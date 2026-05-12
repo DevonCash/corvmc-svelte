@@ -3,18 +3,24 @@
 
 	let {
 		options,
-		selected = $bindable<string[]>([]),
+		value = [],
 		name,
 		placeholder = 'Type to search...'
 	}: {
 		options: { id: string; label: string }[];
-		selected?: string[];
+		value?: string[];
 		name: string;
 		placeholder?: string;
 	} = $props();
 
+	let selected = $state<string[]>([]);
 	let query = $state('');
 	let selectEl: HTMLSelectElement | undefined = $state();
+
+	// Sync internal state from the prop (initial mount + after a save refreshes the query)
+	$effect(() => {
+		selected = [...value];
+	});
 
 	let filtered = $derived(
 		query

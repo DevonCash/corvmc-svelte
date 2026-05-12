@@ -89,7 +89,7 @@
 					<h2 class="card-title">Roles</h2>
 					<TagInput
 						options={roleOptions}
-						selected={initialRoles}
+						value={initialRoles}
 						name="roles"
 						placeholder="Search roles..."
 					/>

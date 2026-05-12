@@ -6,6 +6,7 @@
 
 	export interface FormContext {
 		readonly status: FormStatus;
+		submit(): void;
 	}
 
 	const FORM_KEY = Symbol('form');
@@ -89,6 +90,9 @@
 	setFormContext({
 		get status() {
 			return status;
+		},
+		submit() {
+			formEl?.requestSubmit();
 		}
 	});
 
@@ -130,7 +134,7 @@
 
 	let confirmModal: HTMLDialogElement | undefined = $state();
 	let pendingNavigation: (() => void) | null = $state(null);
-	let bypassing = false;
+	let bypassing = $state(false);
 
 	beforeNavigate(({ cancel, to, willUnload }) => {
 		if (bypassing) {

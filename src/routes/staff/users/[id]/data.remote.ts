@@ -34,21 +34,21 @@ export const getAllRoles = query(async () => {
 	return db.select({ id: role.id, name: role.name }).from(role);
 });
 
-export const updateUser = form(
-	z.object({
-		name: z.string().trim().min(1),
-		pronouns: z.string().trim(),
-		phone: z.string().trim(),
-		roles: z.preprocess(
-			(val) => (val == null ? [] : Array.isArray(val) ? val : [val]),
-			z.array(z.string())
-		)
-	}),
-	async (data) => {
-		const { params } = getRequestEvent();
-		const id = params.id!;
+const updateUserSchema = z.object({
+	name: z.string().trim().min(1),
+	pronouns: z.string().trim(),
+	phone: z.string().trim(),
+	roles: z.array(z.string().regex(/^\d+$/, 'Invalid role ID')).default([])
+});
 
-		await db
+export const updateUser = form(updateUserSchema, async (rawData) => {
+	const data = rawData as z.infer<typeof updateUserSchema>;
+	const { params } = getRequestEvent();
+	const id = params.id!;
+	const roleIds = data.roles.map(Number);
+
+	await db.transaction(async (tx) => {
+		await tx
 			.update(user)
 			.set({
 				name: data.name,
@@ -58,22 +58,20 @@ export const updateUser = form(
 			})
 			.where(eq(user.id, id));
 
-		// Replace roles
-		const roleIds = data.roles.map(Number);
-		await db.delete(modelHasRole).where(eq(modelHasRole.userId, id));
+		await tx.delete(modelHasRole).where(eq(modelHasRole.userId, id));
 
 		if (roleIds.length > 0) {
-			await db.insert(modelHasRole).values(
-				roleIds.map((roleId) => ({
+			await tx.insert(modelHasRole).values(
+				roleIds.map((roleId: number) => ({
 					roleId,
 					userId: id
 				}))
 			);
 		}
+	});
 
-		// Refresh the user query so the page gets fresh data
-		void getUser(id).refresh();
+	// Refresh the user query so the page gets fresh data
+	void getUser(id).refresh();
 
-		return { success: true };
-	}
-);
+	return { success: true };
+});

@@ -1,12 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import {
-		parseShortcut,
-		matchesShortcut,
-		isModifierKey,
-		shortcutLabel
-	} from '$lib/shortcuts';
+	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 
 	let {
 		action,
@@ -42,10 +37,7 @@
 
 	type Status = 'idle' | 'pending' | 'success' | 'error';
 	let status = $state<Status>('idle');
-	let modHeld = $state(false);
 	let buttonEl: HTMLButtonElement | undefined = $state();
-
-	let parsed = $derived(shortcut ? parseShortcut(shortcut) : null);
 
 	async function run() {
 		if (status === 'pending') return;
@@ -73,38 +65,8 @@
 		}, flashDuration);
 	}
 
-	// Keyboard shortcut handling
-	$effect(() => {
-		if (!parsed) return;
-		const p = parsed;
-
-		function onKeydown(e: KeyboardEvent) {
-			if (isModifierKey(e, p)) modHeld = true;
-			if (matchesShortcut(e, p)) {
-				e.preventDefault();
-				if (!buttonEl?.disabled) {
-					run();
-				}
-			}
-		}
-
-		function onKeyup(e: KeyboardEvent) {
-			if (isModifierKey(e, p)) modHeld = false;
-		}
-
-		function onBlur() {
-			modHeld = false;
-		}
-
-		window.addEventListener('keydown', onKeydown);
-		window.addEventListener('keyup', onKeyup);
-		window.addEventListener('blur', onBlur);
-
-		return () => {
-			window.removeEventListener('keydown', onKeydown);
-			window.removeEventListener('keyup', onKeyup);
-			window.removeEventListener('blur', onBlur);
-		};
+	let keys = useShortcut(() => shortcut, () => {
+		if (!buttonEl?.disabled) run();
 	});
 </script>
 
@@ -132,8 +94,8 @@
 		</svg>
 		{errorLabel}
 	{:else}
-		{#if modHeld && parsed}
-			<kbd class="kbd kbd-sm text-base-content">{shortcutLabel(parsed)}</kbd>
+		{#if keys.modHeld && keys.parsed}
+			<kbd class="kbd kbd-sm text-base-content">{shortcutLabel(keys.parsed)}</kbd>
 		{:else if icon}
 			{@render icon()}
 		{/if}
