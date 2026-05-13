@@ -1,32 +1,80 @@
+import type Stripe from 'stripe';
+import { env } from '$env/dynamic/private';
 import { stripe } from '$lib/server/stripe';
 import * as creditService from './credit-service';
 import { type CreditType, creditTypes } from './types';
+import { calculateTotalWithFeeCoverage } from './fees';
 
 // ---------------------------------------------------------------------------
-// PaymentService — checkout, cash recording, refund, cancel
+// Local line item type — avoids Stripe namespace resolution issues in v22
+// ---------------------------------------------------------------------------
+
+/** Subset of Stripe Checkout Session line item params we actually use. */
+export interface CheckoutLineItem {
+	price?: string;
+	price_data?: {
+		currency: string;
+		product: string;
+		unit_amount: number;
+		recurring?: { interval: string };
+	};
+	quantity?: number;
+}
+
+// ---------------------------------------------------------------------------
+// PaymentService — cart-based checkout, cash recording, refund, cancel
+// ---------------------------------------------------------------------------
+// checkout() accepts a cart of Stripe line items and handles credit
+// application, fee coverage, and session creation. It's generic — callers
+// build their own line items and pass metadata for post-checkout linking.
+//
+// Supports both one-time payments and subscriptions via the `mode` param.
+// Anonymous purchases (no userId) skip credit application.
+//
+// Environment variables:
+//   STRIPE_FEE_PRODUCT_ID — product for the fee coverage line item
+// ---------------------------------------------------------------------------
+
+function getFeeProductId(): string {
+	const id = env.STRIPE_FEE_PRODUCT_ID;
+	if (!id) throw new Error('STRIPE_FEE_PRODUCT_ID is not set');
+	return id;
+}
+
+// ---------------------------------------------------------------------------
+// Types
 // ---------------------------------------------------------------------------
 
 export interface CheckoutOptions {
-	userId: string;
-	stripeCustomerId: string;
-	stripePriceId: string;
-	quantity: number;
-	purchasableType: string;
-	purchasableId: string;
+	/** Stripe customer ID. Required for subscriptions, optional for one-time. */
+	stripeCustomerId?: string;
+	/** App user ID. When absent, credit application is skipped (anonymous purchase). */
+	userId?: string;
+	/** Checkout mode — determines one-time vs recurring billing. */
+	mode: 'payment' | 'subscription';
+	/** Cart line items. Passed directly to Stripe Checkout. */
+	lineItems: CheckoutLineItem[];
+	/** Credit types eligible for discount, with the unit value in cents per credit. */
+	eligibleCredits?: EligibleCredit[];
+	/** When true, adds a fee coverage line item so the org nets the full amount. */
+	coverFees?: boolean;
+	/** Opaque metadata passed through to the Stripe session. */
+	metadata?: Record<string, string>;
 	successUrl: string;
 	cancelUrl: string;
+}
+
+/** Describes a credit type eligible for discount on this checkout. */
+export interface EligibleCredit {
+	type: CreditType;
+	/** Value of one credit unit in cents (e.g., 1000 for a $10/hr free hour). */
+	unitValueCents: number;
 }
 
 export interface CheckoutResult {
 	paid: boolean;
 	checkoutUrl?: string;
 	stripePaymentRecordId?: string;
-}
-
-export interface CheckoutCompleteResult {
-	purchasableType: string;
-	purchasableId: string;
-	paymentRecordId: string;
 }
 
 /** A single credit deduction recorded in Stripe metadata for reversal. */
@@ -42,82 +90,86 @@ interface CreditDeduction {
 
 export async function checkout(options: CheckoutOptions): Promise<CheckoutResult> {
 	const {
-		userId,
 		stripeCustomerId,
-		stripePriceId,
-		quantity,
-		purchasableType,
-		purchasableId,
+		userId,
+		mode,
+		lineItems,
+		eligibleCredits = [],
+		coverFees = false,
+		metadata = {},
 		successUrl,
 		cancelUrl
 	} = options;
 
-	// 1. Fetch the Stripe Price and its Product to read eligible_wallets
-	const price = await stripe.prices.retrieve(stripePriceId, { expand: ['product'] });
-	const product = price.product as import('stripe').Stripe.Product;
-	const eligibleWalletsRaw = product.metadata?.eligible_wallets ?? '';
-	const eligibleWallets = eligibleWalletsRaw
-		.split(',')
-		.map((w) => w.trim())
-		.filter((w): w is CreditType => creditTypes.includes(w as CreditType));
+	if (lineItems.length === 0) throw new Error('Cart must have at least one line item');
+	if (mode === 'subscription' && !stripeCustomerId) {
+		throw new Error('Subscription checkouts require a Stripe customer');
+	}
 
-	// 2. Calculate total price
-	const unitAmount = price.unit_amount ?? 0;
-	const totalCents = unitAmount * quantity;
+	// 1. Calculate cart total by resolving each line item's amount.
+	const cartTotalCents = await resolveCartTotal(lineItems);
 
-	// 3. Calculate credit discount
+	// 2. Calculate credit discount (only for authenticated users)
 	let creditsAppliedCents = 0;
 	const creditDeductions: CreditDeduction[] = [];
 
-	for (const walletType of eligibleWallets) {
-		const balance = await creditService.getBalance(userId, walletType);
-		if (balance <= 0) continue;
+	if (userId && eligibleCredits.length > 0) {
+		for (const eligible of eligibleCredits) {
+			const balance = await creditService.getBalance(userId, eligible.type);
+			if (balance <= 0) continue;
 
-		const unitsToUse = Math.min(balance, quantity);
-		const discountCents = unitsToUse * unitAmount;
-		const applicableDiscount = Math.min(discountCents, totalCents - creditsAppliedCents);
+			const maxDiscountCents = balance * eligible.unitValueCents;
+			const applicableDiscount = Math.min(maxDiscountCents, cartTotalCents - creditsAppliedCents);
 
-		if (applicableDiscount > 0) {
-			const actualUnits = Math.ceil(applicableDiscount / unitAmount);
-			creditDeductions.push({ type: walletType, units: actualUnits, cents: applicableDiscount });
-			creditsAppliedCents += applicableDiscount;
+			if (applicableDiscount > 0) {
+				const unitsToUse = Math.ceil(applicableDiscount / eligible.unitValueCents);
+				// Cap cents so credit discount never exceeds remaining cart total
+				const actualCents = Math.min(unitsToUse * eligible.unitValueCents, cartTotalCents - creditsAppliedCents);
+				creditDeductions.push({
+					type: eligible.type,
+					units: unitsToUse,
+					cents: actualCents
+				});
+				creditsAppliedCents += actualCents;
+			}
+
+			if (creditsAppliedCents >= cartTotalCents) break;
 		}
-
-		if (creditsAppliedCents >= totalCents) break;
 	}
 
-	const remainingCents = totalCents - creditsAppliedCents;
+	const remainingCents = cartTotalCents - creditsAppliedCents;
 
-	// 4. Deduct credits (optimistically, before payment).
-	//    If any deduction fails, reverse all prior ones.
+	// 3. Deduct credits optimistically. Reverse all on failure.
 	const completedDeductions: CreditDeduction[] = [];
-	try {
-		for (const deduction of creditDeductions) {
-			await creditService.deductCredits(
-				userId,
-				deduction.type,
-				deduction.units,
-				'checkout',
-				purchasableId,
-				`${deduction.units} ${deduction.type} applied to ${purchasableType} ${purchasableId}`
-			);
-			completedDeductions.push(deduction);
+	if (userId) {
+		try {
+			for (const deduction of creditDeductions) {
+				await creditService.deductCredits(
+					userId,
+					deduction.type,
+					deduction.units,
+					'checkout',
+					metadata.checkout_ref,
+					`${deduction.units} ${deduction.type} applied to checkout`
+				);
+				completedDeductions.push(deduction);
+			}
+		} catch (err) {
+			await reverseDeductions(userId, completedDeductions, metadata.checkout_ref, 'checkout_failed');
+			throw err;
 		}
-	} catch (err) {
-		// Reverse any deductions that succeeded before the failure
-		await reverseDeductions(userId, completedDeductions, purchasableId, 'checkout_failed');
-		throw err;
 	}
 
-	const metadata = {
+	const sessionMetadata: Record<string, string> = {
+		...metadata,
 		credits_applied_cents: String(creditsAppliedCents),
-		credits_breakdown: JSON.stringify(creditDeductions),
-		purchasable_type: purchasableType,
-		purchasable_id: purchasableId
+		credits_breakdown: JSON.stringify(creditDeductions)
 	};
 
-	// 5. Credits fully cover the price
-	if (remainingCents <= 0) {
+	if (userId) sessionMetadata.user_id = userId;
+
+	// 4. Credits fully cover the price
+	if (remainingCents <= 0 && userId) {
 		const now = Math.floor(Date.now() / 1000);
 		const paymentRecord = await stripe.paymentRecords.reportPayment({
 			amount_requested: { value: 0, currency: 'usd' },
@@ -126,63 +178,103 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 				custom: { display_name: 'Credits', type: 'custom' },
 				type: 'custom'
 			},
-			metadata,
+			metadata: sessionMetadata,
 			outcome: 'guaranteed',
 			guaranteed: { guaranteed_at: now },
-			customer_details: { customer: stripeCustomerId }
+			...(stripeCustomerId && { customer_details: { customer: stripeCustomerId } })
 		});
 
 		return { paid: true, stripePaymentRecordId: paymentRecord.id };
 	}
 
-	// 6. Partial or no credit coverage — create Checkout Session
-	const sessionParams: import('stripe').Stripe.Checkout.SessionCreateParams = {
-		customer: stripeCustomerId,
-		mode: 'payment',
-		line_items: [{ price: stripePriceId, quantity }],
+	// 5. Build Checkout Session
+	const finalLineItems = [...lineItems];
+
+	// Add fee coverage line item if requested.
+	// Note: for very small remaining amounts, the fee (2.9% + 30¢) can exceed the
+	// base charge. This is mathematically correct but callers should consider a
+	// minimum charge threshold if the UX matters.
+	if (coverFees && remainingCents > 0) {
+		const { feeCents } = calculateTotalWithFeeCoverage(remainingCents);
+		const feeLineItem: CheckoutLineItem = {
+			price_data: {
+				currency: 'usd',
+				product: getFeeProductId(),
+				unit_amount: feeCents,
+				...(mode === 'subscription' && { recurring: { interval: 'month' } })
+			},
+			quantity: 1
+		};
+		finalLineItems.push(feeLineItem);
+	}
+
+	const sessionParams: {
+		mode: string;
+		line_items: CheckoutLineItem[];
+		success_url: string;
+		cancel_url: string;
+		metadata: Record<string, string>;
+		customer?: string;
+		discounts?: Array<{ coupon: string }>;
+	} = {
+		mode,
+		line_items: finalLineItems,
 		success_url: successUrl,
 		cancel_url: cancelUrl,
-		metadata
+		metadata: sessionMetadata
 	};
 
-	// Apply coupon for credit discount
-	if (creditsAppliedCents > 0) {
+	if (stripeCustomerId) {
+		sessionParams.customer = stripeCustomerId;
+	}
+
+	// Apply coupon for credit discount (one-time payments only — subscriptions
+	// handle credits differently since coupons interact with recurring billing)
+	if (creditsAppliedCents > 0 && mode === 'payment') {
 		const coupon = await stripe.coupons.create({
 			amount_off: creditsAppliedCents,
 			currency: 'usd',
 			max_redemptions: 1,
-			name: `Credit discount (${purchasableType})`
+			name: 'Credit discount'
 		});
-
 		sessionParams.discounts = [{ coupon: coupon.id }];
 	}
 
-	const session = await stripe.checkout.sessions.create(sessionParams);
+	const session = await stripe.checkout.sessions.create(sessionParams as any);
 
-	return { paid: false, checkoutUrl: session.url! };
+	if (!session.url) {
+		throw new Error('Stripe did not return a checkout URL');
+	}
+
+	return { paid: false, checkoutUrl: session.url };
 }
 
 // ---------------------------------------------------------------------------
-// onCheckoutComplete()
+// resolveCartTotal()
 // ---------------------------------------------------------------------------
 
-export async function onCheckoutComplete(sessionId: string): Promise<CheckoutCompleteResult> {
-	const session = await stripe.checkout.sessions.retrieve(sessionId, {
-		expand: ['payment_intent']
-	});
+/**
+ * Calculate the cart total in cents by resolving each line item.
+ * Items with `price_data.unit_amount` are used directly.
+ * Items with a `price` reference are fetched from Stripe.
+ */
+async function resolveCartTotal(
+	lineItems: CheckoutLineItem[]
+): Promise<number> {
+	let total = 0;
 
-	const purchasableType = session.metadata?.purchasable_type;
-	const purchasableId = session.metadata?.purchasable_id;
+	for (const item of lineItems) {
+		const quantity = item.quantity ?? 1;
 
-	if (!purchasableType || !purchasableId) {
-		throw new Error(`Checkout session ${sessionId} missing purchasable metadata`);
+		if (item.price_data?.unit_amount != null) {
+			total += item.price_data.unit_amount * quantity;
+		} else if (item.price) {
+			const price = await stripe.prices.retrieve(item.price);
+			total += (price.unit_amount ?? 0) * quantity;
+		}
 	}
 
-	// The payment intent ID serves as our link to the payment
-	const paymentIntent = session.payment_intent as import('stripe').Stripe.PaymentIntent;
-	const paymentRecordId = paymentIntent?.id ?? session.id;
-
-	return { purchasableType, purchasableId, paymentRecordId };
+	return total;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,15 +282,13 @@ export async function onCheckoutComplete(sessionId: string): Promise<CheckoutCom
 // ---------------------------------------------------------------------------
 
 export interface CashPaymentOptions {
-	userId: string;
 	stripeCustomerId: string;
 	amountCents: number;
-	purchasableType: string;
-	purchasableId: string;
+	metadata?: Record<string, string>;
 }
 
 export async function recordCashPayment(options: CashPaymentOptions): Promise<{ paymentRecordId: string }> {
-	const { stripeCustomerId, amountCents, purchasableType, purchasableId } = options;
+	const { stripeCustomerId, amountCents, metadata = {} } = options;
 
 	const now = Math.floor(Date.now() / 1000);
 	const paymentRecord = await stripe.paymentRecords.reportPayment({
@@ -208,10 +298,7 @@ export async function recordCashPayment(options: CashPaymentOptions): Promise<{ 
 			custom: { display_name: 'Cash', type: 'custom' },
 			type: 'custom'
 		},
-		metadata: {
-			purchasable_type: purchasableType,
-			purchasable_id: purchasableId
-		},
+		metadata,
 		outcome: 'guaranteed',
 		guaranteed: { guaranteed_at: now },
 		customer_details: { customer: stripeCustomerId }
@@ -225,14 +312,14 @@ export async function recordCashPayment(options: CashPaymentOptions): Promise<{ 
 // ---------------------------------------------------------------------------
 
 export interface RefundOptions {
-	userId: string;
-	purchasableType: string;
-	purchasableId: string;
+	/** Required when credits were applied (to reverse them). */
+	userId?: string;
 	stripePaymentRecordId: string;
+	metadata?: Record<string, string>;
 }
 
 export async function refund(options: RefundOptions): Promise<void> {
-	const { userId, purchasableType, purchasableId, stripePaymentRecordId } = options;
+	const { userId, stripePaymentRecordId } = options;
 
 	const paymentRecord = await stripe.paymentRecords.retrieve(stripePaymentRecordId);
 	const paymentAmount = paymentRecord.amount?.value ?? 0;
@@ -249,9 +336,11 @@ export async function refund(options: RefundOptions): Promise<void> {
 		});
 	}
 
-	// Reverse credit deductions using the stored breakdown
-	const deductions = parseBreakdown(paymentRecord.metadata);
-	await reverseDeductions(userId, deductions, stripePaymentRecordId, 'refund');
+	// Reverse credit deductions if a user was involved
+	if (userId) {
+		const deductions = parseBreakdown(paymentRecord.metadata);
+		await reverseDeductions(userId, deductions, stripePaymentRecordId, 'refund');
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -259,22 +348,22 @@ export async function refund(options: RefundOptions): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export interface CancelOptions {
-	userId: string;
-	purchasableType: string;
-	purchasableId: string;
+	/** Required when credits were applied (to reverse them). */
+	userId?: string;
 	stripeCheckoutSessionId?: string;
 }
 
 export async function cancel(options: CancelOptions): Promise<void> {
-	const { userId, purchasableType, purchasableId, stripeCheckoutSessionId } = options;
+	const { userId, stripeCheckoutSessionId } = options;
 
 	if (!stripeCheckoutSessionId) return;
 
 	const session = await stripe.checkout.sessions.retrieve(stripeCheckoutSessionId);
 
-	// Reverse credit deductions using the stored breakdown
-	const deductions = parseBreakdown(session.metadata);
-	await reverseDeductions(userId, deductions, stripeCheckoutSessionId, 'cancelled');
+	if (userId) {
+		const deductions = parseBreakdown(session.metadata);
+		await reverseDeductions(userId, deductions, stripeCheckoutSessionId, 'cancelled');
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +387,7 @@ function parseBreakdown(metadata: Record<string, string> | null | undefined): Cr
 async function reverseDeductions(
 	userId: string,
 	deductions: CreditDeduction[],
-	sourceId: string,
+	sourceId: string | undefined,
 	source: string
 ): Promise<void> {
 	for (const deduction of deductions) {

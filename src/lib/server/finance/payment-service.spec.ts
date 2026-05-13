@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
+// Mock environment
+// ---------------------------------------------------------------------------
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		STRIPE_FEE_PRODUCT_ID: 'prod_fee'
+	}
+}));
+
+// ---------------------------------------------------------------------------
 // Mock Stripe SDK
 // ---------------------------------------------------------------------------
 const mockStripe = {
@@ -39,19 +48,7 @@ const mockCreditService = {
 vi.mock('./credit-service', () => mockCreditService);
 
 // Import after mocking
-const { checkout, onCheckoutComplete, recordCashPayment, refund, cancel } = await import('./payment-service');
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function makePrice(unitAmount: number, eligibleWallets: string) {
-	return {
-		unit_amount: unitAmount,
-		product: {
-			metadata: { eligible_wallets: eligibleWallets }
-		}
-	};
-}
+const { checkout, recordCashPayment, refund, cancel } = await import('./payment-service');
 
 // ---------------------------------------------------------------------------
 // checkout()
@@ -60,10 +57,8 @@ describe('checkout', () => {
 	const baseOptions = {
 		userId: 'user-1',
 		stripeCustomerId: 'cus_123',
-		stripePriceId: 'price_abc',
-		quantity: 3,
-		purchasableType: 'reservation',
-		purchasableId: 'res-1',
+		mode: 'payment' as const,
+		lineItems: [{ price: 'price_abc', quantity: 3 }],
 		successUrl: 'https://example.com/success',
 		cancelUrl: 'https://example.com/cancel'
 	};
@@ -72,9 +67,8 @@ describe('checkout', () => {
 		vi.clearAllMocks();
 	});
 
-	it('creates Checkout Session with no coupon when user has no credits', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, 'free_hours'));
-		mockCreditService.getBalance.mockResolvedValue(0);
+	it('creates Checkout Session with no credits applied when none eligible', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
 			url: 'https://checkout.stripe.com/sess_123'
 		});
@@ -90,17 +84,16 @@ describe('checkout', () => {
 				mode: 'payment',
 				line_items: [{ price: 'price_abc', quantity: 3 }],
 				metadata: expect.objectContaining({
+					user_id: 'user-1',
 					credits_applied_cents: '0',
-					credits_breakdown: '[]',
-					purchasable_type: 'reservation',
-					purchasable_id: 'res-1'
+					credits_breakdown: '[]'
 				})
 			})
 		);
 	});
 
-	it('creates Checkout Session with coupon when user has partial credits', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, 'free_hours'));
+	it('applies partial credit discount via coupon', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockCreditService.getBalance.mockResolvedValue(2);
 		mockCreditService.deductCredits.mockResolvedValue(0);
 		mockStripe.coupons.create.mockResolvedValue({ id: 'coupon_abc' });
@@ -108,123 +101,230 @@ describe('checkout', () => {
 			url: 'https://checkout.stripe.com/sess_456'
 		});
 
-		const result = await checkout(baseOptions);
+		const result = await checkout({
+			...baseOptions,
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+		});
 
 		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_456' });
 		expect(mockCreditService.deductCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'checkout', 'res-1', expect.any(String)
+			'user-1', 'free_hours', 2, 'checkout', undefined, expect.any(String)
 		);
 		expect(mockStripe.coupons.create).toHaveBeenCalledWith(
 			expect.objectContaining({ amount_off: 2000, currency: 'usd', max_redemptions: 1 })
 		);
 		expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
 			expect.objectContaining({
-				discounts: [{ coupon: 'coupon_abc' }],
-				metadata: expect.objectContaining({
-					credits_applied_cents: '2000',
-					credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 2, cents: 2000 }])
-				})
+				discounts: [{ coupon: 'coupon_abc' }]
 			})
 		);
 	});
 
-	it('returns paid: true when credits fully cover the price', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, 'free_hours'));
+	it('returns paid: true when credits fully cover the cart', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockCreditService.getBalance.mockResolvedValue(5);
 		mockCreditService.deductCredits.mockResolvedValue(2);
 		mockStripe.paymentRecords.reportPayment.mockResolvedValue({ id: 'pr_credits_only' });
 
-		const result = await checkout(baseOptions);
+		const result = await checkout({
+			...baseOptions,
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+		});
 
 		expect(result).toEqual({ paid: true, stripePaymentRecordId: 'pr_credits_only' });
 		expect(mockCreditService.deductCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 3, 'checkout', 'res-1', expect.any(String)
+			'user-1', 'free_hours', 3, 'checkout', undefined, expect.any(String)
 		);
 		expect(mockStripe.paymentRecords.reportPayment).toHaveBeenCalledWith(
 			expect.objectContaining({
-				amount_requested: { value: 0, currency: 'usd' },
-				metadata: expect.objectContaining({
-					credits_applied_cents: '3000',
-					credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 3, cents: 3000 }])
-				})
+				amount_requested: { value: 0, currency: 'usd' }
 			})
 		);
 		expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
 	});
 
-	it('ignores credits when product has no eligible_wallets', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, ''));
+	it('skips credit application for anonymous purchases', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_789'
+			url: 'https://checkout.stripe.com/sess_anon'
 		});
 
-		const result = await checkout(baseOptions);
+		const result = await checkout({
+			mode: 'payment',
+			lineItems: [{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 2000 }, quantity: 1 }],
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }],
+			successUrl: 'https://example.com/success',
+			cancelUrl: 'https://example.com/cancel'
+		});
 
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_789' });
+		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_anon' });
 		expect(mockCreditService.getBalance).not.toHaveBeenCalled();
 		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 	});
 
-	it('ignores ineligible credit types', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, 'equipment_credits'));
-		mockCreditService.getBalance.mockResolvedValue(0);
+	it('resolves cart total from price_data inline amounts', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_eq'
+			url: 'https://checkout.stripe.com/sess_pd'
 		});
 
-		const result = await checkout(baseOptions);
+		await checkout({
+			...baseOptions,
+			lineItems: [
+				{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 500 }, quantity: 2 },
+				{ price_data: { currency: 'usd', product: 'prod_y', unit_amount: 300 }, quantity: 1 }
+			]
+		});
 
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_eq' });
-		expect(mockCreditService.getBalance).toHaveBeenCalledWith('user-1', 'equipment_credits');
-		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
+		// Cart total = 500*2 + 300*1 = 1300
+		// No credits, so full amount goes to checkout
+		expect(mockStripe.checkout.sessions.create).toHaveBeenCalled();
+		expect(mockStripe.prices.retrieve).not.toHaveBeenCalled();
+	});
+
+	it('resolves cart total from Stripe price references', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 750 });
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_ref'
+		});
+
+		await checkout({
+			...baseOptions,
+			lineItems: [{ price: 'price_xyz', quantity: 4 }]
+		});
+
+		expect(mockStripe.prices.retrieve).toHaveBeenCalledWith('price_xyz');
+	});
+
+	it('adds fee coverage line item when coverFees is true', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_fee'
+		});
+
+		await checkout({
+			...baseOptions,
+			coverFees: true
+		});
+
+		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		// Should have original + fee line item
+		expect(call.line_items).toHaveLength(2);
+		expect(call.line_items[0]).toEqual({ price: 'price_abc', quantity: 3 });
+		expect(call.line_items[1].price_data.product).toBe('prod_fee');
+		expect(call.line_items[1].price_data.unit_amount).toBeGreaterThan(0);
+		expect(call.line_items[1].quantity).toBe(1);
+	});
+
+	it('adds recurring interval to fee line item for subscriptions', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 500 });
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_sub_fee'
+		});
+
+		await checkout({
+			...baseOptions,
+			mode: 'subscription',
+			coverFees: true
+		});
+
+		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		const feeItem = call.line_items.find(
+			(item: any) => item.price_data?.product === 'prod_fee'
+		);
+		expect(feeItem.price_data.recurring).toEqual({ interval: 'month' });
+	});
+
+	it('does not add fee item when coverFees is false', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_nofee'
+		});
+
+		await checkout({
+			...baseOptions,
+			coverFees: false
+		});
+
+		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(call.line_items).toHaveLength(1);
+	});
+
+	it('passes metadata through to Stripe session', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_meta'
+		});
+
+		await checkout({
+			...baseOptions,
+			metadata: { reservation_id: 'res-42', custom_field: 'hello' }
+		});
+
+		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(call.metadata).toMatchObject({
+			reservation_id: 'res-42',
+			custom_field: 'hello'
+		});
+	});
+
+	it('throws when lineItems is empty', async () => {
+		await expect(checkout({
+			...baseOptions,
+			lineItems: []
+		})).rejects.toThrow('Cart must have at least one line item');
+	});
+
+	it('throws when subscription mode has no customer', async () => {
+		await expect(checkout({
+			mode: 'subscription',
+			lineItems: [{ price: 'price_abc', quantity: 1 }],
+			successUrl: 'https://example.com/success',
+			cancelUrl: 'https://example.com/cancel'
+		})).rejects.toThrow('Subscription checkouts require a Stripe customer');
 	});
 
 	it('reverses completed deductions if a subsequent one fails', async () => {
-		// Product eligible for both wallet types
-		mockStripe.prices.retrieve.mockResolvedValue(makePrice(1000, 'free_hours,equipment_credits'));
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 5000 });
 		mockCreditService.getBalance
-			.mockResolvedValueOnce(2)  // free_hours: 2 available
-			.mockResolvedValueOnce(1); // equipment_credits: 1 available
+			.mockResolvedValueOnce(2)  // free_hours
+			.mockResolvedValueOnce(1); // equipment_credits
 		mockCreditService.deductCredits
-			.mockResolvedValueOnce(0)  // free_hours deduction succeeds
+			.mockResolvedValueOnce(0)  // free_hours succeeds
 			.mockRejectedValueOnce(new Error('DB error')); // equipment_credits fails
 		mockCreditService.addCredits.mockResolvedValue(2);
 
-		await expect(checkout(baseOptions)).rejects.toThrow('DB error');
+		await expect(checkout({
+			...baseOptions,
+			lineItems: [{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 5000 }, quantity: 1 }],
+			eligibleCredits: [
+				{ type: 'free_hours', unitValueCents: 1000 },
+				{ type: 'equipment_credits', unitValueCents: 500 }
+			]
+		})).rejects.toThrow('DB error');
 
 		// The successful free_hours deduction should be reversed
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'checkout_failed', 'res-1', expect.any(String)
+			'user-1', 'free_hours', 2, 'checkout_failed', undefined, expect.any(String)
 		);
 	});
-});
 
-// ---------------------------------------------------------------------------
-// onCheckoutComplete()
-// ---------------------------------------------------------------------------
-describe('onCheckoutComplete', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('returns purchasable info and payment record ID', async () => {
-		mockStripe.checkout.sessions.retrieve.mockResolvedValue({
-			id: 'cs_123',
-			metadata: { purchasable_type: 'reservation', purchasable_id: 'res-42' },
-			payment_intent: { id: 'pi_abc' }
+	it('does not create coupon for subscription mode credits', async () => {
+		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
+		mockCreditService.getBalance.mockResolvedValue(1);
+		mockCreditService.deductCredits.mockResolvedValue(0);
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_sub'
 		});
 
-		const result = await onCheckoutComplete('cs_123');
-		expect(result).toEqual({
-			purchasableType: 'reservation',
-			purchasableId: 'res-42',
-			paymentRecordId: 'pi_abc'
+		await checkout({
+			...baseOptions,
+			mode: 'subscription',
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
 		});
-	});
 
-	it('throws when metadata is missing', async () => {
-		mockStripe.checkout.sessions.retrieve.mockResolvedValue({ id: 'cs_bad', metadata: {} });
-		await expect(onCheckoutComplete('cs_bad')).rejects.toThrow('missing purchasable metadata');
+		expect(mockStripe.coupons.create).not.toHaveBeenCalled();
+		expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+			expect.not.objectContaining({ discounts: expect.anything() })
+		);
 	});
 });
 
@@ -240,11 +340,9 @@ describe('recordCashPayment', () => {
 		mockStripe.paymentRecords.reportPayment.mockResolvedValue({ id: 'pr_cash_1' });
 
 		const result = await recordCashPayment({
-			userId: 'user-1',
 			stripeCustomerId: 'cus_123',
 			amountCents: 2500,
-			purchasableType: 'reservation',
-			purchasableId: 'res-5'
+			metadata: { reservation_id: 'res-5' }
 		});
 
 		expect(result).toEqual({ paymentRecordId: 'pr_cash_1' });
@@ -252,9 +350,9 @@ describe('recordCashPayment', () => {
 			expect.objectContaining({
 				amount_requested: { value: 2500, currency: 'usd' },
 				metadata: expect.objectContaining({
-					purchasable_type: 'reservation',
-					purchasable_id: 'res-5'
-				})
+					reservation_id: 'res-5'
+				}),
+				customer_details: { customer: 'cus_123' }
 			})
 		);
 	});
@@ -268,7 +366,7 @@ describe('refund', () => {
 		vi.clearAllMocks();
 	});
 
-	it('refunds card payment and reverses credits using stored breakdown', async () => {
+	it('refunds card payment and reverses credits', async () => {
 		mockStripe.paymentRecords.retrieve.mockResolvedValue({
 			amount: { value: 1000 },
 			metadata: {
@@ -281,8 +379,6 @@ describe('refund', () => {
 
 		await refund({
 			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-1',
 			stripePaymentRecordId: 'pr_123'
 		});
 
@@ -307,8 +403,6 @@ describe('refund', () => {
 
 		await refund({
 			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-2',
 			stripePaymentRecordId: 'pr_456'
 		});
 
@@ -318,29 +412,25 @@ describe('refund', () => {
 		);
 	});
 
-	it('reverses equipment_credits when that wallet was used', async () => {
+	it('skips credit reversal when no userId provided', async () => {
 		mockStripe.paymentRecords.retrieve.mockResolvedValue({
-			amount: { value: 0 },
+			amount: { value: 1500 },
 			metadata: {
-				credits_applied_cents: '500',
-				credits_breakdown: JSON.stringify([{ type: 'equipment_credits', units: 1, cents: 500 }])
+				credits_applied_cents: '0',
+				credits_breakdown: '[]'
 			}
 		});
-		mockCreditService.addCredits.mockResolvedValue(1);
+		mockStripe.paymentRecords.reportRefund.mockResolvedValue({});
 
 		await refund({
-			userId: 'user-1',
-			purchasableType: 'equipment_loan',
-			purchasableId: 'loan-1',
-			stripePaymentRecordId: 'pr_eq'
+			stripePaymentRecordId: 'pr_anon'
 		});
 
-		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'equipment_credits', 1, 'refund', 'pr_eq', expect.any(String)
-		);
+		expect(mockStripe.paymentRecords.reportRefund).toHaveBeenCalled();
+		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
 	});
 
-	it('does nothing when no credits were applied and no payment amount', async () => {
+	it('does nothing when no credits and no payment amount', async () => {
 		mockStripe.paymentRecords.retrieve.mockResolvedValue({
 			amount: { value: 0 },
 			metadata: {}
@@ -348,8 +438,6 @@ describe('refund', () => {
 
 		await refund({
 			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-3',
 			stripePaymentRecordId: 'pr_empty'
 		});
 
@@ -366,7 +454,7 @@ describe('cancel', () => {
 		vi.clearAllMocks();
 	});
 
-	it('reverses optimistically deducted credits using stored breakdown', async () => {
+	it('reverses optimistically deducted credits', async () => {
 		mockStripe.checkout.sessions.retrieve.mockResolvedValue({
 			metadata: {
 				credits_applied_cents: '1000',
@@ -377,8 +465,6 @@ describe('cancel', () => {
 
 		await cancel({
 			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-3',
 			stripeCheckoutSessionId: 'cs_abandoned'
 		});
 
@@ -389,9 +475,7 @@ describe('cancel', () => {
 
 	it('does nothing when no checkout session ID provided', async () => {
 		await cancel({
-			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-4'
+			userId: 'user-1'
 		});
 
 		expect(mockStripe.checkout.sessions.retrieve).not.toHaveBeenCalled();
@@ -405,9 +489,21 @@ describe('cancel', () => {
 
 		await cancel({
 			userId: 'user-1',
-			purchasableType: 'reservation',
-			purchasableId: 'res-5',
 			stripeCheckoutSessionId: 'cs_no_credits'
+		});
+
+		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+
+	it('skips credit reversal when no userId', async () => {
+		mockStripe.checkout.sessions.retrieve.mockResolvedValue({
+			metadata: {
+				credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 1, cents: 1000 }])
+			}
+		});
+
+		await cancel({
+			stripeCheckoutSessionId: 'cs_anon'
 		});
 
 		expect(mockCreditService.addCredits).not.toHaveBeenCalled();

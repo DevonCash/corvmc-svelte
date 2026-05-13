@@ -1,17 +1,18 @@
 import { env } from '$env/dynamic/private';
 import { stripe } from '$lib/server/stripe';
+import { checkout } from './payment-service';
 import { calculateTotalWithFeeCoverage } from './fees';
 
 // ---------------------------------------------------------------------------
 // SubscriptionService — manages Stripe subscription lifecycle
 // ---------------------------------------------------------------------------
-// Members subscribe at a sliding scale ($5/unit/month). Quantity = monthly
-// contribution units = free hours. Fee coverage is a separate line item so
-// the contribution quantity stays clean for the webhook handler.
+// Subscription creation delegates to the shared checkout() with
+// mode: 'subscription'. This file handles lifecycle operations:
+// getSubscription, updateQuantity, cancel, resume.
 //
 // Environment variables:
 //   STRIPE_CONTRIBUTION_PRICE_ID — $5/unit recurring price
-//   STRIPE_FEE_COVERAGE_PRICE_ID — per-unit price for fee coverage
+//   STRIPE_FEE_PRODUCT_ID        — product for the fee coverage line item
 // ---------------------------------------------------------------------------
 
 function getContributionPriceId(): string {
@@ -20,11 +21,14 @@ function getContributionPriceId(): string {
 	return id;
 }
 
-function getFeeCoveragePriceId(): string {
-	const id = env.STRIPE_FEE_COVERAGE_PRICE_ID;
-	if (!id) throw new Error('STRIPE_FEE_COVERAGE_PRICE_ID is not set');
+function getFeeProductId(): string {
+	const id = env.STRIPE_FEE_PRODUCT_ID;
+	if (!id) throw new Error('STRIPE_FEE_PRODUCT_ID is not set');
 	return id;
 }
+
+/** Cents per contribution unit. Matches the Stripe Price configuration. */
+const CONTRIBUTION_UNIT_CENTS = 500;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,45 +57,34 @@ export interface SubscriptionInfo {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a Stripe Checkout Session in subscription mode.
+ * Create a subscription checkout via the shared checkout() flow.
  * Returns the checkout URL for redirect.
  */
 export async function createCheckoutSession(options: CreateSubscriptionOptions): Promise<string> {
-	const { stripeCustomerId, quantity, coverFees, successUrl, cancelUrl } = options;
+	const { userId, stripeCustomerId, quantity, coverFees, successUrl, cancelUrl } = options;
 
 	if (quantity < 1) throw new Error('Quantity must be at least 1');
 
-	const lineItems: Array<{ price: string; quantity: number }> = [
-		{ price: getContributionPriceId(), quantity }
-	];
-
-	if (coverFees) {
-		// Calculate the fee for the full contribution amount.
-		// The contribution is $5/unit × quantity in cents.
-		const contributionCents = quantity * 500;
-		const { feeCents } = calculateTotalWithFeeCoverage(contributionCents);
-
-		// Fee coverage price is $0.01/unit — quantity = fee in cents
-		lineItems.push({ price: getFeeCoveragePriceId(), quantity: feeCents });
-	}
-
-	const session = await stripe.checkout.sessions.create({
-		customer: stripeCustomerId,
+	const result = await checkout({
+		userId,
+		stripeCustomerId,
 		mode: 'subscription',
-		line_items: lineItems,
-		success_url: successUrl,
-		cancel_url: cancelUrl,
+		lineItems: [
+			{ price: getContributionPriceId(), quantity }
+		],
+		coverFees,
 		metadata: {
-			user_id: options.userId,
-			cover_fees: coverFees ? '1' : '0'
-		}
+			subscription_type: 'contribution'
+		},
+		successUrl,
+		cancelUrl
 	});
 
-	if (!session.url) {
+	if (!result.checkoutUrl) {
 		throw new Error('Stripe did not return a checkout URL');
 	}
 
-	return session.url;
+	return result.checkoutUrl;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,19 +105,24 @@ export async function getSubscription(stripeCustomerId: string): Promise<Subscri
 	const sub = subscriptions.data[0];
 	if (!sub) return null;
 
-	// Find the contribution item (the one using the contribution price)
 	const contributionPriceId = getContributionPriceId();
-	const feePriceId = getFeeCoveragePriceId();
+	const feeProductId = getFeeProductId();
 
 	const contributionItem = sub.items.data.find((item) => item.price.id === contributionPriceId);
-	const feeItem = sub.items.data.find((item) => item.price.id === feePriceId);
+	const feeItem = sub.items.data.find((item) => {
+		const product = item.price.product;
+		return (typeof product === 'string' ? product : product.id) === feeProductId;
+	});
+
+	// In Stripe v22, current_period_end moved to subscription items
+	const periodEnd = contributionItem?.current_period_end ?? 0;
 
 	return {
 		id: sub.id,
 		status: sub.status,
 		quantity: contributionItem?.quantity ?? 0,
 		coveringFees: feeItem != null,
-		currentPeriodEnd: new Date(sub.current_period_end * 1000),
+		currentPeriodEnd: new Date(periodEnd * 1000),
 		cancelAtPeriodEnd: sub.cancel_at_period_end
 	};
 }
@@ -154,33 +152,47 @@ export async function updateQuantity(
 	if (!sub) throw new Error('No active subscription found');
 
 	const contributionPriceId = getContributionPriceId();
-	const feePriceId = getFeeCoveragePriceId();
+	const feeProductId = getFeeProductId();
 
 	const contributionItem = sub.items.data.find((item) => item.price.id === contributionPriceId);
-	const feeItem = sub.items.data.find((item) => item.price.id === feePriceId);
+	const feeItem = sub.items.data.find((item) => {
+		const product = item.price.product;
+		return (typeof product === 'string' ? product : product.id) === feeProductId;
+	});
 
 	if (!contributionItem) throw new Error('Contribution item not found on subscription');
 
-	const items: Array<{ id?: string; price?: string; quantity?: number; deleted?: boolean }> = [
+	const items: Array<{
+		id?: string;
+		price_data?: { currency: string; product: string; unit_amount: number; recurring: { interval: string } };
+		quantity?: number;
+		deleted?: boolean;
+	}> = [
 		{ id: contributionItem.id, quantity: newQuantity }
 	];
 
 	if (coverFees) {
-		const contributionCents = newQuantity * 500;
+		const contributionCents = newQuantity * CONTRIBUTION_UNIT_CENTS;
 		const { feeCents } = calculateTotalWithFeeCoverage(contributionCents);
 
 		if (feeItem) {
-			// Update existing fee item
-			items.push({ id: feeItem.id, quantity: feeCents });
-		} else {
-			// Add fee coverage item
-			items.push({ price: feePriceId, quantity: feeCents });
+			items.push({ id: feeItem.id, deleted: true });
 		}
+		items.push({
+			price_data: {
+				currency: 'usd',
+				product: feeProductId,
+				unit_amount: feeCents,
+				recurring: { interval: 'month' }
+			},
+			quantity: 1
+		});
 	} else if (feeItem) {
-		// Remove fee coverage item
 		items.push({ id: feeItem.id, deleted: true });
 	}
 
+	// @ts-expect-error — Stripe v22 Item type requires all fields; we only send
+	// the subset needed for quantity update + price_data fee items + deleted flags.
 	await stripe.subscriptions.update(sub.id, { items });
 }
 
@@ -190,8 +202,6 @@ export async function updateQuantity(
 
 /**
  * Cancel the subscription at the end of the current billing period.
- * Credits remain available until period end; the subscription.deleted
- * webhook will reset them.
  */
 export async function cancel(stripeCustomerId: string): Promise<void> {
 	const subscriptions = await stripe.subscriptions.list({
@@ -224,4 +234,27 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 	}
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });
+}
+
+// ---------------------------------------------------------------------------
+// Billing portal
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a Stripe Billing Portal session URL. Returns null if no customer ID
+ * is provided. The portal lets members manage payment methods, view invoices,
+ * and cancel subscriptions.
+ */
+export async function createBillingPortalUrl(
+	stripeCustomerId: string | null | undefined,
+	returnUrl: string
+): Promise<string | null> {
+	if (!stripeCustomerId) return null;
+
+	const session = await stripe.billingPortal.sessions.create({
+		customer: stripeCustomerId,
+		return_url: returnUrl
+	});
+
+	return session.url;
 }

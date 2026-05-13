@@ -2,7 +2,6 @@ import type Stripe from 'stripe';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
-import * as paymentService from './payment-service';
 import * as creditService from './credit-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 
@@ -15,32 +14,29 @@ export { registeredEvents };
 // These are called by the webhook route after signature verification.
 // Each handler is responsible for one event type.
 //
-// The webhook handler maintains a registry of purchasable types so it can
-// update the correct table when a checkout completes. Since the payment
-// service is generic (doesn't know about domain models), this mapping
-// lives here at the integration boundary.
+// checkout.session.completed is handled by domain modules that register
+// listeners. This file only handles finance-specific events (credit
+// allocation and subscription lifecycle).
 // ---------------------------------------------------------------------------
 
-/** Registry of purchasable type → table update function. */
-type PurchasableUpdater = (id: string, paymentRecordId: string) => Promise<void>;
-const purchasableUpdaters: Record<string, PurchasableUpdater> = {
-	// Add entries as domain modules are built, e.g.:
-	// reservation: async (id, paymentRecordId) => {
-	//   await db.update(reservation).set({ stripePaymentRecordId: paymentRecordId }).where(eq(reservation.id, id));
-	// },
-};
+// ---------------------------------------------------------------------------
+// Checkout completion listeners
+// ---------------------------------------------------------------------------
+// Domain modules register listeners that are called with the completed
+// session. Each listener inspects the session metadata to decide whether
+// to act (e.g., a reservation module checks for its reservation_id key).
+// ---------------------------------------------------------------------------
 
-/** Register a purchasable type handler. Called by domain modules at startup. */
-export function registerPurchasableType(type: string, updater: PurchasableUpdater): void {
-	purchasableUpdaters[type] = updater;
+type CheckoutListener = (session: Stripe.Checkout.Session) => Promise<void>;
+const checkoutListeners: CheckoutListener[] = [];
+
+/** Register a listener for checkout completion. Called by domain modules at startup. */
+export function onCheckoutComplete(listener: CheckoutListener): void {
+	checkoutListeners.push(listener);
 }
 
 // ---------------------------------------------------------------------------
-// Webhook handler map — colocates event types with their handler functions
-// ---------------------------------------------------------------------------
-// The webhook route looks up handlers by event type from this map.
-// The event list in webhook-events.ts is the single source of truth used by
-// both this map and the sync-webhooks script.
+// Webhook handler map
 // ---------------------------------------------------------------------------
 
 export type WebhookHandlerFn = (data: any) => Promise<void>;
@@ -58,18 +54,13 @@ export const webhookHandlerMap: Record<RegisteredEvent, WebhookHandlerFn> = {
 export async function handleCheckoutCompleted(
 	session: Stripe.Checkout.Session
 ): Promise<void> {
-	const result = await paymentService.onCheckoutComplete(session.id);
-
-	const updater = purchasableUpdaters[result.purchasableType];
-	if (!updater) {
-		console.warn(
-			`No purchasable updater registered for type "${result.purchasableType}". ` +
-			`Payment record ${result.paymentRecordId} not linked to ${result.purchasableId}.`
-		);
-		return;
+	for (const listener of checkoutListeners) {
+		try {
+			await listener(session);
+		} catch (err) {
+			console.error(`Checkout listener failed for session ${session.id}:`, err);
+		}
 	}
-
-	await updater(result.purchasableId, result.paymentRecordId);
 }
 
 // ---------------------------------------------------------------------------
@@ -93,12 +84,12 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		return;
 	}
 
-	// Find the subscription line item (has a subscription_item reference).
+	// Find the subscription line item (has subscription_item_details in parent).
 	// Filters out proration adjustments and tax lines.
 	// The subscription uses $5/unit pricing — quantity = free hours.
 	const lines = invoice.lines?.data ?? [];
 	const contributionLine = lines.find(
-		(line) => line.subscription_item != null && line.quantity != null && line.quantity > 0
+		(line) => line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
 	);
 
 	if (!contributionLine || !contributionLine.quantity) {

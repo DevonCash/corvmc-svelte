@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$env/dynamic/private', () => ({
 	env: {
 		STRIPE_CONTRIBUTION_PRICE_ID: 'price_contribution',
-		STRIPE_FEE_COVERAGE_PRICE_ID: 'price_fee_coverage'
+		STRIPE_FEE_PRODUCT_ID: 'prod_fee'
 	}
 }));
 
@@ -14,14 +14,14 @@ vi.mock('$env/dynamic/private', () => ({
 // Mock Stripe SDK
 // ---------------------------------------------------------------------------
 const mockStripe = {
-	checkout: {
-		sessions: {
-			create: vi.fn()
-		}
-	},
 	subscriptions: {
 		list: vi.fn(),
 		update: vi.fn()
+	},
+	billingPortal: {
+		sessions: {
+			create: vi.fn()
+		}
 	}
 };
 
@@ -29,11 +29,20 @@ vi.mock('$lib/server/stripe', () => ({
 	stripe: mockStripe
 }));
 
+// ---------------------------------------------------------------------------
+// Mock shared checkout
+// ---------------------------------------------------------------------------
+const mockCheckout = vi.fn();
+vi.mock('./payment-service', () => ({
+	checkout: mockCheckout
+}));
+
 const {
 	createCheckoutSession,
 	getSubscription,
 	updateQuantity,
 	cancel,
+	createBillingPortalUrl,
 	resume
 } = await import('./subscription-service');
 
@@ -45,9 +54,10 @@ describe('createCheckoutSession', () => {
 		vi.clearAllMocks();
 	});
 
-	it('creates subscription checkout with correct quantity', async () => {
-		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sub_sess'
+	it('delegates to shared checkout with subscription mode', async () => {
+		mockCheckout.mockResolvedValue({
+			paid: false,
+			checkoutUrl: 'https://checkout.stripe.com/sub_sess'
 		});
 
 		const url = await createCheckoutSession({
@@ -60,42 +70,40 @@ describe('createCheckoutSession', () => {
 		});
 
 		expect(url).toBe('https://checkout.stripe.com/sub_sess');
-		expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+		expect(mockCheckout).toHaveBeenCalledWith(
 			expect.objectContaining({
-				customer: 'cus_123',
+				userId: 'user-1',
+				stripeCustomerId: 'cus_123',
 				mode: 'subscription',
-				line_items: [
-					{ price: 'price_contribution', quantity: 5 }
-				],
+				lineItems: [{ price: 'price_contribution', quantity: 5 }],
+				coverFees: false,
 				metadata: expect.objectContaining({
-					user_id: 'user-1',
-					cover_fees: '0'
-				})
+					subscription_type: 'contribution'
+				}),
+				successUrl: 'https://example.com/success',
+				cancelUrl: 'https://example.com/cancel'
 			})
 		);
 	});
 
-	it('adds fee coverage line item when coverFees is true', async () => {
-		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sub_fee'
+	it('passes coverFees through to shared checkout', async () => {
+		mockCheckout.mockResolvedValue({
+			paid: false,
+			checkoutUrl: 'https://checkout.stripe.com/sub_fee'
 		});
 
 		await createCheckoutSession({
 			userId: 'user-1',
 			stripeCustomerId: 'cus_123',
-			quantity: 5,
+			quantity: 3,
 			coverFees: true,
 			successUrl: 'https://example.com/success',
 			cancelUrl: 'https://example.com/cancel'
 		});
 
-		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
-		expect(call.line_items).toHaveLength(2);
-		expect(call.line_items[0]).toEqual({ price: 'price_contribution', quantity: 5 });
-		expect(call.line_items[1].price).toBe('price_fee_coverage');
-		// Fee coverage quantity should be > 0 (the fee in cents)
-		expect(call.line_items[1].quantity).toBeGreaterThan(0);
-		expect(call.metadata.cover_fees).toBe('1');
+		expect(mockCheckout).toHaveBeenCalledWith(
+			expect.objectContaining({ coverFees: true })
+		);
 	});
 
 	it('throws when quantity is less than 1', async () => {
@@ -107,6 +115,19 @@ describe('createCheckoutSession', () => {
 			successUrl: 'https://example.com/success',
 			cancelUrl: 'https://example.com/cancel'
 		})).rejects.toThrow('Quantity must be at least 1');
+	});
+
+	it('throws when checkout returns no URL', async () => {
+		mockCheckout.mockResolvedValue({ paid: true });
+
+		await expect(createCheckoutSession({
+			userId: 'user-1',
+			stripeCustomerId: 'cus_123',
+			quantity: 5,
+			coverFees: false,
+			successUrl: 'https://example.com/success',
+			cancelUrl: 'https://example.com/cancel'
+		})).rejects.toThrow('Stripe did not return a checkout URL');
 	});
 });
 
@@ -123,12 +144,11 @@ describe('getSubscription', () => {
 			data: [{
 				id: 'sub_abc',
 				status: 'active',
-				current_period_end: 1700000000,
 				cancel_at_period_end: false,
 				items: {
 					data: [
-						{ price: { id: 'price_contribution' }, quantity: 5 },
-						{ price: { id: 'price_fee_coverage' }, quantity: 103 }
+						{ price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5, current_period_end: 1700000000 },
+						{ price: { id: 'price_auto_fee', product: 'prod_fee' }, quantity: 1, current_period_end: 1700000000 }
 					]
 				}
 			}]
@@ -151,11 +171,10 @@ describe('getSubscription', () => {
 			data: [{
 				id: 'sub_no_fee',
 				status: 'active',
-				current_period_end: 1700000000,
 				cancel_at_period_end: true,
 				items: {
 					data: [
-						{ price: { id: 'price_contribution' }, quantity: 3 }
+						{ price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 3, current_period_end: 1700000000 }
 					]
 				}
 			}]
@@ -184,13 +203,13 @@ describe('updateQuantity', () => {
 		vi.clearAllMocks();
 	});
 
-	it('updates contribution quantity and adds fee item', async () => {
+	it('updates contribution quantity and adds fee item via price_data', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
 			data: [{
 				id: 'sub_upd',
 				items: {
 					data: [
-						{ id: 'si_contrib', price: { id: 'price_contribution' }, quantity: 3 }
+						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 3 }
 					]
 				}
 			}]
@@ -201,9 +220,44 @@ describe('updateQuantity', () => {
 		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_upd', {
 			items: expect.arrayContaining([
 				{ id: 'si_contrib', quantity: 7 },
-				expect.objectContaining({ price: 'price_fee_coverage' })
+				expect.objectContaining({
+					price_data: expect.objectContaining({
+						currency: 'usd',
+						product: 'prod_fee',
+						recurring: { interval: 'month' }
+					}),
+					quantity: 1
+				})
 			])
 		});
+
+		// Fee amount should be positive
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		const feeItem = call.items.find((i: any) => i.price_data);
+		expect(feeItem.price_data.unit_amount).toBeGreaterThan(0);
+	});
+
+	it('removes existing fee item before adding new one', async () => {
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [{
+				id: 'sub_replace_fee',
+				items: {
+					data: [
+						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5 },
+						{ id: 'si_old_fee', price: { id: 'price_old_fee', product: 'prod_fee' }, quantity: 1 }
+					]
+				}
+			}]
+		});
+
+		await updateQuantity('cus_123', 10, true);
+
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		// Should delete old fee item
+		expect(call.items).toContainEqual({ id: 'si_old_fee', deleted: true });
+		// Should add new fee item with price_data
+		const newFee = call.items.find((i: any) => i.price_data);
+		expect(newFee).toBeDefined();
 	});
 
 	it('removes fee item when coverFees is false', async () => {
@@ -212,8 +266,8 @@ describe('updateQuantity', () => {
 				id: 'sub_rm_fee',
 				items: {
 					data: [
-						{ id: 'si_contrib', price: { id: 'price_contribution' }, quantity: 5 },
-						{ id: 'si_fee', price: { id: 'price_fee_coverage' }, quantity: 103 }
+						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5 },
+						{ id: 'si_fee', price: { id: 'price_fee_coverage', product: 'prod_fee' }, quantity: 1 }
 					]
 				}
 			}]
@@ -293,5 +347,34 @@ describe('resume', () => {
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
 		await expect(resume('cus_ghost')).rejects.toThrow('No active subscription found');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// createBillingPortalUrl
+// ---------------------------------------------------------------------------
+describe('createBillingPortalUrl', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('creates a billing portal session and returns the URL', async () => {
+		mockStripe.billingPortal.sessions.create.mockResolvedValue({
+			url: 'https://billing.stripe.com/session/abc'
+		});
+
+		const url = await createBillingPortalUrl('cus_123', 'https://example.com/return');
+
+		expect(url).toBe('https://billing.stripe.com/session/abc');
+		expect(mockStripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+			customer: 'cus_123',
+			return_url: 'https://example.com/return'
+		});
+	});
+
+	it('returns null when no customer ID is provided', async () => {
+		expect(await createBillingPortalUrl(null, 'https://example.com')).toBeNull();
+		expect(await createBillingPortalUrl(undefined, 'https://example.com')).toBeNull();
+		expect(mockStripe.billingPortal.sessions.create).not.toHaveBeenCalled();
 	});
 });

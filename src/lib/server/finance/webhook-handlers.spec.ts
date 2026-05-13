@@ -25,11 +25,6 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const mockPaymentService = {
-	onCheckoutComplete: vi.fn()
-};
-vi.mock('./payment-service', () => mockPaymentService);
-
 const mockCreditService = {
 	allocateMonthlyCredits: vi.fn(),
 	setBalance: vi.fn()
@@ -40,7 +35,7 @@ const {
 	handleCheckoutCompleted,
 	handleInvoicePaid,
 	handleSubscriptionDeleted,
-	registerPurchasableType
+	onCheckoutComplete
 } = await import('./webhook-handlers');
 
 // ---------------------------------------------------------------------------
@@ -52,35 +47,30 @@ describe('handleCheckoutCompleted', () => {
 		userQueryResults = [];
 	});
 
-	it('calls onCheckoutComplete and updates purchasable via registered updater', async () => {
-		const updater = vi.fn();
-		registerPurchasableType('reservation', updater);
+	it('calls registered listeners with the session', async () => {
+		const listener = vi.fn();
+		onCheckoutComplete(listener);
 
-		mockPaymentService.onCheckoutComplete.mockResolvedValue({
-			purchasableType: 'reservation',
-			purchasableId: 'res-42',
-			paymentRecordId: 'pi_abc'
-		});
+		const session = { id: 'cs_123', metadata: { reservation_id: 'res-42' } } as unknown as Stripe.Checkout.Session;
+		await handleCheckoutCompleted(session);
 
-		await handleCheckoutCompleted({ id: 'cs_123' } as Stripe.Checkout.Session);
-
-		expect(mockPaymentService.onCheckoutComplete).toHaveBeenCalledWith('cs_123');
-		expect(updater).toHaveBeenCalledWith('res-42', 'pi_abc');
+		expect(listener).toHaveBeenCalledWith(session);
 	});
 
-	it('warns but does not throw for unknown purchasable type', async () => {
-		mockPaymentService.onCheckoutComplete.mockResolvedValue({
-			purchasableType: 'unknown_thing',
-			purchasableId: 'x-1',
-			paymentRecordId: 'pi_xyz'
-		});
+	it('calls multiple listeners in order', async () => {
+		const order: string[] = [];
+		const listenerA = vi.fn(async () => { order.push('A'); });
+		const listenerB = vi.fn(async () => { order.push('B'); });
 
-		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		onCheckoutComplete(listenerA);
+		onCheckoutComplete(listenerB);
 
-		await handleCheckoutCompleted({ id: 'cs_456' } as Stripe.Checkout.Session);
+		await handleCheckoutCompleted({ id: 'cs_multi' } as Stripe.Checkout.Session);
 
-		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('No purchasable updater'));
-		warnSpy.mockRestore();
+		expect(order).toContain('A');
+		expect(order).toContain('B');
+		expect(listenerA).toHaveBeenCalled();
+		expect(listenerB).toHaveBeenCalled();
 	});
 });
 
@@ -105,7 +95,7 @@ describe('handleInvoicePaid', () => {
 			customer: 'cus_123',
 			lines: {
 				data: [
-					{ subscription_item: 'si_abc', quantity: 5, amount: 2500 }
+					{ parent: { subscription_item_details: { subscription_item: 'si_abc' } }, quantity: 5, amount: 2500 }
 				]
 			}
 		} as unknown as Stripe.Invoice;
@@ -129,7 +119,7 @@ describe('handleInvoicePaid', () => {
 			customer: { id: 'cus_456' },
 			lines: {
 				data: [
-					{ subscription_item: 'si_obj', quantity: 3, amount: 1500 }
+					{ parent: { subscription_item_details: { subscription_item: 'si_obj' } }, quantity: 3, amount: 1500 }
 				]
 			}
 		} as unknown as Stripe.Invoice;
@@ -153,6 +143,29 @@ describe('handleInvoicePaid', () => {
 		expect(mockCreditService.allocateMonthlyCredits).not.toHaveBeenCalled();
 	});
 
+	it('skips lines without subscription_item_details', async () => {
+		userQueryResults = [{ id: 'user-1' }];
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const invoice = {
+			id: 'inv_proration',
+			parent: {
+				subscription_details: { subscription: 'sub_abc' }
+			},
+			customer: 'cus_123',
+			lines: {
+				data: [
+					{ parent: { subscription_item_details: null }, quantity: 1, amount: 100 }
+				]
+			}
+		} as unknown as Stripe.Invoice;
+
+		await handleInvoicePaid(invoice);
+
+		expect(mockCreditService.allocateMonthlyCredits).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
+
 	it('warns when no user found for customer', async () => {
 		userQueryResults = [];
 		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -163,7 +176,7 @@ describe('handleInvoicePaid', () => {
 				subscription_details: { subscription: 'sub_xyz' }
 			},
 			customer: 'cus_unknown',
-			lines: { data: [{ subscription_item: 'si_xyz', quantity: 3 }] }
+			lines: { data: [{ parent: { subscription_item_details: { subscription_item: 'si_xyz' } }, quantity: 3 }] }
 		} as unknown as Stripe.Invoice;
 
 		await handleInvoicePaid(invoice);
