@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@humanspeak/svelte-headless-table':
+        specifier: ^6.0.6
+        version: 6.0.6(svelte@5.55.5(@typescript-eslint/types@8.59.3))
       '@tabler/icons-svelte':
         specifier: ^3.44.0
         version: 3.44.0(svelte@5.55.5(@typescript-eslint/types@8.59.3))
@@ -937,6 +940,26 @@ packages:
   '@humanfs/types@0.15.0':
     resolution: {integrity: sha512-ZZ1w0aoQkwuUuC7Yf+7sdeaNfqQiiLcSRbfI08oAxqLtpXQr9AIVX7Ay7HLDuiLYAaFPu8oBYNq/QIi9URHJ3Q==}
     engines: {node: '>=18.18.0'}
+
+  '@humanspeak/memory-cache@1.0.6':
+    resolution: {integrity: sha512-8nS/7OIysYsjd5d64cprdwupgqzpMmFDHw25EWuPLRxxJw5q91K7Z+bjIcAPjikMU9vmptY5GyhsZDbcr1ym4Q==}
+    engines: {node: '>=18.0.0'}
+
+  '@humanspeak/svelte-headless-table@6.0.6':
+    resolution: {integrity: sha512-voFULtgXb1L7wZ/0zof10V7AqpImdRDUKzv2h320xf7cuu8xFys6vFRCfsPdMxQVlFRSCVWtt1VESc2zDuGPOg==}
+    peerDependencies:
+      svelte: ^5.30.0
+
+  '@humanspeak/svelte-keyed@5.0.1':
+    resolution: {integrity: sha512-jFvANd9Nb5B/u9ELTSw1iUyuckgjF9R15BvK1V7eLLPurt4hxu35bZAoZMkqYxmj8fazcSw9UkmEu66jZ0+0Rg==}
+
+  '@humanspeak/svelte-render@5.1.1':
+    resolution: {integrity: sha512-OGqKLVezvEvHmouQXhzfGibtFxgA6a9PAuuNzJ54t1KFQScBCDl9MtLao+ze+5nVUJHoVCWbvXOEMOFY4eGROw==}
+    peerDependencies:
+      svelte: ^5.0.0
+
+  '@humanspeak/svelte-subscribe@5.0.0':
+    resolution: {integrity: sha512-rQEcFFk77ZzYXFPHWf3K8TmjP/97NwNbf6qBE0s5XYB2eqdDNvxa8fKHVPDBukTmBCX53O20FJjXvmlN5yXzjw==}
 
   '@humanwhocodes/module-importer@1.0.1':
     resolution: {integrity: sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA==}
@@ -4304,6 +4327,25 @@ snapshots:
       '@humanwhocodes/retry': 0.4.3
 
   '@humanfs/types@0.15.0': {}
+
+  '@humanspeak/memory-cache@1.0.6': {}
+
+  '@humanspeak/svelte-headless-table@6.0.6(svelte@5.55.5(@typescript-eslint/types@8.59.3))':
+    dependencies:
+      '@humanspeak/memory-cache': 1.0.6
+      '@humanspeak/svelte-keyed': 5.0.1
+      '@humanspeak/svelte-render': 5.1.1(svelte@5.55.5(@typescript-eslint/types@8.59.3))
+      '@humanspeak/svelte-subscribe': 5.0.0
+      svelte: 5.55.5(@typescript-eslint/types@8.59.3)
+
+  '@humanspeak/svelte-keyed@5.0.1': {}
+
+  '@humanspeak/svelte-render@5.1.1(svelte@5.55.5(@typescript-eslint/types@8.59.3))':
+    dependencies:
+      '@humanspeak/svelte-subscribe': 5.0.0
+      svelte: 5.55.5(@typescript-eslint/types@8.59.3)
+
+  '@humanspeak/svelte-subscribe@5.0.0': {}
 
   '@humanwhocodes/module-importer@1.0.1': {}
 

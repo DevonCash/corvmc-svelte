@@ -1,0 +1,155 @@
+import { z } from 'zod';
+import { error } from '@sveltejs/kit';
+import { query, command } from '$app/server';
+import { db } from '$lib/server/db';
+import { reservation } from '$lib/server/db/schema/reservation';
+import { user } from '$lib/server/db/schema/auth';
+import { eq, ilike, or } from 'drizzle-orm';
+import { getAvailableSlots, getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
+import { staffCreate } from '$lib/server/reservation/reservation-service';
+import { markComplete, markNoShow, recordCashAndComplete } from '$lib/server/reservation/reservation-service';
+import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { HOURLY_RATE_CENTS, TIME_SLOT_MINUTES, MIN_DURATION_HOURS, MAX_DURATION_HOURS } from '$lib/server/reservation/config';
+
+// ---------------------------------------------------------------------------
+// Queries — create modal
+// ---------------------------------------------------------------------------
+
+export const searchMembers = query(z.string(), async (q) => {
+	if (!q || q.length < 2) return [];
+
+	const pattern = `%${q}%`;
+	const results = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(or(ilike(user.name, pattern), ilike(user.email, pattern)))
+		.limit(20);
+
+	return results;
+});
+
+export const getSlots = query(z.string(), async (dateParam) => {
+	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const slots = await getAvailableSlots(date);
+
+	return {
+		date: date.toISOString().split('T')[0],
+		slots,
+		config: {
+			hourlyRateCents: HOURLY_RATE_CENTS,
+			slotMinutes: TIME_SLOT_MINUTES,
+			minDurationHours: MIN_DURATION_HOURS,
+			maxDurationHours: MAX_DURATION_HOURS
+		}
+	};
+});
+
+export const checkConflicts = query(
+	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
+	async ({ date, startTime, endTime }) => {
+		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
+		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
+
+		const conflicts = await getConflictDetails(startsAt, endsAt);
+		const validationWarnings = getValidationWarnings(startsAt, endsAt);
+
+		return { conflicts, validationWarnings };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — create modal
+// ---------------------------------------------------------------------------
+
+const staffCreateSchema = z.object({
+	memberId: z.string().min(1, 'Select a member'),
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+	notes: z.string().optional()
+});
+
+export const createReservation = command(staffCreateSchema, async (raw) => {
+	const data = raw as z.infer<typeof staffCreateSchema>;
+	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
+	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+
+	const res = await staffCreate({
+		userId: data.memberId,
+		bookerType: 'user',
+		bookerId: data.memberId,
+		startsAt,
+		endsAt,
+		notes: data.notes,
+		status: 'confirmed'
+	});
+
+	return { reservationId: res.id };
+});
+
+// ---------------------------------------------------------------------------
+// Forms — resolve modal
+// ---------------------------------------------------------------------------
+
+const resolveSchema = z.object({
+	reservationId: z.string().min(1)
+});
+
+export const resolveComplete = command(
+	resolveSchema.extend({ userId: z.string().min(1), startsAt: z.string(), endsAt: z.string() }),
+	async (data) => {
+		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
+		const durationHours = durationMs / (1000 * 60 * 60);
+		const amountCents = Math.round(durationHours * HOURLY_RATE_CENTS);
+
+		const [member] = await db
+			.select({ stripeId: user.stripeId })
+			.from(user)
+			.where(eq(user.id, data.userId))
+			.limit(1);
+
+		if (!member?.stripeId) {
+			throw error(400, 'Member has no Stripe customer ID');
+		}
+
+		const { paymentRecordId } = await recordCashPayment({
+			stripeCustomerId: member.stripeId,
+			amountCents,
+			metadata: { reservation_id: data.reservationId }
+		});
+
+		await recordCashAndComplete(data.reservationId, paymentRecordId);
+		return { success: true };
+	}
+);
+
+export const resolveNoShow = command(resolveSchema, async (data) => {
+	await markNoShow(data.reservationId);
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildDateInTz(dateStr: string, timeStr: string, tz: string): Date {
+	const [hours, minutes] = timeStr.split(':').map(Number);
+	const utcDate = new Date(`${dateStr}T${timeStr}:00Z`);
+
+	const formatter = new Intl.DateTimeFormat('en-US', {
+		timeZone: tz,
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false
+	});
+
+	const parts = formatter.formatToParts(utcDate);
+	const localHour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+	const localMinute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+
+	const wantedMinutes = hours * 60 + minutes;
+	const gotMinutes = localHour * 60 + localMinute;
+	const offsetMinutes = gotMinutes - wantedMinutes;
+
+	return new Date(utcDate.getTime() - offsetMinutes * 60 * 1000);
+}

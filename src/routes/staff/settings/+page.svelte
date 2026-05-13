@@ -1,0 +1,144 @@
+<script lang="ts">
+	import { getProducts, updateProduct } from './data.remote';
+	import Form from '$lib/components/Form.svelte';
+	import SubmitButton from '$lib/components/SubmitButton.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+
+	let products = $derived(await getProducts());
+
+	function formatDollars(cents: number): string {
+		return (cents / 100).toFixed(2);
+	}
+
+	function centsToDollars(cents: number): string {
+		return (cents / 100).toFixed(2);
+	}
+</script>
+
+<svelte:boundary>
+	<PageHeader title="Settings" subtitle="Staff" />
+
+	<div class="space-y-6 max-w-2xl">
+		<h2 class="text-lg font-semibold">Stripe Products</h2>
+		<p class="text-sm opacity-70">
+			Configure the products and pricing used for checkout. Changes to names
+			and descriptions sync to Stripe automatically. Price changes take
+			effect on the next checkout.
+		</p>
+
+		{#each products as product (product.key)}
+			{@const isFee = product.key === 'fee_coverage'}
+			{@const instance = updateProduct.for(product.key)}
+			<Form
+				remote={instance}
+				initial={{
+					key: product.key,
+					name: product.name,
+					description: product.description ?? '',
+					unitAmountCents: String(product.unitAmountCents)
+				}}
+				successToast="{product.name} updated"
+			>
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<div class="flex items-center justify-between">
+							<h3 class="card-title text-base">{product.name}</h3>
+							<SubmitButton
+								label="Save"
+								successLabel="Saved"
+								errorLabel="Error"
+								class="btn-primary btn-sm"
+							/>
+						</div>
+
+						{#if product.stripeProductId}
+							<p class="text-xs font-mono opacity-50">{product.stripeProductId}</p>
+						{:else}
+							<p class="text-xs opacity-50">Stripe product will be created on first checkout</p>
+						{/if}
+
+						<input type="hidden" name="key" value={product.key} />
+
+						<div class="grid gap-4 mt-2 sm:grid-cols-2">
+							<div class="form-control">
+								<label class="label" for="name-{product.key}">
+									<span class="label-text">Product name</span>
+								</label>
+								{#each instance.fields.name.issues() ?? [] as issue}
+									<p class="text-error text-sm">{issue.message}</p>
+								{/each}
+								<input
+									id="name-{product.key}"
+									name="name"
+									type="text"
+									value={product.name}
+									class="input input-bordered input-sm"
+								/>
+							</div>
+
+							{#if !isFee}
+								<div class="form-control">
+									<label class="label" for="amount-{product.key}">
+										<span class="label-text">
+											Amount ({product.unitLabel ?? 'per unit'})
+										</span>
+									</label>
+									{#each instance.fields.unitAmountCents.issues() ?? [] as issue}
+										<p class="text-error text-sm">{issue.message}</p>
+									{/each}
+									<label class="input input-bordered input-sm flex items-center gap-1">
+										<span class="opacity-60">$</span>
+										<input
+											id="amount-{product.key}"
+											type="number"
+											step="0.01"
+											min="0"
+											value={centsToDollars(product.unitAmountCents)}
+											oninput={(e) => {
+												const input = e.target as HTMLInputElement;
+												const dollars = parseFloat(input.value);
+												const hidden = input.closest('form')?.querySelector<HTMLInputElement>('[name="unitAmountCents"]');
+												if (hidden && !isNaN(dollars)) hidden.value = String(Math.round(dollars * 100));
+											}}
+											class="grow bg-transparent outline-none"
+										/>
+									</label>
+									<input type="hidden" name="unitAmountCents" value={product.unitAmountCents} />
+								</div>
+							{:else}
+								<!-- Fee coverage amount is computed per-checkout, not configurable -->
+								<input type="hidden" name="unitAmountCents" value="0" />
+							{/if}
+						</div>
+
+						<div class="form-control mt-2">
+							<label class="label" for="desc-{product.key}">
+								<span class="label-text">Description</span>
+							</label>
+							<textarea
+								id="desc-{product.key}"
+								name="description"
+								value={product.description ?? ''}
+								class="textarea textarea-bordered textarea-sm"
+								rows="2"
+							></textarea>
+						</div>
+					</div>
+				</div>
+			</Form>
+		{/each}
+	</div>
+
+	{#snippet pending()}
+		<div class="flex items-center justify-center p-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{/snippet}
+
+	{#snippet failed(err, reset)}
+		<div class="alert alert-error">
+			<p>Failed to load settings: {String(err)}</p>
+			<button class="btn btn-sm" onclick={reset}>Retry</button>
+		</div>
+	{/snippet}
+</svelte:boundary>

@@ -1,0 +1,132 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+
+	let { data } = $props();
+
+	const upcoming = $derived(data.upcoming);
+	const past = $derived(data.past);
+
+	let activeTab = $state<'upcoming' | 'past'>('upcoming');
+
+	function formatDate(iso: string): string {
+		return new Date(iso).toLocaleDateString('en-US', {
+			timeZone: 'America/Los_Angeles',
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
+	function formatTime(iso: string): string {
+		return new Date(iso).toLocaleTimeString('en-US', {
+			timeZone: 'America/Los_Angeles',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
+	function formatDuration(startsAt: string, endsAt: string): string {
+		const ms = new Date(endsAt).getTime() - new Date(startsAt).getTime();
+		const hours = ms / (1000 * 60 * 60);
+		return hours === 1 ? '1 hour' : `${hours} hours`;
+	}
+
+	const statusBadge: Record<string, string> = {
+		scheduled: 'badge-warning',
+		confirmed: 'badge-success',
+		completed: 'badge-info',
+		no_show: 'badge-error',
+		cancelled: 'badge-ghost'
+	};
+</script>
+
+<div class="space-y-6">
+	<div class="flex items-center justify-between">
+		<h1 class="text-2xl font-bold">My Reservations</h1>
+		<a href="/member/reservations/new" class="btn btn-primary">Book a Session</a>
+	</div>
+
+	<div role="tablist" class="tabs tabs-bordered">
+		<button
+			role="tab"
+			class="tab"
+			class:tab-active={activeTab === 'upcoming'}
+			onclick={() => (activeTab = 'upcoming')}
+		>
+			Upcoming ({upcoming.length})
+		</button>
+		<button
+			role="tab"
+			class="tab"
+			class:tab-active={activeTab === 'past'}
+			onclick={() => (activeTab = 'past')}
+		>
+			Past
+		</button>
+	</div>
+
+	{#if activeTab === 'upcoming'}
+		{#if upcoming.length === 0}
+			<div class="text-center py-12 opacity-60">
+				<p>No upcoming reservations.</p>
+				<a href="/member/reservations/new" class="link link-primary mt-2 inline-block">
+					Book your first session
+				</a>
+			</div>
+		{:else}
+			<div class="space-y-3">
+				{#each upcoming as res}
+					<div class="card bg-base-100 shadow-sm">
+						<div class="card-body flex-row items-center justify-between py-4">
+							<div>
+								<p class="font-medium">
+									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+								</p>
+								<p class="text-sm opacity-60">
+									{formatDuration(res.startsAt, res.endsAt)}
+									{#if res.notes} &middot; {res.notes}{/if}
+								</p>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
+								{#if res.status === 'scheduled'}
+									<a href="/member/reservations/{res.id}/pay" class="btn btn-primary btn-sm">
+										Pay Now
+									</a>
+								{/if}
+								{#if res.status === 'scheduled' || res.status === 'confirmed'}
+									<form method="POST" action="?/cancel" use:enhance>
+										<input type="hidden" name="reservationId" value={res.id} />
+										<button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
+									</form>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	{/if}
+
+	{#if activeTab === 'past'}
+		{#if past.length === 0}
+			<p class="text-center py-12 opacity-60">No past reservations.</p>
+		{:else}
+			<div class="space-y-3">
+				{#each past as res}
+					<div class="card bg-base-100 shadow-sm">
+						<div class="card-body flex-row items-center justify-between py-4">
+							<div>
+								<p class="font-medium">
+									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+								</p>
+								<p class="text-sm opacity-60">{formatDuration(res.startsAt, res.endsAt)}</p>
+							</div>
+							<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	{/if}
+</div>

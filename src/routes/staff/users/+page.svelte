@@ -1,17 +1,25 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
+	import type { Column } from '$lib/components/DataTable.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import Pagination from '$lib/components/Pagination.svelte';
 
 	let { data }: { data: PageServerData } = $props();
 
-	function buildHref(p: number): string {
-		const params = new URLSearchParams();
-		params.set('page', String(p));
-		if (data.search) params.set('q', data.search);
-		return `?${params}`;
-	}
+	type User = (typeof data.users)[number];
+
+	const columns: Column<User>[] = [
+		{ key: 'name', header: 'Name', sortable: true },
+		{ key: 'email', header: 'Email', sortable: true },
+		{ key: 'pronouns', header: 'Pronouns', cell: (v) => (v as string) ?? '—', class: 'opacity-70' },
+		{ key: 'roles', header: 'Roles' },
+		{
+			key: 'createdAt',
+			header: 'Joined',
+			sortable: true,
+			cell: (v) => new Date(v as string).toLocaleDateString()
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -34,16 +42,7 @@
 		{/if}
 	</form>
 
-	<DataTable items={data.users} empty="No users found">
-		{#snippet header()}
-			<tr>
-				<th>Name</th>
-				<th>Email</th>
-				<th>Pronouns</th>
-				<th>Roles</th>
-				<th>Joined</th>
-			</tr>
-		{/snippet}
+	<DataTable data={data.users} {columns} empty="No users found">
 		{#snippet row(u)}
 			<tr class="hover">
 				<td>
@@ -64,10 +63,4 @@
 			</tr>
 		{/snippet}
 	</DataTable>
-
-	<Pagination
-		page={data.pagination.page}
-		totalPages={data.pagination.totalPages}
-		{buildHref}
-	/>
 </div>

@@ -1,3 +1,7 @@
+## UI Patterns
+
+Before building or modifying any page, read `docs/ui-patterns.md`. It defines the shared components (Form, FormField, SubmitButton, PageHeader, StatusBadge, etc.) and composition patterns that all pages must follow. Use it whenever creating new routes, adding forms, or touching page layout.
+
 ## Project Configuration
 
 - **Language**: TypeScript

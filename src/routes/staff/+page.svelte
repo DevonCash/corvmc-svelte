@@ -1,10 +1,24 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
+	import type { Column } from '$lib/components/DataTable.svelte';
 	import StatCard from '$lib/components/StatCard.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let { data }: { data: PageServerData } = $props();
+
+	type RecentUser = (typeof data.recentUsers)[number];
+
+	const columns: Column<RecentUser>[] = [
+		{ key: 'name', header: 'Name', sortable: true },
+		{ key: 'email', header: 'Email' },
+		{
+			key: 'createdAt',
+			header: 'Joined',
+			sortable: true,
+			cell: (v) => new Date(v as string).toLocaleDateString()
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -17,14 +31,7 @@
 		<StatCard title="New This Month" value={data.stats.newUsersThisMonth} />
 	</div>
 
-	<DataTable items={data.recentUsers} empty="No members yet">
-		{#snippet header()}
-			<tr>
-				<th>Name</th>
-				<th>Email</th>
-				<th>Joined</th>
-			</tr>
-		{/snippet}
+	<DataTable data={data.recentUsers} {columns} empty="No members yet">
 		{#snippet row(u)}
 			<tr>
 				<td>

@@ -1,9 +1,9 @@
 import type Stripe from 'stripe';
-import { env } from '$env/dynamic/private';
 import { stripe } from '$lib/server/stripe';
 import * as creditService from './credit-service';
 import { type CreditType, creditTypes } from './types';
 import { calculateTotalWithFeeCoverage } from './fees';
+import { getStripeProductId } from './product-config-service';
 
 // ---------------------------------------------------------------------------
 // Local line item type — avoids Stripe namespace resolution issues in v22
@@ -35,10 +35,8 @@ export interface CheckoutLineItem {
 //   STRIPE_FEE_PRODUCT_ID — product for the fee coverage line item
 // ---------------------------------------------------------------------------
 
-function getFeeProductId(): string {
-	const id = env.STRIPE_FEE_PRODUCT_ID;
-	if (!id) throw new Error('STRIPE_FEE_PRODUCT_ID is not set');
-	return id;
+async function getFeeProductId(): Promise<string> {
+	return getStripeProductId('fee_coverage');
 }
 
 // ---------------------------------------------------------------------------
@@ -196,10 +194,11 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	// minimum charge threshold if the UX matters.
 	if (coverFees && remainingCents > 0) {
 		const { feeCents } = calculateTotalWithFeeCoverage(remainingCents);
+		const feeProductId = await getFeeProductId();
 		const feeLineItem: CheckoutLineItem = {
 			price_data: {
 				currency: 'usd',
-				product: getFeeProductId(),
+				product: feeProductId,
 				unit_amount: feeCents,
 				...(mode === 'subscription' && { recurring: { interval: 'month' } })
 			},

@@ -1,7 +1,11 @@
-import { env } from '$env/dynamic/private';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from './payment-service';
 import { calculateTotalWithFeeCoverage } from './fees';
+import {
+	getProductConfig,
+	getStripeProductId,
+	buildSubscriptionLineItem
+} from './product-config-service';
 
 // ---------------------------------------------------------------------------
 // SubscriptionService — manages Stripe subscription lifecycle
@@ -10,25 +14,9 @@ import { calculateTotalWithFeeCoverage } from './fees';
 // mode: 'subscription'. This file handles lifecycle operations:
 // getSubscription, updateQuantity, cancel, resume.
 //
-// Environment variables:
-//   STRIPE_CONTRIBUTION_PRICE_ID — $5/unit recurring price
-//   STRIPE_FEE_PRODUCT_ID        — product for the fee coverage line item
+// All pricing uses inline price_data from product_config. No stored Stripe
+// Price IDs — unit amounts are read from the database at checkout time.
 // ---------------------------------------------------------------------------
-
-function getContributionPriceId(): string {
-	const id = env.STRIPE_CONTRIBUTION_PRICE_ID;
-	if (!id) throw new Error('STRIPE_CONTRIBUTION_PRICE_ID is not set');
-	return id;
-}
-
-function getFeeProductId(): string {
-	const id = env.STRIPE_FEE_PRODUCT_ID;
-	if (!id) throw new Error('STRIPE_FEE_PRODUCT_ID is not set');
-	return id;
-}
-
-/** Cents per contribution unit. Matches the Stripe Price configuration. */
-const CONTRIBUTION_UNIT_CENTS = 500;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,13 +53,18 @@ export async function createCheckoutSession(options: CreateSubscriptionOptions):
 
 	if (quantity < 1) throw new Error('Quantity must be at least 1');
 
+	const config = await getProductConfig('contribution');
+	const lineItem = await buildSubscriptionLineItem(
+		'contribution',
+		config.unitAmountCents,
+		quantity
+	);
+
 	const result = await checkout({
 		userId,
 		stripeCustomerId,
 		mode: 'subscription',
-		lineItems: [
-			{ price: getContributionPriceId(), quantity }
-		],
+		lineItems: [lineItem],
 		coverFees,
 		metadata: {
 			subscription_type: 'contribution'
@@ -105,10 +98,13 @@ export async function getSubscription(stripeCustomerId: string): Promise<Subscri
 	const sub = subscriptions.data[0];
 	if (!sub) return null;
 
-	const contributionPriceId = getContributionPriceId();
-	const feeProductId = getFeeProductId();
+	const contributionProductId = await getStripeProductId('contribution');
+	const feeProductId = await getStripeProductId('fee_coverage');
 
-	const contributionItem = sub.items.data.find((item) => item.price.id === contributionPriceId);
+	const contributionItem = sub.items.data.find((item) => {
+		const product = item.price.product;
+		return (typeof product === 'string' ? product : product.id) === contributionProductId;
+	});
 	const feeItem = sub.items.data.find((item) => {
 		const product = item.price.product;
 		return (typeof product === 'string' ? product : product.id) === feeProductId;
@@ -151,16 +147,21 @@ export async function updateQuantity(
 	const sub = subscriptions.data[0];
 	if (!sub) throw new Error('No active subscription found');
 
-	const contributionPriceId = getContributionPriceId();
-	const feeProductId = getFeeProductId();
+	const contributionProductId = await getStripeProductId('contribution');
+	const feeProductId = await getStripeProductId('fee_coverage');
 
-	const contributionItem = sub.items.data.find((item) => item.price.id === contributionPriceId);
+	const contributionItem = sub.items.data.find((item) => {
+		const product = item.price.product;
+		return (typeof product === 'string' ? product : product.id) === contributionProductId;
+	});
 	const feeItem = sub.items.data.find((item) => {
 		const product = item.price.product;
 		return (typeof product === 'string' ? product : product.id) === feeProductId;
 	});
 
 	if (!contributionItem) throw new Error('Contribution item not found on subscription');
+
+	const contributionConfig = await getProductConfig('contribution');
 
 	const items: Array<{
 		id?: string;
@@ -172,7 +173,7 @@ export async function updateQuantity(
 	];
 
 	if (coverFees) {
-		const contributionCents = newQuantity * CONTRIBUTION_UNIT_CENTS;
+		const contributionCents = newQuantity * contributionConfig.unitAmountCents;
 		const { feeCents } = calculateTotalWithFeeCoverage(contributionCents);
 
 		if (feeItem) {

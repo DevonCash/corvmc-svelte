@@ -74,6 +74,7 @@
 		"zod4-mock": "^0.2.3"
 	},
 	"dependencies": {
+		"@humanspeak/svelte-headless-table": "^6.0.6",
 		"@tabler/icons-svelte": "^3.44.0",
 		"bits-ui": "^2.18.1",
 		"daisyui": "^5.5.19",

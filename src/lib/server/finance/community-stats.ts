@@ -83,8 +83,20 @@ async function queryStats(): Promise<CommunityStats> {
 	};
 }
 
-/** First day of the current month at midnight UTC. */
+/** First day of the current month at midnight in the app timezone (America/Los_Angeles). */
 function getMonthStart(): Date {
-	const now = new Date();
-	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+	// Format current date in app timezone to get the correct local month/year
+	const parts = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/Los_Angeles',
+		year: 'numeric',
+		month: 'numeric'
+	}).formatToParts(new Date());
+
+	const year = Number(parts.find(p => p.type === 'year')!.value);
+	const month = Number(parts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+
+	// Create a Date representing midnight of the 1st in Los_Angeles.
+	// We approximate by using UTC and adjusting for Pacific offset (max 8h behind UTC).
+	// For vanity stats with 24h caching, the few-hour boundary edge case is acceptable.
+	return new Date(Date.UTC(year, month, 1, 8)); // 00:00 PST = 08:00 UTC
 }

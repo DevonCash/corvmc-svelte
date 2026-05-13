@@ -1,0 +1,26 @@
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { env } from '$env/dynamic/private';
+import { autoCompleteExpired } from '$lib/server/reservation/reservation-service';
+
+/**
+ * Cron endpoint for auto-completing paid reservations past their end time.
+ * Protected by a shared secret in the Authorization header.
+ *
+ * Call from an external scheduler every 15 minutes:
+ *   POST /api/cron/auto-complete
+ *   Authorization: Bearer <CRON_SECRET>
+ */
+export const POST: RequestHandler = async ({ request }) => {
+	const secret = env.CRON_SECRET;
+	if (!secret) throw error(500, 'CRON_SECRET not configured');
+
+	const auth = request.headers.get('Authorization');
+	if (auth !== `Bearer ${secret}`) {
+		throw error(401, 'Unauthorized');
+	}
+
+	const completed = await autoCompleteExpired();
+
+	return json({ completed });
+};
