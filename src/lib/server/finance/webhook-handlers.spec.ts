@@ -1,0 +1,222 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type Stripe from 'stripe';
+
+// ---------------------------------------------------------------------------
+// Mock dependencies
+// ---------------------------------------------------------------------------
+let userQueryResults: unknown[] = [];
+
+function chainable() {
+	const proxy: any = new Proxy(() => proxy, {
+		get(_, prop) {
+			if (prop === 'then') {
+				return (resolve: (v: unknown[]) => void) => resolve(userQueryResults);
+			}
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: () => chainable(),
+		update: () => chainable()
+	}
+}));
+
+const mockPaymentService = {
+	onCheckoutComplete: vi.fn()
+};
+vi.mock('./payment-service', () => mockPaymentService);
+
+const mockCreditService = {
+	allocateMonthlyCredits: vi.fn(),
+	setBalance: vi.fn()
+};
+vi.mock('./credit-service', () => mockCreditService);
+
+const {
+	handleCheckoutCompleted,
+	handleInvoicePaid,
+	handleSubscriptionDeleted,
+	registerPurchasableType
+} = await import('./webhook-handlers');
+
+// ---------------------------------------------------------------------------
+// handleCheckoutCompleted
+// ---------------------------------------------------------------------------
+describe('handleCheckoutCompleted', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [];
+	});
+
+	it('calls onCheckoutComplete and updates purchasable via registered updater', async () => {
+		const updater = vi.fn();
+		registerPurchasableType('reservation', updater);
+
+		mockPaymentService.onCheckoutComplete.mockResolvedValue({
+			purchasableType: 'reservation',
+			purchasableId: 'res-42',
+			paymentRecordId: 'pi_abc'
+		});
+
+		await handleCheckoutCompleted({ id: 'cs_123' } as Stripe.Checkout.Session);
+
+		expect(mockPaymentService.onCheckoutComplete).toHaveBeenCalledWith('cs_123');
+		expect(updater).toHaveBeenCalledWith('res-42', 'pi_abc');
+	});
+
+	it('warns but does not throw for unknown purchasable type', async () => {
+		mockPaymentService.onCheckoutComplete.mockResolvedValue({
+			purchasableType: 'unknown_thing',
+			purchasableId: 'x-1',
+			paymentRecordId: 'pi_xyz'
+		});
+
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		await handleCheckoutCompleted({ id: 'cs_456' } as Stripe.Checkout.Session);
+
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('No purchasable updater'));
+		warnSpy.mockRestore();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// handleInvoicePaid
+// ---------------------------------------------------------------------------
+describe('handleInvoicePaid', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [];
+	});
+
+	it('allocates monthly credits based on subscription quantity', async () => {
+		userQueryResults = [{ id: 'user-1' }];
+		mockCreditService.allocateMonthlyCredits.mockResolvedValue(5);
+
+		const invoice = {
+			id: 'inv_123',
+			parent: {
+				subscription_details: { subscription: 'sub_abc' }
+			},
+			customer: 'cus_123',
+			lines: {
+				data: [
+					{ subscription_item: 'si_abc', quantity: 5, amount: 2500 }
+				]
+			}
+		} as unknown as Stripe.Invoice;
+
+		await handleInvoicePaid(invoice);
+
+		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith(
+			'user-1', 5, 'inv_123'
+		);
+	});
+
+	it('handles customer as an object with id property', async () => {
+		userQueryResults = [{ id: 'user-2' }];
+		mockCreditService.allocateMonthlyCredits.mockResolvedValue(3);
+
+		const invoice = {
+			id: 'inv_obj_cus',
+			parent: {
+				subscription_details: { subscription: { id: 'sub_obj' } }
+			},
+			customer: { id: 'cus_456' },
+			lines: {
+				data: [
+					{ subscription_item: 'si_obj', quantity: 3, amount: 1500 }
+				]
+			}
+		} as unknown as Stripe.Invoice;
+
+		await handleInvoicePaid(invoice);
+
+		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith(
+			'user-2', 3, 'inv_obj_cus'
+		);
+	});
+
+	it('skips non-subscription invoices', async () => {
+		const invoice = {
+			id: 'inv_one_time',
+			parent: { subscription_details: null },
+			customer: 'cus_123'
+		} as unknown as Stripe.Invoice;
+
+		await handleInvoicePaid(invoice);
+
+		expect(mockCreditService.allocateMonthlyCredits).not.toHaveBeenCalled();
+	});
+
+	it('warns when no user found for customer', async () => {
+		userQueryResults = [];
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const invoice = {
+			id: 'inv_orphan',
+			parent: {
+				subscription_details: { subscription: 'sub_xyz' }
+			},
+			customer: 'cus_unknown',
+			lines: { data: [{ subscription_item: 'si_xyz', quantity: 3 }] }
+		} as unknown as Stripe.Invoice;
+
+		await handleInvoicePaid(invoice);
+
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no user found'));
+		expect(mockCreditService.allocateMonthlyCredits).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// handleSubscriptionDeleted
+// ---------------------------------------------------------------------------
+describe('handleSubscriptionDeleted', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [];
+	});
+
+	it('resets free_hours balance to 0', async () => {
+		userQueryResults = [{ id: 'user-1' }];
+		mockCreditService.setBalance.mockResolvedValue(0);
+
+		const subscription = {
+			id: 'sub_cancelled',
+			customer: 'cus_123'
+		} as unknown as Stripe.Subscription;
+
+		await handleSubscriptionDeleted(subscription);
+
+		expect(mockCreditService.setBalance).toHaveBeenCalledWith(
+			'user-1',
+			'free_hours',
+			0,
+			'monthly_allocation',
+			'sub_cancelled',
+			expect.any(String)
+		);
+	});
+
+	it('warns when no user found for customer', async () => {
+		userQueryResults = [];
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const subscription = {
+			id: 'sub_orphan',
+			customer: 'cus_ghost'
+		} as unknown as Stripe.Subscription;
+
+		await handleSubscriptionDeleted(subscription);
+
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no user found'));
+		expect(mockCreditService.setBalance).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
+});

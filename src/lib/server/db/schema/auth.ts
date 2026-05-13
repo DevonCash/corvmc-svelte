@@ -25,6 +25,7 @@ export const user = pgTable('user', {
 	stripeId: text('stripe_id'),
 	pmType: text('pm_type'),
 	pmLastFour: text('pm_last_four'),
+	credits: jsonb('credits').notNull().default({}),
 	trialEndsAt: timestamp('trial_ends_at'),
 	deletedAt: timestamp('deleted_at')
 });
