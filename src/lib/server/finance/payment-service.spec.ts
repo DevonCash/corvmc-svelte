@@ -5,8 +5,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 vi.mock('$env/dynamic/private', () => ({
 	env: {
-		STRIPE_FEE_PRODUCT_ID: 'prod_fee'
+		STRIPE_FEE_PRODUCT_ID: 'prod_fee',
+		DATABASE_URL: 'postgres://mock'
 	}
+}));
+
+// Mock product-config-service to prevent db import chain
+vi.mock('./product-config-service', () => ({
+	getStripeProductId: vi.fn().mockResolvedValue('prod_fee'),
+	getProductConfig: vi.fn().mockResolvedValue({
+		key: 'fee_coverage',
+		name: 'Fee Coverage',
+		description: 'Covers processing fees',
+		stripeProductId: 'prod_fee',
+		unitAmountCents: 100,
+		unitLabel: null
+	})
 }));
 
 // ---------------------------------------------------------------------------

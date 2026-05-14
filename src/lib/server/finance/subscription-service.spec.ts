@@ -6,8 +6,38 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$env/dynamic/private', () => ({
 	env: {
 		STRIPE_CONTRIBUTION_PRICE_ID: 'price_contribution',
-		STRIPE_FEE_PRODUCT_ID: 'prod_fee'
+		STRIPE_FEE_PRODUCT_ID: 'prod_fee',
+		DATABASE_URL: 'postgres://mock'
 	}
+}));
+
+// Mock product-config-service to prevent db import chain
+vi.mock('./product-config-service', () => ({
+	getStripeProductId: vi.fn().mockImplementation((key: string) => {
+		if (key === 'contribution') return Promise.resolve('prod_contribution');
+		if (key === 'fee_coverage') return Promise.resolve('prod_fee');
+		return Promise.resolve(`prod_${key}`);
+	}),
+	getProductConfig: vi.fn().mockResolvedValue({
+		key: 'contribution',
+		name: 'Monthly Contribution',
+		description: 'Monthly membership contribution',
+		stripeProductId: 'prod_contribution',
+		unitAmountCents: 500,
+		unitLabel: null
+	}),
+	buildSubscriptionLineItem: vi.fn().mockImplementation(
+		(_key: string, unitAmount: number, quantity: number) =>
+			Promise.resolve({
+				price_data: {
+					currency: 'usd',
+					product: 'prod_contribution',
+					unit_amount: unitAmount,
+					recurring: { interval: 'month' }
+				},
+				quantity
+			})
+	)
 }));
 
 // ---------------------------------------------------------------------------
@@ -75,7 +105,14 @@ describe('createCheckoutSession', () => {
 				userId: 'user-1',
 				stripeCustomerId: 'cus_123',
 				mode: 'subscription',
-				lineItems: [{ price: 'price_contribution', quantity: 5 }],
+				lineItems: [expect.objectContaining({
+					price_data: expect.objectContaining({
+						currency: 'usd',
+						product: 'prod_contribution',
+						recurring: { interval: 'month' }
+					}),
+					quantity: 5
+				})],
 				coverFees: false,
 				metadata: expect.objectContaining({
 					subscription_type: 'contribution'

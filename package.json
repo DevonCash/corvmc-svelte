@@ -11,8 +11,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
+		"test": "pnpm run test:unit -- --run && pnpm run test:e2e",
 		"test:e2e": "playwright install && playwright test",
+		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"db:push": "drizzle-kit push",
@@ -74,6 +75,7 @@
 		"zod4-mock": "^0.2.3"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1045.0",
 		"@humanspeak/svelte-headless-table": "^6.0.6",
 		"@tabler/icons-svelte": "^3.44.0",
 		"@types/luxon": "^3.7.1",

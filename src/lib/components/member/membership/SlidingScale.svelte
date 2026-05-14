@@ -2,7 +2,6 @@
 	const tiers = [
 		{ amount: '$10/month', hours: '2 free hours' },
 		{ amount: '$25/month', hours: '5 free hours' },
-		{ amount: '$50/month', hours: '10 free hours' },
 		{ amount: '$60/month', hours: '12 free hours' }
 	];
 </script>

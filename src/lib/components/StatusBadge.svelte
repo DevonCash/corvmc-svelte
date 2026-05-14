@@ -20,6 +20,10 @@
 		no_show: 'badge-error',
 		cancelled: 'badge-ghost',
 
+		// Event statuses
+		draft: 'badge-warning',
+		published: 'badge-success',
+
 		// Generic
 		active: 'badge-success',
 		pending: 'badge-warning',
