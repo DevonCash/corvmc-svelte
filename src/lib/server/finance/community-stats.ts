@@ -2,6 +2,8 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
+import { DateTime } from 'luxon';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
 
 // ---------------------------------------------------------------------------
 // CommunityStats — aggregated subscription metrics for the membership page
@@ -85,18 +87,10 @@ async function queryStats(): Promise<CommunityStats> {
 
 /** First day of the current month at midnight in the app timezone (America/Los_Angeles). */
 function getMonthStart(): Date {
-	// Format current date in app timezone to get the correct local month/year
-	const parts = new Intl.DateTimeFormat('en-US', {
-		timeZone: 'America/Los_Angeles',
-		year: 'numeric',
-		month: 'numeric'
-	}).formatToParts(new Date());
-
-	const year = Number(parts.find(p => p.type === 'year')!.value);
-	const month = Number(parts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-
-	// Create a Date representing midnight of the 1st in Los_Angeles.
-	// We approximate by using UTC and adjusting for Pacific offset (max 8h behind UTC).
-	// For vanity stats with 24h caching, the few-hour boundary edge case is acceptable.
-	return new Date(Date.UTC(year, month, 1, 8)); // 00:00 PST = 08:00 UTC
+	const now = DateTime.now().setZone('America/Los_Angeles');
+	return buildDateInTz(
+		`${now.year}-${String(now.month).padStart(2, '0')}-01`,
+		'00:00',
+		'America/Los_Angeles'
+	);
 }

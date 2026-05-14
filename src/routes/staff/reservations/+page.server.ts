@@ -3,13 +3,9 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, inArray, ilike, or, desc, asc, count } from 'drizzle-orm';
-import { autoCompleteExpired } from '$lib/server/reservation/reservation-service';
 import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
 
 export const load: PageServerLoad = async ({ url }) => {
-	// Opportunistic auto-complete on page load
-	await autoCompleteExpired();
-
 	const now = new Date();
 	const tab = url.searchParams.get('tab') ?? 'upcoming';
 	const search = url.searchParams.get('q') ?? '';
@@ -36,8 +32,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		conditions.push(lt(reservation.startsAt, new Date(dateTo + 'T23:59:59')));
 	}
 
+	// Search by member name or email in SQL
+	if (search) {
+		const pattern = `%${search}%`;
+		conditions.push(or(ilike(user.name, pattern), ilike(user.email, pattern)));
+	}
+
 	// Main query
-	let query = db
+	const reservations = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
@@ -55,16 +57,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.limit(200);
-
-	let reservations = await query;
-
-	// Client-side search filter (name or email)
-	if (search) {
-		const q = search.toLowerCase();
-		reservations = reservations.filter(
-			(r) => r.memberName.toLowerCase().includes(q) || r.memberEmail.toLowerCase().includes(q)
-		);
-	}
 
 	// Unresolved count + data for resolve modal
 	const unresolved = await db

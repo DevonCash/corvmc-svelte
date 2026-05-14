@@ -10,6 +10,7 @@ import {
 	MIN_DURATION_HOURS,
 	MAX_DURATION_HOURS
 } from './config';
+import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from './types';
 
 // ---------------------------------------------------------------------------
@@ -69,8 +70,8 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 
 	// Build day boundaries in local time
 	const dateStr = date.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
-	const dayStart = parseDateTimeInTz(dateStr, OPERATING_HOURS_START, tz);
-	const dayEnd = parseDateTimeInTz(dateStr, OPERATING_HOURS_END, tz);
+	const dayStart = buildDateInTz(dateStr, OPERATING_HOURS_START, tz);
+	const dayEnd = buildDateInTz(dateStr, OPERATING_HOURS_END, tz);
 
 	// Fetch all non-cancelled reservations for this day
 	const dayReservations = await db
@@ -294,51 +295,3 @@ export function getValidationWarnings(startsAt: Date, endsAt: Date): string[] {
 	return warnings;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Format a Date to "HH:MM" in the given timezone */
-function formatTimeInTz(date: Date, tz: string): string {
-	return date.toLocaleTimeString('en-GB', {
-		timeZone: tz,
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
-	});
-}
-
-/** Parse a date string + time string into a Date in the given timezone */
-function parseDateTimeInTz(dateStr: string, timeStr: string, tz: string): Date {
-	// Build an ISO-ish string and parse with timezone awareness
-	const [hours, minutes] = timeStr.split(':').map(Number);
-	const naive = new Date(`${dateStr}T${timeStr}:00`);
-
-	// Use Intl to find the UTC offset for this date/time in the target timezone
-	const formatter = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false
-	});
-
-	// Strategy: create the date assuming UTC, then adjust by the tz offset
-	// More reliable: use the temporal-like approach of formatting and comparing
-	const utcDate = new Date(`${dateStr}T${timeStr}:00Z`);
-
-	// Get what the local time would be if we interpret utcDate in the target tz
-	const parts = formatter.formatToParts(utcDate);
-	const localHour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-	const localMinute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-
-	// Calculate the offset between what we want and what UTC gives us in that tz
-	const wantedMinutes = hours * 60 + minutes;
-	const gotMinutes = localHour * 60 + localMinute;
-	const offsetMinutes = gotMinutes - wantedMinutes;
-
-	return new Date(utcDate.getTime() - offsetMinutes * 60 * 1000);
-}

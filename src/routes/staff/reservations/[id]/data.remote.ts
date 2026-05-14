@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { command, getRequestEvent } from '$app/server';
+import { command } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
+import { requireStaff } from '$lib/server/authorization';
 import {
 	confirm,
 	cancel,
@@ -17,16 +18,19 @@ import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
 const idSchema = z.object({ reservationId: z.string().min(1) });
 
 export const confirmReservation = command(idSchema, async (data) => {
+	await requireStaff();
 	await confirm(data.reservationId);
 	return { success: true };
 });
 
 export const completeReservation = command(idSchema, async (data) => {
+	await requireStaff();
 	await markComplete(data.reservationId);
 	return { success: true };
 });
 
 export const noShowReservation = command(idSchema, async (data) => {
+	await requireStaff();
 	await markNoShow(data.reservationId);
 	return { success: true };
 });
@@ -34,10 +38,8 @@ export const noShowReservation = command(idSchema, async (data) => {
 export const cancelReservation = command(
 	idSchema.extend({ reason: z.string().optional() }),
 	async (data) => {
-		const { locals } = getRequestEvent();
-		if (!locals.user) throw error(401, 'Not authenticated');
-
-		await cancel(data.reservationId, locals.user.id, data.reason, { staffOverride: true });
+		const staff = await requireStaff();
+		await cancel(data.reservationId, staff.id, data.reason, { staffOverride: true });
 		return { success: true };
 	}
 );
@@ -49,6 +51,7 @@ export const cashReceived = command(
 		endsAt: z.string()
 	}),
 	async (data) => {
+		await requireStaff();
 		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
 		const amountCents = Math.round(durationHours * HOURLY_RATE_CENTS);

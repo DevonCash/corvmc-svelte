@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, lt, isNotNull } from 'drizzle-orm';
+import { eq, and, lt, ne, gt, isNotNull, inArray, sql } from 'drizzle-orm';
 import { hasConflict, validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import type { BookerType, ReservationStatus } from './types';
@@ -61,27 +61,40 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationValidationError(validation.error!);
 	}
 
-	// Check for conflicts
-	const conflict = await hasConflict(startsAt, endsAt);
-	if (conflict) {
-		throw new ReservationConflictError();
-	}
+	// Conflict check + insert in a serializable transaction to prevent races
+	return await db.transaction(async (tx) => {
+		// Lock overlapping rows to prevent concurrent inserts
+		const conflicts = await tx
+			.select({ id: reservation.id })
+			.from(reservation)
+			.where(
+				and(
+					ne(reservation.status, 'cancelled'),
+					lt(reservation.startsAt, endsAt),
+					gt(reservation.endsAt, startsAt)
+				)
+			)
+			.for('update');
 
-	// Insert
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			status: 'scheduled',
-			startsAt,
-			endsAt,
-			notes: notes ?? null
-		})
-		.returning();
+		if (conflicts.length > 0) {
+			throw new ReservationConflictError();
+		}
 
-	return row;
+		const [row] = await tx
+			.insert(reservation)
+			.values({
+				bookerType,
+				bookerId,
+				createdByUserId: userId,
+				status: 'scheduled',
+				startsAt,
+				endsAt,
+				notes: notes ?? null
+			})
+			.returning();
+
+		return row;
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +142,7 @@ export async function cancel(
 	reason?: string,
 	options?: { staffOverride?: boolean }
 ): Promise<void> {
+	// Read current state to check authorization and determine refund eligibility
 	const [row] = await db
 		.select()
 		.from(reservation)
@@ -149,15 +163,26 @@ export async function cancel(
 		throw new Error(`Cannot cancel a reservation with status "${status}"`);
 	}
 
-	// Update status
-	await db
+	// Atomic conditional update — only cancels if status hasn't changed since read
+	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed'];
+	const result = await db
 		.update(reservation)
 		.set({
 			status: 'cancelled',
 			cancellationReason: reason ?? null,
 			updatedAt: new Date()
 		})
-		.where(eq(reservation.id, reservationId));
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				inArray(reservation.status, cancellable)
+			)
+		);
+
+	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
+	if (rowCount === 0) {
+		throw new Error('Reservation status changed concurrently');
+	}
 
 	// If it was confirmed (paid), trigger refund
 	if (status === 'confirmed' && row.stripePaymentRecordId) {
@@ -189,25 +214,31 @@ export async function recordCashAndComplete(
 	reservationId: string,
 	stripePaymentRecordId: string
 ): Promise<void> {
-	const [row] = await db
-		.select()
-		.from(reservation)
-		.where(eq(reservation.id, reservationId))
-		.limit(1);
-
-	if (!row) throw new Error('Reservation not found');
-	if (row.status !== 'scheduled') {
-		throw new Error(`Expected status "scheduled", got "${row.status}"`);
-	}
-
-	await db
+	const result = await db
 		.update(reservation)
 		.set({
 			status: 'completed',
 			stripePaymentRecordId,
 			updatedAt: new Date()
 		})
-		.where(eq(reservation.id, reservationId));
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				eq(reservation.status, 'scheduled')
+			)
+		);
+
+	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
+	if (rowCount === 0) {
+		const [row] = await db
+			.select({ status: reservation.status })
+			.from(reservation)
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		if (!row) throw new Error('Reservation not found');
+		throw new Error(`Expected status "scheduled", got "${row.status}"`);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -238,21 +269,28 @@ async function updateStatus(
 	expectedStatuses: ReservationStatus[],
 	newStatus: ReservationStatus
 ): Promise<void> {
-	const [row] = await db
-		.select({ status: reservation.status })
-		.from(reservation)
-		.where(eq(reservation.id, reservationId))
-		.limit(1);
-
-	if (!row) throw new Error('Reservation not found');
-	if (!expectedStatuses.includes(row.status as ReservationStatus)) {
-		throw new Error(
-			`Cannot transition from "${row.status}" to "${newStatus}"`
-		);
-	}
-
-	await db
+	// Atomic conditional update — avoids the select-then-update race condition
+	const result = await db
 		.update(reservation)
 		.set({ status: newStatus, updatedAt: new Date() })
-		.where(eq(reservation.id, reservationId));
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				inArray(reservation.status, expectedStatuses)
+			)
+		);
+
+	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
+
+	if (rowCount === 0) {
+		// Determine whether it's "not found" or "wrong status"
+		const [row] = await db
+			.select({ status: reservation.status })
+			.from(reservation)
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		if (!row) throw new Error('Reservation not found');
+		throw new Error(`Cannot transition from "${row.status}" to "${newStatus}"`);
+	}
 }

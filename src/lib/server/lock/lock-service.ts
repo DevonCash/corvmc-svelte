@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { createTemporaryUser, removeTemporaryUser } from './ultraloc-client';
 
 // ---------------------------------------------------------------------------
@@ -130,28 +131,3 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 	return count;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function buildDateInTz(dateStr: string, timeStr: string, tz: string): Date {
-	const [hours, minutes] = timeStr.split(':').map(Number);
-	const utcDate = new Date(`${dateStr}T${timeStr}:00Z`);
-
-	const formatter = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz,
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
-	});
-
-	const parts = formatter.formatToParts(utcDate);
-	const localHour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-	const localMinute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-
-	const wantedMinutes = hours * 60 + minutes;
-	const gotMinutes = localHour * 60 + localMinute;
-	const offsetMinutes = gotMinutes - wantedMinutes;
-
-	return new Date(utcDate.getTime() - offsetMinutes * 60 * 1000);
-}

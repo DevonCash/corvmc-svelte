@@ -1,3 +1,5 @@
+import { error } from '@sveltejs/kit';
+import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq, and } from 'drizzle-orm';
@@ -24,6 +26,19 @@ export async function hasAnyRole(userId: string, roleNames: string[]): Promise<b
 		if (await hasRole(userId, name)) return true;
 	}
 	return false;
+}
+
+/**
+ * Assert the current request is from an authenticated user with a staff or admin role.
+ * Throws 401/403 via SvelteKit error() if not.
+ * Returns the authenticated user for convenience.
+ */
+export async function requireStaff() {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
+	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
+	if (!allowed) throw error(403, 'Staff access required');
+	return locals.user;
 }
 
 /**

@@ -76,8 +76,10 @@
 	"dependencies": {
 		"@humanspeak/svelte-headless-table": "^6.0.6",
 		"@tabler/icons-svelte": "^3.44.0",
+		"@types/luxon": "^3.7.1",
 		"bits-ui": "^2.18.1",
 		"daisyui": "^5.5.19",
+		"luxon": "^3.7.2",
 		"stripe": "^22.1.1",
 		"svelte-sonner": "^1.1.1"
 	}

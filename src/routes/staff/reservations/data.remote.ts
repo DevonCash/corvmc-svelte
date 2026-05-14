@@ -5,10 +5,12 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, ilike, or } from 'drizzle-orm';
+import { requireStaff } from '$lib/server/authorization';
 import { getAvailableSlots, getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { markComplete, markNoShow, recordCashAndComplete } from '$lib/server/reservation/reservation-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { HOURLY_RATE_CENTS, TIME_SLOT_MINUTES, MIN_DURATION_HOURS, MAX_DURATION_HOURS } from '$lib/server/reservation/config';
 
 // ---------------------------------------------------------------------------
@@ -16,6 +18,7 @@ import { HOURLY_RATE_CENTS, TIME_SLOT_MINUTES, MIN_DURATION_HOURS, MAX_DURATION_
 // ---------------------------------------------------------------------------
 
 export const searchMembers = query(z.string(), async (q) => {
+	await requireStaff();
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
@@ -29,6 +32,7 @@ export const searchMembers = query(z.string(), async (q) => {
 });
 
 export const getSlots = query(z.string(), async (dateParam) => {
+	await requireStaff();
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
 	const slots = await getAvailableSlots(date);
 
@@ -47,6 +51,7 @@ export const getSlots = query(z.string(), async (dateParam) => {
 export const checkConflicts = query(
 	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
 	async ({ date, startTime, endTime }) => {
+		await requireStaff();
 		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
 		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
 
@@ -70,6 +75,7 @@ const staffCreateSchema = z.object({
 });
 
 export const createReservation = command(staffCreateSchema, async (raw) => {
+	await requireStaff();
 	const data = raw as z.infer<typeof staffCreateSchema>;
 	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
 	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
@@ -98,6 +104,7 @@ const resolveSchema = z.object({
 export const resolveComplete = command(
 	resolveSchema.extend({ userId: z.string().min(1), startsAt: z.string(), endsAt: z.string() }),
 	async (data) => {
+		await requireStaff();
 		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
 		const amountCents = Math.round(durationHours * HOURLY_RATE_CENTS);
@@ -124,32 +131,8 @@ export const resolveComplete = command(
 );
 
 export const resolveNoShow = command(resolveSchema, async (data) => {
+	await requireStaff();
 	await markNoShow(data.reservationId);
 	return { success: true };
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function buildDateInTz(dateStr: string, timeStr: string, tz: string): Date {
-	const [hours, minutes] = timeStr.split(':').map(Number);
-	const utcDate = new Date(`${dateStr}T${timeStr}:00Z`);
-
-	const formatter = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz,
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
-	});
-
-	const parts = formatter.formatToParts(utcDate);
-	const localHour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-	const localMinute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-
-	const wantedMinutes = hours * 60 + minutes;
-	const gotMinutes = localHour * 60 + localMinute;
-	const offsetMinutes = gotMinutes - wantedMinutes;
-
-	return new Date(utcDate.getTime() - offsetMinutes * 60 * 1000);
-}

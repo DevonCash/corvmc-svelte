@@ -5,6 +5,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, gte, lte, asc, desc, count } from 'drizzle-orm';
 import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
+import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 
 export const load: PageServerLoad = async ({ params }) => {
 	// Load the reservation
@@ -35,9 +36,9 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	// Same-day reservations for the timeline bar
 	const tz = 'America/Los_Angeles';
-	const dayStr = row.startsAt.toLocaleDateString('en-CA', { timeZone: tz });
-	const dayStart = new Date(`${dayStr}T00:00:00`);
-	const dayEnd = new Date(`${dayStr}T23:59:59`);
+	const dayStr = formatDateInTz(row.startsAt, tz);
+	const dayStart = buildDateInTz(dayStr, '00:00', tz);
+	const dayEnd = buildDateInTz(dayStr, '23:59', tz);
 
 	const sameDayReservations = await db
 		.select({

@@ -4,6 +4,7 @@ import { query, form, getRequestEvent } from '$app/server';
 import { getAvailableSlots } from '$lib/server/reservation/conflict-service';
 import { create } from '$lib/server/reservation/reservation-service';
 import { createReservationSchema } from '$lib/server/reservation/types';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	TIME_SLOT_MINUTES,
 	MIN_DURATION_HOURS,
@@ -56,29 +57,3 @@ export const bookReservation = form(createReservationSchema, async (raw) => {
 	return { reservationId: res.id };
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Parse a date + time string into a Date in the given timezone */
-function buildDateInTz(dateStr: string, timeStr: string, tz: string): Date {
-	const [hours, minutes] = timeStr.split(':').map(Number);
-	const utcDate = new Date(`${dateStr}T${timeStr}:00Z`);
-
-	const formatter = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz,
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
-	});
-
-	const parts = formatter.formatToParts(utcDate);
-	const localHour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-	const localMinute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-
-	const wantedMinutes = hours * 60 + minutes;
-	const gotMinutes = localHour * 60 + localMinute;
-	const offsetMinutes = gotMinutes - wantedMinutes;
-
-	return new Date(utcDate.getTime() - offsetMinutes * 60 * 1000);
-}
