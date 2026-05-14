@@ -1,12 +1,16 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { SvelteComponent } from 'svelte';
 	import { page } from '$app/state';
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	type IconComponent = typeof SvelteComponent<any>;
 
 	let {
 		navItems,
 		footer
 	}: {
-		navItems: { href: string; label: string; icon: string }[];
+		navItems: { href: string; label: string; icon: IconComponent }[];
 		footer?: Snippet;
 	} = $props();
 
@@ -28,9 +32,7 @@
 		{#each navItems as item (item.href)}
 			<li>
 				<a href={item.href} class:active={isActive(item.href)}>
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
-					</svg>
+					<item.icon size={20} />
 					{item.label}
 				</a>
 			</li>

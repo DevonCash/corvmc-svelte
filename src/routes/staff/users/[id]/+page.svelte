@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getUser, getAllRoles, updateUser } from './data.remote';
 	import Form from '$lib/components/Form.svelte';
 	import SubmitButton from '$lib/components/SubmitButton.svelte';
@@ -39,9 +40,7 @@
 			{/if}
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-						<path d="M15.173 2H4a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4.827a2 2 0 00-.586-1.414l-1.827-1.827A2 2 0 0015.173 2zM10 14a2 2 0 110-4 2 2 0 010 4zM6 4h5v3H6V4z" />
-					</svg>
+					<IconDeviceFloppy size={20} />
 				{/snippet}
 			</SubmitButton>
 		</PageHeader>
