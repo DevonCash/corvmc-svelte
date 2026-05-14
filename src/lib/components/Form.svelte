@@ -40,7 +40,7 @@
 		class: className,
 		...rest
 	}: {
-		remote: RemoteForm<TInput, TOutput>;
+		remote: RemoteForm<TInput, TOutput> | Omit<RemoteForm<TInput, TOutput>, 'for'>;
 		initial: Record<string, unknown>;
 		flashDuration?: number;
 		successToast?: string;

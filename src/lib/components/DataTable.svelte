@@ -23,6 +23,7 @@
 	import { createTable, Subscribe } from '@humanspeak/svelte-headless-table';
 	import { addSortBy, addPagination } from '@humanspeak/svelte-headless-table/plugins';
 	import { writable } from 'svelte/store';
+	import { untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -43,18 +44,18 @@
 		class?: string;
 	} = $props();
 
-	const dataStore = writable(data);
+	const dataStore = writable(untrack(() => data));
 	$effect(() => {
 		dataStore.set(data);
 	});
 
 	const table = createTable(dataStore, {
 		sort: addSortBy(),
-		page: addPagination({ initialPageSize: pageSizeProp })
+		page: addPagination({ initialPageSize: untrack(() => pageSizeProp) })
 	});
 
 	const tableColumns = table.createColumns(
-		columns.map((col) =>
+		untrack(() => columns).map((col) =>
 			table.column({
 				header: col.header,
 				accessor: col.key as string,
@@ -113,8 +114,9 @@
 									{#each row.cells as cell, i (cell.id)}
 										{@const col = columns[i]}
 										<Subscribe attrs={cell.attrs()} let:attrs>
+											{@const val = cell.isData() ? cell.value : ''}
 											<td {...attrs} class={col.class ?? ''}>
-												{col.cell ? col.cell(cell.value, row.original) : (cell.value ?? '')}
+												{col.cell ? col.cell(val, row.original) : (val ?? '')}
 											</td>
 										</Subscribe>
 									{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT, type SubscriptionInfo } from '$lib/finance/types';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 
@@ -12,7 +13,7 @@
 		showModifyForm?: boolean;
 	} = $props();
 
-	let editing = $state(showModifyForm);
+	let editing = $state(untrack(() => showModifyForm));
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
 	const nextBilling = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 
 	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 minimum
@@ -16,8 +17,8 @@
 		formAction: string;
 	} = $props();
 
-	let amount = $state(currentAmount ?? MIN_AMOUNT);
-	let coverFees = $state(currentCoverFees);
+	let amount = $state(untrack(() => currentAmount ?? MIN_AMOUNT));
+	let coverFees = $state(untrack(() => currentCoverFees));
 	let submitting = $state(false);
 
 	// Fee calculation: solve for total where total - (total * 0.029 + 0.30) = base
