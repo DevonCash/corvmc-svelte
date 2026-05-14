@@ -11,9 +11,11 @@
 		cancelReservation,
 		cashReceived
 	} from './data.remote';
-	import { IconArrowLeft, IconArrowRight } from '@tabler/icons-svelte';
 	import DayTimeline from '$lib/components/DayTimeline.svelte';
+	import RecordNav from '$lib/components/RecordNav.svelte';
+	import CopyableId from '$lib/components/CopyableId.svelte';
 	import InfoCard from '$lib/components/InfoCard.svelte';
+	import MemberLink from '$lib/components/MemberLink.svelte';
 	import {
 		fullDate,
 		formatTime,
@@ -48,27 +50,7 @@
 			: { label: 'Comped', class: 'badge-info' };
 	});
 
-	function initials(name: string): string {
-		return name
-			.split(' ')
-			.map((w) => w[0])
-			.join('')
-			.toUpperCase()
-			.slice(0, 2);
-	}
-
-	// Keyboard shortcuts for prev/next
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-		if (e.key === 'ArrowLeft' && data.prevId) {
-			window.location.href = `/staff/reservations/${data.prevId}`;
-		} else if (e.key === 'ArrowRight' && data.nextId) {
-			window.location.href = `/staff/reservations/${data.nextId}`;
-		}
-	}
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 <div class="mx-auto max-w-3xl space-y-6">
 	<PageHeader title="Reservation" backHref="/staff/reservations">
@@ -182,34 +164,11 @@
 						{formatTime(r.startsAt)} – {formatTime(r.endsAt)} · {durationLabel}
 					</p>
 				</hgroup>
-				<div class="flex items-center gap-4">
-					<!-- Prev/Next navigation -->
-					{#if data.prevId}
-						<a
-							href="/staff/reservations/{data.prevId}"
-							class="btn btn-ghost btn-sm"
-							title="Previous reservation (←)"
-						>
-							<IconArrowLeft size={16} />
-							Prev
-						</a>
-					{:else}
-						<span class="btn btn-disabled btn-ghost btn-sm">← Prev</span>
-					{/if}
-
-					{#if data.nextId}
-						<a
-							href="/staff/reservations/{data.nextId}"
-							class="btn btn-ghost btn-sm"
-							title="Next reservation (→)"
-						>
-							Next
-							<IconArrowRight size={16} />
-						</a>
-					{:else}
-						<span class="text-xs opacity-50">Last of the day</span>
-					{/if}
-				</div>
+				<RecordNav
+					prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
+					nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
+					endLabel="Last of the day"
+				/>
 			</header>
 		</div>
 
@@ -230,24 +189,17 @@
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 		<!-- Member card -->
 		<InfoCard title="Member">
-			<div class="mb-3 flex items-center gap-3">
-				<div
-					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-content"
-				>
-					{initials(r.memberName)}
-				</div>
-				<div class="min-w-0">
-					<div class="flex items-center gap-2">
-						<a href="/staff/users/{r.createdByUserId}" class="link font-medium link-primary">
-							{r.memberName}
-						</a>
-						{#if data.isFirstReservation}
-							<span class="badge badge-sm badge-info">First reservation</span>
-						{/if}
-					</div>
-					<a href="mailto:{r.memberEmail}" class="link text-sm opacity-60">{r.memberEmail}</a>
-				</div>
-			</div>
+			<MemberLink
+				name={r.memberName}
+				email={r.memberEmail}
+				userId={r.createdByUserId}
+				avatar
+				class="mb-3"
+			/>
+
+			{#if data.isFirstReservation}
+				<span class="badge badge-sm badge-info mb-2">First reservation</span>
+			{/if}
 
 			{#if r.memberPhone}
 				<p class="text-sm opacity-60">
@@ -279,21 +231,7 @@
 
 				{#if r.stripePaymentRecordId}
 					<div class="mt-3 border-t border-base-200 pt-3">
-						<p class="text-xs opacity-50">Stripe record</p>
-						<div class="mt-1 flex items-center gap-2">
-							<code class="text-xs opacity-70"
-								>{r.stripePaymentRecordId.slice(0, 10)}...{r.stripePaymentRecordId.slice(
-									-4
-								)}</code
-							>
-							<button
-								class="btn btn-ghost btn-xs"
-								onclick={() => navigator.clipboard.writeText(r.stripePaymentRecordId ?? '')}
-								title="Copy"
-							>
-								📋
-							</button>
-						</div>
+						<CopyableId value={r.stripePaymentRecordId} label="Stripe record" />
 					</div>
 				{/if}
 			</InfoCard>

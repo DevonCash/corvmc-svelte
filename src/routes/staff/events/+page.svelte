@@ -14,7 +14,10 @@
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
-		return tags.split(',').map((t) => t.trim()).filter(Boolean);
+		return tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
 	}
 
 	function dayLabel(e: Event): string {
@@ -23,8 +26,8 @@
 
 	const columns: Column<Event>[] = [
 		{ key: 'status', header: '' },
-		{ key: 'startsAt', header: 'Date', sortable: true },
 		{ key: 'title', header: 'Title', sortable: true },
+		{ key: 'startsAt', header: 'Date', sortable: true },
 		{ key: 'tags', header: 'Tags' },
 		{ key: 'reservationId', header: 'Space' }
 	];
@@ -32,32 +35,38 @@
 
 <div class="space-y-6">
 	<PageHeader title="Events">
-		<button class="btn btn-sm btn-primary" onclick={() => showCreateModal = true}>New Event</button>
+		<button class="btn btn-sm btn-primary" onclick={() => (showCreateModal = true)}
+			>New Event</button
+		>
 	</PageHeader>
 
 	<CreateEventModal bind:open={showCreateModal} />
 
 	<DataTable data={data.events} {columns} groupBy={dayLabel} empty="No events yet">
 		{#snippet row(e)}
-			<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/events/${e.id}`}>
+			<tr
+				class="hover cursor-pointer"
+				onclick={() => (window.location.href = `/staff/events/${e.id}`)}
+			>
 				<td class="w-px">
 					<StatusBadge status={e.status} />
-				</td>
-				<td>
-					<div>{formatDate(e.startsAt)}</div>
-					<div class="text-sm opacity-60">{formatTimeRange(e.startsAt, e.endsAt)}</div>
 				</td>
 				<td>
 					{e.title}
 				</td>
 				<td>
+					<div>{formatDate(e.startsAt)}</div>
+					<div class="text-sm opacity-60">{formatTimeRange(e.startsAt, e.endsAt)}</div>
+				</td>
+
+				<td>
 					{#each parseTags(e.tags) as tag (tag)}
-						<span class="badge badge-outline badge-sm mr-1">{tag}</span>
+						<span class="mr-1 badge badge-outline badge-sm">{tag}</span>
 					{/each}
 				</td>
 				<td>
 					{#if e.reservationId}
-						<span class="badge badge-info badge-sm">Reserved</span>
+						<span class="badge badge-sm badge-info">Reserved</span>
 					{:else}
 						<span class="text-sm opacity-40">—</span>
 					{/if}

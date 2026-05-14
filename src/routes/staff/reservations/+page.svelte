@@ -6,6 +6,8 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateModal from './CreateModal.svelte';
+	import MemberLink from '$lib/components/MemberLink.svelte';
+	import TabBar from '$lib/components/TabBar.svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
@@ -60,21 +62,13 @@
 		</div>
 	</PageHeader>
 
-	<!-- Tabs -->
-	<div class="tabs-bordered tabs">
-		<a
-			href="/staff/reservations?tab=upcoming"
-			class="tab"
-			class:tab-active={data.tab === 'upcoming'}
-		>
-			Upcoming
-			<span class="ml-1 badge badge-sm">{data.counts.upcoming}</span>
-		</a>
-		<a href="/staff/reservations?tab=all" class="tab" class:tab-active={data.tab === 'all'}>
-			All
-			<span class="ml-1 badge badge-sm">{data.counts.all}</span>
-		</a>
-	</div>
+	<TabBar
+		tabs={[
+			{ key: 'upcoming', label: 'Upcoming', badge: data.counts.upcoming, href: '/staff/reservations?tab=upcoming' },
+			{ key: 'all', label: 'All', badge: data.counts.all, href: '/staff/reservations?tab=all' }
+		]}
+		active={data.tab}
+	/>
 
 	<!-- Filters -->
 	<form method="get" class="flex flex-wrap items-end gap-2">
@@ -109,15 +103,8 @@
 				<td class="w-px">
 					<StatusBadge status={r.status} />
 				</td>
-				<td class="w-px">
-					<a
-						href="/staff/users/{r.createdByUserId}"
-						class="link link-primary"
-						onclick={(e) => e.stopPropagation()}
-					>
-						{r.memberName}
-					</a>
-					<div class="text-sm opacity-60">{r.memberEmail}</div>
+				<td class="w-px" onclick={(e) => e.stopPropagation()}>
+					<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} />
 				</td>
 				<td class="w-full">
 					<div>{formatTimeRange(r.startsAt, r.endsAt)}</div>

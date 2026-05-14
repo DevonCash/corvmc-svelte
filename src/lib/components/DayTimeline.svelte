@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IconUser, IconCalendarEvent } from '@tabler/icons-svelte';
+	import BookerTypeIcon from './BookerTypeIcon.svelte';
 
 	type TimeSlot = {
 		id: string;
@@ -68,11 +68,7 @@
 				data-tip={other.label}
 				title={other.label}
 			>
-				{#if other.bookerType === 'user'}
-					<IconUser size={16} class="text-base-100" />
-				{:else if other.bookerType === 'event'}
-					<IconCalendarEvent size={16} class="text-base-100" />
-				{/if}
+				<BookerTypeIcon type={other.bookerType} size={16} class="text-base-100" />
 			</a>
 		{:else}
 			<div
@@ -80,11 +76,7 @@
 				style="left: {left(other)}; width: {width(other)}"
 				title={other.label}
 			>
-				{#if other.bookerType === 'user'}
-					<IconUser size={16} class="text-base-100" />
-				{:else if other.bookerType === 'event'}
-					<IconCalendarEvent size={16} class="text-base-100" />
-				{/if}
+				<BookerTypeIcon type={other.bookerType} size={16} class="text-base-100" />
 			</div>
 		{/if}
 	{/each}
@@ -94,10 +86,6 @@
 		class="absolute flex h-full items-center justify-start rounded bg-primary px-1 text-base-100"
 		style="left: {left(current)}; width: {width(current)}"
 	>
-		{#if current.bookerType === 'user'}
-			<IconUser size={16} class="text-base-100" />
-		{:else if current.bookerType === 'event'}
-			<IconCalendarEvent size={16} class="text-base-100" />
-		{/if}
+		<BookerTypeIcon type={current.bookerType} size={16} class="text-base-100" />
 	</div>
 </div>

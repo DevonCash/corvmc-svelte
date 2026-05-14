@@ -152,6 +152,74 @@ Renders a daisyUI badge colored by status string. Handles underscore-to-space co
 
 Built-in variants: `scheduled` (warning), `confirmed` (info), `completed` (success), `no_show` (error), `cancelled` (ghost), `active` (success), `pending` (warning), `error` (error). Unknown statuses fall back to `badge-ghost`.
 
+## MemberLink
+
+Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
+
+```svelte
+<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} avatar />
+```
+
+Without `userId`, the name renders as plain text. Without `avatar`, only name + email are shown.
+
+## BookerTypeIcon
+
+Maps a `bookerType` string to the appropriate icon (user or event).
+
+```svelte
+<BookerTypeIcon type={reservation.bookerType} size={16} class="text-base-100" />
+```
+
+Change the icon mapping here when the icon set changes.
+
+## TabBar
+
+Tab navigation supporting both URL-driven (links) and client-state (buttons) modes.
+
+```svelte
+<!-- URL-driven -->
+<TabBar
+  tabs={[
+    { key: 'upcoming', label: 'Upcoming', badge: 12, href: '/reservations?tab=upcoming' },
+    { key: 'all', label: 'All', badge: 50, href: '/reservations?tab=all' }
+  ]}
+  active={data.tab}
+/>
+
+<!-- Client-state -->
+<TabBar
+  tabs={[{ key: 'upcoming', label: 'Upcoming' }, { key: 'past', label: 'Past' }]}
+  active={activeTab}
+  onchange={(key) => (activeTab = key)}
+/>
+```
+
+Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags and call `onchange`.
+
+## CopyableId
+
+Truncated ID display with a clipboard copy button. Useful for Stripe IDs, record IDs, etc.
+
+```svelte
+<CopyableId value={record.stripePaymentRecordId} label="Stripe record" />
+```
+
+IDs longer than 16 characters are automatically truncated to `first10...last4`.
+
+## RecordNav
+
+Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte:window>` listener.
+
+```svelte
+<RecordNav
+  prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
+  nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
+  endLabel="Last of the day"
+/>
+```
+
+When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
+
 ## InfoCard
 
 Card with a small label header and content body. Use for detail page sections (member info, payment, notes, etc.).

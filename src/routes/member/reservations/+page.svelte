@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import TabBar from '$lib/components/TabBar.svelte';
 
 	let { data } = $props();
 
@@ -25,24 +26,14 @@
 		<a href="/member/reservations/new" class="btn btn-primary">Book a Session</a>
 	</div>
 
-	<div role="tablist" class="tabs tabs-bordered">
-		<button
-			role="tab"
-			class="tab"
-			class:tab-active={activeTab === 'upcoming'}
-			onclick={() => (activeTab = 'upcoming')}
-		>
-			Upcoming ({upcoming.length})
-		</button>
-		<button
-			role="tab"
-			class="tab"
-			class:tab-active={activeTab === 'past'}
-			onclick={() => (activeTab = 'past')}
-		>
-			Past
-		</button>
-	</div>
+	<TabBar
+		tabs={[
+			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
+			{ key: 'past', label: 'Past' }
+		]}
+		active={activeTab}
+		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
+	/>
 
 	{#if activeTab === 'upcoming'}
 		{#if upcoming.length === 0}

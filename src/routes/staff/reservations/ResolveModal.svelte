@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
+	import MemberLink from '$lib/components/MemberLink.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
 
 	let {
@@ -63,8 +64,7 @@
 					<div class="card-body p-4">
 						<div class="flex justify-between mb-2">
 							<div>
-								<p class="font-medium">{r.memberName}</p>
-								<p class="text-sm opacity-60">{r.memberEmail}</p>
+								<MemberLink name={r.memberName} email={r.memberEmail} />
 							</div>
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
