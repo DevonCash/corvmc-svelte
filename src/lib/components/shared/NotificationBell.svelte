@@ -137,7 +137,7 @@
 
 	{#if open}
 		<div
-			class="absolute top-full right-0 z-50 mt-2 w-80 rounded-lg border border-base-300 bg-base-100 shadow-lg"
+			class="absolute top-full left-0 z-1000 mt-2 w-80 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
 				<span class="text-sm font-semibold">Notifications</span>

@@ -24,7 +24,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Ticket check-in | TicketCheckIn page | ✅ Staff check-in | Search + check in tickets at the door |
 | Space closures | SpaceClosures resource | ✅ List + create + delete | Parity |
 | Settings | ManageOrganizationSettings | ✅ Settings page | Hourly rate, buffer, hours; Laravel has more org settings |
-| Payments view | OrderResource, TicketOrders | — | Not needed as-is; may want a read-only Stripe API view |
+| Payments view | OrderResource, TicketOrders | ✅ /staff/payments | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
 | Recurring reservations | RecurringReservations resource | — | Not started |
 | Equipment | Equipment resource | — | Not started |
 | Volunteering | VolunteerReportPage, PendingHourLogs | — | Not started |
@@ -226,7 +226,7 @@ Features are grouped by dependency. The notification system is foundational — 
 
 1. ~~**Notification system**~~ — ✅ Complete. Postmark email + in-app (database + bell + SSE). emittery domain event bus. User preference UI in account settings. Ticket, event, band, and contact form notifications wired. SMS channel deferred.
 2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
-4. **Stripe payments view** — No new tables. Read-only view pulling payment history from Stripe API for staff.
+4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_record` cache table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
 5. **Recurring reservations** — Needs rrule storage on reservation or a new recurrence table. Moderate complexity.
 6. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
 7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.

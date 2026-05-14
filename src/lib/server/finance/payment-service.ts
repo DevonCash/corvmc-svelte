@@ -1,5 +1,8 @@
 import type Stripe from 'stripe';
 import { stripe } from '$lib/server/stripe';
+import { db } from '$lib/server/db';
+import { paymentRecord } from '$lib/server/db/schema/finance';
+import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { type CreditType, creditTypes } from './types';
 import { calculateTotalWithFeeCoverage } from './fees';
@@ -169,7 +172,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	// 4. Credits fully cover the price
 	if (remainingCents <= 0 && userId) {
 		const now = Math.floor(Date.now() / 1000);
-		const paymentRecord = await stripe.paymentRecords.reportPayment({
+		const stripeRecord = await stripe.paymentRecords.reportPayment({
 			amount_requested: { value: 0, currency: 'usd' },
 			initiated_at: now,
 			payment_method_details: {
@@ -182,7 +185,20 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			...(stripeCustomerId && { customer_details: { customer: stripeCustomerId } })
 		});
 
-		return { paid: true, stripePaymentRecordId: paymentRecord.id };
+		// Cache locally
+		await db.insert(paymentRecord).values({
+			id: stripeRecord.id,
+			userId,
+			reservationId: metadata.reservation_id ?? null,
+			stripeCustomerId: stripeCustomerId ?? '',
+			amountCents: 0,
+			currency: 'usd',
+			paymentMethod: 'Credits',
+			status: 'completed',
+			paidAt: new Date()
+		});
+
+		return { paid: true, stripePaymentRecordId: stripeRecord.id };
 	}
 
 	// 5. Build Checkout Session
@@ -281,16 +297,17 @@ async function resolveCartTotal(
 // ---------------------------------------------------------------------------
 
 export interface CashPaymentOptions {
+	userId: string;
 	stripeCustomerId: string;
 	amountCents: number;
 	metadata?: Record<string, string>;
 }
 
 export async function recordCashPayment(options: CashPaymentOptions): Promise<{ paymentRecordId: string }> {
-	const { stripeCustomerId, amountCents, metadata = {} } = options;
+	const { userId, stripeCustomerId, amountCents, metadata = {} } = options;
 
 	const now = Math.floor(Date.now() / 1000);
-	const paymentRecord = await stripe.paymentRecords.reportPayment({
+	const stripeRecord = await stripe.paymentRecords.reportPayment({
 		amount_requested: { value: amountCents, currency: 'usd' },
 		initiated_at: now,
 		payment_method_details: {
@@ -303,7 +320,20 @@ export async function recordCashPayment(options: CashPaymentOptions): Promise<{ 
 		customer_details: { customer: stripeCustomerId }
 	});
 
-	return { paymentRecordId: paymentRecord.id };
+	// Cache locally
+	await db.insert(paymentRecord).values({
+		id: stripeRecord.id,
+		userId,
+		reservationId: metadata.reservation_id ?? null,
+		stripeCustomerId,
+		amountCents,
+		currency: 'usd',
+		paymentMethod: 'Cash',
+		status: 'completed',
+		paidAt: new Date()
+	});
+
+	return { paymentRecordId: stripeRecord.id };
 }
 
 // ---------------------------------------------------------------------------
@@ -320,8 +350,8 @@ export interface RefundOptions {
 export async function refund(options: RefundOptions): Promise<void> {
 	const { userId, stripePaymentRecordId } = options;
 
-	const paymentRecord = await stripe.paymentRecords.retrieve(stripePaymentRecordId);
-	const paymentAmount = paymentRecord.amount?.value ?? 0;
+	const stripeRecord = await stripe.paymentRecords.retrieve(stripePaymentRecordId);
+	const paymentAmount = stripeRecord.amount?.value ?? 0;
 
 	// Refund the card payment if there was one
 	if (paymentAmount > 0) {
@@ -335,9 +365,15 @@ export async function refund(options: RefundOptions): Promise<void> {
 		});
 	}
 
+	// Update local cache
+	await db
+		.update(paymentRecord)
+		.set({ status: 'refunded', refundedAt: new Date() })
+		.where(eq(paymentRecord.id, stripePaymentRecordId));
+
 	// Reverse credit deductions if a user was involved
 	if (userId) {
-		const deductions = parseBreakdown(paymentRecord.metadata);
+		const deductions = parseBreakdown(stripeRecord.metadata);
 		await reverseDeductions(userId, deductions, stripePaymentRecordId, 'refund');
 	}
 }

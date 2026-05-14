@@ -6,6 +6,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
+import { listByUser } from '$lib/server/finance/payment-record-service';
 
 export const getUser = query(z.string(), async (id) => {
 	const [found] = await db
@@ -32,6 +33,10 @@ export const getUser = query(z.string(), async (id) => {
 
 export const getAllRoles = query(async () => {
 	return db.select({ id: role.id, name: role.name }).from(role);
+});
+
+export const getUserPayments = query(z.string(), async (userId) => {
+	return listByUser(userId);
 });
 
 const updateUserSchema = z.object({

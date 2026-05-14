@@ -57,6 +57,20 @@
       "when": 1778796438788,
       "tag": "0007_mixed_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778886000000,
+      "tag": "0008_payment_record_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778802665948,
+      "tag": "0009_fluffy_purifiers",
+      "breakpoints": true
     }
   ]
 }

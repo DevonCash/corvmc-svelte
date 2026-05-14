@@ -120,6 +120,7 @@ export const resolveComplete = command(
 		}
 
 		const { paymentRecordId } = await recordCashPayment({
+			userId: data.userId,
 			stripeCustomerId: member.stripeId,
 			amountCents,
 			metadata: { reservation_id: data.reservationId }

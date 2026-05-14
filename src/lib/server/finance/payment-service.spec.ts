@@ -61,6 +61,31 @@ const mockCreditService = {
 
 vi.mock('./credit-service', () => mockCreditService);
 
+// ---------------------------------------------------------------------------
+// Mock DB
+// ---------------------------------------------------------------------------
+const mockDbInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+const mockDbUpdate = vi.fn().mockReturnValue({
+	set: vi.fn().mockReturnValue({
+		where: vi.fn().mockResolvedValue(undefined)
+	})
+});
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		insert: (...args: any[]) => mockDbInsert(...args),
+		update: (...args: any[]) => mockDbUpdate(...args)
+	}
+}));
+
+vi.mock('$lib/server/db/schema/finance', () => ({
+	paymentRecord: { id: 'id' }
+}));
+
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn()
+}));
+
 // Import after mocking
 const { checkout, recordCashPayment, refund, cancel } = await import('./payment-service');
 
@@ -350,10 +375,11 @@ describe('recordCashPayment', () => {
 		vi.clearAllMocks();
 	});
 
-	it('reports payment to Stripe with correct amount and metadata', async () => {
+	it('reports payment to Stripe and caches locally', async () => {
 		mockStripe.paymentRecords.reportPayment.mockResolvedValue({ id: 'pr_cash_1' });
 
 		const result = await recordCashPayment({
+			userId: 'user-1',
 			stripeCustomerId: 'cus_123',
 			amountCents: 2500,
 			metadata: { reservation_id: 'res-5' }
@@ -369,6 +395,7 @@ describe('recordCashPayment', () => {
 				customer_details: { customer: 'cus_123' }
 			})
 		);
+		expect(mockDbInsert).toHaveBeenCalled();
 	});
 });
 
