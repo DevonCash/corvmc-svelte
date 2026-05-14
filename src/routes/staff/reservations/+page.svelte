@@ -54,6 +54,15 @@
 			: { label: 'Comped', class: 'badge-info' };
 	}
 
+	function dayLabel(r: Reservation): string {
+		return new Date(r.startsAt).toLocaleDateString('en-US', {
+			timeZone: 'America/Los_Angeles',
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
 	const columns: Column<Reservation>[] = [
 		{ key: 'status', header: 'Status' },
 		{ key: 'startsAt', header: 'Time', sortable: true },
@@ -130,10 +139,10 @@
 	</form>
 
 	<!-- Table -->
-	<DataTable data={data.reservations} {columns} empty="No reservations found">
+	<DataTable data={data.reservations} {columns} groupBy={dayLabel} empty="No reservations found">
 		{#snippet row(r)}
 			<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/reservations/${r.id}`}>
-				<td>
+				<td class="w-px">
 					<StatusBadge status={r.status} />
 				</td>
 				<td>
@@ -147,8 +156,10 @@
 					<div class="text-sm opacity-60">{r.memberEmail}</div>
 				</td>
 				<td>
-					<div>{formatAmount(r.startsAt, r.endsAt)}</div>
-					{#if true}
+					{#if r.bookerType === 'event'}
+						<span class="text-sm opacity-40">—</span>
+					{:else}
+						<div>{formatAmount(r.startsAt, r.endsAt)}</div>
 						{@const ps = paymentStatus(r)}
 						<span class="badge badge-sm {ps.class}">{ps.label}</span>
 					{/if}

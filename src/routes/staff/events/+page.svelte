@@ -35,6 +35,15 @@
 		return tags.split(',').map((t) => t.trim()).filter(Boolean);
 	}
 
+	function dayLabel(e: Event): string {
+		return new Date(e.startsAt).toLocaleDateString('en-US', {
+			timeZone: 'America/Los_Angeles',
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
 	const columns: Column<Event>[] = [
 		{ key: 'status', header: 'Status' },
 		{ key: 'startsAt', header: 'Date', sortable: true },
@@ -51,10 +60,10 @@
 
 	<CreateEventModal bind:open={showCreateModal} />
 
-	<DataTable data={data.events} {columns} empty="No events yet">
+	<DataTable data={data.events} {columns} groupBy={dayLabel} empty="No events yet">
 		{#snippet row(e)}
 			<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/events/${e.id}`}>
-				<td>
+				<td class="w-px">
 					<StatusBadge status={e.status} />
 				</td>
 				<td>

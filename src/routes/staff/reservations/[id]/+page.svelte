@@ -305,36 +305,35 @@
 			</div>
 		</div>
 
-		<!-- Payment card -->
-		<div class="card bg-base-100 shadow">
-			<div class="card-body">
-				<h3 class="text-sm font-medium opacity-60 mb-3">Payment</h3>
-				<div class="flex items-baseline justify-between mb-1">
-					<span class="text-2xl font-medium">{amountFormatted()}</span>
-					{#if true}
-						{@const ps = paymentStatus()}
-						<span class="badge {ps.class}">{ps.label}</span>
+		<!-- Payment card (not shown for event reservations) -->
+		{#if r.bookerType !== 'event'}
+			<div class="card bg-base-100 shadow">
+				<div class="card-body">
+					<h3 class="text-sm font-medium opacity-60 mb-3">Payment</h3>
+					<div class="flex items-baseline justify-between mb-1">
+						<span class="text-2xl font-medium">{amountFormatted()}</span>
+						<span class="badge {paymentStatus().class}">{paymentStatus().label}</span>
+					</div>
+					<p class="text-sm opacity-60">{durationLabel()} × {rateFormatted()}/hr</p>
+
+					{#if r.stripePaymentRecordId}
+						<div class="mt-3 pt-3 border-t border-base-200">
+							<p class="text-xs opacity-50">Stripe record</p>
+							<div class="flex items-center gap-2 mt-1">
+								<code class="text-xs opacity-70">{r.stripePaymentRecordId.slice(0, 10)}...{r.stripePaymentRecordId.slice(-4)}</code>
+								<button
+									class="btn btn-ghost btn-xs"
+									onclick={() => navigator.clipboard.writeText(r.stripePaymentRecordId ?? '')}
+									title="Copy"
+								>
+									📋
+								</button>
+							</div>
+						</div>
 					{/if}
 				</div>
-				<p class="text-sm opacity-60">{durationLabel()} × {rateFormatted()}/hr</p>
-
-				{#if r.stripePaymentRecordId}
-					<div class="mt-3 pt-3 border-t border-base-200">
-						<p class="text-xs opacity-50">Stripe record</p>
-						<div class="flex items-center gap-2 mt-1">
-							<code class="text-xs opacity-70">{r.stripePaymentRecordId.slice(0, 10)}...{r.stripePaymentRecordId.slice(-4)}</code>
-							<button
-								class="btn btn-ghost btn-xs"
-								onclick={() => navigator.clipboard.writeText(r.stripePaymentRecordId ?? '')}
-								title="Copy"
-							>
-								📋
-							</button>
-						</div>
-					</div>
-				{/if}
 			</div>
-		</div>
+		{/if}
 	</div>
 
 	<!-- Notes -->

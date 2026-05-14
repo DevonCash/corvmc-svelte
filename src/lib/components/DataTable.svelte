@@ -30,6 +30,7 @@
 		data,
 		columns,
 		row: rowSnippet,
+		groupBy,
 		pageSize: pageSizeProp = 20,
 		empty = 'No items found',
 		class: className = ''
@@ -38,6 +39,8 @@
 		columns: Column<T>[];
 		/** Optional: full control over row rendering. Receives the sorted row item. */
 		row?: Snippet<[T]>;
+		/** Optional: group rows by a label derived from each item. Returns the heading text for the group. */
+		groupBy?: (item: T) => string;
 		/** Rows per page. Default 20. */
 		pageSize?: number;
 		empty?: string;
@@ -105,7 +108,18 @@
 					{/each}
 				</thead>
 				<tbody {...$tableBodyAttrs}>
-					{#each $pageRows as row (row.id)}
+					{#each $pageRows as row, idx (row.id)}
+						{#if groupBy}
+							{@const label = groupBy(row.original)}
+							{@const prevLabel = idx > 0 ? groupBy($pageRows[idx - 1].original) : null}
+							{#if label !== prevLabel}
+								<tr>
+									<td colspan={columns.length} class="bg-base-200 text-xs font-semibold uppercase tracking-wide opacity-60 py-2 px-4">
+										{label}
+									</td>
+								</tr>
+							{/if}
+						{/if}
 						{#if rowSnippet}
 							{@render rowSnippet(row.original)}
 						{:else}
@@ -132,7 +146,7 @@
 			</table>
 		</div>
 
-		{#if $pageCount > 1}
+		{#if data.length > 0}
 			<div class="flex items-center justify-between px-4 py-3">
 				<span class="text-sm opacity-60">
 					Page {$pageIndex + 1} of {$pageCount}
