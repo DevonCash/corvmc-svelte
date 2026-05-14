@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import FormField from '$lib/components/FormField.svelte';
 	import { checkConflicts, createEvent } from './data.remote';
+
+	let { open = $bindable(false) }: { open: boolean } = $props();
 
 	// Form state
 	let title = $state('');
@@ -48,19 +50,6 @@
 	});
 
 	const hasConflicts = $derived(warnings.length > 0);
-
-	// Generate time options (30-min slots from 09:00 to 22:00)
-	const timeOptions = $derived.by(() => {
-		const opts: Array<{ value: string; label: string }> = [];
-		for (let h = 9; h <= 22; h++) {
-			for (const m of [0, 30]) {
-				if (h === 22 && m > 0) break;
-				const value = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-				opts.push({ value, label: formatSlotTime(value) });
-			}
-		}
-		return opts;
-	});
 
 	// When reservation is toggled on, default reservation times to event times
 	$effect(() => {
@@ -127,10 +116,12 @@
 			}
 
 			toast.success('Event created');
+			open = false;
+			resetForm();
+			await invalidateAll();
+
 			if (result?.eventId) {
 				goto(`/staff/events/${result.eventId}`);
-			} else {
-				goto('/staff/events');
 			}
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to create event');
@@ -138,12 +129,28 @@
 			submitting = false;
 		}
 	}
+
+	function resetForm() {
+		title = '';
+		description = '';
+		eventDate = new Date().toISOString().split('T')[0];
+		eventStartTime = '';
+		eventEndTime = '';
+		doorsTime = '';
+		tags = '';
+		reserveSpace = false;
+		reservationStartTime = '';
+		reservationEndTime = '';
+		posterFile = null;
+	}
+
+	function close() {
+		open = false;
+	}
 </script>
 
-<svelte:boundary>
-	<div class="max-w-md space-y-6">
-		<PageHeader title="New Event" backHref="/staff/events" />
-
+<Modal bind:open title="New Event" maxWidth="max-w-md" onclose={resetForm}>
+	<svelte:boundary>
 		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
 			<FormField label="Title" id="title" issues={[]}>
 				<input
@@ -178,31 +185,34 @@
 
 			<div class="grid grid-cols-2 gap-4">
 				<FormField label="Start time" id="eventStartTime" issues={[]}>
-					<select id="eventStartTime" bind:value={eventStartTime} class="select select-bordered w-full" required>
-						<option value="">Select</option>
-						{#each timeOptions as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
+					<input
+						type="time"
+						id="eventStartTime"
+						bind:value={eventStartTime}
+						class="input input-bordered w-full"
+						required
+					/>
 				</FormField>
 
 				<FormField label="End time" id="eventEndTime" issues={[]}>
-					<select id="eventEndTime" bind:value={eventEndTime} class="select select-bordered w-full" required>
-						<option value="">Select</option>
-						{#each timeOptions as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
+					<input
+						type="time"
+						id="eventEndTime"
+						bind:value={eventEndTime}
+						class="input input-bordered w-full"
+						required
+					/>
 				</FormField>
 			</div>
 
 			<FormField label="Doors time" id="doorsTime" issues={[]}>
-				<select id="doorsTime" bind:value={doorsTime} class="select select-bordered w-full">
-					<option value="">No doors time</option>
-					{#each timeOptions as opt (opt.value)}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
+				<input
+					type="time"
+					id="doorsTime"
+					bind:value={doorsTime}
+					placeholder="Optional"
+					class="input input-bordered w-full"
+				/>
 			</FormField>
 
 			<FormField label="Tags" id="tags" issues={[]}>
@@ -244,21 +254,21 @@
 
 					<div class="grid grid-cols-2 gap-4">
 						<FormField label="Reservation start" id="reservationStartTime" issues={[]}>
-							<select id="reservationStartTime" bind:value={reservationStartTime} class="select select-bordered w-full">
-								<option value="">Select</option>
-								{#each timeOptions as opt (opt.value)}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
+							<input
+								type="time"
+								id="reservationStartTime"
+								bind:value={reservationStartTime}
+								class="input input-bordered w-full"
+							/>
 						</FormField>
 
 						<FormField label="Reservation end" id="reservationEndTime" issues={[]}>
-							<select id="reservationEndTime" bind:value={reservationEndTime} class="select select-bordered w-full">
-								<option value="">Select</option>
-								{#each timeOptions as opt (opt.value)}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
+							<input
+								type="time"
+								id="reservationEndTime"
+								bind:value={reservationEndTime}
+								class="input input-bordered w-full"
+							/>
 						</FormField>
 					</div>
 
@@ -274,8 +284,9 @@
 				</div>
 			{/if}
 
-			<div class="flex justify-end gap-2 pt-2">
-				<a href="/staff/events" class="btn btn-ghost">Cancel</a>
+			<!-- Footer -->
+			<div class="modal-action">
+				<button type="button" class="btn btn-ghost" onclick={close}>Cancel</button>
 				<button
 					type="submit"
 					class="btn {hasConflicts ? 'btn-warning' : 'btn-primary'}"
@@ -288,18 +299,11 @@
 				</button>
 			</div>
 		</form>
-	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
-
-	{#snippet failed(err, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load: {String(err)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>
+		{#snippet pending()}
+			<div class="flex items-center justify-center p-8">
+				<span class="loading loading-spinner loading-md"></span>
+			</div>
+		{/snippet}
+	</svelte:boundary>
+</Modal>

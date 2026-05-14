@@ -254,6 +254,12 @@ Page title with optional back button, subtitle, and right-side action slot.
 </PageHeader>
 ```
 
+## Create forms live in modals
+
+"Create" flows (new reservation, new event, etc.) should open in a modal on the list page, not navigate to a separate `/new` route. This keeps the user in context and avoids a full page transition for what's usually a short form. The modal is a sibling component to the list page (e.g. `CreateModal.svelte`) and is toggled by a button in the `PageHeader`.
+
+Edit/detail views remain full pages at `[id]/`.
+
 ## CSS conventions
 
 - Use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.

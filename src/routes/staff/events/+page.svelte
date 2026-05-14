@@ -4,8 +4,10 @@
 	import DataTable from '$lib/components/DataTable.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import CreateEventModal from './CreateEventModal.svelte';
 
 	let { data }: { data: PageServerData } = $props();
+	let showCreateModal = $state(false);
 
 	type Event = (typeof data.events)[number];
 
@@ -44,8 +46,10 @@
 
 <div class="space-y-6">
 	<PageHeader title="Events">
-		<a href="/staff/events/new" class="btn btn-sm btn-primary">New Event</a>
+		<button class="btn btn-sm btn-primary" onclick={() => showCreateModal = true}>New Event</button>
 	</PageHeader>
+
+	<CreateEventModal bind:open={showCreateModal} />
 
 	<DataTable data={data.events} {columns} empty="No events yet">
 		{#snippet row(e)}
