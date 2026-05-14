@@ -3,8 +3,12 @@ import { error } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
+import { reservation } from '$lib/server/db/schema/reservation';
 import { auth } from '$lib/server/auth';
-import { eq } from 'drizzle-orm';
+import { eq, and, gt, ne } from 'drizzle-orm';
+import { hasAnyRole } from '$lib/server/authorization';
+import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,6 +71,72 @@ export const changePassword = form(
 				revokeOtherSessions: false
 			}
 		});
+
+		return { success: true };
+	}
+);
+
+export const deleteAccount = form(
+	z.object({
+		password: z.string().min(1, 'Password is required to delete your account')
+	}),
+	async (data) => {
+		const currentUser = requireUser();
+		const event = getRequestEvent();
+
+		// Staff and admin accounts cannot be self-deleted
+		if (await hasAnyRole(currentUser.id, ['admin', 'staff'])) {
+			throw error(403, 'Staff and admin accounts cannot be deleted this way');
+		}
+
+		// Verify password by attempting sign-in
+		try {
+			await auth.api.signInEmail({
+				headers: event.request.headers,
+				body: {
+					email: currentUser.email,
+					password: data.password
+				}
+			});
+		} catch {
+			throw error(403, 'Incorrect password');
+		}
+
+		// Cancel all future non-cancelled reservations
+		const futureReservations = await db
+			.select({ id: reservation.id })
+			.from(reservation)
+			.where(
+				and(
+					eq(reservation.createdByUserId, currentUser.id),
+					gt(reservation.startsAt, new Date()),
+					ne(reservation.status, 'cancelled')
+				)
+			);
+
+		for (const r of futureReservations) {
+			await cancelReservation(r.id, currentUser.id, 'Account deleted', {
+				staffOverride: true
+			});
+		}
+
+		// Cancel Stripe subscription if active
+		if (currentUser.stripeId) {
+			try {
+				await cancelSubscription(currentUser.stripeId);
+			} catch {
+				// Subscription may not exist — that's fine
+			}
+		}
+
+		// Soft-delete the user
+		await db
+			.update(user)
+			.set({ deletedAt: new Date().toISOString() })
+			.where(eq(user.id, currentUser.id));
+
+		// Sign out
+		await auth.api.signOut({ headers: event.request.headers });
 
 		return { success: true };
 	}

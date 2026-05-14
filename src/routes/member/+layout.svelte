@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { LayoutServerData } from './$types';
 	import { Toaster } from 'svelte-sonner';
-	import { IconStar, IconCalendar, IconSettings } from '@tabler/icons-svelte';
+	import { IconLayoutDashboard, IconStar, IconCalendar, IconSettings } from '@tabler/icons-svelte';
 	import Sidebar from '$lib/components/staff/Sidebar.svelte';
 	import Topbar from '$lib/components/staff/Topbar.svelte';
 	import UserFooter from '$lib/components/staff/UserFooter.svelte';
@@ -9,6 +9,7 @@
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
 
 	const navItems = [
+		{ href: '/member', label: 'Dashboard', icon: IconLayoutDashboard },
 		{ href: '/member/membership', label: 'Membership', icon: IconStar },
 		{ href: '/member/reservations', label: 'Reservations', icon: IconCalendar },
 		{ href: '/member/account', label: 'Account', icon: IconSettings },

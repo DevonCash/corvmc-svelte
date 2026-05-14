@@ -341,8 +341,8 @@ export async function getById(eventId: string): Promise<EventRow | null> {
 }
 
 /** Published events with startsAt in the future, ordered by date. */
-export async function listUpcoming(): Promise<EventRow[]> {
-	return db
+export async function listUpcoming(limit?: number): Promise<EventRow[]> {
+	const query = db
 		.select()
 		.from(event)
 		.where(
@@ -352,6 +352,9 @@ export async function listUpcoming(): Promise<EventRow[]> {
 			)
 		)
 		.orderBy(asc(event.startsAt));
+
+	if (limit) return query.limit(limit);
+	return query;
 }
 
 /** All events for staff, newest first. */

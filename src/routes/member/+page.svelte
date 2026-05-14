@@ -1,0 +1,126 @@
+<script lang="ts">
+	import type { PageServerData } from './$types';
+	import InfoCard from '$lib/components/InfoCard.svelte';
+	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/BookerTypeIcon.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
+	import {
+		IconCalendarPlus,
+		IconCalendarEvent,
+		IconStar
+	} from '@tabler/icons-svelte';
+
+	let { data }: { data: PageServerData } = $props();
+
+	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
+	const freeHours = $derived(data.credits.free_hours ?? 0);
+</script>
+
+<div class="space-y-6">
+	<h1 class="text-2xl font-bold">Dashboard</h1>
+
+	<!-- Quick links -->
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+		<a href="/member/reservations/new" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
+			<div class="card-body flex-row items-center gap-3 py-4">
+				<IconCalendarPlus size={24} class="text-primary" />
+				<span class="font-medium">Book a Session</span>
+			</div>
+		</a>
+		<a href="/events" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
+			<div class="card-body flex-row items-center gap-3 py-4">
+				<IconCalendarEvent size={24} class="text-primary" />
+				<span class="font-medium">Browse Events</span>
+			</div>
+		</a>
+		<a href="/member/membership" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
+			<div class="card-body flex-row items-center gap-3 py-4">
+				<IconStar size={24} class="text-primary" />
+				<span class="font-medium">Manage Membership</span>
+			</div>
+		</a>
+	</div>
+
+	<!-- Reservations + Credits grid -->
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+		<!-- This week's reservations -->
+		<div class="lg:col-span-2">
+			<InfoCard title="This Week">
+				{#if data.weekReservations.length === 0}
+					<EmptyState
+						message="No sessions booked this week."
+						actionLabel="Book a session"
+						actionHref="/member/reservations/new"
+					/>
+				{:else}
+					<div class="space-y-2">
+						{#each data.weekReservations as res (res.id)}
+							<div class="flex items-center justify-between rounded-lg bg-base-200 px-3 py-2">
+								<div class="flex items-center gap-3">
+									<BookerTypeIcon type={res.bookerType} size={18} class="opacity-60" />
+									<div>
+										<p class="text-sm font-medium">
+											{formatDate(res.startsAt)}
+										</p>
+										<p class="text-xs opacity-60">
+											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(res.startsAt, res.endsAt)}
+										</p>
+									</div>
+								</div>
+								<StatusBadge status={res.status} />
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</InfoCard>
+		</div>
+
+		<!-- Credit balance -->
+		<InfoCard title="Practice Credits">
+			{#if isSustaining}
+				<div class="space-y-3">
+					<p class="text-3xl font-medium">{freeHours}<span class="text-base opacity-60"> hrs left</span></p>
+					<progress
+						class="progress progress-primary w-full"
+						value={data.usedThisMonth}
+						max={data.allocatedThisMonth || 1}
+					></progress>
+					<p class="text-xs opacity-60">
+						{data.usedThisMonth} of {data.allocatedThisMonth} hours used this month
+					</p>
+				</div>
+			{:else}
+				<div class="space-y-3">
+					<p class="text-sm opacity-70">
+						Become a sustaining member to get free practice hours each month.
+					</p>
+					<a href="/member/membership" class="btn btn-primary btn-sm">Learn More</a>
+				</div>
+			{/if}
+		</InfoCard>
+	</div>
+
+	<!-- Upcoming events -->
+	<InfoCard title="Upcoming Events">
+		{#if data.upcomingEvents.length === 0}
+			<EmptyState message="No events on the horizon." />
+		{:else}
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				{#each data.upcomingEvents as evt (evt.id)}
+					<a href="/events" class="card bg-base-200 transition-shadow hover:shadow-md">
+						{#if evt.posterUrl}
+							<figure>
+								<img src={evt.posterUrl} alt={evt.title} class="h-32 w-full object-cover" />
+							</figure>
+						{/if}
+						<div class="card-body p-3">
+							<p class="text-sm font-medium">{evt.title}</p>
+							<p class="text-xs opacity-60">{formatDate(evt.startsAt)}</p>
+						</div>
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</InfoCard>
+</div>

@@ -5,7 +5,9 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import SubmitButton from '$lib/components/SubmitButton.svelte';
 	import InfoCard from '$lib/components/InfoCard.svelte';
-	import { updateProfile, changePassword } from './data.remote';
+	import Modal from '$lib/components/Modal.svelte';
+	import { goto } from '$app/navigation';
+	import { updateProfile, changePassword, deleteAccount } from './data.remote';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -16,17 +18,21 @@
 	});
 
 	const passwordInitial = { currentPassword: '', newPassword: '', confirmPassword: '' };
+	const deleteInitial = { password: '' };
+
+	let showPasswordModal = $state(false);
+	let showDeleteModal = $state(false);
 </script>
 
 <div class="max-w-2xl space-y-6">
 	<PageHeader title="Account Settings" />
 
 	<!-- Profile info -->
-	<InfoCard title="Profile">
+	<InfoCard title="Contact Information">
 		<Form
 			remote={updateProfile}
 			initial={profileInitial}
-			successToast="Profile updated"
+			successToast="Contact info updated"
 			errorToast="Update failed"
 		>
 			<div class="space-y-4">
@@ -83,13 +89,39 @@
 		</Form>
 	</InfoCard>
 
-	<!-- Change password -->
-	<InfoCard title="Change Password">
+	<!-- Security -->
+	<InfoCard title="Security">
+		<div class="space-y-4">
+			<div class="flex items-center justify-between">
+				<p class="text-sm opacity-70">Change your account password.</p>
+				<button class="btn btn-outline btn-sm" onclick={() => (showPasswordModal = true)}>
+					Change Password
+				</button>
+			</div>
+
+			<div class="divider my-0"></div>
+
+			<div class="flex items-center justify-between">
+				{#if data.isStaff}
+					<p class="text-sm opacity-70">Contact an admin to delete your account.</p>
+					<span class="btn btn-error btn-sm btn-disabled">Delete Account</span>
+				{:else}
+					<p class="text-sm opacity-70">Permanently delete your account and all associated data.</p>
+					<button class="btn btn-error btn-sm" onclick={() => (showDeleteModal = true)}>
+						Delete Account
+					</button>
+				{/if}
+			</div>
+		</div>
+	</InfoCard>
+
+	<Modal title="Change Password" bind:open={showPasswordModal}>
 		<Form
 			remote={changePassword}
 			initial={passwordInitial}
 			successToast="Password changed"
 			errorToast="Password change failed"
+			onsuccess={() => (showPasswordModal = false)}
 		>
 			<div class="space-y-4">
 				<FormField label="Current password" id="currentPassword" issues={changePassword.fields.currentPassword.issues()}>
@@ -127,5 +159,42 @@
 				</div>
 			</div>
 		</Form>
-	</InfoCard>
+	</Modal>
+
+	<Modal title="Delete Account" bind:open={showDeleteModal}>
+		<Form
+			remote={deleteAccount}
+			initial={deleteInitial}
+			successToast="Account deleted"
+			errorToast="Deletion failed"
+			onsuccess={() => goto('/demo/better-auth/login')}
+		>
+			<div class="space-y-4">
+				<div class="alert alert-error">
+					<p>
+						This action is permanent. Deleting your account will cancel all of your current and
+						future reservations and end your subscription. This cannot be undone.
+					</p>
+				</div>
+
+				<FormField
+					label="Enter your password to confirm"
+					id="password"
+					issues={deleteAccount.fields.password.issues()}
+				>
+					<input
+						id="password"
+						name="password"
+						type="password"
+						class="input input-bordered w-full"
+						autocomplete="current-password"
+					/>
+				</FormField>
+
+				<div class="flex justify-end pt-2">
+					<SubmitButton label="Delete My Account" successLabel="Deleted" class="btn-error" />
+				</div>
+			</div>
+		</Form>
+	</Modal>
 </div>
