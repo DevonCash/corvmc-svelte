@@ -43,6 +43,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	const sameDayReservations = await db
 		.select({
 			id: reservation.id,
+			bookerType: reservation.bookerType,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			status: reservation.status
@@ -68,24 +69,14 @@ export const load: PageServerLoad = async ({ params }) => {
 	const [prevRow] = await db
 		.select({ id: reservation.id })
 		.from(reservation)
-		.where(
-			and(
-				ne(reservation.status, 'cancelled'),
-				lt(reservation.startsAt, row.startsAt)
-			)
-		)
+		.where(and(ne(reservation.status, 'cancelled'), lt(reservation.startsAt, row.startsAt)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(1);
 
 	const [nextRow] = await db
-		.select({ id: reservation.id })
+		.select({ id: reservation.id, startsAt: reservation.startsAt })
 		.from(reservation)
-		.where(
-			and(
-				ne(reservation.status, 'cancelled'),
-				gt(reservation.startsAt, row.startsAt)
-			)
-		)
+		.where(and(ne(reservation.status, 'cancelled'), gt(reservation.startsAt, row.startsAt)))
 		.orderBy(asc(reservation.startsAt))
 		.limit(1);
 
@@ -94,10 +85,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		.select({ count: count() })
 		.from(reservation)
 		.where(
-			and(
-				eq(reservation.createdByUserId, row.createdByUserId),
-				eq(reservation.status, 'completed')
-			)
+			and(eq(reservation.createdByUserId, row.createdByUserId), eq(reservation.status, 'completed'))
 		);
 
 	return {
@@ -109,6 +97,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		},
 		sameDayReservations: sameDayReservations.map((r) => ({
 			id: r.id,
+			memberName: '', // Not needed for timeline, and would require extra queries
+			bookerType: r.bookerType,
 			startsAt: r.startsAt.toISOString(),
 			endsAt: r.endsAt.toISOString()
 		})),

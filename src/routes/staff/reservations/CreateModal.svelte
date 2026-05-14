@@ -5,6 +5,7 @@
 	import { searchMembers, getSlots, checkConflicts, createReservation } from './data.remote';
 	import Modal from '$lib/components/Modal.svelte';
 	import FormField from '$lib/components/FormField.svelte';
+	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
@@ -79,7 +80,7 @@
 
 		for (const c of conflictData.conflicts) {
 			if (c.type === 'reservation') {
-				const range = `${formatSlotTime(formatTimeFromDate(c.startsAt))} – ${formatSlotTime(formatTimeFromDate(c.endsAt))}`;
+				const range = `${formatSlotTime(toLocalTime(c.startsAt))} – ${formatSlotTime(toLocalTime(c.endsAt))}`;
 				msgs.push(`Conflicts with existing reservation: ${c.label}, ${range}`);
 			} else {
 				msgs.push(`Overlaps with closure: ${c.label}`);
@@ -90,27 +91,10 @@
 		return msgs;
 	});
 
-	function formatSlotTime(time: string): string {
-		const [h, m] = time.split(':').map(Number);
-		const period = h >= 12 ? 'PM' : 'AM';
-		const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-		return m === 0 ? `${hour} ${period}` : `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-	}
-
 	function addMinutes(time: string, minutes: number): string {
 		const [h, m] = time.split(':').map(Number);
 		const total = h * 60 + m + minutes;
 		return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
-	}
-
-	function formatTimeFromDate(d: Date | string): string {
-		const date = typeof d === 'string' ? new Date(d) : d;
-		return date.toLocaleTimeString('en-GB', {
-			timeZone: 'America/Los_Angeles',
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		});
 	}
 
 	// When combobox value changes, look up the member from results

@@ -3,16 +3,9 @@
 	import Form from '$lib/components/Form.svelte';
 	import SubmitButton from '$lib/components/SubmitButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { formatDollars } from '$lib/utils/format';
 
 	let products = $derived(await getProducts());
-
-	function formatDollars(cents: number): string {
-		return (cents / 100).toFixed(2);
-	}
-
-	function centsToDollars(cents: number): string {
-		return (cents / 100).toFixed(2);
-	}
 </script>
 
 <svelte:boundary>
@@ -93,7 +86,7 @@
 											type="number"
 											step="0.01"
 											min="0"
-											value={centsToDollars(product.unitAmountCents)}
+											value={formatDollars(product.unitAmountCents)}
 											oninput={(e) => {
 												const input = e.target as HTMLInputElement;
 												const dollars = parseFloat(input.value);

@@ -6,6 +6,7 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateModal from './CreateModal.svelte';
+	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -13,32 +14,6 @@
 
 	let resolveOpen = $state(false);
 	let createOpen = $state(false);
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
-
-	function formatTimeRange(startsAt: string, endsAt: string): string {
-		const fmt = (iso: string) =>
-			new Date(iso).toLocaleTimeString('en-US', {
-				timeZone: 'America/Los_Angeles',
-				hour: 'numeric',
-				minute: '2-digit'
-			});
-		return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-	}
-
-	function formatAmount(startsAt: string, endsAt: string): string {
-		const ms = new Date(endsAt).getTime() - new Date(startsAt).getTime();
-		const hours = ms / (1000 * 60 * 60);
-		const cents = Math.round(hours * data.hourlyRateCents);
-		return `$${(cents / 100).toFixed(2)}`;
-	}
 
 	function paymentStatus(r: Reservation): { label: string; class: string } {
 		if (r.status === 'no_show') return { label: 'No-show', class: 'badge-error' };
@@ -55,17 +30,12 @@
 	}
 
 	function dayLabel(r: Reservation): string {
-		return new Date(r.startsAt).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(r.startsAt);
 	}
 
 	const columns: Column<Reservation>[] = [
 		{ key: 'status', header: '' },
-		{ key: 'memberName', header: 'Member', sortable: true },
+		{ key: 'memberName', header: 'Reserved for', sortable: true },
 		{ key: 'startsAt', header: 'Time', sortable: true },
 		{ key: 'stripePaymentRecordId', header: 'Payment' },
 		{ key: 'bookerType', header: 'Booker' }
@@ -158,7 +128,7 @@
 					{#if r.bookerType === 'event'}
 						<span class="text-sm opacity-40">—</span>
 					{:else}
-						<div>{formatAmount(r.startsAt, r.endsAt)}</div>
+						<div>{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}</div>
 						{@const ps = paymentStatus(r)}
 						<span class="badge badge-sm {ps.class}">{ps.label}</span>
 					{/if}

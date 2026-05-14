@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	let { data } = $props();
 
@@ -7,29 +9,6 @@
 	const past = $derived(data.past);
 
 	let activeTab = $state<'upcoming' | 'past'>('upcoming');
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
-
-	function formatTime(iso: string): string {
-		return new Date(iso).toLocaleTimeString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			hour: 'numeric',
-			minute: '2-digit'
-		});
-	}
-
-	function formatDuration(startsAt: string, endsAt: string): string {
-		const ms = new Date(endsAt).getTime() - new Date(startsAt).getTime();
-		const hours = ms / (1000 * 60 * 60);
-		return hours === 1 ? '1 hour' : `${hours} hours`;
-	}
 
 	const statusBadge: Record<string, string> = {
 		scheduled: 'badge-warning',
@@ -110,7 +89,7 @@
 
 	{#if activeTab === 'past'}
 		{#if past.length === 0}
-			<p class="text-center py-12 opacity-60">No past reservations.</p>
+			<EmptyState message="No past reservations." />
 		{:else}
 			<div class="space-y-3">
 				{#each past as res}

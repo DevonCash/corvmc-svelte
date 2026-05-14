@@ -4,6 +4,7 @@
 	import { getSlots, bookReservation } from './data.remote';
 	import Form from '$lib/components/Form.svelte';
 	import SubmitButton from '$lib/components/SubmitButton.svelte';
+	import { formatSlotTime } from '$lib/utils/format';
 
 	// Resolve date from URL, default to today
 	let dateParam = $derived(
@@ -80,12 +81,6 @@
 		return (eh * 60 + em - (sh * 60 + sm)) / 60;
 	});
 
-	function formatTimeLabel(time: string): string {
-		const [h, m] = time.split(':').map(Number);
-		const suffix = h >= 12 ? 'PM' : 'AM';
-		const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-		return `${h12}:${m.toString().padStart(2, '0')} ${suffix}`;
-	}
 
 	// Form dirty tracking watches these fields
 	let initial = $derived({ startTime: '', endTime: '', notes: '' });
@@ -140,7 +135,7 @@
 						{startTimeOptions.length === 0 ? 'No times available' : 'Select a start time'}
 					</option>
 					{#each startTimeOptions as time}
-						<option value={time}>{formatTimeLabel(time)}</option>
+						<option value={time}>{formatSlotTime(time)}</option>
 					{/each}
 				</select>
 			</div>
@@ -169,7 +164,7 @@
 						{/if}
 					</option>
 					{#each endTimeOptions as time}
-						<option value={time}>{formatTimeLabel(time)}</option>
+						<option value={time}>{formatSlotTime(time)}</option>
 					{/each}
 				</select>
 			</div>

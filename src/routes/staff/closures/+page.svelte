@@ -1,20 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { formatDateTime } from '$lib/utils/format';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	let { data } = $props();
 
 	const closures = $derived(data.closures);
-
-	function formatDateTime(iso: string): string {
-		return new Date(iso).toLocaleString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric',
-			hour: 'numeric',
-			minute: '2-digit'
-		});
-	}
 
 	function isFuture(iso: string): boolean {
 		return new Date(iso) > new Date();
@@ -54,7 +45,7 @@
 	</div>
 
 	{#if closures.length === 0}
-		<p class="text-center py-8 opacity-60">No closures.</p>
+		<EmptyState message="No closures." />
 	{:else}
 		<div class="space-y-3">
 			{#each closures as c}

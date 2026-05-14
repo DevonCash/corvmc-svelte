@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
+	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
 
 	let {
 		open = $bindable(false),
@@ -27,33 +28,6 @@
 	let resolved = $state<Set<string>>(new Set());
 
 	const visible = $derived(unresolved.filter((r) => !resolved.has(r.id)));
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
-
-	function formatTimeRange(startsAt: string, endsAt: string): string {
-		const fmt = (iso: string) =>
-			new Date(iso).toLocaleTimeString('en-US', {
-				timeZone: 'America/Los_Angeles',
-				hour: 'numeric',
-				minute: '2-digit'
-			});
-		return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-	}
-
-	function durationAndAmount(startsAt: string, endsAt: string): string {
-		const ms = new Date(endsAt).getTime() - new Date(startsAt).getTime();
-		const hours = ms / (1000 * 60 * 60);
-		const cents = Math.round(hours * hourlyRateCents);
-		const hLabel = hours === 1 ? '1 hr' : `${hours} hrs`;
-		return `${hLabel} · $${(cents / 100).toFixed(2)}`;
-	}
 
 	function markResolved(id: string) {
 		resolved = new Set([...resolved, id]);
@@ -95,7 +69,7 @@
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
 								<p class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</p>
-								<p class="text-sm opacity-60">{durationAndAmount(r.startsAt, r.endsAt)}</p>
+								<p class="text-sm opacity-60">{formatDurationAndAmount(r.startsAt, r.endsAt, hourlyRateCents)}</p>
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">

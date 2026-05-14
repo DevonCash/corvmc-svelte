@@ -152,6 +152,39 @@ Renders a daisyUI badge colored by status string. Handles underscore-to-space co
 
 Built-in variants: `scheduled` (warning), `confirmed` (info), `completed` (success), `no_show` (error), `cancelled` (ghost), `active` (success), `pending` (warning), `error` (error). Unknown statuses fall back to `badge-ghost`.
 
+## InfoCard
+
+Card with a small label header and content body. Use for detail page sections (member info, payment, notes, etc.).
+
+```svelte
+<InfoCard title="Payment">
+  <p class="text-2xl font-medium">$24.00</p>
+</InfoCard>
+```
+
+Pass extra classes on the outer card via `class`:
+
+```svelte
+<InfoCard title="Cancelled" class="border-l-4 border-error">
+  <p>Reason: scheduling conflict</p>
+</InfoCard>
+```
+
+## DayTimeline
+
+Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "current" slot in primary and shows others in secondary.
+
+```svelte
+<DayTimeline
+  current={{ id: 'abc', startsAt: '...', endsAt: '...', bookerType: 'user' }}
+  others={[
+    { id: 'def', startsAt: '...', endsAt: '...', bookerType: 'event', label: 'Band Practice', href: '/staff/reservations/def' }
+  ]}
+/>
+```
+
+The `others` array is optional. Each slot's `href` makes it clickable; `label` shows on hover.
+
 ## EmptyState
 
 Consistent empty-state message for lists and tables.

@@ -5,30 +5,12 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
+	import { formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 	let showCreateModal = $state(false);
 
 	type Event = (typeof data.events)[number];
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
-
-	function formatTimeRange(startsAt: string, endsAt: string): string {
-		const fmt = (iso: string) =>
-			new Date(iso).toLocaleTimeString('en-US', {
-				timeZone: 'America/Los_Angeles',
-				hour: 'numeric',
-				minute: '2-digit'
-			});
-		return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-	}
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
@@ -36,16 +18,11 @@
 	}
 
 	function dayLabel(e: Event): string {
-		return new Date(e.startsAt).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(e.startsAt);
 	}
 
 	const columns: Column<Event>[] = [
-		{ key: 'status', header: 'Status' },
+		{ key: 'status', header: '' },
 		{ key: 'startsAt', header: 'Date', sortable: true },
 		{ key: 'title', header: 'Title', sortable: true },
 		{ key: 'tags', header: 'Tags' },

@@ -53,6 +53,6 @@
 	const label = $derived.by(() => status.replace(/_/g, ' ').at(0)?.toUpperCase() + status.slice(1));
 </script>
 
-<span class="{variant.color} {className} tooltip tooltip-right" data-tip={label}>
-	<variant.icon {size} />
+<span class="tooltip tooltip-right" data-tip={label}>
+	<variant.icon {size} class="{variant.color} {className}"/>
 </span>

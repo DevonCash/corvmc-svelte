@@ -7,6 +7,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { publishEvent, cancelEvent, updateEvent, checkRebook, checkConflicts } from './data.remote';
+	import InfoCard from '$lib/components/InfoCard.svelte';
+	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -170,38 +172,7 @@
 		}
 	}
 
-	// ── Formatting helpers ────────────────────────────────────────────────
-
-	function fullDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		});
-	}
-
-	function formatTime(iso: string): string {
-		return new Date(iso).toLocaleTimeString('en-US', {
-			timeZone: 'America/Los_Angeles',
-			hour: 'numeric',
-			minute: '2-digit'
-		});
-	}
-
-	function toLocalDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-	}
-
-	function toLocalTime(iso: string): string {
-		return new Date(iso).toLocaleTimeString('en-GB', {
-			timeZone: 'America/Los_Angeles',
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		});
-	}
+	// ── Helpers ───────────────────────────────────────────────────────────
 
 	function buildISOFromLocal(date: string, time: string, _tz: string): string {
 		// Build a rough ISO string for the rebook check query
@@ -354,83 +325,69 @@
 	{/if}
 
 	<!-- Event info card -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<h3 class="text-sm font-medium opacity-60 mb-3">Event Details</h3>
-
-			<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
-			<p class="opacity-70">
-				{#if evt.doorsAt}
-					Doors {formatTime(evt.doorsAt)} · Show {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
-				{:else}
-					{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
-				{/if}
-			</p>
-
-			{#if evt.description}
-				<div class="mt-4 pt-4 border-t border-base-200">
-					<p class="whitespace-pre-wrap">{evt.description}</p>
-				</div>
+	<InfoCard title="Event Details">
+		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
+		<p class="opacity-70">
+			{#if evt.doorsAt}
+				Doors {formatTime(evt.doorsAt)} · Show {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+			{:else}
+				{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 			{/if}
+		</p>
 
-			{#if parseTags(evt.tags).length > 0}
-				<div class="mt-4 pt-4 border-t border-base-200 flex gap-1 flex-wrap">
-					{#each parseTags(evt.tags) as tag (tag)}
-						<span class="badge badge-outline badge-sm">{tag}</span>
-					{/each}
-				</div>
-			{/if}
-		</div>
-	</div>
+		{#if evt.description}
+			<div class="mt-4 pt-4 border-t border-base-200">
+				<p class="whitespace-pre-wrap">{evt.description}</p>
+			</div>
+		{/if}
+
+		{#if parseTags(evt.tags).length > 0}
+			<div class="mt-4 pt-4 border-t border-base-200 flex gap-1 flex-wrap">
+				{#each parseTags(evt.tags) as tag (tag)}
+					<span class="badge badge-outline badge-sm">{tag}</span>
+				{/each}
+			</div>
+		{/if}
+	</InfoCard>
 
 	<!-- Poster -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<h3 class="text-sm font-medium opacity-60 mb-3">Poster</h3>
+	<InfoCard title="Poster">
+		{#if data.posterUrl}
+			<img src={data.posterUrl} alt="Event poster" class="rounded max-h-64 object-contain" />
+		{:else}
+			<p class="text-sm opacity-50">No poster uploaded</p>
+		{/if}
 
-			{#if data.posterUrl}
-				<img src={data.posterUrl} alt="Event poster" class="rounded max-h-64 object-contain" />
-			{:else}
-				<p class="text-sm opacity-50">No poster uploaded</p>
-			{/if}
-
-			{#if evt.status !== 'cancelled'}
-				<div class="mt-3">
-					<input
-						type="file"
-						accept="image/jpeg,image/png,image/webp"
-						onchange={handlePosterUpload}
-						class="file-input file-input-bordered file-input-sm"
-					/>
-				</div>
-			{/if}
-		</div>
-	</div>
+		{#if evt.status !== 'cancelled'}
+			<div class="mt-3">
+				<input
+					type="file"
+					accept="image/jpeg,image/png,image/webp"
+					onchange={handlePosterUpload}
+					class="file-input file-input-bordered file-input-sm"
+				/>
+			</div>
+		{/if}
+	</InfoCard>
 
 	<!-- Linked reservation -->
 	{#if data.linkedReservation}
-		<div class="card bg-base-100 shadow">
-			<div class="card-body">
-				<h3 class="text-sm font-medium opacity-60 mb-3">Space Reservation</h3>
-				<div class="flex items-center gap-3">
-					<StatusBadge status={data.linkedReservation.status} />
-					<span>{formatTime(data.linkedReservation.startsAt)} – {formatTime(data.linkedReservation.endsAt)}</span>
-				</div>
-				<div class="mt-2">
-					<a href="/staff/reservations/{data.linkedReservation.id}" class="link link-primary text-sm">
-						View reservation →
-					</a>
-				</div>
+		<InfoCard title="Space Reservation">
+			<div class="flex items-center gap-3">
+				<StatusBadge status={data.linkedReservation.status} />
+				<span>{formatTime(data.linkedReservation.startsAt)} – {formatTime(data.linkedReservation.endsAt)}</span>
 			</div>
-		</div>
+			<div class="mt-2">
+				<a href="/staff/reservations/{data.linkedReservation.id}" class="link link-primary text-sm">
+					View reservation →
+				</a>
+			</div>
+		</InfoCard>
 	{/if}
 
 	<!-- Creator -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<h3 class="text-sm font-medium opacity-60 mb-2">Created by</h3>
-			<p>{data.creator.name} ({data.creator.email})</p>
-			<p class="text-sm opacity-50">Created {fullDate(evt.createdAt)}</p>
-		</div>
-	</div>
+	<InfoCard title="Created by">
+		<p>{data.creator.name} ({data.creator.email})</p>
+		<p class="text-sm opacity-50">Created {fullDate(evt.createdAt)}</p>
+	</InfoCard>
 </div>
