@@ -23,13 +23,18 @@ const mockEventRow = {
 
 // Track what the mock DB does
 let selectResult: unknown[] = [];
+let selectResultQueue: unknown[][] = [];
 let updateRowCount = 1;
 
 function chainable(result?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(result ?? selectResult);
+				return (resolve: (v: unknown[]) => void) => {
+					if (result !== undefined) return resolve(result);
+					if (selectResultQueue.length > 0) return resolve(selectResultQueue.shift()!);
+					return resolve(selectResult);
+				};
 			}
 			if (prop === 'rowCount') return updateRowCount;
 			return () => proxy;
@@ -91,7 +96,7 @@ vi.mock('$lib/server/storage', () => ({
 	deleteObject: vi.fn().mockResolvedValue(undefined)
 }));
 
-import { create, publish, cancel } from './event-service';
+import { create, publish, cancel, update, checkRebookNeeded } from './event-service';
 import { staffCreate, cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
@@ -100,6 +105,7 @@ describe('EventService', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		selectResult = [];
+		selectResultQueue = [];
 		updateRowCount = 1;
 	});
 
@@ -263,6 +269,214 @@ describe('EventService', () => {
 
 			// Should not throw — error from cancelReservation is caught
 			await expect(cancel('evt-1', 'staff-1')).resolves.toBeUndefined();
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// checkRebookNeeded
+	// -----------------------------------------------------------------------
+
+	describe('checkRebookNeeded', () => {
+		const resRow = {
+			id: 'res-1',
+			startsAt: new Date('2025-07-15T01:00:00Z'),
+			endsAt: new Date('2025-07-15T06:00:00Z')
+		};
+
+		it('returns not needed when event has no reservation', async () => {
+			// getById returns event with no reservationId
+			selectResult = [{ ...mockEventRow, reservationId: null }];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T02:00:00Z'),
+				new Date('2025-07-15T05:00:00Z')
+			);
+
+			expect(result.needed).toBe(false);
+			expect(result.currentReservation).toBeNull();
+		});
+
+		it('returns not needed when new times fit within reservation', async () => {
+			// First select: getById (event), second select: reservation row
+			selectResultQueue = [
+				[{ ...mockEventRow, reservationId: 'res-1' }],
+				[resRow]
+			];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T02:00:00Z'), // within 01:00-06:00
+				new Date('2025-07-15T05:00:00Z')
+			);
+
+			expect(result.needed).toBe(false);
+		});
+
+		it('returns needed when event starts earlier than reservation', async () => {
+			selectResultQueue = [
+				[{ ...mockEventRow, reservationId: 'res-1' }],
+				[resRow]
+			];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T00:30:00Z'), // before 01:00
+				new Date('2025-07-15T05:00:00Z')
+			);
+
+			expect(result.needed).toBe(true);
+			expect(result.reason).toContain('starts earlier');
+		});
+
+		it('returns needed when event ends later than reservation', async () => {
+			selectResultQueue = [
+				[{ ...mockEventRow, reservationId: 'res-1' }],
+				[resRow]
+			];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T02:00:00Z'),
+				new Date('2025-07-15T07:00:00Z') // after 06:00
+			);
+
+			expect(result.needed).toBe(true);
+			expect(result.reason).toContain('ends later');
+		});
+
+		it('returns needed with both reasons when extending both directions', async () => {
+			selectResultQueue = [
+				[{ ...mockEventRow, reservationId: 'res-1' }],
+				[resRow]
+			];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T00:00:00Z'),
+				new Date('2025-07-15T08:00:00Z')
+			);
+
+			expect(result.needed).toBe(true);
+			expect(result.reason).toContain('starts earlier');
+			expect(result.reason).toContain('ends later');
+		});
+
+		it('returns not needed when times match exactly', async () => {
+			selectResultQueue = [
+				[{ ...mockEventRow, reservationId: 'res-1' }],
+				[resRow]
+			];
+
+			const result = await checkRebookNeeded(
+				'evt-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T06:00:00Z')
+			);
+
+			expect(result.needed).toBe(false);
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// update with rebook
+	// -----------------------------------------------------------------------
+
+	describe('update with rebook', () => {
+		it('cancels old reservation and creates new one', async () => {
+			// getById for the update call
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				startsAt: new Date('2025-07-15T00:00:00Z'),
+				endsAt: new Date('2025-07-15T07:00:00Z'),
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(cancelReservation).toHaveBeenCalledWith(
+				'res-1',
+				'staff-1',
+				'Event times changed — rebooking',
+				{ staffOverride: true }
+			);
+			expect(staffCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bookerType: 'event',
+					bookerId: 'evt-1',
+					status: 'confirmed' // published event → confirmed reservation
+				})
+			);
+		});
+
+		it('creates scheduled reservation for draft events', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: true
+				}
+			});
+
+			expect(staffCreate).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 'scheduled' })
+			);
+		});
+
+		it('throws on conflict when override is false', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			vi.mocked(hasConflict).mockResolvedValueOnce(true);
+
+			await expect(
+				update('evt-1', {
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+						overrideConflicts: false
+					}
+				})
+			).rejects.toThrow('Time slot is not available');
+		});
+
+		it('skips conflict check when override is true', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: true
+				}
+			});
+
+			expect(hasConflict).not.toHaveBeenCalled();
+			expect(staffCreate).toHaveBeenCalled();
+		});
+
+		it('does not rebook when no reservationId on event', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: null }];
+
+			await update('evt-1', {
+				title: 'New Title',
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(staffCreate).not.toHaveBeenCalled();
 		});
 	});
 });

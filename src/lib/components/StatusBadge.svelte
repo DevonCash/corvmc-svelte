@@ -13,6 +13,7 @@
 		IconWorld,
 		IconAlertTriangle
 	} from '@tabler/icons-svelte';
+	import { Tooltip } from 'bits-ui';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;
@@ -49,9 +50,9 @@
 
 	const fallback: Variant = { icon: IconCircleX, color: 'opacity-40' };
 	const variant = $derived(variants[status] ?? fallback);
-	const label = $derived(status.replace(/_/g, ' '));
+	const label = $derived.by(() => status.replace(/_/g, ' ').at(0)?.toUpperCase() + status.slice(1));
 </script>
 
-<span class="{variant.color} {className}" title={label}>
+<span class="{variant.color} {className} tooltip tooltip-right" data-tip={label}>
 	<variant.icon {size} />
 </span>

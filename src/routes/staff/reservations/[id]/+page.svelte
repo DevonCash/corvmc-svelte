@@ -228,9 +228,9 @@
 				<!-- Other reservations -->
 				{#each data.sameDayReservations as other (other.id)}
 					<div
-						class="absolute h-full bg-base-300 rounded opacity-50"
+						class="absolute h-full bg-secondary rounded opacity-50 tooltip"
 						style="left: {timelinePercent(other.startsAt)}%; width: {timelinePercent(other.endsAt) - timelinePercent(other.startsAt)}%"
-						title="{formatTime(other.startsAt)} – {formatTime(other.endsAt)}"
+						data-tip="{other.memberName}"
 					></div>
 				{/each}
 

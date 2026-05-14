@@ -1,7 +1,69 @@
 import { z } from 'zod';
-import { command } from '$app/server';
+import { command, query } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
-import { publish, cancel, update } from '$lib/server/event/event-service';
+import {
+	publish,
+	cancel,
+	update,
+	checkRebookNeeded
+} from '$lib/server/event/event-service';
+import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+
+// ---------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------
+
+export const checkConflicts = query(
+	z.object({
+		date: z.string(),
+		startTime: z.string(),
+		endTime: z.string(),
+		excludeReservationId: z.string().optional()
+	}),
+	async ({ date, startTime, endTime, excludeReservationId }) => {
+		await requireStaff();
+		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
+		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
+
+		const conflicts = await getConflictDetails(startsAt, endsAt);
+		const validationWarnings = getValidationWarnings(startsAt, endsAt);
+
+		// Filter out the event's own reservation from conflicts
+		const filtered = excludeReservationId
+			? conflicts.filter((c) => c.type !== 'reservation' || !('id' in c))
+			: conflicts;
+
+		return { conflicts: filtered, validationWarnings };
+	}
+);
+
+export const checkRebook = query(
+	z.object({
+		eventId: z.string(),
+		newStartsAt: z.string(),
+		newEndsAt: z.string()
+	}),
+	async ({ eventId, newStartsAt, newEndsAt }) => {
+		await requireStaff();
+		const result = await checkRebookNeeded(
+			eventId,
+			new Date(newStartsAt),
+			new Date(newEndsAt)
+		);
+		return {
+			needed: result.needed,
+			reason: result.reason,
+			currentReservation: result.currentReservation
+				? {
+						id: result.currentReservation.id,
+						startsAt: result.currentReservation.startsAt.toISOString(),
+						endsAt: result.currentReservation.endsAt.toISOString()
+					}
+				: null
+		};
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Commands
@@ -29,12 +91,52 @@ const updateEventSchema = z.object({
 	eventId: z.string().min(1),
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
-	tags: z.string().nullable().optional()
+	tags: z.string().nullable().optional(),
+	eventDate: z.string().optional(),
+	eventStartTime: z.string().optional(),
+	eventEndTime: z.string().optional(),
+	doorsTime: z.string().nullable().optional(),
+	// Rebook params — only sent when user confirmed the rebook
+	rebookReservation: z.boolean().default(false),
+	reservationStartTime: z.string().optional(),
+	reservationEndTime: z.string().optional(),
+	overrideConflicts: z.boolean().default(false)
 });
 
 export const updateEvent = command(updateEventSchema, async (raw) => {
-	await requireStaff();
-	const { eventId, ...fields } = raw as z.infer<typeof updateEventSchema>;
-	await update(eventId, fields);
+	const staff = await requireStaff();
+	const data = raw as z.infer<typeof updateEventSchema>;
+	const { eventId, ...fields } = data;
+	const tz = 'America/Los_Angeles';
+
+	const updateParams: Parameters<typeof update>[1] = {};
+
+	if (fields.title !== undefined) updateParams.title = fields.title;
+	if (fields.description !== undefined) updateParams.description = fields.description;
+	if (fields.tags !== undefined) updateParams.tags = fields.tags;
+
+	// Build Date objects if date/time fields provided
+	if (fields.eventDate && fields.eventStartTime && fields.eventEndTime) {
+		updateParams.startsAt = buildDateInTz(fields.eventDate, fields.eventStartTime, tz);
+		updateParams.endsAt = buildDateInTz(fields.eventDate, fields.eventEndTime, tz);
+	}
+
+	if (fields.doorsTime !== undefined) {
+		updateParams.doorsAt = fields.doorsTime && fields.eventDate
+			? buildDateInTz(fields.eventDate, fields.doorsTime, tz)
+			: null;
+	}
+
+	// Handle reservation rebooking
+	if (fields.rebookReservation && fields.eventDate && fields.reservationStartTime && fields.reservationEndTime) {
+		updateParams.rebook = {
+			userId: staff.id,
+			reservationStartsAt: buildDateInTz(fields.eventDate, fields.reservationStartTime, tz),
+			reservationEndsAt: buildDateInTz(fields.eventDate, fields.reservationEndTime, tz),
+			overrideConflicts: fields.overrideConflicts
+		};
+	}
+
+	await update(eventId, updateParams);
 	return { success: true };
 });

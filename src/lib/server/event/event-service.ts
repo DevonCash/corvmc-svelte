@@ -143,6 +143,64 @@ export interface UpdateEventParams {
 		buffer: ArrayBuffer;
 		contentType: string;
 	};
+	/** When times change and a linked reservation exists, rebook it. */
+	rebook?: {
+		userId: string;
+		reservationStartsAt: Date;
+		reservationEndsAt: Date;
+		overrideConflicts: boolean;
+	};
+}
+
+/**
+ * Check whether an event's time change would require rebooking its reservation.
+ * Returns null if no rebook is needed, or an object describing the situation.
+ */
+export async function checkRebookNeeded(
+	eventId: string,
+	newStartsAt: Date,
+	newEndsAt: Date
+): Promise<{
+	needed: boolean;
+	currentReservation: { id: string; startsAt: Date; endsAt: Date } | null;
+	reason: string | null;
+}> {
+	const evt = await getById(eventId);
+	if (!evt) throw new Error('Event not found');
+
+	if (!evt.reservationId) {
+		return { needed: false, currentReservation: null, reason: null };
+	}
+
+	const [res] = await db
+		.select({ id: reservation.id, startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+		.from(reservation)
+		.where(eq(reservation.id, evt.reservationId))
+		.limit(1);
+
+	if (!res) {
+		return { needed: false, currentReservation: null, reason: null };
+	}
+
+	const currentRes = { id: res.id, startsAt: res.startsAt, endsAt: res.endsAt };
+
+	// Rebook needed if new event times extend outside the current reservation window
+	const extendsEarlier = newStartsAt.getTime() < res.startsAt.getTime();
+	const extendsLater = newEndsAt.getTime() > res.endsAt.getTime();
+
+	if (!extendsEarlier && !extendsLater) {
+		return { needed: false, currentReservation: currentRes, reason: null };
+	}
+
+	const reasons: string[] = [];
+	if (extendsEarlier) reasons.push('starts earlier than the current reservation');
+	if (extendsLater) reasons.push('ends later than the current reservation');
+
+	return {
+		needed: true,
+		currentReservation: currentRes,
+		reason: `New event time ${reasons.join(' and ')}`
+	};
 }
 
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
@@ -158,9 +216,41 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 
+	// Handle reservation rebooking if requested
+	if (params.rebook && existing.reservationId) {
+		const { userId, reservationStartsAt, reservationEndsAt, overrideConflicts } = params.rebook;
+
+		// Cancel existing reservation
+		try {
+			await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
+				staffOverride: true
+			});
+		} catch {
+			// Already cancelled — continue
+		}
+
+		// Create new reservation
+		if (!overrideConflicts) {
+			const conflict = await hasConflict(reservationStartsAt, reservationEndsAt, existing.reservationId);
+			if (conflict) {
+				throw new ReservationConflictError();
+			}
+		}
+
+		const newRes = await staffCreate({
+			userId,
+			bookerType: 'event',
+			bookerId: eventId,
+			startsAt: reservationStartsAt,
+			endsAt: reservationEndsAt,
+			status: existing.status === 'draft' ? 'scheduled' : 'confirmed'
+		});
+
+		updates.reservationId = newRes.id;
+	}
+
 	// Handle poster replacement
 	if (params.posterFile) {
-		// Delete old poster if present
 		if (existing.posterKey) {
 			await deleteObject(existing.posterKey);
 		}

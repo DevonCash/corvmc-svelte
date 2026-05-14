@@ -64,9 +64,9 @@
 	}
 
 	const columns: Column<Reservation>[] = [
-		{ key: 'status', header: 'Status' },
-		{ key: 'startsAt', header: 'Time', sortable: true },
+		{ key: 'status', header: '' },
 		{ key: 'memberName', header: 'Member', sortable: true },
+		{ key: 'startsAt', header: 'Time', sortable: true },
 		{ key: 'stripePaymentRecordId', header: 'Payment' },
 		{ key: 'bookerType', header: 'Booker' }
 	];
@@ -91,70 +91,69 @@
 	</PageHeader>
 
 	<!-- Tabs -->
-	<div class="tabs tabs-bordered">
+	<div class="tabs-bordered tabs">
 		<a
 			href="/staff/reservations?tab=upcoming"
 			class="tab"
 			class:tab-active={data.tab === 'upcoming'}
 		>
 			Upcoming
-			<span class="badge badge-sm ml-1">{data.counts.upcoming}</span>
+			<span class="ml-1 badge badge-sm">{data.counts.upcoming}</span>
 		</a>
-		<a
-			href="/staff/reservations?tab=all"
-			class="tab"
-			class:tab-active={data.tab === 'all'}
-		>
+		<a href="/staff/reservations?tab=all" class="tab" class:tab-active={data.tab === 'all'}>
 			All
-			<span class="badge badge-sm ml-1">{data.counts.all}</span>
+			<span class="ml-1 badge badge-sm">{data.counts.all}</span>
 		</a>
 	</div>
 
 	<!-- Filters -->
-	<form method="get" class="flex flex-wrap gap-2 items-end">
+	<form method="get" class="flex flex-wrap items-end gap-2">
 		<input type="hidden" name="tab" value={data.tab} />
 		<input
 			type="text"
 			name="q"
 			value={data.search}
 			placeholder="Search name or email..."
-			class="input input-bordered input-sm w-48"
+			class="input-bordered input input-sm w-48"
 		/>
 		<input
 			type="date"
 			name="from"
 			value={data.dateFrom ?? ''}
-			class="input input-bordered input-sm"
+			class="input-bordered input input-sm"
 		/>
-		<input
-			type="date"
-			name="to"
-			value={data.dateTo ?? ''}
-			class="input input-bordered input-sm"
-		/>
+		<input type="date" name="to" value={data.dateTo ?? ''} class="input-bordered input input-sm" />
 		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
 		{#if data.search || data.dateFrom || data.dateTo || data.statusFilter.length > 0}
-			<a href="/staff/reservations?tab={data.tab}" class="btn btn-sm btn-ghost">Clear</a>
+			<a href="/staff/reservations?tab={data.tab}" class="btn btn-ghost btn-sm">Clear</a>
 		{/if}
 	</form>
 
 	<!-- Table -->
 	<DataTable data={data.reservations} {columns} groupBy={dayLabel} empty="No reservations found">
 		{#snippet row(r)}
-			<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/reservations/${r.id}`}>
+			<tr
+				class="hover cursor-pointer"
+				onclick={() => (window.location.href = `/staff/reservations/${r.id}`)}
+			>
 				<td class="w-px">
 					<StatusBadge status={r.status} />
 				</td>
-				<td>
-					<div>{formatDate(r.startsAt)}</div>
-					<div class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</div>
-				</td>
-				<td>
-					<a href="/staff/users/{r.createdByUserId}" class="link link-primary" onclick={(e) => e.stopPropagation()}>
+				<td class="w-px">
+					<a
+						href="/staff/users/{r.createdByUserId}"
+						class="link link-primary"
+						onclick={(e) => e.stopPropagation()}
+					>
 						{r.memberName}
 					</a>
 					<div class="text-sm opacity-60">{r.memberEmail}</div>
 				</td>
+				<td class="w-full">
+					<div>{formatTimeRange(r.startsAt, r.endsAt)}</div>
+					<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
+				</td>
+
 				<td>
 					{#if r.bookerType === 'event'}
 						<span class="text-sm opacity-40">—</span>
@@ -172,5 +171,9 @@
 	</DataTable>
 </div>
 
-<ResolveModal bind:open={resolveOpen} unresolved={data.unresolved} hourlyRateCents={data.hourlyRateCents} />
+<ResolveModal
+	bind:open={resolveOpen}
+	unresolved={data.unresolved}
+	hourlyRateCents={data.hourlyRateCents}
+/>
 <CreateModal bind:open={createOpen} />
