@@ -96,6 +96,10 @@ const updateEventSchema = z.object({
 	eventStartTime: z.string().optional(),
 	eventEndTime: z.string().optional(),
 	doorsTime: z.string().nullable().optional(),
+	// Ticketing
+	ticketingEnabled: z.boolean().optional(),
+	ticketPrice: z.number().int().positive().nullable().optional(),
+	ticketQuantity: z.number().int().positive().nullable().optional(),
 	// Rebook params — only sent when user confirmed the rebook
 	rebookReservation: z.boolean().default(false),
 	reservationStartTime: z.string().optional(),
@@ -114,6 +118,9 @@ export const updateEvent = command(updateEventSchema, async (raw) => {
 	if (fields.title !== undefined) updateParams.title = fields.title;
 	if (fields.description !== undefined) updateParams.description = fields.description;
 	if (fields.tags !== undefined) updateParams.tags = fields.tags;
+	if (fields.ticketingEnabled !== undefined) updateParams.ticketingEnabled = fields.ticketingEnabled;
+	if (fields.ticketPrice !== undefined) updateParams.ticketPrice = fields.ticketPrice;
+	if (fields.ticketQuantity !== undefined) updateParams.ticketQuantity = fields.ticketQuantity;
 
 	// Build Date objects if date/time fields provided
 	if (fields.eventDate && fields.eventStartTime && fields.eventEndTime) {

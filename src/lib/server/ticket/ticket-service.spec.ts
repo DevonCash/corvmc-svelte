@@ -1,0 +1,292 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+const mockTicket = {
+	id: 'ticket-1',
+	eventId: 'event-1',
+	purchaseId: 'purchase-1',
+	userId: 'user-1',
+	attendeeName: 'Alice',
+	attendeeEmail: 'alice@example.com',
+	code: 'ABCD1234',
+	status: 'pending',
+	checkedInAt: null,
+	checkedInByUserId: null,
+	createdAt: new Date(),
+	updatedAt: new Date()
+};
+
+let selectResult: unknown[] = [];
+let selectResultQueue: unknown[][] = [];
+let updateResult: unknown = { rowCount: 1 };
+let insertResult: unknown[] = [{ ...mockTicket }];
+
+function chainable(result?: unknown[]) {
+	const proxy: any = new Proxy(() => proxy, {
+		get(_, prop) {
+			if (prop === 'then') {
+				return (resolve: (v: unknown[]) => void) => {
+					if (result !== undefined) return resolve(result);
+					if (selectResultQueue.length > 0) return resolve(selectResultQueue.shift()!);
+					return resolve(selectResult);
+				};
+			}
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+
+const mockDb = {
+	select: vi.fn(() => chainable()),
+	insert: vi.fn(() => ({
+		values: vi.fn(() => ({
+			returning: vi.fn(() => Promise.resolve(insertResult))
+		}))
+	})),
+	update: vi.fn(() => ({
+		set: vi.fn(() => ({
+			where: vi.fn(() => {
+				const whereResult = Promise.resolve(updateResult);
+				(whereResult as any).returning = vi.fn(() => Promise.resolve(updateResult));
+				return whereResult;
+			})
+		}))
+	}))
+};
+
+vi.mock('$lib/server/db', () => ({
+	db: mockDb
+}));
+
+vi.mock('$lib/server/db/schema/ticket', () => ({
+	ticket: {
+		id: 'id',
+		eventId: 'event_id',
+		purchaseId: 'purchase_id',
+		userId: 'user_id',
+		attendeeName: 'attendee_name',
+		attendeeEmail: 'attendee_email',
+		code: 'code',
+		status: 'status',
+		checkedInAt: 'checked_in_at',
+		checkedInByUserId: 'checked_in_by_user_id',
+		createdAt: 'created_at',
+		updatedAt: 'updated_at'
+	}
+}));
+
+vi.mock('$lib/server/db/schema/event', () => ({
+	event: {
+		id: 'id',
+		ticketQuantity: 'ticket_quantity',
+		title: 'title',
+		startsAt: 'starts_at',
+		endsAt: 'ends_at'
+	}
+}));
+
+vi.mock('$lib/server/db/schema/auth', () => ({
+	user: { id: 'id', name: 'name' }
+}));
+
+const { generateCodeString, generateCode, createTickets, fulfillPurchase, cancelPurchase, checkIn, getTicketsSold, getTicketsRemaining } =
+	await import('./ticket-service');
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	selectResult = [];
+	selectResultQueue = [];
+	updateResult = { rowCount: 1 };
+	insertResult = [{ ...mockTicket }];
+});
+
+describe('generateCodeString', () => {
+	it('returns an 8-character string', () => {
+		const code = generateCodeString();
+		expect(code).toHaveLength(8);
+	});
+
+	it('excludes ambiguous characters', () => {
+		const ambiguous = ['0', 'O', 'I', 'L', '1'];
+		// Generate many codes and check none contain ambiguous chars
+		for (let i = 0; i < 100; i++) {
+			const code = generateCodeString();
+			for (const char of ambiguous) {
+				expect(code).not.toContain(char);
+			}
+		}
+	});
+
+	it('uses only uppercase letters and digits', () => {
+		for (let i = 0; i < 100; i++) {
+			const code = generateCodeString();
+			expect(code).toMatch(/^[A-Z2-9]+$/);
+		}
+	});
+});
+
+describe('generateCode', () => {
+	it('returns a code when no collision', async () => {
+		selectResult = []; // no existing ticket with this code
+		const code = await generateCode();
+		expect(code).toHaveLength(8);
+	});
+});
+
+describe('createTickets', () => {
+	it('inserts tickets with correct fields', async () => {
+		insertResult = [
+			{ ...mockTicket, code: 'CODE0001' },
+			{ ...mockTicket, id: 'ticket-2', code: 'CODE0002' }
+		];
+
+		const result = await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'purchase-1',
+			quantity: 2,
+			userId: 'user-1',
+			attendeeName: 'Alice',
+			attendeeEmail: 'alice@example.com'
+		});
+
+		expect(result).toHaveLength(2);
+		expect(mockDb.insert).toHaveBeenCalled();
+	});
+
+	it('creates tickets with pending status by default', async () => {
+		await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'purchase-1',
+			quantity: 1,
+			attendeeName: 'Bob',
+			attendeeEmail: 'bob@example.com'
+		});
+
+		const insertCall = mockDb.insert.mock.results[0].value;
+		const valuesCall = insertCall.values;
+		const passedValues = valuesCall.mock.calls[0][0];
+		expect(passedValues[0].status).toBe('pending');
+		expect(passedValues[0].userId).toBeNull();
+	});
+
+	it('creates tickets with valid status when specified', async () => {
+		await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'purchase-1',
+			quantity: 1,
+			attendeeName: 'Carol',
+			attendeeEmail: 'carol@example.com',
+			status: 'valid'
+		});
+
+		const insertCall = mockDb.insert.mock.results[0].value;
+		const valuesCall = insertCall.values;
+		const passedValues = valuesCall.mock.calls[0][0];
+		expect(passedValues[0].status).toBe('valid');
+	});
+});
+
+describe('fulfillPurchase', () => {
+	it('returns the updated ticket rows', async () => {
+		const fulfilled = [
+			{ ...mockTicket, status: 'valid' },
+			{ ...mockTicket, id: 'ticket-2', status: 'valid' }
+		];
+		updateResult = fulfilled;
+		const rows = await fulfillPurchase('purchase-1');
+		expect(rows).toHaveLength(2);
+		expect(rows[0].status).toBe('valid');
+	});
+
+	it('returns empty array when no pending tickets exist', async () => {
+		updateResult = [];
+		const rows = await fulfillPurchase('purchase-nonexistent');
+		expect(rows).toHaveLength(0);
+	});
+});
+
+describe('cancelPurchase', () => {
+	it('returns the number of cancelled tickets', async () => {
+		updateResult = { rowCount: 2 };
+		const count = await cancelPurchase('purchase-1');
+		expect(count).toBe(2);
+	});
+});
+
+describe('checkIn', () => {
+	it('throws when ticket not found', async () => {
+		selectResult = [];
+		await expect(checkIn('nonexistent', 'staff-1')).rejects.toThrow('Ticket not found');
+	});
+
+	it('throws when ticket is not valid', async () => {
+		selectResult = [{ status: 'pending' }];
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "pending"');
+	});
+
+	it('throws when ticket is already checked in', async () => {
+		selectResult = [{ status: 'checked_in' }];
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "checked_in"');
+	});
+
+	it('throws when ticket is cancelled', async () => {
+		selectResult = [{ status: 'cancelled' }];
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "cancelled"');
+	});
+
+	it('updates the ticket when valid', async () => {
+		selectResult = [{ status: 'valid' }];
+		await checkIn('ticket-1', 'staff-1');
+		expect(mockDb.update).toHaveBeenCalled();
+	});
+});
+
+describe('getTicketsSold', () => {
+	it('returns the count from the query', async () => {
+		selectResult = [{ count: 5 }];
+		const count = await getTicketsSold('event-1');
+		expect(count).toBe(5);
+	});
+
+	it('returns 0 when no results', async () => {
+		selectResult = [{ count: 0 }];
+		const count = await getTicketsSold('event-1');
+		expect(count).toBe(0);
+	});
+});
+
+describe('getTicketsRemaining', () => {
+	it('returns null for unlimited capacity', async () => {
+		// First select: event query returns null ticketQuantity
+		selectResultQueue = [[{ ticketQuantity: null }]];
+		const remaining = await getTicketsRemaining('event-1');
+		expect(remaining).toBeNull();
+	});
+
+	it('returns remaining count for limited capacity', async () => {
+		// First select: event query, second select: sold count
+		selectResultQueue = [[{ ticketQuantity: 50 }], [{ count: 12 }]];
+		const remaining = await getTicketsRemaining('event-1');
+		expect(remaining).toBe(38);
+	});
+
+	it('returns 0 when sold out', async () => {
+		selectResultQueue = [[{ ticketQuantity: 10 }], [{ count: 10 }]];
+		const remaining = await getTicketsRemaining('event-1');
+		expect(remaining).toBe(0);
+	});
+
+	it('returns 0 when oversold', async () => {
+		selectResultQueue = [[{ ticketQuantity: 10 }], [{ count: 12 }]];
+		const remaining = await getTicketsRemaining('event-1');
+		expect(remaining).toBe(0);
+	});
+});

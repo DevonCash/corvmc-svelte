@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, index, check } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp, uuid, index, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { user } from './auth';
 import { reservation } from './reservation';
@@ -17,6 +17,9 @@ export const event = pgTable(
 		reservationId: uuid('reservation_id').references(() => reservation.id),
 		posterKey: text('poster_key'),
 		tags: text('tags'),
+		ticketingEnabled: boolean('ticketing_enabled').notNull().default(false),
+		ticketPrice: integer('ticket_price'),
+		ticketQuantity: integer('ticket_quantity'),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),

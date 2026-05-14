@@ -1,9 +1,8 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import type { Column } from '$lib/components/DataTable.svelte';
-	import DataTable from '$lib/components/DataTable.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import { default as DataTable, type Column } from '$lib/components/shared/Table/DataTable.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 

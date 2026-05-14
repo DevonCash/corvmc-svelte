@@ -82,7 +82,10 @@
 		"@types/luxon": "^3.7.1",
 		"bits-ui": "^2.18.1",
 		"daisyui": "^5.5.19",
+		"emittery": "^1.1.0",
 		"luxon": "^3.7.2",
+		"mjml": "^5.0.0-alpha.4",
+		"postmark": "^4.0.5",
 		"stripe": "^22.1.1",
 		"svelte-sonner": "^1.1.1"
 	}

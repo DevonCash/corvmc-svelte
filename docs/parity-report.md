@@ -1,6 +1,6 @@
 # Laravel → Svelte Parity Report
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 This document tracks feature coverage between the Laravel app (corvmc-redux) and the Svelte rebuild (corvmc-svelte). Use it to plan what to build next and to avoid re-discovering gaps.
 
@@ -20,7 +20,8 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Dashboard | StaffDashboard page | ✅ +page.svelte | Basic stats in both |
 | Users list + detail | UserResource + pages | ✅ Full CRUD | List, detail with role/note editing |
 | Reservations list + detail | SpaceManagement resource | ✅ Full CRUD | Create, resolve, confirm, cancel, no-show, cash-received, day-grouped table |
-| Events list + detail | EventResource | ✅ Full CRUD | List, create, detail with edit form, poster upload, rebook detection |
+| Events list + detail | EventResource | ✅ Full CRUD | List, create, detail with edit form, poster upload, rebook detection, ticketing config |
+| Ticket check-in | TicketCheckIn page | ✅ Staff check-in | Search + check in tickets at the door |
 | Space closures | SpaceClosures resource | ✅ List + create + delete | Parity |
 | Settings | ManageOrganizationSettings | ✅ Settings page | Hourly rate, buffer, hours; Laravel has more org settings |
 | Payments view | OrderResource, TicketOrders | — | Not needed as-is; may want a read-only Stripe API view |
@@ -40,28 +41,29 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 
 | Feature | Laravel | Svelte | Notes |
 |---------|---------|--------|-------|
-| Dashboard | MemberDashboard | ✅ +page.svelte | Quick links, this week's reservations, credit balance widget, upcoming events |
+| Dashboard | MemberDashboard | ✅ +page.svelte | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner |
 | Membership / subscription | MyMembership page | ✅ Full flow | Sliding scale, Stripe checkout, credit balance, benefits grid |
 | Reservations | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout |
 | Account settings | MyProfile, MyAccount pages | ✅ Full flow | Profile editing, password change (modal), account deletion with password confirmation |
 | My orders | MyOrders page | — | May become "payment history" pulling from Stripe |
-| My tickets | MyTickets page + Livewire | — | Not started |
+| My tickets | MyTickets page + Livewire | ✅ Full flow | Upcoming/past split, ticket codes, status badges |
 | Equipment loans | Equipment resource (nested) | — | Not started |
-| Bands | Bands resource | — | Not started |
+| Bands | Bands resource | ✅ Full flow | My Bands list, create band, accept/decline invitations |
 | Volunteer hours | SubmitHoursPage, VolunteerPage | — | Not started |
 
 ## Band panel
 
-The entire band panel is not started. Laravel has Filament tenancy where each band is a tenant.
+The band panel uses a per-band layout at `/band/[slug]/` with role-gated navigation. Laravel uses Filament tenancy; Svelte uses a layout-level auth check with `getUserRole` + `hasAnyRole` for staff bypass.
 
 | Feature | Laravel | Svelte | Notes |
 |---------|---------|--------|-------|
-| Band dashboard | BandDashboard | — | |
-| Band members | BandMembers resource | — | |
-| Band reservations | BandReservations resource | — | |
-| Band profile | EditBandProfile page | — | |
-| Band registration | RegisterBand tenancy page | — | |
-| Invitations | AcceptInvitationPage | — | |
+| Band dashboard | BandDashboard | ✅ +page.svelte | Stat cards, upcoming reservations list |
+| Band members | BandMembers resource | ✅ Full flow | Invite (user search), remove, revoke, update role/position, transfer ownership, leave band |
+| Band reservations | BandReservations resource | ✅ Full flow | List (upcoming/past tabs), book session (reuses slot/conflict system), cancel |
+| Band profile editing | EditBandProfile page | ✅ Full flow | Name, bio, avatar upload/remove via REST endpoint + R2 storage |
+| Band settings | — | ✅ Settings page | Owner-only, delete band with confirmation (cascades reservations + avatar) |
+| Band creation | RegisterBand tenancy page | ✅ Modal on My Bands | Create band from member panel |
+| Invitations | AcceptInvitationPage | ✅ On My Bands page | Accept/decline with `.for()` pattern |
 
 ## Public pages
 
@@ -71,32 +73,163 @@ The entire band panel is not started. Laravel has Filament tenancy where each ba
 | Events listing | EventsGrid Livewire | ✅ +page.svelte | Parity |
 | About | web.php route | — | Not started |
 | Contact form | ContactForm Livewire | — | Not started |
-| Ticket purchase | TicketPurchaseWidget | — | Not started |
-| Member directory | MembersGrid Livewire | — | Not started |
+| Ticket purchase | TicketPurchaseWidget | ✅ Full flow | Purchase page, Stripe checkout, sustaining member discount, success page with ticket codes |
+| Member directory | MembersGrid Livewire | ✅ /directory | Tabbed Members/Bands directory, public band profile with member list |
+
+## Platform infrastructure
+
+Cross-cutting concerns that Laravel provides out of the box and the Svelte app needs to build up.
+
+### Notification system
+
+The Svelte app uses two channels — Postmark for email and a database-backed in-app notification system with bell dropdown + SSE real-time delivery. Members configure which notification types reach them via email/in-app toggles in account settings. SMS (Twilio) is deferred — can be added as a third channel later. This replaces Laravel's 43 notification classes (of which only ~13 were actually wired; the rest were dead code).
+
+| Concern | Laravel | Svelte | Notes |
+|---------|---------|--------|-------|
+| Email transport | Laravel Mail (SMTP/SES) | ✅ Postmark | Direct Postmark API via `postmark` SDK, MJML templates |
+| SMS | — (not implemented) | — | Deferred; channel architecture supports adding Twilio later |
+| In-app notifications | Database channel + Filament bell | ✅ Bell + SSE | Persistent `notification` table, bell dropdown in sidebar, SSE real-time push |
+| User preferences | — | ✅ notification_preference table | Per-user, per-notification-type channel toggles on account page |
+| Domain event bus | `event()` dispatcher + 40 event classes | ✅ emittery | Typed event map, async listeners, replaces old callback registry |
+| Auth emails | Fortify (verification, password reset) | Via better-auth | better-auth handles these natively |
+| Ticket emails | — | ✅ Via notification system | Confirmation, cancellation, reminder — routed through dispatcher |
+
+#### Laravel notification audit
+
+Of 43 notification classes in the Laravel app, only ~13 were actually wired and sending. The rest were aspirational dead code. This breakdown informed what the Svelte app should build:
+
+**Actually sending in production:**
+
+- ✅ Reservation reminder (upcoming) — event + listener + cron endpoint wired
+- ✅ Reservation confirmation reminder (unconfirmed bookings) — event + listener + cron endpoint wired
+- Daily admin reservation digest — could be a dashboard widget instead of email; TBD
+- Rehearsal attendance request — deferred until rehearsal module enhancements
+- Rehearsal reminder — deferred until rehearsal module enhancements
+- ✅ Band invitation — emitted from band-service.invite(), email + in-app
+- ✅ Band invitation accepted — emitted from band-service.acceptInvitation(), email + in-app to admins
+- User/platform invitation — invite with token link
+- ✅ Contact form submission — emitted from contact.form_submitted event, forwards to staff email
+
+**Previously unbuilt but clearly needed (now built):**
+
+- ✅ Ticket purchase confirmation — emitted from checkout listener after fulfillment, email to buyer
+- ✅ Event cancellation to ticket holders — emitted from event-service.cancel(), email + in-app per holder
+- Event reschedule to ticket holders — not yet wired (needs event update detection)
+
+**Never wired and probably not needed:**
+
+- Event created/published/cancelled to organizer — self-confirmation noise; they just did the action
+- Membership renewal reminders — Stripe already sends subscription renewal emails natively
+- Membership expired / welcome / deactivated — never finished, low-signal
+- Reservation created/confirmed/cancelled lifecycle — the member just took the action in-app; a toast is sufficient
+- Moderation notifications — deferred until moderation module is built
+- Volunteering notifications — deferred until volunteering module is built
+
+### Scheduled jobs
+
+Individual `/api/cron/*` routes, each hit by the hosting platform's cron scheduler. No in-app scheduler or job table — Sentry Crons handles pass/fail tracking and missed-run alerts.
+
+| Job | Schedule | Svelte | Notes |
+|-----|---------|--------|-------|
+| Auto-complete reservations | Every few min | ✅ /api/cron/auto-complete | |
+| Lock code provisioning | Daily | ✅ /api/cron/lock-access | |
+| Confirmation reminders | Daily 09:00 | ✅ /api/cron/confirmation-reminders | Emits `reservation.confirmation_reminder_due` for unconfirmed (scheduled) reservations starting in next 24h |
+| Reservation reminders | Daily 10:00 | ✅ /api/cron/reservation-reminders | Emits `reservation.reminder_due` for confirmed reservations starting in next 24h |
+| Daily reservation digest | Daily 20:00 | — | Could become a dashboard widget |
+| Rehearsal reminders | Daily 09:30 | — | Depends on notification system + band rehearsals |
+| Recurring reservation generation | Daily 00:00 | — | Deferred until recurring reservations are built |
+| Volunteer shift reminders | Daily 09:00 | — | Deferred until volunteering module is built |
+
+**Removed from Laravel's list:**
+
+- Monthly credit allocation — handled by `invoice.paid` webhook in the Svelte app, not a cron job
+- Credit expiration — credits reset on subscription cancellation via `customer.subscription.deleted` webhook; no time-based expiry
+- Stripe reconciliation — unnecessary; Stripe is the source of truth, not a secondary ledger to verify
+- Stale checkout sweep — Stripe expires sessions automatically; the Laravel job existed to clean up local Order/Transaction records which the Svelte app doesn't have
+- Membership reminders — was a no-op in Laravel (notify call commented out); Stripe handles renewal emails natively
+
+### Event-driven architecture
+
+Services fire typed domain events via Node's built-in `EventEmitter`. Listeners handle side effects (notifications, activity logging, cross-module reactions). Wiring is explicit in a registration file. This replaces Laravel's 40 event classes + 15 listener classes with a lighter-weight equivalent — typed event payloads instead of event classes, listener functions instead of listener classes.
+
+| Concern | Laravel | Svelte | Notes |
+|---------|---------|--------|-------|
+| Event bus | `event()` dispatcher + 40 event classes | ✅ `emittery` | Typed event map, async-native, single emitter instance, listeners registered at startup in hooks.server.ts |
+| Checkout fan-out | Part of event/listener system | ✅ Via emittery | Migrated from callback registry to domain event bus |
+| Notification dispatch | Listeners call `$user->notify()` | ✅ Dispatcher + listeners | Listeners check user preferences, route to email (Postmark) and in-app channels |
+| Activity logging | 6 activity-log listeners via spatie/activitylog | — | Not started; lower priority |
+| Lock code management | Queued listeners on reservation confirm/cancel | ✅ Cron-based | Different approach — cron provisions daily instead of per-event |
+
+### Background processing
+
+Laravel uses a Redis/database job queue for async notification sends and lock code provisioning. The Svelte app doesn't need a full job queue — Postmark and Twilio API calls are fast enough to fire-and-forget from event listeners, and the lock code work is already handled via cron.
+
+Event listeners that call external APIs (Postmark, Twilio) should not block the request. Listeners can fire the API call without awaiting it, or use `waitUntil()` on the hosting platform if available. If fan-out to many recipients becomes a latency problem (e.g., notifying all ticket holders of event cancellation), that's the point to consider a queue — not before.
+
+### Authorization
+
+| Concern | Laravel | Svelte | Notes |
+|---------|---------|--------|-------|
+| Role/permission tables | spatie/laravel-permission (polymorphic) | ✅ Drizzle schema | Simplified from morph to direct user FK |
+| Role checking | `$user->hasRole()`, middleware | ✅ hasRole/hasAnyRole/requireStaff | Utility functions in authorization.ts |
+| Policies | 20 policy classes in app/Policies | — | No formal policy layer; checks are inline in route handlers |
+| Route-level guards | Filament panel auth + middleware | Ad-hoc | Each route calls requireStaff() or checks roles manually |
+
+### Observers / model hooks
+
+Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling cache invalidation, cascading side effects, and notification dispatch. The Svelte app handles these inline in services. This is intentional — explicit calls in services are easier to trace than implicit observer hooks.
 
 ## API / background
 
 | Feature | Laravel | Svelte | Notes |
 |---------|---------|--------|-------|
-| Stripe webhooks | Cashier + custom handlers | ✅ /api/stripe/webhook | Different implementation, same behavior |
-| Auto-complete reservations | Scheduled command | ✅ /api/cron/auto-complete | Parity |
-| Lock access | Kiosk module | ✅ /api/cron/lock-access | Parity |
-| Event poster serving | Media library | ✅ /api/events/[id]/poster | Parity |
+| Stripe webhooks | Cashier + custom handlers | ✅ /api/stripe/webhook | checkout.session.completed, invoice.paid, subscription.deleted |
+| Auto-complete reservations | Scheduled command | ✅ /api/cron/auto-complete | |
+| Lock access | Kiosk module | ✅ /api/cron/lock-access | |
+| Event poster serving | Media library | ✅ /api/events/[id]/poster | |
+| Band avatar upload | Media library | ✅ /api/bands/[id]/avatar | |
 
 ## Database schema
 
-The Svelte app has 12 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure), events (event), and finance (product_config, credit_transaction).
+The Svelte app has 19 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure), events (event), finance (product_config, credit_transaction), bands (band, band_member), tickets (ticket), and notifications (notification, notification_preference).
 
-Tables that would need to be added for missing features: equipment, equipment_loan, band, band_member, volunteer_hour_log, sponsor, venue, ticket, site_page, kiosk_device.
+Tables that would need to be added for missing features: equipment, equipment_loan, volunteer_hour_log, sponsor, venue, site_page, kiosk_device.
+
+## Library decisions
+
+Chosen libraries for platform concerns. Preference is for small, focused packages over frameworks.
+
+| Concern | Library | Why |
+|---------|---------|-----|
+| Email transport | `postmark` | Official SDK, well-typed, direct integration |
+| Email templates | MJML or Maizzle | MJML is battle-tested; Maizzle uses Tailwind (matches existing tooling). Decide when building. Both compile to static HTML for Postmark |
+| SMS | `twilio` | Official SDK, reliable, overkill for SMS-only but actively maintained |
+| Domain event bus | `emittery` | Async-native (listeners can do I/O without blocking), strong TypeScript generics, ESM-only (fine for SvelteKit) |
+| Error tracking | `@sentry/sveltekit` | First-class SvelteKit integration, auto-instruments load functions and routes. Also provides Sentry Crons for scheduled job monitoring |
+| Image crop/resize | `svelte-easy-crop` (client-side) | Browser-based crop UI + canvas resize before upload. User selects and frames the image, client resizes to target dimensions, uploads the processed result. No server-side image processing needed |
+| File uploads | `@aws-sdk/client-s3` (existing) | Hand-rolled R2 integration is sufficient. Add `@aws-sdk/s3-request-presigner` if client-direct uploads are needed later |
+| In-app notifications | Hand-rolled | Postgres `notification` table via Drizzle, SSE from SvelteKit `+server.ts` for real-time delivery. Novu/Knock are overkill and have React-only client components |
+| Background work | Detached promises | Fire-and-forget with `.catch()` piped to Sentry. Add `p-queue` if concurrency control is needed later. No Redis/BullMQ |
+
+**Not using:**
+
+- `sharp` — native binary, incompatible with Cloudflare Workers
+- `svelte-email` — abandoned (last update 2023)
+- `@react-email/render` — adds React as a dependency for email templates
+- `uploadthing` — stale Svelte support, adds hosted service dependency
+- Novu / Knock — hosted notification platforms with React-only UI, overkill for this app
+- BullMQ — requires Redis, unnecessary when detached promises suffice
 
 ## Suggested build order
 
-Features are grouped by how much new schema and infrastructure they require, with "extends existing patterns" items first.
+Features are grouped by dependency. The notification system is foundational — many features need to send notifications, so it comes first.
 
-1. **Stripe payments view** — No new tables. Read-only view pulling payment history from Stripe API for staff.
-2. **Recurring reservations** — Needs rrule storage on reservation or a new recurrence table. Moderate complexity.
-3. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
-4. **Bands module** — New tables (band, band_member). Multi-tenant UI pattern, invitations.
-5. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.
-6. **Tickets** — New table (ticket). Stripe integration for purchase, check-in flow.
-7. **Everything else** — Sponsors, CMS, venues, kiosk, activity log, reports, bylaws.
+1. ~~**Notification system**~~ — ✅ Complete. Postmark email + in-app (database + bell + SSE). emittery domain event bus. User preference UI in account settings. Ticket, event, band, and contact form notifications wired. SMS channel deferred.
+2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
+4. **Stripe payments view** — No new tables. Read-only view pulling payment history from Stripe API for staff.
+5. **Recurring reservations** — Needs rrule storage on reservation or a new recurrence table. Moderate complexity.
+6. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
+7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
+8. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.
+9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
+10. **Everything else** — Sponsors, CMS, venues, kiosk, activity log, reports, bylaws.

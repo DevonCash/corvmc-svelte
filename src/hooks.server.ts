@@ -2,6 +2,12 @@ import type { Handle } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { registerListeners } from '$lib/server/events/register-listeners';
+
+// Register domain event listeners once at startup
+if (!building) {
+	registerListeners();
+}
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });

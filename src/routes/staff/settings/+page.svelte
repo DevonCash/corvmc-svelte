@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getProducts, updateProduct } from './data.remote';
-	import Form from '$lib/components/Form.svelte';
-	import SubmitButton from '$lib/components/SubmitButton.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import { formatDollars } from '$lib/utils/format';
 
 	let products = $derived(await getProducts());
@@ -11,12 +11,11 @@
 <svelte:boundary>
 	<PageHeader title="Settings" subtitle="Staff" />
 
-	<div class="space-y-6 max-w-2xl">
+	<div class="max-w-2xl space-y-6">
 		<h2 class="text-lg font-semibold">Stripe Products</h2>
 		<p class="text-sm opacity-70">
-			Configure the products and pricing used for checkout. Changes to names
-			and descriptions sync to Stripe automatically. Price changes take
-			effect on the next checkout.
+			Configure the products and pricing used for checkout. Changes to names and descriptions sync
+			to Stripe automatically. Price changes take effect on the next checkout.
 		</p>
 
 		{#each products as product (product.key)}
@@ -40,32 +39,32 @@
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
-								class="btn-primary btn-sm"
+								class="btn-sm btn-primary"
 							/>
 						</div>
 
 						{#if product.stripeProductId}
-							<p class="text-xs font-mono opacity-50">{product.stripeProductId}</p>
+							<p class="font-mono text-xs opacity-50">{product.stripeProductId}</p>
 						{:else}
 							<p class="text-xs opacity-50">Stripe product will be created on first checkout</p>
 						{/if}
 
 						<input type="hidden" name="key" value={product.key} />
 
-						<div class="grid gap-4 mt-2 sm:grid-cols-2">
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<div class="form-control">
 								<label class="label" for="name-{product.key}">
 									<span class="label-text">Product name</span>
 								</label>
 								{#each instance.fields.name.issues() ?? [] as issue}
-									<p class="text-error text-sm">{issue.message}</p>
+									<p class="text-sm text-error">{issue.message}</p>
 								{/each}
 								<input
 									id="name-{product.key}"
 									name="name"
 									type="text"
 									value={product.name}
-									class="input input-bordered input-sm"
+									class="input-bordered input input-sm"
 								/>
 							</div>
 
@@ -77,9 +76,9 @@
 										</span>
 									</label>
 									{#each instance.fields.unitAmountCents.issues() ?? [] as issue}
-										<p class="text-error text-sm">{issue.message}</p>
+										<p class="text-sm text-error">{issue.message}</p>
 									{/each}
-									<label class="input input-bordered input-sm flex items-center gap-1">
+									<label class="input-bordered input input-sm flex items-center gap-1">
 										<span class="opacity-60">$</span>
 										<input
 											id="amount-{product.key}"
@@ -90,8 +89,11 @@
 											oninput={(e) => {
 												const input = e.target as HTMLInputElement;
 												const dollars = parseFloat(input.value);
-												const hidden = input.closest('form')?.querySelector<HTMLInputElement>('[name="unitAmountCents"]');
-												if (hidden && !isNaN(dollars)) hidden.value = String(Math.round(dollars * 100));
+												const hidden = input
+													.closest('form')
+													?.querySelector<HTMLInputElement>('[name="unitAmountCents"]');
+												if (hidden && !isNaN(dollars))
+													hidden.value = String(Math.round(dollars * 100));
 											}}
 											class="grow bg-transparent outline-none"
 										/>
@@ -112,7 +114,7 @@
 								id="desc-{product.key}"
 								name="description"
 								value={product.description ?? ''}
-								class="textarea textarea-bordered textarea-sm"
+								class="textarea-bordered textarea textarea-sm"
 								rows="2"
 							></textarea>
 						</div>
@@ -124,7 +126,7 @@
 
 	{#snippet pending()}
 		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{/snippet}
 

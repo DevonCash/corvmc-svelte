@@ -1,28 +1,37 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import InfoCard from '$lib/components/InfoCard.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/EmptyState.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
-	import {
-		IconCalendarPlus,
-		IconCalendarEvent,
-		IconStar
-	} from '@tabler/icons-svelte';
+	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 
 	let { data }: { data: PageServerData } = $props();
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
 	const freeHours = $derived(data.credits.free_hours ?? 0);
+	const pendingInvites = $derived(data.pendingInviteCount ?? 0);
 </script>
 
 <div class="space-y-6">
 	<h1 class="text-2xl font-bold">Dashboard</h1>
 
+	{#if pendingInvites > 0}
+		<a href="/member/bands" class="alert alert-info shadow-sm">
+			<span>
+				You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
+			</span>
+			<span class="link font-medium">View</span>
+		</a>
+	{/if}
+
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<a href="/member/reservations/new" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
+		<a
+			href="/member/reservations/new"
+			class="card bg-base-100 shadow transition-shadow hover:shadow-md"
+		>
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
@@ -62,9 +71,15 @@
 									<div>
 										<p class="text-sm font-medium">
 											{formatDate(res.startsAt)}
+											{#if res.bandName}
+												<span class="opacity-60">· {res.bandName}</span>
+											{/if}
 										</p>
 										<p class="text-xs opacity-60">
-											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(res.startsAt, res.endsAt)}
+											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(
+												res.startsAt,
+												res.endsAt
+											)}
 										</p>
 									</div>
 								</div>
@@ -80,9 +95,11 @@
 		<InfoCard title="Practice Credits">
 			{#if isSustaining}
 				<div class="space-y-3">
-					<p class="text-3xl font-medium">{freeHours}<span class="text-base opacity-60"> hrs left</span></p>
+					<p class="text-3xl font-medium">
+						{freeHours}<span class="text-base opacity-60"> hrs left</span>
+					</p>
 					<progress
-						class="progress progress-primary w-full"
+						class="progress w-full progress-primary"
 						value={data.usedThisMonth}
 						max={data.allocatedThisMonth || 1}
 					></progress>
@@ -95,7 +112,7 @@
 					<p class="text-sm opacity-70">
 						Become a sustaining member to get free practice hours each month.
 					</p>
-					<a href="/member/membership" class="btn btn-primary btn-sm">Learn More</a>
+					<a href="/member/membership" class="btn btn-sm btn-primary">Learn More</a>
 				</div>
 			{/if}
 		</InfoCard>

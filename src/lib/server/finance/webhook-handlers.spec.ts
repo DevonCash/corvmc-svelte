@@ -31,11 +31,19 @@ const mockCreditService = {
 };
 vi.mock('./credit-service', () => mockCreditService);
 
+const mockEmit = vi.fn();
+vi.mock('$lib/server/events/event-bus', () => ({
+	domainEvents: { emit: mockEmit }
+}));
+
+vi.mock('./webhook-events', () => ({
+	registeredEvents: ['checkout.session.completed', 'invoice.paid', 'customer.subscription.deleted']
+}));
+
 const {
 	handleCheckoutCompleted,
 	handleInvoicePaid,
-	handleSubscriptionDeleted,
-	onCheckoutComplete
+	handleSubscriptionDeleted
 } = await import('./webhook-handlers');
 
 // ---------------------------------------------------------------------------
@@ -47,30 +55,26 @@ describe('handleCheckoutCompleted', () => {
 		userQueryResults = [];
 	});
 
-	it('calls registered listeners with the session', async () => {
-		const listener = vi.fn();
-		onCheckoutComplete(listener);
-
+	it('emits checkout.completed domain event with session data', async () => {
 		const session = { id: 'cs_123', metadata: { reservation_id: 'res-42' } } as unknown as Stripe.Checkout.Session;
 		await handleCheckoutCompleted(session);
 
-		expect(listener).toHaveBeenCalledWith(session);
+		expect(mockEmit).toHaveBeenCalledWith('checkout.completed', {
+			sessionId: 'cs_123',
+			metadata: { reservation_id: 'res-42' },
+			stripeSession: session
+		});
 	});
 
-	it('calls multiple listeners in order', async () => {
-		const order: string[] = [];
-		const listenerA = vi.fn(async () => { order.push('A'); });
-		const listenerB = vi.fn(async () => { order.push('B'); });
+	it('defaults metadata to empty object when null', async () => {
+		const session = { id: 'cs_no_meta', metadata: null } as unknown as Stripe.Checkout.Session;
+		await handleCheckoutCompleted(session);
 
-		onCheckoutComplete(listenerA);
-		onCheckoutComplete(listenerB);
-
-		await handleCheckoutCompleted({ id: 'cs_multi' } as Stripe.Checkout.Session);
-
-		expect(order).toContain('A');
-		expect(order).toContain('B');
-		expect(listenerA).toHaveBeenCalled();
-		expect(listenerB).toHaveBeenCalled();
+		expect(mockEmit).toHaveBeenCalledWith('checkout.completed', {
+			sessionId: 'cs_no_meta',
+			metadata: {},
+			stripeSession: session
+		});
 	});
 });
 

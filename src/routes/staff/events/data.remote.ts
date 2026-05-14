@@ -35,6 +35,9 @@ const createEventSchema = z.object({
 	eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 	doorsTime: z.string().optional(),
 	tags: z.string().optional(),
+	ticketingEnabled: z.boolean().default(false),
+	ticketPrice: z.number().int().positive().optional(),
+	ticketQuantity: z.number().int().positive().optional(),
 	reserveSpace: z.boolean(),
 	reservationStartTime: z.string().optional(),
 	reservationEndTime: z.string().optional(),
@@ -65,6 +68,9 @@ export const createEvent = command(createEventSchema, async (raw) => {
 		endsAt,
 		doorsAt,
 		tags: data.tags,
+		ticketingEnabled: data.ticketingEnabled,
+		ticketPrice: data.ticketingEnabled ? data.ticketPrice : undefined,
+		ticketQuantity: data.ticketingEnabled ? data.ticketQuantity : undefined,
 		createdByUserId: staff.id,
 		reservation
 	});

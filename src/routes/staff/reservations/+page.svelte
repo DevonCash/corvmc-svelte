@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import type { Column } from '$lib/components/DataTable.svelte';
-	import DataTable from '$lib/components/DataTable.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateModal from './CreateModal.svelte';
-	import MemberLink from '$lib/components/MemberLink.svelte';
-	import TabBar from '$lib/components/TabBar.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
@@ -15,7 +15,6 @@
 	type Reservation = (typeof data.reservations)[number];
 
 	let resolveOpen = $state(false);
-	let createOpen = $state(false);
 
 	function paymentStatus(r: Reservation): { label: string; class: string } {
 		if (r.status === 'no_show') return { label: 'No-show', class: 'badge-error' };
@@ -56,15 +55,18 @@
 					<span class="badge badge-sm">{data.counts.unresolved}</span>
 				{/if}
 			</button>
-			<button class="btn btn-sm btn-primary" onclick={() => (createOpen = true)}>
-				New Reservation
-			</button>
+			
 		</div>
 	</PageHeader>
 
 	<TabBar
 		tabs={[
-			{ key: 'upcoming', label: 'Upcoming', badge: data.counts.upcoming, href: '/staff/reservations?tab=upcoming' },
+			{
+				key: 'upcoming',
+				label: 'Upcoming',
+				badge: data.counts.upcoming,
+				href: '/staff/reservations?tab=upcoming'
+			},
 			{ key: 'all', label: 'All', badge: data.counts.all, href: '/staff/reservations?tab=all' }
 		]}
 		active={data.tab}
@@ -101,10 +103,10 @@
 				onclick={() => (window.location.href = `/staff/reservations/${r.id}`)}
 			>
 				<td class="w-px">
-					<StatusBadge status={r.status} />
+					<StatusBadge status={r.status} class='size-6'/>
 				</td>
-				<td class="w-px" onclick={(e) => e.stopPropagation()}>
-					<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} />
+				<td class="w-px" onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
+					<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} class='p-7 px-4'/>
 				</td>
 				<td class="w-full">
 					<div>{formatTimeRange(r.startsAt, r.endsAt)}</div>
@@ -133,4 +135,4 @@
 	unresolved={data.unresolved}
 	hourlyRateCents={data.hourlyRateCents}
 />
-<CreateModal bind:open={createOpen} />
+<CreateModal />

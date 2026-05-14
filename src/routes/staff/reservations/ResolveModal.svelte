@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { IconCheck } from '@tabler/icons-svelte';
-	import AsyncButton from '$lib/components/AsyncButton.svelte';
-	import Modal from '$lib/components/Modal.svelte';
+	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Modal from '$lib/components/shared/Modal.svelte';
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
-	import MemberLink from '$lib/components/MemberLink.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
 
 	let {

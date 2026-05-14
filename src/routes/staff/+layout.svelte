@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { LayoutServerData } from './$types';
 	import { Toaster } from 'svelte-sonner';
-	import Sidebar from '$lib/components/staff/Sidebar.svelte';
-	import Topbar from '$lib/components/staff/Topbar.svelte';
-	import UserFooter from '$lib/components/staff/UserFooter.svelte';
+	import Sidebar from '$lib/components/shared/Sidebar.svelte';
+	import Topbar from '$lib/components/shared/Topbar.svelte';
+	import UserFooter from '$lib/components/shared/UserFooter.svelte';
+	import NotificationBell from '$lib/components/shared/NotificationBell.svelte';
 	import {
 		IconHome,
 		IconUsers,
@@ -31,7 +32,7 @@
 	<input id="staff-drawer" type="checkbox" class="drawer-toggle" />
 
 	<div class="drawer-content flex flex-col">
-		<Topbar drawerId="staff-drawer" userName={data.user.name} />
+		<Topbar drawerId="staff-drawer" userName={data.user.name} showNotifications />
 
 		<main class="flex-1 p-6">
 			{@render children()}
@@ -41,6 +42,17 @@
 	<div class="drawer-side z-40">
 		<label for="staff-drawer" class="drawer-overlay"></label>
 		<Sidebar {navItems}>
+			{#snippet brand()}
+				<div class="flex items-center justify-between px-6 py-5">
+					<div class="flex items-center gap-2">
+						<span class="truncate text-xl font-bold">CorvMC</span>
+						<span class="badge badge-sm badge-primary">Staff</span>
+					</div>
+					<div class="hidden lg:block">
+						<NotificationBell />
+					</div>
+				</div>
+			{/snippet}
 			{#snippet footer()}
 				<UserFooter name={data.user.name} email={data.user.email} />
 			{/snippet}

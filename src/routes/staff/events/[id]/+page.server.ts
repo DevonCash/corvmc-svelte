@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getById } from '$lib/server/event/event-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { getEventTickets, getTicketsSold, getTicketsRemaining } from '$lib/server/ticket/ticket-service';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
@@ -54,6 +55,38 @@ export const load: PageServerLoad = async ({ params }) => {
 		posterUrl = getPublicUrl(evt.posterKey);
 	}
 
+	// Load ticket data if ticketing is enabled
+	let ticketStats: { sold: number; remaining: number | null } | null = null;
+	let tickets: Array<{
+		id: string;
+		purchaseId: string;
+		attendeeName: string;
+		attendeeEmail: string;
+		code: string;
+		status: string;
+		checkedInAt: string | null;
+		createdAt: string;
+	}> = [];
+
+	if (evt.ticketingEnabled) {
+		const [sold, remaining, allTickets] = await Promise.all([
+			getTicketsSold(evt.id),
+			getTicketsRemaining(evt.id),
+			getEventTickets(evt.id)
+		]);
+		ticketStats = { sold, remaining };
+		tickets = allTickets.map((t) => ({
+			id: t.id,
+			purchaseId: t.purchaseId,
+			attendeeName: t.attendeeName,
+			attendeeEmail: t.attendeeEmail,
+			code: t.code,
+			status: t.status,
+			checkedInAt: t.checkedInAt?.toISOString() ?? null,
+			createdAt: t.createdAt.toISOString()
+		}));
+	}
+
 	return {
 		event: {
 			...evt,
@@ -66,6 +99,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		},
 		posterUrl,
 		creator,
-		linkedReservation
+		linkedReservation,
+		ticketStats,
+		tickets
 	};
 };

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/AsyncButton.svelte';
-	import FormField from '$lib/components/FormField.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { publishEvent, cancelEvent, updateEvent, checkRebook, checkConflicts } from './data.remote';
-	import InfoCard from '$lib/components/InfoCard.svelte';
-	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -25,6 +25,9 @@
 	let editDoorsTime = $state('');
 	let editReservationStartTime = $state('');
 	let editReservationEndTime = $state('');
+	let editTicketingEnabled = $state(false);
+	let editTicketPriceDollars = $state('');
+	let editTicketQuantity = $state('');
 	let saving = $state(false);
 
 	// Rebook state
@@ -69,6 +72,11 @@
 		editStartTime = toLocalTime(evt.startsAt);
 		editEndTime = toLocalTime(evt.endsAt);
 		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
+
+		// Pre-fill ticketing fields
+		editTicketingEnabled = evt.ticketingEnabled;
+		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
+		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
 		if (data.linkedReservation) {
@@ -134,6 +142,13 @@
 				eventStartTime: editStartTime,
 				eventEndTime: editEndTime,
 				doorsTime: editDoorsTime || null,
+				ticketingEnabled: editTicketingEnabled,
+				ticketPrice: editTicketingEnabled && editTicketPriceDollars
+					? Math.round(parseFloat(editTicketPriceDollars) * 100)
+					: null,
+				ticketQuantity: editTicketingEnabled && editTicketQuantity
+					? parseInt(editTicketQuantity, 10)
+					: null,
 				rebookReservation: rebookNeeded && rebookConfirmed,
 				reservationStartTime: editReservationStartTime || undefined,
 				reservationEndTime: editReservationEndTime || undefined,
@@ -189,6 +204,10 @@
 <div class="max-w-3xl mx-auto space-y-6">
 	<PageHeader title={evt.title} backHref="/staff/events">
 		<div class="flex items-center gap-2">
+			{#if evt.ticketingEnabled}
+				<a href="/staff/events/{evt.id}/check-in" class="btn btn-sm btn-ghost">Check-in</a>
+			{/if}
+
 			{#if evt.status !== 'cancelled' && !editing}
 				<button class="btn btn-sm btn-ghost" onclick={startEditing}>Edit</button>
 			{/if}
@@ -259,6 +278,46 @@
 					<FormField label="Tags" id="editTags" issues={[]}>
 						<input id="editTags" type="text" bind:value={editTags} class="input input-bordered w-full" placeholder="e.g. open mic, workshop" />
 					</FormField>
+
+					<!-- Ticketing -->
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-3">
+							<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+							<span class="label-text">Enable ticketing</span>
+						</label>
+					</div>
+
+					{#if editTicketingEnabled}
+						<div class="card bg-base-200 p-4">
+							<div class="grid grid-cols-2 gap-4">
+								<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
+									<input
+										id="editTicketPrice"
+										type="number"
+										bind:value={editTicketPriceDollars}
+										min="0.01"
+										step="0.01"
+										placeholder="15.00"
+										class="input input-bordered w-full"
+										required
+									/>
+								</FormField>
+
+								<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+									<input
+										id="editTicketQuantity"
+										type="number"
+										bind:value={editTicketQuantity}
+										min="1"
+										step="1"
+										placeholder="Unlimited"
+										class="input input-bordered w-full"
+									/>
+								</FormField>
+							</div>
+							<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
+						</div>
+					{/if}
 
 					<!-- Rebook warning -->
 					{#if rebookNeeded}
@@ -349,6 +408,68 @@
 			</div>
 		{/if}
 	</InfoCard>
+
+	<!-- Ticketing -->
+	{#if evt.ticketingEnabled}
+		<InfoCard title="Ticketing">
+			<div class="flex gap-6">
+				<div>
+					<p class="text-sm opacity-60">Price</p>
+					<p class="text-lg font-medium">{formatCents(evt.ticketPrice!)}</p>
+				</div>
+				<div>
+					<p class="text-sm opacity-60">Capacity</p>
+					<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
+				</div>
+				{#if data.ticketStats}
+					<div>
+						<p class="text-sm opacity-60">Sold</p>
+						<p class="text-lg font-medium">{data.ticketStats.sold}</p>
+					</div>
+					<div>
+						<p class="text-sm opacity-60">Remaining</p>
+						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
+					</div>
+				{/if}
+			</div>
+
+			{#if evt.status === 'published'}
+				<div class="mt-3">
+					<a href="/events/{evt.id}/tickets" class="link link-primary text-sm" target="_blank">
+						View purchase page →
+					</a>
+				</div>
+			{/if}
+		</InfoCard>
+
+		<!-- Ticket list -->
+		{#if data.tickets.length > 0}
+			<InfoCard title="Tickets ({data.tickets.length})">
+				<div class="overflow-x-auto">
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Email</th>
+								<th>Code</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each data.tickets as ticket (ticket.id)}
+								<tr>
+									<td>{ticket.attendeeName}</td>
+									<td class="text-sm opacity-70">{ticket.attendeeEmail}</td>
+									<td class="font-mono text-sm">{ticket.code}</td>
+									<td><StatusBadge status={ticket.status} /></td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</InfoCard>
+		{/if}
+	{/if}
 
 	<!-- Poster -->
 	<InfoCard title="Poster">

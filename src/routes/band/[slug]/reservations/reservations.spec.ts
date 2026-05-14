@@ -1,0 +1,219 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mockUser } from '$lib/server/db/test-factory';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+const mockBand = {
+	id: 'band-1',
+	name: 'The Velvet Underground',
+	slug: 'the-velvet-underground',
+	bio: 'NYC band',
+	ownerId: 'user-owner',
+	avatarKey: null,
+	memberCount: 3,
+	createdAt: new Date(),
+	updatedAt: new Date()
+};
+
+const bandServiceMock = {
+	getBySlug: vi.fn(async () => mockBand),
+	getUserRole: vi.fn(async () => 'member' as string | null)
+};
+
+vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+
+const conflictServiceMock = {
+	getAvailableSlots: vi.fn(async () => [
+		{ startTime: '09:00', endTime: '09:30', available: true },
+		{ startTime: '09:30', endTime: '10:00', available: true },
+		{ startTime: '10:00', endTime: '10:30', available: false }
+	])
+};
+
+vi.mock('$lib/server/reservation/conflict-service', () => conflictServiceMock);
+
+const reservationServiceMock = {
+	create: vi.fn(async () => ({
+		id: 'res-new',
+		bookerType: 'band',
+		bookerId: 'band-1',
+		status: 'scheduled',
+		startsAt: new Date(),
+		endsAt: new Date()
+	})),
+	cancel: vi.fn(async () => undefined)
+};
+
+vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+
+vi.mock('$lib/server/reservation/timezone', () => ({
+	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
+}));
+
+vi.mock('$lib/server/reservation/config', () => ({
+	TIME_SLOT_MINUTES: 30,
+	MIN_DURATION_HOURS: 1,
+	MAX_DURATION_HOURS: 8
+}));
+
+vi.mock('$lib/server/finance/product-config-service', () => ({
+	getProductConfig: vi.fn(async () => ({ unitAmountCents: 1500 }))
+}));
+
+vi.mock('$lib/server/authorization', () => ({
+	hasAnyRole: vi.fn(async () => false)
+}));
+
+// Mock DB for page load
+let selectResult: unknown[] = [];
+
+function chainable() {
+	const proxy: any = new Proxy(() => proxy, {
+		get(_, prop) {
+			if (prop === 'then') {
+				return (resolve: (v: unknown[]) => void) => resolve(selectResult);
+			}
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: () => chainable()
+	}
+}));
+
+const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
+
+vi.mock('$app/server', () => ({
+	getRequestEvent: () => ({
+		locals: { user: testUser },
+		params: { slug: 'the-velvet-underground' },
+		request: { headers: new Headers() }
+	}),
+	form: (_schema: unknown, handler: Function) => {
+		const fn = handler;
+		(fn as any).__ = { type: 'form' };
+		(fn as any).for = () => fn;
+		return fn;
+	},
+	query: (...args: unknown[]) => {
+		const handler = typeof args[0] === 'function' ? args[0] : args[1];
+		const fn = handler as Function;
+		(fn as any).__ = { type: 'query' };
+		return fn;
+	}
+}));
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	bandServiceMock.getUserRole.mockResolvedValue('member');
+	selectResult = [];
+});
+
+// ---------------------------------------------------------------------------
+// Remote handlers
+// ---------------------------------------------------------------------------
+
+describe('getSlots', () => {
+	it('returns available slots and config', async () => {
+		const { getSlots } = await import('./data.remote');
+
+		const result = await getSlots('2026-06-15');
+
+		expect(conflictServiceMock.getAvailableSlots).toHaveBeenCalled();
+		expect(result.slots).toHaveLength(3);
+		expect(result.config.hourlyRateCents).toBe(1500);
+		expect(result.config.slotMinutes).toBe(30);
+	});
+
+	it('requires band membership', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		const { getSlots } = await import('./data.remote');
+
+		await expect(getSlots('2026-06-15')).rejects.toThrow();
+	});
+});
+
+describe('bookReservation', () => {
+	it('creates reservation with band as booker', async () => {
+		const { bookReservation } = await import('./data.remote');
+
+		const result = await bookReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00'
+		});
+
+		expect(reservationServiceMock.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'user-owner',
+				bookerType: 'band',
+				bookerId: 'band-1'
+			})
+		);
+		expect(result.reservationId).toBe('res-new');
+	});
+
+	it('passes notes through', async () => {
+		const { bookReservation } = await import('./data.remote');
+
+		await bookReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00',
+			notes: 'Practice set list'
+		});
+
+		expect(reservationServiceMock.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				notes: 'Practice set list'
+			})
+		);
+	});
+});
+
+describe('cancelBandReservation', () => {
+	it('cancels the reservation', async () => {
+		const { cancelBandReservation } = await import('./data.remote');
+
+		const result = await cancelBandReservation({ reservationId: 'res-42' });
+
+		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
+			'res-42',
+			'user-owner'
+		);
+		expect(result.success).toBe(true);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Page load
+// ---------------------------------------------------------------------------
+
+describe('reservations page load', () => {
+	it('returns upcoming and past arrays', async () => {
+		selectResult = [
+			{
+				id: 'res-1',
+				status: 'scheduled',
+				startsAt: new Date('2026-06-20T18:00:00Z'),
+				endsAt: new Date('2026-06-20T19:00:00Z'),
+				notes: null,
+				bookedByName: 'Test Owner'
+			}
+		];
+
+		const { load } = await import('./+page.server');
+		const result = (await load({
+			parent: async () => ({ band: { id: 'band-1' } })
+		} as any)) as any;
+
+		expect(result.upcoming).toBeDefined();
+		expect(result.past).toBeDefined();
+	});
+});

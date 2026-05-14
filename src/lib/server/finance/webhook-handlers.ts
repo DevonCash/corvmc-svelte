@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
+import { domainEvents } from '$lib/server/events/event-bus';
 
 // Re-export so downstream consumers can import from one place
 export { registeredEvents };
@@ -14,26 +15,10 @@ export { registeredEvents };
 // These are called by the webhook route after signature verification.
 // Each handler is responsible for one event type.
 //
-// checkout.session.completed is handled by domain modules that register
-// listeners. This file only handles finance-specific events (credit
-// allocation and subscription lifecycle).
+// checkout.session.completed emits a domain event — listeners are registered
+// in register-listeners.ts. This file handles finance-specific events
+// (credit allocation and subscription lifecycle) directly.
 // ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Checkout completion listeners
-// ---------------------------------------------------------------------------
-// Domain modules register listeners that are called with the completed
-// session. Each listener inspects the session metadata to decide whether
-// to act (e.g., a reservation module checks for its reservation_id key).
-// ---------------------------------------------------------------------------
-
-type CheckoutListener = (session: Stripe.Checkout.Session) => Promise<void>;
-const checkoutListeners: CheckoutListener[] = [];
-
-/** Register a listener for checkout completion. Called by domain modules at startup. */
-export function onCheckoutComplete(listener: CheckoutListener): void {
-	checkoutListeners.push(listener);
-}
 
 // ---------------------------------------------------------------------------
 // Webhook handler map
@@ -54,13 +39,11 @@ export const webhookHandlerMap: Record<RegisteredEvent, WebhookHandlerFn> = {
 export async function handleCheckoutCompleted(
 	session: Stripe.Checkout.Session
 ): Promise<void> {
-	for (const listener of checkoutListeners) {
-		try {
-			await listener(session);
-		} catch (err) {
-			console.error(`Checkout listener failed for session ${session.id}:`, err);
-		}
-	}
+	await domainEvents.emit('checkout.completed', {
+		sessionId: session.id,
+		metadata: (session.metadata as Record<string, string>) ?? {},
+		stripeSession: session
+	});
 }
 
 // ---------------------------------------------------------------------------

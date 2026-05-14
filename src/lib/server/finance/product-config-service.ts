@@ -8,7 +8,7 @@ import type { CheckoutLineItem } from './payment-service';
 // Product config defaults — used to seed the table on first access
 // ---------------------------------------------------------------------------
 
-export type ProductKey = 'contribution' | 'rehearsal' | 'fee_coverage';
+export type ProductKey = 'contribution' | 'rehearsal' | 'fee_coverage' | 'ticket';
 
 interface ProductDefault {
 	name: string;
@@ -35,6 +35,12 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 		description: 'Optional fee to cover payment processing costs',
 		unitAmountCents: 0,
 		unitLabel: 'per transaction'
+	},
+	ticket: {
+		name: 'Event Ticket',
+		description: 'Ticket for a Corvallis Music Collective event',
+		unitAmountCents: 0,
+		unitLabel: 'per ticket'
 	}
 };
 
@@ -94,7 +100,7 @@ export async function getProductConfig(key: ProductKey): Promise<ProductConfigRo
  * Get all product configs, seeding any missing ones from defaults.
  */
 export async function getAllProductConfigs(): Promise<ProductConfigRow[]> {
-	const keys: ProductKey[] = ['contribution', 'rehearsal', 'fee_coverage'];
+	const keys: ProductKey[] = ['contribution', 'rehearsal', 'fee_coverage', 'ticket'];
 	const configs: ProductConfigRow[] = [];
 
 	for (const key of keys) {

@@ -2,21 +2,15 @@ import type Stripe from 'stripe';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq } from 'drizzle-orm';
-import { onCheckoutComplete } from '$lib/server/finance/webhook-handlers';
 
 // ---------------------------------------------------------------------------
 // Reservation checkout listener
 // ---------------------------------------------------------------------------
-// Registered at module load time. When a Stripe checkout session completes
-// with a `reservation_id` in metadata, transitions the reservation from
-// scheduled → confirmed.
+// Called by the domain event bus when a checkout completes. Inspects session
+// metadata for a reservation_id and transitions scheduled → confirmed.
 // ---------------------------------------------------------------------------
 
-export function registerReservationCheckoutListener(): void {
-	onCheckoutComplete(handleReservationCheckout);
-}
-
-async function handleReservationCheckout(session: Stripe.Checkout.Session): Promise<void> {
+export async function handleReservationCheckout(session: Stripe.Checkout.Session): Promise<void> {
 	const reservationId = session.metadata?.reservation_id;
 	if (!reservationId) return;
 

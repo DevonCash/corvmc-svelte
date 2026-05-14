@@ -40,9 +40,25 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$lib/server/auth', () => ({
 	auth: {
 		api: {
-			changePassword: vi.fn().mockResolvedValue({ token: null, user: {} })
+			changePassword: vi.fn().mockResolvedValue({ token: null, user: {} }),
+			signInEmail: vi.fn().mockResolvedValue({}),
+			signOut: vi.fn().mockResolvedValue({})
 		}
 	}
+}));
+
+vi.mock('$lib/server/authorization', () => ({
+	hasRole: vi.fn().mockResolvedValue(false),
+	hasAnyRole: vi.fn().mockResolvedValue(false),
+	getUserRoles: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('$lib/server/reservation/reservation-service', () => ({
+	cancel: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('$lib/server/finance/subscription-service', () => ({
+	cancel: vi.fn().mockResolvedValue(undefined)
 }));
 
 // Mock getRequestEvent for remote functions
@@ -55,10 +71,15 @@ vi.mock('$app/server', () => ({
 		request: { headers: mockHeaders }
 	}),
 	form: (_schema: unknown, handler: Function) => {
-		// Return the handler directly so tests can call it
-		return handler;
+		const fn = handler;
+		(fn as any).__ = { type: 'form' };
+		return fn;
 	},
-	query: (_schema: unknown, handler: Function) => handler
+	query: (_schema: unknown, handler: Function) => {
+		const fn = handler;
+		(fn as any).__ = { type: 'query' };
+		return fn;
+	}
 }));
 
 import { auth } from '$lib/server/auth';

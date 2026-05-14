@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
+	import { formatCents } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -68,6 +69,13 @@
 								{#each parseTags(evt.tags) as tag (tag)}
 									<span class="badge badge-outline badge-sm">{tag}</span>
 								{/each}
+							</div>
+						{/if}
+
+						{#if evt.ticketingEnabled && evt.ticketPrice}
+							<div class="card-actions justify-between items-center mt-4">
+								<span class="font-medium">{formatCents(evt.ticketPrice)}</span>
+								<a href="/events/{evt.id}/tickets" class="btn btn-primary btn-sm">Get Tickets</a>
 							</div>
 						{/if}
 					</div>

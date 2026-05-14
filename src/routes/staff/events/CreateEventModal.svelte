@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Modal from '$lib/components/Modal.svelte';
-	import FormField from '$lib/components/FormField.svelte';
+	import Modal from '$lib/components/shared/Modal.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { checkConflicts, createEvent } from './data.remote';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
@@ -18,6 +18,9 @@
 	let reserveSpace = $state(false);
 	let reservationStartTime = $state('');
 	let reservationEndTime = $state('');
+	let ticketingEnabled = $state(false);
+	let ticketPriceDollars = $state('');
+	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
 	let submitting = $state(false);
 
@@ -96,6 +99,13 @@
 				eventEndTime,
 				doorsTime: doorsTime || undefined,
 				tags: tags || undefined,
+				ticketingEnabled,
+				ticketPrice: ticketingEnabled && ticketPriceDollars
+					? Math.round(parseFloat(ticketPriceDollars) * 100)
+					: undefined,
+				ticketQuantity: ticketingEnabled && ticketQuantity
+					? parseInt(ticketQuantity, 10)
+					: undefined,
 				reserveSpace,
 				reservationStartTime: reservationStartTime || undefined,
 				reservationEndTime: reservationEndTime || undefined,
@@ -138,6 +148,9 @@
 		eventEndTime = '';
 		doorsTime = '';
 		tags = '';
+		ticketingEnabled = false;
+		ticketPriceDollars = '';
+		ticketQuantity = '';
 		reserveSpace = false;
 		reservationStartTime = '';
 		reservationEndTime = '';
@@ -237,6 +250,46 @@
 					<p class="text-sm opacity-60 mt-1">{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)</p>
 				{/if}
 			</FormField>
+
+			<!-- Ticketing toggle -->
+			<div class="form-control">
+				<label class="label cursor-pointer justify-start gap-3">
+					<input type="checkbox" bind:checked={ticketingEnabled} class="toggle" />
+					<span class="label-text">Enable ticketing</span>
+				</label>
+			</div>
+
+			{#if ticketingEnabled}
+				<div class="card bg-base-200 p-4 space-y-4">
+					<div class="grid grid-cols-2 gap-4">
+						<FormField label="Ticket price ($)" id="ticketPrice" issues={[]}>
+							<input
+								type="number"
+								id="ticketPrice"
+								bind:value={ticketPriceDollars}
+								min="0.01"
+								step="0.01"
+								placeholder="15.00"
+								class="input input-bordered w-full"
+								required
+							/>
+						</FormField>
+
+						<FormField label="Capacity" id="ticketQuantity" issues={[]}>
+							<input
+								type="number"
+								id="ticketQuantity"
+								bind:value={ticketQuantity}
+								min="1"
+								step="1"
+								placeholder="Unlimited"
+								class="input input-bordered w-full"
+							/>
+						</FormField>
+					</div>
+					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
+				</div>
+			{/if}
 
 			<!-- Reserve space toggle -->
 			<div class="form-control">

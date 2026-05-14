@@ -38,7 +38,9 @@ const updateUserSchema = z.object({
 	name: z.string().trim().min(1),
 	pronouns: z.string().trim(),
 	phone: z.string().trim(),
-	roles: z.array(z.string().regex(/^\d+$/, 'Invalid role ID')).default([])
+	roles: z.string().transform((s) => JSON.parse(s) as string[]).pipe(
+		z.array(z.string().regex(/^\d+$/, 'Invalid role ID'))
+	).default('[]')
 });
 
 export const updateUser = form(updateUserSchema, async (rawData) => {

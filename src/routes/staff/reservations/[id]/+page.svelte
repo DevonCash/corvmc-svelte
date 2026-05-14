@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/AsyncButton.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import {
 		confirmReservation,
@@ -11,17 +11,19 @@
 		cancelReservation,
 		cashReceived
 	} from './data.remote';
-	import DayTimeline from '$lib/components/DayTimeline.svelte';
-	import RecordNav from '$lib/components/RecordNav.svelte';
-	import CopyableId from '$lib/components/CopyableId.svelte';
-	import InfoCard from '$lib/components/InfoCard.svelte';
-	import MemberLink from '$lib/components/MemberLink.svelte';
+	import DayTimeline from '$lib/components/shared/DayTimeline.svelte';
+	import RecordNav from '$lib/components/shared/RecordNav.svelte';
+	import CopyableId from '$lib/components/shared/CopyableId.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import {
 		fullDate,
 		formatTime,
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
+	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -49,7 +51,6 @@
 			? { label: 'Paid', class: 'badge-success' }
 			: { label: 'Comped', class: 'badge-info' };
 	});
-
 </script>
 
 <div class="mx-auto max-w-3xl space-y-6">
@@ -186,37 +187,35 @@
 	</div>
 
 	<!-- Member + Payment grid -->
-	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<!-- Member card -->
 		<InfoCard title="Member">
-			<MemberLink
-				name={r.memberName}
-				email={r.memberEmail}
-				userId={r.createdByUserId}
-				avatar
-				class="mb-3"
-			/>
-
-			{#if data.isFirstReservation}
-				<span class="badge badge-sm badge-info mb-2">First reservation</span>
-			{/if}
-
-			{#if r.memberPhone}
-				<p class="text-sm opacity-60">
-					<a href="tel:{r.memberPhone}" class="link">{r.memberPhone}</a>
-				</p>
-			{/if}
-			{#if r.memberPronouns}
-				<p class="text-sm opacity-50">{r.memberPronouns}</p>
-			{/if}
-
-			<div class="mt-3 flex items-center justify-between border-t border-base-200 pt-3">
-				<span class="text-xs opacity-50">
-					Booked as: <span class="badge badge-ghost badge-sm">{r.bookerType}</span>
-				</span>
-				<a href="/staff/users/{r.createdByUserId}" class="link text-sm link-primary">
-					View profile →
-				</a>
+			{#snippet header(title)}
+				<header class="flex justify-between">
+					<span class="card-title">{title}</span>
+					{#if r.createdByUserId}
+						<a href="/staff/users/{r.createdByUserId}" class="btn btn-sm"> View Profile </a>
+					{/if}
+				</header>
+			{/snippet}
+			<div class="flex flex-col items-center">
+				<Avatar src={r.memberAvatarUrl} name={r.memberName} class="size-16 mb-4" />
+				<h3 class='text-lg'>{r.memberName}</h3>
+				{#if r.memberPronouns}
+					<p class="text-xs text-muted">{r.memberPronouns}</p>
+				{/if}
+				<div class="join join-vertical mt-4">
+					<a href="mailto:{r.memberEmail}" class="btn join-item btn-outline">
+						<IconMail class="size-5" />
+						{r.memberEmail}
+					</a>
+					{#if r.memberPhone}
+						<a href="tel:{r.memberPhone}" class="btn join-item btn-outline">
+							<IconPhone class="size-5" />
+							{r.memberPhone}
+						</a>
+					{/if}
+				</div>
 			</div>
 		</InfoCard>
 

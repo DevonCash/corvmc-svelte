@@ -2,38 +2,24 @@
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getUser, getAllRoles, updateUser } from './data.remote';
-	import Form from '$lib/components/Form.svelte';
-	import SubmitButton from '$lib/components/SubmitButton.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import TagInput from '$lib/components/TagInput.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import { Field } from '$lib/components/shared/Form';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
 
-	let roleOptions = $derived(
-		allRoles.map((r) => ({ id: String(r.id), label: r.name }))
-	);
+	let roleOptions = $derived((allRoles ?? []).map((r) => ({ id: String(r.id), label: r.name })));
 
 	let initialRoles = $derived(
-		allRoles
-			.filter((r) => member.roles.includes(r.name))
-			.map((r) => String(r.id))
+		(allRoles ?? []).filter((r) => member.roles.includes(r.name)).map((r) => String(r.id))
 	);
-
-	let initial = $derived({
-		name: member.name,
-		pronouns: member.pronouns ?? '',
-		phone: member.phone ?? '',
-		roles: initialRoles
-	});
 </script>
 
 <svelte:boundary>
-	<Form
-		remote={updateUser}
-		{initial}
-		successToast="Changes saved"
-	>
+	<Form remote={updateUser} successToast="Changes saved">
 		<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
 			{#if member.deletedAt}
 				<span class="badge badge-error">Deleted</span>
@@ -45,87 +31,75 @@
 			</SubmitButton>
 		</PageHeader>
 
-		<div class="grid gap-6 lg:grid-cols-2">
+		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Profile card -->
-			<div class="card bg-base-100 shadow">
-				<div class="card-body">
-					<h2 class="card-title">Profile</h2>
-					<div class="space-y-4">
-						<div class="form-control">
-							<label class="label" for="name">Name</label>
-							{#each updateUser.fields.name.issues() ?? [] as issue}
-								<p class="text-error text-sm">{issue.message}</p>
-							{/each}
-							<input
-								{...updateUser.fields.name.as('text', member.name)}
-								id="name"
-								class="input input-bordered"
-							/>
-						</div>
-						<div class="form-control">
-							<label class="label" for="pronouns">Pronouns</label>
-							<input
-								{...updateUser.fields.pronouns.as('text', member.pronouns ?? '')}
-								id="pronouns"
-								class="input input-bordered"
-							/>
-						</div>
-						<div class="form-control">
-							<label class="label" for="phone">Phone</label>
-							<input
-								{...updateUser.fields.phone.as('text', member.phone ?? '')}
-								id="phone"
-								class="input input-bordered"
-							/>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Roles card -->
-			<div class="card bg-base-100 shadow">
-				<div class="card-body">
-					<h2 class="card-title">Roles</h2>
-					<TagInput
-						options={roleOptions}
-						value={initialRoles}
+			<InfoCard title="Account Info">
+				<div class="@container grid grid-cols-4 gap-x-2">
+					<Field
+						name="name"
+						type="text"
+						value={member.name}
+						class="col-span-4 @md:col-span-2 @lg:col-span-3"
+					/>
+					<Field
+						name="pronouns"
+						type="text"
+						value={member.pronouns ?? ''}
+						class="col-span-4 @md:col-span-2 @lg:col-span-1"
+					/>
+					<Field
+						name="email"
+						readonly={true}
+						type="email"
+						value={member.email}
+						class="col-span-4 @md:col-span-2 @lg:col-span-2"
+					/>
+					<Field
+						name="phone"
+						type="tel"
+						value={member.phone ?? ''}
+						class="col-span-4 @md:col-span-2 @lg:col-span-2"
+					/>
+					<Field
+						class="col-span-4 "
 						name="roles"
-						placeholder="Search roles..."
+						type="tags"
+						options={roleOptions}
+						multiple={true}
+						value={initialRoles}
 					/>
 				</div>
-			</div>
-
-			<!-- Info card -->
-			<div class="card bg-base-100 shadow lg:col-span-2">
-				<div class="card-body">
-					<h2 class="card-title">Details</h2>
-					<dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-						<dt class="opacity-60">User ID</dt>
-						<dd class="font-mono text-xs">{member.id}</dd>
-
-						<dt class="opacity-60">Stripe ID</dt>
-						<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
-
-						<dt class="opacity-60">Joined</dt>
-						<dd>{new Date(member.createdAt).toLocaleString()}</dd>
-
-						{#if member.deletedAt}
-							<dt class="opacity-60">Deleted</dt>
-							<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
-						{/if}
-					</dl>
-				</div>
-			</div>
+			</InfoCard>
 		</div>
+
+		<!-- Info card -->
+		<InfoCard title="Details" class='bg-base-200 shadow-none'>
+			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
+				<dt class="opacity-60">User ID</dt>
+				<dd class="font-mono text-xs">{member.id}</dd>
+
+				<dt class="opacity-60">Stripe ID</dt>
+				<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
+
+				<dt class="opacity-60">Joined</dt>
+				<dd>{new Date(member.createdAt).toLocaleString()}</dd>
+
+				{#if member.deletedAt}
+					<dt class="opacity-60">Deleted</dt>
+					<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
+				{/if}
+			</dl>
+		</InfoCard>
 	</Form>
 
 	{#snippet pending()}
 		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{/snippet}
 
 	{#snippet failed(error, reset)}
+		{@debug error}
 		<div class="alert alert-error">
 			<p>Failed to load user: {String(error)}</p>
 			<button class="btn btn-sm" onclick={reset}>Retry</button>

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import type { Column } from '$lib/components/DataTable.svelte';
-	import DataTable from '$lib/components/DataTable.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { type Column, default as DataTable } from '$lib/components/shared/Table/DataTable.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -11,13 +10,18 @@
 	const columns: Column<User>[] = [
 		{ key: 'name', header: 'Name', sortable: true },
 		{ key: 'email', header: 'Email', sortable: true },
-		{ key: 'pronouns', header: 'Pronouns', cell: (v) => (v as string) ?? '—', class: 'opacity-70' },
+		{
+			key: 'pronouns',
+			header: 'Pronouns',
+			cell: (v: unknown) => (v as string) ?? '—',
+			class: 'opacity-70'
+		},
 		{ key: 'roles', header: 'Roles' },
 		{
 			key: 'createdAt',
 			header: 'Joined',
 			sortable: true,
-			cell: (v) => new Date(v as string).toLocaleDateString()
+			cell: (v: unknown) => new Date(v as string).toLocaleDateString()
 		}
 	];
 </script>
@@ -34,7 +38,7 @@
 			name="q"
 			value={data.search}
 			placeholder="Search by name or email..."
-			class="input input-bordered w-full max-w-sm"
+			class="input-bordered input w-full max-w-sm"
 		/>
 		<button type="submit" class="btn btn-primary">Search</button>
 		{#if data.search}
@@ -43,7 +47,7 @@
 	</form>
 
 	<DataTable data={data.users} {columns} empty="No users found">
-		{#snippet row(u)}
+		{#snippet row(u: User)}
 			<tr class="hover">
 				<td>
 					<a href="/staff/users/{u.id}" class="link link-primary">

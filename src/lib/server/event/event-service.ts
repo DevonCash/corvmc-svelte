@@ -2,12 +2,15 @@ import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { ticket } from '$lib/server/db/schema/ticket';
 import { eq, and, gt, ne, asc, desc, inArray } from 'drizzle-orm';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
+import { domainEvents } from '$lib/server/events/event-bus';
+import { DateTime } from 'luxon';
 
 // ---------------------------------------------------------------------------
 // EventService — create, update, publish, cancel events
@@ -27,6 +30,9 @@ export interface EventRow {
 	reservationId: string | null;
 	posterKey: string | null;
 	tags: string | null;
+	ticketingEnabled: boolean;
+	ticketPrice: number | null;
+	ticketQuantity: number | null;
 	createdByUserId: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -43,6 +49,9 @@ export interface CreateEventParams {
 	endsAt: Date;
 	doorsAt?: Date;
 	tags?: string;
+	ticketingEnabled?: boolean;
+	ticketPrice?: number | null;
+	ticketQuantity?: number | null;
 	createdByUserId: string;
 	reservation?: {
 		startsAt: Date;
@@ -63,10 +72,18 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		endsAt,
 		doorsAt,
 		tags,
+		ticketingEnabled = false,
+		ticketPrice,
+		ticketQuantity,
 		createdByUserId,
 		reservation: reservationParams,
 		posterFile
 	} = params;
+
+	// Validate ticketing fields
+	if (ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
+		throw new Error('Ticket price is required when ticketing is enabled');
+	}
 
 	// Insert event + optional reservation in a transaction
 	const row = await db.transaction(async (tx) => {
@@ -80,6 +97,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				endsAt,
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
+				ticketingEnabled,
+				ticketPrice: ticketingEnabled ? ticketPrice! : null,
+				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
 				createdByUserId
 			})
 			.returning();
@@ -139,6 +159,9 @@ export interface UpdateEventParams {
 	endsAt?: Date;
 	doorsAt?: Date | null;
 	tags?: string | null;
+	ticketingEnabled?: boolean;
+	ticketPrice?: number | null;
+	ticketQuantity?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -215,6 +238,24 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
+
+	// Ticketing fields
+	if (params.ticketingEnabled !== undefined) {
+		updates.ticketingEnabled = params.ticketingEnabled;
+		if (params.ticketingEnabled) {
+			if (params.ticketPrice == null || params.ticketPrice <= 0) {
+				throw new Error('Ticket price is required when ticketing is enabled');
+			}
+			updates.ticketPrice = params.ticketPrice;
+			updates.ticketQuantity = params.ticketQuantity ?? null;
+		} else {
+			updates.ticketPrice = null;
+			updates.ticketQuantity = null;
+		}
+	} else {
+		if (params.ticketPrice !== undefined) updates.ticketPrice = params.ticketPrice;
+		if (params.ticketQuantity !== undefined) updates.ticketQuantity = params.ticketQuantity;
+	}
 
 	// Handle reservation rebooking if requested
 	if (params.rebook && existing.reservationId) {
@@ -324,6 +365,50 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	if (existing.posterKey) {
 		await deleteObject(existing.posterKey);
 	}
+
+	// Emit domain event for ticket holder notifications (fire-and-forget)
+	Promise.resolve().then(async () => {
+		try {
+			const tickets = await db
+				.select({
+					attendeeName: ticket.attendeeName,
+					attendeeEmail: ticket.attendeeEmail,
+					userId: ticket.userId
+				})
+				.from(ticket)
+				.where(
+					and(
+						eq(ticket.eventId, eventId),
+						inArray(ticket.status, ['valid', 'pending'])
+					)
+				);
+
+			// Deduplicate by email (one notification per buyer)
+			const seen = new Set<string>();
+			const holders = tickets.filter((t) => {
+				if (seen.has(t.attendeeEmail)) return false;
+				seen.add(t.attendeeEmail);
+				return true;
+			});
+
+			if (holders.length > 0) {
+				const eventDt = DateTime.fromJSDate(existing.startsAt);
+				await domainEvents.emit('event.cancelled', {
+					eventId,
+					eventTitle: existing.title,
+					eventDate: eventDt.toLocaleString(DateTime.DATE_FULL),
+					ticketHolders: holders.map((h) => ({
+						attendeeName: h.attendeeName,
+						attendeeEmail: h.attendeeEmail,
+						userId: h.userId ?? undefined
+					})),
+					refundNote: 'Refunds will be processed automatically. Please allow a few business days.'
+				});
+			}
+		} catch (err) {
+			console.error('[events] event.cancelled emission failed:', err);
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------

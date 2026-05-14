@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import EmptyState from '$lib/components/EmptyState.svelte';
-	import TabBar from '$lib/components/TabBar.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import TabBar from '$lib/components/shared/TabBar.svelte';
 
 	let { data } = $props();
 

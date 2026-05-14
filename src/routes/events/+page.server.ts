@@ -15,7 +15,9 @@ export const load: PageServerLoad = async () => {
 			endsAt: e.endsAt.toISOString(),
 			doorsAt: e.doorsAt?.toISOString() ?? null,
 			tags: e.tags,
-			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null,
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice
 		}))
 	};
 };

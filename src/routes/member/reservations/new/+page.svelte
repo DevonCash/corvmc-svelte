@@ -2,8 +2,8 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { getSlots, bookReservation } from './data.remote';
-	import Form from '$lib/components/Form.svelte';
-	import SubmitButton from '$lib/components/SubmitButton.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	// Resolve date from URL, default to today

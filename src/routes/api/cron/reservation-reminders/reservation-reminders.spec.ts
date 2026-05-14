@@ -1,0 +1,201 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+let queryResult: unknown[] = [];
+
+function chainable(result?: unknown[]) {
+	const proxy: any = new Proxy(() => proxy, {
+		get(_, prop) {
+			if (prop === 'then') {
+				return (resolve: (v: unknown[]) => void) => resolve(result ?? queryResult);
+			}
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: () => chainable()
+	}
+}));
+
+vi.mock('$lib/server/db/schema/reservation', () => ({
+	reservation: {
+		id: 'id', status: 'status', startsAt: 'starts_at', endsAt: 'ends_at',
+		createdByUserId: 'created_by_user_id'
+	}
+}));
+
+vi.mock('$lib/server/db/schema/auth', () => ({
+	user: { id: 'id', name: 'name', email: 'email' }
+}));
+
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn(), and: vi.fn(), gte: vi.fn(), lt: vi.fn()
+}));
+
+vi.mock('luxon', () => ({
+	DateTime: {
+		fromJSDate: () => ({
+			setZone: () => ({
+				toLocaleString: (fmt: any) => fmt === 'DATE_FULL' ? 'May 15, 2026' : '10:00 AM'
+			})
+		}),
+		DATE_FULL: 'DATE_FULL',
+		TIME_SIMPLE: 'TIME_SIMPLE'
+	}
+}));
+
+const mockEmit = vi.fn();
+vi.mock('$lib/server/events/event-bus', () => ({
+	domainEvents: { emit: mockEmit }
+}));
+
+vi.mock('$env/dynamic/private', () => ({
+	env: { CRON_SECRET: 'test-secret' }
+}));
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	queryResult = [];
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('POST /api/cron/reservation-reminders', () => {
+	it('rejects requests without valid auth', async () => {
+		const { POST } = await import('./+server');
+
+		await expect(
+			POST({
+				request: new Request('http://localhost/api/cron/reservation-reminders', {
+					method: 'POST',
+					headers: { Authorization: 'Bearer wrong-secret' }
+				})
+			} as any)
+		).rejects.toThrow();
+	});
+
+	it('emits reservation.reminder_due for each confirmed reservation', async () => {
+		const tomorrow = new Date(Date.now() + 12 * 60 * 60 * 1000);
+		const tomorrowEnd = new Date(tomorrow.getTime() + 3600000);
+
+		queryResult = [
+			{
+				id: 'res-1',
+				startsAt: tomorrow,
+				endsAt: tomorrowEnd,
+				userId: 'user-1',
+				userName: 'Alice',
+				userEmail: 'alice@example.com'
+			},
+			{
+				id: 'res-2',
+				startsAt: tomorrow,
+				endsAt: tomorrowEnd,
+				userId: 'user-2',
+				userName: 'Bob',
+				userEmail: 'bob@example.com'
+			}
+		];
+
+		const { POST } = await import('./+server');
+
+		const response = await POST({
+			request: new Request('http://localhost/api/cron/reservation-reminders', {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-secret' }
+			})
+		} as any);
+
+		const body = await response.json();
+
+		expect(body.found).toBe(2);
+		expect(body.emitted).toBe(2);
+		expect(mockEmit).toHaveBeenCalledTimes(2);
+		expect(mockEmit).toHaveBeenCalledWith('reservation.reminder_due', expect.objectContaining({
+			reservationId: 'res-1',
+			userId: 'user-1',
+			userName: 'Alice',
+			userEmail: 'alice@example.com'
+		}));
+		expect(mockEmit).toHaveBeenCalledWith('reservation.reminder_due', expect.objectContaining({
+			reservationId: 'res-2',
+			userId: 'user-2'
+		}));
+	});
+
+	it('returns zero when no reservations match', async () => {
+		queryResult = [];
+
+		const { POST } = await import('./+server');
+
+		const response = await POST({
+			request: new Request('http://localhost/api/cron/reservation-reminders', {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-secret' }
+			})
+		} as any);
+
+		const body = await response.json();
+
+		expect(body.found).toBe(0);
+		expect(body.emitted).toBe(0);
+		expect(mockEmit).not.toHaveBeenCalled();
+	});
+
+	it('continues emitting if one reservation fails', async () => {
+		queryResult = [
+			{
+				id: 'res-fail',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				userId: 'user-1',
+				userName: 'Alice',
+				userEmail: 'alice@example.com'
+			},
+			{
+				id: 'res-ok',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				userId: 'user-2',
+				userName: 'Bob',
+				userEmail: 'bob@example.com'
+			}
+		];
+
+		mockEmit
+			.mockRejectedValueOnce(new Error('dispatch failed'))
+			.mockResolvedValueOnce(undefined);
+
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const { POST } = await import('./+server');
+
+		const response = await POST({
+			request: new Request('http://localhost/api/cron/reservation-reminders', {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-secret' }
+			})
+		} as any);
+
+		const body = await response.json();
+
+		expect(body.found).toBe(2);
+		expect(body.emitted).toBe(1);
+		expect(mockEmit).toHaveBeenCalledTimes(2);
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining('res-fail'),
+			expect.any(Error)
+		);
+
+		consoleSpy.mockRestore();
+	});
+});

@@ -43,7 +43,35 @@ Create `src/lib/server/band/band-service.ts` with all functions from the spec:
 - `leaveBand(bandId, userId)` — Delete the user's band_member row. Throw if role is `'owner'`.
 - `getUserRole(bandId, userId)` — Return the user's role in the band, or null if not a member. Used for authorization checks.
 
-Test: `create` produces a band + owner row. `invite` + `acceptInvitation` produces an active member. `invite` for an existing member throws. `transferOwnership` swaps roles correctly. `delete` cancels future reservations.
+### 1.4 Slug utility tests
+
+Create `src/lib/server/utils/slug.spec.ts` (vitest, mocked DB following the project's existing test patterns):
+- Basic slugification: `"My Cool Band"` → `"my-cool-band"`.
+- Special characters stripped: `"Rock & Roll!!!"` → `"rock-roll"`.
+- Consecutive hyphens collapsed: `"a---b"` → `"a-b"`.
+- Leading/trailing hyphens trimmed.
+- `ensureUniqueSlug` appends `-2` when slug exists.
+
+### 1.5 Band service tests
+
+Create `src/lib/server/band/band-service.spec.ts` (vitest, mocked DB):
+- `create` — inserts band row + owner band_member row, generates slug.
+- `create` with duplicate name — calls `ensureUniqueSlug`, appends suffix.
+- `invite` — inserts band_member with `status = 'pending'`.
+- `invite` existing member — throws.
+- `acceptInvitation` — updates status to `'active'`, verifies userId matches.
+- `acceptInvitation` wrong user — throws.
+- `declineInvitation` — deletes the pending row.
+- `revokeInvitation` — deletes the pending row.
+- `removeMember` — deletes active row.
+- `removeMember` on owner — throws.
+- `updateMember` — updates role/position, rejects owner demotion.
+- `transferOwnership` — swaps roles, updates `band.ownerId`.
+- `leaveBand` as owner — throws.
+- `leaveBand` as member — deletes row.
+- `delete` — cancels future band reservations, deletes avatar from R2, deletes band.
+- `searchMembers` — returns matching users, excludes existing band members.
+- `getUserRole` — returns role for member, null for non-member.
 
 ---
 
@@ -74,7 +102,13 @@ On success, redirect to `/band/{slug}/`.
 
 Update `src/routes/member/+layout.svelte` — add a "Bands" nav item with `IconUsersGroup` (or similar tabler icon) linking to `/member/bands`.
 
-Test: Creating a band redirects to the band panel. Accepting an invitation moves the band from pending to active list. Declining removes it.
+### 2.4 My Bands and Create Band tests
+
+Create `src/routes/member/bands/bands.spec.ts`:
+- `createBand` form handler — calls `band-service.create`, returns slug.
+- `acceptInvitation` form handler — calls `band-service.acceptInvitation` with correct userId.
+- `declineInvitation` form handler — calls `band-service.declineInvitation`, deletes row.
+- Load function returns bands split by status (active vs pending).
 
 ---
 
@@ -98,7 +132,14 @@ Create `src/routes/band/[slug]/+page.server.ts` — load upcoming reservations f
 
 Create `src/routes/band/[slug]/+page.svelte` — band name, member count, list of upcoming reservations (reuse reservation display patterns from member dashboard). Quick links to Members and Book Practice Space.
 
-Test: Band dashboard shows the band name, member count, and upcoming reservations. Non-members get 403.
+### 3.3 Band layout and dashboard tests
+
+Create `src/routes/band/band-panel.spec.ts`:
+- Layout load — resolves band by slug, returns band data and user role.
+- Layout load — throws 404 for unknown slug.
+- Layout load — throws 403 for non-member (not staff).
+- Layout load — allows staff/admin access to any band.
+- Dashboard load — returns upcoming reservations for the band.
 
 ---
 
@@ -127,7 +168,16 @@ Create `src/routes/band/[slug]/members/data.remote.ts` — form/query handlers:
 - `transferOwnership` form — calls `transferOwnership()`. Show confirmation modal before submitting.
 - `leaveBand` form — calls `leaveBand()`. Redirect to `/member/bands` on success.
 
-Test: Owner can invite, remove, transfer. Admin can invite, remove (not owner). Member sees the list but has no action buttons. Revoking a pending invitation removes it from the list.
+### 4.3 Members and invitations tests
+
+Create `src/routes/band/[slug]/members/members.spec.ts`:
+- `inviteMember` — calls `invite()` with correct params, rejects if user already a member.
+- `removeMember` — calls `removeMember()`, rejects removal of owner.
+- `revokeInvitation` — deletes pending row.
+- `updateMember` — updates role/position.
+- `transferOwnership` — swaps owner role, updates `band.ownerId`.
+- `leaveBand` — deletes member row, rejects if owner.
+- `searchMembers` query — returns matches, excludes existing band members.
 
 ---
 
@@ -151,7 +201,12 @@ The form fields are the same: date, start time, end time, notes. Conflict checki
 
 Add a cancel handler in `src/routes/band/[slug]/reservations/data.remote.ts`. Any band member can cancel a band reservation (or scope to owner/admin if preferred — the spec says all members can book, so all can cancel too).
 
-Test: Booking as a band creates a reservation with `bookerType = 'band'`. The reservation shows on the band's reservation list. Cancelling removes it.
+### 5.4 Band reservation tests
+
+Create `src/routes/band/[slug]/reservations/reservations.spec.ts`:
+- `bookReservation` form — creates reservation with `bookerType = 'band'`, `bookerId = band.id`.
+- `cancelReservation` form — cancels the reservation.
+- Load function — returns only reservations for this band, excludes other bands' reservations.
 
 ---
 
@@ -175,7 +230,17 @@ Create `src/routes/band/[slug]/settings/+page.svelte` and `data.remote.ts` — o
 - Delete Band button with confirmation modal. Calls `band-service.delete()`. Redirects to `/member/bands`.
 - Transfer Ownership could also live here as an alternative to the members page (or just link to it).
 
-Test: Updating name regenerates the slug. Avatar upload stores in R2 and displays. Deleting a band cancels future reservations and redirects.
+### 6.4 Profile and settings tests
+
+Create `src/routes/band/[slug]/edit/edit.spec.ts`:
+- `updateBand` form — updates name/bio, regenerates slug if name changed.
+- Avatar POST handler — stores file in R2, updates `avatarKey`.
+- Avatar DELETE handler — removes from R2, clears `avatarKey`.
+- Rejects updates from non-owner/admin.
+
+Create `src/routes/band/[slug]/settings/settings.spec.ts`:
+- `deleteBand` form — cancels future reservations, deletes avatar, deletes band.
+- Rejects deletion from non-owner.
 
 ---
 
@@ -195,7 +260,12 @@ Update `src/routes/member/+page.server.ts` — load pending invitation count for
 
 Update `src/routes/member/+page.svelte` — add a notification banner or badge in the quick links area: "You have N pending band invitations" linking to `/member/bands`.
 
-Test: A band reservation appears on each member's dashboard. Pending invitations show a notification on the dashboard.
+### 7.3 Dashboard integration tests
+
+Update `src/routes/member/dashboard.spec.ts` (or create if needed):
+- Dashboard load includes band reservations for bands the user is an active member of.
+- Band reservations are excluded for bands the user is only a pending invitee of.
+- Pending invitation count is returned.
 
 ---
 
@@ -224,37 +294,14 @@ Create `src/routes/directory/bands/[slug]/+page.svelte` — public profile: band
 
 Add "Directory" to the site's public navigation (wherever public nav items live — check the root layout).
 
-Test: Directory page shows both tabs. Band cards link to the public profile. Public profile shows member list.
+### 8.4 Directory tests
 
----
+Create `src/routes/directory/directory.spec.ts`:
+- Load returns non-deleted members and all bands with active member counts.
+- Public band profile load returns band with active members (names, positions).
+- Public band profile throws 404 for unknown slug.
 
-## Epic 9: Tests and verification
-
-Depends on: All previous epics.
-
-### 9.1 Band service tests
-
-Create `src/lib/server/band/band-service.spec.ts`:
-- `create` — produces band + owner row, generates slug.
-- `create` with duplicate name — appends suffix to slug.
-- `invite` + `accept` — produces active member.
-- `invite` existing member — throws.
-- `decline` — deletes row.
-- `revoke` — deletes row.
-- `removeMember` owner — throws.
-- `transferOwnership` — swaps roles, updates `band.ownerId`.
-- `leaveBand` as owner — throws.
-- `delete` — deletes band, cancels future reservations.
-- `searchMembers` — returns matching users, excludes existing band members.
-
-### 9.2 Slug utility tests
-
-Create `src/lib/server/utils/slug.spec.ts`:
-- Basic slugification (spaces, special chars, uppercase).
-- Consecutive hyphens collapsed.
-- Leading/trailing hyphens trimmed.
-
-### 9.3 Compile check
+### 8.5 Compile check
 
 Run `pnpm check` to verify no TypeScript errors across all new files.
 
@@ -263,16 +310,14 @@ Run `pnpm check` to verify no TypeScript errors across all new files.
 ## Dependency graph
 
 ```
-Epic 1 (schema + service)
-  ├─▶ Epic 2 (member panel: my bands + create)
-  │     └─▶ Epic 3 (band panel: layout + dashboard)
-  │           ├─▶ Epic 4 (band panel: members + invitations)
-  │           ├─▶ Epic 5 (band panel: reservations + booking)
-  │           └─▶ Epic 6 (band panel: edit + settings)
-  ├─▶ Epic 7 (dashboard integration)
-  └─▶ Epic 8 (public directory)
-
-Epic 9 (tests) ── after all epics
+Epic 1 (schema + service + tests)
+  ├─▶ Epic 2 (member panel: my bands + create + tests)
+  │     └─▶ Epic 3 (band panel: layout + dashboard + tests)
+  │           ├─▶ Epic 4 (band panel: members + invitations + tests)
+  │           ├─▶ Epic 5 (band panel: reservations + booking + tests)
+  │           └─▶ Epic 6 (band panel: edit + settings + tests)
+  ├─▶ Epic 7 (dashboard integration + tests)
+  └─▶ Epic 8 (public directory + tests)
 ```
 
 Epics 4, 5, and 6 are independent of each other and can be built in any order after Epic 3. Epic 7 and 8 can be built in parallel with Epics 3–6.

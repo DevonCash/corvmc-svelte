@@ -16,6 +16,9 @@ const mockEventRow = {
 	reservationId: null,
 	posterKey: null,
 	tags: 'open mic,music',
+	ticketingEnabled: false,
+	ticketPrice: null,
+	ticketQuantity: null,
 	createdByUserId: 'staff-1',
 	createdAt: new Date(),
 	updatedAt: new Date()
@@ -43,16 +46,25 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
+let lastInsertedValues: Record<string, unknown> | null = null;
+let lastUpdateSet: Record<string, unknown> | null = null;
+
 const txMock = {
 	insert: vi.fn(() => ({
-		values: vi.fn(() => ({
-			returning: vi.fn(() => Promise.resolve([{ ...mockEventRow }]))
-		}))
+		values: vi.fn((vals: Record<string, unknown>) => {
+			lastInsertedValues = vals;
+			return {
+				returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }]))
+			};
+		})
 	})),
 	update: vi.fn(() => ({
-		set: vi.fn(() => ({
-			where: vi.fn(() => Promise.resolve({ rowCount: updateRowCount }))
-		}))
+		set: vi.fn((vals: Record<string, unknown>) => {
+			lastUpdateSet = vals;
+			return {
+				where: vi.fn(() => Promise.resolve({ rowCount: updateRowCount }))
+			};
+		})
 	})),
 	select: vi.fn(() => chainable())
 };
@@ -66,12 +78,15 @@ vi.mock('$lib/server/db', () => ({
 			}))
 		})),
 		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve([{ ...mockEventRow }])),
-					then: (resolve: any) => resolve({ rowCount: updateRowCount })
-				}))
-			}))
+			set: vi.fn((vals: Record<string, unknown>) => {
+				lastUpdateSet = vals;
+				return {
+					where: vi.fn(() => ({
+						returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }])),
+						then: (resolve: any) => resolve({ rowCount: updateRowCount })
+					}))
+				};
+			})
 		})),
 		transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
 	}
@@ -107,6 +122,8 @@ describe('EventService', () => {
 		selectResult = [];
 		selectResultQueue = [];
 		updateRowCount = 1;
+		lastInsertedValues = null;
+		lastUpdateSet = null;
 	});
 
 	// -----------------------------------------------------------------------
@@ -194,6 +211,57 @@ describe('EventService', () => {
 				'events/posters/evt-1.jpg',
 				'image/jpeg'
 			);
+		});
+
+		it('stores ticketing fields when ticketing is enabled', async () => {
+			await create({
+				...baseParams,
+				ticketingEnabled: true,
+				ticketPrice: 1500,
+				ticketQuantity: 50
+			});
+
+			expect(lastInsertedValues).toMatchObject({
+				ticketingEnabled: true,
+				ticketPrice: 1500,
+				ticketQuantity: 50
+			});
+		});
+
+		it('stores null price and quantity when ticketing is disabled', async () => {
+			await create(baseParams);
+
+			expect(lastInsertedValues).toMatchObject({
+				ticketingEnabled: false,
+				ticketPrice: null,
+				ticketQuantity: null
+			});
+		});
+
+		it('throws when ticketing is enabled but price is missing', async () => {
+			await expect(
+				create({ ...baseParams, ticketingEnabled: true })
+			).rejects.toThrow('Ticket price is required');
+		});
+
+		it('throws when ticketing is enabled but price is zero', async () => {
+			await expect(
+				create({ ...baseParams, ticketingEnabled: true, ticketPrice: 0 })
+			).rejects.toThrow('Ticket price is required');
+		});
+
+		it('allows null ticketQuantity for unlimited capacity', async () => {
+			await create({
+				...baseParams,
+				ticketingEnabled: true,
+				ticketPrice: 1000
+			});
+
+			expect(lastInsertedValues).toMatchObject({
+				ticketingEnabled: true,
+				ticketPrice: 1000,
+				ticketQuantity: null
+			});
 		});
 	});
 
@@ -477,6 +545,75 @@ describe('EventService', () => {
 
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// update ticketing fields
+	// -----------------------------------------------------------------------
+
+	describe('update ticketing fields', () => {
+		it('enables ticketing with price and quantity', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft' }];
+
+			await update('evt-1', {
+				ticketingEnabled: true,
+				ticketPrice: 2000,
+				ticketQuantity: 100
+			});
+
+			expect(lastUpdateSet).toMatchObject({
+				ticketingEnabled: true,
+				ticketPrice: 2000,
+				ticketQuantity: 100
+			});
+		});
+
+		it('clears price and quantity when disabling ticketing', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 100 }];
+
+			await update('evt-1', {
+				ticketingEnabled: false
+			});
+
+			expect(lastUpdateSet).toMatchObject({
+				ticketingEnabled: false,
+				ticketPrice: null,
+				ticketQuantity: null
+			});
+		});
+
+		it('throws when enabling ticketing without price', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft' }];
+
+			await expect(
+				update('evt-1', { ticketingEnabled: true })
+			).rejects.toThrow('Ticket price is required');
+		});
+
+		it('throws when enabling ticketing with zero price', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft' }];
+
+			await expect(
+				update('evt-1', { ticketingEnabled: true, ticketPrice: 0 })
+			).rejects.toThrow('Ticket price is required');
+		});
+
+		it('updates price independently when ticketingEnabled is not changed', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 1500 }];
+
+			await update('evt-1', { ticketPrice: 2500 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2500 });
+			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+		});
+
+		it('rejects update on cancelled event', async () => {
+			selectResult = [{ ...mockEventRow, status: 'cancelled' }];
+
+			await expect(
+				update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })
+			).rejects.toThrow('Cannot update a cancelled event');
 		});
 	});
 });

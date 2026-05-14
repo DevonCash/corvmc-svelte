@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDateTime } from '$lib/utils/format';
-	import EmptyState from '$lib/components/EmptyState.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 
 	let { data } = $props();
 

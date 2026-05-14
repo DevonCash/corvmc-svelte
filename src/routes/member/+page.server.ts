@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, gte, lte, ne } from 'drizzle-orm';
+import { band, bandMember } from '$lib/server/db/schema/band';
+import { eq, and, gte, lte, ne, inArray, sql } from 'drizzle-orm';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
 import { getAllBalances } from '$lib/server/finance/credit-service';
@@ -20,26 +21,74 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const r2Available = isConfigured();
 
-	const [weekReservations, upcomingEvents, credits, subscription] = await Promise.all([
-		db
-			.select()
-			.from(reservation)
-			.where(
-				and(
-					eq(reservation.createdByUserId, user.id),
-					gte(reservation.startsAt, weekStart),
-					lte(reservation.startsAt, weekEnd),
-					ne(reservation.status, 'cancelled')
-				)
+	// Get the user's active band IDs for band reservation lookup
+	const userBands = await db
+		.select({ bandId: bandMember.bandId, bandName: band.name })
+		.from(bandMember)
+		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.where(
+			and(
+				eq(bandMember.userId, user.id),
+				eq(bandMember.status, 'active')
 			)
-			.orderBy(reservation.startsAt),
+		);
 
-		listUpcoming(4),
+	const activeBandIds = userBands.map((b) => b.bandId);
+	const bandNameMap = Object.fromEntries(userBands.map((b) => [b.bandId, b.bandName]));
 
-		getAllBalances(user.id),
+	// Pending invitation count
+	const [{ count: pendingInviteCount }] = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(bandMember)
+		.where(
+			and(
+				eq(bandMember.userId, user.id),
+				eq(bandMember.status, 'pending')
+			)
+		);
 
-		user.stripeId ? getSubscription(user.stripeId) : Promise.resolve(null)
-	]);
+	const [weekReservations, bandWeekReservations, upcomingEvents, credits, subscription] =
+		await Promise.all([
+			db
+				.select()
+				.from(reservation)
+				.where(
+					and(
+						eq(reservation.createdByUserId, user.id),
+						eq(reservation.bookerType, 'user'),
+						gte(reservation.startsAt, weekStart),
+						lte(reservation.startsAt, weekEnd),
+						ne(reservation.status, 'cancelled')
+					)
+				)
+				.orderBy(reservation.startsAt),
+
+			activeBandIds.length > 0
+				? db
+						.select()
+						.from(reservation)
+						.where(
+							and(
+								eq(reservation.bookerType, 'band'),
+								inArray(reservation.bookerId, activeBandIds),
+								gte(reservation.startsAt, weekStart),
+								lte(reservation.startsAt, weekEnd),
+								ne(reservation.status, 'cancelled')
+							)
+						)
+						.orderBy(reservation.startsAt)
+				: Promise.resolve([]),
+
+			listUpcoming(4),
+
+			getAllBalances(user.id),
+
+			user.stripeId ? getSubscription(user.stripeId) : Promise.resolve(null)
+		]);
+
+	// Merge and sort all reservations by startsAt
+	const allReservations = [...weekReservations, ...bandWeekReservations]
+		.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
 	// Credit usage for sustaining members
 	let allocatedThisMonth = 0;
@@ -49,9 +98,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {
-		weekReservations: weekReservations.map((r) => ({
+		weekReservations: allReservations.map((r) => ({
 			id: r.id,
 			bookerType: r.bookerType,
+			bookerId: r.bookerId,
+			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
 			status: r.status,
 			startsAt: r.startsAt.toISOString(),
 			endsAt: r.endsAt.toISOString(),
@@ -68,6 +119,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		credits,
 		subscription,
 		allocatedThisMonth,
-		usedThisMonth
+		usedThisMonth,
+		pendingInviteCount
 	};
 };
