@@ -20,9 +20,35 @@ import { hashPassword } from 'better-auth/crypto';
 import { user, account } from '../src/lib/server/db/schema/auth';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
+import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
+import { ticket } from '../src/lib/server/db/schema/ticket';
 import { productConfig } from '../src/lib/server/db/schema/product-config';
-import { creditTransaction } from '../src/lib/server/db/schema/finance';
+import { creditTransaction, paymentRecord } from '../src/lib/server/db/schema/finance';
+import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
+import { band, bandMember } from '../src/lib/server/db/schema/band';
+// Build RRULE strings inline to avoid pulling rrule CJS dependency into seed script
+function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const y = startsAt.getUTCFullYear();
+	const m = pad(startsAt.getUTCMonth() + 1);
+	const d = pad(startsAt.getUTCDate());
+	const h = pad(startsAt.getUTCHours());
+	const min = pad(startsAt.getUTCMinutes());
+	const dtstart = `DTSTART;TZID=America/Los_Angeles:${y}${m}${d}T${h}${min}00`;
+	const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+	const day = days[startsAt.getDay()];
+	switch (freq) {
+		case 'weekly':
+			return `${dtstart}\nRRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=${day}`;
+		case 'biweekly':
+			return `${dtstart}\nRRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=${day}`;
+		case 'monthly': {
+			const nth = Math.ceil(startsAt.getDate() / 7);
+			return `${dtstart}\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=${nth}${day}`;
+		}
+	}
+}
 
 const client = postgres(process.env.DATABASE_URL!);
 const db = drizzle(client);
@@ -93,6 +119,19 @@ const CLOSURE_REASONS = [
 
 const CREDIT_TYPES = ['free_hours', 'equipment'];
 
+const BAND_NAMES = [
+	'The Voltage Thieves', 'Half Past Never', 'Cardboard Satellites',
+	'Velvet Brake', 'Tin Whisker', 'Slow Catastrophe',
+	'Paper Wolves', 'The After Math'
+];
+
+const BAND_POSITIONS = [
+	'Guitar', 'Bass', 'Drums', 'Vocals', 'Keys',
+	'Saxophone', 'Violin', 'Cello', 'Trumpet'
+];
+
+const TICKET_CODES_PREFIX = 'TIX';
+
 // ---------------------------------------------------------------------------
 // Seed functions
 // ---------------------------------------------------------------------------
@@ -101,7 +140,14 @@ async function truncateAll() {
 	console.log('Truncating all tables...');
 	await db.execute(sql`
 		TRUNCATE TABLE
+			notification_preference,
+			notification,
+			ticket,
+			band_member,
+			band,
+			payment_record,
 			credit_transaction,
+			recurring_series,
 			event,
 			closure,
 			reservation,
@@ -171,6 +217,8 @@ async function seedUsers(count: number) {
 
 interface SeedRole { id: number; name: string }
 interface SeedUser { id: string; name: string }
+interface SeedEvent { id: string; status: string; startsAt: Date }
+interface SeedReservation { id: string; createdByUserId: string; startsAt: Date; endsAt: Date; status: string }
 
 async function seedAdminUser(): Promise<SeedUser> {
 	console.log('Seeding admin user (admin@corvallismusic.org)...');
@@ -238,10 +286,10 @@ async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: Seed
 	}
 }
 
-async function seedReservations(users: SeedUser[]) {
+async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 	console.log('Seeding reservations...');
 	const statuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled'] as const;
-	const rows = [];
+	const rows: SeedReservation[] = [];
 
 	// Past reservations (mostly completed)
 	for (let day = -14; day < 0; day++) {
@@ -332,9 +380,9 @@ async function seedClosures() {
 	return rows;
 }
 
-async function seedEvents(users: SeedUser[]) {
+async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 	console.log('Seeding events...');
-	const rows = [];
+	const rows: SeedEvent[] = [];
 	const staffUsers = users.slice(0, 6); // admin + first 5 fake users are staff
 
 	/** Create a reservation for the event's space, with 30min setup/teardown buffer. */
@@ -532,6 +580,279 @@ async function seedCreditTransactions(users: SeedUser[]) {
 	}
 }
 
+async function seedBands(users: SeedUser[]) {
+	console.log('Seeding bands...');
+	const bands = [];
+
+	for (let i = 0; i < BAND_NAMES.length; i++) {
+		const owner = users[i % users.length];
+		const slug = BAND_NAMES[i].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
+
+		const [b] = await db.insert(band).values({
+			name: BAND_NAMES[i],
+			slug,
+			bio: `${BAND_NAMES[i]} is a local band from Corvallis.`,
+			ownerId: owner.id
+		}).returning();
+		bands.push(b);
+
+		// Owner as band member
+		await db.insert(bandMember).values({
+			bandId: b.id,
+			userId: owner.id,
+			role: 'owner',
+			position: pick(BAND_POSITIONS),
+			status: 'active'
+		});
+
+		// 1-3 additional members
+		const memberCount = randomInt(1, 3);
+		const candidates = users.filter((u) => u.id !== owner.id);
+		const members = pickN(candidates, memberCount);
+		for (const m of members) {
+			await db.insert(bandMember).values({
+				bandId: b.id,
+				userId: m.id,
+				role: 'member',
+				position: pick(BAND_POSITIONS),
+				status: Math.random() > 0.15 ? 'active' : 'pending',
+				invitedById: owner.id
+			});
+		}
+	}
+
+	return bands;
+}
+
+async function seedRecurringSeries(users: SeedUser[]) {
+	console.log('Seeding recurring series...');
+	const rows = [];
+	const frequencies = ['weekly', 'biweekly', 'monthly'] as const;
+
+	// 4 active recurring series
+	for (let i = 0; i < 4; i++) {
+		const member = users[i % users.length];
+		const freq = frequencies[i % frequencies.length];
+		const dayOffset = i; // spread across different days
+		const hour = 10 + i * 2;
+		const duration = pick([1, 1.5, 2]);
+
+		const protoStart = ptDate(dayOffset - 14, hour); // started 2 weeks ago
+		const protoEnd = ptDate(dayOffset - 14, hour + duration);
+
+		// Create the prototype reservation
+		const [proto] = await db.insert(reservation).values({
+			bookerType: 'user',
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: 'completed',
+			startsAt: protoStart,
+			endsAt: protoEnd,
+			notes: `Recurring ${freq} practice`
+		}).returning();
+
+		const rrule = seedRRule(protoStart, freq);
+
+		const [series] = await db.insert(recurringSeries).values({
+			prototypeType: 'reservation',
+			prototypeId: proto.id,
+			rrule
+		}).returning();
+		rows.push(series);
+
+		// Link prototype to the series
+		await db.execute(
+			sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`
+		);
+
+		// Create a couple of generated instances
+		for (let w = 1; w <= 2; w++) {
+			const instStart = ptDate(dayOffset - 14 + w * 7, hour);
+			const instEnd = ptDate(dayOffset - 14 + w * 7, hour + duration);
+			const status = instStart < new Date() ? 'completed' : 'scheduled';
+
+			await db.insert(reservation).values({
+				bookerType: 'user',
+				bookerId: member.id,
+				createdByUserId: member.id,
+				status,
+				startsAt: instStart,
+				endsAt: instEnd,
+				notes: `Recurring ${freq} practice`,
+				recurringSeriesId: series.id
+			});
+		}
+	}
+
+	// 1 cancelled series
+	{
+		const member = users[5];
+		const protoStart = ptDate(-21, 14);
+		const protoEnd = ptDate(-21, 16);
+
+		const [proto] = await db.insert(reservation).values({
+			bookerType: 'user',
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: 'completed',
+			startsAt: protoStart,
+			endsAt: protoEnd,
+			notes: 'Cancelled recurring session'
+		}).returning();
+
+		const rrule = seedRRule(protoStart, 'weekly');
+
+		const [series] = await db.insert(recurringSeries).values({
+			prototypeType: 'reservation',
+			prototypeId: proto.id,
+			rrule,
+			cancelledAt: new Date(Date.now() - 7 * 86400000) // cancelled a week ago
+		}).returning();
+		rows.push(series);
+
+		await db.execute(
+			sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`
+		);
+	}
+
+	return rows;
+}
+
+async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
+	console.log('Seeding payment records...');
+	const rows = [];
+
+	// Payments for completed/confirmed reservations
+	const payableReservations = reservations
+		.filter((r) => ['completed', 'confirmed', 'scheduled'].includes(r.status))
+		.slice(0, 25);
+
+	for (const r of payableReservations) {
+		const hours = Math.round((r.endsAt.getTime() - r.startsAt.getTime()) / 3600000 * 2) / 2;
+		const amountCents = hours * 1500; // $15/hr
+		const method = Math.random() > 0.3 ? 'Cash' : 'Credits';
+
+		const [p] = await db.insert(paymentRecord).values({
+			id: `pr_seed_${randomUUID().slice(0, 8)}`,
+			userId: r.createdByUserId,
+			reservationId: r.id,
+			stripeCustomerId: `cus_seed${randomInt(1000, 9999)}`,
+			amountCents,
+			paymentMethod: method,
+			status: Math.random() > 0.1 ? 'completed' : 'refunded',
+			paidAt: r.startsAt,
+			refundedAt: Math.random() > 0.9 ? new Date() : null
+		}).returning();
+		rows.push(p);
+	}
+
+	return rows;
+}
+
+async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
+	console.log('Seeding tickets...');
+	const rows = [];
+
+	const publishedEvents = events.filter((e) => e.status === 'published');
+
+	for (const evt of publishedEvents) {
+		// 2-6 tickets per event
+		const ticketCount = randomInt(2, 6);
+		const purchaseId = randomUUID();
+		const buyers = pickN(users, ticketCount);
+
+		for (let i = 0; i < ticketCount; i++) {
+			const buyer = buyers[i];
+			const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
+			const isPast = evt.startsAt < new Date();
+
+			const [t] = await db.insert(ticket).values({
+				eventId: evt.id,
+				purchaseId,
+				userId: buyer.id,
+				attendeeName: buyer.name,
+				attendeeEmail: `${buyer.name.toLowerCase().replace(' ', '.')}@example.com`,
+				code,
+				status: isPast ? (Math.random() > 0.2 ? 'used' : 'pending') : 'pending',
+				checkedInAt: isPast && Math.random() > 0.3 ? evt.startsAt : null,
+				checkedInByUserId: isPast && Math.random() > 0.3 ? users[0].id : null
+			}).returning();
+			rows.push(t);
+		}
+	}
+
+	return rows;
+}
+
+async function seedNotifications(users: SeedUser[]) {
+	console.log('Seeding notifications...');
+	const rows = [];
+
+	const types = [
+		{ type: 'reservation_reminder', title: 'Upcoming reservation', body: 'Your reservation is tomorrow at 2:00 PM.', href: '/member/reservations' },
+		{ type: 'confirmation_reminder', title: 'Please confirm your reservation', body: 'You have an unconfirmed reservation this week.', href: '/member/reservations' },
+		{ type: 'band_invitation', title: 'Band invitation', body: 'You\'ve been invited to join The Voltage Thieves.', href: '/member/bands' },
+		{ type: 'band_invitation_accepted', title: 'Invitation accepted', body: 'Jordan Nguyen accepted your band invitation.', href: '/member/bands' },
+		{ type: 'recurring_skipped', title: 'Recurring reservation skipped', body: 'Your weekly reservation was skipped due to a closure.', href: '/member/reservations' },
+		{ type: 'ticket_confirmation', title: 'Tickets confirmed', body: 'Your tickets for Open Mic Night are confirmed!', href: '/member/tickets' },
+		{ type: 'event_cancellation', title: 'Event cancelled', body: 'Outdoor Festival has been cancelled. Your tickets will be refunded.', href: '/member/tickets' }
+	];
+
+	// Give each user 0-5 notifications, mix of read and unread
+	for (const u of users) {
+		const count = randomInt(0, 5);
+		const selected = pickN(types, count);
+
+		for (const n of selected) {
+			const daysAgo = randomInt(0, 14);
+			const createdAt = new Date(Date.now() - daysAgo * 86400000);
+			const isRead = Math.random() > 0.4;
+
+			const [row] = await db.insert(notification).values({
+				userId: u.id,
+				type: n.type,
+				title: n.title,
+				body: n.body,
+				href: n.href,
+				readAt: isRead ? new Date(createdAt.getTime() + randomInt(1, 24) * 3600000) : null,
+				createdAt
+			}).returning();
+			rows.push(row);
+		}
+	}
+
+	return rows;
+}
+
+async function seedNotificationPreferences(users: SeedUser[]) {
+	console.log('Seeding notification preferences...');
+	const rows = [];
+	const configurableTypes = [
+		'check_in_reminder', 'reservation_reminder',
+		'confirmation_reminder', 'band_invitation',
+		'band_invitation_accepted', 'recurring_skipped'
+	];
+
+	// ~30% of users have customized preferences
+	const customizers = pickN(users, Math.ceil(users.length * 0.3));
+
+	for (const u of customizers) {
+		// Each customizer tweaks 1-3 notification types
+		const tweaked = pickN(configurableTypes, randomInt(1, 3));
+		for (const nt of tweaked) {
+			const [row] = await db.insert(notificationPreference).values({
+				userId: u.id,
+				notificationType: nt,
+				emailEnabled: Math.random() > 0.3,
+				inAppEnabled: Math.random() > 0.2
+			}).returning();
+			rows.push(row);
+		}
+	}
+
+	return rows;
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -577,6 +898,12 @@ async function main() {
 	const reservations = await seedReservations(allUsers);
 	const closures = await seedClosures();
 	const events = await seedEvents(allUsers);
+	const bands = await seedBands(allUsers);
+	const series = await seedRecurringSeries(allUsers);
+	const payments = await seedPaymentRecords(allUsers, reservations);
+	const tickets = await seedTickets(allUsers, events);
+	const notifications = await seedNotifications(allUsers);
+	const preferences = await seedNotificationPreferences(allUsers);
 	await seedProductConfig();
 	await seedCreditTransactions(allUsers);
 
@@ -586,6 +913,12 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${closures.length} closures`);
 	console.log(`  ${events.length} events`);
+	console.log(`  ${bands.length} bands`);
+	console.log(`  ${series.length} recurring series`);
+	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${tickets.length} tickets`);
+	console.log(`  ${notifications.length} notifications`);
+	console.log(`  ${preferences.length} notification preferences`);
 	console.log('  3 product configs');
 	console.log('  credit transactions for 12 users');
 

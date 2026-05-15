@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS "recurring_series" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"superseded_by" uuid,
 	"prototype_type" text NOT NULL,
-	"prototype_id" text NOT NULL,
+	"prototype_id" uuid NOT NULL,
 	"rrule" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"cancelled_at" timestamp with time zone

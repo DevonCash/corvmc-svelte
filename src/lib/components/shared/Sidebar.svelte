@@ -59,6 +59,8 @@
 		</div>
 	{/if}
 
+	<div class="tri-stripe"></div>
+
 	<!-- Nav links -->
 	<ul class="menu w-full flex-1">
 		{@render navigation?.()}

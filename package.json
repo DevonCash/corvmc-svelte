@@ -24,7 +24,8 @@
 		"build-storybook": "storybook build",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"stripe:sync-webhooks": "tsx scripts/sync-webhooks.ts",
-		"db:seed": "tsx scripts/seed-dev.ts"
+		"db:seed": "tsx scripts/seed-dev.ts",
+		"db:reset": "drizzle-kit push --force && pnpm run db:seed"
 	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",

@@ -7,7 +7,7 @@ export const recurringSeries = pgTable(
 		id: uuid('id').primaryKey().defaultRandom(),
 		supersededBy: uuid('superseded_by'),
 		prototypeType: text('prototype_type').notNull(),
-		prototypeId: text('prototype_id').notNull(),
+		prototypeId: uuid('prototype_id').notNull(),
 		rrule: text('rrule').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		cancelledAt: timestamp('cancelled_at', { withTimezone: true })

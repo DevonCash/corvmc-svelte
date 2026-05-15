@@ -251,3 +251,24 @@ p {
     var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
   );
 }
+
+/* Dark mode: swap to the navy (mid-blue) top band for better contrast */
+[data-theme="corvmc-dark"] .tri-stripe {
+  background: linear-gradient(
+    to bottom,
+    var(--cmc-navy)       0%,   var(--cmc-navy)       33.333%,
+    var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
+    var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="corvmc"]) .tri-stripe {
+    background: linear-gradient(
+      to bottom,
+      var(--cmc-navy)       0%,   var(--cmc-navy)       33.333%,
+      var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
+      var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
+    );
+  }
+}

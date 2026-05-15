@@ -1,4 +1,5 @@
-import { RRule, Frequency } from 'rrule';
+import pkg from 'rrule';
+const { RRule, Frequency } = pkg;
 import { DateTime } from 'luxon';
 import type { RecurringFrequency } from './config';
 import { MAX_ADVANCE_DAYS_RECURRING } from './config';

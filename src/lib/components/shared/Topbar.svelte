@@ -31,3 +31,4 @@
 		<span class="text-sm opacity-70">{userName}</span>
 	</div>
 </nav>
+<div class="tri-stripe lg:hidden"></div>

@@ -155,7 +155,8 @@
 			if (va == null && vb == null) return 0;
 			if (va == null) return 1;
 			if (vb == null) return -1;
-			const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+			// Relies on ISO-8601 strings sorting lexicographically for date/datetime columns
+		const cmp = va < vb ? -1 : va > vb ? 1 : 0;
 			return dir === 'asc' ? cmp : -cmp;
 		});
 	});
@@ -168,11 +169,11 @@
 	const pageCount = $derived(Math.max(1, Math.ceil(sorted.length / pageSize)));
 	const paged = $derived(sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize));
 
-	// Reset page when data length changes
-	let prevDataLength = data.length;
+	// Reset page when data changes (identity or length)
+	let prevData = data;
 	$effect(() => {
-		if (data.length !== prevDataLength) {
-			prevDataLength = data.length;
+		if (data !== prevData) {
+			prevData = data;
 			pageIndex = 0;
 		}
 	});
@@ -204,7 +205,7 @@
 		<table class="table {className}">
 			<thead>
 				<tr>
-					{#each columns as col (col.key)}
+					{#each columns as col, i (i)}
 						{#if col.sortable}
 							<th class="cursor-pointer" onclick={() => toggleSort(col.key)}>
 								<div class="flex items-center gap-1">
@@ -244,13 +245,10 @@
 							class="hover"
 							class:cursor-pointer={!!rowHref}
 							onclick={rowHref
-								? (e) => {
-										e.preventDefault();
-										goto(rowHref!(item));
-									}
+								? () => goto(rowHref!(item))
 								: undefined}
 						>
-							{#each columns as col (col.key)}
+							{#each columns as col, i (i)}
 								<td
 									class="{col.class}{col.shrink ? ' w-px' : ''}"
 									onclick={col.stopClick ? (e) => e.stopPropagation() : undefined}

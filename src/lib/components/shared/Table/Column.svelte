@@ -24,6 +24,7 @@
 	} = $props();
 
 	const ctx = getContext<DataTableContext>('datatable');
+	if (!ctx) throw new Error('Column must be used inside DataTable');
 	const colId = Symbol();
 
 	untrack(() => {
