@@ -28,7 +28,6 @@
 		navItems,
 		title = 'CorvMC',
 		badge = 'Staff',
-		footer,
 		navigation,
 		brand
 	}: {
@@ -36,7 +35,6 @@
 		navItems?: (INavItem | INavGroup)[] | null;
 		title?: string;
 		badge?: string;
-		footer?: Snippet;
 		navigation?: Snippet;
 		brand?: Snippet;
 	} = $props();
@@ -81,7 +79,4 @@
 		{/each}
 	</ul>
 
-	{#if footer}
-		{@render footer()}
-	{/if}
 </aside>

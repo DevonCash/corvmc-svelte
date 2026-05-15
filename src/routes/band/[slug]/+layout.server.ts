@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { getBySlug, getUserRole } from '$lib/server/band/band-service';
+import { getBySlug, getUserRole, listForUser } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
 
 export const load: LayoutServerLoad = async ({ params, locals }) => {
@@ -31,6 +31,7 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
 			createdAt: band.createdAt.toISOString()
 		},
 		userRole: role ?? ('staff' as const),
-		isStaff
+		isStaff,
+		userBands: await listForUser(locals.user.id).catch(() => [])
 	};
 };
