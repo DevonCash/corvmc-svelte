@@ -132,6 +132,52 @@ const BAND_POSITIONS = [
 
 const TICKET_CODES_PREFIX = 'TIX';
 
+const INSTRUMENTS = [
+	'guitar', 'bass', 'drums', 'vocals', 'keys', 'piano',
+	'saxophone', 'violin', 'cello', 'trumpet', 'trombone',
+	'flute', 'banjo', 'mandolin', 'harmonica', 'ukulele',
+	'synthesizer', 'turntables', 'percussion'
+];
+
+const GENRES = [
+	'jazz', 'rock', 'funk', 'blues', 'folk', 'indie',
+	'electronic', 'hip-hop', 'classical', 'punk', 'metal',
+	'r&b', 'soul', 'country', 'reggae', 'latin',
+	'world', 'experimental', 'pop', 'ambient'
+];
+
+const TAGLINES = [
+	'Drummer looking for a funk project',
+	'Multi-instrumentalist | Jazz & Soul',
+	'Singer-songwriter | Acoustic vibes',
+	'Lead guitarist | Rock & Blues',
+	'Bassist for hire',
+	'Keys player | All genres welcome',
+	'Producer & DJ',
+	'Classically trained, genre curious',
+	'Vocalist | R&B, Soul, Gospel',
+	'Percussionist | World music enthusiast'
+];
+
+const MEMBER_BIOS = [
+	'Been playing since I was 12. Love jamming with new people.',
+	'Studied music at OSU. Currently in two bands but always looking for side projects.',
+	'Self-taught guitarist. Into anything with a good groove.',
+	'Professional session musician. Available for recording and live gigs.',
+	'Just moved to Corvallis and looking to connect with local musicians.',
+	'Weekend warrior. Day job in tech, music is my therapy.',
+	null, null, null
+];
+
+const SAMPLE_LINKS = [
+	{ label: 'My SoundCloud', url: 'https://soundcloud.com/example/tracks' },
+	{ label: 'YouTube Channel', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+	{ label: 'Spotify', url: 'https://open.spotify.com/artist/example' },
+	{ label: 'Bandcamp', url: 'https://example.bandcamp.com/album/demo' },
+	{ label: 'Instagram', url: 'https://instagram.com/musician' },
+	{ label: 'Personal Site', url: 'https://example.com' }
+];
+
 // ---------------------------------------------------------------------------
 // Seed functions
 // ---------------------------------------------------------------------------
@@ -198,6 +244,15 @@ async function seedUsers(count: number) {
 		const id = randomUUID();
 		const createdAt = new Date(Date.now() - randomInt(7, 365) * 86400000);
 
+		// Profile data: ~70% of users have some profile info
+		const hasProfile = Math.random() > 0.3;
+		const memberInstruments = hasProfile ? pickN(INSTRUMENTS, randomInt(1, 3)) : null;
+		const memberGenres = hasProfile ? pickN(GENRES, randomInt(1, 3)) : null;
+		const memberLinks = hasProfile && Math.random() > 0.4
+			? pickN(SAMPLE_LINKS, randomInt(1, 3))
+			: null;
+		const wantsPublic = hasProfile && Math.random() > 0.6;
+
 		const [u] = await db.insert(user).values({
 			id,
 			name,
@@ -206,6 +261,14 @@ async function seedUsers(count: number) {
 			pronouns: pick(PRONOUNS),
 			phone: Math.random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
 			credits: { free_hours: randomInt(0, 8), equipment: randomInt(0, 3) },
+			bio: hasProfile ? pick(MEMBER_BIOS) : null,
+			tagline: hasProfile ? pick(TAGLINES) : null,
+			instruments: memberInstruments,
+			genres: memberGenres,
+			lookingForBand: hasProfile && Math.random() > 0.7,
+			publicListing: wantsPublic,
+			directoryContact: wantsPublic ? { email } : null,
+			links: memberLinks,
 			createdAt,
 			updatedAt: createdAt
 		}).returning();
@@ -588,11 +651,20 @@ async function seedBands(users: SeedUser[]) {
 		const owner = users[i % users.length];
 		const slug = BAND_NAMES[i].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
 
+		const bandGenres = pickN(GENRES, randomInt(1, 3));
+		const bandLinks = Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 2)) : null;
+		const bandPublic = Math.random() > 0.5;
+
 		const [b] = await db.insert(band).values({
 			name: BAND_NAMES[i],
 			slug,
 			bio: `${BAND_NAMES[i]} is a local band from Corvallis.`,
-			ownerId: owner.id
+			ownerId: owner.id,
+			tagline: Math.random() > 0.3 ? `${pick(GENRES)} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis` : null,
+			genres: bandGenres,
+			lookingForMembers: Math.random() > 0.6,
+			publicListing: bandPublic,
+			links: bandLinks
 		}).returning();
 		bands.push(b);
 

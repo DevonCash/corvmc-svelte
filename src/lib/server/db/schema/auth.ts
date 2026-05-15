@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 
 // ---------------------------------------------------------------------------
 // better-auth core tables
@@ -27,8 +27,23 @@ export const user = pgTable('user', {
 	pmLastFour: text('pm_last_four'),
 	credits: jsonb('credits').notNull().default({}),
 	trialEndsAt: timestamp('trial_ends_at'),
-	deletedAt: timestamp('deleted_at')
-});
+	deletedAt: timestamp('deleted_at'),
+
+	// directory profile
+	bio: text('bio'),
+	tagline: text('tagline'),
+	instruments: text('instruments').array(),
+	genres: text('genres').array(),
+	lookingForBand: boolean('looking_for_band').notNull().default(false),
+	directoryOptOut: boolean('directory_opt_out').notNull().default(false),
+	publicListing: boolean('public_listing').notNull().default(false),
+	directoryContact: jsonb('directory_contact'),
+	links: jsonb('links')
+},
+(t) => [
+	index('idx_user_instruments').using('gin', t.instruments),
+	index('idx_user_genres').using('gin', t.genres)
+]);
 
 export const session = pgTable('session', {
 	id: text('id').primaryKey(),

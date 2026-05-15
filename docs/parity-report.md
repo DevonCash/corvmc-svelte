@@ -75,7 +75,7 @@ The band panel uses a per-band layout at `/band/[slug]/` with role-gated navigat
 | About | web.php route | — | Not started |
 | Contact form | ContactForm Livewire | — | Not started |
 | Ticket purchase | TicketPurchaseWidget | ✅ Full flow | Purchase page, Stripe checkout, sustaining member discount, success page with ticket codes |
-| Member directory | MembersGrid Livewire | ✅ /directory | Tabbed Members/Bands directory, public band profile with member list |
+| Member directory | MembersGrid Livewire | ✅ /directory + /member/directory | Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. |
 
 ## Platform infrastructure
 

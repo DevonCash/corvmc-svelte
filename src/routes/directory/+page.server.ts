@@ -1,38 +1,28 @@
 import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
-import { band, bandMember } from '$lib/server/db/schema/band';
-import { isNull, eq, asc, sql } from 'drizzle-orm';
+import {
+	listPublicMembers,
+	listPublicBands
+} from '$lib/server/directory/directory-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import type { ProfileLink } from '$lib/types/profile';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
 	const r2Available = isConfigured();
 
-	const [members, bands] = await Promise.all([
-		db
-			.select({
-				id: user.id,
-				name: user.name,
-				pronouns: user.pronouns,
-				image: user.image
-			})
-			.from(user)
-			.where(isNull(user.deletedAt))
-			.orderBy(asc(user.name)),
+	const search = url.searchParams.get('search') || undefined;
+	const instrumentsParam = url.searchParams.get('instruments');
+	const genresParam = url.searchParams.get('genres');
+	const lookingForBand = url.searchParams.get('lookingForBand') === 'true' || undefined;
+	const lookingForMembers = url.searchParams.get('lookingForMembers') === 'true' || undefined;
 
-		db
-			.select({
-				id: band.id,
-				name: band.name,
-				slug: band.slug,
-				bio: band.bio,
-				avatarKey: band.avatarKey,
-				memberCount: sql<number>`count(case when ${bandMember.status} = 'active' then 1 end)::int`
-			})
-			.from(band)
-			.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-			.groupBy(band.id)
-			.orderBy(asc(band.name))
+	let instruments: string[] | undefined;
+	let genres: string[] | undefined;
+	try { instruments = instrumentsParam ? JSON.parse(instrumentsParam) : undefined; } catch { /* */ }
+	try { genres = genresParam ? JSON.parse(genresParam) : undefined; } catch { /* */ }
+
+	const [members, bands] = await Promise.all([
+		listPublicMembers({ search, instruments, genres, lookingForBand }),
+		listPublicBands({ search, genres, lookingForMembers })
 	]);
 
 	return {
@@ -40,15 +30,22 @@ export const load: PageServerLoad = async () => {
 			id: m.id,
 			name: m.name,
 			pronouns: m.pronouns,
-			image: m.image
+			image: m.image,
+			tagline: m.tagline,
+			instruments: m.instruments,
+			genres: m.genres,
+			lookingForBand: m.lookingForBand
 		})),
 		bands: bands.map((b) => ({
 			id: b.id,
 			name: b.name,
 			slug: b.slug,
 			bio: b.bio ? (b.bio.length > 120 ? b.bio.slice(0, 120).trimEnd() + '…' : b.bio) : null,
+			tagline: b.tagline,
 			avatarUrl: b.avatarKey && r2Available ? getPublicUrl(b.avatarKey) : null,
-			memberCount: b.memberCount
+			memberCount: b.memberCount,
+			genres: b.genres,
+			lookingForMembers: b.lookingForMembers
 		}))
 	};
 };

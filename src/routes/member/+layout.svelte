@@ -8,7 +8,8 @@
 		IconSettings,
 		IconUsersGroup,
 		IconAddressBook,
-		IconTicket
+		IconTicket,
+		IconUser
 	} from '@tabler/icons-svelte';
 	import Sidebar from '$lib/components/shared/Sidebar.svelte';
 	import Topbar from '$lib/components/shared/Topbar.svelte';
@@ -83,6 +84,9 @@
 
 				<NavItem href="/member/membership" label="Membership">
 					{#snippet icon()}<IconStar />{/snippet}
+				</NavItem>
+				<NavItem href="/member/profile" label="Profile">
+					{#snippet icon()}<IconUser />{/snippet}
 				</NavItem>
 				<NavItem href="/member/account" label="Account">
 					{#snippet icon()}<IconSettings />{/snippet}

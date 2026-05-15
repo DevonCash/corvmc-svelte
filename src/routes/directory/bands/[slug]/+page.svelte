@@ -1,11 +1,15 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
+	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 
 	let { data }: { data: PageServerData } = $props();
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);
+	const contact = $derived(band.directoryContact ?? {});
+	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);
 </script>
 
 <div class="max-w-2xl mx-auto space-y-6 p-6">
@@ -24,14 +28,61 @@
 		</div>
 		<div>
 			<h1 class="text-2xl font-bold">{band.name}</h1>
-			<p class="text-sm opacity-60">
-				{band.memberCount} member{band.memberCount === 1 ? '' : 's'}
-			</p>
+			{#if band.tagline}
+				<p class="opacity-60">{band.tagline}</p>
+			{:else}
+				<p class="text-sm opacity-60">
+					{band.memberCount} member{band.memberCount === 1 ? '' : 's'}
+				</p>
+			{/if}
+			{#if band.lookingForMembers}
+				<span class="badge badge-primary badge-sm mt-1">Looking for members</span>
+			{/if}
 		</div>
 	</div>
 
 	{#if band.bio}
 		<p class="text-base-content/80">{band.bio}</p>
+	{/if}
+
+	{#if band.genres?.length}
+		<div>
+			<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
+			<div class="flex flex-wrap gap-1">
+				{#each band.genres as genre}
+					<span class="badge badge-ghost badge-sm">{genre}</span>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	{#if hasContact}
+		<div>
+			<h2 class="text-sm font-semibold mb-2">Contact</h2>
+			<dl class="grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
+				{#if contact.email}
+					<dt class="opacity-60">Email</dt>
+					<dd><a href="mailto:{contact.email}" class="link">{contact.email}</a></dd>
+				{/if}
+				{#if contact.phone}
+					<dt class="opacity-60">Phone</dt>
+					<dd>{contact.phone}</dd>
+				{/if}
+				{#if contact.social}
+					<dt class="opacity-60">Social</dt>
+					<dd>{contact.social}</dd>
+				{/if}
+			</dl>
+		</div>
+	{/if}
+
+	{#if band.links.length > 0}
+		<div>
+			<h2 class="text-sm font-semibold mb-2">Links</h2>
+			<ProfileLinks links={band.links} />
+		</div>
+
+		<ProfileEmbeds links={band.links} />
 	{/if}
 
 	<!-- Members -->

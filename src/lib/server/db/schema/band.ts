@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, index, unique, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 
 export const band = pgTable(
@@ -14,9 +14,21 @@ export const band = pgTable(
 		avatarKey: text('avatar_key'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-		deletedAt: timestamp('deleted_at', { withTimezone: true })
+		deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+		// directory profile
+		tagline: text('tagline'),
+		genres: text('genres').array(),
+		lookingForMembers: boolean('looking_for_members').notNull().default(false),
+		directoryOptOut: boolean('directory_opt_out').notNull().default(false),
+		publicListing: boolean('public_listing').notNull().default(false),
+		directoryContact: jsonb('directory_contact'),
+		links: jsonb('links')
 	},
-	(t) => [index('idx_band_slug').on(t.slug)]
+	(t) => [
+		index('idx_band_slug').on(t.slug),
+		index('idx_band_genres').using('gin', t.genres)
+	]
 );
 
 export const bandMember = pgTable(
