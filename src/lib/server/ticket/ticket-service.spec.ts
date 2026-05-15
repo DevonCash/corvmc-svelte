@@ -51,7 +51,11 @@ const mockDb = {
 		set: vi.fn(() => ({
 			where: vi.fn(() => {
 				const whereResult = Promise.resolve(updateResult);
-				(whereResult as any).returning = vi.fn(() => Promise.resolve(updateResult));
+				(whereResult as any).returning = vi.fn(() => Promise.resolve(
+					typeof (updateResult as any).rowCount === 'number'
+						? Array.from({ length: (updateResult as any).rowCount }, (_, i) => ({ id: `id-${i}` }))
+						: updateResult
+				));
 				return whereResult;
 			})
 		}))

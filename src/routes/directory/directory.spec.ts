@@ -21,6 +21,14 @@ function chainable() {
 	return proxy;
 }
 
+let mockMembers: unknown[] = [];
+let mockBands: unknown[] = [];
+
+vi.mock('$lib/server/directory/directory-service', () => ({
+	listPublicMembers: vi.fn(async () => mockMembers),
+	listPublicBands: vi.fn(async () => mockBands)
+}));
+
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chainable()
@@ -44,6 +52,8 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	selectCallIndex = 0;
 	selectResults.length = 0;
+	mockMembers = [];
+	mockBands = [];
 });
 
 // ---------------------------------------------------------------------------
@@ -52,13 +62,11 @@ beforeEach(() => {
 
 describe('directory page load', () => {
 	it('returns members and bands', async () => {
-		// select 1: members
-		selectResults.push([
+		mockMembers = [
 			{ id: 'u-1', name: 'Alice', pronouns: 'she/her', image: null },
 			{ id: 'u-2', name: 'Bob', pronouns: null, image: null }
-		]);
-		// select 2: bands
-		selectResults.push([
+		];
+		mockBands = [
 			{
 				id: 'b-1',
 				name: 'The Strokes',
@@ -67,10 +75,12 @@ describe('directory page load', () => {
 				avatarKey: null,
 				memberCount: 3
 			}
-		]);
+		];
 
 		const { load } = await import('./+page.server');
-		const result = (await load({} as any)) as any;
+		const result = (await load({
+			url: new URL('http://localhost/directory')
+		} as any)) as any;
 
 		expect(result.members).toHaveLength(2);
 		expect(result.members[0].name).toBe('Alice');
@@ -80,8 +90,8 @@ describe('directory page load', () => {
 	});
 
 	it('truncates long bios', async () => {
-		selectResults.push([]); // members
-		selectResults.push([
+		mockMembers = [];
+		mockBands = [
 			{
 				id: 'b-1',
 				name: 'Wordy Band',
@@ -90,10 +100,12 @@ describe('directory page load', () => {
 				avatarKey: null,
 				memberCount: 1
 			}
-		]);
+		];
 
 		const { load } = await import('./+page.server');
-		const result = (await load({} as any)) as any;
+		const result = (await load({
+			url: new URL('http://localhost/directory')
+		} as any)) as any;
 
 		expect(result.bands[0].bio!.length).toBeLessThanOrEqual(124); // 120 + "…"
 	});
