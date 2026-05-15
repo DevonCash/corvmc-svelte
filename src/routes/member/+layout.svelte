@@ -9,7 +9,8 @@
 		IconUsersGroup,
 		IconAddressBook,
 		IconTicket,
-		IconUser
+		IconUser,
+		IconTool
 	} from '@tabler/icons-svelte';
 	import Sidebar from '$lib/components/shared/Sidebar.svelte';
 	import Topbar from '$lib/components/shared/Topbar.svelte';
@@ -64,6 +65,9 @@
 				</NavItem>
 				<NavItem href="/member/directory" label="Directory">
 					{#snippet icon()}<IconAddressBook />{/snippet}
+				</NavItem>
+				<NavItem href="/member/equipment" label="Equipment">
+					{#snippet icon()}<IconTool />{/snippet}
 				</NavItem>
 
 				<NavGroup title="My Bands">

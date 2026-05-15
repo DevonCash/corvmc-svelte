@@ -75,6 +75,18 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true }
 	},
 	{
+		key: 'equipment_loan_scheduled',
+		label: 'Equipment loan confirmed',
+		description: 'Notification when staff confirms your equipment pickup',
+		defaults: { email: true, inApp: true }
+	},
+	{
+		key: 'equipment_loan_requested',
+		label: 'Equipment loan requested (staff)',
+		description: 'Notification when a member requests equipment',
+		defaults: { email: true, inApp: true }
+	},
+	{
 		key: 'contact_form',
 		label: 'Contact form submission',
 		description: 'Forwarded contact form messages (staff only)',

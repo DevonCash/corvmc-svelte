@@ -128,6 +128,42 @@ export interface RecurringSkippedEvent {
 	reason: string;
 }
 
+export interface EquipmentLoanRequestedEvent {
+	loanId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	equipmentName: string | null;
+	memberNotes: string | null;
+	requestedPickupDate: string;
+}
+
+export interface EquipmentLoanScheduledEvent {
+	loanId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	equipmentName: string;
+	scheduledPickupDate: string;
+}
+
+export interface EquipmentCheckedOutEvent {
+	loanId: string;
+	userId: string;
+	equipmentName: string;
+}
+
+export interface EquipmentReturnedEvent {
+	loanId: string;
+	userId: string;
+	userName: string;
+	equipmentName: string;
+	totalChargeCents: number;
+	creditsCents: number;
+	cashCents: number;
+	daysBorrowed: number;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -144,6 +180,10 @@ export type DomainEvents = {
 	'band.invitation_accepted': BandInvitationAcceptedEvent;
 	'contact.form_submitted': ContactFormSubmittedEvent;
 	'reservation.recurring_skipped': RecurringSkippedEvent;
+	'equipment.loan_requested': EquipmentLoanRequestedEvent;
+	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
+	'equipment.checked_out': EquipmentCheckedOutEvent;
+	'equipment.returned': EquipmentReturnedEvent;
 };
 
 // ---------------------------------------------------------------------------

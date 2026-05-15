@@ -85,6 +85,9 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 
 	// Use invoice ID as sourceId for idempotency — each invoice is unique
 	await creditService.allocateMonthlyCredits(member.id, freeHours, invoice.id);
+
+	// Equipment credits: 1:1 with contribution level, capped at 250
+	await creditService.allocateEquipmentCredits(member.id, contributionLine.quantity, invoice.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -111,6 +114,15 @@ export async function handleSubscriptionDeleted(
 		'monthly_allocation',
 		subscription.id,
 		'Subscription cancelled — free hours reset'
+	);
+
+	await creditService.setBalance(
+		member.id,
+		'equipment_credits',
+		0,
+		'monthly_allocation',
+		subscription.id,
+		'Subscription cancelled — equipment credits reset'
 	);
 
 	// Cancel all active recurring series for this user

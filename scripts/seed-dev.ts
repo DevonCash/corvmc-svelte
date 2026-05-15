@@ -34,6 +34,11 @@ import {
 	campaign,
 	campaignAudience
 } from '../src/lib/server/db/schema/marketing';
+import {
+	equipmentCategory,
+	equipment,
+	equipmentLoan
+} from '../src/lib/server/db/schema/equipment';
 // Build RRULE strings inline to avoid pulling rrule CJS dependency into seed script
 function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
@@ -193,6 +198,9 @@ async function truncateAll() {
 	console.log('Truncating all tables...');
 	await db.execute(sql`
 		TRUNCATE TABLE
+			equipment_loan,
+			equipment,
+			equipment_category,
 			campaign_audience,
 			campaign,
 			audience_member,
@@ -1168,6 +1176,300 @@ async function seedMarketing(users: SeedUser[]) {
 }
 
 // ---------------------------------------------------------------------------
+// Equipment
+// ---------------------------------------------------------------------------
+
+async function seedEquipment(users: SeedUser[]) {
+	console.log('Seeding equipment...');
+
+	const categories = await db
+		.insert(equipmentCategory)
+		.values([
+			{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
+			{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
+			{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
+			{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
+			{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' }
+		])
+		.returning();
+
+	const catByName = Object.fromEntries(categories.map((c) => [c.name, c.id]));
+
+	const items = await db
+		.insert(equipment)
+		.values([
+			{
+				id: randomUUID(),
+				name: 'Fender Stratocaster',
+				description: 'Sunburst finish, maple neck. Great all-rounder.',
+				categoryId: catByName['Guitars'],
+				totalQuantity: 1,
+				serialNumber: 'FEN-STR-2019-0041',
+				resourceId: 'EQ-001',
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Gibson Les Paul Standard',
+				description: 'Cherry burst. Heavy but sounds incredible.',
+				categoryId: catByName['Guitars'],
+				totalQuantity: 1,
+				serialNumber: 'GIB-LP-2021-1187',
+				resourceId: 'EQ-002',
+				condition: 'excellent',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Ibanez SR500 Bass',
+				description: '4-string active bass. Lightweight mahogany body.',
+				categoryId: catByName['Guitars'],
+				totalQuantity: 1,
+				serialNumber: 'IBZ-SR5-2020-0223',
+				resourceId: 'EQ-003',
+				condition: 'fair',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Fender Blues Deluxe',
+				description: '40W tube combo. Clean and overdrive channels.',
+				categoryId: catByName['Amplifiers'],
+				totalQuantity: 1,
+				serialNumber: 'FEN-BD-2018-0912',
+				resourceId: 'EQ-004',
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Orange CR120 Head + 4x12 Cab',
+				description: 'Solid state 120W head with matching cabinet.',
+				categoryId: catByName['Amplifiers'],
+				totalQuantity: 1,
+				serialNumber: 'ORG-CR120-2022-0055',
+				resourceId: 'EQ-005',
+				condition: 'excellent',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'QSC K12.2 Powered Speaker',
+				description: '2000W powered PA speaker. Great for rehearsals and small shows.',
+				categoryId: catByName['Amplifiers'],
+				totalQuantity: 2,
+				resourceId: 'EQ-006',
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Shure SM58',
+				description: 'Industry-standard dynamic vocal mic.',
+				categoryId: catByName['Microphones'],
+				totalQuantity: 6,
+				outOfOrderQuantity: 1,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Shure SM57',
+				description: 'Instrument mic. Amps, snares, everything.',
+				categoryId: catByName['Microphones'],
+				totalQuantity: 4,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'AKG P420 Condenser',
+				description: 'Large-diaphragm condenser. Needs phantom power.',
+				categoryId: catByName['Microphones'],
+				totalQuantity: 2,
+				resourceId: 'EQ-009',
+				condition: 'excellent',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'DW 5000 Kick Pedal',
+				description: 'Single chain drive kick pedal.',
+				categoryId: catByName['Drum Hardware'],
+				totalQuantity: 2,
+				condition: 'fair',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Snare Stand',
+				description: 'Heavy-duty double-braced snare stand.',
+				categoryId: catByName['Drum Hardware'],
+				totalQuantity: 3,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'XLR Cable (25ft)',
+				description: 'Standard balanced XLR cable.',
+				categoryId: catByName['Cables & Accessories'],
+				totalQuantity: 12,
+				outOfOrderQuantity: 2,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Instrument Cable (15ft)',
+				description: '1/4" TS cable for guitars and basses.',
+				categoryId: catByName['Cables & Accessories'],
+				totalQuantity: 8,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Mic Stand (Boom)',
+				description: 'Tripod base with telescoping boom arm.',
+				categoryId: catByName['Cables & Accessories'],
+				totalQuantity: 6,
+				outOfOrderQuantity: 1,
+				condition: 'good',
+				status: 'available'
+			},
+			{
+				id: randomUUID(),
+				name: 'Yamaha MG10XU Mixer',
+				description: '10-channel mixer with USB and effects. Currently being repaired.',
+				categoryId: catByName['Amplifiers'],
+				totalQuantity: 1,
+				serialNumber: 'YAM-MG10-2020-0331',
+				resourceId: 'EQ-015',
+				condition: 'poor',
+				status: 'maintenance'
+			}
+		])
+		.returning();
+
+	const itemByName = Object.fromEntries(items.map((i) => [i.name, i]));
+	const now = new Date();
+	const day = 24 * 60 * 60 * 1000;
+
+	const loans = await db
+		.insert(equipmentLoan)
+		.values([
+			// Active: checked out, due in 3 days
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['Fender Stratocaster'].id,
+				userId: users[0].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() - 10 * day),
+				scheduledPickupDate: new Date(now.getTime() - 9 * day),
+				dueDate: new Date(now.getTime() + 3 * day),
+				checkedOutAt: new Date(now.getTime() - 9 * day),
+				status: 'checked_out',
+				dailyRateCents: 500,
+				memberNotes: 'Need it for a gig this weekend'
+			},
+			// Active: checked out and overdue
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['Shure SM58'].id,
+				userId: users[1].id,
+				quantity: 2,
+				requestedPickupDate: new Date(now.getTime() - 14 * day),
+				scheduledPickupDate: new Date(now.getTime() - 13 * day),
+				dueDate: new Date(now.getTime() - 2 * day),
+				checkedOutAt: new Date(now.getTime() - 13 * day),
+				status: 'checked_out',
+				dailyRateCents: 500
+			},
+			// Requested: waiting for staff
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['Gibson Les Paul Standard'].id,
+				userId: users[2].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 2 * day),
+				status: 'requested',
+				memberNotes: 'Would love to try this for a recording session'
+			},
+			// Scheduled: pickup confirmed
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['QSC K12.2 Powered Speaker'].id,
+				userId: users[3].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 1 * day),
+				scheduledPickupDate: new Date(now.getTime() + 1 * day),
+				status: 'scheduled',
+				memberNotes: 'Need for band practice in Room B'
+			},
+			// Free-form request (no equipmentId)
+			{
+				id: randomUUID(),
+				equipmentId: null,
+				userId: users[4].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 3 * day),
+				status: 'requested',
+				memberNotes: 'Looking for a bass amp that can handle a loud drummer — something 300W+'
+			},
+			// Past: returned with charges
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['Fender Blues Deluxe'].id,
+				userId: users[0].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() - 30 * day),
+				scheduledPickupDate: new Date(now.getTime() - 29 * day),
+				dueDate: new Date(now.getTime() - 22 * day),
+				checkedOutAt: new Date(now.getTime() - 29 * day),
+				returnedAt: new Date(now.getTime() - 23 * day),
+				status: 'returned',
+				dailyRateCents: 500,
+				totalChargeCents: 3000,
+				creditsCents: 2000,
+				cashCents: 1000,
+				staffNotes: 'Returned in good condition'
+			},
+			// Past: returned accessory (free for sustaining)
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['XLR Cable (25ft)'].id,
+				userId: users[1].id,
+				quantity: 3,
+				requestedPickupDate: new Date(now.getTime() - 20 * day),
+				scheduledPickupDate: new Date(now.getTime() - 19 * day),
+				dueDate: new Date(now.getTime() - 15 * day),
+				checkedOutAt: new Date(now.getTime() - 19 * day),
+				returnedAt: new Date(now.getTime() - 16 * day),
+				status: 'returned',
+				dailyRateCents: 0,
+				totalChargeCents: 0,
+				creditsCents: 0,
+				cashCents: 0,
+				staffNotes: 'Sustaining member — accessories free'
+			},
+			// Past: cancelled
+			{
+				id: randomUUID(),
+				equipmentId: itemByName['AKG P420 Condenser'].id,
+				userId: users[5].id,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() - 7 * day),
+				status: 'cancelled'
+			}
+		])
+		.returning();
+
+	return { categories: categories.length, items: items.length, loans: loans.length };
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -1221,6 +1523,7 @@ async function main() {
 	await seedProductConfig();
 	await seedCreditTransactions(allUsers);
 	const marketing = await seedMarketing(allUsers);
+	const eq = await seedEquipment(allUsers);
 
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
@@ -1237,6 +1540,7 @@ async function main() {
 	console.log('  3 product configs');
 	console.log('  credit transactions for 12 users');
 	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.memberships} memberships, ${marketing.campaigns} campaigns`);
+	console.log(`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`);
 
 	await client.end();
 }

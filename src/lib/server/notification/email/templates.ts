@@ -169,6 +169,53 @@ export function contactFormForward(vars: {
 	);
 }
 
+export function loanScheduledConfirmation(vars: {
+	userName: string;
+	equipmentName: string;
+	scheduledPickupDate: string;
+	siteUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">Equipment pickup confirmed</mj-text>
+		<mj-text>Hi {{userName}}, your equipment loan for <strong>{{equipmentName}}</strong> has been confirmed.</mj-text>
+		<mj-text><strong>Pickup date:</strong> {{scheduledPickupDate}}</mj-text>
+		<mj-text>Please visit the space during open hours on the pickup date.</mj-text>
+		<mj-button href="{{siteUrl}}/member/equipment/loans">View My Loans</mj-button>
+		`,
+		`Equipment pickup confirmed: ${vars.equipmentName}`,
+		vars
+	);
+}
+
+export function loanRequestedStaffNotification(vars: {
+	userName: string;
+	equipmentName: string | null;
+	memberNotes: string | null;
+	requestedPickupDate: string;
+	siteUrl: string;
+	loanId: string;
+}): string {
+	const itemLine = vars.equipmentName
+		? `<strong>Item:</strong> {{equipmentName}}`
+		: `<strong>Free-form request</strong>`;
+	const notesLine = vars.memberNotes
+		? `<mj-text><strong>Notes:</strong> {{memberNotes}}</mj-text>`
+		: '';
+
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">New equipment loan request</mj-text>
+		<mj-text><strong>{{userName}}</strong> has requested to borrow equipment.</mj-text>
+		<mj-text>${itemLine}<br/><strong>Requested pickup:</strong> {{requestedPickupDate}}</mj-text>
+		${notesLine}
+		<mj-button href="{{siteUrl}}/staff/equipment/loans/{{loanId}}">Review Request</mj-button>
+		`,
+		`Equipment request from ${vars.userName}`,
+		vars as Record<string, string>
+	);
+}
+
 export function recurringSkipped(vars: {
 	userName: string;
 	skippedDate: string;
