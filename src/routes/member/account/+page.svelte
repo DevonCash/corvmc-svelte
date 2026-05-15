@@ -5,10 +5,9 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import {
 		updateProfile,
 		changePassword,
@@ -21,8 +20,6 @@
 
 	let { data }: { data: PageServerData } = $props();
 
-	let showPasswordModal = $state(false);
-	let showDeleteModal = $state(false);
 
 	interface NotifPref {
 		key: string;
@@ -205,7 +202,7 @@
 											<p class="text-xs opacity-60">{sub.audienceDescription}</p>
 										{/if}
 									</div>
-									<AsyncButton
+									<Action
 										action={async () => {
 											await unsubscribeFromList({ audienceId: sub.audienceId });
 											toast.success(`Unsubscribed from ${sub.audienceName}`);
@@ -229,7 +226,7 @@
 											<p class="text-xs opacity-60">{a.description}</p>
 										{/if}
 									</div>
-									<AsyncButton
+									<Action
 										action={async () => {
 											await subscribeToList({ audienceId: a.id });
 											toast.success(`Subscribed to ${a.name}`);
@@ -253,9 +250,46 @@
 		<div class="space-y-4">
 			<div class="flex items-center justify-between">
 				<p class="text-sm opacity-70">Change your account password.</p>
-				<button class="btn btn-outline btn-sm" onclick={() => (showPasswordModal = true)}>
-					Change Password
-				</button>
+				<Action
+					action={changePassword}
+					label="Change Password"
+					modalTitle="Change Password"
+					successToast="Password changed"
+					errorToast="Password change failed"
+					class="btn-outline btn-sm"
+				>
+					{#snippet form({ close })}
+						<FormField label="Current password" id="currentPassword">
+							<input
+								id="currentPassword"
+								name="currentPassword"
+								type="password"
+								class="input input-bordered w-full"
+								autocomplete="current-password"
+							/>
+						</FormField>
+
+						<FormField label="New password" id="newPassword">
+							<input
+								id="newPassword"
+								name="newPassword"
+								type="password"
+								class="input input-bordered w-full"
+								autocomplete="new-password"
+							/>
+						</FormField>
+
+						<FormField label="Confirm new password" id="confirmPassword">
+							<input
+								id="confirmPassword"
+								name="confirmPassword"
+								type="password"
+								class="input input-bordered w-full"
+								autocomplete="new-password"
+							/>
+						</FormField>
+					{/snippet}
+				</Action>
 			</div>
 
 			<div class="divider my-0"></div>
@@ -266,91 +300,40 @@
 					<span class="btn btn-error btn-sm btn-disabled">Delete Account</span>
 				{:else}
 					<p class="text-sm opacity-70">Permanently delete your account and all associated data.</p>
-					<button class="btn btn-error btn-sm" onclick={() => (showDeleteModal = true)}>
-						Delete Account
-					</button>
+					<Action
+						action={deleteAccount}
+						label="Delete Account"
+						modalTitle="Delete Account"
+						submitLabel="Delete My Account"
+						successToast="Account deleted"
+						errorToast="Deletion failed"
+						class="btn-error btn-sm"
+						onsuccess={() => goto('/demo/better-auth/login')}
+					>
+						{#snippet form({ close })}
+							<div class="alert alert-error">
+								<p>
+									This action is permanent. Deleting your account will cancel all of your current and
+									future reservations and end your subscription. This cannot be undone.
+								</p>
+							</div>
+
+							<FormField
+								label="Enter your password to confirm"
+								id="password"
+							>
+								<input
+									id="password"
+									name="password"
+									type="password"
+									class="input input-bordered w-full"
+									autocomplete="current-password"
+								/>
+							</FormField>
+						{/snippet}
+					</Action>
 				{/if}
 			</div>
 		</div>
 	</InfoCard>
-
-	<Modal title="Change Password" bind:open={showPasswordModal}>
-		<Form
-			remote={changePassword}
-			successToast="Password changed"
-			errorToast="Password change failed"
-			onsuccess={() => (showPasswordModal = false)}
-		>
-			<div class="space-y-4">
-				<FormField label="Current password" id="currentPassword">
-					<input
-						id="currentPassword"
-						name="currentPassword"
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="current-password"
-					/>
-				</FormField>
-
-				<FormField label="New password" id="newPassword">
-					<input
-						id="newPassword"
-						name="newPassword"
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="new-password"
-					/>
-				</FormField>
-
-				<FormField label="Confirm new password" id="confirmPassword">
-					<input
-						id="confirmPassword"
-						name="confirmPassword"
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="new-password"
-					/>
-				</FormField>
-
-				<div class="flex justify-end pt-2">
-					<SubmitButton label="Change Password" successLabel="Changed" class="btn-primary" />
-				</div>
-			</div>
-		</Form>
-	</Modal>
-
-	<Modal title="Delete Account" bind:open={showDeleteModal}>
-		<Form
-			remote={deleteAccount}
-			successToast="Account deleted"
-			errorToast="Deletion failed"
-			onsuccess={() => goto('/demo/better-auth/login')}
-		>
-			<div class="space-y-4">
-				<div class="alert alert-error">
-					<p>
-						This action is permanent. Deleting your account will cancel all of your current and
-						future reservations and end your subscription. This cannot be undone.
-					</p>
-				</div>
-
-				<FormField
-					label="Enter your password to confirm"
-					id="password"
-				>
-					<input
-						id="password"
-						name="password"
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="current-password"
-					/>
-				</FormField>
-
-				<div class="flex justify-end pt-2">
-					<SubmitButton label="Delete My Account" successLabel="Deleted" class="btn-error" />
-				</div>
-			</div>
-		</Form>
-	</Modal>
 </div>

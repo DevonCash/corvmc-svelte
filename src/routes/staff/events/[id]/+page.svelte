@@ -2,11 +2,12 @@
 	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { publishEvent, cancelEvent, updateEvent, checkRebook, checkConflicts } from './data.remote';
+	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 
@@ -36,31 +37,7 @@
 	let rebookConfirmed = $state(false);
 	let overrideConflicts = $state(false);
 
-	// Conflict checking for reservation times
-	const conflictData = $derived(
-		rebookConfirmed && editReservationStartTime && editReservationEndTime && editDate
-			? await checkConflicts({
-					date: editDate,
-					startTime: editReservationStartTime,
-					endTime: editReservationEndTime,
-					excludeReservationId: data.linkedReservation?.id
-				})
-			: null
-	);
-
-	const conflictWarnings = $derived.by(() => {
-		if (!conflictData) return [];
-		const msgs: string[] = [];
-		for (const c of conflictData.conflicts) {
-			if (c.type === 'reservation') {
-				msgs.push(`Conflicts with reservation: ${c.label}`);
-			} else {
-				msgs.push(`Overlaps with closure: ${c.label}`);
-			}
-		}
-		msgs.push(...conflictData.validationWarnings);
-		return msgs;
-	});
+	let hasConflicts = $state(false);
 
 	function startEditing() {
 		editTitle = evt.title;
@@ -213,8 +190,8 @@
 			{/if}
 
 			{#if evt.status === 'draft'}
-				<AsyncButton
-					action={async () => { await publishEvent({ eventId: evt.id }); }}
+				<Action
+					action={() => publishEvent({ eventId: evt.id })}
 					label="Publish"
 					successToast="Published"
 					class="btn-success btn-sm"
@@ -223,9 +200,10 @@
 			{/if}
 
 			{#if evt.status !== 'cancelled'}
-				<AsyncButton
-					action={async () => { await cancelEvent({ eventId: evt.id }); }}
+				<Action
+					action={() => cancelEvent({ eventId: evt.id })}
 					label="Cancel Event"
+					confirm="Cancel this event? This cannot be undone."
 					successToast="Cancelled"
 					class="btn-error btn-outline btn-sm"
 					onsuccess={() => invalidateAll()}
@@ -341,16 +319,19 @@
 										</FormField>
 									</div>
 
-									{#if conflictWarnings.length > 0}
-										<div class="space-y-1 mt-2">
-											{#each conflictWarnings as warning, i (i)}
-												<div class="alert alert-error text-sm py-2">{warning}</div>
-											{/each}
-											<label class="label cursor-pointer justify-start gap-3">
-												<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
-												<span class="label-text">Override conflicts</span>
-											</label>
-										</div>
+									<ConflictWarnings
+										date={editDate}
+										startTime={editReservationStartTime}
+										endTime={editReservationEndTime}
+										{checkConflicts}
+										excludeReservationId={data.linkedReservation?.id}
+										bind:hasConflicts
+									/>
+									{#if hasConflicts}
+										<label class="label cursor-pointer justify-start gap-3">
+											<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
+											<span class="label-text">Override conflicts</span>
+										</label>
 									{/if}
 								{/if}
 							</div>
@@ -361,7 +342,7 @@
 						<button class="btn btn-ghost btn-sm" onclick={cancelEditing}>Cancel</button>
 						<button
 							class="btn btn-primary btn-sm"
-							disabled={saving || !editTitle || !editDate || !editStartTime || !editEndTime || (rebookNeeded && !rebookConfirmed) || (conflictWarnings.length > 0 && !overrideConflicts)}
+							disabled={saving || !editTitle || !editDate || !editStartTime || !editEndTime || (rebookNeeded && !rebookConfirmed) || (hasConflicts && !overrideConflicts)}
 							onclick={saveEdits}
 						>
 							{#if saving}

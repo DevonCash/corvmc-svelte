@@ -2,7 +2,7 @@
 	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import {
 		confirmReservation,
@@ -31,7 +31,6 @@
 	const status = $derived(r.status);
 
 	let cancelReason = $state('');
-	let showCancelForm = $state(false);
 
 	// Derived formatting
 	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
@@ -60,24 +59,21 @@
 
 			<!-- Actions -->
 			{#if status === 'scheduled'}
-				<AsyncButton
-					action={async () => {
-						await confirmReservation({ reservationId: r.id });
-					}}
+				<Action
+					action={() => confirmReservation({ reservationId: r.id })}
 					label="Confirm"
 					successToast="Confirmed"
 					class="btn-sm btn-success"
 					onsuccess={() => invalidateAll()}
 				/>
-				<AsyncButton
-					action={async () => {
-						await cashReceived({
+				<Action
+					action={() =>
+						cashReceived({
 							reservationId: r.id,
 							userId: r.createdByUserId,
 							startsAt: r.startsAt,
 							endsAt: r.endsAt
-						});
-					}}
+						})}
 					label="Cash Received"
 					successToast="Marked as paid"
 					class="btn-outline btn-sm btn-success"
@@ -86,10 +82,8 @@
 			{/if}
 
 			{#if status === 'confirmed'}
-				<AsyncButton
-					action={async () => {
-						await completeReservation({ reservationId: r.id });
-					}}
+				<Action
+					action={() => completeReservation({ reservationId: r.id })}
 					label="Complete"
 					successToast="Completed"
 					class="btn-sm btn-success"
@@ -98,17 +92,28 @@
 			{/if}
 
 			{#if status === 'scheduled' || status === 'confirmed'}
-				<button
-					class="btn btn-outline btn-sm btn-error"
-					onclick={() => (showCancelForm = !showCancelForm)}
+				<Action
+					action={() => cancelReservation({ reservationId: r.id, reason: cancelReason || undefined })}
+					label="Cancel"
+					modalTitle="Cancel Reservation"
+					class="btn-outline btn-sm btn-error"
+					successToast="Cancelled"
+					onsuccess={() => { cancelReason = ''; invalidateAll(); }}
 				>
-					Cancel
-				</button>
-				<AsyncButton
-					action={async () => {
-						await noShowReservation({ reservationId: r.id });
-					}}
+					{#snippet form({ close })}
+						<p class="text-sm mb-3">Cancel this reservation?</p>
+						<input
+							type="text"
+							bind:value={cancelReason}
+							placeholder="Reason (optional)"
+							class="input-bordered input input-sm w-full"
+						/>
+					{/snippet}
+				</Action>
+				<Action
+					action={() => noShowReservation({ reservationId: r.id })}
 					label="No-Show"
+					confirm="Mark this reservation as a no-show?"
 					successToast="Marked as no-show"
 					class="btn-outline btn-sm btn-warning"
 					onsuccess={() => invalidateAll()}
@@ -116,41 +121,6 @@
 			{/if}
 		</div>
 	</PageHeader>
-
-	<!-- Cancel reason form (inline, shown when cancel clicked) -->
-	{#if showCancelForm}
-		<div class="alert alert-error">
-			<div class="w-full">
-				<p class="mb-2 font-medium">Cancel this reservation?</p>
-				<div class="flex gap-2">
-					<input
-						type="text"
-						bind:value={cancelReason}
-						placeholder="Reason (optional)"
-						class="input-bordered input input-sm flex-1"
-					/>
-					<AsyncButton
-						action={async () => {
-							await cancelReservation({
-								reservationId: r.id,
-								reason: cancelReason || undefined
-							});
-						}}
-						label="Confirm Cancel"
-						successToast="Cancelled"
-						class="btn-sm btn-error"
-						onsuccess={() => {
-							showCancelForm = false;
-							invalidateAll();
-						}}
-					/>
-					<button class="btn btn-ghost btn-sm" onclick={() => (showCancelForm = false)}>
-						Nevermind
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Hero card -->
 	<div class="card bg-base-100 shadow">

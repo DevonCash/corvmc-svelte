@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import { getCampaignDetail, unscheduleCommand } from './data.remote';
 
 	let id = $derived(page.params.id!);
@@ -20,14 +19,12 @@
 				<a href="/staff/marketing/campaigns/{id}/edit" class="btn btn-sm btn-primary">Edit</a>
 			{/if}
 			{#if campaign.status === 'scheduled'}
-				<AsyncButton
-					action={async () => {
-						await unscheduleCommand({});
-						toast.success('Campaign unscheduled — returned to draft');
-						goto(`/staff/marketing/campaigns/${id}/edit`);
-					}}
+				<Action
+					action={() => unscheduleCommand({})}
 					label="Cancel Schedule"
+					successToast="Campaign unscheduled — returned to draft"
 					class="btn-warning btn-sm"
+					onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)}
 				/>
 			{/if}
 		</PageHeader>

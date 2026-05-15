@@ -6,6 +6,7 @@
 	import { Dialog } from 'bits-ui';
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
+	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 
 	// ---------------------------------------------------------------------------
 	// Props
@@ -13,12 +14,14 @@
 
 	let {
 		action,
+		shortcut,
 		label = 'Run',
 		icon,
 		successLabel = 'Done',
 		errorLabel = 'Error',
 		confirm,
 		modalTitle,
+		form: formSnippet,
 		body,
 		submitLabel,
 		canSubmit = true,
@@ -32,23 +35,20 @@
 		onfailure,
 		...rest
 	}: {
-		/** Async callback or a RemoteForm from form(). When a RemoteForm is passed, a body snippet is expected and the action renders as a form modal. */
 		action: (() => Promise<unknown>) | RemoteForm<any, any>;
+		shortcut?: string;
 		label?: string;
 		icon?: Snippet;
 		successLabel?: string;
 		errorLabel?: string;
-		/** When set, a confirmation dialog is shown before firing a callback action. The string is used as the dialog message. */
 		confirm?: string;
-		/** Title for the modal. Used in both form-modal and callback+body modes. */
 		modalTitle?: string;
-		/** Modal content. When action is a RemoteForm, rendered inside a <Form> wrapper. When action is a callback, rendered as-is with a manual submit button. Receives { close } as snippet params. */
-		body?: Snippet<[{ close: () => void }]>;
-		/** Label for the submit button inside the modal. Defaults to `label`. */
+		/** Form fields rendered inside the default modal layout (title bar + submit button). Receives { close }. */
+		form?: Snippet<[{ close: () => void }]>;
+		/** Full-control modal body. Replaces entire modal content area. Receives { close, run, status }. */
+		body?: Snippet<[{ close: () => void; run: () => void; status: Status }]>;
 		submitLabel?: string;
-		/** Gates the submit button in callback+body mode. Ignored in form-modal mode (Zod handles validation). */
 		canSubmit?: boolean;
-		/** Max width class for the modal. Defaults to 'max-w-lg'. */
 		maxWidth?: string;
 		successToast?: string;
 		errorToast?: string;
@@ -65,7 +65,7 @@
 	// ---------------------------------------------------------------------------
 
 	const isForm = $derived(typeof action !== 'function');
-	const hasModal = $derived(isForm || (!!body && !confirm));
+	const hasModal = $derived(isForm || !!body || (!!formSnippet && !confirm));
 
 	// ---------------------------------------------------------------------------
 	// Shared state
@@ -73,8 +73,8 @@
 
 	type Status = 'idle' | 'pending' | 'success' | 'error';
 	let status = $state<Status>('idle');
+	let buttonEl: HTMLButtonElement | undefined = $state();
 
-	// Dialog state (confirm or form modal)
 	let dialogOpen = $state(false);
 
 	function close() {
@@ -82,7 +82,18 @@
 	}
 
 	// ---------------------------------------------------------------------------
-	// Direct / confirm / callback+body action mode
+	// Keyboard shortcut
+	// ---------------------------------------------------------------------------
+
+	let keys = useShortcut(
+		() => shortcut,
+		() => {
+			if (!buttonEl?.disabled) handleClick();
+		}
+	);
+
+	// ---------------------------------------------------------------------------
+	// Direct / confirm / callback+form / callback+body action mode
 	// ---------------------------------------------------------------------------
 
 	async function run() {
@@ -130,6 +141,7 @@
 
 <!-- Trigger button -->
 <button
+	bind:this={buttonEl}
 	type="button"
 	class="btn {className}"
 	class:btn-success={status === 'success'}
@@ -148,15 +160,17 @@
 		<IconX size={20} />
 		{errorLabel}
 	{:else}
-		{#if icon}
+		{#if keys.modHeld && keys.parsed}
+			<kbd class="kbd kbd-sm text-base-content">{shortcutLabel(keys.parsed)}</kbd>
+		{:else if icon}
 			{@render icon()}
 		{/if}
 		{label}
 	{/if}
 </button>
 
-<!-- Confirm dialog (callback + confirm string, no body) -->
-{#if !isForm && confirm && !body}
+<!-- Confirm dialog (callback + confirm string, no form/body) -->
+{#if !isForm && confirm && !formSnippet && !body}
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Portal>
 			<Dialog.Overlay class="modal modal-open bg-black/40" />
@@ -176,8 +190,22 @@
 	</Dialog.Root>
 {/if}
 
-<!-- Callback + body modal (async callback with custom form content) -->
+<!-- Callback + body modal (full control — consumer owns entire content area) -->
 {#if !isForm && body}
+	<Dialog.Root bind:open={dialogOpen}>
+		<Dialog.Portal>
+			<Dialog.Overlay class="modal modal-open bg-black/40" />
+			<Dialog.Content class="modal modal-open">
+				<div class="modal-box {maxWidth}">
+					{@render body({ close, run, status })}
+				</div>
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
+{/if}
+
+<!-- Callback + form modal (default layout with title bar + submit button) -->
+{#if !isForm && formSnippet && !body}
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Portal>
 			<Dialog.Overlay class="modal modal-open bg-black/40" />
@@ -191,7 +219,7 @@
 					</div>
 
 					<div class="space-y-4">
-						{@render body({ close })}
+						{@render formSnippet({ close })}
 						<div class="flex justify-end pt-2">
 							<button
 								type="button"
@@ -212,8 +240,8 @@
 	</Dialog.Root>
 {/if}
 
-<!-- Form modal (RemoteForm action + body snippet) -->
-{#if isForm && body}
+<!-- Form modal with RemoteForm + form snippet (default layout) -->
+{#if isForm && formSnippet && !body}
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Portal>
 			<Dialog.Overlay class="modal modal-open bg-black/40" />
@@ -239,11 +267,38 @@
 						}}
 					>
 						<div class="space-y-4">
-							{@render body({ close })}
+							{@render formSnippet({ close })}
 							<div class="flex justify-end pt-2">
 								<SubmitButton label={submitLabel ?? label} class={className} />
 							</div>
 						</div>
+					</Form>
+				</div>
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
+{/if}
+
+<!-- Form modal with RemoteForm + body snippet (full control) -->
+{#if isForm && body}
+	<Dialog.Root bind:open={dialogOpen}>
+		<Dialog.Portal>
+			<Dialog.Overlay class="modal modal-open bg-black/40" />
+			<Dialog.Content class="modal modal-open">
+				<div class="modal-box {maxWidth}">
+					<Form
+						remote={action as RemoteForm<any, any>}
+						{successToast}
+						{errorToast}
+						onsuccess={(result) => {
+							dialogOpen = false;
+							onsuccess?.(result);
+						}}
+						onfailure={(issues) => {
+							onfailure?.(issues);
+						}}
+					>
+						{@render body({ close, run: () => {}, status })}
 					</Form>
 				</div>
 			</Dialog.Content>

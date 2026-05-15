@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import { checkConflicts, createEvent } from './data.remote';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
@@ -23,36 +24,7 @@
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
 	let submitting = $state(false);
-
-	// Conflict check for reservation times
-	const conflictData = $derived(
-		reserveSpace && reservationStartTime && reservationEndTime
-			? await checkConflicts({
-					date: eventDate,
-					startTime: reservationStartTime,
-					endTime: reservationEndTime
-				})
-			: null
-	);
-
-	const warnings = $derived.by(() => {
-		if (!conflictData) return [];
-		const msgs: string[] = [];
-
-		for (const c of conflictData.conflicts) {
-			if (c.type === 'reservation') {
-				const range = `${formatSlotTime(formatTimeFromDate(c.startsAt))} – ${formatSlotTime(formatTimeFromDate(c.endsAt))}`;
-				msgs.push(`Conflicts with reservation: ${c.label}, ${range}`);
-			} else {
-				msgs.push(`Overlaps with closure: ${c.label}`);
-			}
-		}
-
-		msgs.push(...conflictData.validationWarnings);
-		return msgs;
-	});
-
-	const hasConflicts = $derived(warnings.length > 0);
+	let hasConflicts = $state(false);
 
 	// When reservation is toggled on, default reservation times to event times
 	$effect(() => {
@@ -63,23 +35,6 @@
 			reservationEndTime = eventEndTime;
 		}
 	});
-
-	function formatSlotTime(time: string): string {
-		const [h, m] = time.split(':').map(Number);
-		const period = h >= 12 ? 'PM' : 'AM';
-		const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-		return m === 0 ? `${hour} ${period}` : `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-	}
-
-	function formatTimeFromDate(d: Date | string): string {
-		const date = typeof d === 'string' ? new Date(d) : d;
-		return date.toLocaleTimeString('en-GB', {
-			timeZone: 'America/Los_Angeles',
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		});
-	}
 
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -325,14 +280,14 @@
 						</FormField>
 					</div>
 
-					{#if warnings.length > 0}
-						<div class="space-y-2">
-							{#each warnings as warning, i (i)}
-								<div class="alert alert-warning text-sm py-2">
-									{warning}
-								</div>
-							{/each}
-						</div>
+					{#if reserveSpace}
+						<ConflictWarnings
+							date={eventDate}
+							startTime={reservationStartTime}
+							endTime={reservationEndTime}
+							{checkConflicts}
+							bind:hasConflicts
+						/>
 					{/if}
 				</div>
 			{/if}

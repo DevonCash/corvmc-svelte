@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import {
 		getAudienceDetail,
 		getAudienceSubscribers,
@@ -45,15 +45,13 @@
 <svelte:boundary>
 	{#if audienceData}
 		<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
-			<AsyncButton
-				action={async () => {
-					if (!window.confirm('Delete this audience? All subscribers will be removed.')) return;
-					await deleteAudienceCommand({});
-					toast.success('Audience deleted');
-					goto('/staff/marketing/audiences');
-				}}
+			<Action
+				action={() => deleteAudienceCommand({})}
 				label="Delete"
+				confirm="Delete this audience? All subscribers will be removed."
+				successToast="Audience deleted"
 				class="btn-error btn-sm"
+				onsuccess={() => goto('/staff/marketing/audiences')}
 			/>
 		</PageHeader>
 
@@ -87,7 +85,7 @@
 
 			<InfoCard title="Actions">
 				<div class="space-y-3">
-					<AsyncButton
+					<Action
 						action={async () => {
 							const result = await bulkAddMembersCommand({});
 							toast.success(`Added ${result?.added ?? 0} members`);
@@ -179,12 +177,11 @@
 								</td>
 								<td class="text-sm">{new Date(s.createdAt).toLocaleDateString()}</td>
 								<td class="text-right">
-									<AsyncButton
-										action={async () => {
-											if (!window.confirm(`Remove ${s.email} from this audience?`)) return;
-											await removeSubscriberCommand({ subscriberId: s.subscriberId });
-										}}
+									<Action
+										action={() => removeSubscriberCommand({ subscriberId: s.subscriberId })}
 										label="Remove"
+										confirm={`Remove ${s.email} from this audience?`}
+										successToast="Subscriber removed"
 										class="btn-ghost btn-xs text-error"
 									/>
 								</td>

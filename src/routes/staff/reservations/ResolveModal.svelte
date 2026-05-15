@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconCheck } from '@tabler/icons-svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
@@ -73,24 +73,21 @@
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">
-							<AsyncButton
-								action={async () => {
-									await resolveComplete({
+							<Action
+								action={() =>
+									resolveComplete({
 										reservationId: r.id,
 										userId: r.createdByUserId,
 										startsAt: r.startsAt,
 										endsAt: r.endsAt
-									});
-								}}
+									})}
 								label="Cash received"
 								successToast="Marked as paid"
 								class="btn-success btn-outline btn-sm"
 								onsuccess={() => markResolved(r.id)}
 							/>
-							<AsyncButton
-								action={async () => {
-									await resolveNoShow({ reservationId: r.id });
-								}}
+							<Action
+								action={() => resolveNoShow({ reservationId: r.id })}
 								label="No-show"
 								successToast="Marked as no-show"
 								class="btn-error btn-outline btn-sm"

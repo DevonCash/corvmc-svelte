@@ -17,7 +17,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 
@@ -75,19 +75,17 @@
 
 				<div class="mt-4 flex gap-2">
 					{#if isDeactivated}
-						<AsyncButton
+						<Action
 							action={() => reactivateBand({})}
 							label="Reactivate"
 							successToast="Band reactivated"
 							class="btn-success btn-sm"
 						/>
 					{:else}
-						<AsyncButton
-							action={async () => {
-								if (!window.confirm('Deactivate this band? All future reservations will be cancelled.')) return;
-								await deactivateBand({});
-							}}
+						<Action
+							action={() => deactivateBand({})}
 							label="Deactivate"
+							confirm="Deactivate this band? All future reservations will be cancelled."
 							successToast="Band deactivated"
 							class="btn-error btn-sm"
 						/>
@@ -127,22 +125,18 @@
 								{#if m.role !== 'owner'}
 									<div class="flex gap-1 justify-end">
 										{#if m.status === 'active' && m.role !== 'owner'}
-											<AsyncButton
-												action={async () => {
-													if (!window.confirm(`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`)) return;
-													await transferBandOwnership({ newOwnerId: m.userId });
-												}}
+											<Action
+												action={() => transferBandOwnership({ newOwnerId: m.userId })}
 												label="Make owner"
+												confirm={`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`}
 												successToast="Ownership transferred"
 												class="btn-ghost btn-xs"
 											/>
 										{/if}
-										<AsyncButton
-											action={async () => {
-												if (!window.confirm(`Remove ${m.userName} from this band?`)) return;
-												await removeBandMember({ memberId: m.id });
-											}}
+										<Action
+											action={() => removeBandMember({ memberId: m.id })}
 											label="Remove"
+											confirm={`Remove ${m.userName} from this band?`}
 											successToast="Member removed"
 											class="btn-ghost btn-xs text-error"
 										/>
