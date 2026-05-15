@@ -7,7 +7,17 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { goto } from '$app/navigation';
-	import { updateProfile, changePassword, deleteAccount } from './data.remote';
+	import { toast } from 'svelte-sonner';
+	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import {
+		updateProfile,
+		changePassword,
+		deleteAccount,
+		getMySubscriptions,
+		getAvailableLists,
+		subscribeToList,
+		unsubscribeFromList
+	} from './data.remote';
 
 	let { data }: { data: PageServerData } = $props();
 
@@ -170,6 +180,73 @@
 			</div>
 		{/if}
 	</InfoCard>
+
+	<!-- Email Subscriptions -->
+	<svelte:boundary>
+		{@const subscriptions = getMySubscriptions()}
+		{@const available = getAvailableLists()}
+		<InfoCard title="Email Subscriptions">
+			{#await Promise.all([subscriptions, available])}
+				<div class="flex justify-center p-4">
+					<span class="loading loading-spinner loading-sm"></span>
+				</div>
+			{:then [subs, avail]}
+				{#if subs.length === 0 && avail.length === 0}
+					<p class="text-sm opacity-60">No mailing lists available.</p>
+				{:else}
+					{#if subs.length > 0}
+						<p class="text-xs font-medium opacity-60 mb-2">Your subscriptions</p>
+						<div class="space-y-2 mb-4">
+							{#each subs as sub (sub.audienceId)}
+								<div class="flex items-center justify-between border rounded-lg px-4 py-2">
+									<div>
+										<p class="text-sm font-medium">{sub.audienceName}</p>
+										{#if sub.audienceDescription}
+											<p class="text-xs opacity-60">{sub.audienceDescription}</p>
+										{/if}
+									</div>
+									<AsyncButton
+										action={async () => {
+											await unsubscribeFromList({ audienceId: sub.audienceId });
+											toast.success(`Unsubscribed from ${sub.audienceName}`);
+										}}
+										label="Unsubscribe"
+										class="btn-ghost btn-xs"
+									/>
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					{#if avail.length > 0}
+						<p class="text-xs font-medium opacity-60 mb-2">Available lists</p>
+						<div class="space-y-2">
+							{#each avail as a (a.id)}
+								<div class="flex items-center justify-between border rounded-lg px-4 py-2">
+									<div>
+										<p class="text-sm font-medium">{a.name}</p>
+										{#if a.description}
+											<p class="text-xs opacity-60">{a.description}</p>
+										{/if}
+									</div>
+									<AsyncButton
+										action={async () => {
+											await subscribeToList({ audienceId: a.id });
+											toast.success(`Subscribed to ${a.name}`);
+										}}
+										label="Subscribe"
+										class="btn-primary btn-xs"
+									/>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+			{:catch}
+				<p class="text-sm text-error">Failed to load subscriptions.</p>
+			{/await}
+		</InfoCard>
+	</svelte:boundary>
 
 	<!-- Security -->
 	<InfoCard title="Security">

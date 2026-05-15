@@ -2,6 +2,7 @@
 	import { IconDeviceFloppy, IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import { getProfile, getGenreSuggestions, saveProfile } from './data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -57,38 +58,17 @@
 			<!-- Identity -->
 			<InfoCard title="About">
 				<div class="space-y-4">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Tagline</legend>
-						<input
-							name="tagline"
-							type="text"
-							value={profile?.tagline ?? ''}
-							placeholder="e.g. Funk trio from Portland"
-							maxlength="150"
-							class="input-bordered input w-full"
-						/>
-						<p class="text-xs opacity-50 mt-1">A short one-liner shown on your directory card</p>
-					</fieldset>
+					<FormField name="tagline" label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Funk trio from Portland" description="A short one-liner shown on your directory card" />
 
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Genres</legend>
+					<FormField name="genres" label="Genres">
 						<FreeformTagInput
 							bind:value={genres}
 							suggestions={genreSuggestions}
 							placeholder="e.g. jazz, funk, rock..."
 						/>
-					</fieldset>
+					</FormField>
 
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="checkbox"
-							name="lookingForMembers"
-							class="toggle toggle-primary"
-							checked={lookingForMembers}
-							onchange={(e) => (lookingForMembers = (e.target as HTMLInputElement).checked)}
-						/>
-						<span>We're looking for members</span>
-					</label>
+					<FormField name="lookingForMembers" type="toggle" value={lookingForMembers} checkboxLabel="We're looking for members" />
 				</div>
 			</InfoCard>
 
@@ -139,84 +119,39 @@
 					Optional contact details shown on your directory listing.
 				</p>
 				<div class="space-y-3">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Display email</legend>
-						<input
-							name="contactEmail"
-							type="email"
-							value={contact.email ?? ''}
-							placeholder="band@example.com"
-							class="input-bordered input w-full"
-						/>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Phone</legend>
-						<input
-							name="contactPhone"
-							type="tel"
-							value={contact.phone ?? ''}
-							class="input-bordered input w-full"
-						/>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Social handle</legend>
-						<input
-							name="contactSocial"
-							type="text"
-							value={contact.social ?? ''}
-							placeholder="@handle or URL"
-							class="input-bordered input w-full"
-						/>
-					</fieldset>
+					<FormField name="contactEmail" label="Display email" type="email" value={contact.email ?? ''} placeholder="band@example.com" />
+					<FormField name="contactPhone" label="Phone" type="tel" value={contact.phone ?? ''} />
+					<FormField name="contactSocial" label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
 				</div>
 			</InfoCard>
 
 			<!-- Visibility -->
 			<InfoCard title="Visibility">
-				<div class="space-y-2">
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="radio"
-							name="directoryVisibility"
-							value="hidden"
-							class="radio"
-							checked={directoryVisibility === 'hidden'}
-							onchange={() => (directoryVisibility = 'hidden')}
-						/>
-						<div>
-							<p>Hidden</p>
-							<p class="text-xs opacity-50">Not shown in any directory</p>
-						</div>
-					</label>
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="radio"
-							name="directoryVisibility"
-							value="members"
-							class="radio"
-							checked={directoryVisibility === 'members'}
-							onchange={() => (directoryVisibility = 'members')}
-						/>
-						<div>
-							<p>Members only</p>
-							<p class="text-xs opacity-50">Visible to logged-in members</p>
-						</div>
-					</label>
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="radio"
-							name="directoryVisibility"
-							value="public"
-							class="radio"
-							checked={directoryVisibility === 'public'}
-							onchange={() => (directoryVisibility = 'public')}
-						/>
-						<div>
-							<p>Public</p>
-							<p class="text-xs opacity-50">Anyone can see this band's profile, no login required</p>
-						</div>
-					</label>
-				</div>
+				<FormField name="directoryVisibility" label="Directory visibility">
+					<div class="space-y-2">
+						<label class="label cursor-pointer justify-start gap-3">
+							<input type="radio" name="directoryVisibility" value="hidden" class="radio" checked={directoryVisibility === 'hidden'} onchange={() => (directoryVisibility = 'hidden')} />
+							<div>
+								<p>Hidden</p>
+								<p class="text-xs opacity-50">Not shown in any directory</p>
+							</div>
+						</label>
+						<label class="label cursor-pointer justify-start gap-3">
+							<input type="radio" name="directoryVisibility" value="members" class="radio" checked={directoryVisibility === 'members'} onchange={() => (directoryVisibility = 'members')} />
+							<div>
+								<p>Members only</p>
+								<p class="text-xs opacity-50">Visible to logged-in members</p>
+							</div>
+						</label>
+						<label class="label cursor-pointer justify-start gap-3">
+							<input type="radio" name="directoryVisibility" value="public" class="radio" checked={directoryVisibility === 'public'} onchange={() => (directoryVisibility = 'public')} />
+							<div>
+								<p>Public</p>
+								<p class="text-xs opacity-50">Anyone can see this band's profile, no login required</p>
+							</div>
+						</label>
+					</div>
+				</FormField>
 			</InfoCard>
 		</div>
 	</Form>

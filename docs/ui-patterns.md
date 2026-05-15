@@ -145,7 +145,7 @@ Place inside a `<Form>`. For standalone async actions (not inside a form), use `
 
 ## AsyncButton
 
-Same status feedback as SubmitButton but for standalone async actions that aren't part of a form.
+Same status feedback as SubmitButton but for standalone async actions that aren't part of a form. For actions that need a confirmation step or a form modal, use `Action` instead.
 
 ```svelte
 <AsyncButton
@@ -155,6 +155,78 @@ Same status feedback as SubmitButton but for standalone async actions that aren'
   class="btn-error btn-sm"
 />
 ```
+
+## Action
+
+A single component that handles three patterns depending on its props: direct async action, confirmation dialog, or form modal. Detects the mode from the `action` prop — pass a callback for direct/confirm, or a `RemoteForm` from `form()` for the modal form.
+
+### Direct action
+
+Runs an async callback on click. Same behavior as `AsyncButton`.
+
+```svelte
+<Action action={() => archive(item.id)} label="Archive" successToast="Archived" class="btn-sm" />
+```
+
+### With confirmation
+
+When `confirm` is set, an alert dialog is shown before firing the callback:
+
+```svelte
+<Action
+  action={() => deleteItem(item.id)}
+  label="Delete"
+  class="btn-error btn-sm"
+  confirm="This will permanently delete the item. Are you sure?"
+  successToast="Deleted"
+/>
+```
+
+### Form modal
+
+When `action` is a `RemoteForm` (from `form()` in `data.remote.ts`), clicking the button opens a modal with a `<Form>` wrapper. Provide the form fields via the `body` snippet. The modal includes a built-in `SubmitButton` and closes on success.
+
+```svelte
+<Action
+  action={updateItem}
+  label="Edit"
+  class="btn-primary btn-sm"
+  modalTitle="Edit Item"
+  successToast="Updated"
+  onsuccess={() => invalidateAll()}
+>
+  {#snippet body()}
+    <FormField name="name" type="text" value={item.name} />
+    <FormField name="description" type="textarea" value={item.description} />
+  {/snippet}
+</Action>
+```
+
+For `.for()` instances (per-row actions in a list):
+
+```svelte
+{#each items as item (item.id)}
+  <Action action={updateItem.for(item.id)} label="Edit" modalTitle="Edit {item.name}" ...>
+    {#snippet body()}
+      <FormField name="name" type="text" value={item.name} />
+    {/snippet}
+  </Action>
+{/each}
+```
+
+### Props
+
+- `action` — async callback `() => Promise<any>` or a `RemoteForm` from `form()`
+- `label` — button text (also used as default submit label in form modals)
+- `icon` — optional icon snippet on the trigger button
+- `confirm` — string message for the confirmation dialog (callback mode only)
+- `modalTitle` — title for the form modal (form mode only)
+- `body` — snippet of form fields rendered inside the modal (form mode only)
+- `submitLabel` — override the submit button label in the form modal (defaults to `label`)
+- `successToast` / `errorToast` — toast messages
+- `onsuccess` / `onfailure` — callbacks
+- `class` — button classes (default `btn-primary`)
+- `disabled` — disables the trigger button
 
 ## StatusBadge
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { form, getRequestEvent } from '$app/server';
+import { form, query, command, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -9,6 +9,13 @@ import { eq, and, gt, ne } from 'drizzle-orm';
 import { hasAnyRole } from '$lib/server/authorization';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import {
+	getSubscriptionsForUser,
+	getOptInAudiencesForUser,
+	addSubscriber,
+	unsubscribe
+} from '$lib/server/marketing/audience-service';
+import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,6 +79,46 @@ export const changePassword = form(
 			}
 		});
 
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Email subscriptions
+// ---------------------------------------------------------------------------
+
+export const getMySubscriptions = query(z.void(), async () => {
+	const currentUser = requireUser();
+	return getSubscriptionsForUser(currentUser.id);
+});
+
+export const getAvailableLists = query(z.void(), async () => {
+	const currentUser = requireUser();
+	return getOptInAudiencesForUser(currentUser.id);
+});
+
+export const subscribeToList = command(
+	z.object({ audienceId: z.string().min(1) }),
+	async (data) => {
+		const currentUser = requireUser();
+		const sub = await findOrCreateForUser(currentUser.id, currentUser.email, currentUser.name);
+		await addSubscriber(data.audienceId, sub.id);
+		void getMySubscriptions().refresh();
+		void getAvailableLists().refresh();
+		return { success: true };
+	}
+);
+
+export const unsubscribeFromList = command(
+	z.object({ audienceId: z.string().min(1) }),
+	async (data) => {
+		const currentUser = requireUser();
+		const sub = await findByUserId(currentUser.id);
+		if (sub) {
+			await unsubscribe(sub.id, data.audienceId);
+		}
+		void getMySubscriptions().refresh();
+		void getAvailableLists().refresh();
 		return { success: true };
 	}
 );
