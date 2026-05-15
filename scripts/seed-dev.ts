@@ -27,6 +27,13 @@ import { productConfig } from '../src/lib/server/db/schema/product-config';
 import { creditTransaction, paymentRecord } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { band, bandMember } from '../src/lib/server/db/schema/band';
+import {
+	subscriber,
+	audience,
+	audienceMember,
+	campaign,
+	campaignAudience
+} from '../src/lib/server/db/schema/marketing';
 // Build RRULE strings inline to avoid pulling rrule CJS dependency into seed script
 function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
@@ -186,6 +193,11 @@ async function truncateAll() {
 	console.log('Truncating all tables...');
 	await db.execute(sql`
 		TRUNCATE TABLE
+			campaign_audience,
+			campaign,
+			audience_member,
+			audience,
+			subscriber,
 			notification_preference,
 			notification,
 			ticket,
@@ -944,6 +956,218 @@ async function seedNotificationPreferences(users: SeedUser[]) {
 }
 
 // ---------------------------------------------------------------------------
+// Marketing
+// ---------------------------------------------------------------------------
+
+async function seedMarketing(users: SeedUser[]) {
+	console.log('Seeding marketing...');
+
+	// Create audiences
+	const audienceRows = await db
+		.insert(audience)
+		.values([
+			{
+				id: randomUUID(),
+				name: 'Newsletter',
+				slug: 'newsletter',
+				description: 'Monthly updates from CorvMC — events, news, and community highlights.',
+				allowOptIn: true
+			},
+			{
+				id: randomUUID(),
+				name: 'Event Updates',
+				slug: 'event-updates',
+				description: 'Get notified about upcoming shows and events.',
+				allowOptIn: true
+			},
+			{
+				id: randomUUID(),
+				name: 'Member Announcements',
+				slug: 'member-announcements',
+				description: 'Important announcements for CorvMC members.',
+				allowOptIn: false
+			},
+			{
+				id: randomUUID(),
+				name: 'Public Updates',
+				slug: 'public-updates',
+				description: 'General updates and news from CorvMC.',
+				allowOptIn: true
+			}
+		])
+		.returning();
+
+	// Create subscribers for all users
+	const subscriberRows = await db
+		.insert(subscriber)
+		.values(
+			users.map((u) => ({
+				id: randomUUID(),
+				email: u.email,
+				name: u.name,
+				userId: u.id
+			}))
+		)
+		.returning();
+
+	// Add some external subscribers
+	const externalEmails = [
+		'fan1@example.com',
+		'fan2@example.com',
+		'localpress@example.com',
+		'musicblog@example.com',
+		'concertgoer@example.com',
+		'neighbor@example.com',
+		'sponsor@example.com'
+	];
+
+	const externalSubs = await db
+		.insert(subscriber)
+		.values(
+			externalEmails.map((email) => ({
+				id: randomUUID(),
+				email,
+				name: email.split('@')[0].replace(/\d+/g, ''),
+				userId: null
+			}))
+		)
+		.returning();
+
+	const allSubs = [...subscriberRows, ...externalSubs];
+
+	// Add subscribers to audiences with randomized membership
+	const membershipRows: { id: string; subscriberId: string; audienceId: string; unsubscribedAt: Date | null }[] = [];
+
+	for (const sub of allSubs) {
+		for (const aud of audienceRows) {
+			// ~70% chance of being in each audience
+			if (Math.random() < 0.7) {
+				// ~10% chance of being unsubscribed
+				const unsubscribed = Math.random() < 0.1;
+				membershipRows.push({
+					id: randomUUID(),
+					subscriberId: sub.id,
+					audienceId: aud.id,
+					unsubscribedAt: unsubscribed ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) : null
+				});
+			}
+		}
+	}
+
+	if (membershipRows.length > 0) {
+		await db.insert(audienceMember).values(membershipRows);
+	}
+
+	// Create campaigns in various states
+	const adminUser = users[0]; // first user is admin
+
+	const sentCampaigns = [
+		{
+			subject: 'Welcome to the CorvMC Newsletter!',
+			markdownBody: '# Welcome!\n\nThanks for subscribing to the CorvMC newsletter. We\'ll keep you posted on all the latest happenings.\n\n## What\'s coming up\n\nStay tuned for event announcements and community updates.',
+			sentAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+			scheduledFor: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+			recipientCount: 18
+		},
+		{
+			subject: 'February Events Roundup',
+			markdownBody: '# February Events\n\nHere\'s what happened this month at CorvMC:\n\n- **Open Mic Night** — Great turnout!\n- **Jazz Workshop** — Thanks to everyone who participated.\n\nSee you next month!',
+			sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+			scheduledFor: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+			recipientCount: 15
+		}
+	];
+
+	for (const c of sentCampaigns) {
+		const [row] = await db
+			.insert(campaign)
+			.values({
+				id: randomUUID(),
+				subject: c.subject,
+				markdownBody: c.markdownBody,
+				htmlBody: `<p>${c.markdownBody.replace(/\n/g, '</p><p>')}</p>`,
+				scheduledFor: c.scheduledFor,
+				sentAt: c.sentAt,
+				sentById: adminUser.id,
+				recipientCount: c.recipientCount
+			})
+			.returning();
+
+		// Attach to first two audiences
+		await db.insert(campaignAudience).values([
+			{ campaignId: row.id, audienceId: audienceRows[0].id },
+			{ campaignId: row.id, audienceId: audienceRows[1].id }
+		]);
+	}
+
+	// Scheduled campaign
+	const [scheduled] = await db
+		.insert(campaign)
+		.values({
+			id: randomUUID(),
+			subject: 'Upcoming: Spring Concert Series',
+			markdownBody: '# Spring Concert Series\n\nWe\'re excited to announce our spring lineup! More details coming soon.\n\nMark your calendars for March 15th.',
+			htmlBody: '<p>Spring Concert Series preview</p>',
+			scheduledFor: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+			sentAt: null,
+			sentById: adminUser.id,
+			recipientCount: null
+		})
+		.returning();
+
+	await db.insert(campaignAudience).values([
+		{ campaignId: scheduled.id, audienceId: audienceRows[0].id },
+		{ campaignId: scheduled.id, audienceId: audienceRows[3].id }
+	]);
+
+	// Draft campaigns
+	const [draft1] = await db
+		.insert(campaign)
+		.values({
+			id: randomUUID(),
+			subject: 'New Practice Room Hours',
+			markdownBody: '# Updated Hours\n\nStarting next month, practice rooms will be available until 11pm on weekends.\n\n{{subscriber_name}}, we hope this helps your schedule!',
+			htmlBody: '<p>Draft - practice room hours</p>',
+			scheduledFor: null,
+			sentAt: null,
+			sentById: adminUser.id,
+			recipientCount: null
+		})
+		.returning();
+
+	await db.insert(campaignAudience).values({
+		campaignId: draft1.id,
+		audienceId: audienceRows[2].id
+	});
+
+	const [draft2] = await db
+		.insert(campaign)
+		.values({
+			id: randomUUID(),
+			subject: 'Volunteer Opportunities',
+			markdownBody: '# Help Out at CorvMC\n\nWe\'re looking for volunteers for the upcoming fundraiser. If you\'re interested, reply to this email!',
+			htmlBody: '<p>Draft - volunteer opportunities</p>',
+			scheduledFor: null,
+			sentAt: null,
+			sentById: adminUser.id,
+			recipientCount: null
+		})
+		.returning();
+
+	await db.insert(campaignAudience).values({
+		campaignId: draft2.id,
+		audienceId: audienceRows[0].id
+	});
+
+	return {
+		audiences: audienceRows.length,
+		subscribers: allSubs.length,
+		memberships: membershipRows.length,
+		campaigns: sentCampaigns.length + 3 // 2 sent + 1 scheduled + 2 drafts
+	};
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -996,6 +1220,7 @@ async function main() {
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedProductConfig();
 	await seedCreditTransactions(allUsers);
+	const marketing = await seedMarketing(allUsers);
 
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
@@ -1011,6 +1236,7 @@ async function main() {
 	console.log(`  ${preferences.length} notification preferences`);
 	console.log('  3 product configs');
 	console.log('  credit transactions for 12 users');
+	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.memberships} memberships, ${marketing.campaigns} campaigns`);
 
 	await client.end();
 }

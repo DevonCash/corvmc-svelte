@@ -27,6 +27,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Payments view | OrderResource, TicketOrders | ✅ /staff/payments | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
 | Recurring reservations | RecurringReservations resource | ✅ /staff/recurring | List active/cancelled series, cancel action. Member UI in reservations page |
 | Bands | BandResource (via tenancy) | ✅ /staff/bands | List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation |
+| Email marketing | — (new) | ✅ Full flow | Audiences, campaigns (draft/schedule/send), markdown editor with live preview, broadcast via Postmark |
 | Equipment | Equipment resource | — | Not started |
 | Volunteering | VolunteerReportPage, PendingHourLogs | — | Not started |
 | Sponsors | Sponsors resource | — | Not started |
@@ -45,7 +46,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Dashboard | MemberDashboard | ✅ +page.svelte | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner |
 | Membership / subscription | MyMembership page | ✅ Full flow | Sliding scale, Stripe checkout, credit balance, benefits grid |
 | Reservations | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout |
-| Account settings | MyProfile, MyAccount pages | ✅ Full flow | Profile editing, password change (modal), account deletion with password confirmation |
+| Account settings | MyProfile, MyAccount pages | ✅ Full flow | Profile editing, password change (modal), account deletion with password confirmation, email list subscriptions |
 | My orders | MyOrders page | — | May become "payment history" pulling from Stripe |
 | My tickets | MyTickets page + Livewire | ✅ Full flow | Upcoming/past split, ticket codes, status badges |
 | Equipment loans | Equipment resource (nested) | — | Not started |
@@ -75,6 +76,8 @@ The band panel uses a per-band layout at `/band/[slug]/` with role-gated navigat
 | About | web.php route | — | Not started |
 | Contact form | ContactForm Livewire | — | Not started |
 | Ticket purchase | TicketPurchaseWidget | ✅ Full flow | Purchase page, Stripe checkout, sustaining member discount, success page with ticket codes |
+| Email subscribe | — (new) | ✅ /subscribe + /subscribe/[slug] | Public opt-in for audiences with allowOptIn flag |
+| Email unsubscribe | — (new) | ✅ /unsubscribe/[token] | HMAC-signed one-click unsubscribe |
 | Member directory | MembersGrid Livewire | ✅ /directory + /member/directory | Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. |
 
 ## Platform infrastructure
@@ -139,6 +142,7 @@ Individual `/api/cron/*` routes, each hit by the hosting platform's cron schedul
 | Daily reservation digest | Daily 20:00 | — | Could become a dashboard widget |
 | Rehearsal reminders | Daily 09:30 | — | Depends on notification system + band rehearsals |
 | Recurring reservation generation | Daily 00:00 | ✅ /api/cron/generate-recurring-reservations | Expands active recurring series into scheduled reservations within 2.5-week window |
+| Send scheduled campaigns | Every few min | ✅ /api/cron/send-campaigns | Finds due campaigns (scheduledFor ≤ now, sentAt IS NULL) and executes send |
 | Volunteer shift reminders | Daily 09:00 | — | Deferred until volunteering module is built |
 
 **Removed from Laravel's list:**
@@ -192,7 +196,7 @@ Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling c
 
 ## Database schema
 
-The Svelte app has 21 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_record), bands (band, band_member), tickets (ticket), and notifications (notification, notification_preference).
+The Svelte app has 26 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_record), bands (band, band_member), tickets (ticket), notifications (notification, notification_preference), and marketing (subscriber, audience, audience_member, campaign, campaign_audience).
 
 Tables that would need to be added for missing features: equipment, equipment_loan, volunteer_hour_log, sponsor, venue, site_page, kiosk_device.
 
@@ -230,8 +234,9 @@ Features are grouped by dependency. The notification system is foundational — 
 2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
 4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_record` cache table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
 5. ~~**Recurring reservations**~~ — ✅ Complete. `recurring_series` table with prototype pattern, `rrule` npm package for RFC 5545 scheduling. Generation cron expands series into concrete reservations within 2.5-week window. Sustaining member exclusive. Subscription lapse auto-cancels active series. Staff list page + member booking integration with recurring tab.
-6. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
-7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
+6. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
+7. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
+8. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
 8. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.
 9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
 10. **Everything else** — Sponsors, CMS, venues, kiosk, activity log, reports, bylaws.

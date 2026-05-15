@@ -32,6 +32,57 @@ export interface SendEmailParams {
 	metadata?: Record<string, string>;
 }
 
+// ---------------------------------------------------------------------------
+// Broadcast batch sending (for marketing campaigns)
+// ---------------------------------------------------------------------------
+
+export interface BroadcastMessage {
+	to: string;
+	subject: string;
+	htmlBody: string;
+	tag?: string;
+	metadata?: Record<string, string>;
+}
+
+const BATCH_SIZE = 500;
+
+/**
+ * Send a batch of emails via Postmark's broadcast message stream.
+ * Automatically chunks into batches of 500 (Postmark's limit).
+ */
+export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<void> {
+	if (messages.length === 0) return;
+
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const from = `${fromName} <${fromAddress}>`;
+
+	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+		const chunk = messages.slice(i, i + BATCH_SIZE);
+
+		try {
+			await getClient().sendEmailBatch(
+				chunk.map((msg) => ({
+					From: from,
+					To: msg.to,
+					Subject: msg.subject,
+					HtmlBody: msg.htmlBody,
+					Tag: msg.tag,
+					Metadata: msg.metadata,
+					MessageStream: 'broadcast'
+				}))
+			);
+		} catch (err) {
+			console.error('[email] Broadcast batch failed:', {
+				batchStart: i,
+				batchSize: chunk.length,
+				error: err
+			});
+			throw err;
+		}
+	}
+}
+
 export async function sendEmail(params: SendEmailParams): Promise<void> {
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';

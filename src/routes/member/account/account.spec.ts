@@ -65,6 +65,18 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 const mockHeaders = new Headers({ cookie: 'session=abc' });
 
+vi.mock('$lib/server/marketing/audience-service', () => ({
+	getSubscriptionsForUser: vi.fn().mockResolvedValue([]),
+	getOptInAudiencesForUser: vi.fn().mockResolvedValue([]),
+	addSubscriber: vi.fn().mockResolvedValue(undefined),
+	unsubscribe: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('$lib/server/marketing/subscriber-service', () => ({
+	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' }),
+	findByUserId: vi.fn().mockResolvedValue({ id: 'sub-1' })
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: mockLocals,
@@ -78,6 +90,11 @@ vi.mock('$app/server', () => ({
 	query: (_schema: unknown, handler: Function) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'query' };
+		return fn;
+	},
+	command: (_schema: unknown, handler: Function) => {
+		const fn = handler;
+		(fn as any).__ = { type: 'command' };
 		return fn;
 	}
 }));
