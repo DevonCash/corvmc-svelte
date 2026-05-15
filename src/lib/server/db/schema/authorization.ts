@@ -1,51 +1,40 @@
-import {
-	pgTable,
-	text,
-	bigserial,
-	timestamp,
-	primaryKey,
-	index,
-	unique,
-	bigint
-} from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
 // Roles & permissions (translated from spatie/laravel-permission)
 // ---------------------------------------------------------------------------
-// Simplified from Laravel's polymorphic morph pattern: since only users have
-// roles/permissions here, pivot tables use a direct text FK to the user table
-// instead of model_type + model_id.
-// ---------------------------------------------------------------------------
 
-export const permission = pgTable(
+export const permission = sqliteTable(
 	'permissions',
 	{
-		id: bigserial('id', { mode: 'number' }).primaryKey(),
+		id: integer('id').primaryKey({ autoIncrement: true }),
 		name: text('name').notNull(),
 		guardName: text('guard_name').notNull().default('web'),
-		createdAt: timestamp('created_at').defaultNow(),
-		updatedAt: timestamp('updated_at').defaultNow()
+		createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
 	},
 	(t) => [unique('permissions_name_guard_unique').on(t.name, t.guardName)]
 );
 
-export const role = pgTable(
+export const role = sqliteTable(
 	'roles',
 	{
-		id: bigserial('id', { mode: 'number' }).primaryKey(),
+		id: integer('id').primaryKey({ autoIncrement: true }),
 		name: text('name').notNull(),
 		guardName: text('guard_name').notNull().default('web'),
-		createdAt: timestamp('created_at').defaultNow(),
-		updatedAt: timestamp('updated_at').defaultNow()
+		createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
 	},
 	(t) => [unique('roles_name_guard_unique').on(t.name, t.guardName)]
 );
 
-export const modelHasPermission = pgTable(
+export const modelHasPermission = sqliteTable(
 	'model_has_permissions',
 	{
-		permissionId: bigint('permission_id', { mode: 'number' })
+		permissionId: integer('permission_id')
 			.notNull()
 			.references(() => permission.id, { onDelete: 'cascade' }),
 		userId: text('user_id')
@@ -58,10 +47,10 @@ export const modelHasPermission = pgTable(
 	]
 );
 
-export const modelHasRole = pgTable(
+export const modelHasRole = sqliteTable(
 	'model_has_roles',
 	{
-		roleId: bigint('role_id', { mode: 'number' })
+		roleId: integer('role_id')
 			.notNull()
 			.references(() => role.id, { onDelete: 'cascade' }),
 		userId: text('user_id')
@@ -74,13 +63,13 @@ export const modelHasRole = pgTable(
 	]
 );
 
-export const roleHasPermission = pgTable(
+export const roleHasPermission = sqliteTable(
 	'role_has_permissions',
 	{
-		permissionId: bigint('permission_id', { mode: 'number' })
+		permissionId: integer('permission_id')
 			.notNull()
 			.references(() => permission.id, { onDelete: 'cascade' }),
-		roleId: bigint('role_id', { mode: 'number' })
+		roleId: integer('role_id')
 			.notNull()
 			.references(() => role.id, { onDelete: 'cascade' })
 	},

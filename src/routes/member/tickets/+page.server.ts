@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Load event info for all tickets
 	const eventIds = [...new Set(tickets.map((t) => t.eventId))];
-	let eventMap: Record<string, { title: string; startsAt: string; endsAt: string }> = {};
+	let eventMap: Record<string, { title: string; startsAt: Date; endsAt: Date }> = {};
 
 	if (eventIds.length > 0) {
 		const events = await db
@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		eventMap = Object.fromEntries(
 			events.map((e) => [
 				e.id,
-				{ title: e.title, startsAt: e.startsAt.toISOString(), endsAt: e.endsAt.toISOString() }
+				{ title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }
 			])
 		);
 	}
@@ -40,8 +40,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			code: t.code,
 			status: t.status,
 			attendeeName: t.attendeeName,
-			checkedInAt: t.checkedInAt?.toISOString() ?? null,
-			createdAt: t.createdAt.toISOString(),
+			checkedInAt: t.checkedInAt ?? null,
+			createdAt: t.createdAt,
 			event: eventMap[t.eventId] ?? null
 		}))
 	};

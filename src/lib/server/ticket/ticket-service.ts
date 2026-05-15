@@ -176,7 +176,7 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 
 export async function getTicketsSold(eventId: string): Promise<number> {
 	const [result] = await db
-		.select({ count: sql<number>`count(*)::int` })
+		.select({ count: sql<number>`cast(count(*) as integer)` })
 		.from(ticket)
 		.where(
 			and(

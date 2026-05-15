@@ -1,19 +1,19 @@
-import { pgTable, text, timestamp, uuid, index } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 
-export const recurringSeries = pgTable(
+export const recurringSeries = sqliteTable(
 	'recurring_series',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		supersededBy: uuid('superseded_by'),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		supersededBy: text('superseded_by'),
 		prototypeType: text('prototype_type').notNull(),
-		prototypeId: uuid('prototype_id').notNull(),
+		prototypeId: text('prototype_id').notNull(),
 		rrule: text('rrule').notNull(),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		cancelledAt: timestamp('cancelled_at', { withTimezone: true })
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		cancelledAt: timestamp('cancelled_at')
 	},
 	(t) => [
-		// Self-referential FK added via migration SQL (Drizzle can't reference same table inline)
 		index('idx_recurring_series_active').on(t.prototypeType).where(
 			sql`cancelled_at IS NULL AND superseded_by IS NULL`
 		),

@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { user, userInstrument, userGenre } from '$lib/server/db/schema/auth';
+import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
 import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/types/profile';
 
@@ -55,22 +55,42 @@ export type MemberProfileData = {
 };
 
 export async function updateMemberProfile(userId: string, data: MemberProfileData) {
-	await db
-		.update(user)
-		.set({
-			bio: data.bio?.slice(0, MAX_BIO) ?? null,
-			tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
-			instruments: data.instruments ? validateTags(data.instruments) : null,
-			genres: data.genres ? validateTags(data.genres) : null,
-			lookingForBand: data.lookingForBand ?? false,
-			directoryVisibility: data.directoryVisibility ?? 'members',
-			directoryContact: data.directoryContact
-				? validateContact(data.directoryContact)
-				: null,
-			links: data.links ? validateLinks(data.links) : null,
-			updatedAt: new Date()
-		})
-		.where(eq(user.id, userId));
+	await db.transaction(async (tx) => {
+		await tx
+			.update(user)
+			.set({
+				bio: data.bio?.slice(0, MAX_BIO) ?? null,
+				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
+				lookingForBand: data.lookingForBand ?? false,
+				directoryVisibility: data.directoryVisibility ?? 'members',
+				directoryContact: data.directoryContact
+					? validateContact(data.directoryContact)
+					: null,
+				links: data.links ? validateLinks(data.links) : null,
+				updatedAt: new Date()
+			})
+			.where(eq(user.id, userId));
+
+		if (data.instruments !== undefined) {
+			await tx.delete(userInstrument).where(eq(userInstrument.userId, userId));
+			const tags = validateTags(data.instruments);
+			if (tags.length > 0) {
+				await tx.insert(userInstrument).values(
+					tags.map((instrument) => ({ userId, instrument }))
+				);
+			}
+		}
+
+		if (data.genres !== undefined) {
+			await tx.delete(userGenre).where(eq(userGenre.userId, userId));
+			const tags = validateTags(data.genres);
+			if (tags.length > 0) {
+				await tx.insert(userGenre).values(
+					tags.map((genre) => ({ userId, genre }))
+				);
+			}
+		}
+	});
 }
 
 /** Load current profile data for the edit form */
@@ -79,8 +99,6 @@ export async function getMemberProfileForEdit(userId: string) {
 		.select({
 			bio: user.bio,
 			tagline: user.tagline,
-			instruments: user.instruments,
-			genres: user.genres,
 			lookingForBand: user.lookingForBand,
 			directoryVisibility: user.directoryVisibility,
 			directoryContact: user.directoryContact,
@@ -89,7 +107,23 @@ export async function getMemberProfileForEdit(userId: string) {
 		.from(user)
 		.where(eq(user.id, userId));
 
-	return row ?? null;
+	if (!row) return null;
+
+	const instruments = await db
+		.select({ instrument: userInstrument.instrument })
+		.from(userInstrument)
+		.where(eq(userInstrument.userId, userId));
+
+	const genres = await db
+		.select({ genre: userGenre.genre })
+		.from(userGenre)
+		.where(eq(userGenre.userId, userId));
+
+	return {
+		...row,
+		instruments: instruments.map((r) => r.instrument),
+		genres: genres.map((r) => r.genre)
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +139,6 @@ export type BandProfileData = {
 	links?: ProfileLink[];
 };
 
-/** Check the caller is an owner or admin of the band */
 async function requireBandAdmin(bandId: string, userId: string) {
 	const [membership] = await db
 		.select({ role: bandMember.role })
@@ -130,20 +163,31 @@ export async function updateBandProfile(
 ) {
 	await requireBandAdmin(bandId, userId);
 
-	await db
-		.update(band)
-		.set({
-			tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
-			genres: data.genres ? validateTags(data.genres) : null,
-			lookingForMembers: data.lookingForMembers ?? false,
-			directoryVisibility: data.directoryVisibility ?? 'public',
-			directoryContact: data.directoryContact
-				? validateContact(data.directoryContact)
-				: null,
-			links: data.links ? validateLinks(data.links) : null,
-			updatedAt: new Date()
-		})
-		.where(eq(band.id, bandId));
+	await db.transaction(async (tx) => {
+		await tx
+			.update(band)
+			.set({
+				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
+				lookingForMembers: data.lookingForMembers ?? false,
+				directoryVisibility: data.directoryVisibility ?? 'public',
+				directoryContact: data.directoryContact
+					? validateContact(data.directoryContact)
+					: null,
+				links: data.links ? validateLinks(data.links) : null,
+				updatedAt: new Date()
+			})
+			.where(eq(band.id, bandId));
+
+		if (data.genres !== undefined) {
+			await tx.delete(bandGenre).where(eq(bandGenre.bandId, bandId));
+			const tags = validateTags(data.genres);
+			if (tags.length > 0) {
+				await tx.insert(bandGenre).values(
+					tags.map((genre) => ({ bandId, genre }))
+				);
+			}
+		}
+	});
 }
 
 /** Load current band profile data for the edit form */
@@ -151,7 +195,6 @@ export async function getBandProfileForEdit(bandId: string) {
 	const [row] = await db
 		.select({
 			tagline: band.tagline,
-			genres: band.genres,
 			lookingForMembers: band.lookingForMembers,
 			directoryVisibility: band.directoryVisibility,
 			directoryContact: band.directoryContact,
@@ -160,5 +203,15 @@ export async function getBandProfileForEdit(bandId: string) {
 		.from(band)
 		.where(eq(band.id, bandId));
 
-	return row ?? null;
+	if (!row) return null;
+
+	const genres = await db
+		.select({ genre: bandGenre.genre })
+		.from(bandGenre)
+		.where(eq(bandGenre.bandId, bandId));
+
+	return {
+		...row,
+		genres: genres.map((r) => r.genre)
+	};
 }

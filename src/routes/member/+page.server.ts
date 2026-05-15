@@ -38,7 +38,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Pending invitation count
 	const [{ count: pendingInviteCount }] = await db
-		.select({ count: sql<number>`count(*)::int` })
+		.select({ count: sql<number>`cast(count(*) as integer)` })
 		.from(bandMember)
 		.where(
 			and(
@@ -104,16 +104,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			bookerId: r.bookerId,
 			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
 			status: r.status,
-			startsAt: r.startsAt.toISOString(),
-			endsAt: r.endsAt.toISOString(),
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
 			notes: r.notes
 		})),
 		upcomingEvents: upcomingEvents.map((e) => ({
 			id: e.id,
 			title: e.title,
-			startsAt: e.startsAt.toISOString(),
-			endsAt: e.endsAt.toISOString(),
-			doorsAt: e.doorsAt?.toISOString() ?? null,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ?? null,
 			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
 		})),
 		credits,

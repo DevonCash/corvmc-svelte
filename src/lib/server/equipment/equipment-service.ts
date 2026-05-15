@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { equipment, equipmentCategory, equipmentLoan } from '$lib/server/db/schema/equipment';
-import { eq, and, sql, ilike, isNull, or, inArray } from 'drizzle-orm';
+import { eq, and, sql, like, isNull, or, inArray } from 'drizzle-orm';
 import type { PricingTier, EquipmentCondition, EquipmentStatus } from './types';
 
 // ---------------------------------------------------------------------------
@@ -245,9 +245,9 @@ export async function listEquipment(opts: ListEquipmentOptions = {}) {
 	if (opts.search) {
 		conditions.push(
 			or(
-				ilike(equipment.name, `%${opts.search}%`),
-				ilike(equipment.serialNumber, `%${opts.search}%`),
-				ilike(equipment.resourceId, `%${opts.search}%`)
+				like(equipment.name, `%${opts.search}%`),
+				like(equipment.serialNumber, `%${opts.search}%`),
+				like(equipment.resourceId, `%${opts.search}%`)
 			)
 		);
 	}

@@ -71,7 +71,7 @@ export async function listAudiences() {
 			description: audience.description,
 			allowOptIn: audience.allowOptIn,
 			createdAt: audience.createdAt,
-			subscriberCount: sql<number>`count(case when ${audienceMember.unsubscribedAt} is null then 1 end)::int`
+			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
 		})
 		.from(audience)
 		.leftJoin(audienceMember, eq(audienceMember.audienceId, audience.id))
@@ -88,7 +88,7 @@ export async function getAudience(id: string) {
 			description: audience.description,
 			allowOptIn: audience.allowOptIn,
 			createdAt: audience.createdAt,
-			subscriberCount: sql<number>`count(case when ${audienceMember.unsubscribedAt} is null then 1 end)::int`
+			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
 		})
 		.from(audience)
 		.leftJoin(audienceMember, eq(audienceMember.audienceId, audience.id))

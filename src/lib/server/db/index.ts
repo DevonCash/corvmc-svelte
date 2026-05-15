@@ -1,10 +1,17 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/d1';
 import * as schema from './schema';
-import { env } from '$env/dynamic/private';
 
-if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
 
-const client = postgres(env.DATABASE_URL);
+let _db: Database;
 
-export const db = drizzle(client, { schema });
+export function initDb(d1: D1Database) {
+	_db = drizzle(d1, { schema });
+}
+
+export const db = new Proxy({} as Database, {
+	get(_target, prop, receiver) {
+		if (!_db) throw new Error('Database not initialized — call initDb(d1) in hooks.server.ts first');
+		return Reflect.get(_db, prop, receiver);
+	}
+});

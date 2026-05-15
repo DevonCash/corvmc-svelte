@@ -4,7 +4,7 @@ import { query, command } from '$app/server';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, ilike, or } from 'drizzle-orm';
+import { eq, like, or } from 'drizzle-orm';
 import { requireStaff } from '$lib/server/authorization';
 import { getAvailableSlots, getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
@@ -25,7 +25,7 @@ export const searchMembers = query(z.string(), async (q) => {
 	const results = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
-		.where(or(ilike(user.name, pattern), ilike(user.email, pattern)))
+		.where(or(like(user.name, pattern), like(user.email, pattern)))
 		.limit(20);
 
 	return results;

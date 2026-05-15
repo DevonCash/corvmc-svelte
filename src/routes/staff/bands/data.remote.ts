@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { query, command } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
-import { or, ilike, isNull } from 'drizzle-orm';
+import { or, like, isNull } from 'drizzle-orm';
 import { requireStaff } from '$lib/server/authorization';
 import { create } from '$lib/server/band/band-service';
 
@@ -15,7 +15,7 @@ export const searchUsers = query(z.string(), async (q) => {
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(
-			or(ilike(user.name, pattern), ilike(user.email, pattern))
+			or(like(user.name, pattern), like(user.email, pattern))
 		)
 		.limit(20);
 });

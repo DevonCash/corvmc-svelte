@@ -36,7 +36,7 @@ export async function createNotification(params: CreateNotificationParams) {
 
 export async function getUnreadCount(userId: string): Promise<number> {
 	const [result] = await db
-		.select({ count: sql<number>`count(*)::int` })
+		.select({ count: sql<number>`cast(count(*) as integer)` })
 		.from(notification)
 		.where(and(eq(notification.userId, userId), isNull(notification.readAt)));
 

@@ -12,7 +12,12 @@ declare global {
 		// interface Error {}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+
+		interface Platform {
+			env?: {
+				DB: D1Database;
+			};
+		}
 	}
 }
 

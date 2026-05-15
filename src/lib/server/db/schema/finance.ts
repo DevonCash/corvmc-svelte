@@ -1,4 +1,6 @@
-import { pgTable, serial, text, uuid, integer, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 import { reservation } from './reservation';
 
@@ -6,24 +8,24 @@ import { reservation } from './reservation';
 // Payment record cache — mirrors Stripe Payment Records created by our app
 // ---------------------------------------------------------------------------
 
-export const paymentRecord = pgTable(
+export const paymentRecord = sqliteTable(
 	'payment_record',
 	{
-		id: text('id').primaryKey(), // Stripe payment record ID (pr_...)
+		id: text('id').primaryKey(),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		reservationId: uuid('reservation_id').references(() => reservation.id, {
+		reservationId: text('reservation_id').references(() => reservation.id, {
 			onDelete: 'set null'
 		}),
 		stripeCustomerId: text('stripe_customer_id'),
 		amountCents: integer('amount_cents').notNull(),
 		currency: text('currency').notNull().default('usd'),
-		paymentMethod: text('payment_method').notNull(), // 'Cash' | 'Credits'
-		status: text('status').notNull().default('completed'), // 'completed' | 'refunded'
-		paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
-		refundedAt: timestamp('refunded_at', { withTimezone: true }),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		paymentMethod: text('payment_method').notNull(),
+		status: text('status').notNull().default('completed'),
+		paidAt: timestamp('paid_at').notNull(),
+		refundedAt: timestamp('refunded_at'),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_payment_record_user').on(t.userId),
@@ -36,10 +38,10 @@ export const paymentRecord = pgTable(
 // Credit transactions
 // ---------------------------------------------------------------------------
 
-export const creditTransaction = pgTable(
+export const creditTransaction = sqliteTable(
 	'credit_transaction',
 	{
-		id: serial('id').primaryKey(),
+		id: integer('id').primaryKey({ autoIncrement: true }),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -49,8 +51,8 @@ export const creditTransaction = pgTable(
 		source: text('source').notNull(),
 		sourceId: text('source_id'),
 		description: text('description').notNull(),
-		metadata: jsonb('metadata').notNull().default({}),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		metadata: text('metadata', { mode: 'json' }).notNull().default({}),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('credit_transaction_user_idx').on(t.userId),

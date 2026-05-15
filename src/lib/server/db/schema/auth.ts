@@ -1,55 +1,74 @@
-import { pgTable, text, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 
 // ---------------------------------------------------------------------------
 // better-auth core tables
 // ---------------------------------------------------------------------------
-// These match better-auth's expected schema (snake_case, text PKs).
-// The `user` table is extended with corvmc-specific fields below the
-// standard better-auth columns.
-// ---------------------------------------------------------------------------
 
-export const user = pgTable('user', {
+export const user = sqliteTable('user', {
 	// better-auth standard fields
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	email: text('email').notNull().unique(),
-	emailVerified: boolean('email_verified').notNull().default(false),
+	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 	image: text('image'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`),
 
 	// corvmc extensions
 	pronouns: text('pronouns'),
 	phone: text('phone'),
-	settings: jsonb('settings'),
+	settings: text('settings', { mode: 'json' }),
 	stripeId: text('stripe_id'),
 	pmType: text('pm_type'),
 	pmLastFour: text('pm_last_four'),
-	credits: jsonb('credits').notNull().default({}),
+	creditFreeHours: integer('credit_free_hours').notNull().default(0),
+	creditEquipment: integer('credit_equipment').notNull().default(0),
 	trialEndsAt: timestamp('trial_ends_at'),
 	deletedAt: timestamp('deleted_at'),
 
 	// directory profile
 	bio: text('bio'),
 	tagline: text('tagline'),
-	instruments: text('instruments').array(),
-	genres: text('genres').array(),
-	lookingForBand: boolean('looking_for_band').notNull().default(false),
+	lookingForBand: integer('looking_for_band', { mode: 'boolean' }).notNull().default(false),
 	directoryVisibility: text('directory_visibility').notNull().default('members'),
-	directoryContact: jsonb('directory_contact'),
-	links: jsonb('links')
-},
-(t) => [
-	index('idx_user_instruments').using('gin', t.instruments),
-	index('idx_user_genres').using('gin', t.genres)
-]);
+	directoryContact: text('directory_contact', { mode: 'json' }),
+	links: text('links', { mode: 'json' })
+});
 
-export const session = pgTable('session', {
+export const userInstrument = sqliteTable(
+	'user_instrument',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		instrument: text('instrument').notNull()
+	},
+	(t) => [
+		index('idx_user_instrument_user').on(t.userId)
+	]
+);
+
+export const userGenre = sqliteTable(
+	'user_genre',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		genre: text('genre').notNull()
+	},
+	(t) => [
+		index('idx_user_genre_user').on(t.userId)
+	]
+);
+
+export const session = sqliteTable('session', {
 	id: text('id').primaryKey(),
 	expiresAt: timestamp('expires_at').notNull(),
 	token: text('token').notNull().unique(),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`),
 	ipAddress: text('ip_address'),
 	userAgent: text('user_agent'),
 	userId: text('user_id')
@@ -57,7 +76,7 @@ export const session = pgTable('session', {
 		.references(() => user.id, { onDelete: 'cascade' })
 });
 
-export const account = pgTable('account', {
+export const account = sqliteTable('account', {
 	id: text('id').primaryKey(),
 	accountId: text('account_id').notNull(),
 	providerId: text('provider_id').notNull(),
@@ -71,15 +90,15 @@ export const account = pgTable('account', {
 	refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
 	scope: text('scope'),
 	password: text('password'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow()
+	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 });
 
-export const verification = pgTable('verification', {
+export const verification = sqliteTable('verification', {
 	id: text('id').primaryKey(),
 	identifier: text('identifier').notNull(),
 	value: text('value').notNull(),
 	expiresAt: timestamp('expires_at').notNull(),
-	createdAt: timestamp('created_at').defaultNow(),
-	updatedAt: timestamp('updated_at').defaultNow()
+	createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
+	updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
 });

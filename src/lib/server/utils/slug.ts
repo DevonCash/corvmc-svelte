@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
-import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
+import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /**
  * Generate a URL-friendly slug from a string.
@@ -20,8 +20,8 @@ export function generateSlug(name: string): string {
  */
 export async function ensureUniqueSlug(
 	baseSlug: string,
-	table: PgTable,
-	column: PgColumn
+	table: SQLiteTable,
+	column: SQLiteColumn
 ): Promise<string> {
 	let slug = baseSlug;
 	let suffix = 2;

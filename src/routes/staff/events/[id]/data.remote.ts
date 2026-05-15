@@ -57,8 +57,8 @@ export const checkRebook = query(
 			currentReservation: result.currentReservation
 				? {
 						id: result.currentReservation.id,
-						startsAt: result.currentReservation.startsAt.toISOString(),
-						endsAt: result.currentReservation.endsAt.toISOString()
+						startsAt: result.currentReservation.startsAt,
+						endsAt: result.currentReservation.endsAt
 					}
 				: null
 		};

@@ -270,7 +270,7 @@ export async function getRecipientsForCampaign(campaignId: string) {
 
 	// Get all active subscribers across those audiences, deduplicated by email
 	const rows = await db
-		.selectDistinctOn([subscriber.email], {
+		.selectDistinct({
 			subscriberId: subscriber.id,
 			email: subscriber.email,
 			name: subscriber.name,

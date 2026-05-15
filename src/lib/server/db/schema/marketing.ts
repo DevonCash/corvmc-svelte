@@ -1,32 +1,20 @@
-import {
-	pgTable,
-	text,
-	timestamp,
-	uuid,
-	index,
-	unique,
-	boolean,
-	integer,
-	primaryKey
-} from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
 // Subscribers
 // ---------------------------------------------------------------------------
-// An email address that can appear on any number of audiences. Optionally
-// linked to a user account via userId.
-// ---------------------------------------------------------------------------
 
-export const subscriber = pgTable(
+export const subscriber = sqliteTable(
 	'subscriber',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		email: text('email').notNull().unique(),
 		name: text('name'),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [index('idx_subscriber_user').on(t.userId)]
 );
@@ -34,39 +22,32 @@ export const subscriber = pgTable(
 // ---------------------------------------------------------------------------
 // Audiences
 // ---------------------------------------------------------------------------
-// A named, staff-managed list of subscribers. Has a slug for public signup
-// URLs. allowOptIn controls whether the audience appears on the public
-// subscribe page and member account opt-in UI.
-// ---------------------------------------------------------------------------
 
-export const audience = pgTable('audience', {
-	id: uuid('id').primaryKey().defaultRandom(),
+export const audience = sqliteTable('audience', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
-	allowOptIn: boolean('allow_opt_in').notNull().default(false),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	allowOptIn: integer('allow_opt_in', { mode: 'boolean' }).notNull().default(false),
+	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 });
 
 // ---------------------------------------------------------------------------
 // Audience members
 // ---------------------------------------------------------------------------
-// Join between subscriber and audience with unsubscribe tracking.
-// Active if unsubscribedAt is null.
-// ---------------------------------------------------------------------------
 
-export const audienceMember = pgTable(
+export const audienceMember = sqliteTable(
 	'audience_member',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		subscriberId: uuid('subscriber_id')
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		subscriberId: text('subscriber_id')
 			.notNull()
 			.references(() => subscriber.id, { onDelete: 'cascade' }),
-		audienceId: uuid('audience_id')
+		audienceId: text('audience_id')
 			.notNull()
 			.references(() => audience.id, { onDelete: 'cascade' }),
-		unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true }),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		unsubscribedAt: timestamp('unsubscribed_at'),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		unique('uq_audience_member').on(t.subscriberId, t.audienceId),
@@ -77,29 +58,22 @@ export const audienceMember = pgTable(
 // ---------------------------------------------------------------------------
 // Campaigns
 // ---------------------------------------------------------------------------
-// A markdown email composed by staff, targeting one or more audiences.
-// Status is derived from timestamps:
-//   Draft:     scheduledFor is null, sentAt is null
-//   Scheduled: scheduledFor is set and in the future
-//   Sending:   scheduledFor is past, sentAt is null
-//   Sent:      sentAt is set
-// ---------------------------------------------------------------------------
 
-export const campaign = pgTable(
+export const campaign = sqliteTable(
 	'campaign',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		subject: text('subject').notNull(),
 		markdownBody: text('markdown_body').notNull(),
 		htmlBody: text('html_body').notNull(),
-		scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
-		sentAt: timestamp('sent_at', { withTimezone: true }),
+		scheduledFor: timestamp('scheduled_for'),
+		sentAt: timestamp('sent_at'),
 		sentById: text('sent_by_id')
 			.notNull()
 			.references(() => user.id),
 		recipientCount: integer('recipient_count'),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_campaign_pending_send').on(t.scheduledFor).where(sql`sent_at IS NULL`),
@@ -111,13 +85,13 @@ export const campaign = pgTable(
 // Campaign ↔ Audience join
 // ---------------------------------------------------------------------------
 
-export const campaignAudience = pgTable(
+export const campaignAudience = sqliteTable(
 	'campaign_audience',
 	{
-		campaignId: uuid('campaign_id')
+		campaignId: text('campaign_id')
 			.notNull()
 			.references(() => campaign.id, { onDelete: 'cascade' }),
-		audienceId: uuid('audience_id')
+		audienceId: text('audience_id')
 			.notNull()
 			.references(() => audience.id, { onDelete: 'cascade' })
 	},

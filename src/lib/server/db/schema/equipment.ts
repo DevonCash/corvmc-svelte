@@ -1,36 +1,37 @@
-import { pgTable, text, timestamp, uuid, index, integer, check } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 
-export const equipmentCategory = pgTable('equipment_category', {
-	id: uuid('id').primaryKey().defaultRandom(),
+export const equipmentCategory = sqliteTable('equipment_category', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	displayOrder: integer('display_order').notNull().default(0),
-	pricingTier: text('pricing_tier').notNull(), // 'major' | 'accessory'
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	pricingTier: text('pricing_tier').notNull(),
+	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 });
 
-export const equipment = pgTable(
+export const equipment = sqliteTable(
 	'equipment',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull(),
 		description: text('description'),
-		categoryId: uuid('category_id')
+		categoryId: text('category_id')
 			.notNull()
 			.references(() => equipmentCategory.id, { onDelete: 'restrict' }),
 		totalQuantity: integer('total_quantity').notNull().default(1),
 		outOfOrderQuantity: integer('out_of_order_quantity').notNull().default(0),
 		serialNumber: text('serial_number'),
 		resourceId: text('resource_id'),
-		condition: text('condition').notNull(), // 'excellent' | 'good' | 'fair' | 'poor'
-		status: text('status').notNull().default('available'), // 'available' | 'maintenance' | 'retired'
+		condition: text('condition').notNull(),
+		status: text('status').notNull().default('available'),
 		notes: text('notes'),
 		imageUrl: text('image_url'),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-		deletedAt: timestamp('deleted_at', { withTimezone: true })
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`),
+		deletedAt: timestamp('deleted_at')
 	},
 	(t) => [
 		index('idx_equipment_category').on(t.categoryId),
@@ -46,29 +47,29 @@ export const equipment = pgTable(
 	]
 );
 
-export const equipmentLoan = pgTable(
+export const equipmentLoan = sqliteTable(
 	'equipment_loan',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		equipmentId: text('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		quantity: integer('quantity').notNull().default(1),
-		requestedPickupDate: timestamp('requested_pickup_date', { withTimezone: true }).notNull(),
-		scheduledPickupDate: timestamp('scheduled_pickup_date', { withTimezone: true }),
-		dueDate: timestamp('due_date', { withTimezone: true }),
-		checkedOutAt: timestamp('checked_out_at', { withTimezone: true }),
-		returnedAt: timestamp('returned_at', { withTimezone: true }),
-		status: text('status').notNull().default('requested'), // 'requested' | 'scheduled' | 'checked_out' | 'returned' | 'cancelled'
+		requestedPickupDate: timestamp('requested_pickup_date').notNull(),
+		scheduledPickupDate: timestamp('scheduled_pickup_date'),
+		dueDate: timestamp('due_date'),
+		checkedOutAt: timestamp('checked_out_at'),
+		returnedAt: timestamp('returned_at'),
+		status: text('status').notNull().default('requested'),
 		dailyRateCents: integer('daily_rate_cents'),
 		totalChargeCents: integer('total_charge_cents'),
 		creditsCents: integer('credits_cents'),
 		cashCents: integer('cash_cents'),
 		memberNotes: text('member_notes'),
 		staffNotes: text('staff_notes'),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_loan_equipment').on(t.equipmentId),

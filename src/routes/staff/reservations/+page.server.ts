@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, ne, gt, lt, inArray, ilike, or, desc, asc, count } from 'drizzle-orm';
+import { eq, and, ne, gt, lt, inArray, like, or, desc, asc, count } from 'drizzle-orm';
 import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -35,7 +35,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	// Search by member name or email in SQL
 	if (search) {
 		const pattern = `%${search}%`;
-		conditions.push(or(ilike(user.name, pattern), ilike(user.email, pattern)));
+		conditions.push(or(like(user.name, pattern), like(user.email, pattern)));
 	}
 
 	// Main query

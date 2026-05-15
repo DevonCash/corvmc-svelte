@@ -1,10 +1,8 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import {
-	parseCredits,
-	getBalance as getBalanceFromCredits,
 	isCreditType,
 	creditTypeConfig,
 	type CreditType,
@@ -12,14 +10,13 @@ import {
 } from './types';
 
 // ---------------------------------------------------------------------------
-// CreditService — reads and writes credit balances
+// Column mapping — maps credit type names to user table columns
 // ---------------------------------------------------------------------------
-// All write operations run in a transaction: update user.credits + insert
-// credit_transaction. The JSONB updates use Postgres jsonb_set with a balance
-// check in the WHERE clause to prevent concurrent over-spending.
-//
-// Credits column shape: { "free_hours": 4, "equipment_credits": 12 }
-// ---------------------------------------------------------------------------
+
+const creditColumn = {
+	free_hours: user.creditFreeHours,
+	equipment_credits: user.creditEquipment
+} as const satisfies Record<CreditType, unknown>;
 
 export class InsufficientCreditsError extends Error {
 	constructor(type: CreditType, requested: number, available: number) {
@@ -28,32 +25,34 @@ export class InsufficientCreditsError extends Error {
 	}
 }
 
-/** Validate creditType at runtime before using in raw SQL. */
 function assertCreditType(type: string): asserts type is CreditType {
 	if (!isCreditType(type)) {
 		throw new Error(`Invalid credit type: ${type}`);
 	}
 }
 
-/** Read the balance for a single credit type. Returns 0 if the user has no credits of that type. */
 export async function getBalance(userId: string, creditType: CreditType): Promise<number> {
 	const credits = await getAllBalances(userId);
-	return getBalanceFromCredits(credits, creditType);
+	return credits[creditType] ?? 0;
 }
 
-/** Read the full credits object for a user. */
 export async function getAllBalances(userId: string): Promise<Credits> {
 	const [row] = await db
-		.select({ credits: user.credits })
+		.select({
+			free_hours: user.creditFreeHours,
+			equipment_credits: user.creditEquipment
+		})
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
 
 	if (!row) return {};
-	return parseCredits(row.credits);
+	return {
+		free_hours: row.free_hours,
+		equipment_credits: row.equipment_credits
+	};
 }
 
-/** Add credits to a user's balance. Respects maxBalance cap from config. */
 export async function addCredits(
 	userId: string,
 	creditType: CreditType,
@@ -65,30 +64,29 @@ export async function addCredits(
 	if (amount <= 0) throw new Error('Amount must be positive');
 	assertCreditType(creditType);
 
+	const col = creditColumn[creditType];
+
 	return db.transaction(async (tx) => {
-		// SELECT ... FOR UPDATE to prevent lost writes from concurrent addCredits
-		const [row] = await tx.execute(sql`
-			SELECT credits FROM "user" WHERE id = ${userId} FOR UPDATE
-		`);
+		const [row] = await tx
+			.select({ balance: col })
+			.from(user)
+			.where(eq(user.id, userId));
 
 		if (!row) throw new Error(`User ${userId} not found`);
 
-		const credits = parseCredits((row as { credits: unknown }).credits);
-		const currentBalance = credits[creditType] ?? 0;
+		const currentBalance = row.balance;
 		const { maxBalance } = creditTypeConfig[creditType];
 		let newBalance = currentBalance + amount;
 
-		// Cap at maxBalance if configured
 		if (maxBalance !== null && newBalance > maxBalance) {
 			newBalance = maxBalance;
 		}
 
 		const actualAdded = newBalance - currentBalance;
-		const updated: Credits = { ...credits, [creditType]: newBalance };
 
 		await tx
 			.update(user)
-			.set({ credits: updated })
+			.set({ [creditColumn[creditType].name]: newBalance })
 			.where(eq(user.id, userId));
 
 		await tx.insert(creditTransaction).values({
@@ -105,11 +103,6 @@ export async function addCredits(
 	});
 }
 
-/**
- * Deduct credits from a user's balance. Throws InsufficientCreditsError if
- * the user doesn't have enough. Uses an atomic WHERE clause to prevent
- * concurrent checkouts from over-spending.
- */
 export async function deductCredits(
 	userId: string,
 	creditType: CreditType,
@@ -121,31 +114,24 @@ export async function deductCredits(
 	if (amount <= 0) throw new Error('Amount must be positive');
 	assertCreditType(creditType);
 
-	// Build the JSON key path as a validated literal — never from untrusted input
-	const keyPath = `{${creditType}}`;
+	const col = creditColumn[creditType];
 
 	return db.transaction(async (tx) => {
-		// Atomic update: only succeeds if balance >= amount
-		const result = await tx.execute(sql`
-			UPDATE "user"
-			SET credits = jsonb_set(
-				credits,
-				${sql.raw(`'${keyPath}'`)},
-				to_jsonb((credits->>${sql.raw(`'${creditType}'`)})::int - ${amount})
-			)
-			WHERE id = ${userId}
-			AND (credits->>${sql.raw(`'${creditType}'`)})::int >= ${amount}
-			RETURNING (credits->>${sql.raw(`'${creditType}'`)})::int AS new_balance
-		`);
+		const result = await tx
+			.update(user)
+			.set({
+				[col.name]: sql`${col} - ${amount}`
+			})
+			.where(and(eq(user.id, userId), gte(col, amount)))
+			.returning({ newBalance: col });
 
 		if (result.length === 0) {
-			// Either user not found or insufficient balance — check which
 			const credits = await getAllBalances(userId);
-			const current = getBalanceFromCredits(credits, creditType);
+			const current = credits[creditType] ?? 0;
 			throw new InsufficientCreditsError(creditType, amount, current);
 		}
 
-		const newBalance = result[0].new_balance as number;
+		const newBalance = result[0].newBalance;
 
 		await tx.insert(creditTransaction).values({
 			userId,
@@ -161,7 +147,6 @@ export async function deductCredits(
 	});
 }
 
-/** Set balance to an exact value. Used for monthly resets (free hours). */
 export async function setBalance(
 	userId: string,
 	creditType: CreditType,
@@ -173,22 +158,22 @@ export async function setBalance(
 	if (balance < 0) throw new Error('Balance cannot be negative');
 	assertCreditType(creditType);
 
+	const col = creditColumn[creditType];
+
 	return db.transaction(async (tx) => {
-		const [row] = await tx.execute(sql`
-			SELECT credits FROM "user" WHERE id = ${userId} FOR UPDATE
-		`);
+		const [row] = await tx
+			.select({ balance: col })
+			.from(user)
+			.where(eq(user.id, userId));
 
 		if (!row) throw new Error(`User ${userId} not found`);
 
-		const credits = parseCredits((row as { credits: unknown }).credits);
-		const currentBalance = credits[creditType] ?? 0;
+		const currentBalance = row.balance;
 		const delta = balance - currentBalance;
-
-		const updated: Credits = { ...credits, [creditType]: balance };
 
 		await tx
 			.update(user)
-			.set({ credits: updated })
+			.set({ [col.name]: balance })
 			.where(eq(user.id, userId));
 
 		await tx.insert(creditTransaction).values({
@@ -209,10 +194,6 @@ export async function setBalance(
 // Monthly allocation helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Check if a transaction with the given source+sourceId already exists.
- * Used for idempotency on webhook-driven allocations.
- */
 export async function hasTransaction(source: string, sourceId: string): Promise<boolean> {
 	const [row] = await db
 		.select({ id: creditTransaction.id })
@@ -226,13 +207,11 @@ export async function hasTransaction(source: string, sourceId: string): Promise<
 	return !!row;
 }
 
-/** Set free_hours balance to the subscription-derived amount (no rollover). Idempotent by invoiceId. */
 export async function allocateMonthlyCredits(
 	userId: string,
 	freeHours: number,
 	sourceId: string
 ): Promise<number> {
-	// Idempotency: skip if this invoice was already processed
 	if (await hasTransaction('monthly_allocation', sourceId)) {
 		const current = await getBalance(userId, 'free_hours');
 		return current;
@@ -241,7 +220,6 @@ export async function allocateMonthlyCredits(
 	return setBalance(userId, 'free_hours', freeHours, 'monthly_allocation', sourceId);
 }
 
-/** Add equipment credits up to the cap. */
 export async function allocateEquipmentCredits(
 	userId: string,
 	amount: number,

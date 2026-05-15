@@ -9,3 +9,4 @@ export * from './notification';
 export * from './recurring';
 export * from './marketing';
 export * from './equipment';
+export * from './band';

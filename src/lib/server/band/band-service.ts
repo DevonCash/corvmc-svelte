@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, ilike, notInArray, inArray, isNull, isNotNull, count, like } from 'drizzle-orm';
+import { eq, and, ne, gt, sql, or, like, notInArray, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
@@ -234,7 +234,7 @@ export async function searchMembers(query: string, bandId: string) {
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(
-			and(or(ilike(user.name, pattern), ilike(user.email, pattern)), sql`${user.deletedAt} is null`)
+			and(or(like(user.name, pattern), like(user.email, pattern)), sql`${user.deletedAt} is null`)
 		)
 		.limit(10);
 
@@ -244,7 +244,7 @@ export async function searchMembers(query: string, bandId: string) {
 			.from(user)
 			.where(
 				and(
-					or(ilike(user.name, pattern), ilike(user.email, pattern)),
+					or(like(user.name, pattern), like(user.email, pattern)),
 					sql`${user.deletedAt} is null`,
 					notInArray(user.id, existingIds)
 				)
@@ -474,7 +474,7 @@ export async function listAll(opts?: { search?: string; status?: 'active' | 'dea
 	const conditions = [];
 
 	if (opts?.search) {
-		conditions.push(ilike(band.name, `%${opts.search}%`));
+		conditions.push(like(band.name, `%${opts.search}%`));
 	}
 	if (opts?.status === 'active') {
 		conditions.push(isNull(band.deletedAt));

@@ -28,7 +28,7 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
 			ownerId: band.ownerId,
 			avatarKey: band.avatarKey,
 			memberCount: band.memberCount,
-			createdAt: band.createdAt.toISOString()
+			createdAt: band.createdAt
 		},
 		userRole: role ?? ('staff' as const),
 		isStaff,

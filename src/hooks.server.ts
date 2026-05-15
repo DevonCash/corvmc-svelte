@@ -3,6 +3,7 @@ import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/events/register-listeners';
+import { initDb } from '$lib/server/db';
 
 // Register domain event listeners once at startup
 if (!building) {
@@ -10,6 +11,10 @@ if (!building) {
 }
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
+	if (event.platform?.env?.DB) {
+		initDb(event.platform.env.DB);
+	}
+
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	if (session) {

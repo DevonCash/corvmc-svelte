@@ -1,29 +1,30 @@
-import { pgTable, text, timestamp, uuid, index, check } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
 
-export const reservation = pgTable(
+export const reservation = sqliteTable(
 	'reservation',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		bookerType: text('booker_type').notNull(),
 		bookerId: text('booker_id').notNull(),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		status: text('status').notNull().default('scheduled'),
-		startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
-		endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+		startsAt: timestamp('starts_at').notNull(),
+		endsAt: timestamp('ends_at').notNull(),
 		notes: text('notes'),
 		cancellationReason: text('cancellation_reason'),
 		stripePaymentRecordId: text('stripe_payment_record_id'),
 		lockAccessId: text('lock_access_id'),
-		recurringSeriesId: uuid('recurring_series_id').references(() => recurringSeries.id, {
+		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_reservation_conflict').on(t.startsAt, t.endsAt),
@@ -36,14 +37,14 @@ export const reservation = pgTable(
 	]
 );
 
-export const closure = pgTable(
+export const closure = sqliteTable(
 	'closure',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		reason: text('reason').notNull(),
-		startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
-		endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		startsAt: timestamp('starts_at').notNull(),
+		endsAt: timestamp('ends_at').notNull(),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_closure_time').on(t.startsAt, t.endsAt),

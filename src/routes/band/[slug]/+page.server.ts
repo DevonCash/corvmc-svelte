@@ -35,8 +35,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 		upcoming: upcoming.map((r) => ({
 			id: r.id,
 			status: r.status,
-			startsAt: r.startsAt.toISOString(),
-			endsAt: r.endsAt.toISOString(),
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
 			notes: r.notes,
 			bookedByName: r.bookedByName
 		}))

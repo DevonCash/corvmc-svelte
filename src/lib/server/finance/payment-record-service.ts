@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { paymentRecord } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, desc, and, gte, lte, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, like, or, sql, type SQL } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 
 const TZ = 'America/Los_Angeles';
@@ -64,8 +64,8 @@ function buildFilters(filters: PaymentRecordFilters): SQL[] {
 		const escaped = escapeLike(filters.search);
 		conditions.push(
 			or(
-				ilike(user.name, `%${escaped}%`),
-				ilike(user.email, `%${escaped}%`)
+				like(user.name, `%${escaped}%`),
+				like(user.email, `%${escaped}%`)
 			)!
 		);
 	}

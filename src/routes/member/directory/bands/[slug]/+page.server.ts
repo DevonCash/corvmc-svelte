@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
@@ -21,11 +21,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			tagline: band.tagline,
 			avatarKey: band.avatarKey,
 			createdAt: band.createdAt,
-			genres: band.genres,
 			lookingForMembers: band.lookingForMembers,
 			directoryContact: band.directoryContact,
 			links: band.links,
-			memberCount: sql<number>`count(case when ${bandMember.status} = 'active' then 1 end)::int`
+			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
 		})
 		.from(band)
 		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
@@ -37,6 +36,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.groupBy(band.id);
 
 	if (!row) throw error(404, 'Band not found');
+
+	const genres = await db
+		.select({ genre: bandGenre.genre })
+		.from(bandGenre)
+		.where(eq(bandGenre.bandId, row.id));
 
 	const members = await db
 		.select({
@@ -70,7 +74,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			avatarUrl: row.avatarKey && r2Available ? getPublicUrl(row.avatarKey) : null,
 			memberCount: row.memberCount,
 			createdAt: row.createdAt.toISOString(),
-			genres: row.genres,
+			genres: genres.map((r) => r.genre),
 			lookingForMembers: row.lookingForMembers,
 			directoryContact: row.directoryContact as DirectoryContact | null,
 			links: (row.links as ProfileLink[] | null) ?? []

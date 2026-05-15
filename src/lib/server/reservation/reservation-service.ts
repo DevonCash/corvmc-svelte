@@ -74,7 +74,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 					gt(reservation.endsAt, startsAt)
 				)
 			)
-			.for('update');
+			;
 
 		if (conflicts.length > 0) {
 			throw new ReservationConflictError();

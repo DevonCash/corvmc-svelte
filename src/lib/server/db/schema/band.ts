@@ -1,10 +1,12 @@
-import { pgTable, text, timestamp, uuid, index, unique, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 
-export const band = pgTable(
+export const band = sqliteTable(
 	'band',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull().unique(),
 		slug: text('slug').notNull().unique(),
 		bio: text('bio'),
@@ -12,39 +14,50 @@ export const band = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'set null' }),
 		avatarKey: text('avatar_key'),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-		deletedAt: timestamp('deleted_at', { withTimezone: true }),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`),
+		deletedAt: timestamp('deleted_at'),
 
 		// directory profile
 		tagline: text('tagline'),
-		genres: text('genres').array(),
-		lookingForMembers: boolean('looking_for_members').notNull().default(false),
+		lookingForMembers: integer('looking_for_members', { mode: 'boolean' }).notNull().default(false),
 		directoryVisibility: text('directory_visibility').notNull().default('public'),
-		directoryContact: jsonb('directory_contact'),
-		links: jsonb('links')
+		directoryContact: text('directory_contact', { mode: 'json' }),
+		links: text('links', { mode: 'json' })
 	},
 	(t) => [
-		index('idx_band_slug').on(t.slug),
-		index('idx_band_genres').using('gin', t.genres)
+		index('idx_band_slug').on(t.slug)
 	]
 );
 
-export const bandMember = pgTable(
+export const bandGenre = sqliteTable(
+	'band_genre',
+	{
+		bandId: text('band_id')
+			.notNull()
+			.references(() => band.id, { onDelete: 'cascade' }),
+		genre: text('genre').notNull()
+	},
+	(t) => [
+		index('idx_band_genre_band').on(t.bandId)
+	]
+);
+
+export const bandMember = sqliteTable(
 	'band_member',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		bandId: uuid('band_id')
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		bandId: text('band_id')
 			.notNull()
 			.references(() => band.id, { onDelete: 'cascade' }),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		role: text('role').notNull(), // 'owner' | 'admin' | 'member'
+		role: text('role').notNull(),
 		position: text('position'),
-		status: text('status').notNull(), // 'pending' | 'active'
+		status: text('status').notNull(),
 		invitedById: text('invited_by_id').references(() => user.id, { onDelete: 'set null' }),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		unique('band_member_band_user_unique').on(t.bandId, t.userId),

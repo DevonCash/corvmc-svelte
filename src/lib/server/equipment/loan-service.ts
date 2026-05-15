@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/schema/equipment';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, sql, ilike, inArray, or, desc } from 'drizzle-orm';
+import { eq, and, sql, like, inArray, or, desc } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
@@ -435,7 +435,7 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 	if (opts.equipmentId) conditions.push(eq(equipmentLoan.equipmentId, opts.equipmentId));
 	if (opts.search) {
 		conditions.push(
-			or(ilike(user.name, `%${opts.search}%`), ilike(user.email, `%${opts.search}%`))
+			or(like(user.name, `%${opts.search}%`), like(user.email, `%${opts.search}%`))
 		);
 	}
 

@@ -1,18 +1,16 @@
-import { pgTable, text, timestamp, uuid, jsonb, index, boolean, unique } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { timestamp } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
 // In-app notifications
 // ---------------------------------------------------------------------------
-// Persistent notifications shown in the bell dropdown. Each notification
-// targets a single user and has a type (used for preference lookups),
-// human-readable title/body, optional link, and optional structured data.
-// ---------------------------------------------------------------------------
 
-export const notification = pgTable(
+export const notification = sqliteTable(
 	'notification',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -20,9 +18,9 @@ export const notification = pgTable(
 		title: text('title').notNull(),
 		body: text('body'),
 		href: text('href'),
-		data: jsonb('data'),
-		readAt: timestamp('read_at', { withTimezone: true }),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		data: text('data', { mode: 'json' }),
+		readAt: timestamp('read_at'),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		index('idx_notification_user').on(t.userId),
@@ -33,22 +31,19 @@ export const notification = pgTable(
 // ---------------------------------------------------------------------------
 // Notification preferences
 // ---------------------------------------------------------------------------
-// Per-user, per-notification-type channel selection. If no row exists for
-// a (user, type) pair, the notification type's default channels are used.
-// ---------------------------------------------------------------------------
 
-export const notificationPreference = pgTable(
+export const notificationPreference = sqliteTable(
 	'notification_preference',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		notificationType: text('notification_type').notNull(),
-		emailEnabled: boolean('email_enabled').notNull().default(true),
-		inAppEnabled: boolean('in_app_enabled').notNull().default(true),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+		emailEnabled: integer('email_enabled', { mode: 'boolean' }).notNull().default(true),
+		inAppEnabled: integer('in_app_enabled', { mode: 'boolean' }).notNull().default(true),
+		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [
 		unique('uq_notification_pref_user_type').on(t.userId, t.notificationType),
