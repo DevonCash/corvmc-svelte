@@ -109,7 +109,7 @@ describe('bands page load', () => {
 
 describe('createBand', () => {
 	it('calls band-service create and returns slug', async () => {
-		const { createBand } = await import('./data.remote');
+		const { createBand } = await import('./data.remote') as any;
 
 		const result = await createBand({ name: 'New Band', bio: 'A great band' });
 
@@ -121,7 +121,7 @@ describe('createBand', () => {
 	});
 
 	it('omits bio when empty string', async () => {
-		const { createBand } = await import('./data.remote');
+		const { createBand } = await import('./data.remote') as any;
 
 		await createBand({ name: 'No Bio Band', bio: '' });
 
@@ -138,7 +138,7 @@ describe('createBand', () => {
 
 describe('acceptInvite', () => {
 	it('calls acceptInvitation with memberId and userId', async () => {
-		const { acceptInvite } = await import('./data.remote');
+		const { acceptInvite } = await import('./data.remote') as any;
 
 		const result = await acceptInvite({ memberId: 'member-42' });
 
@@ -153,7 +153,7 @@ describe('acceptInvite', () => {
 
 describe('declineInvite', () => {
 	it('calls declineInvitation with memberId and userId', async () => {
-		const { declineInvite } = await import('./data.remote');
+		const { declineInvite } = await import('./data.remote') as any;
 
 		const result = await declineInvite({ memberId: 'member-42' });
 

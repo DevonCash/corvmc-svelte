@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { band, bandMember } from '$lib/server/db/schema/band';
-import { isNull, eq, asc, sql, and, ilike } from 'drizzle-orm';
+import { isNull, eq, asc, sql, and, ilike, inArray } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -46,9 +46,9 @@ function memberWhereConditions(
 	const conditions: SQL[] = [isNull(user.deletedAt)];
 
 	if (visibility === 'public') {
-		conditions.push(eq(user.publicListing, true));
+		conditions.push(eq(user.directoryVisibility, 'public'));
 	} else {
-		conditions.push(eq(user.directoryOptOut, false));
+		conditions.push(inArray(user.directoryVisibility, ['members', 'public']));
 	}
 
 	if (filters?.search) {
@@ -83,7 +83,7 @@ export async function listMembers(filters?: MemberFilters) {
 		.orderBy(asc(user.name));
 }
 
-/** Public directory — only publicListing = true */
+/** Public directory — only directoryVisibility = 'public' */
 export async function listPublicMembers(filters?: MemberFilters) {
 	return db
 		.select(memberSelect)
@@ -100,9 +100,9 @@ export async function getMemberProfile(
 	const conditions: SQL[] = [eq(user.id, userId), isNull(user.deletedAt)];
 
 	if (visibility === 'public') {
-		conditions.push(eq(user.publicListing, true));
+		conditions.push(eq(user.directoryVisibility, 'public'));
 	} else {
-		conditions.push(eq(user.directoryOptOut, false));
+		conditions.push(inArray(user.directoryVisibility, ['members', 'public']));
 	}
 
 	const [row] = await db
@@ -138,9 +138,9 @@ function bandWhereConditions(
 	const conditions: SQL[] = [isNull(band.deletedAt)];
 
 	if (visibility === 'public') {
-		conditions.push(eq(band.publicListing, true));
+		conditions.push(eq(band.directoryVisibility, 'public'));
 	} else {
-		conditions.push(eq(band.directoryOptOut, false));
+		conditions.push(inArray(band.directoryVisibility, ['members', 'public']));
 	}
 
 	if (filters?.search) {
@@ -180,6 +180,29 @@ export async function listPublicBands(filters?: BandFilters) {
 		.where(and(...bandWhereConditions('public', filters)))
 		.groupBy(band.id)
 		.orderBy(asc(band.name));
+}
+
+/** Single band profile by slug */
+export async function getBandProfile(
+	slug: string,
+	visibility: 'members' | 'public'
+) {
+	const conditions: SQL[] = [eq(band.slug, slug), isNull(band.deletedAt)];
+
+	if (visibility === 'public') {
+		conditions.push(eq(band.directoryVisibility, 'public'));
+	} else {
+		conditions.push(inArray(band.directoryVisibility, ['members', 'public']));
+	}
+
+	const [row] = await db
+		.select(bandSelect)
+		.from(band)
+		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
+		.where(and(...conditions))
+		.groupBy(band.id);
+
+	return row ?? null;
 }
 
 // ---------------------------------------------------------------------------

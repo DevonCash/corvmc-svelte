@@ -1,6 +1,6 @@
 # Directory & Profiles
 
-A member and band directory with rich profiles — bio, tagline, instruments, genres, links with embeds, and "looking for band/members" flags. Two tiers: a members-only directory (all active members listed by default, opt-out) and a fully public directory (opt-in, no login required). Extends the existing `/directory` route with profile data, filtering, and individual member profiles. Adds profile editing for both members and bands.
+A member and band directory with rich profiles — bio, tagline, instruments, genres, links with embeds, and "looking for band/members" flags. Three visibility tiers: hidden (not listed), members-only (default for users), and public (default for bands, no login required). Extends the existing `/directory` route with profile data, filtering, and individual member profiles. Adds profile editing for both members and bands.
 
 ---
 
@@ -14,7 +14,7 @@ A music co-op's directory should function like a musician-specific Linktree: eac
 
 ## Key concepts
 
-**Two-tier visibility.** Every active member appears in the members-only directory by default and can opt out via `directoryOptOut`. Separately, members can opt *in* to the public directory via `publicListing`. The public directory at `/directory` shows only public profiles; the member directory at `/member/directory` shows all non-opted-out members. Bands follow the same pattern.
+**Three-tier visibility.** Each member and band has a `directoryVisibility` field with three states: `hidden` (not shown anywhere), `members` (visible to logged-in members only), or `public` (visible to everyone, including the public directory). Members default to `members`; bands default to `public`. The public directory at `/directory` shows only `public` profiles; the member directory at `/member/directory` shows `members` and `public` profiles.
 
 **Profile vs. account.** Profile data (bio, tagline, instruments, genres, links, contact info, visibility toggles) is about how you present yourself to others. Account data (email, password, notification preferences, membership) is about your relationship with the platform. They live on separate pages: `/member/profile` and `/member/account`.
 
@@ -35,9 +35,8 @@ bio              text          -- longer-form description
 tagline          text          -- short one-liner, ~150 chars
 instruments      text[]        -- e.g. ['guitar', 'vocals']
 genres           text[]        -- e.g. ['jazz', 'funk']
-lookingForBand   boolean       -- default false
-directoryOptOut  boolean       -- default false (opt out of members-only directory)
-publicListing    boolean       -- default false (opt in to public directory)
+lookingForBand        boolean       -- default false
+directoryVisibility   text          -- 'hidden' | 'members' | 'public', default 'members'
 directoryContact jsonb         -- { email?, phone?, social? } — separate from account email
 links            jsonb         -- [{label, url}, ...]
 ```
@@ -47,9 +46,8 @@ links            jsonb         -- [{label, url}, ...]
 ```
 tagline            text
 genres             text[]
-lookingForMembers  boolean     -- default false
-directoryOptOut    boolean     -- default false
-publicListing      boolean     -- default false
+lookingForMembers     boolean     -- default false
+directoryVisibility   text        -- 'hidden' | 'members' | 'public', default 'public'
 directoryContact   jsonb
 links              jsonb
 ```
@@ -98,7 +96,7 @@ Instruments are not on the band table — a band's instruments are implied by it
 ### Visitor browses the public directory
 
 1. Navigates to `/directory` (no login required)
-2. Same layout as member directory but only shows profiles where `publicListing = true`
+2. Same layout as member directory but only shows profiles where `directoryVisibility = 'public'`
 3. Member cards link to `/directory/members/[id]`
 4. Band cards link to `/directory/bands/[slug]` (existing)
 5. Same filtering capabilities
@@ -107,7 +105,7 @@ Instruments are not on the band table — a band's instruments are implied by it
 
 1. Navigates to `/directory/members/[id]`
 2. Same layout as the member-only profile view
-3. Only accessible if the member has `publicListing = true` — otherwise 404
+3. Only accessible if the member has `directoryVisibility = 'public'` — otherwise 404
 
 ---
 
@@ -163,8 +161,7 @@ ALTER TABLE "user" ADD COLUMN "tagline" text;
 ALTER TABLE "user" ADD COLUMN "instruments" text[];
 ALTER TABLE "user" ADD COLUMN "genres" text[];
 ALTER TABLE "user" ADD COLUMN "looking_for_band" boolean NOT NULL DEFAULT false;
-ALTER TABLE "user" ADD COLUMN "directory_opt_out" boolean NOT NULL DEFAULT false;
-ALTER TABLE "user" ADD COLUMN "public_listing" boolean NOT NULL DEFAULT false;
+ALTER TABLE "user" ADD COLUMN "directory_visibility" text NOT NULL DEFAULT 'members';
 ALTER TABLE "user" ADD COLUMN "directory_contact" jsonb;
 ALTER TABLE "user" ADD COLUMN "links" jsonb;
 ```
@@ -175,8 +172,7 @@ ALTER TABLE "user" ADD COLUMN "links" jsonb;
 ALTER TABLE "band" ADD COLUMN "tagline" text;
 ALTER TABLE "band" ADD COLUMN "genres" text[];
 ALTER TABLE "band" ADD COLUMN "looking_for_members" boolean NOT NULL DEFAULT false;
-ALTER TABLE "band" ADD COLUMN "directory_opt_out" boolean NOT NULL DEFAULT false;
-ALTER TABLE "band" ADD COLUMN "public_listing" boolean NOT NULL DEFAULT false;
+ALTER TABLE "band" ADD COLUMN "directory_visibility" text NOT NULL DEFAULT 'public';
 ALTER TABLE "band" ADD COLUMN "directory_contact" jsonb;
 ALTER TABLE "band" ADD COLUMN "links" jsonb;
 ```
@@ -190,8 +186,8 @@ CREATE INDEX idx_user_genres ON "user" USING gin ("genres");
 CREATE INDEX idx_band_genres ON "band" USING gin ("genres");
 
 -- Partial index for directory queries
-CREATE INDEX idx_user_directory ON "user" ("name") WHERE "deleted_at" IS NULL AND "directory_opt_out" = false;
-CREATE INDEX idx_user_public ON "user" ("name") WHERE "deleted_at" IS NULL AND "public_listing" = true;
+CREATE INDEX idx_user_directory ON "user" ("name") WHERE "deleted_at" IS NULL AND "directory_visibility" IN ('members', 'public');
+CREATE INDEX idx_user_public ON "user" ("name") WHERE "deleted_at" IS NULL AND "directory_visibility" = 'public';
 ```
 
 ### JSONB shape: directoryContact
@@ -224,10 +220,10 @@ type ProfileLink = {
 Queries for the directory pages. Separate from band-service and user account queries.
 
 ```typescript
-// Member directory (all non-opted-out active members)
+// Member directory (visibility = 'members' or 'public')
 listMembers(opts?: { search?: string; instruments?: string[]; genres?: string[]; lookingForBand?: boolean })
 
-// Public directory (only publicListing = true)
+// Public directory (visibility = 'public' only)
 listPublicMembers(opts?: { search?: string; instruments?: string[]; genres?: string[] })
 
 // Single member profile (for detail pages)
@@ -256,8 +252,7 @@ updateMemberProfile(userId: string, data: {
   instruments?: string[];
   genres?: string[];
   lookingForBand?: boolean;
-  directoryOptOut?: boolean;
-  publicListing?: boolean;
+  directoryVisibility?: DirectoryVisibility;
   directoryContact?: DirectoryContact;
   links?: ProfileLink[];
 })
@@ -267,8 +262,7 @@ updateBandProfile(bandId: string, userId: string, data: {
   tagline?: string;
   genres?: string[];
   lookingForMembers?: boolean;
-  directoryOptOut?: boolean;
-  publicListing?: boolean;
+  directoryVisibility?: DirectoryVisibility;
   directoryContact?: DirectoryContact;
   links?: ProfileLink[];
 })
@@ -292,7 +286,7 @@ updateBandProfile(bandId: string, userId: string, data: {
 
 **Contact info:** optional fields for email, phone, social handle. Helper text: "This info is shown on your directory profile. Leave blank to keep private."
 
-**Visibility:** "Hide me from the member directory" toggle (`directoryOptOut`), "Show my profile publicly (no login required)" toggle (`publicListing`)
+**Visibility:** radio group with three options — Hidden (not shown anywhere), Members only (visible to logged-in members), Public (visible to everyone). Stored as `directoryVisibility`.
 
 ---
 
@@ -316,7 +310,7 @@ Replaces the current `/member/directory` dead link. Uses the existing `/director
 
 ### Public directory (`/directory`)
 
-Same layout and filtering as member directory, but queries `publicListing = true` profiles only.
+Same layout and filtering as member directory, but queries `directoryVisibility = 'public'` profiles only.
 
 ### Member profile detail
 
@@ -339,7 +333,7 @@ Extend the existing page to show: tagline, genres, "looking for members" badge, 
 | Browse member directory          | Any active member                |
 | View member profile (members)    | Any active member                |
 | Browse public directory           | Anyone (no auth)                 |
-| View member profile (public)     | Anyone (if publicListing = true) |
+| View member profile (public)     | Anyone (if visibility = 'public') |
 | View band profile (public)       | Anyone (band not deactivated)    |
 
 Staff can view any profile through the existing staff user/band detail pages. No special staff directory features needed for v1.
@@ -350,8 +344,8 @@ Staff can view any profile through the existing staff user/band detail pages. No
 
 | Area                          | Change                                                          |
 |-------------------------------|-----------------------------------------------------------------|
-| `user` schema                 | Add 9 columns (bio, tagline, instruments, genres, lookingForBand, directoryOptOut, publicListing, directoryContact, links) |
-| `band` schema                 | Add 7 columns (tagline, genres, lookingForMembers, directoryOptOut, publicListing, directoryContact, links) |
+| `user` schema                 | Add 8 columns (bio, tagline, instruments, genres, lookingForBand, directoryVisibility, directoryContact, links) |
+| `band` schema                 | Add 6 columns (tagline, genres, lookingForMembers, directoryVisibility, directoryContact, links) |
 | `/directory` page             | Enhanced cards with profile data, filtering, member profile links |
 | `/directory/bands/[slug]`     | Enhanced with tagline, genres, links, embeds, contact info       |
 | Member sidebar nav            | Fix `/member/directory` link (currently points to non-existent route), add `/member/profile` |

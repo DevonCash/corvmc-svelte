@@ -61,8 +61,7 @@ const profileSchema = z.object({
 		try { return JSON.parse(s) as string[]; } catch { return []; }
 	}),
 	lookingForMembers: z.string().optional().transform((v) => v === 'on'),
-	directoryOptOut: z.string().optional().transform((v) => v === 'on'),
-	publicListing: z.string().optional().transform((v) => v === 'on'),
+	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('public'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
@@ -84,8 +83,7 @@ export const saveProfile = form(profileSchema, async (data) => {
 		tagline: data.tagline || undefined,
 		genres: data.genres,
 		lookingForMembers: data.lookingForMembers,
-		directoryOptOut: data.directoryOptOut,
-		publicListing: data.publicListing,
+		directoryVisibility: data.directoryVisibility,
 		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
 		links: data.links
 	});

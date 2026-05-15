@@ -57,7 +57,7 @@
 </script>
 
 <script lang="ts" generics="T extends Record<string, any>">
-	import { setContext } from 'svelte';
+	import { setContext, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { formatDate, formatDateTime, formatCents } from '$lib/utils/format';
 
@@ -170,7 +170,7 @@
 	const paged = $derived(sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize));
 
 	// Reset page when data changes (identity or length)
-	let prevData = data;
+	let prevData = untrack(() => data);
 	$effect(() => {
 		if (data !== prevData) {
 			prevData = data;

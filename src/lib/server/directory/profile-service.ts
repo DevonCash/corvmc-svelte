@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
-import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
+import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/types/profile';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -49,8 +49,7 @@ export type MemberProfileData = {
 	instruments?: string[];
 	genres?: string[];
 	lookingForBand?: boolean;
-	directoryOptOut?: boolean;
-	publicListing?: boolean;
+	directoryVisibility?: DirectoryVisibility;
 	directoryContact?: DirectoryContact;
 	links?: ProfileLink[];
 };
@@ -64,8 +63,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 			instruments: data.instruments ? validateTags(data.instruments) : null,
 			genres: data.genres ? validateTags(data.genres) : null,
 			lookingForBand: data.lookingForBand ?? false,
-			directoryOptOut: data.directoryOptOut ?? false,
-			publicListing: data.publicListing ?? false,
+			directoryVisibility: data.directoryVisibility ?? 'members',
 			directoryContact: data.directoryContact
 				? validateContact(data.directoryContact)
 				: null,
@@ -84,8 +82,7 @@ export async function getMemberProfileForEdit(userId: string) {
 			instruments: user.instruments,
 			genres: user.genres,
 			lookingForBand: user.lookingForBand,
-			directoryOptOut: user.directoryOptOut,
-			publicListing: user.publicListing,
+			directoryVisibility: user.directoryVisibility,
 			directoryContact: user.directoryContact,
 			links: user.links
 		})
@@ -103,8 +100,7 @@ export type BandProfileData = {
 	tagline?: string;
 	genres?: string[];
 	lookingForMembers?: boolean;
-	directoryOptOut?: boolean;
-	publicListing?: boolean;
+	directoryVisibility?: DirectoryVisibility;
 	directoryContact?: DirectoryContact;
 	links?: ProfileLink[];
 };
@@ -140,8 +136,7 @@ export async function updateBandProfile(
 			tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 			genres: data.genres ? validateTags(data.genres) : null,
 			lookingForMembers: data.lookingForMembers ?? false,
-			directoryOptOut: data.directoryOptOut ?? false,
-			publicListing: data.publicListing ?? false,
+			directoryVisibility: data.directoryVisibility ?? 'public',
 			directoryContact: data.directoryContact
 				? validateContact(data.directoryContact)
 				: null,
@@ -158,8 +153,7 @@ export async function getBandProfileForEdit(bandId: string) {
 			tagline: band.tagline,
 			genres: band.genres,
 			lookingForMembers: band.lookingForMembers,
-			directoryOptOut: band.directoryOptOut,
-			publicListing: band.publicListing,
+			directoryVisibility: band.directoryVisibility,
 			directoryContact: band.directoryContact,
 			links: band.links
 		})

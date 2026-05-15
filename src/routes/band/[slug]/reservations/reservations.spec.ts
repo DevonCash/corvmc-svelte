@@ -121,7 +121,7 @@ beforeEach(() => {
 
 describe('getSlots', () => {
 	it('returns available slots and config', async () => {
-		const { getSlots } = await import('./data.remote');
+		const { getSlots } = await import('./data.remote') as any;
 
 		const result = await getSlots('2026-06-15');
 
@@ -133,7 +133,7 @@ describe('getSlots', () => {
 
 	it('requires band membership', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		const { getSlots } = await import('./data.remote');
+		const { getSlots } = await import('./data.remote') as any;
 
 		await expect(getSlots('2026-06-15')).rejects.toThrow();
 	});
@@ -141,7 +141,7 @@ describe('getSlots', () => {
 
 describe('bookReservation', () => {
 	it('creates reservation with band as booker', async () => {
-		const { bookReservation } = await import('./data.remote');
+		const { bookReservation } = await import('./data.remote') as any;
 
 		const result = await bookReservation({
 			date: '2026-06-15',
@@ -160,7 +160,7 @@ describe('bookReservation', () => {
 	});
 
 	it('passes notes through', async () => {
-		const { bookReservation } = await import('./data.remote');
+		const { bookReservation } = await import('./data.remote') as any;
 
 		await bookReservation({
 			date: '2026-06-15',
@@ -179,7 +179,7 @@ describe('bookReservation', () => {
 
 describe('cancelBandReservation', () => {
 	it('cancels the reservation', async () => {
-		const { cancelBandReservation } = await import('./data.remote');
+		const { cancelBandReservation } = await import('./data.remote') as any;
 
 		const result = await cancelBandReservation({ reservationId: 'res-42' });
 

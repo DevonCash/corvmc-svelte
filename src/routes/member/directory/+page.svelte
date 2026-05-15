@@ -142,7 +142,7 @@
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 					{#each bands as b (b.id)}
 						<a
-							href="/directory/bands/{b.slug}"
+							href="/member/directory/bands/{b.slug}"
 							class="card bg-base-100 shadow-sm transition-shadow hover:shadow-md"
 						>
 							<div class="card-body py-4">

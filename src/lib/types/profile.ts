@@ -1,3 +1,5 @@
+export type DirectoryVisibility = 'hidden' | 'members' | 'public';
+
 export type DirectoryContact = {
 	email?: string;
 	phone?: string;

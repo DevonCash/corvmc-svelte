@@ -143,7 +143,7 @@ describe('account page load', () => {
 
 describe('updateProfile', () => {
 	it('updates name, pronouns, and phone', async () => {
-		const { updateProfile } = await import('./data.remote');
+		const { updateProfile } = await import('./data.remote') as any;
 
 		await updateProfile({
 			name: 'New Name',
@@ -158,7 +158,7 @@ describe('updateProfile', () => {
 	});
 
 	it('clears optional fields when empty strings provided', async () => {
-		const { updateProfile } = await import('./data.remote');
+		const { updateProfile } = await import('./data.remote') as any;
 
 		await updateProfile({
 			name: 'Just Name',
@@ -177,7 +177,7 @@ describe('updateProfile', () => {
 
 describe('changePassword', () => {
 	it('delegates to better-auth API with correct params', async () => {
-		const { changePassword } = await import('./data.remote');
+		const { changePassword } = await import('./data.remote') as any;
 
 		await changePassword({
 			currentPassword: 'old-pass',

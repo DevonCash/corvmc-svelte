@@ -68,7 +68,7 @@
 
 				<NavGroup title="My Bands">
 					{#each data.userBands as band}
-						<NavItem href={`/member/bands/${band.id}`} label={band.name}>
+						<NavItem href={`/band/${band.slug}`} label={band.name}>
 							{#snippet icon()}
 								<Avatar
 									class="size-8"

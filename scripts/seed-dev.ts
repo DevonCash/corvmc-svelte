@@ -251,7 +251,7 @@ async function seedUsers(count: number) {
 		const memberLinks = hasProfile && Math.random() > 0.4
 			? pickN(SAMPLE_LINKS, randomInt(1, 3))
 			: null;
-		const wantsPublic = hasProfile && Math.random() > 0.6;
+		const visibility = !hasProfile ? 'hidden' : Math.random() > 0.6 ? 'public' : 'members';
 
 		const [u] = await db.insert(user).values({
 			id,
@@ -266,8 +266,8 @@ async function seedUsers(count: number) {
 			instruments: memberInstruments,
 			genres: memberGenres,
 			lookingForBand: hasProfile && Math.random() > 0.7,
-			publicListing: wantsPublic,
-			directoryContact: wantsPublic ? { email } : null,
+			directoryVisibility: visibility,
+			directoryContact: visibility === 'public' ? { email } : null,
 			links: memberLinks,
 			createdAt,
 			updatedAt: createdAt
@@ -653,7 +653,7 @@ async function seedBands(users: SeedUser[]) {
 
 		const bandGenres = pickN(GENRES, randomInt(1, 3));
 		const bandLinks = Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 2)) : null;
-		const bandPublic = Math.random() > 0.5;
+		const bandVisibility = Math.random() > 0.8 ? 'hidden' : Math.random() > 0.4 ? 'public' : 'members';
 
 		const [b] = await db.insert(band).values({
 			name: BAND_NAMES[i],
@@ -663,7 +663,7 @@ async function seedBands(users: SeedUser[]) {
 			tagline: Math.random() > 0.3 ? `${pick(GENRES)} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis` : null,
 			genres: bandGenres,
 			lookingForMembers: Math.random() > 0.6,
-			publicListing: bandPublic,
+			directoryVisibility: bandVisibility,
 			links: bandLinks
 		}).returning();
 		bands.push(b);

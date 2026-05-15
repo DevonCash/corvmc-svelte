@@ -35,8 +35,7 @@ export const user = pgTable('user', {
 	instruments: text('instruments').array(),
 	genres: text('genres').array(),
 	lookingForBand: boolean('looking_for_band').notNull().default(false),
-	directoryOptOut: boolean('directory_opt_out').notNull().default(false),
-	publicListing: boolean('public_listing').notNull().default(false),
+	directoryVisibility: text('directory_visibility').notNull().default('members'),
 	directoryContact: jsonb('directory_contact'),
 	links: jsonb('links')
 },

@@ -53,8 +53,7 @@ const profileSchema = z.object({
 		try { return JSON.parse(s) as string[]; } catch { return []; }
 	}),
 	lookingForBand: z.string().optional().transform((v) => v === 'on'),
-	directoryOptOut: z.string().optional().transform((v) => v === 'on'),
-	publicListing: z.string().optional().transform((v) => v === 'on'),
+	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('members'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
@@ -78,8 +77,7 @@ export const saveProfile = form(profileSchema, async (data) => {
 		instruments: data.instruments,
 		genres: data.genres,
 		lookingForBand: data.lookingForBand,
-		directoryOptOut: data.directoryOptOut,
-		publicListing: data.publicListing,
+		directoryVisibility: data.directoryVisibility,
 		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
 		links: data.links
 	});

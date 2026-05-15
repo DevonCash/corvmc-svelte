@@ -20,8 +20,7 @@ export const band = pgTable(
 		tagline: text('tagline'),
 		genres: text('genres').array(),
 		lookingForMembers: boolean('looking_for_members').notNull().default(false),
-		directoryOptOut: boolean('directory_opt_out').notNull().default(false),
-		publicListing: boolean('public_listing').notNull().default(false),
+		directoryVisibility: text('directory_visibility').notNull().default('public'),
 		directoryContact: jsonb('directory_contact'),
 		links: jsonb('links')
 	},

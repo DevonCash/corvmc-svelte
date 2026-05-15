@@ -14,16 +14,14 @@
 	let genres = $state<string[]>([]);
 	let links = $state<ProfileLink[]>([]);
 	let lookingForMembers = $state(false);
-	let directoryOptOut = $state(false);
-	let publicListing = $state(false);
+	let directoryVisibility = $state<string>('public');
 
 	$effect(() => {
 		if (profile) {
 			genres = profile.genres ?? [];
 			links = (profile.links as ProfileLink[] | null) ?? [];
 			lookingForMembers = profile.lookingForMembers;
-			directoryOptOut = profile.directoryOptOut;
-			publicListing = profile.publicListing;
+			directoryVisibility = profile.directoryVisibility;
 		}
 	});
 
@@ -175,30 +173,46 @@
 
 			<!-- Visibility -->
 			<InfoCard title="Visibility">
-				<div class="space-y-3">
+				<div class="space-y-2">
 					<label class="label cursor-pointer justify-start gap-3">
 						<input
-							type="checkbox"
-							name="directoryOptOut"
-							class="toggle"
-							checked={directoryOptOut}
-							onchange={(e) => (directoryOptOut = (e.target as HTMLInputElement).checked)}
+							type="radio"
+							name="directoryVisibility"
+							value="hidden"
+							class="radio"
+							checked={directoryVisibility === 'hidden'}
+							onchange={() => (directoryVisibility = 'hidden')}
 						/>
 						<div>
-							<p>Hide from member directory</p>
-							<p class="text-xs opacity-50">Other members won't see this band in the directory</p>
+							<p>Hidden</p>
+							<p class="text-xs opacity-50">Not shown in any directory</p>
 						</div>
 					</label>
 					<label class="label cursor-pointer justify-start gap-3">
 						<input
-							type="checkbox"
-							name="publicListing"
-							class="toggle toggle-primary"
-							checked={publicListing}
-							onchange={(e) => (publicListing = (e.target as HTMLInputElement).checked)}
+							type="radio"
+							name="directoryVisibility"
+							value="members"
+							class="radio"
+							checked={directoryVisibility === 'members'}
+							onchange={() => (directoryVisibility = 'members')}
 						/>
 						<div>
-							<p>Show publicly</p>
+							<p>Members only</p>
+							<p class="text-xs opacity-50">Visible to logged-in members</p>
+						</div>
+					</label>
+					<label class="label cursor-pointer justify-start gap-3">
+						<input
+							type="radio"
+							name="directoryVisibility"
+							value="public"
+							class="radio"
+							checked={directoryVisibility === 'public'}
+							onchange={() => (directoryVisibility = 'public')}
+						/>
+						<div>
+							<p>Public</p>
 							<p class="text-xs opacity-50">Anyone can see this band's profile, no login required</p>
 						</div>
 					</label>

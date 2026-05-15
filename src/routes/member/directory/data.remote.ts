@@ -5,6 +5,7 @@ import {
 	listMembers,
 	listBands,
 	getMemberProfile,
+	getBandProfile,
 	suggestInstruments,
 	suggestGenres
 } from '$lib/server/directory/directory-service';
@@ -65,6 +66,11 @@ export const getBands = query(filtersSchema, async (filters) => {
 export const getMember = query(z.string(), async (userId) => {
 	requireUser();
 	return getMemberProfile(userId, 'members');
+});
+
+export const getBand = query(z.string(), async (slug) => {
+	requireUser();
+	return getBandProfile(slug, 'members');
 });
 
 export const getInstrumentSuggestions = query(z.void(), async () => {

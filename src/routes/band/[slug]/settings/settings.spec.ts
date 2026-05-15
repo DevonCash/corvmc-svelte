@@ -58,7 +58,7 @@ beforeEach(() => {
 
 describe('deleteBandForm', () => {
 	it('deletes the band', async () => {
-		const { deleteBandForm } = await import('./data.remote');
+		const { deleteBandForm } = await import('./data.remote') as any;
 
 		const result = await deleteBandForm({});
 
@@ -68,14 +68,14 @@ describe('deleteBandForm', () => {
 
 	it('rejects non-owner users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { deleteBandForm } = await import('./data.remote');
+		const { deleteBandForm } = await import('./data.remote') as any;
 
 		await expect(deleteBandForm({})).rejects.toThrow();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { deleteBandForm } = await import('./data.remote');
+		const { deleteBandForm } = await import('./data.remote') as any;
 
 		await expect(deleteBandForm({})).rejects.toThrow();
 	});
