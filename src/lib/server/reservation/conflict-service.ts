@@ -8,7 +8,9 @@ import {
 	OPERATING_HOURS_END,
 	TIME_SLOT_MINUTES,
 	MIN_DURATION_HOURS,
-	MAX_DURATION_HOURS
+	MAX_DURATION_HOURS,
+	MAX_ADVANCE_DAYS_ONEOFF,
+	MAX_ADVANCE_DAYS_RECURRING
 } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from './types';
@@ -139,11 +141,20 @@ export interface ValidationResult {
 	error?: string;
 }
 
+export interface ValidateBookingOptions {
+	/** Set to true for recurring series generation (uses longer advance window) */
+	isRecurring?: boolean;
+}
+
 /**
  * Validate that a proposed booking time is within operating constraints.
  * Does not check conflicts — that's a separate DB query.
  */
-export function validateBooking(startsAt: Date, endsAt: Date): ValidationResult {
+export function validateBooking(
+	startsAt: Date,
+	endsAt: Date,
+	options?: ValidateBookingOptions
+): ValidationResult {
 	const tz = 'America/Los_Angeles';
 
 	if (endsAt <= startsAt) {
@@ -178,6 +189,16 @@ export function validateBooking(startsAt: Date, endsAt: Date): ValidationResult 
 
 	if (endTime > OPERATING_HOURS_END) {
 		return { valid: false, error: `Cannot end after ${OPERATING_HOURS_END}` };
+	}
+
+	// Check advance booking window
+	const maxDays = options?.isRecurring ? MAX_ADVANCE_DAYS_RECURRING : MAX_ADVANCE_DAYS_ONEOFF;
+	const maxMs = maxDays * 24 * 60 * 60 * 1000;
+	if (startsAt.getTime() - Date.now() > maxMs) {
+		return {
+			valid: false,
+			error: `Cannot book more than ${maxDays} days in advance`
+		};
 	}
 
 	return { valid: true };
@@ -259,7 +280,11 @@ export async function getConflictDetails(
 // getValidationWarnings() — human-readable warnings without throwing
 // ---------------------------------------------------------------------------
 
-export function getValidationWarnings(startsAt: Date, endsAt: Date): string[] {
+export function getValidationWarnings(
+	startsAt: Date,
+	endsAt: Date,
+	options?: ValidateBookingOptions
+): string[] {
 	const tz = 'America/Los_Angeles';
 	const warnings: string[] = [];
 
@@ -290,6 +315,12 @@ export function getValidationWarnings(startsAt: Date, endsAt: Date): string[] {
 
 	if (startTime < OPERATING_HOURS_START || endTime > OPERATING_HOURS_END) {
 		warnings.push(`Outside operating hours (${OPERATING_HOURS_START} – ${OPERATING_HOURS_END})`);
+	}
+
+	const maxDays = options?.isRecurring ? MAX_ADVANCE_DAYS_RECURRING : MAX_ADVANCE_DAYS_ONEOFF;
+	const maxMs = maxDays * 24 * 60 * 60 * 1000;
+	if (startsAt.getTime() - Date.now() > maxMs) {
+		warnings.push(`More than ${maxDays} days in advance`);
 	}
 
 	return warnings;

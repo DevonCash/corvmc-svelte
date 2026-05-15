@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, gt, lte, ne, desc } from 'drizzle-orm';
 import { cancel } from '$lib/server/reservation/reservation-service';
+import { cancel as cancelSeries, get as getSeries, listForUser } from '$lib/server/reservation/recurring-series-service';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -35,9 +36,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.orderBy(desc(reservation.startsAt))
 		.limit(20);
 
+	const recurringSeries = await listForUser(locals.user.id);
+
 	return {
 		upcoming: upcoming.map(serializeReservation),
-		past: past.map(serializeReservation)
+		past: past.map(serializeReservation),
+		recurringSeries: recurringSeries.map((s) => ({
+			id: s.id,
+			frequencyLabel: s.frequencyLabel,
+			bookerType: s.bookerType,
+			startsAt: s.startsAt.toISOString(),
+			endsAt: s.endsAt.toISOString(),
+			createdAt: s.createdAt.toISOString()
+		}))
 	};
 };
 
@@ -58,6 +69,29 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	cancelSeries: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { error: 'Not authenticated' });
+
+		const formData = await request.formData();
+		const seriesId = formData.get('seriesId') as string;
+
+		if (!seriesId) return fail(400, { error: 'Missing series ID' });
+
+		// Verify the caller owns this series
+		const series = await getSeries(seriesId);
+		if (!series || series.prototypeCreatedByUserId !== locals.user.id) {
+			return fail(403, { error: 'Not authorized to cancel this series' });
+		}
+
+		try {
+			await cancelSeries(seriesId);
+		} catch (err) {
+			return fail(400, { error: (err as Error).message });
+		}
+
+		return { success: true };
 	}
 };
 
@@ -69,6 +103,7 @@ function serializeReservation(row: any) {
 		status: row.status,
 		startsAt: row.startsAt.toISOString(),
 		endsAt: row.endsAt.toISOString(),
-		notes: row.notes
+		notes: row.notes,
+		recurringSeriesId: row.recurringSeriesId ?? null
 	};
 }

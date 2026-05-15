@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
+import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
 
@@ -111,6 +112,9 @@ export async function handleSubscriptionDeleted(
 		subscription.id,
 		'Subscription cancelled — free hours reset'
 	);
+
+	// Cancel all active recurring series for this user
+	await cancelAllForUser(member.id);
 }
 
 // ---------------------------------------------------------------------------

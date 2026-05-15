@@ -1,0 +1,1 @@
+ALTER TABLE "payment_record" ALTER COLUMN "stripe_customer_id" DROP NOT NULL;

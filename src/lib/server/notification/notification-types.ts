@@ -69,6 +69,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true }
 	},
 	{
+		key: 'recurring_skipped',
+		label: 'Recurring reservation skipped',
+		description: 'Notification when a recurring reservation is skipped due to a conflict',
+		defaults: { email: true, inApp: true }
+	},
+	{
 		key: 'contact_form',
 		label: 'Contact form submission',
 		description: 'Forwarded contact form messages (staff only)',

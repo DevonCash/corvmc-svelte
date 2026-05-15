@@ -6,3 +6,4 @@ export * from './product-config';
 export * from './event';
 export * from './ticket';
 export * from './notification';
+export * from './recurring';

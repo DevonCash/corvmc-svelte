@@ -115,6 +115,19 @@ export interface ContactFormSubmittedEvent {
 	message: string;
 }
 
+export interface RecurringSkippedEvent {
+	seriesId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** The date that was skipped (YYYY-MM-DD in America/Los_Angeles) */
+	skippedDate: string;
+	startTime: string;
+	endTime: string;
+	/** Why it was skipped */
+	reason: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -130,6 +143,7 @@ export type DomainEvents = {
 	'band.invitation_sent': BandInvitationSentEvent;
 	'band.invitation_accepted': BandInvitationAcceptedEvent;
 	'contact.form_submitted': ContactFormSubmittedEvent;
+	'reservation.recurring_skipped': RecurringSkippedEvent;
 };
 
 // ---------------------------------------------------------------------------

@@ -163,6 +163,29 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Recurring reservation skipped ---
+	domainEvents.on('reservation.recurring_skipped', async (event) => {
+		const html = templates.recurringSkipped({
+			userName: event.userName,
+			skippedDate: event.skippedDate,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			reason: event.reason,
+			siteUrl
+		});
+
+		await dispatch({
+			type: 'recurring_skipped',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Recurring reservation skipped',
+			body: `${event.skippedDate} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			href: '/member/reservations',
+			emailSubject: `Recurring reservation skipped: ${event.skippedDate}`,
+			emailHtml: html
+		});
+	});
+
 	// --- Contact form submission ---
 	domainEvents.on('contact.form_submitted', async (event) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';

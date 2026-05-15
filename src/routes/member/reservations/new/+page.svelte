@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getSlots, bookReservation } from './data.remote';
+	import { getSlots, getMembershipStatus, bookReservation } from './data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
@@ -82,8 +82,12 @@
 	});
 
 
+	let membershipStatus = $derived(await getMembershipStatus());
+	const isSustainingMember = $derived(membershipStatus.isSustainingMember);
+	let recurring = $state('');
+
 	// Form dirty tracking watches these fields
-	let initial = $derived({ startTime: '', endTime: '', notes: '' });
+	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
 </script>
 
 <svelte:boundary>
@@ -189,9 +193,33 @@
 				></textarea>
 			</div>
 
+			{#if isSustainingMember}
+				<div class="form-control mt-4">
+					<label class="label" for="recurring">
+						<span class="label-text">Repeat this reservation</span>
+					</label>
+					<select
+						id="recurring"
+						name="recurring"
+						class="select select-bordered"
+						bind:value={recurring}
+					>
+						<option value="">Don't repeat (one-time)</option>
+						<option value="weekly">Weekly</option>
+						<option value="biweekly">Every 2 weeks</option>
+						<option value="monthly">Monthly</option>
+					</select>
+					{#if recurring}
+						<p class="text-sm mt-1 opacity-60">
+							Future instances will be generated automatically. You'll confirm and pay for each one individually.
+						</p>
+					{/if}
+				</div>
+			{/if}
+
 			<div class="mt-6">
 				<SubmitButton
-					label="Book Session"
+					label={recurring ? 'Book & Start Series' : 'Book Session'}
 					successLabel="Booked!"
 					errorLabel="Booking failed"
 					disabled={!selectedStart || !selectedEnd}

@@ -1,6 +1,6 @@
 # Laravel → Svelte Parity Report
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 This document tracks feature coverage between the Laravel app (corvmc-redux) and the Svelte rebuild (corvmc-svelte). Use it to plan what to build next and to avoid re-discovering gaps.
 
@@ -25,7 +25,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Space closures | SpaceClosures resource | ✅ List + create + delete | Parity |
 | Settings | ManageOrganizationSettings | ✅ Settings page | Hourly rate, buffer, hours; Laravel has more org settings |
 | Payments view | OrderResource, TicketOrders | ✅ /staff/payments | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
-| Recurring reservations | RecurringReservations resource | — | Not started |
+| Recurring reservations | RecurringReservations resource | ✅ /staff/recurring | List active/cancelled series, cancel action. Member UI in reservations page |
 | Equipment | Equipment resource | — | Not started |
 | Volunteering | VolunteerReportPage, PendingHourLogs | — | Not started |
 | Sponsors | Sponsors resource | — | Not started |
@@ -137,7 +137,7 @@ Individual `/api/cron/*` routes, each hit by the hosting platform's cron schedul
 | Reservation reminders | Daily 10:00 | ✅ /api/cron/reservation-reminders | Emits `reservation.reminder_due` for confirmed reservations starting in next 24h |
 | Daily reservation digest | Daily 20:00 | — | Could become a dashboard widget |
 | Rehearsal reminders | Daily 09:30 | — | Depends on notification system + band rehearsals |
-| Recurring reservation generation | Daily 00:00 | — | Deferred until recurring reservations are built |
+| Recurring reservation generation | Daily 00:00 | ✅ /api/cron/generate-recurring-reservations | Expands active recurring series into scheduled reservations within 2.5-week window |
 | Volunteer shift reminders | Daily 09:00 | — | Deferred until volunteering module is built |
 
 **Removed from Laravel's list:**
@@ -191,7 +191,7 @@ Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling c
 
 ## Database schema
 
-The Svelte app has 19 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure), events (event), finance (product_config, credit_transaction), bands (band, band_member), tickets (ticket), and notifications (notification, notification_preference).
+The Svelte app has 21 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_record), bands (band, band_member), tickets (ticket), and notifications (notification, notification_preference).
 
 Tables that would need to be added for missing features: equipment, equipment_loan, volunteer_hour_log, sponsor, venue, site_page, kiosk_device.
 
@@ -205,6 +205,7 @@ Chosen libraries for platform concerns. Preference is for small, focused package
 | Email templates | MJML or Maizzle | MJML is battle-tested; Maizzle uses Tailwind (matches existing tooling). Decide when building. Both compile to static HTML for Postmark |
 | SMS | `twilio` | Official SDK, reliable, overkill for SMS-only but actively maintained |
 | Domain event bus | `emittery` | Async-native (listeners can do I/O without blocking), strong TypeScript generics, ESM-only (fine for SvelteKit) |
+| Recurrence rules | `rrule` | RFC 5545 RRULE parsing/generation with timezone support via luxon. Used for recurring reservation scheduling |
 | Error tracking | `@sentry/sveltekit` | First-class SvelteKit integration, auto-instruments load functions and routes. Also provides Sentry Crons for scheduled job monitoring |
 | Image crop/resize | `svelte-easy-crop` (client-side) | Browser-based crop UI + canvas resize before upload. User selects and frames the image, client resizes to target dimensions, uploads the processed result. No server-side image processing needed |
 | File uploads | `@aws-sdk/client-s3` (existing) | Hand-rolled R2 integration is sufficient. Add `@aws-sdk/s3-request-presigner` if client-direct uploads are needed later |
@@ -227,7 +228,7 @@ Features are grouped by dependency. The notification system is foundational — 
 1. ~~**Notification system**~~ — ✅ Complete. Postmark email + in-app (database + bell + SSE). emittery domain event bus. User preference UI in account settings. Ticket, event, band, and contact form notifications wired. SMS channel deferred.
 2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
 4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_record` cache table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
-5. **Recurring reservations** — Needs rrule storage on reservation or a new recurrence table. Moderate complexity.
+5. ~~**Recurring reservations**~~ — ✅ Complete. `recurring_series` table with prototype pattern, `rrule` npm package for RFC 5545 scheduling. Generation cron expands series into concrete reservations within 2.5-week window. Sustaining member exclusive. Subscription lapse auto-cancels active series. Staff list page + member booking integration with recurring tab.
 6. **Equipment module** — New tables (equipment, equipment_loan). Full CRUD with state machine for loan lifecycle.
 7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
 8. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.

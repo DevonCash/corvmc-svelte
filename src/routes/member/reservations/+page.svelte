@@ -8,8 +8,9 @@
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
+	const recurringSeries = $derived(data.recurringSeries);
 
-	let activeTab = $state<'upcoming' | 'past'>('upcoming');
+	let activeTab = $state<'upcoming' | 'past' | 'recurring'>('upcoming');
 
 	const statusBadge: Record<string, string> = {
 		scheduled: 'badge-warning',
@@ -29,10 +30,11 @@
 	<TabBar
 		tabs={[
 			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
+			{ key: 'recurring', label: `Recurring (${recurringSeries.length})` },
 			{ key: 'past', label: 'Past' }
 		]}
 		active={activeTab}
-		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
+		onchange={(key) => (activeTab = key as 'upcoming' | 'past' | 'recurring')}
 	/>
 
 	{#if activeTab === 'upcoming'}
@@ -58,6 +60,9 @@
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
+								{#if res.recurringSeriesId}
+									<span class="badge badge-outline badge-sm">recurring</span>
+								{/if}
 								<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
 								{#if res.status === 'scheduled'}
 									<a href="/member/reservations/{res.id}/pay" class="btn btn-primary btn-sm">
@@ -70,6 +75,42 @@
 										<button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
 									</form>
 								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	{/if}
+
+	{#if activeTab === 'recurring'}
+		{#if recurringSeries.length === 0}
+			<div class="text-center py-12 opacity-60">
+				<p>No active recurring reservations.</p>
+				<p class="text-sm mt-1">
+					Sustaining members can set up recurring reservations when booking.
+				</p>
+			</div>
+		{:else}
+			<div class="space-y-3">
+				{#each recurringSeries as series}
+					<div class="card bg-base-100 shadow-sm">
+						<div class="card-body flex-row items-center justify-between py-4">
+							<div>
+								<p class="font-medium">
+									{formatDate(series.startsAt)} &middot; {formatTime(series.startsAt)}–{formatTime(series.endsAt)}
+								</p>
+								<p class="text-sm opacity-60">
+									{series.frequencyLabel} &middot;
+									{formatDuration(series.startsAt, series.endsAt)}
+								</p>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="badge badge-success">active</span>
+								<form method="POST" action="?/cancelSeries" use:enhance>
+									<input type="hidden" name="seriesId" value={series.id} />
+									<button type="submit" class="btn btn-ghost btn-sm">Cancel Series</button>
+								</form>
 							</div>
 						</div>
 					</div>

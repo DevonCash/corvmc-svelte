@@ -168,3 +168,23 @@ export function contactFormForward(vars: {
 		vars
 	);
 }
+
+export function recurringSkipped(vars: {
+	userName: string;
+	skippedDate: string;
+	startTime: string;
+	endTime: string;
+	reason: string;
+	siteUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">Recurring reservation skipped</mj-text>
+		<mj-text>Hi {{userName}}, your recurring reservation on <strong>{{skippedDate}}</strong> from <strong>{{startTime}} – {{endTime}}</strong> was skipped due to: {{reason}}.</mj-text>
+		<mj-text>Your series will continue generating future reservations as normal.</mj-text>
+		<mj-button href="{{siteUrl}}/member/reservations">View My Reservations</mj-button>
+		`,
+		`Recurring reservation skipped: ${vars.skippedDate}`,
+		vars
+	);
+}

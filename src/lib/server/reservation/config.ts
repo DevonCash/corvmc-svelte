@@ -18,3 +18,13 @@ export const OPERATING_HOURS_END = '22:00';
 
 /** Required gap between back-to-back reservations in minutes */
 export const BUFFER_MINUTES = 0;
+
+/** Maximum days ahead a one-off reservation can be booked */
+export const MAX_ADVANCE_DAYS_ONEOFF = 14;
+
+/** Generation window for recurring series (2.5 weeks) */
+export const MAX_ADVANCE_DAYS_RECURRING = 17.5;
+
+/** Allowed recurrence frequencies */
+export const RECURRING_FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const;
+export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];

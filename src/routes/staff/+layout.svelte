@@ -12,7 +12,8 @@
 		IconCalendarEvent,
 		IconBan,
 		IconSettings,
-		IconCash
+		IconCash,
+		IconRepeat
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -21,6 +22,7 @@
 		{ href: '/staff', label: 'Dashboard', icon: IconHome },
 		{ href: '/staff/users', label: 'Users', icon: IconUsers },
 		{ href: '/staff/reservations', label: 'Reservations', icon: IconClipboardCheck },
+		{ href: '/staff/recurring', label: 'Recurring', icon: IconRepeat },
 		{ href: '/staff/events', label: 'Events', icon: IconCalendarEvent },
 		{ href: '/staff/payments', label: 'Payments', icon: IconCash },
 		{ href: '/staff/closures', label: 'Closures', icon: IconBan },

@@ -71,6 +71,20 @@
       "when": 1778802665948,
       "tag": "0009_fluffy_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778803146188,
+      "tag": "0010_tired_cardiac",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778828076765,
+      "tag": "0011_overconfident_lady_deathstrike",
+      "breakpoints": true
     }
   ]
 }
