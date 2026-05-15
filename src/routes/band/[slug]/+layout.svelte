@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { LayoutData } from './$types';
-	import { Toaster } from 'svelte-sonner';
 	import {
 		IconLayoutDashboard,
 		IconUsersGroup,
@@ -9,60 +8,63 @@
 		IconSettings,
 		IconUser
 	} from '@tabler/icons-svelte';
-	import Sidebar from '$lib/components/shared/Sidebar.svelte';
-	import Topbar from '$lib/components/shared/Topbar.svelte';
-	import UserFooter from '$lib/components/shared/UserFooter.svelte';
+	import AppShell from '$lib/components/shared/AppShell.svelte';
+	import NavItem from '$lib/components/shared/NavItem.svelte';
 
 	let { data, children }: { data: LayoutData; children: any } = $props();
 
 	const base = $derived(`/band/${data.band.slug}`);
 	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');
 
-	const navItems = $derived([
-		{ href: base, label: 'Dashboard', icon: IconLayoutDashboard },
-		{ href: `${base}/members`, label: 'Members', icon: IconUsersGroup },
-		{ href: `${base}/reservations`, label: 'Reservations', icon: IconCalendar },
-		...(isOwnerOrAdmin
-			? [
-					{ href: `${base}/edit`, label: 'Edit Band', icon: IconPencil },
-					{ href: `${base}/profile`, label: 'Profile', icon: IconUser }
-				]
+	const panels = $derived([
+		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
+		...(data.isStaff
+			? [{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const }]
 			: []),
-		...(data.userRole === 'owner'
-			? [{ href: `${base}/settings`, label: 'Settings', icon: IconSettings }]
-			: [])
+		...data.userBands.map((b) => ({
+			key: b.slug,
+			label: b.name,
+			href: `/band/${b.slug}`,
+			type: 'band' as const
+		}))
 	]);
 </script>
 
-<Toaster position="bottom-right" richColors closeButton />
-
-<div class="drawer lg:drawer-open">
-	<input id="band-drawer" type="checkbox" class="drawer-toggle" />
-
-	<div class="drawer-content flex flex-col">
-		<Topbar drawerId="band-drawer" userName={data.user?.name ?? ''} title={data.band.name} />
-
-		<main class="flex-1 p-6">
-			{@render children()}
-		</main>
-	</div>
-
-	<div class="drawer-side z-40">
-		<label for="band-drawer" class="drawer-overlay"></label>
-		<Sidebar {navItems} title={data.band.name} badge="Band">
-			{#snippet brand()}
-				<div class="flex items-center justify-between px-6 py-5">
-					<div class="flex items-center gap-2">
-						<span class="truncate text-xl font-bold">{data.band.name}</span>
-					</div>
-				</div>
-				<div class="border-t border-base-300 ">
-					<a href="/member/bands" class="btn btn-block rounded-none border-none justify-start btn-ghost btn-sm">
-						← Back to Member View
-						{#snippet icon()}<IconLayoutDashboard size={20} />{/snippet}
-					</a>
-				</div>
-			{/snippet}
-		</Sidebar>
-	</div>
-</div>
+<AppShell
+	drawerId="band-drawer"
+	user={data.user}
+	{panels}
+	activePanel={data.band.slug}
+>
+	{#snippet brand()}
+		<div class="flex items-center gap-2 px-6 py-5">
+			<span class="truncate text-xl font-bold">{data.band.name}</span>
+			<span class="badge badge-sm badge-primary">Band</span>
+		</div>
+	{/snippet}
+	{#snippet navigation()}
+		<NavItem href={base} label="Dashboard">
+			{#snippet icon()}<IconLayoutDashboard size={20} />{/snippet}
+		</NavItem>
+		<NavItem href={`${base}/members`} label="Members">
+			{#snippet icon()}<IconUsersGroup size={20} />{/snippet}
+		</NavItem>
+		<NavItem href={`${base}/reservations`} label="Reservations">
+			{#snippet icon()}<IconCalendar size={20} />{/snippet}
+		</NavItem>
+		{#if isOwnerOrAdmin}
+			<NavItem href={`${base}/edit`} label="Edit Band">
+				{#snippet icon()}<IconPencil size={20} />{/snippet}
+			</NavItem>
+			<NavItem href={`${base}/profile`} label="Profile">
+				{#snippet icon()}<IconUser size={20} />{/snippet}
+			</NavItem>
+		{/if}
+		{#if data.userRole === 'owner'}
+			<NavItem href={`${base}/settings`} label="Settings">
+				{#snippet icon()}<IconSettings size={20} />{/snippet}
+			</NavItem>
+		{/if}
+	{/snippet}
+	{@render children()}
+</AppShell>

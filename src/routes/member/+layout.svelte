@@ -1,100 +1,72 @@
 <script lang="ts">
 	import type { LayoutServerData } from './$types';
-	import { Toaster } from 'svelte-sonner';
 	import {
 		IconLayoutDashboard,
 		IconStar,
 		IconCalendar,
-		IconSettings,
-		IconUsersGroup,
-		IconAddressBook,
 		IconTicket,
-		IconUser
+		IconAddressBook
 	} from '@tabler/icons-svelte';
-	import Sidebar from '$lib/components/shared/Sidebar.svelte';
-	import Topbar from '$lib/components/shared/Topbar.svelte';
-	import UserFooter from '$lib/components/shared/UserFooter.svelte';
+	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
-	import NotificationBell from '$lib/components/shared/NotificationBell.svelte';
-	import PanelSwitcher from '$lib/components/shared/PanelSwitcher.svelte';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
+
+	const panels = $derived([
+		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
+		...(data.isStaff
+			? [{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const }]
+			: []),
+		...data.userBands.map((b) => ({
+			key: b.slug,
+			label: b.name,
+			href: `/band/${b.slug}`,
+			type: 'band' as const
+		}))
+	]);
 </script>
 
-<Toaster position="bottom-right" richColors closeButton />
+<AppShell drawerId="member-drawer" user={data.user} {panels} activePanel="member">
+	{#snippet brand()}
+		<div class="flex items-center gap-2 px-6 py-5">
+			<span class="truncate text-xl font-bold">CorvMC</span>
+		</div>
+	{/snippet}
+	{#snippet navigation()}
+		<NavItem href="/member" label="Dashboard">
+			{#snippet icon()}<IconLayoutDashboard />{/snippet}
+		</NavItem>
+		<NavItem href="/member/reservations" label="Reservations">
+			{#snippet icon()}<IconCalendar />{/snippet}
+		</NavItem>
+		<NavItem href="/member/tickets" label="My Tickets">
+			{#snippet icon()}<IconTicket />{/snippet}
+		</NavItem>
+		<NavItem href="/member/directory" label="Directory">
+			{#snippet icon()}<IconAddressBook />{/snippet}
+		</NavItem>
 
-<div class="drawer lg:drawer-open">
-	<input id="member-drawer" type="checkbox" class="drawer-toggle" />
+		<NavGroup title="My Bands">
+			{#each data.userBands as band}
+				<NavItem href={`/band/${band.slug}`} label={band.name}>
+					{#snippet icon()}
+						<Avatar
+							class="size-8"
+							src={band.avatarKey ? `/api/bands/${band.id}/avatar` : undefined}
+							name={band.name}
+						/>
+					{/snippet}
+				</NavItem>
+			{/each}
+		</NavGroup>
 
-	<div class="drawer-content flex flex-col">
-		<Topbar drawerId="member-drawer" userName={data.user.name} showNotifications />
+		<div class="flex grow"></div>
 
-		<main class="flex-1 p-6">
-			{@render children()}
-		</main>
-	</div>
-
-	<div class="drawer-side z-40">
-		<label for="member-drawer" class="drawer-overlay"></label>
-		<Sidebar>
-			{#snippet brand()}
-				<div class="flex items-center justify-between px-6 py-5">
-					<div class="flex items-center gap-2">
-						<span class="truncate text-xl font-bold">CorvMC</span>
-					</div>
-					<div class="hidden lg:block">
-						<NotificationBell />
-					</div>
-				</div>
-				{#if data.isStaff}
-					<PanelSwitcher current="member" />
-				{/if}
-			{/snippet}
-			{#snippet navigation()}
-				<NavItem href="/member" label="Dashboard">
-					{#snippet icon()}<IconLayoutDashboard />{/snippet}
-				</NavItem>
-				<NavItem href="/member/reservations" label="Reservations">
-					{#snippet icon()}<IconCalendar />{/snippet}
-				</NavItem>
-				<NavItem href="/member/tickets" label="My Tickets">
-					{#snippet icon()}<IconTicket />{/snippet}
-				</NavItem>
-				<NavItem href="/member/directory" label="Directory">
-					{#snippet icon()}<IconAddressBook />{/snippet}
-				</NavItem>
-
-				<NavGroup title="My Bands">
-					{#each data.userBands as band}
-						<NavItem href={`/band/${band.slug}`} label={band.name}>
-							{#snippet icon()}
-								<Avatar
-									class="size-8"
-									src={band.avatarKey ? `/api/bands/${band.id}/avatar` : undefined}
-									name={band.name}
-								/>
-							{/snippet}
-						</NavItem>
-					{/each}
-				</NavGroup>
-
-				<div class="flex grow"></div>
-
-				<NavItem href="/member/membership" label="Membership">
-					{#snippet icon()}<IconStar />{/snippet}
-				</NavItem>
-				<NavItem href="/member/profile" label="Profile">
-					{#snippet icon()}<IconUser />{/snippet}
-				</NavItem>
-				<NavItem href="/member/account" label="Account">
-					{#snippet icon()}<IconSettings />{/snippet}
-				</NavItem>
-			{/snippet}
-			{#snippet footer()}
-				<UserFooter name={data.user.name} email={data.user.email} />
-			{/snippet}
-		</Sidebar>
-	</div>
-</div>
+		<NavItem href="/member/membership" label="Membership">
+			{#snippet icon()}<IconStar />{/snippet}
+		</NavItem>
+	{/snippet}
+	{@render children()}
+</AppShell>

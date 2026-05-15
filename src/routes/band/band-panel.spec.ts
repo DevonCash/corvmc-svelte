@@ -23,7 +23,8 @@ let hasAnyRoleResult = false;
 
 vi.mock('$lib/server/band/band-service', () => ({
 	getBySlug: vi.fn(async () => getBySlugResult),
-	getUserRole: vi.fn(async () => getUserRoleResult)
+	getUserRole: vi.fn(async () => getUserRoleResult),
+	listForUser: vi.fn(async () => [])
 }));
 
 vi.mock('$lib/server/authorization', () => ({

@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { hasAnyRole } from '$lib/server/authorization';
+import { listForUser } from '$lib/server/band/band-service';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async (event) => {
@@ -14,6 +15,7 @@ export const load: LayoutServerLoad = async (event) => {
 	}
 
 	return {
-		user: event.locals.user
+		user: event.locals.user,
+		userBands: await listForUser(event.locals.user.id).catch(() => [])
 	};
 };
