@@ -158,7 +158,7 @@ Same status feedback as SubmitButton but for standalone async actions that aren'
 
 ## Action
 
-A single component that handles three patterns depending on its props: direct async action, confirmation dialog, or form modal. Detects the mode from the `action` prop — pass a callback for direct/confirm, or a `RemoteForm` from `form()` for the modal form.
+A single component that handles four patterns depending on its props: direct async action, confirmation dialog, callback modal, or form modal. Detects the mode from the `action` prop and presence of `body`/`confirm`.
 
 ### Direct action
 
@@ -170,7 +170,7 @@ Runs an async callback on click. Same behavior as `AsyncButton`.
 
 ### With confirmation
 
-When `confirm` is set, an alert dialog is shown before firing the callback:
+When `confirm` is set (and no `body`), an alert dialog is shown before firing the callback:
 
 ```svelte
 <Action
@@ -181,6 +181,28 @@ When `confirm` is set, an alert dialog is shown before firing the callback:
   successToast="Deleted"
 />
 ```
+
+### Callback modal
+
+When `action` is a callback and `body` is provided, clicking the button opens a modal with custom content and a submit button that calls the callback. Use this for create flows backed by `command()` or any async function that needs user input first.
+
+```svelte
+<Action
+  action={() => createAudience({ name, slug, description })}
+  label="New Audience"
+  modalTitle="Create Audience"
+  canSubmit={!!name.trim()}
+  successToast="Created"
+  onsuccess={(result) => goto(`/staff/marketing/audiences/${result.id}`)}
+>
+  {#snippet body({ close })}
+    <FormField name="name" label="Name" type="text" bind:value={name} />
+    <FormField name="slug" label="Slug" type="text" bind:value={slug} />
+  {/snippet}
+</Action>
+```
+
+The body snippet receives `{ close }` so the parent can programmatically close the modal if needed. The `canSubmit` prop gates the submit button.
 
 ### Form modal
 
@@ -195,7 +217,7 @@ When `action` is a `RemoteForm` (from `form()` in `data.remote.ts`), clicking th
   successToast="Updated"
   onsuccess={() => invalidateAll()}
 >
-  {#snippet body()}
+  {#snippet body({ close })}
     <FormField name="name" type="text" value={item.name} />
     <FormField name="description" type="textarea" value={item.description} />
   {/snippet}
@@ -207,22 +229,33 @@ For `.for()` instances (per-row actions in a list):
 ```svelte
 {#each items as item (item.id)}
   <Action action={updateItem.for(item.id)} label="Edit" modalTitle="Edit {item.name}" ...>
-    {#snippet body()}
+    {#snippet body({ close })}
       <FormField name="name" type="text" value={item.name} />
     {/snippet}
   </Action>
 {/each}
 ```
 
+### Mode detection
+
+| `action` type | `body` | `confirm` | Mode |
+|---|---|---|---|
+| callback | — | — | Direct action |
+| callback | — | string | Confirmation dialog |
+| callback | snippet | — | Callback modal |
+| RemoteForm | snippet | — | Form modal |
+
 ### Props
 
 - `action` — async callback `() => Promise<any>` or a `RemoteForm` from `form()`
-- `label` — button text (also used as default submit label in form modals)
+- `label` — button text (also used as default submit label in modals)
 - `icon` — optional icon snippet on the trigger button
-- `confirm` — string message for the confirmation dialog (callback mode only)
-- `modalTitle` — title for the form modal (form mode only)
-- `body` — snippet of form fields rendered inside the modal (form mode only)
-- `submitLabel` — override the submit button label in the form modal (defaults to `label`)
+- `confirm` — string message for the confirmation dialog (callback mode, no body)
+- `modalTitle` — title for the modal (callback modal and form modal modes)
+- `body` — snippet rendered inside the modal. Receives `{ close }` as params. In form-modal mode, wrapped in a `<Form>`. In callback mode, rendered as-is.
+- `submitLabel` — override the submit button label in the modal (defaults to `label`)
+- `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
+- `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
 - `class` — button classes (default `btn-primary`)

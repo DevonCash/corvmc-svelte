@@ -21,6 +21,8 @@
 		modalTitle,
 		body,
 		submitLabel,
+		canSubmit = true,
+		maxWidth = 'max-w-lg',
 		successToast,
 		errorToast = 'Something went wrong',
 		flashDuration = 1500,
@@ -38,12 +40,16 @@
 		errorLabel?: string;
 		/** When set, a confirmation dialog is shown before firing a callback action. The string is used as the dialog message. */
 		confirm?: string;
-		/** Title for the form modal. Only used when action is a RemoteForm. */
+		/** Title for the modal. Used in both form-modal and callback+body modes. */
 		modalTitle?: string;
-		/** Form content rendered inside a modal with a <Form> wrapper. Only used when action is a RemoteForm. */
-		body?: Snippet;
-		/** Label for the submit button inside the form modal. Defaults to `label`. */
+		/** Modal content. When action is a RemoteForm, rendered inside a <Form> wrapper. When action is a callback, rendered as-is with a manual submit button. Receives { close } as snippet params. */
+		body?: Snippet<[{ close: () => void }]>;
+		/** Label for the submit button inside the modal. Defaults to `label`. */
 		submitLabel?: string;
+		/** Gates the submit button in callback+body mode. Ignored in form-modal mode (Zod handles validation). */
+		canSubmit?: boolean;
+		/** Max width class for the modal. Defaults to 'max-w-lg'. */
+		maxWidth?: string;
 		successToast?: string;
 		errorToast?: string;
 		flashDuration?: number;
@@ -59,6 +65,7 @@
 	// ---------------------------------------------------------------------------
 
 	const isForm = $derived(typeof action !== 'function');
+	const hasModal = $derived(isForm || (!!body && !confirm));
 
 	// ---------------------------------------------------------------------------
 	// Shared state
@@ -70,8 +77,12 @@
 	// Dialog state (confirm or form modal)
 	let dialogOpen = $state(false);
 
+	function close() {
+		dialogOpen = false;
+	}
+
 	// ---------------------------------------------------------------------------
-	// Direct / confirm action mode
+	// Direct / confirm / callback+body action mode
 	// ---------------------------------------------------------------------------
 
 	async function run() {
@@ -83,6 +94,7 @@
 		try {
 			const result = await (action as () => Promise<unknown>)();
 			await minDelay;
+			dialogOpen = false;
 			onsuccess?.(result);
 			if (successToast) toast.success(successToast);
 			status = 'success';
@@ -101,7 +113,7 @@
 	}
 
 	function handleClick() {
-		if (isForm) {
+		if (hasModal) {
 			dialogOpen = true;
 		} else if (confirm) {
 			dialogOpen = true;
@@ -143,8 +155,8 @@
 	{/if}
 </button>
 
-<!-- Confirm dialog (callback + confirm string) -->
-{#if !isForm && confirm}
+<!-- Confirm dialog (callback + confirm string, no body) -->
+{#if !isForm && confirm && !body}
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Portal>
 			<Dialog.Overlay class="modal modal-open bg-black/40" />
@@ -164,13 +176,49 @@
 	</Dialog.Root>
 {/if}
 
+<!-- Callback + body modal (async callback with custom form content) -->
+{#if !isForm && body}
+	<Dialog.Root bind:open={dialogOpen}>
+		<Dialog.Portal>
+			<Dialog.Overlay class="modal modal-open bg-black/40" />
+			<Dialog.Content class="modal modal-open">
+				<div class="modal-box {maxWidth}">
+					<div class="flex items-center justify-between mb-4">
+						{#if modalTitle}
+							<Dialog.Title class="text-lg font-bold">{modalTitle}</Dialog.Title>
+						{/if}
+						<Dialog.Close class="btn btn-sm btn-ghost btn-circle">✕</Dialog.Close>
+					</div>
+
+					<div class="space-y-4">
+						{@render body({ close })}
+						<div class="flex justify-end pt-2">
+							<button
+								type="button"
+								class="btn {className}"
+								disabled={!canSubmit || status === 'pending'}
+								onclick={run}
+							>
+								{#if status === 'pending'}
+									<span class="loading loading-spinner loading-sm"></span>
+								{/if}
+								{submitLabel ?? label}
+							</button>
+						</div>
+					</div>
+				</div>
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
+{/if}
+
 <!-- Form modal (RemoteForm action + body snippet) -->
 {#if isForm && body}
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Portal>
 			<Dialog.Overlay class="modal modal-open bg-black/40" />
 			<Dialog.Content class="modal modal-open">
-				<div class="modal-box max-w-lg">
+				<div class="modal-box {maxWidth}">
 					<div class="flex items-center justify-between mb-4">
 						{#if modalTitle}
 							<Dialog.Title class="text-lg font-bold">{modalTitle}</Dialog.Title>
@@ -191,7 +239,7 @@
 						}}
 					>
 						<div class="space-y-4">
-							{@render body()}
+							{@render body({ close })}
 							<div class="flex justify-end pt-2">
 								<SubmitButton label={submitLabel ?? label} class={className} />
 							</div>
