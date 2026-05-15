@@ -6,7 +6,7 @@
 	let pendingNavigation: (() => void) | null = $state(null);
 	let bypassing = $state(false);
 
-	const form = getFormContext();
+	const form = getFormContext()!;
 
 	beforeNavigate(({ cancel, to, willUnload }) => {
 		if (bypassing) {

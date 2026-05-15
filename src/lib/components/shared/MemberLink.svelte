@@ -10,7 +10,7 @@
 		hideAvatar = false
 	}: {
 		name: string;
-		email: string;
+		email?: string;
 		userId?: string;
 		avatarUrl?: string;
 		class?: string;
@@ -27,6 +27,6 @@
 	{/if}
 	<div class="min-w-0">
 		<p class="font-medium">{name}</p>
-		<span class="link text-sm opacity-60">{email}</span>
+		{#if email}<span class="link text-sm opacity-60">{email}</span>{/if}
 	</div>
 </a>

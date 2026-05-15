@@ -25,7 +25,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			memberName: user.name,
 			memberEmail: user.email,
 			memberPhone: user.phone,
-			memberPronouns: user.pronouns
+			memberPronouns: user.pronouns,
+			memberImage: user.image
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))

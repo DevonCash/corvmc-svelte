@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -7,7 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { deleteBandForm } from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const band = $derived(data?.band);
 

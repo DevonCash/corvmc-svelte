@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
@@ -16,7 +16,7 @@
 		leave
 	} from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');
@@ -302,7 +302,7 @@
 	>
 		<div class="space-y-4">
 			<p>
-				Are you sure you want to leave <strong>{band.name}</strong>? You will need to be re-invited
+				Are you sure you want to leave <strong>{data.band.name}</strong>? You will need to be re-invited
 				to rejoin.
 			</p>
 			<div class="flex justify-end pt-2">

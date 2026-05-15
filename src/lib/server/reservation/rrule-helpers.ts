@@ -1,4 +1,5 @@
 import pkg from 'rrule';
+import type { Frequency as FrequencyType, RRule as RRuleType } from 'rrule';
 const { RRule, Frequency } = pkg;
 import { DateTime } from 'luxon';
 import type { RecurringFrequency } from './config';
@@ -13,7 +14,7 @@ const TZ = 'America/Los_Angeles';
 /**
  * Map our frequency names to RRULE Frequency + interval.
  */
-function frequencyParams(freq: RecurringFrequency): { freq: Frequency; interval: number } {
+function frequencyParams(freq: RecurringFrequency): { freq: FrequencyType; interval: number } {
 	switch (freq) {
 		case 'weekly':
 			return { freq: Frequency.WEEKLY, interval: 1 };
@@ -69,7 +70,7 @@ export function buildRRule(prototypeStartsAt: Date, frequency: RecurringFrequenc
 /**
  * Parse a stored RRULE string back into an RRule instance.
  */
-export function parseRRule(rruleString: string): RRule {
+export function parseRRule(rruleString: string): RRuleType {
 	return RRule.fromString(rruleString);
 }
 

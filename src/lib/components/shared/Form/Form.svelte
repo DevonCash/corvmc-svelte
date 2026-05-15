@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { getContext, setContext } from 'svelte';
+	import { getContext, hasContext, setContext } from 'svelte';
 	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '@sveltejs/kit';
 
 	export type FormStatus = 'idle' | 'dirty' | 'pending' | 'success' | 'error';
@@ -16,7 +16,8 @@
 
 	const FORM_KEY = Symbol('form');
 
-	export function getFormContext(): FormContext {
+	export function getFormContext(): FormContext | null {
+		if (!hasContext(FORM_KEY)) return null;
 		return getContext<FormContext>(FORM_KEY);
 	}
 

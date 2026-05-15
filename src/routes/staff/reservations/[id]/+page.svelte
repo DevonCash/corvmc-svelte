@@ -199,7 +199,7 @@
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
-				<Avatar src={r.memberAvatarUrl} name={r.memberName} class="size-16 mb-4" />
+				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
 				<h3 class='text-lg'>{r.memberName}</h3>
 				{#if r.memberPronouns}
 					<p class="text-xs text-muted">{r.memberPronouns}</p>

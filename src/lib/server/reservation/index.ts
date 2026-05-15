@@ -5,6 +5,4 @@ export * from './types';
 export * from './config';
 export * from './conflict-service';
 export * from './reservation-service';
-import { registerReservationCheckoutListener } from './checkout-listener';
-
-registerReservationCheckoutListener();
+export { handleReservationCheckout } from './checkout-listener';

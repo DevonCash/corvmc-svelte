@@ -32,8 +32,8 @@
 		navigation,
 		brand
 	}: {
-		// @deprecated navItems prop, will be removed in favor of using the navigation slot exclusively
-		navItems: (INavItem | INavGroup)[] | null;
+		/** @deprecated use the navigation snippet instead */
+		navItems?: (INavItem | INavGroup)[] | null;
 		title?: string;
 		badge?: string;
 		footer?: Snippet;
@@ -70,7 +70,7 @@
 					{#snippet icon()}<item.icon size={20} />{/snippet}
 				</NavItem>
 			{:else}
-				<NavGroup label={item.label} icon={item.icon}>
+				<NavGroup title={item.label}>
 					{#each item.children as child, j (child.label)}
 						<NavItem href={child.href} label={child.label}>
 							{#snippet icon()}<child.icon size={20} />{/snippet}

@@ -13,7 +13,7 @@
 	let coverFees = $state(false);
 	let submitting = $state(false);
 
-	const evt = $derived(data.event);
+	const evt = $derived(data!.event);
 	const unitPrice = $derived(evt.ticketPrice);
 	const discountedPrice = $derived(
 		data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice

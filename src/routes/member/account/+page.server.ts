@@ -25,5 +25,12 @@ export const load: PageServerLoad = async (event) => {
 
 	if (!row) throw error(404, 'User not found');
 
-	return { user: row, isStaff };
+	return {
+		user: {
+			...row,
+			pronouns: row.pronouns ?? undefined,
+			phone: row.phone ?? undefined
+		},
+		isStaff
+	};
 };

@@ -2,6 +2,7 @@
 	import { type Snippet } from 'svelte';
 	import TagInput from './TagInput.svelte';
 	import { getFormContext } from './Form.svelte';
+	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
 	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle';
@@ -9,38 +10,48 @@
 	let {
 		label,
 		name,
+		id: propId,
 		type,
 		class: className = '',
 		input,
 		description,
 		readonly,
+		issues: propIssues,
+		children,
 		...rest
 	}: {
-		name: string;
+		name?: string;
+		id?: string;
 		label?: string;
 		input?: Snippet<[id: string]>;
+		children?: Snippet;
 		description?: string;
 		type?: InputType;
 		class?: string;
-		value: any;
+		value?: any;
 		readonly?: boolean;
+		issues?: RemoteFormIssue[] | null;
 		[key: string]: any;
 	} = $props();
 
 	const form = getFormContext();
 
-	let id = `form-field-${name}-${Math.random().toString(16).slice(2, 8)}`;
-	let _label = $derived.by(() => label ?? name.slice(0, 1).toUpperCase() + name.slice(1));
-	let issues = $derived.by(() => form.issuesFor(name));
-	let pending = $derived(form.status === 'pending');
+	// Support old API: use `id` prop if `name` is not provided
+	const uid = Math.random().toString(16).slice(2, 8);
+	let _name = $derived(name ?? propId ?? '');
+	let _id = $derived(propId ?? `form-field-${_name}-${uid}`);
+	let _label = $derived.by(() => label ?? (_name ? _name.slice(0, 1).toUpperCase() + _name.slice(1) : ''));
+	// When inside a Form context, derive issues from form; otherwise use prop
+	let issues = $derived.by(() => form ? form.issuesFor(_name) : (propIssues ?? null));
+	let pending = $derived(form ? form.status === 'pending' : false);
 
 	let inputProps = $derived({
-		id,
-		name,
+		id: _id,
+		name: _name,
 		type,
 		disabled: pending || readonly,
-		onchange: () => form.changed(),
-		oninput: () => form.changed()
+		onchange: () => form?.changed(),
+		oninput: () => form?.changed()
 	});
 </script>
 
@@ -55,8 +66,10 @@
 	{:else if description}
 		<p class="text-muted text-sm">{description}</p>
 	{/if}
-	{#if input}
-		{@render input(id)}
+	{#if children}
+		{@render children()}
+	{:else if input}
+		{@render input(_id)}
 	{:else if readonly}
 		<p class="input-bordered input w-full">
 			<span class="grow">{rest.value}</span>
@@ -69,29 +82,29 @@
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="checkbox" checked={rest.value} disabled={pending || readonly} {id} {name} onchange={() => form.changed()} />
+			<input type="checkbox" class="checkbox" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} onchange={() => form?.changed()} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} {id} {name} onchange={() => form.changed()} />
+			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} onchange={() => form?.changed()} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'select' && rest.multiple}
 		{@const selectedValues = Array.isArray(rest.value) ? rest.value : []}
-		<input type="hidden" {name} value={JSON.stringify(selectedValues)} />
+		<input type="hidden" name={_name} value={JSON.stringify(selectedValues)} />
 		<select
 			class="select-bordered select w-full"
 			class:ghost={readonly}
 			multiple
 			disabled={pending}
-			{id}
+			id={_id}
 			onchange={(e) => {
 				const sel = e.currentTarget;
 				const vals = Array.from(sel.selectedOptions, (o) => o.value);
 				const hidden = sel.previousElementSibling as HTMLInputElement;
 				hidden.value = JSON.stringify(vals);
-				form.changed();
+				form?.changed();
 			}}
 		>
 			{#each rest.options as option}

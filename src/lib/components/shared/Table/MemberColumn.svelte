@@ -25,7 +25,7 @@
 			name={row[nameKey] ?? 'Unknown'}
 			email={emailKey ? row[emailKey] : undefined}
 			userId={userIdKey ? row[userIdKey] : undefined}
-			{avatar}
+			hideAvatar={!avatar}
 			class="p-7 px-4"
 		/>
 	{/snippet}

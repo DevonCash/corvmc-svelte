@@ -155,7 +155,7 @@
 	}
 </script>
 
-<button class="btn btn-sm btn-primary" onclick={() => (createOpen = true)}>
+<button class="btn btn-sm btn-primary" onclick={() => (open = true)}>
 	New Reservation
 </button>
 <Modal bind:open title="New Reservation" maxWidth="max-w-md" onclose={resetForm}>

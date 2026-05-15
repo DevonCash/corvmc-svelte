@@ -96,7 +96,7 @@ export async function fulfillPurchase(purchaseId: string) {
 // ---------------------------------------------------------------------------
 
 export async function cancelPurchase(purchaseId: string): Promise<number> {
-	const result = await db
+	const rows = await db
 		.update(ticket)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(
@@ -104,9 +104,10 @@ export async function cancelPurchase(purchaseId: string): Promise<number> {
 				eq(ticket.purchaseId, purchaseId),
 				inArray(ticket.status, ['pending', 'valid'])
 			)
-		);
+		)
+		.returning({ id: ticket.id });
 
-	return result.rowCount ?? 0;
+	return rows.length;
 }
 
 // ---------------------------------------------------------------------------

@@ -12,9 +12,15 @@
 		children?: Snippet;
 		subtitle?: string;
 	} = $props();
+
+	let scrollY = $state(0);
 </script>
 
-<div class="flex items-center justify-between">
+<svelte:window bind:scrollY />
+<div
+	class="sticky top-0 z-50 -mx-6 flex items-center justify-between bg-base-100 px-6 py-4"
+	class:shadow={scrollY > 0}
+>
 	<div class="flex items-center gap-4">
 		{#if backHref}
 			<a href={backHref} class="btn btn-square btn-ghost btn-lg">←</a>

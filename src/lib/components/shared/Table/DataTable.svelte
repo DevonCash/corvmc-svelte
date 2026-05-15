@@ -245,7 +245,7 @@
 							class="hover"
 							class:cursor-pointer={!!rowHref}
 							onclick={rowHref
-								? () => goto(rowHref!(item))
+								? () => { goto(rowHref!(item)); }
 								: undefined}
 						>
 							{#each columns as col, i (i)}

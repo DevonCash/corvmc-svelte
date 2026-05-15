@@ -1,4 +1,2 @@
 export * from './ticket-service';
-import { registerTicketCheckoutListener } from './checkout-listener';
-
-registerTicketCheckoutListener();
+export { handleTicketCheckout } from './checkout-listener';

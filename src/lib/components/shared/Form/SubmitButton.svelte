@@ -24,7 +24,7 @@
 		[key: string]: unknown;
 	} = $props();
 
-	let ctx = getFormContext();
+	let ctx = getFormContext()!;
 
 	let keys = useShortcut(() => shortcut, () => {
 		if (ctx.status !== 'pending' && !disabled) ctx.submit();
