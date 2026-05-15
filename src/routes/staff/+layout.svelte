@@ -19,7 +19,8 @@
 		IconRepeat,
 		IconMusic,
 		IconMail,
-		IconMailbox
+		IconMailbox,
+		IconTool
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -73,6 +74,9 @@
 					</NavItem>
 					<NavItem href="/staff/closures" label="Closures">
 						{#snippet icon()}<IconBan size={20} />{/snippet}
+					</NavItem>
+					<NavItem href="/staff/equipment" label="Equipment">
+						{#snippet icon()}<IconTool size={20} />{/snippet}
 					</NavItem>
 				</NavGroup>
 

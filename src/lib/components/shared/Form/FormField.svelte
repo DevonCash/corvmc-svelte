@@ -5,7 +5,7 @@
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
-	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle';
+	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle';
 
 	let {
 		label,

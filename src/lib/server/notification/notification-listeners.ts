@@ -186,6 +186,56 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Equipment loan scheduled (notify member) ---
+	domainEvents.on('equipment.loan_scheduled', async (event) => {
+		const html = templates.loanScheduledConfirmation({
+			userName: event.userName,
+			equipmentName: event.equipmentName,
+			scheduledPickupDate: new Date(event.scheduledPickupDate).toLocaleDateString('en-US', {
+				weekday: 'long',
+				month: 'long',
+				day: 'numeric'
+			}),
+			siteUrl
+		});
+
+		await dispatch({
+			type: 'equipment_loan_scheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Equipment pickup confirmed: ${event.equipmentName}`,
+			body: `Pickup on ${new Date(event.scheduledPickupDate).toLocaleDateString()}`,
+			href: '/member/equipment/loans',
+			emailSubject: `Equipment pickup confirmed: ${event.equipmentName}`,
+			emailHtml: html
+		});
+	});
+
+	// --- Equipment loan requested (notify staff) ---
+	domainEvents.on('equipment.loan_requested', async (event) => {
+		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
+
+		const html = templates.loanRequestedStaffNotification({
+			userName: event.userName,
+			equipmentName: event.equipmentName,
+			memberNotes: event.memberNotes,
+			requestedPickupDate: new Date(event.requestedPickupDate).toLocaleDateString('en-US', {
+				weekday: 'long',
+				month: 'long',
+				day: 'numeric'
+			}),
+			siteUrl,
+			loanId: event.loanId
+		});
+
+		await dispatchEmailOnly({
+			type: 'equipment_loan_requested',
+			toEmail: staffEmail,
+			subject: `Equipment request from ${event.userName}`,
+			html
+		});
+	});
+
 	// --- Contact form submission ---
 	domainEvents.on('contact.form_submitted', async (event) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
