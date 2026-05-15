@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Demo cassette</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.cassette {
+  position: relative; width: 220px; height: 138px;
+  padding: 7px; border-radius: 4px; background: #3a4150;
+  transform: rotate(-3deg);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.cassette__label {
+  flex: 1; position: relative;
+  padding: 8px 12px 26px;
+  background:
+    linear-gradient(180deg,
+      transparent 0 70%,
+      #f84d13 70% 76%,
+      #e5771e 76% 82%,
+      #ffb500 82% 88%,
+      #00859b 88% 94%,
+      #003b5c 94% 100%),
+    repeating-linear-gradient(180deg, transparent 0 12px, rgba(0,0,90,0.06) 12px 13px),
+    #f4ead8;
+  border-radius: 2px;
+}
+.cassette__side {
+  position: absolute; top: 3px; right: 7px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.18em; color: rgba(26,20,16,0.55);
+}
+.cassette__band {
+  font-family: var(--font-script); font-size: 19px;
+  font-weight: 700; color: #1a1410; line-height: 1;
+  margin: 4px 0 0; transform: rotate(-0.8deg);
+}
+.cassette__title { font-family: var(--font-script); font-size: 12px; font-weight: 600; color: rgba(26,20,16,0.72); line-height: 1.1; margin: 2px 0 0; }
+.cassette__stamp {
+  position: absolute; bottom: 32px; right: 8px;
+  font-family: var(--font-chalk); font-size: 10px;
+  color: #c63015; letter-spacing: 0.08em;
+  text-transform: uppercase; transform: rotate(-5deg);
+  border: 1.5px solid #c63015; padding: 1px 4px;
+  border-radius: 2px; background: rgba(244, 234, 216, 0.92); z-index: 2;
+}
+.cassette__deck {
+  display: flex; justify-content: space-around;
+  align-items: center; height: 26px; padding: 0 26px;
+  position: relative;
+}
+.cassette__spool {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #1a1d24; border: 1.5px solid #5a6273;
+}
+.cassette__deck::before {
+  content: ""; position: absolute; top: 50%;
+  left: 32%; right: 32%; height: 3px;
+  transform: translateY(-50%); background: #1a1d24; border-radius: 1px;
+}
+
+
+/* Light outline on dark background */
+.stage--back .cassette { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Apply to Perform</span>
+    <span class="bar__title">Demo cassette</span>
+    <select id="variant" class="bar__select"><option value="0">Demo submission</option><option value="1">Mixtape</option><option value="2">Live recording</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="cassette">
+  <div class="cassette__label">
+    <span class="cassette__side" data-slot="side">Side A</span>
+    <h4 class="cassette__band" data-slot="band">your band</h4>
+    <p class="cassette__title" data-slot="title">3-track demo · Dec '25</p>
+    <span class="cassette__stamp" data-slot="stamp">Demo</span>
+  </div>
+  <div class="cassette__deck"><div class="cassette__spool"></div><div class="cassette__spool"></div></div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="cassette">
+  <div class="cassette__label">
+    <span class="cassette__side" data-slot="side">Side A</span>
+    <h4 class="cassette__band" data-slot="band">your band</h4>
+    <p class="cassette__title" data-slot="title">3-track demo · Dec '25</p>
+    <span class="cassette__stamp" data-slot="stamp">Demo</span>
+  </div>
+  <div class="cassette__deck"><div class="cassette__spool"></div><div class="cassette__spool"></div></div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Demo submission",
+    "side": "Side A",
+    "band": "your band",
+    "title": "3-track demo · Dec '25",
+    "stamp": "Demo"
+  },
+  {
+    "__name": "Mixtape",
+    "side": "Side B",
+    "band": "mixtape '26",
+    "title": "Songs for the road · January",
+    "stamp": "Mix"
+  },
+  {
+    "__name": "Live recording",
+    "side": "Live",
+    "band": "Open Mic '25",
+    "title": "Recorded Oct 5 at CMC",
+    "stamp": "Live"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

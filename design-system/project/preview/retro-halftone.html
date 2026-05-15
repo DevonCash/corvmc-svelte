@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Halftone dot texture</title><style>
+@import url("../colors_and_type.css");
+@import url("../retro_flourishes.css");
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background: var(--cmc-cream); color: var(--fg-1); -webkit-font-smoothing: antialiased; }
+.card {
+  padding: 20px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+</style></head>
+<body><div class="card">
+  <div class="label">.halftone · subtle vintage offset-print feel</div>
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; flex: 1;">
+    <div class="halftone" style="background:var(--cmc-yellow); border-radius:8px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; --dot-color: var(--cmc-brown); min-height: 180px;">
+      <div style="font-weight:700; font-size:15px; color:var(--cmc-brown);">Default</div>
+      <div style="font-size:11px; color:var(--cmc-brown); opacity:0.7;">6px gap · 22% opacity</div>
+    </div>
+    <div class="halftone halftone--coarse" style="background:var(--cmc-light-blue); border-radius:8px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; --dot-color: var(--cmc-navy); min-height: 180px;">
+      <div style="font-weight:700; font-size:15px; color:var(--cmc-navy);">Coarse</div>
+      <div style="font-size:11px; color:var(--cmc-navy); opacity:0.7;">8px gap · larger dots</div>
+    </div>
+    <div class="halftone halftone--fade-bottom" style="background:var(--cmc-orange); border-radius:8px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; --dot-color: rgba(0,0,0,0.4); min-height: 180px;">
+      <div style="font-weight:700; font-size:15px; color:#fff;">Fade-bottom</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.85);">density gradient</div>
+    </div>
+  </div>
+  <div style="font-size:11px; color:var(--fg-3); line-height:1.55;">Radial-gradient pattern on a pseudo-element. Adds print-press feel without textures. Use sparingly — strongest at full-bleed scale.</div></div></body>
+</html>

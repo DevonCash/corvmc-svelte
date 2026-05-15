@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Setlist</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.setlist {
+  position: relative; width: 220px; padding: 30px 18px 22px;
+  background: #f4ead8; color: #16140f;
+  transform: rotate(-1.4deg);
+  font-family: "Lexend", sans-serif;
+}
+.setlist::before, .setlist::after {
+  content: ""; position: absolute; top: -8px;
+  width: 42px; height: 17px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 5px, rgba(0,0,0,0.10) 5px 6px),
+    #e5771e;
+}
+.setlist::before { left: 10px; transform: rotate(-14deg); }
+.setlist::after  { right: 10px; transform: rotate(11deg); }
+.setlist__header {
+  font-family: var(--font-chalk); font-size: 18px;
+  line-height: 1; margin-bottom: 8px;
+  transform: rotate(-1deg); transform-origin: left;
+}
+.setlist__header small {
+  display: block; font-family: var(--font-script);
+  font-size: 11px; font-weight: 600;
+  color: rgba(22,20,15,0.6); margin-top: 4px;
+}
+.setlist__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; counter-reset: cue; }
+.setlist__item {
+  counter-increment: cue;
+  display: grid; grid-template-columns: 16px 1fr auto;
+  align-items: baseline; gap: 6px;
+  padding: 3px 0 4px;
+  border-bottom: 1px dashed rgba(22,20,15,0.18);
+  font-family: var(--font-script); font-size: 14px; font-weight: 600;
+  line-height: 1.1;
+}
+.setlist__item::before {
+  content: counter(cue) "."; font-family: var(--font-script);
+  font-size: 12px; font-weight: 600; color: rgba(22,20,15,0.55);
+}
+.setlist__item--strike { position: relative; color: rgba(22,20,15,0.5); }
+.setlist__item--strike::after {
+  content: ""; position: absolute; left: 16px; right: 26px;
+  top: 55%; height: 2px; background: rgba(22,20,15,0.55);
+  transform: rotate(-0.6deg);
+}
+.setlist__item .time { font-family: var(--font-script); font-size: 12px; color: rgba(22,20,15,0.6); font-weight: 600; }
+.setlist__encore {
+  margin-top: 8px; padding-top: 6px;
+  border-top: 2px solid rgba(22,20,15,0.55);
+  font-family: var(--font-chalk); font-size: 15px;
+  line-height: 1; color: #c63015;
+  transform: rotate(-1.4deg); transform-origin: left;
+}
+
+
+/* Light outline on dark background */
+.stage--back .setlist { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Real Book Club</span>
+    <span class="bar__title">Setlist</span>
+    <select id="variant" class="bar__select"><option value="0">This week</option><option value="1">Next week</option><option value="2">Saturday lineup</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="setlist">
+  <div class="setlist__header" data-slot="header">This Week<small data-slot="sub">Dec 5 — Dec 9</small></div>
+  <ul class="setlist__list">
+    <li class="setlist__item setlist__item--strike"><span data-slot="i1">Songwriter Circle</span><span class="time" data-slot="t1">Mon 7p</span></li>
+    <li class="setlist__item setlist__item--strike"><span data-slot="i2">Open Practice</span><span class="time" data-slot="t2">Tue 6p</span></li>
+    <li class="setlist__item"><span data-slot="i3">Real Book Club</span><span class="time" data-slot="t3">Thu 7p</span></li>
+    <li class="setlist__item"><span data-slot="i4">Member Meetup</span><span class="time" data-slot="t4">Thu 8:30</span></li>
+  </ul>
+  <div class="setlist__encore" data-slot="encore">ENCORE — Jam after :30</div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="setlist">
+  <div class="setlist__header" data-slot="header">This Week<small data-slot="sub">Dec 5 — Dec 9</small></div>
+  <ul class="setlist__list">
+    <li class="setlist__item setlist__item--strike"><span data-slot="i1">Songwriter Circle</span><span class="time" data-slot="t1">Mon 7p</span></li>
+    <li class="setlist__item setlist__item--strike"><span data-slot="i2">Open Practice</span><span class="time" data-slot="t2">Tue 6p</span></li>
+    <li class="setlist__item"><span data-slot="i3">Real Book Club</span><span class="time" data-slot="t3">Thu 7p</span></li>
+    <li class="setlist__item"><span data-slot="i4">Member Meetup</span><span class="time" data-slot="t4">Thu 8:30</span></li>
+  </ul>
+  <div class="setlist__encore" data-slot="encore">ENCORE — Jam after :30</div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "This week",
+    "header": "This Week",
+    "i1": "Songwriter Circle",
+    "t1": "Mon 7p",
+    "i2": "Open Practice",
+    "t2": "Tue 6p",
+    "i3": "Real Book Club",
+    "t3": "Thu 7p",
+    "i4": "Member Meetup",
+    "t4": "Thu 8:30",
+    "encore": "ENCORE — Jam after :30"
+  },
+  {
+    "__name": "Next week",
+    "header": "Next Week",
+    "i1": "Songwriter Circle",
+    "t1": "Mon 7p",
+    "i2": "Jazz Combo",
+    "t2": "Wed 6p",
+    "i3": "Real Book Club",
+    "t3": "Thu 7p",
+    "i4": "Cassette Showcase",
+    "t4": "Fri 7p",
+    "encore": "ENCORE — open mic"
+  },
+  {
+    "__name": "Saturday lineup",
+    "header": "Saturday",
+    "i1": "Doors open",
+    "t1": "6:00",
+    "i2": "Sound check",
+    "t2": "6:15",
+    "i3": "Opener · trio",
+    "t3": "7:00",
+    "i4": "Headliner · quintet",
+    "t4": "8:30",
+    "encore": "ENCORE — sit-in"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

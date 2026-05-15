@@ -265,56 +265,74 @@ Consistent empty-state message for lists and tables.
 
 ## DataTable
 
-Card-wrapped table backed by `@humanspeak/svelte-headless-table`. Accepts column definitions and data; handles sorting and client-side pagination automatically.
-
-Define columns using the `Column<T>` type from `$lib/components/DataTable.svelte`:
-
-```typescript
-import type { Column } from '$lib/components/DataTable.svelte';
-
-const columns: Column<User>[] = [
-  { key: 'name', header: 'Name', sortable: true },
-  { key: 'email', header: 'Email' },
-  {
-    key: 'createdAt',
-    header: 'Joined',
-    sortable: true,
-    cell: (v) => new Date(v as string).toLocaleDateString()
-  }
-];
-```
-
-Column options: `key` (property on data object), `header` (label text), `sortable` (enables click-to-sort), `cell` (formats the value as text), `class` (extra CSS on the `<td>`).
-
-For simple text-only cells, the `cell` formatter or raw value is rendered automatically:
+Table with built-in sorting and client-side pagination. Define columns as child `<Column>` components in the markup — each column declares its header, data key, and optional cell rendering.
 
 ```svelte
-<DataTable data={users} {columns} empty="No users found" />
-```
+import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+import Column from '$lib/components/shared/Table/Column.svelte';
 
-For complex cells (links, badges, multiple elements), pass a `row` snippet to take full control of row rendering:
-
-```svelte
-<DataTable data={users} {columns} empty="No users found">
-  {#snippet row(user)}
-    <tr class="hover">
-      <td><a href="/staff/users/{user.id}" class="link link-primary">{user.name}</a></td>
-      <td>{user.email}</td>
-      <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-    </tr>
-  {/snippet}
+<DataTable data={users} empty="No users found">
+  <Column key="name" header="Name" sortable />
+  <Column key="email" header="Email" />
+  <Column key="createdAt" header="Joined" sortable type="date" />
 </DataTable>
 ```
 
-When using the `row` snippet, you're responsible for rendering all `<td>` elements in column order. The `columns` prop still drives the header row and sorting behavior.
+### Column props
 
-Pagination is built in (default 20 rows per page). Customize with `pageSize`:
+`key` (data property), `header` (label text), `sortable` (click-to-sort), `type` (built-in formatter: `text`, `date`, `datetime`, `currency`, `badge`), `class` (CSS on td), `shrink` (adds `w-px` for shrink-to-fit columns), `stopClick` (prevents row click propagation on this cell).
+
+### Custom cell rendering
+
+For complex cells (links, badges, compound elements), pass a `cell` snippet:
 
 ```svelte
-<DataTable data={users} {columns} pageSize={50} />
+<Column key="status" header="Status">
+  {#snippet cell(value, row)}
+    <StatusBadge status={row.status} />
+  {/snippet}
+</Column>
 ```
 
-Pagination controls only render when there are multiple pages.
+### MemberColumn
+
+Domain component that renders a `MemberLink` in a table cell. Handles the padding, click propagation, and link behavior automatically.
+
+```svelte
+import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
+
+<MemberColumn nameKey="userName" emailKey="userEmail" userIdKey="userId" />
+```
+
+Props: `nameKey` (default `"userName"`), `emailKey`, `userIdKey`, `header` (default `"Member"`), `sortable`, `avatar`.
+
+### Row navigation
+
+Make rows clickable with `rowHref`:
+
+```svelte
+<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`}>
+  <!-- columns -->
+</DataTable>
+```
+
+Uses SvelteKit's `goto` for client-side navigation. Cells with `stopClick` opt out of row clicks (useful for MemberColumn or action buttons).
+
+### Grouping
+
+Group rows by a label with `groupBy`:
+
+```svelte
+<DataTable data={reservations} groupBy={(r) => formatDate(r.startsAt)}>
+```
+
+### Pagination
+
+Built in, default 20 rows per page. Customize with `pageSize`. Controls only render when there are multiple pages.
+
+### Legacy API
+
+The old `columns` prop + `row` snippet API still works for backward compat but new pages should use `<Column>` components.
 
 ## StatCard
 

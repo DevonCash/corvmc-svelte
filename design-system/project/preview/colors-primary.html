@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Primary palette — both backgrounds</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #fffbf6;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.half {
+  flex: 1;
+  padding: 18px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.half--house { background: #fffbf6; color: #1a2330; }
+.half--back  { background: #161b22; color: #e6dcd0; }
+.label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.label strong {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.half--house .label { color: #7a8290; }
+.half--house .label strong { color: #1a2330; }
+.half--back  .label { color: #828a98; }
+.half--back  .label strong { color: #e6dcd0; }
+.row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.swatch { display: flex; flex-direction: column; gap: 4px; }
+.chip {
+  flex: 1;
+  min-height: 56px;
+  border-radius: 6px;
+}
+.half--house .chip { border: 1px solid rgba(0,0,0,0.06); }
+.half--back  .chip { border: 1px solid rgba(255,255,255,0.06); }
+.name { font-weight: 600; font-size: 11px; line-height: 1.1; }
+.hex {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+}
+.half--house .hex { color: #4a5563; }
+.half--back  .hex { color: #828a98; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="half half--house">
+    <div class="label"><strong>On Houselights cream</strong>brand fills on #fffbf6</div>
+    <div class="row">
+      <div class="swatch"><div class="chip" style="background:#e5771e"></div><div class="name">Orange</div><div class="hex">#e5771e</div></div>
+      <div class="swatch"><div class="chip" style="background:#f84d13"></div><div class="name">Red-orange</div><div class="hex">#f84d13</div></div>
+      <div class="swatch"><div class="chip" style="background:#ffb500"></div><div class="name">Goldenrod</div><div class="hex">#ffb500</div></div>
+      <div class="swatch"><div class="chip" style="background:#ffe28a"></div><div class="name">Yellow</div><div class="hex">#ffe28a</div></div>
+      <div class="swatch"><div class="chip" style="background:#00859b"></div><div class="name">Teal</div><div class="hex">#00859b</div></div>
+      <div class="swatch"><div class="chip" style="background:#b8dde1"></div><div class="name">Light blue</div><div class="hex">#b8dde1</div></div>
+      <div class="swatch"><div class="chip" style="background:#003b5c"></div><div class="name">Navy</div><div class="hex">#003b5c</div></div>
+      <div class="swatch"><div class="chip" style="background:#5a3d2b"></div><div class="name">Brown</div><div class="hex">#5a3d2b</div></div>
+    </div>
+  </div>
+
+  <div class="half half--back">
+    <div class="label"><strong>On Backstage charcoal</strong>brand fills on #161b22</div>
+    <div class="row">
+      <div class="swatch"><div class="chip" style="background:#e5771e"></div><div class="name">Orange</div><div class="hex">#e5771e</div></div>
+      <div class="swatch"><div class="chip" style="background:#f84d13"></div><div class="name">Red-orange</div><div class="hex">#f84d13</div></div>
+      <div class="swatch"><div class="chip" style="background:#ffb500"></div><div class="name">Goldenrod</div><div class="hex">#ffb500</div></div>
+      <div class="swatch"><div class="chip" style="background:#ffe28a"></div><div class="name">Yellow</div><div class="hex">#ffe28a</div></div>
+      <div class="swatch"><div class="chip" style="background:#00859b"></div><div class="name">Teal</div><div class="hex">#00859b</div></div>
+      <div class="swatch"><div class="chip" style="background:#b8dde1"></div><div class="name">Light blue</div><div class="hex">#b8dde1</div></div>
+      <div class="swatch"><div class="chip" style="background:#003b5c"></div><div class="name">Navy</div><div class="hex">#003b5c</div></div>
+      <div class="swatch"><div class="chip" style="background:#5a3d2b"></div><div class="name">Brown</div><div class="hex">#5a3d2b</div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

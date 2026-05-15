@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vinyl album — band directory</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card { height: 100vh; display: flex; flex-direction: column; }
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__hint {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff8c42;
+  margin-right: 4px;
+}
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px 30px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+/* ─── Vinyl card ──────────────────────────────────────────────────────── */
+.vinyl-card {
+  position: relative;
+  width: 270px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+.vinyl-card__art-area {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+/* Disc — same size as the sleeve, sitting BEHIND it (fully eclipsed at rest) */
+.vinyl-card__disc {
+  position: absolute;
+  /* Disc is slightly smaller than the sleeve so it sits centered inside
+     it at rest and doesn't appear to pierce the top edge when it rolls. */
+  top: 10px;
+  left: 10px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.22);
+  background:
+    repeating-radial-gradient(circle at 50% 50%,
+      #0a0a0a 0 1px,
+      #1c1c1c 1px 3px,
+      #0a0a0a 3px 4px),
+    #111;
+  z-index: 1;
+  /* Rotate while sliding — both transitions run together. */
+  translate: 0 0;
+  rotate: -15deg;
+  transition: translate 600ms cubic-bezier(0.25, 0.7, 0.3, 1),
+              rotate 600ms cubic-bezier(0.25, 0.7, 0.3, 1);
+}
+.vinyl-card__disc::before {
+  /* center label — band color */
+  content: "";
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  background: var(--vinyl-label, #e5771e);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+}
+.vinyl-card__disc::after {
+  /* spindle hole */
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #14110d;
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,0.6);
+}
+.vinyl-card__disc-label {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--vinyl-text, #fff);
+  text-transform: uppercase;
+  width: 50%;
+  line-height: 1.05;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Sleeve — square, sits on top, fully eclipses the disc at rest. On hover it
+   slides and tilts slightly opposite to the disc — like the cover pushing
+   off as the record rolls out. */
+.vinyl-card__sleeve {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  background: var(--art, linear-gradient(180deg, #003b5c 0%, #00859b 100%));
+  border: 1px solid rgba(0,0,0,0.18);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 700ms cubic-bezier(0.25, 0.7, 0.3, 1);
+  transform-origin: bottom right;
+}
+.vinyl-card:hover .vinyl-card__sleeve,
+.vinyl-card.is-hovered .vinyl-card__sleeve {
+  transform: translateX(-35px) rotate(-4deg);
+}
+.vinyl-card__band-initials {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 64px;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--art-text, #fffbf6);
+}
+
+/* Caption — beneath the sleeve, separate from it */
+.vinyl-card__caption {
+  margin-top: 12px;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vinyl-card__band-name {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+}
+.vinyl-card__meta {
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  opacity: 0.7;
+}
+.stage--house .vinyl-card__band-name { color: #1a2330; }
+.stage--house .vinyl-card__meta { color: #5a4d3b; }
+.stage--back  .vinyl-card__band-name { color: #e6dcd0; }
+.stage--back  .vinyl-card__meta { color: #b6b0a6; }
+
+/* Hover — disc rolls out from behind sleeve. Slide finishes before the
+   rotation starts, so the disc is fully clear of the cover when it spins. */
+/* Hover — disc rolls a little to the right while rotating; cover counters
+   by sliding a little to the left and tilting back. */
+.vinyl-card:hover .vinyl-card__disc,
+.vinyl-card.is-hovered .vinyl-card__disc {
+  translate: 90px 0;
+  rotate: 30deg;
+}
+
+/* Light outline on dark background */
+.stage--back .vinyl-card__sleeve, .stage--back .vinyl-card__disc { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Band directory</span>
+    <span class="bar__title">Vinyl album</span>
+    <span class="bar__hint">Hover →</span>
+    <select id="variant" class="bar__select">
+      <option value="0">The Backline Trio</option>
+      <option value="1">Cassette Showcase</option>
+      <option value="2">Real Book Quintet</option>
+    </select>
+  </div>
+  <div class="stages">
+
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      <article class="vinyl-card" style="--vinyl-label:#e5771e;--vinyl-text:#fff;--art:linear-gradient(135deg, #003b5c 0%, #00859b 100%);--art-text:#fffbf6;">
+        <div class="vinyl-card__art-area">
+          <div class="vinyl-card__disc">
+            <span class="vinyl-card__disc-label" data-slot="discLabel">The Backline Trio</span>
+          </div>
+          <div class="vinyl-card__sleeve">
+            <span class="vinyl-card__band-initials" data-slot="initials">BT</span>
+          </div>
+        </div>
+        <div class="vinyl-card__caption">
+          <div class="vinyl-card__band-name" data-slot="name">The Backline Trio</div>
+          <div class="vinyl-card__meta" data-slot="meta">Jazz · 2024 — present</div>
+        </div>
+      </article>
+    </div>
+
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      <article class="vinyl-card" style="--vinyl-label:#e5771e;--vinyl-text:#fff;--art:linear-gradient(135deg, #003b5c 0%, #00859b 100%);--art-text:#fffbf6;">
+        <div class="vinyl-card__art-area">
+          <div class="vinyl-card__disc">
+            <span class="vinyl-card__disc-label" data-slot="discLabel">The Backline Trio</span>
+          </div>
+          <div class="vinyl-card__sleeve">
+            <span class="vinyl-card__band-initials" data-slot="initials">BT</span>
+          </div>
+        </div>
+        <div class="vinyl-card__caption">
+          <div class="vinyl-card__band-name" data-slot="name">The Backline Trio</div>
+          <div class="vinyl-card__meta" data-slot="meta">Jazz · 2024 — present</div>
+        </div>
+      </article>
+    </div>
+
+  </div>
+</div>
+<script>
+const variants = [
+  { name:"The Backline Trio", initials:"BT", discLabel:"The Backline Trio",
+    meta:"Jazz · 2024 — present",
+    labelColor:"#e5771e", labelText:"#fff",
+    art:"linear-gradient(135deg, #003b5c 0%, #00859b 100%)", artText:"#fffbf6" },
+  { name:"Cassette Showcase", initials:"CS", discLabel:"Cassette Showcase",
+    meta:"Lo-fi pop · 2023",
+    labelColor:"#f84d13", labelText:"#fff",
+    art:"linear-gradient(135deg, #ffb500 0%, #f84d13 100%)", artText:"#1a1410" },
+  { name:"Real Book Quintet", initials:"RB", discLabel:"Real Book Quintet",
+    meta:"Jazz standards · weekly",
+    labelColor:"#00859b", labelText:"#fffbf6",
+    art:"linear-gradient(135deg, #5a3d2b 0%, #003b5c 100%)", artText:"#ffe28a" }
+];
+
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const v = variants[idx];
+  document.querySelectorAll('[data-slot="discLabel"]').forEach(el => el.textContent = v.discLabel);
+  document.querySelectorAll('[data-slot="initials"]').forEach(el => el.textContent = v.initials);
+  document.querySelectorAll('[data-slot="name"]').forEach(el => el.textContent = v.name);
+  document.querySelectorAll('[data-slot="meta"]').forEach(el => el.textContent = v.meta);
+  document.querySelectorAll('.vinyl-card').forEach(el => {
+    el.style.setProperty('--vinyl-label', v.labelColor);
+    el.style.setProperty('--vinyl-text', v.labelText);
+    el.style.setProperty('--art', v.art);
+    el.style.setProperty('--art-text', v.artText);
+  });
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+</script>
+</body>
+</html>

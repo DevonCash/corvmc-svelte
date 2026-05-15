@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Badges</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1;
+  --cmc-yellow: #ffe28a;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-brown: #5a3d2b;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin:0; padding:0;
+  font-family:"Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card { padding: 24px 28px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; }
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* Tape badge — flat fill, chalkpen text, slight tilt. No stripe overlay,
+   no shadow. Permanent Marker for the chalkpen feel. */
+.badge {
+  display: inline-block;
+  padding: 6px 11px 4px;
+  font-family: "Permanent Marker", "Lexend", sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  color: var(--badge-text, var(--cmc-brown));
+  background: var(--badge-color, rgba(255, 181, 0, 0.92));
+}
+.row .badge:nth-child(3n + 1) { transform: rotate(-1.5deg); }
+.row .badge:nth-child(3n + 2) { transform: rotate(1deg); }
+.row .badge:nth-child(3n + 3) { transform: rotate(-0.5deg); }
+.row .badge:nth-child(5n)     { transform: rotate(2deg); }
+
+.badge--primary   { --badge-color: rgba(229, 119, 30, 0.92); --badge-text: #fff; }
+.badge--secondary { --badge-color: rgba(0, 59, 92, 0.92);    --badge-text: #fff; }
+.badge--accent    { --badge-color: rgba(184, 221, 225, 0.92);--badge-text: var(--cmc-navy); }
+.badge--warning   { --badge-color: rgba(255, 226, 138, 0.92);--badge-text: var(--cmc-brown); }
+.badge--info      { --badge-color: rgba(0, 133, 155, 0.92);  --badge-text: #fff; }
+.badge--goldenrod { --badge-color: rgba(255, 181, 0, 0.92);  --badge-text: var(--cmc-brown); }
+.badge--red       { --badge-color: rgba(248, 77, 19, 0.92);  --badge-text: #fff; }
+.badge--neutral   { --badge-color: rgba(255, 226, 205, 0.95);--badge-text: var(--cmc-brown); }
+
+/* Mini variant */
+.badge--mini { padding: 4px 8px 3px; font-size: 12px; letter-spacing: 0.04em; }
+
+/* Larger variant */
+.badge--lg { padding: 9px 16px 7px; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">.badge — washi paper-tape style · chalkpen text · slight tilt</div>
+
+  <div class="row">
+    <span class="badge badge--primary">primary</span>
+    <span class="badge badge--secondary">secondary</span>
+    <span class="badge badge--accent">accent</span>
+    <span class="badge badge--warning">warning</span>
+    <span class="badge badge--info">info</span>
+    <span class="badge badge--goldenrod">goldenrod</span>
+    <span class="badge badge--red">red</span>
+    <span class="badge badge--neutral">neutral</span>
+  </div>
+
+  <div class="label" style="margin-top: 8px;">Sized variants — mini · default · large</div>
+
+  <div class="row" style="align-items: center;">
+    <span class="badge badge--accent badge--mini">jazz</span>
+    <span class="badge badge--warning badge--mini">monthly</span>
+    <span class="badge badge--red badge--mini">all ages</span>
+    <span class="badge badge--neutral badge--mini">free</span>
+  </div>
+
+  <div class="row" style="align-items: center;">
+    <span class="badge badge--primary">Showcase</span>
+    <span class="badge badge--info">Open Mic</span>
+    <span class="badge badge--warning">Workshop</span>
+    <span class="badge badge--red">Sold Out</span>
+  </div>
+
+  <div class="row" style="align-items: center;">
+    <span class="badge badge--primary badge--lg">Featured</span>
+    <span class="badge badge--red badge--lg">New!</span>
+    <span class="badge badge--accent badge--lg">Member event</span>
+  </div>
+
+  <div class="label" style="margin-top: 8px;">In context — genre chips on a band card</div>
+
+  <div style="background: #fff; padding: 16px 18px; border-radius: 6px; max-width: 360px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-weight: 700; font-size: 16px; color: var(--cmc-navy);">Indigo Kiss</div>
+    <div style="font-size: 12px; color: var(--fg-2);">Soul · 4 members</div>
+    <div class="row" style="gap: 8px; margin-top: 4px;">
+      <span class="badge badge--accent badge--mini">soul</span>
+      <span class="badge badge--warning badge--mini">R&amp;B</span>
+      <span class="badge badge--info badge--mini">available</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

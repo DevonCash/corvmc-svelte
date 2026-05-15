@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clipboard</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.clipboard {
+  position: relative; width: 180px; padding: 22px 10px 10px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(80,55,30,0.06) 0 1px, transparent 1px 3px),
+    #ac8350;
+  transform: rotate(-1.5deg);
+}
+.clipboard__clip {
+  position: absolute; top: -7px; left: 50%;
+  transform: translateX(-50%); width: 56px; height: 20px;
+  background: #9da0a6; border-radius: 3px 3px 1px 1px; z-index: 3;
+}
+.clipboard__clip::before {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); width: 6px; height: 6px;
+  border-radius: 50%; background: #2a2c30;
+}
+.clipboard__pen {
+  position: absolute; top: -2px; right: 18px;
+  width: 4px; height: 72px; background: #c63015;
+  border-radius: 2px; transform: rotate(-3deg); z-index: 4;
+}
+.clipboard__paper {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 18px, rgba(0,0,90,0.07) 18px 19px),
+    #f5edd5;
+  padding: 12px 10px 10px; border-radius: 1px;
+  min-height: 124px; color: #1a1410;
+}
+.clipboard__title {
+  font-family: var(--font-chalk); font-size: 15px;
+  line-height: 1; color: #1a1410; margin: 0 0 8px;
+  transform: rotate(-1deg);
+}
+.clipboard__rows {
+  display: flex; flex-direction: column; gap: 5px;
+  font-family: var(--font-script); font-size: 14px; font-weight: 600;
+  color: rgba(26,20,16,0.85); line-height: 1.1;
+}
+.clipboard__rows label { display: flex; align-items: center; gap: 7px; }
+.clipboard__rows label::before {
+  content: ""; width: 10px; height: 10px;
+  border: 1.5px solid rgba(26,20,16,0.55);
+  border-radius: 2px; flex-shrink: 0;
+}
+.clipboard__rows label.is-checked {
+  text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: 0.55;
+}
+.clipboard__rows label.is-checked::before { background: #1a1410; }
+
+
+/* Light outline on dark background */
+.stage--back .clipboard { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Forms · sign-ups</span>
+    <span class="bar__title">Clipboard</span>
+    <select id="variant" class="bar__select"><option value="0">Open mic signups</option><option value="1">Volunteer sheet</option><option value="2">Pre-flight check</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="clipboard">
+  <div class="clipboard__clip"></div>
+  <div class="clipboard__pen"></div>
+  <div class="clipboard__paper">
+    <div class="clipboard__title" data-slot="title">Sign up</div>
+    <div class="clipboard__rows">
+      <label class="is-checked"><span data-slot="r1">Maya Rivera</span></label>
+      <label class="is-checked"><span data-slot="r2">Devon Cash</span></label>
+      <label><span data-slot="r3">Sam K.</span></label>
+      <label><span data-slot="r4">_____________</span></label>
+    </div>
+  </div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="clipboard">
+  <div class="clipboard__clip"></div>
+  <div class="clipboard__pen"></div>
+  <div class="clipboard__paper">
+    <div class="clipboard__title" data-slot="title">Sign up</div>
+    <div class="clipboard__rows">
+      <label class="is-checked"><span data-slot="r1">Maya Rivera</span></label>
+      <label class="is-checked"><span data-slot="r2">Devon Cash</span></label>
+      <label><span data-slot="r3">Sam K.</span></label>
+      <label><span data-slot="r4">_____________</span></label>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Open mic signups",
+    "title": "Sign up",
+    "r1": "Maya Rivera",
+    "r2": "Devon Cash",
+    "r3": "Sam K.",
+    "r4": "_____________"
+  },
+  {
+    "__name": "Volunteer sheet",
+    "title": "Volunteers",
+    "r1": "Door · Maya",
+    "r2": "Bar · Devon",
+    "r3": "Sound · Sam",
+    "r4": "Stage · ____"
+  },
+  {
+    "__name": "Pre-flight check",
+    "title": "Pre-show",
+    "r1": "PA on",
+    "r2": "Mics tested",
+    "r3": "Setlist taped",
+    "r4": "Doors at 6:30"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

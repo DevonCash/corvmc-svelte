@@ -1,0 +1,378 @@
+/* ============================================================================
+   Corvallis Music Collective — Retro Flourishes
+   ----------------------------------------------------------------------------
+   Additive utility layer that brings poster/print vocabulary into product UI.
+   Designed to opt-in per-element — the base system stays clean; reach for
+   these when an element should feel like print collateral.
+
+   Pairs with `colors_and_type.css` (uses the brand tokens defined there).
+   Import after the base system:
+
+     @import url("./colors_and_type.css");
+     @import url("./retro_flourishes.css");
+
+   Or as individual classes on elements (no parent class required).
+   ========================================================================== */
+
+/* ----------------------------------------------------------------------------
+   .sunburst — radiating triangular rays from a corner.
+   Pure CSS conic-gradient. Customize ray color, count, and origin via vars.
+
+     <div class="sunburst" style="--ray-color: #f84d13;">
+       <h2>Open House!</h2>
+     </div>
+
+   Variables:
+     --ray-color    Color of the rays. Default: red-orange.
+     --ray-bg       Color of the negative space. Default: cream.
+     --ray-origin   conic-gradient origin point. Default: 0% 100% (bottom-left).
+     --ray-width    Degrees per ray. Default: 6.
+     --ray-gap      Degrees between rays. Default: 12.
+     --ray-opacity  Overall opacity of the rays. Default: 1.
+   ---------------------------------------------------------------------------- */
+.sunburst {
+  position: relative;
+  isolation: isolate;
+  --ray-color: var(--cmc-red-orange, #f84d13);
+  --ray-bg: transparent;
+  --ray-origin: 0% 100%;
+  --ray-width: 6deg;
+  --ray-gap: 12deg;
+  --ray-opacity: 1;
+}
+.sunburst::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--ray-opacity);
+  background:
+    conic-gradient(
+      from -90deg at var(--ray-origin),
+      var(--ray-color) 0 var(--ray-width),
+      var(--ray-bg) var(--ray-width) calc(var(--ray-width) + var(--ray-gap)),
+      var(--ray-color) calc(var(--ray-width) + var(--ray-gap)) calc(2 * var(--ray-width) + var(--ray-gap)),
+      var(--ray-bg) calc(2 * var(--ray-width) + var(--ray-gap)) calc(2 * var(--ray-width) + 2 * var(--ray-gap)),
+      var(--ray-color) calc(2 * var(--ray-width) + 2 * var(--ray-gap)) calc(3 * var(--ray-width) + 2 * var(--ray-gap)),
+      var(--ray-bg) calc(3 * var(--ray-width) + 2 * var(--ray-gap)) calc(3 * var(--ray-width) + 3 * var(--ray-gap)),
+      var(--ray-color) calc(3 * var(--ray-width) + 3 * var(--ray-gap)) calc(4 * var(--ray-width) + 3 * var(--ray-gap)),
+      var(--ray-bg) calc(4 * var(--ray-width) + 3 * var(--ray-gap)) calc(4 * var(--ray-width) + 4 * var(--ray-gap)),
+      var(--ray-color) calc(4 * var(--ray-width) + 4 * var(--ray-gap)) calc(5 * var(--ray-width) + 4 * var(--ray-gap)),
+      var(--ray-bg) calc(5 * var(--ray-width) + 4 * var(--ray-gap)) calc(5 * var(--ray-width) + 5 * var(--ray-gap)),
+      var(--ray-color) calc(5 * var(--ray-width) + 5 * var(--ray-gap)) calc(6 * var(--ray-width) + 5 * var(--ray-gap)),
+      var(--ray-bg) calc(6 * var(--ray-width) + 5 * var(--ray-gap)) calc(6 * var(--ray-width) + 6 * var(--ray-gap)),
+      var(--ray-color) calc(6 * var(--ray-width) + 6 * var(--ray-gap)) calc(7 * var(--ray-width) + 6 * var(--ray-gap)),
+      var(--ray-bg) calc(7 * var(--ray-width) + 6 * var(--ray-gap)) calc(7 * var(--ray-width) + 7 * var(--ray-gap)),
+      var(--ray-color) calc(7 * var(--ray-width) + 7 * var(--ray-gap)) calc(8 * var(--ray-width) + 7 * var(--ray-gap)),
+      var(--ray-bg) calc(8 * var(--ray-width) + 7 * var(--ray-gap)) calc(8 * var(--ray-width) + 8 * var(--ray-gap)),
+      var(--ray-color) calc(8 * var(--ray-width) + 8 * var(--ray-gap)) calc(9 * var(--ray-width) + 8 * var(--ray-gap)),
+      var(--ray-bg) calc(9 * var(--ray-width) + 8 * var(--ray-gap)) calc(9 * var(--ray-width) + 9 * var(--ray-gap)),
+      var(--ray-color) calc(9 * var(--ray-width) + 9 * var(--ray-gap)) calc(10 * var(--ray-width) + 9 * var(--ray-gap)),
+      var(--ray-bg) calc(10 * var(--ray-width) + 9 * var(--ray-gap)) 360deg
+    );
+}
+.sunburst--center { --ray-origin: 50% 50%; }
+.sunburst--bottom-right { --ray-origin: 100% 100%; }
+.sunburst--top-left { --ray-origin: 0% 0%; }
+.sunburst--top-right { --ray-origin: 100% 0%; }
+
+/* ----------------------------------------------------------------------------
+   .halftone — repeating dot pattern overlay. Vintage offset-print feel.
+
+     <div class="halftone" style="--dot-color: #5a3d2b;">
+       …content…
+     </div>
+
+   Variables:
+     --dot-color    Color of the dots. Default: brown.
+     --dot-size     Diameter. Default: 1.2px.
+     --dot-gap      Tile size (= spacing between dot centers). Default: 6px.
+     --dot-opacity  Overall opacity. Default: 0.22 — keeps the texture subtle.
+   ---------------------------------------------------------------------------- */
+.halftone {
+  position: relative;
+  isolation: isolate;
+  --dot-color: var(--cmc-brown, #5a3d2b);
+  --dot-size: 1.2px;
+  --dot-gap: 6px;
+  --dot-opacity: 0.22;
+}
+.halftone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--dot-opacity);
+  background-image: radial-gradient(circle at center, var(--dot-color) var(--dot-size), transparent calc(var(--dot-size) + 0.6px));
+  background-size: var(--dot-gap) var(--dot-gap);
+}
+.halftone--coarse { --dot-size: 1.8px; --dot-gap: 8px; --dot-opacity: 0.18; }
+.halftone--fine   { --dot-size: 0.9px; --dot-gap: 4px; --dot-opacity: 0.20; }
+
+/* Halftone "fade" — texture concentrates at one edge, fades toward the other.
+   Useful on full-bleed sections so the texture has rhythm. */
+.halftone--fade-bottom::after {
+  mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
+}
+
+/* ----------------------------------------------------------------------------
+   .paper-grain — barely-there noise texture for cards/sections.
+   SVG-encoded data URI; ships zero requests.
+
+     <div class="paper-grain card">…</div>
+
+   Adds ~2% noise grain on top of whatever bg the element has. Don't combine
+   with halftone — they fight.
+   ---------------------------------------------------------------------------- */
+.paper-grain {
+  position: relative;
+  isolation: isolate;
+}
+.paper-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.24  0 0 0 0 0.16  0 0 0 0.08 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* ----------------------------------------------------------------------------
+   .paper-tape — a washi-tape strip across a corner. Always pseudo-absolute.
+
+     <div class="paper-tape" style="--tape-color: rgba(255,181,0,0.78);">…</div>
+
+   Variables:
+     --tape-color   The tape fill (use semi-transparent for that washi feel).
+     --tape-w       Width of the strip. Default: 110px.
+     --tape-h       Height of the strip. Default: 22px.
+     --tape-x       Horizontal position (0%–100%). Default: 18%.
+     --tape-rotate  Rotation. Default: -3deg.
+     --tape-y       Vertical offset from top. Default: -10px (overlaps top edge).
+   ---------------------------------------------------------------------------- */
+.paper-tape {
+  position: relative;
+  --tape-color: rgba(255, 181, 0, 0.78);
+  --tape-w: 110px;
+  --tape-h: 22px;
+  --tape-x: 18%;
+  --tape-y: -10px;
+  --tape-rotate: -3deg;
+}
+.paper-tape::before {
+  content: "";
+  position: absolute;
+  left: var(--tape-x);
+  top: var(--tape-y);
+  width: var(--tape-w);
+  height: var(--tape-h);
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, transparent 12%, transparent 88%, rgba(0,0,0,0.06) 100%),
+    repeating-linear-gradient(90deg, transparent 0 8px, rgba(255,255,255,0.16) 8px 9px),
+    var(--tape-color);
+  transform: rotate(var(--tape-rotate));
+  transform-origin: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+  z-index: 2;
+}
+
+/* ----------------------------------------------------------------------------
+   .sticker — peel-up sticker tilt + chunky shadow. Pair with .paper-tape or
+   .badge for a "this got handed to me at the show" feel.
+
+     <span class="badge sticker">New!</span>
+   ---------------------------------------------------------------------------- */
+.sticker {
+  transform: rotate(-2.5deg);
+  box-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.12),
+    3px 3px 0 rgba(0, 0, 0, 0.06);
+  transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1);
+}
+.sticker:hover { transform: rotate(0deg) scale(1.03); }
+.sticker--right { transform: rotate(2.5deg); }
+.sticker--right:hover { transform: rotate(0deg) scale(1.03); }
+.sticker--flat { transform: rotate(0deg); }
+
+/* ----------------------------------------------------------------------------
+   .marker-underline — wavy hand-drawn underline behind inline text.
+   Uses an SVG data URI so it can be ANY color via currentColor.
+
+     <h2>Real <em class="marker-underline">Book</em> Club</h2>
+   ---------------------------------------------------------------------------- */
+.marker-underline {
+  font-style: normal;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M3 7c14-4 28-1 42 2s28 1 42-2 28 1 30 2'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 100% 0.36em;
+  padding-bottom: 0.18em;
+  color: inherit;
+}
+.marker-underline--goldenrod { color: var(--cmc-goldenrod, #ffb500); }
+.marker-underline--red       { color: var(--cmc-red-orange, #f84d13); }
+.marker-underline--teal      { color: var(--cmc-teal, #00859b); }
+
+/* ----------------------------------------------------------------------------
+   .ink-stamp — circular badge with a slight rotation + worn double-border.
+   Use as a "PRESS PROOF" / "MEMBER" / approval mark.
+
+     <div class="ink-stamp">EST 2019</div>
+   ---------------------------------------------------------------------------- */
+.ink-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 2.5px solid var(--cmc-red-orange, #f84d13);
+  box-shadow: 0 0 0 2px var(--cmc-cream, #fffbf6), 0 0 0 4px var(--cmc-red-orange, #f84d13);
+  color: var(--cmc-red-orange, #f84d13);
+  font-family: var(--font-display, "Lexend"), sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.05;
+  transform: rotate(-8deg);
+  padding: 8px;
+}
+
+/* ----------------------------------------------------------------------------
+   .ticket-tear — a single-row ticket with serrated edges between stub and body.
+   Build with two flex children. Pure CSS dots for the tear.
+
+     <div class="ticket-tear">
+       <div class="ticket-tear__stub">12/05 · 7PM</div>
+       <div class="ticket-tear__body">Real Book Club · all skill levels</div>
+     </div>
+   ---------------------------------------------------------------------------- */
+.ticket-tear {
+  position: relative;
+  display: flex;
+  background: var(--cmc-cream, #fffbf6);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 6px 14px -4px rgba(0,0,0,0.18), 0 2px 4px rgba(0,0,0,0.06);
+}
+.ticket-tear__stub {
+  position: relative;
+  background: var(--cmc-red-orange, #f84d13);
+  color: #fff;
+  padding: 18px 22px;
+  font-family: var(--font-display, "Lexend"), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.ticket-tear__stub::after {
+  /* The tear edge — series of cream half-circles cutting into the stub */
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -6px;
+  bottom: 0;
+  width: 12px;
+  background-image: radial-gradient(circle at 100% 50%, var(--cmc-cream, #fffbf6) 4px, transparent 4.5px);
+  background-size: 12px 14px;
+  background-repeat: repeat-y;
+  background-position: 0 0;
+}
+.ticket-tear__body {
+  flex: 1;
+  padding: 18px 22px 18px 26px;
+  font-family: var(--font-sans, "Lexend"), sans-serif;
+  font-size: 15px;
+  color: var(--fg-1, #1a2330);
+  display: flex;
+  align-items: center;
+}
+
+/* ----------------------------------------------------------------------------
+   .marquee-border — chunky alternating-color outline like vintage signage.
+   Wraps a card / hero in a flat tri-color "marquee" border.
+   ---------------------------------------------------------------------------- */
+.marquee-border {
+  position: relative;
+  padding: 12px;
+  background:
+    repeating-linear-gradient(90deg,
+      var(--cmc-red-orange, #f84d13) 0 14px,
+      var(--cmc-goldenrod, #ffb500) 14px 28px,
+      var(--cmc-teal, #00859b) 28px 42px
+    );
+  border-radius: 6px;
+}
+.marquee-border > * {
+  background: var(--cmc-cream, #fffbf6);
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------------------------
+   .sticker-badge — rectangular sticker shape (vs. the default pill badge).
+   Slight rotation, chunky shadow, allcaps. Replaces .badge as a more
+   poster-feeling alternative when you want personality.
+
+     <span class="sticker-badge sticker-badge--orange">All Ages</span>
+   ---------------------------------------------------------------------------- */
+.sticker-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--cmc-goldenrod, #ffb500);
+  color: var(--cmc-brown, #5a3d2b);
+  font-family: var(--font-display, "Lexend"), sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  transform: rotate(-1.5deg);
+  box-shadow: 1.5px 1.5px 0 var(--cmc-brown, #5a3d2b);
+  white-space: nowrap;
+}
+.sticker-badge--orange { background: var(--cmc-orange, #e5771e); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
+.sticker-badge--red    { background: var(--cmc-red-orange, #f84d13); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
+.sticker-badge--teal   { background: var(--cmc-teal, #00859b); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
+
+/* ----------------------------------------------------------------------------
+   .retro-button — alternate button style with chunky double-outline and an
+   offset drop shadow, like a printed button on flyer cardstock.
+   Drop-in for `.btn` when a CTA should feel more poster-y.
+   ---------------------------------------------------------------------------- */
+.retro-button {
+  display: inline-block;
+  padding: 14px 28px;
+  background: var(--cmc-orange, #e5771e);
+  color: #fff;
+  font-family: var(--font-display, "Lexend"), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  border: 2.5px solid var(--cmc-brown, #5a3d2b);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--cmc-brown, #5a3d2b);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+  cursor: pointer;
+}
+.retro-button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--cmc-brown, #5a3d2b);
+  opacity: 1;
+}
+.retro-button:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0 var(--cmc-brown, #5a3d2b);
+}
+.retro-button--teal { background: var(--cmc-teal, #00859b); }
+.retro-button--red  { background: var(--cmc-red-orange, #f84d13); }

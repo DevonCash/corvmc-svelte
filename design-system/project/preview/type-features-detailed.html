@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Lexend feature settings — detailed specimen</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-brown: #5a3d2b;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin:0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card { padding: 28px 32px; min-height: 100vh; display: flex; flex-direction: column; gap: 22px; }
+
+.intro {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--fg-2);
+  max-width: 56em;
+}
+.intro strong { color: var(--fg); }
+.intro code { font-family: ui-monospace, Menlo, monospace; font-size: 0.92em; background: var(--cmc-parchment); padding: 1px 5px; border-radius: 3px; color: var(--cmc-brown); }
+
+.section-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cmc-orange);
+  margin-top: 8px;
+}
+
+.variants {
+  display: grid;
+  grid-template-columns: 110px 80px 1fr 1fr;
+  gap: 0;
+  font-size: 14px;
+}
+.variants > div {
+  padding: 14px 16px;
+  border-top: 1px solid var(--cmc-parchment);
+  display: flex;
+  align-items: center;
+}
+.variants > div:nth-child(-n+4) { border-top: 1.5px solid var(--cmc-brown); font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); }
+
+.feat-code {
+  font-family: ui-monospace, Menlo, "SF Mono", monospace;
+  font-size: 12px;
+  color: var(--cmc-brown);
+  background: var(--cmc-parchment);
+  padding: 3px 8px;
+  border-radius: 4px;
+  width: max-content;
+}
+
+.var-default { font-family: "Lexend"; font-feature-settings: normal; }
+.var-on      { font-family: "Lexend"; font-weight: 500; }
+
+.spec-large {
+  font-size: 28px;
+  letter-spacing: -0.005em;
+  line-height: 1;
+}
+.spec-body {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.callout {
+  background: var(--cmc-parchment);
+  padding: 14px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--cmc-brown);
+}
+.callout strong { color: var(--cmc-orange); }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div>
+    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3);">Type · feature settings</div>
+    <h1 style="font-size: 32px; font-weight: 700; margin: 6px 0 12px; letter-spacing: -0.01em;">Lexend variants</h1>
+    <p class="intro">Lexend ships a generous set of OpenType axes that let one font feel like several. Toggling
+      <code>font-feature-settings</code> swaps in alternate letterforms without changing the family. The CMC system
+      defaults to <strong>cv05 + cv11</strong> — single-story <em>g</em> and <em>a</em> — which give Lexend a softer,
+      mid-20th-century humanist character. The rest of these are <em>opt-in</em> per-element when you want more
+      personality.</p>
+  </div>
+
+  <div class="section-header">Character variants — letterforms</div>
+
+  <div class="variants">
+    <div>Feature</div>
+    <div>Status</div>
+    <div>Default</div>
+    <div>With feature</div>
+
+    <div><span class="feat-code">cv05</span></div>
+    <div>System on</div>
+    <div><span class="var-default spec-large">g g g</span></div>
+    <div><span class="var-on spec-large" style="font-feature-settings: 'cv05';">g g g</span></div>
+
+    <div><span class="feat-code">cv11</span></div>
+    <div>System on</div>
+    <div><span class="var-default spec-large">a a a</span></div>
+    <div><span class="var-on spec-large" style="font-feature-settings: 'cv11';">a a a</span></div>
+
+    <div><span class="feat-code">ss01</span></div>
+    <div>Display only</div>
+    <div><span class="var-default spec-large">i j l t</span></div>
+    <div><span class="var-on spec-large" style="font-feature-settings: 'ss01';">i j l t</span></div>
+
+    <div><span class="feat-code">cv08</span></div>
+    <div>Optional</div>
+    <div><span class="var-default spec-large">4</span></div>
+    <div><span class="var-on spec-large" style="font-feature-settings: 'cv08';">4</span></div>
+
+    <div><span class="feat-code">cv11 + cv05 + ss01</span></div>
+    <div>Display stack</div>
+    <div><span class="var-default spec-body">Real Book Club · Indigo Kiss · 6775 Philomath Blvd</span></div>
+    <div><span class="var-on spec-body" style="font-feature-settings: 'cv11','cv05','ss01';">Real Book Club · Indigo Kiss · 6775 Philomath Blvd</span></div>
+  </div>
+
+  <div class="section-header">Numerics</div>
+
+  <div class="variants">
+    <div>Feature</div>
+    <div>Used for</div>
+    <div>Default (proportional)</div>
+    <div>With feature</div>
+
+    <div><span class="feat-code">tnum</span></div>
+    <div>Tables · stat cards</div>
+    <div><span class="var-default" style="font-family: 'Lexend'; font-size: 16px; line-height: 1.4;">0123456789<br>$15 · $1,500 · $100</span></div>
+    <div><span style="font-family: 'Lexend'; font-size: 16px; line-height: 1.4; font-variant-numeric: tabular-nums;">0123456789<br>$15 · $1,500 · $100</span></div>
+
+    <div><span class="feat-code">zero</span></div>
+    <div>Codes · MIDI · serial #s</div>
+    <div><span class="var-default" style="font-family: 'Lexend'; font-size: 22px;">RES-2025-0412</span></div>
+    <div><span style="font-family: 'Lexend'; font-size: 22px; font-feature-settings: 'zero';">RES-2025-0412</span></div>
+
+    <div><span class="feat-code">frac</span></div>
+    <div>Inline fractions</div>
+    <div><span class="var-default" style="font-family: 'Lexend'; font-size: 18px;">1/2 cup · 3/4 time</span></div>
+    <div><span style="font-family: 'Lexend'; font-size: 18px; font-feature-settings: 'frac';">1/2 cup · 3/4 time</span></div>
+
+    <div><span class="feat-code">ordn</span></div>
+    <div>1st, 2nd, 3rd</div>
+    <div><span class="var-default" style="font-family: 'Lexend'; font-size: 18px;">1st Thursday · 2nd Saturday</span></div>
+    <div><span style="font-family: 'Lexend'; font-size: 18px; font-feature-settings: 'ordn';">1st Thursday · 2nd Saturday</span></div>
+  </div>
+
+  <div class="section-header">Side-by-side · "Real Book Club" eyebrow</div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+    <div style="background: #fff; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px;">Default Lexend</div>
+      <div style="font-family: 'Lexend'; font-weight: 700; font-size: 26px; line-height: 1.05; letter-spacing: -0.01em; color: var(--cmc-navy); font-feature-settings: normal;">Real Book Club is back this Thursday — bring your gear.</div>
+    </div>
+    <div style="background: #fff; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cmc-orange); margin-bottom: 8px;">CMC display stack</div>
+      <div style="font-family: 'Lexend'; font-weight: 700; font-size: 26px; line-height: 1.05; letter-spacing: -0.01em; color: var(--cmc-navy); font-feature-settings: 'cv11','cv05','ss01';">Real Book Club is back this Thursday — bring your gear.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Usage.</strong> Body and headings inherit <code style="font-family: ui-monospace, Menlo, monospace;">var(--font-features-body)</code> and
+    <code style="font-family: ui-monospace, Menlo, monospace;">var(--font-features-display)</code> from
+    <code style="font-family: ui-monospace, Menlo, monospace;">colors_and_type.css</code> — you usually don't need to think about it.
+    Reach for <code style="font-family: ui-monospace, Menlo, monospace;">'tnum'</code> on data tables and stat cards,
+    <code style="font-family: ui-monospace, Menlo, monospace;">'zero'</code> on monospaced codes, and
+    <code style="font-family: ui-monospace, Menlo, monospace;">'frac'</code> / <code style="font-family: ui-monospace, Menlo, monospace;">'ordn'</code> on prose
+    that contains them. Avoid stacking <em>everything</em> — the family stays cleaner with restraint.
+  </div>
+
+</div>
+</body>
+</html>

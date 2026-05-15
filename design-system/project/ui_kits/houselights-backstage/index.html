@@ -1,0 +1,2220 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<title>Houselights &amp; Backstage · CMC dual-mode system</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+
+  /* Houselights tokens — light theme */
+  --h-bg-page:    #fffbf6;
+  --h-bg-section: #ffe2cd;
+  --h-bg-card:    #ffffff;
+  --h-fg-1:       #2c2418;
+  --h-fg-2:       #5a4d3b;
+  --h-fg-3:       #8a7a5c;
+  --h-orange:     #e5771e;
+  --h-teal:       #00859b;
+  --h-navy:       #003b5c;
+  --h-goldenrod:  #ffb500;
+  --h-red:        #f84d13;
+  --h-brown:      #5a3d2b;
+  --h-yellow:     #ffe28a;
+  --h-light-blue: #b8dde1;
+  --h-hairline:   rgba(90, 61, 43, 0.12);
+
+  /* Backstage tokens — dark theme */
+  --b-bg-page:    #161b22;
+  --b-bg-section: #1d232c;
+  --b-bg-card:    #262d38;
+  --b-fg-1:       #e6dcd0;
+  --b-fg-2:       #b6b0a6;
+  --b-fg-3:       #828a98;
+  --b-orange:     #ff8c42;
+  --b-teal:       #3eb5ca;
+  --b-navy:       #6da5cc;
+  --b-goldenrod:  #ffb500;
+  --b-red:        #f84d13;
+  --b-brown:      #d3b59a;
+  --b-yellow:     #f4d27a;
+  --b-light-blue: #b8dde1;
+  --b-hairline:   rgba(255, 255, 255, 0.06);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--b-bg-page);
+  color: var(--b-fg-1);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv05", "cv11";
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 40px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+}
+
+/* ── HERO ────────────────────────────────────────────────────────────── */
+.hero {
+  margin: 0 -40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  min-height: 360px;
+  align-items: center;
+}
+.hero__half {
+  padding: 56px 48px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.hero__half--house {
+  background: #fffbf6;
+  color: #2c2418;
+  background-image:
+    radial-gradient(ellipse at 30% 0%, rgba(255, 220, 130, 0.4) 0%, transparent 60%),
+    linear-gradient(180deg, #fffbf6 0%, #ffe2cd 100%);
+}
+.hero__half--back {
+  background: #161b22;
+  color: #e6dcd0;
+  background-image:
+    radial-gradient(ellipse at 70% 100%, rgba(255, 140, 66, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #1d232c 0%, #161b22 100%);
+}
+.hero__eyebrow {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.hero__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.hero__role {
+  font-size: 14px;
+  margin-top: 14px;
+  line-height: 1.55;
+  max-width: 32ch;
+  opacity: 0.85;
+}
+.hero__stripe {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%,
+    #ffb500 33.333% 66.666%,
+    #f84d13 66.666% 100%
+  );
+}
+
+.kicker { text-align: center; margin-top: -16px; }
+.kicker__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #e6dcd0;
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+.kicker__lede {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #b6b0a6;
+  max-width: 64ch;
+  margin: 0 auto;
+  text-wrap: pretty;
+}
+.kicker__lede em { color: #e6dcd0; font-style: normal; font-weight: 600; }
+
+/* ── Section scaffold ────────────────────────────────────────────────── */
+.section { display: flex; flex-direction: column; gap: 24px; }
+.section__head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--b-hairline);
+}
+.eyebrow {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--b-fg-3);
+}
+.section__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  color: #e6dcd0;
+  margin: 0;
+  text-wrap: balance;
+}
+.section__lede {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #b6b0a6;
+  max-width: 68ch;
+  margin: 0;
+  text-wrap: pretty;
+}
+.section__lede strong, .section__lede em {
+  color: #e6dcd0;
+  font-weight: 600;
+  font-style: normal;
+}
+.section__lede code {
+  color: #ff8c42;
+  font-size: 12.5px;
+}
+
+/* ── Principles ──────────────────────────────────────────────────────── */
+.principles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.principle {
+  padding: 22px 22px 24px;
+  background: #1d232c;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.principle__num {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #828a98;
+}
+.principle__quote {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: #e6dcd0;
+  margin: 0;
+  text-wrap: balance;
+}
+.principle__note {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #b6b0a6;
+  margin: 0;
+}
+
+/* ── Foundations · color palette ─────────────────────────────────────── */
+.palette-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--b-hairline);
+}
+.palette-pair__cell {
+  padding: 22px 24px 24px;
+}
+.palette-pair__cell--house { background: var(--h-bg-page); }
+.palette-pair__cell--back  { background: var(--b-bg-page); }
+.palette-pair__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.palette-pair__cell--house .palette-pair__label { color: #8a7a5c; }
+.palette-pair__cell--back  .palette-pair__label { color: #828a98; }
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.swatch { display: flex; flex-direction: column; gap: 4px; }
+.swatch__chip {
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.palette-pair__cell--back .swatch__chip { border-color: rgba(255,255,255,0.06); }
+.swatch__name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.palette-pair__cell--house .swatch__name { color: #2c2418; }
+.palette-pair__cell--back  .swatch__name { color: #e6dcd0; }
+.swatch__hex {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+}
+.palette-pair__cell--house .swatch__hex { color: #5a4d3b; }
+.palette-pair__cell--back  .swatch__hex { color: #828a98; }
+
+/* ── Foundations · type scale ────────────────────────────────────────── */
+.type-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--b-hairline);
+}
+.type-pair__cell { padding: 28px 32px 30px; }
+.type-pair__cell--house { background: var(--h-bg-page); color: var(--h-fg-1); }
+.type-pair__cell--back  { background: var(--b-bg-page); color: var(--b-fg-1); }
+.type-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 0;
+}
+.type-row + .type-row {
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.type-pair__cell--back .type-row + .type-row { border-top-color: rgba(255,255,255,0.06); }
+.type-row__meta {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.type-pair__cell--house .type-row__meta { color: #8a7a5c; }
+.type-pair__cell--back  .type-row__meta { color: #828a98; }
+.type-row__sample { font-family: "Lexend", sans-serif; line-height: 1.05; letter-spacing: -0.01em; text-wrap: balance; }
+.type-pair__cell--house .type-row__sample { color: var(--h-navy); }
+.type-pair__cell--back  .type-row__sample { color: #e6dcd0; }
+.type-row--display .type-row__sample { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+.type-row--h1 .type-row__sample      { font-size: 32px; font-weight: 700; }
+.type-row--h3 .type-row__sample      { font-size: 22px; font-weight: 600; line-height: 1.2; }
+.type-row--body .type-row__sample    { font-size: 16px; font-weight: 400; line-height: 1.5; letter-spacing: 0; }
+.type-row--eyebrow .type-row__sample {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.type-pair__cell--house .type-row--eyebrow .type-row__sample { color: #e5771e; }
+.type-pair__cell--back  .type-row--eyebrow .type-row__sample { color: #ff8c42; }
+
+/* ── Tri-stripe constant ─────────────────────────────────────────────── */
+.tri-callout {
+  display: grid;
+  grid-template-columns: 1fr 280px 1fr;
+  align-items: center;
+  gap: 0;
+}
+.tri-callout__rail {
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%,
+    #ffb500 33.333% 66.666%,
+    #f84d13 66.666% 100%
+  );
+}
+.tri-callout__rail:first-child  { border-radius: 2px 0 0 2px; }
+.tri-callout__rail:last-child   { border-radius: 0 2px 2px 0; }
+.tri-callout__mid {
+  text-align: center;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b6b0a6;
+  padding: 0 18px;
+}
+.tri-callout__mid strong { display: block; color: #e6dcd0; font-size: 12px; margin-bottom: 2px; }
+
+/* ── Materials ───────────────────────────────────────────────────────── */
+.materials {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.mat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mat__chip {
+  aspect-ratio: 4 / 3;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mat__name { font-weight: 600; font-size: 13px; color: #e6dcd0; }
+.mat__use  { font-size: 11.5px; color: #b6b0a6; line-height: 1.45; }
+
+.mat-gaffer {
+  background: #e5771e;
+}
+.mat-gaffer .chalk {
+  font-family: var(--font-chalk);
+  font-size: 22px;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+.mat-aluminum {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px),
+    #9498a0;
+}
+.mat-spike {
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0,0,0,0.05) 0.5px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,0.05) 0.5px, transparent 1px),
+    #e3ddcc;
+}
+.mat-glow { background: #c4ff8a; }
+.mat-paper {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 22px, rgba(0,0,0,0.05) 22px 23px),
+    #f3e8d2;
+}
+.mat-parchment { background: #ffe2cd; }
+.mat-cream { background: #fffbf6; border-color: rgba(90,61,43,0.18); }
+.mat-charcoal { background: #161b22; }
+
+/* ── Handwriting roles ────────────────────────────────────────────────── */
+.hand-roles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.hand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hand__sample {
+  height: 110px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.hand__sample--tape {
+  background: #e5771e;
+}
+.hand__sample--paper {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 26px, rgba(0,0,0,0.05) 26px 27px),
+    #f4ead8;
+}
+.chalk-demo {
+  font-family: var(--font-chalk);
+  font-size: 44px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+  transform: rotate(-2deg);
+  line-height: 1;
+}
+.script-demo {
+  font-family: var(--font-script);
+  font-size: 40px;
+  font-weight: 600;
+  color: rgba(22,20,15,0.82);
+  transform: rotate(-1.5deg);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.hand__name { font-weight: 600; font-size: 14px; color: #e6dcd0; }
+.hand__name em { font-style: normal; color: #ff8c42; font-weight: 700; }
+.hand__use { font-size: 12.5px; color: #b6b0a6; line-height: 1.55; max-width: 52ch; }
+
+/* ── Compare table (chrome, functional) ──────────────────────────────── */
+.compare {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--b-hairline);
+}
+.compare__head { display: contents; }
+.compare__head > * {
+  padding: 14px 22px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: #1d232c;
+  color: #828a98;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.compare__head .h-house { background: #ffe2cd; color: #5a3d2b; }
+.compare__head .h-back  { background: #1d232c; color: #b6b0a6; }
+.compare__row { display: contents; }
+.compare__row > * {
+  padding: 22px;
+  border-top: 1px solid var(--b-hairline);
+}
+.compare__row .h-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #1a2029;
+  align-items: flex-start;
+}
+.compare__row .h-label strong {
+  font-family: "Lexend", sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e6dcd0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.compare__row .h-label small {
+  font-size: 11.5px;
+  color: #828a98;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+}
+.cell-house { background: #fffbf6; color: #2c2418; }
+.cell-back  { background: #161b22; color: #e6dcd0; }
+.cell-house, .cell-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+  position: relative;
+}
+
+/* ── Chrome elements ─────────────────────────────────────────────────── */
+.btn-house {
+  display: inline-flex; align-items: center;
+  padding: 10px 20px;
+  background: #e5771e;
+  color: #ffffff;
+  border: 2.5px solid #5a3d2b;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 #5a3d2b;
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+.btn-back {
+  display: inline-flex; align-items: center;
+  padding: 10px 20px;
+  background: #ff8c42;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.65);
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+.btn-house--out {
+  background: transparent;
+  color: #5a3d2b;
+  border: 2.5px solid #5a3d2b;
+  box-shadow: 4px 4px 0 rgba(90,61,43,0.18);
+}
+.btn-back--out {
+  background: transparent;
+  color: #ff8c42;
+  border: 2.5px solid #ff8c42;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.65);
+}
+
+.surface-house {
+  width: 160px; height: 90px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(90,61,43,0.12), 0 4px 6px -2px rgba(90,61,43,0.06);
+  border: 1px solid rgba(90,61,43,0.06);
+}
+.surface-back {
+  width: 160px; height: 90px;
+  background: #262d38;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.65);
+}
+
+.eyebrow-house {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: #e5771e;
+}
+.eyebrow-back {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: #ff8c42;
+}
+
+.tag-house, .tag-back {
+  display: inline-block;
+  padding: 7px 13px 5px;
+  font-family: var(--font-chalk);
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  border-radius: 2px;
+  background: #e5771e;
+  color: #ffffff;
+  transform: rotate(-1.4deg);
+}
+
+.stripe-sample {
+  width: 200px; height: 10px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%, #ffb500 33.333% 66.666%, #f84d13 66.666% 100%
+  );
+  border-radius: 1px;
+}
+.compare__same {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #5a4d3b; margin-top: 8px;
+}
+.cell-back .compare__same { color: #828a98; }
+
+/* ── Content card · feature (neutral) — from cmp-cards.html ─────────── */
+.feature-card {
+  position: relative;
+  width: 230px;
+  background: #fffbf6;
+  color: #1a2330;
+  padding: 18px 18px 20px;
+  border: 2.5px solid #5a3d2b;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 #5a3d2b;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  isolation: isolate;
+}
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.14;
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, #5a3d2b 1px, transparent 1.6px);
+  background-size: 7px 7px;
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 60%);
+}
+.feature-card__icon {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: var(--icon-bg, #00859b);
+  color: var(--icon-fg, #fff);
+  border: 2.5px solid #5a3d2b;
+  border-radius: 5px;
+  box-shadow: 3px 3px 0 #5a3d2b;
+}
+.feature-card__icon svg { width: 22px; height: 22px; }
+.feature-card__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  color: #003b5c;
+  margin: 4px 0 0;
+}
+.feature-card__body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #4a5563;
+  margin: 0;
+}
+.feature-card--teal   .feature-card__icon { --icon-bg: #00859b;     --icon-fg: #fff; }
+.feature-card--orange .feature-card__icon { --icon-bg: #e5771e;     --icon-fg: #fff; }
+.feature-card--gold   .feature-card__icon { --icon-bg: #ffb500;     --icon-fg: #5a3d2b; }
+.feature-card--blue   .feature-card__icon { --icon-bg: #b8dde1;     --icon-fg: #003b5c; }
+
+/* Dark-mode variant — brown stroke drops out, hard black offset shadow */
+.feature-card--dark {
+  background: #262d38;
+  color: #e6dcd0;
+  border: none;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.65);
+}
+.feature-card--dark .feature-card__icon {
+  border: none;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+}
+.feature-card--dark .feature-card__title { color: #e6dcd0; }
+.feature-card--dark .feature-card__body  { color: #b6b0a6; }
+.feature-card--dark::after {
+  /* Halftone in cream on dark surface */
+  background-image: radial-gradient(circle at center, #e6dcd0 1px, transparent 1.6px);
+  opacity: 0.10;
+}
+
+/* ── Content card · CTA (colored) — from cmp-cards-colored.html ─────── */
+.cta-card {
+  position: relative;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 18px;
+  background: var(--cta-fill, #e5771e);
+  color: var(--cta-text, #fff);
+  border: 2.5px solid #5a3d2b;
+  border-radius: 6px;
+  box-shadow: 5px 5px 0 #5a3d2b;
+  isolation: isolate;
+}
+.cta-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.10;
+  pointer-events: none;
+  border-radius: 4px;
+  overflow: hidden;
+  background-image: radial-gradient(circle at center, #5a3d2b 1px, transparent 1.6px);
+  background-size: 7px 7px;
+  mix-blend-mode: multiply;
+}
+.cta-card__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+.cta-card__title {
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.cta-card__body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  flex: 1;
+}
+.cta-card__btn {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  background: #fffbf6;
+  color: #5a3d2b;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-decoration: none;
+  border: 2px solid #5a3d2b;
+  border-radius: 5px;
+  box-shadow: 3px 3px 0 #5a3d2b;
+  font-family: "Lexend", sans-serif;
+}
+.cta-card--primary { --cta-fill: #e5771e; --cta-text: #fff; }
+.cta-card--navy    { --cta-fill: #003b5c; --cta-text: #fff; }
+.cta-card--accent  { --cta-fill: #b8dde1; --cta-text: #003b5c; }
+
+/* Dark-mode variant — brown stroke drops, dark button finish */
+.cta-card--dark {
+  border: none;
+  box-shadow: 5px 5px 0 rgba(0,0,0,0.65);
+  background: #ff8c42;
+  color: #ffffff;
+}
+.cta-card--dark .cta-card__btn {
+  background: #262d38;
+  color: #e6dcd0;
+  border: none;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.65);
+}
+/* Halftone stays in dark — brown dots on orange still read */
+
+/* ── App functional ──────────────────────────────────────────────────── */
+.ftile { width: 180px; padding: 14px 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ftile-house { background: #fff; border: 1px solid rgba(90,61,43,0.12); color: #2c2418; }
+.ftile-back  { background: #262d38; border: 1px solid rgba(255,255,255,0.06); color: #e6dcd0; }
+.ftile__label { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; }
+.ftile__value { font-family: "Lexend", sans-serif; font-weight: 700; font-size: 32px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ftile__value small { font-weight: 500; font-size: 15px; opacity: 0.55; margin-left: 4px; }
+.ftile__bar { margin-top: 4px; height: 5px; background: rgba(0,0,0,0.08); border-radius: 3px; overflow: hidden; }
+.ftile-back .ftile__bar { background: rgba(255,255,255,0.08); }
+.ftile__bar i { display: block; height: 100%; border-radius: 3px; }
+.ftile-house .ftile__bar i { background: #e5771e; }
+.ftile-back  .ftile__bar i { background: #ff8c42; }
+
+.ftable { width: 260px; font-size: 12.5px; border-radius: 6px; overflow: hidden; }
+.ftable-house { background: #fff; border: 1px solid rgba(90,61,43,0.12); color: #2c2418; }
+.ftable-back  { background: #262d38; border: 1px solid rgba(255,255,255,0.05); color: #e6dcd0; }
+.ftable__row { display: grid; grid-template-columns: 36px 1fr 50px; padding: 9px 14px; gap: 10px; align-items: center; }
+.ftable__row + .ftable__row { border-top: 1px solid rgba(90,61,43,0.08); }
+.ftable-back  .ftable__row + .ftable__row { border-top: 1px solid rgba(255,255,255,0.05); }
+.ftable__row--head { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.65; padding-top: 10px; padding-bottom: 10px; }
+.ftable-house .ftable__row--head { background: rgba(255, 226, 205, 0.4); }
+.ftable-back  .ftable__row--head { background: rgba(255,255,255,0.04); }
+.ftable__num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.finput { width: 240px; display: flex; flex-direction: column; gap: 6px; }
+.finput__label { font-weight: 600; font-size: 12px; }
+.finput-house .finput__label { color: #2c2418; }
+.finput-back  .finput__label { color: #e6dcd0; }
+.finput__input {
+  padding: 9px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  border: 1px solid transparent;
+  font-family: "Lexend", sans-serif;
+}
+.finput-house .finput__input { background: #fff; color: #2c2418; border-color: rgba(90,61,43,0.2); }
+.finput-house .finput__input::placeholder { color: rgba(44,36,24,0.4); }
+.finput-back  .finput__input { background: #1d232c; color: #e6dcd0; border-color: rgba(255,255,255,0.12); }
+.finput-back  .finput__input::placeholder { color: rgba(230,220,208,0.35); }
+.finput__help { font-size: 11px; opacity: 0.6; }
+
+.fnav { width: 200px; display: flex; flex-direction: column; gap: 1px; padding: 8px; border-radius: 8px; }
+.fnav-house { background: #ffe2cd; }
+.fnav-back  { background: #1d232c; }
+.fnav__item { display: flex; align-items: center; gap: 10px; padding: 7px 11px; font-size: 12.5px; font-weight: 500; border-radius: 5px; cursor: pointer; }
+.fnav__item::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.45; }
+.fnav-house .fnav__item { color: #5a4d3b; }
+.fnav-back  .fnav__item { color: #b6b0a6; }
+.fnav__item.is-active { font-weight: 700; }
+.fnav-house .fnav__item.is-active { background: #fff; color: #2c2418; }
+.fnav-back  .fnav__item.is-active { background: #262d38; color: #e6dcd0; }
+.fnav-house .fnav__item.is-active::before { background: #e5771e; opacity: 1; }
+.fnav-back  .fnav__item.is-active::before { background: #ff8c42; opacity: 1; }
+
+.ftabs { display: inline-flex; padding: 3px; border-radius: 7px; font-size: 12px; }
+.ftabs-house { background: rgba(90,61,43,0.08); }
+.ftabs-back  { background: rgba(255,255,255,0.06); }
+.ftabs button { padding: 7px 14px; background: transparent; border: none; font: inherit; cursor: pointer; border-radius: 4px; font-weight: 600; font-family: "Lexend", sans-serif; }
+.ftabs-house button { color: #5a4d3b; }
+.ftabs-back  button { color: #b6b0a6; }
+.ftabs button.is-active { font-weight: 700; }
+.ftabs-house button.is-active { background: #fff; color: #2c2418; border: 1px solid rgba(90,61,43,0.12); }
+.ftabs-back  button.is-active { background: #262d38; color: #e6dcd0; border: 1px solid rgba(255,255,255,0.08); }
+
+/* Admonition / alert */
+.alert {
+  width: 260px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.alert__icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  margin-top: 1px;
+  position: relative;
+}
+.alert__icon::after {
+  content: "!";
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Lexend", sans-serif; font-weight: 700; font-size: 13px;
+  line-height: 1;
+}
+.alert__body { font-size: 12.5px; line-height: 1.45; }
+.alert__body strong { display: block; font-weight: 700; margin-bottom: 1px; }
+.alert-house {
+  background: rgba(255, 226, 205, 0.5);
+  border: 1px solid rgba(229, 119, 30, 0.3);
+  color: #2c2418;
+}
+.alert-house .alert__icon { color: #e5771e; }
+.alert-house .alert__icon::after { color: #fff; }
+.alert-back {
+  background: rgba(255, 140, 66, 0.08);
+  border: 1px solid rgba(255, 140, 66, 0.3);
+  color: #e6dcd0;
+}
+.alert-back .alert__icon { color: #ff8c42; }
+.alert-back .alert__icon::after { color: #1a1410; }
+
+/* ── Decorative · two-stage pairs ────────────────────────────────────── */
+.specimens { display: flex; flex-direction: column; gap: 24px; }
+.specimen-pair {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--b-hairline);
+}
+.specimen-pair__label {
+  padding: 20px 22px;
+  background: #1a2029;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.specimen-pair__num {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #828a98;
+}
+.specimen-pair__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.005em;
+  color: #e6dcd0;
+  margin: 0;
+}
+.specimen-pair__program {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ff8c42;
+}
+.specimen-pair__note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b6b0a6;
+  margin: 4px 0 0;
+}
+.specimen-pair__stage {
+  padding: 38px 28px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  position: relative;
+}
+.specimen-pair__stage--house { background: #fffbf6; }
+.specimen-pair__stage--back  { background: #161b22; }
+
+/* ── Amp cabinet ─────────────────────────────────────────────────────── */
+.amp {
+  position: relative;
+  width: 220px;
+  padding: 14px 12px 16px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px),
+    #0a0805;
+}
+.amp::before, .amp::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #c08a1a;
+}
+.amp::before { left: 5px; } .amp::after { right: 5px; }
+.amp__grille {
+  position: relative;
+  min-height: 152px;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle, rgba(0,0,0,0.2) 0.6px, transparent 1.1px) 0 0,
+    radial-gradient(circle, rgba(255,255,255,0.25) 0.5px, transparent 0.9px) 1.5px 1.5px,
+    #b8a47a;
+  background-size: 3.2px 3.2px, 3.2px 3.2px, 100% 100%;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.55),
+    inset 0 -1px 0 rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 16px 14px 14px;
+}
+.amp__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  color: #fffbf6;
+  margin: 0 0 4px;
+}
+.amp__copy {
+  font-size: 11px;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Ticket stub ─────────────────────────────────────────────────────── */
+.ticket {
+  position: relative;
+  display: flex;
+  width: 240px;
+  border-radius: 3px;
+  color: #1a1410;
+  transform: rotate(-2deg);
+  background: transparent;
+  cursor: pointer;
+}
+.ticket__main {
+  flex: 1; padding: 12px 12px 10px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+  background: #edc46a;
+  border-radius: 3px 0 0 3px;
+  clip-path: polygon(
+    0 0, 100% 0,
+    97% 5%, 100% 10%, 97% 15%, 100% 20%, 97% 25%, 100% 30%,
+    97% 35%, 100% 40%, 97% 45%, 100% 50%, 97% 55%, 100% 60%,
+    97% 65%, 100% 70%, 97% 75%, 100% 80%, 97% 85%, 100% 90%,
+    97% 95%, 100% 100%,
+    0 100%
+  );
+}
+.ticket__eyebrow {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c63015;
+  font-weight: 700;
+}
+.ticket__title {
+  font-family: var(--font-chalk);
+  font-size: 19px;
+  line-height: 0.95;
+  color: #1a1410;
+  margin: 4px 0 4px;
+  letter-spacing: 0.01em;
+}
+.ticket__when {
+  font-family: var(--font-script);
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1410;
+  line-height: 1.05;
+  margin: 0;
+}
+.ticket__where {
+  font-family: var(--font-script);
+  font-size: 12px;
+  color: rgba(26,20,16,0.72);
+  line-height: 1.15;
+  margin: 0;
+}
+.ticket__price {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1.5px dashed rgba(26,20,16,0.4);
+  display: flex;
+  justify-content: space-between;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c63015;
+}
+.ticket__price span:last-child { color: rgba(26,20,16,0.55); }
+.ticket__perf {
+  width: 2px;
+  background: repeating-linear-gradient(180deg, rgba(26,20,16,0.55) 0 3px, transparent 3px 6px);
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 250ms ease;
+}
+.ticket__stub {
+  width: 42px;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dfb04f;
+  border-radius: 0 3px 3px 0;
+  clip-path: polygon(
+    3% 5%, 0 10%, 3% 15%, 0 20%, 3% 25%, 0 30%,
+    3% 35%, 0 40%, 3% 45%, 0 50%, 3% 55%, 0 60%,
+    3% 65%, 0 70%, 3% 75%, 0 80%, 3% 85%, 0 90%,
+    3% 95%, 0 100%,
+    100% 100%, 100% 0,
+    0 0
+  );
+  transition: transform 350ms cubic-bezier(0.25, 0.7, 0.3, 1);
+  transform-origin: right center;
+}
+.ticket:hover .ticket__stub { transform: translateX(36px) rotate(7deg); }
+.ticket:hover .ticket__perf { opacity: 0; }
+.ticket__admit {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #c63015;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  line-height: 1;
+}
+
+/* ── Key fob ─────────────────────────────────────────────────────────── */
+.keyfob {
+  position: relative;
+  width: 110px;
+  margin-top: 14px;
+  padding: 26px 10px 0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: #f4ead8;
+  transform: rotate(-3deg);
+  overflow: hidden;
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.10) 48%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, #234866 0%, #163049 100%);
+}
+.keyfob::before {
+  content: "";
+  position: absolute;
+  top: 5px; left: 50%;
+  transform: translateX(-50%);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #c08a1a;
+  z-index: 1;
+}
+.keyfob::after {
+  content: "";
+  position: absolute;
+  top: 11px; left: 50%;
+  transform: translateX(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #0d0f12;
+  z-index: 2;
+}
+.keyfob__num {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #f4ead8;
+  margin-top: 10px;
+}
+.keyfob__label {
+  font-family: var(--font-chalk);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: #f4ead8;
+  margin-top: 6px;
+  text-transform: uppercase;
+  transform: rotate(-1deg);
+}
+.keyfob__hours {
+  padding: 0 0 18px;
+  font-family: "Courier New", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c4cfde;
+  text-shadow:
+    -1px -1px 0 rgba(255,255,255,0.85),
+    -1px -1px 1px rgba(255,255,255,0.45),
+     1px  1px 0 rgba(0,0,0,0.95),
+     2px  2px 1px rgba(0,0,0,0.55);
+}
+.keyfob__stripe {
+  align-self: stretch;
+  height: 6px;
+  margin: 16px -10px 18px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%,
+    #ffb500 33.333% 66.666%,
+    #f84d13 66.666% 100%
+  );
+}
+
+/* ── Setlist ─────────────────────────────────────────────────────────── */
+.setlist {
+  position: relative;
+  width: 220px;
+  padding: 30px 18px 22px;
+  background: #f4ead8;
+  color: #16140f;
+  transform: rotate(-1.4deg);
+  font-family: "Lexend", sans-serif;
+}
+.setlist::before, .setlist::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  width: 46px;
+  height: 18px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 5px, rgba(0,0,0,0.10) 5px 6px),
+    #e5771e;
+}
+.setlist::before { left: 12px; transform: rotate(-14deg); }
+.setlist::after  { right: 12px; transform: rotate(11deg); }
+.setlist__header {
+  font-family: var(--font-chalk);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  margin-bottom: 10px;
+  transform: rotate(-1deg);
+  transform-origin: left;
+}
+.setlist__header small {
+  display: block;
+  font-family: var(--font-script);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(22,20,15,0.6);
+  margin-top: 5px;
+}
+.setlist__list {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  counter-reset: cue;
+}
+.setlist__item {
+  counter-increment: cue;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0 5px;
+  border-bottom: 1px dashed rgba(22,20,15,0.18);
+  font-family: var(--font-script);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.setlist__item::before {
+  content: counter(cue) ".";
+  font-family: var(--font-script);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(22,20,15,0.55);
+}
+.setlist__item--strike { position: relative; color: rgba(22,20,15,0.5); }
+.setlist__item--strike::after {
+  content: "";
+  position: absolute;
+  left: 18px; right: 30px;
+  top: 55%;
+  height: 2px;
+  background: rgba(22,20,15,0.55);
+  transform: rotate(-0.6deg);
+}
+.setlist__item .time {
+  font-family: var(--font-script);
+  font-size: 13px;
+  color: rgba(22,20,15,0.6);
+  font-weight: 600;
+}
+.setlist__encore {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px solid rgba(22,20,15,0.55);
+  font-family: var(--font-chalk);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #c63015;
+  transform: rotate(-1.4deg);
+  transform-origin: left;
+}
+
+/* ── Membership pass (peach in both themes) ──────────────────────────── */
+.pass {
+  position: relative;
+  width: 250px;
+  aspect-ratio: 5 / 3;
+  background: #ffe2cd;
+  border: 1px solid rgba(90,61,43,0.2);
+  border-radius: 8px;
+  transform: rotate(-1.4deg);
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.pass__hole {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px; height: 5px;
+  background: #000;
+  border-radius: 2px;
+}
+.pass__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pass__brand {
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #5a3d2b;
+  line-height: 1.2;
+}
+.pass__brand strong { display: block; color: #003b5c; font-size: 10px; }
+.pass__tier {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  line-height: 0.95;
+  color: #e5771e;
+  text-transform: uppercase;
+  text-align: right;
+}
+.pass__tier small {
+  display: block;
+  font-size: 7.5px;
+  letter-spacing: 0.18em;
+  color: rgba(229, 119, 30, 0.7);
+  margin-top: 3px;
+  font-weight: 600;
+}
+.pass__stripe {
+  margin: 8px -14px 0;
+  height: 4px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%, #ffb500 33.333% 66.666%, #f84d13 66.666% 100%);
+}
+.pass__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 6px;
+}
+.pass__photo {
+  width: 46px;
+  height: 46px;
+  border-radius: 4px;
+  background: #ff8c42;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: #1a1410;
+}
+.pass__info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.pass__name {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: #003b5c;
+  line-height: 1.1;
+}
+.pass__role { font-size: 10px; color: #5a4d3b; }
+.pass__no {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8.5px;
+  color: rgba(90, 61, 43, 0.6);
+  letter-spacing: 0.08em;
+  margin-top: 1px;
+}
+.pass__footer { width: 100%; margin-top: auto; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pass__footer-label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(90, 61, 43, 0.7);
+}
+.pass__bands {
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #003b5c;
+}
+
+/* ── Cassette ────────────────────────────────────────────────────────── */
+.cassette {
+  position: relative;
+  width: 220px;
+  height: 138px;
+  padding: 7px;
+  border-radius: 4px;
+  background: #3a4150;
+  transform: rotate(-3deg);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cassette__label {
+  flex: 1;
+  position: relative;
+  padding: 8px 12px 26px;
+  background:
+    linear-gradient(180deg,
+      transparent 0 70%,
+      #f84d13 70% 76%,
+      #e5771e 76% 82%,
+      #ffb500 82% 88%,
+      #00859b 88% 94%,
+      #003b5c 94% 100%),
+    repeating-linear-gradient(180deg, transparent 0 12px, rgba(0,0,90,0.06) 12px 13px),
+    #f4ead8;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.cassette__side {
+  position: absolute;
+  top: 3px; right: 7px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(26,20,16,0.55);
+}
+.cassette__band {
+  font-family: var(--font-script);
+  font-size: 19px;
+  font-weight: 700;
+  color: #1a1410;
+  line-height: 1;
+  margin: 4px 0 0;
+  transform: rotate(-0.8deg);
+}
+.cassette__title {
+  font-family: var(--font-script);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(26,20,16,0.72);
+  line-height: 1.1;
+  margin: 2px 0 0;
+}
+.cassette__stamp {
+  position: absolute;
+  bottom: 32px;
+  right: 8px;
+  font-family: var(--font-chalk);
+  font-size: 10px;
+  color: #c63015;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-5deg);
+  border: 1.5px solid #c63015;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(244, 234, 216, 0.92);
+  z-index: 2;
+}
+.cassette__deck {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 26px;
+  padding: 0 26px;
+  position: relative;
+}
+.cassette__spool {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1a1d24;
+  border: 1.5px solid #5a6273;
+}
+.cassette__deck::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 32%; right: 32%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: #1a1d24;
+  border-radius: 1px;
+}
+
+/* ── Spike tape ──────────────────────────────────────────────────────── */
+.spike { width: 100%; max-width: 280px; display: flex; flex-direction: column; gap: 8px; }
+.spike__labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.specimen-pair__stage--house .spike__labels { color: #8a7a5c; }
+.specimen-pair__stage--back  .spike__labels { color: #828a98; }
+.specimen-pair__stage--house .spike__label--active { color: #2c2418; font-weight: 700; }
+.specimen-pair__stage--back  .spike__label--active { color: #e6dcd0; font-weight: 700; }
+.spike__rail {
+  position: relative;
+  height: 12px;
+  background: #e3ddcc;
+  border-radius: 1px;
+  transform: rotate(-0.4deg);
+}
+.spike__lit {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: #ffc828;
+  border-radius: 1px;
+}
+.spike__marks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.spike__mark { width: 2px; height: 20px; background: rgba(22,20,15,0.65); margin-top: -4px; }
+.spike__mark--major { height: 24px; width: 3px; }
+.spike__caption { font-size: 11.5px; line-height: 1.5; }
+.specimen-pair__stage--house .spike__caption { color: #5a4d3b; }
+.specimen-pair__stage--back  .spike__caption { color: #b6b0a6; }
+
+/* ── Clipboard ───────────────────────────────────────────────────────── */
+.clipboard {
+  position: relative;
+  width: 180px;
+  padding: 22px 10px 10px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(80,55,30,0.06) 0 1px, transparent 1px 3px),
+    #ac8350;
+  transform: rotate(-1.5deg);
+}
+.clipboard__clip {
+  position: absolute;
+  top: -7px; left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 20px;
+  background: #9da0a6;
+  border-radius: 3px 3px 1px 1px;
+  z-index: 3;
+}
+.clipboard__clip::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #2a2c30;
+}
+.clipboard__pen {
+  position: absolute;
+  top: -2px;
+  right: 18px;
+  width: 4px;
+  height: 72px;
+  background: #c63015;
+  border-radius: 2px;
+  transform: rotate(-3deg);
+  z-index: 4;
+}
+.clipboard__paper {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 18px, rgba(0,0,90,0.07) 18px 19px),
+    #f5edd5;
+  padding: 12px 10px 10px;
+  border-radius: 1px;
+  min-height: 124px;
+  color: #1a1410;
+}
+.clipboard__title {
+  font-family: var(--font-chalk);
+  font-size: 15px;
+  line-height: 1;
+  color: #1a1410;
+  margin: 0 0 8px;
+  transform: rotate(-1deg);
+}
+.clipboard__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--font-script);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(26,20,16,0.85);
+  line-height: 1.1;
+}
+.clipboard__rows label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.clipboard__rows label::before {
+  content: "";
+  width: 10px; height: 10px;
+  border: 1.5px solid rgba(26,20,16,0.55);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.clipboard__rows label.is-checked {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  opacity: 0.55;
+}
+.clipboard__rows label.is-checked::before {
+  background: #1a1410;
+}
+
+/* ── Poster matte ────────────────────────────────────────────────────── */
+.poster {
+  width: 150px;
+  position: relative;
+  padding: 4px;
+  background: #ffe2cd;
+  transform: rotate(-2deg);
+}
+.poster::before {
+  content: "";
+  position: absolute;
+  top: -4px; left: 50%;
+  transform: translateX(-50%);
+  width: 36px; height: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.4) 0 4px, transparent 4px 5px),
+    rgba(184,221,225,0.9);
+  border-radius: 1px;
+}
+.poster__art {
+  width: 100%;
+  height: 168px;
+  background:
+    repeating-linear-gradient(45deg, #f84d13 0 12px, #ffb500 12px 24px, #00859b 24px 36px);
+}
+.poster__cap {
+  padding: 8px 4px 4px;
+  text-align: center;
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  color: #5a3d2b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Theme picking ───────────────────────────────────────────────────── */
+.picking { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.pick { padding: 22px 24px 24px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px; }
+.pick--house { background: linear-gradient(180deg, #fffbf6 0%, #ffe2cd 100%); color: #2c2418; }
+.pick--back  { background: #1d232c; color: #e6dcd0; }
+.pick__name { font-family: "Lexend", sans-serif; font-weight: 700; font-size: 22px; margin: 0; letter-spacing: -0.005em; }
+.pick__when { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; }
+.pick__list { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.6; }
+.pick__list li { padding-left: 18px; position: relative; }
+.pick__list li::before { content: "·"; position: absolute; left: 6px; font-weight: 700; }
+.pick code { font-size: 11px; padding: 1px 4px; border-radius: 3px; }
+.pick--house code { background: rgba(229,119,30,0.18); color: #5a3d2b; }
+.pick--back code { background: rgba(255,140,66,0.18); color: #ff8c42; }
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+.foot {
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+}
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; min-height: auto; }
+  .hero__title { font-size: 44px; }
+  .principles, .picking, .palette-pair, .type-pair, .compare, .specimen-pair, .hand-roles { grid-template-columns: 1fr; }
+  .specimen-pair { display: block; }
+  .materials { grid-template-columns: repeat(2, 1fr); }
+  .tri-callout { grid-template-columns: 1fr; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── HERO ──────────────────────────────────────────────────────────── -->
+  <header class="hero">
+    <div class="hero__half hero__half--house">
+      <span class="hero__eyebrow">Light mode</span>
+      <h1 class="hero__title">Houselights</h1>
+      <p class="hero__role">Lights up. Warm cream surfaces,<br>warm accents, warmer paper.</p>
+    </div>
+    <div class="hero__half hero__half--back">
+      <span class="hero__eyebrow">Dark mode</span>
+      <h1 class="hero__title">Backstage</h1>
+      <p class="hero__role">Lights down. Cool charcoal surfaces,<br>cool accents, glow on top.</p>
+    </div>
+    <div class="hero__stripe"></div>
+  </header>
+
+  <div class="kicker">
+    <h2 class="kicker__title">Same building. Different time of day.</h2>
+    <p class="kicker__lede">
+      CMC ships two themes — Houselights and Backstage — and <em>every
+      piece of the design system renders in both</em>. Same chrome, same
+      functional UI, same decorative objects. The room changes; the kit
+      doesn't. A booking table can be either theme. A poster wall can be
+      either theme.
+    </p>
+  </div>
+
+  <!-- ── 01 · PRINCIPLES ───────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">01 · Three principles</span>
+      <h2 class="section__title">The system has three load-bearing layers.</h2>
+      <p class="section__lede">
+        Every piece belongs to one of three layers — <strong>Chrome</strong>
+        (UI shell — buttons, surfaces, badges), <strong>App</strong>
+        (functional dashboard components — tables, forms, KPIs), or
+        <strong>Decorative</strong> (skeumorphic program objects). Each
+        layer ships in both themes.
+      </p>
+    </div>
+    <div class="principles">
+      <article class="principle">
+        <span class="principle__num">01</span>
+        <p class="principle__quote">The room changes. The DNA stays.</p>
+        <p class="principle__note">Both rooms run on the same speaker mark, the same six brand hues, the same Lexend type, the same tri-stripe. The difference is the lighting on top.</p>
+      </article>
+      <article class="principle">
+        <span class="principle__num">02</span>
+        <p class="principle__quote">Three layers. Both rooms.</p>
+        <p class="principle__note">Chrome (shell), App (functional dashboard UI), Decorative (skeumorphic objects). Every layer renders in both themes. Pick the layer for the job, not the theme.</p>
+      </article>
+      <article class="principle">
+        <span class="principle__num">03</span>
+        <p class="principle__quote">The tri-stripe is the constant.</p>
+        <p class="principle__note">Teal / goldenrod / red-orange, exactly the same recipe in both rooms. Strongest brand recall device, never tuned.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── 02 · FOUNDATIONS ──────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">02 · Foundations</span>
+      <h2 class="section__title">Color, type, and the tri-stripe.</h2>
+      <p class="section__lede">
+        Both themes share the same six brand hues, with values lifted on
+        dark for legibility. Lexend handles every UI string at the same
+        scale in both rooms. The tri-stripe is identical, atom for atom.
+      </p>
+    </div>
+
+    <!-- Color palette -->
+    <div class="palette-pair">
+      <div class="palette-pair__cell palette-pair__cell--house">
+        <div class="palette-pair__label">Houselights · brand palette</div>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch__chip" style="background:#e5771e"></div><div class="swatch__name">Orange</div><div class="swatch__hex">#e5771e</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#00859b"></div><div class="swatch__name">Teal</div><div class="swatch__hex">#00859b</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#003b5c"></div><div class="swatch__name">Navy</div><div class="swatch__hex">#003b5c</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#ffb500"></div><div class="swatch__name">Goldenrod</div><div class="swatch__hex">#ffb500</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#f84d13"></div><div class="swatch__name">Red-orange</div><div class="swatch__hex">#f84d13</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#5a3d2b"></div><div class="swatch__name">Brown</div><div class="swatch__hex">#5a3d2b</div></div>
+        </div>
+      </div>
+      <div class="palette-pair__cell palette-pair__cell--back">
+        <div class="palette-pair__label">Backstage · brand palette</div>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch__chip" style="background:#ff8c42"></div><div class="swatch__name">Orange</div><div class="swatch__hex">#ff8c42</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#3eb5ca"></div><div class="swatch__name">Teal</div><div class="swatch__hex">#3eb5ca</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#6da5cc"></div><div class="swatch__name">Mid blue</div><div class="swatch__hex">#6da5cc</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#ffb500"></div><div class="swatch__name">Goldenrod</div><div class="swatch__hex">#ffb500</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#f84d13"></div><div class="swatch__name">Red-orange</div><div class="swatch__hex">#f84d13</div></div>
+          <div class="swatch"><div class="swatch__chip" style="background:#d3b59a"></div><div class="swatch__name">Tan (brown)</div><div class="swatch__hex">#d3b59a</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Type scale -->
+    <div class="type-pair">
+      <div class="type-pair__cell type-pair__cell--house">
+        <div class="palette-pair__label">Houselights · Lexend</div>
+        <div class="type-row type-row--display"><span class="type-row__meta">Display 44</span><span class="type-row__sample">Music Communities</span></div>
+        <div class="type-row type-row--h1"><span class="type-row__meta">H1 · 32</span><span class="type-row__sample">Building Music Communities</span></div>
+        <div class="type-row type-row--h3"><span class="type-row__meta">H3 · 22</span><span class="type-row__sample">Upcoming events</span></div>
+        <div class="type-row type-row--body"><span class="type-row__meta">Body 16</span><span class="type-row__sample">Affordable hourly rehearsal space with professional equipment.</span></div>
+        <div class="type-row type-row--eyebrow"><span class="type-row__meta">Eyebrow 12</span><span class="type-row__sample">Real Book Club</span></div>
+      </div>
+      <div class="type-pair__cell type-pair__cell--back">
+        <div class="palette-pair__label">Backstage · Lexend</div>
+        <div class="type-row type-row--display"><span class="type-row__meta">Display 44</span><span class="type-row__sample">Music Communities</span></div>
+        <div class="type-row type-row--h1"><span class="type-row__meta">H1 · 32</span><span class="type-row__sample">Building Music Communities</span></div>
+        <div class="type-row type-row--h3"><span class="type-row__meta">H3 · 22</span><span class="type-row__sample">Upcoming events</span></div>
+        <div class="type-row type-row--body"><span class="type-row__meta">Body 16</span><span class="type-row__sample">Affordable hourly rehearsal space with professional equipment.</span></div>
+        <div class="type-row type-row--eyebrow"><span class="type-row__meta">Eyebrow 12</span><span class="type-row__sample">Real Book Club</span></div>
+      </div>
+    </div>
+
+    <!-- Tri-stripe -->
+    <div class="tri-callout">
+      <div class="tri-callout__rail"></div>
+      <div class="tri-callout__mid"><strong>Tri-stripe — identical in both rooms</strong>Teal · Goldenrod · Red-orange</div>
+      <div class="tri-callout__rail"></div>
+    </div>
+  </section>
+
+  <!-- ── 03 · MATERIALS ───────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">03 · Materials</span>
+      <h2 class="section__title">Eight surfaces. Both themes use the same materials.</h2>
+      <p class="section__lede">
+        Real-world materials show up across the decorative layer. Gaffer
+        tape is gaffer tape whether the lights are on or off. Spike tape
+        is spike tape. Parchment, paper, and glow tape behave the same way.
+      </p>
+    </div>
+    <div class="materials">
+      <div class="mat"><div class="mat__chip mat-gaffer"><span class="chalk">Fragile</span></div><div class="mat__name">Gaffer tape</div><div class="mat__use">Labels, hazard tags, the canonical badge. Hi-vis orange tape with white chalkpen.</div></div>
+      <div class="mat"><div class="mat__chip mat-spike"></div><div class="mat__name">Spike tape</div><div class="mat__use">Chalky white tape for wayfinding strips and progress indicators.</div></div>
+      <div class="mat"><div class="mat__chip mat-glow"></div><div class="mat__name">Glow tape</div><div class="mat__use">Live / on-air / available status. Reserved for "right now" states.</div></div>
+      <div class="mat"><div class="mat__chip mat-paper"></div><div class="mat__name">Setlist paper</div><div class="mat__use">Cream newsprint with rule lines. Setlists, ticket stubs, ruled lists.</div></div>
+      <div class="mat"><div class="mat__chip mat-parchment"></div><div class="mat__name">Parchment</div><div class="mat__use">Peach card stock. Membership passes, business cards, secondary surfaces in Houselights.</div></div>
+      <div class="mat"><div class="mat__chip mat-aluminum"></div><div class="mat__name">Brushed aluminum</div><div class="mat__use">Hardware moments — clipboard clips, key grommets, mic stand bases.</div></div>
+      <div class="mat"><div class="mat__chip mat-cream"></div><div class="mat__name">Cream page</div><div class="mat__use">Houselights canvas. Warm white. Never pure white.</div></div>
+      <div class="mat"><div class="mat__chip mat-charcoal"></div><div class="mat__name">Charcoal page</div><div class="mat__use">Backstage canvas. Cool blue-gray. Never pure black.</div></div>
+    </div>
+  </section>
+
+  <!-- ── 04 · HANDWRITING ──────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">04 · Hand-lettering</span>
+      <h2 class="section__title">Two handwriting roles. Two different tools.</h2>
+      <p class="section__lede">
+        Lexend still handles every UI string. Handwriting only appears
+        where a real backstage object would actually be hand-labelled — a
+        paint pen on a strip of tape, a Sharpie on a setlist. Same two
+        roles in both rooms.
+      </p>
+    </div>
+    <div class="hand-roles">
+      <div class="hand">
+        <div class="hand__sample hand__sample--tape"><span class="chalk-demo">Fragile</span></div>
+        <div class="hand__name">Chalkpen · <em>Permanent Marker</em></div>
+        <div class="hand__use">Paint-pen on gaffer tape. All-caps, single weight, slight rotation. Used on tape labels, hazard tags, primary CTAs in tape form, marker annotations (ENCORE, SOLD OUT, DEMO). Never in body copy or product UI.</div>
+      </div>
+      <div class="hand">
+        <div class="hand__sample hand__sample--paper"><span class="script-demo">Thu 7pm · jam</span></div>
+        <div class="hand__name">Sharpie · <em>Caveat</em></div>
+        <div class="hand__use">Ballpoint or Sharpie on paper. Mixed case, leans right, lighter weight. Used on setlist items, taped-up reminders, hand-written captions on cassette labels and ticket stubs.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 05 · CHROME ───────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">05 · Chrome — UI shell</span>
+      <h2 class="section__title">Buttons, surfaces, and the canonical badge.</h2>
+      <p class="section__lede">
+        Chrome is the layer that touches everything. The recipe is the
+        same in both themes — only the values change. Brown stroke + brown
+        offset shadow in light; no stroke, black offset shadow in dark.
+      </p>
+    </div>
+    <div class="compare">
+      <div class="compare__head"><div>Chrome element</div><div class="h-house">Houselights</div><div class="h-back">Backstage</div></div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Page surface</strong><small>White card on warm-white page · charcoal card on charcoal page</small></div>
+        <div class="cell-house"><div class="surface-house"></div></div>
+        <div class="cell-back"><div class="surface-back"></div></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Content card · feature</strong><small>Brown stroke + offset shadow + colored icon notch + halftone wash. Dark drops the stroke.</small></div>
+        <div class="cell-house">
+          <article class="feature-card feature-card--teal">
+            <div class="feature-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h4 class="feature-card__title">Live events weekly</h4>
+            <p class="feature-card__body">Regular concerts and showcases featuring local and touring musicians.</p>
+          </article>
+        </div>
+        <div class="cell-back">
+          <article class="feature-card feature-card--teal feature-card--dark">
+            <div class="feature-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h4 class="feature-card__title">Live events weekly</h4>
+            <p class="feature-card__body">Regular concerts and showcases featuring local and touring musicians.</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Content card · CTA</strong><small>Solid brand fill, eyebrow + title + body + inset cream button.</small></div>
+        <div class="cell-house">
+          <article class="cta-card cta-card--primary">
+            <div class="cta-card__eyebrow">Become a member</div>
+            <h4 class="cta-card__title">Join the Collective</h4>
+            <p class="cta-card__body">Access practice space, events, and a community of musicians.</p>
+            <a class="cta-card__btn" href="#">Join now</a>
+          </article>
+        </div>
+        <div class="cell-back">
+          <article class="cta-card cta-card--primary cta-card--dark">
+            <div class="cta-card__eyebrow">Become a member</div>
+            <h4 class="cta-card__title">Join the Collective</h4>
+            <p class="cta-card__body">Access practice space, events, and a community of musicians.</p>
+            <a class="cta-card__btn" href="#">Join now</a>
+          </article>
+        </div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Primary button</strong><small>Solid orange · white text · offset shadow. Stroke in light only.</small></div>
+        <div class="cell-house"><a class="btn-house">Become a Member</a></div>
+        <div class="cell-back"><a class="btn-back">Become a Member</a></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Secondary button</strong><small>Outline + offset shadow. Brown in light, orange in dark.</small></div>
+        <div class="cell-house"><a class="btn-house btn-house--out">Learn more</a></div>
+        <div class="cell-back"><a class="btn-back btn-back--out">Learn more</a></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Eyebrow / accent text</strong><small>Brand orange in both — theme-tuned for contrast.</small></div>
+        <div class="cell-house"><span class="eyebrow-house">Real Book Club</span></div>
+        <div class="cell-back"><span class="eyebrow-back">Real Book Club</span></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Gaffer tag</strong><small>The canonical badge. Hi-vis orange tape with white chalkpen — same recipe in both rooms.</small></div>
+        <div class="cell-house"><span class="tag-house">Tonight</span></div>
+        <div class="cell-back"><span class="tag-back">Tonight</span></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Tri-stripe</strong><small>Strongest brand recall device. Never tuned.</small></div>
+        <div class="cell-house"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div class="stripe-sample"></div><span class="compare__same">Identical →</span></div></div>
+        <div class="cell-back"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div class="stripe-sample"></div><span class="compare__same">← Identical</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 06 · APP FUNCTIONAL ───────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">06 · App — functional UI for dashboards</span>
+      <h2 class="section__title">Flat, dense components for real work.</h2>
+      <p class="section__lede">
+        Dashboards, booking flows, admin panels, gear-library inventory —
+        these run on functional components without skeumorphic flair.
+        Same vocabulary, stripped of finish. Each component ships in both
+        themes; the bones are identical, the surface treatment changes.
+      </p>
+    </div>
+    <div class="compare">
+      <div class="compare__head"><div>Component</div><div class="h-house">Houselights</div><div class="h-back">Backstage</div></div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>KPI / stat tile</strong><small>Label, value, optional progress.</small></div>
+        <div class="cell-house"><div class="ftile ftile-house"><div class="ftile__label">Free hours · Dec</div><div class="ftile__value">6<small>/ 10</small></div><div class="ftile__bar"><i style="width: 60%"></i></div></div></div>
+        <div class="cell-back"><div class="ftile ftile-back"><div class="ftile__label">Free hours · Dec</div><div class="ftile__value">6<small>/ 10</small></div><div class="ftile__bar"><i style="width: 60%"></i></div></div></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Data table</strong><small>Booking ledger, gear inventory, member roll.</small></div>
+        <div class="cell-house"><div class="ftable ftable-house"><div class="ftable__row ftable__row--head"><span>Rm</span><span>Member</span><span class="ftable__num">Hrs</span></div><div class="ftable__row"><span>03</span><span>Maya Rivera</span><span class="ftable__num">2.0</span></div><div class="ftable__row"><span>02</span><span>Devon Cash</span><span class="ftable__num">1.5</span></div></div></div>
+        <div class="cell-back"><div class="ftable ftable-back"><div class="ftable__row ftable__row--head"><span>Rm</span><span>Member</span><span class="ftable__num">Hrs</span></div><div class="ftable__row"><span>03</span><span>Maya Rivera</span><span class="ftable__num">2.0</span></div><div class="ftable__row"><span>02</span><span>Devon Cash</span><span class="ftable__num">1.5</span></div></div></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Text input</strong><small>Label + input + helper.</small></div>
+        <div class="cell-house"><div class="finput finput-house"><label class="finput__label">Email address</label><input class="finput__input" type="email" placeholder="you@example.com" /><small class="finput__help">We'll never share this.</small></div></div>
+        <div class="cell-back"><div class="finput finput-back"><label class="finput__label">Email address</label><input class="finput__input" type="email" placeholder="you@example.com" /><small class="finput__help">We'll never share this.</small></div></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Sidebar nav</strong><small>Orange dot indicator on the active item.</small></div>
+        <div class="cell-house"><nav class="fnav fnav-house"><a class="fnav__item is-active">Dashboard</a><a class="fnav__item">Bookings</a><a class="fnav__item">Gear library</a><a class="fnav__item">Events</a></nav></div>
+        <div class="cell-back"><nav class="fnav fnav-back"><a class="fnav__item is-active">Dashboard</a><a class="fnav__item">Bookings</a><a class="fnav__item">Gear library</a><a class="fnav__item">Events</a></nav></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Tabs · segmented control</strong><small>Filter chip group for views.</small></div>
+        <div class="cell-house"><div class="ftabs ftabs-house"><button class="is-active">All shows</button><button>Jazz</button><button>Showcase</button></div></div>
+        <div class="cell-back"><div class="ftabs ftabs-back"><button class="is-active">All shows</button><button>Jazz</button><button>Showcase</button></div></div>
+      </div>
+
+      <div class="compare__row">
+        <div class="h-label"><strong>Admonition / alert</strong><small>Info, warning, success — tinted to match theme.</small></div>
+        <div class="cell-house"><div class="alert alert-house"><div class="alert__icon"></div><div class="alert__body"><strong>Room 03 is booked tonight</strong>Songwriter Circle has it reserved 7–9 PM.</div></div></div>
+        <div class="cell-back"><div class="alert alert-back"><div class="alert__icon"></div><div class="alert__body"><strong>Room 03 is booked tonight</strong>Songwriter Circle has it reserved 7–9 PM.</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 07 · DECORATIVE ───────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">07 · Decorative — skeumorphic program objects</span>
+      <h2 class="section__title">Six objects. Each renders the same in both rooms.</h2>
+      <p class="section__lede">
+        Decorative objects belong on marketing pages, event listings, and
+        program-identity moments where the brand should feel hand-made.
+        Each object is drawn <em>once</em> and sits on either a cream
+        (Houselights) or charcoal (Backstage) surface — the object reads
+        in either room without modification.
+      </p>
+    </div>
+    <div class="specimens">
+
+      <!-- 7a · Gear Library — Amp -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7a · Gear Library</span>
+          <h3 class="specimen-pair__title">Amp cabinet</h3>
+          <span class="specimen-pair__program">Gear loans</span>
+          <p class="specimen-pair__note">Black wood box with grille cloth. Loops back to the CMC speaker mark — the brand is a cabinet.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="amp"><div class="amp__grille"><h4 class="amp__title">Borrow a pedal, a kick, a tuner.</h4><p class="amp__copy">40 instruments in the loaner library. Two-week loans.</p></div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="amp"><div class="amp__grille"><h4 class="amp__title">Borrow a pedal, a kick, a tuner.</h4><p class="amp__copy">40 instruments in the loaner library. Two-week loans.</p></div></div></div>
+      </article>
+
+      <!-- 7b · Events — Ticket -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7b · Events</span>
+          <h3 class="specimen-pair__title">Ticket stub</h3>
+          <span class="specimen-pair__program">Shows · showcases</span>
+          <p class="specimen-pair__note">Aged paper, perforated stub, chalkpen event name, Sharpie date/location. The paper is the paper.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="ticket"><div class="ticket__main"><span class="ticket__eyebrow">Corvallis Music Collective</span><h4 class="ticket__title">Cassette Showcase</h4><p class="ticket__when">Fri Dec 13 · 7 PM</p><p class="ticket__where">6775 SW Philomath</p><div class="ticket__price"><span>$5 NOTAFLOF</span><span>Doors 6:30</span></div></div><div class="ticket__perf"></div><div class="ticket__stub"><span class="ticket__admit">Admit One</span></div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="ticket"><div class="ticket__main"><span class="ticket__eyebrow">Corvallis Music Collective</span><h4 class="ticket__title">Cassette Showcase</h4><p class="ticket__when">Fri Dec 13 · 7 PM</p><p class="ticket__where">6775 SW Philomath</p><div class="ticket__price"><span>$5 NOTAFLOF</span><span>Doors 6:30</span></div></div><div class="ticket__perf"></div><div class="ticket__stub"><span class="ticket__admit">Admit One</span></div></div></div>
+      </article>
+
+      <!-- 7c · Practice Rooms — Key fob -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7c · Practice Rooms</span>
+          <h3 class="specimen-pair__title">Room key fob</h3>
+          <span class="specimen-pair__program">Hourly bookings</span>
+          <p class="specimen-pair__note">Walnut wood tag, brass grommet, engraved room number, chalkpen label. Hangs from a keyring whatever time it is.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="keyfob"><div class="keyfob__num">03</div><div class="keyfob__label">Practice<br>Room</div><div class="keyfob__stripe"></div><div class="keyfob__hours">10a — 10p · Daily</div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="keyfob"><div class="keyfob__num">03</div><div class="keyfob__label">Practice<br>Room</div><div class="keyfob__stripe"></div><div class="keyfob__hours">10a — 10p · Daily</div></div></div>
+      </article>
+
+      <!-- 7d · Setlist — Real Book Club -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7d · Real Book Club &amp; meetups</span>
+          <h3 class="specimen-pair__title">Setlist</h3>
+          <span class="specimen-pair__program">Weekly programs</span>
+          <p class="specimen-pair__note">Sharpie on cream newsprint, taped down at the corners with hi-vis gaffer. Strike-throughs for done items, red marker for ENCORE.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="setlist"><div class="setlist__header">This Week<small>Dec 5 — Dec 9</small></div><ul class="setlist__list"><li class="setlist__item setlist__item--strike"><span>Songwriter Circle</span><span class="time">Mon 7p</span></li><li class="setlist__item setlist__item--strike"><span>Open Practice Rm</span><span class="time">Tue 6p</span></li><li class="setlist__item"><span>Real Book Club</span><span class="time">Thu 7p</span></li><li class="setlist__item"><span>Member Meetup</span><span class="time">Thu 8:30</span></li></ul><div class="setlist__encore">ENCORE — Jam after :30</div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="setlist"><div class="setlist__header">This Week<small>Dec 5 — Dec 9</small></div><ul class="setlist__list"><li class="setlist__item setlist__item--strike"><span>Songwriter Circle</span><span class="time">Mon 7p</span></li><li class="setlist__item setlist__item--strike"><span>Open Practice Rm</span><span class="time">Tue 6p</span></li><li class="setlist__item"><span>Real Book Club</span><span class="time">Thu 7p</span></li><li class="setlist__item"><span>Member Meetup</span><span class="time">Thu 8:30</span></li></ul><div class="setlist__encore">ENCORE — Jam after :30</div></div></div>
+      </article>
+
+      <!-- 7e · Membership pass -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7e · Membership</span>
+          <h3 class="specimen-pair__title">Membership pass</h3>
+          <span class="specimen-pair__program">Tiers, hours, benefits</span>
+          <p class="specimen-pair__note">Parchment-peach card stock in both themes. Lanyard hole, tier tag, photo, name, member number, free-hours indicator. Same card in either room.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house">
+          <article class="pass">
+            <span class="pass__hole"></span>
+            <div class="pass__header"><div class="pass__brand">Corvallis Music<br><strong>Collective</strong></div><div class="pass__tier">Sustainer<small>since 2024</small></div></div>
+            <div class="pass__stripe"></div>
+            <div class="pass__body"><div class="pass__photo">MR</div><div class="pass__info"><div class="pass__name">Maya Rivera</div><div class="pass__role">Bass · Vocals</div><div class="pass__no">Member No. 0142</div></div></div>
+            <div class="pass__footer"><div class="pass__footer-label">Plays with</div><div class="pass__bands">The Backline Trio · Real Book Quintet</div></div>
+          </article>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--back">
+          <article class="pass">
+            <span class="pass__hole"></span>
+            <div class="pass__header"><div class="pass__brand">Corvallis Music<br><strong>Collective</strong></div><div class="pass__tier">Sustainer<small>since 2024</small></div></div>
+            <div class="pass__stripe"></div>
+            <div class="pass__body"><div class="pass__photo">MR</div><div class="pass__info"><div class="pass__name">Maya Rivera</div><div class="pass__role">Bass · Vocals</div><div class="pass__no">Member No. 0142</div></div></div>
+            <div class="pass__footer"><div class="pass__footer-label">Plays with</div><div class="pass__bands">The Backline Trio · Real Book Quintet</div></div>
+          </article>
+        </div>
+      </article>
+
+      <!-- 7f · Apply to Perform — Cassette -->
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">7f · Apply to Perform</span>
+          <h3 class="specimen-pair__title">Demo cassette</h3>
+          <span class="specimen-pair__program">Submissions</span>
+          <p class="specimen-pair__note">Slate-blue plastic shell, paper label with a five-color band, red DEMO stamp. CMC palette extended to 5 stops on the label.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="cassette"><div class="cassette__label"><span class="cassette__side">Side A</span><h4 class="cassette__band">your band</h4><p class="cassette__title">3-track demo · Dec '25</p><span class="cassette__stamp">Demo</span></div><div class="cassette__deck"><div class="cassette__spool"></div><div class="cassette__spool"></div></div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="cassette"><div class="cassette__label"><span class="cassette__side">Side A</span><h4 class="cassette__band">your band</h4><p class="cassette__title">3-track demo · Dec '25</p><span class="cassette__stamp">Demo</span></div><div class="cassette__deck"><div class="cassette__spool"></div><div class="cassette__spool"></div></div></div></div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ── 08 · UTILITY ─────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">08 · Utility — program-agnostic decorative</span>
+      <h2 class="section__title">Three patterns that aren't tied to a program.</h2>
+      <p class="section__lede">
+        Wayfinding, generic forms, and event listings need backstage
+        vocabulary too — without leaning on any one program's identity.
+      </p>
+    </div>
+    <div class="specimens">
+
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">8a · Spike tape</span>
+          <h3 class="specimen-pair__title">Wayfinding · progress</h3>
+          <p class="specimen-pair__note">Chalky tape with stage marks. Hi-vis fills as the user advances. Onboarding steps, multi-step forms, breadcrumb-ish indicators.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="spike"><div class="spike__labels"><span>Tier</span><span class="spike__label--active">Info</span><span>Pay</span><span>Done</span></div><div class="spike__rail"><div class="spike__lit" style="width: 55%;"></div><div class="spike__marks"><span class="spike__mark spike__mark--major"></span><span class="spike__mark"></span><span class="spike__mark"></span><span class="spike__mark spike__mark--major"></span></div></div><div class="spike__caption">Step 2 of 4 — Tell us about your band.</div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="spike"><div class="spike__labels"><span>Tier</span><span class="spike__label--active">Info</span><span>Pay</span><span>Done</span></div><div class="spike__rail"><div class="spike__lit" style="width: 55%;"></div><div class="spike__marks"><span class="spike__mark spike__mark--major"></span><span class="spike__mark"></span><span class="spike__mark"></span><span class="spike__mark spike__mark--major"></span></div></div><div class="spike__caption">Step 2 of 4 — Tell us about your band.</div></div></div>
+      </article>
+
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">8b · Clipboard</span>
+          <h3 class="specimen-pair__title">Forms · sign-ups · lists</h3>
+          <p class="specimen-pair__note">Masonite + spring clip + ruled paper + pen tucked under the clip. Generic form pattern for any program.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="clipboard"><div class="clipboard__clip"></div><div class="clipboard__pen"></div><div class="clipboard__paper"><div class="clipboard__title">Sign up</div><div class="clipboard__rows"><label class="is-checked">Maya Rivera</label><label class="is-checked">Devon Cash</label><label>Sam K.</label><label>____________</label></div></div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="clipboard"><div class="clipboard__clip"></div><div class="clipboard__pen"></div><div class="clipboard__paper"><div class="clipboard__title">Sign up</div><div class="clipboard__rows"><label class="is-checked">Maya Rivera</label><label class="is-checked">Devon Cash</label><label>Sam K.</label><label>____________</label></div></div></div></div>
+      </article>
+
+      <article class="specimen-pair">
+        <div class="specimen-pair__label">
+          <span class="specimen-pair__num">8c · Poster matte</span>
+          <h3 class="specimen-pair__title">Event listings · gallery</h3>
+          <p class="specimen-pair__note">Parchment frame around any uploaded poster image. The matte is the matte — different wall.</p>
+        </div>
+        <div class="specimen-pair__stage specimen-pair__stage--house"><div class="poster"><div class="poster__art"></div><div class="poster__cap">Real Book Club</div></div></div>
+        <div class="specimen-pair__stage specimen-pair__stage--back"><div class="poster"><div class="poster__art"></div><div class="poster__cap">Real Book Club</div></div></div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ── 09 · THEME PICKING ───────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section__head">
+      <span class="eyebrow">09 · Theme picking</span>
+      <h2 class="section__title">How a user lands on each theme.</h2>
+      <p class="section__lede">
+        Theme isn't a use-case split — both themes ship every layer of the
+        system. What differs is just the user's <em>lighting preference</em>.
+      </p>
+    </div>
+    <div class="picking">
+      <div class="pick pick--house">
+        <span class="pick__when">Default · light theme</span>
+        <h3 class="pick__name">Houselights</h3>
+        <ul class="pick__list">
+          <li>Default for unsigned-in users and users with light OS preference</li>
+          <li>Recommended canvas for print, email, posters, slides</li>
+          <li>Renders <em>every</em> layer: chrome, functional, decorative</li>
+          <li>Activated by <code>data-theme="light"</code> or no attribute</li>
+        </ul>
+      </div>
+      <div class="pick pick--back">
+        <span class="pick__when">Opt-in · dark theme</span>
+        <h3 class="pick__name">Backstage</h3>
+        <ul class="pick__list">
+          <li>Users with <code>prefers-color-scheme: dark</code></li>
+          <li>Users who flip the explicit theme toggle</li>
+          <li>Often paired with long-session work — but not required</li>
+          <li>Activated by <code>data-theme="dark"</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>CMC · Design System</span>
+    <span>Dual-mode kitchen sink · v01</span>
+  </div>
+
+</div>
+
+</body>
+</html>

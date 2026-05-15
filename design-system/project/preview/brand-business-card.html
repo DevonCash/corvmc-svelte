@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Business card</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-parchment: #ffe2cd;
+  --cmc-cream: #fffbf6;
+  --cmc-brown: #5a3d2b;
+  --fg: #1a2330;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  padding: 22px 28px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+  align-self: stretch;
+}
+
+/* Card: 3.5×2 in. Vertical thirds:
+     row 1 (2/3) : speaker + wordmark on cream
+     row 2 (3px) : tri-stripe in canonical orientation (teal/goldenrod/red, top→bottom)
+     row 3 (1/3) : person details on peach parchment */
+.bcard {
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 524 / 312;
+  display: grid;
+  grid-template-rows: 2fr auto 1fr;
+  background: var(--cmc-cream);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.06);
+  container-type: inline-size;
+}
+
+/* Row 1 — 1/3 logo column · 2/3 wordmark column · baselines bottom-aligned */
+.bcard__top {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 27px;
+  align-items: end;
+  padding: 6px 22px 26px 0;
+}
+.bcard__speaker {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: visible;
+}
+.bcard__speaker img {
+  width: auto;
+  height: 71%;
+  max-height: 113px;
+  display: block;
+  margin-left: -32px;
+}
+.bcard__brand { display: flex; flex-direction: column; min-width: 0; }
+.bcard__brand .name {
+  font-weight: 700;
+  color: var(--cmc-teal);
+  font-size: 6.8cqw;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+.bcard__brand .link {
+  font-size: 3.4cqw;
+  color: var(--cmc-orange);
+  margin-top: 4px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Row 2 — canonical tri-stripe (horizontal bands stacked top→bottom) */
+.bcard__stripes {
+  height: 2.4cqw;
+  min-height: 10px;
+  background: linear-gradient(
+    to bottom,
+    var(--cmc-teal) 0 33.333%,
+    var(--cmc-goldenrod) 33.333% 66.666%,
+    var(--cmc-red-orange) 66.666% 100%
+  );
+}
+
+/* Row 3 — person details on peach */
+.bcard__bottom {
+  background: var(--cmc-parchment);
+  padding: 0 24px;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+}
+.bcard__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+.bcard__row .name {
+  font-weight: 500;
+  color: var(--cmc-brown);
+  font-size: 4.2cqw;
+}
+.bcard__row .email,
+.bcard__row .phone {
+  color: var(--cmc-brown);
+  font-size: 3.4cqw;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.bcard__row .title {
+  color: var(--cmc-orange);
+  font-size: 3.4cqw;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">Print collateral · 3.5×2 in · vertical thirds (2/3 brand · stripe · 1/3 contact)</div>
+  <div class="bcard">
+    <div class="bcard__top">
+      <div class="bcard__speaker">
+        <img src="../assets/logos/cmc-speaker.png" alt="" />
+      </div>
+      <div class="bcard__brand">
+        <div class="name">Corvallis</div>
+        <div class="name">Music Collective</div>
+        <div class="link">corvmc.org &nbsp;·&nbsp; @corvmc</div>
+      </div>
+    </div>
+    <div class="bcard__stripes"></div>
+    <div class="bcard__bottom">
+      <div class="bcard__row">
+        <div class="name">Devon Cash</div>
+        <div class="email">devon@corvmc.org</div>
+      </div>
+      <div class="bcard__row">
+        <div class="title">President</div>
+        <div class="phone">541-948-9022</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

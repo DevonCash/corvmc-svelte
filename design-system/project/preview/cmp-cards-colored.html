@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cards — colored</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1;
+  --cmc-yellow: #ffe28a;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-brown: #5a3d2b;
+  --fg: #1a2330;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card { padding: 24px 28px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; }
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+
+/* Retro CTA card: chunky brown stroke + offset shadow (like the buttons),
+   subtle halftone dot texture, inset retro button anchored at the bottom.
+   Card itself uses overflow:visible so tape strips can hang off the top edge —
+   the halftone pseudo clips itself via border-radius. */
+.cta-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 22px;
+  background: var(--cta-fill, var(--cmc-orange));
+  color: var(--cta-text, #fff);
+  border: 2.5px solid var(--cmc-brown);
+  border-radius: 6px;
+  box-shadow: 5px 5px 0 var(--cmc-brown);
+  isolation: isolate;
+}
+.cta-card::after {
+  /* halftone dot overlay — subtle vintage print feel, dialed back so it never
+     fights body copy. Light-bg variants drop it further (see overrides below).
+     Self-clipped via border-radius so the card can keep overflow:visible. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.10;
+  pointer-events: none;
+  border-radius: 4px;
+  overflow: hidden;
+  background-image: radial-gradient(circle at center, var(--cmc-brown) 1px, transparent 1.6px);
+  background-size: 7px 7px;
+  mix-blend-mode: multiply;
+}
+/* Light backgrounds: even subtler so body text stays readable */
+.cta-card--accent::after,
+.cta-card--warning::after { opacity: 0.06; }
+.cta-card__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+.cta-card__title {
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  text-wrap: balance;
+}
+.cta-card__body {
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+  flex: 1;
+}
+.cta-card__btn {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: var(--cmc-cream);
+  color: var(--cmc-brown);
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  border: 2px solid var(--cmc-brown);
+  border-radius: 5px;
+  box-shadow: 3px 3px 0 var(--cmc-brown);
+}
+
+/* Variants — each emphasized variant pairs with a contrasting dogear color */
+.cta-card--primary   { --cta-fill: var(--cmc-orange);     --cta-text: #fff; --cta-dogear: var(--cmc-teal); }
+.cta-card--navy      { --cta-fill: var(--cmc-navy);       --cta-text: #fff; --cta-dogear: var(--cmc-goldenrod); }
+.cta-card--accent    { --cta-fill: var(--cmc-light-blue); --cta-text: var(--cmc-navy); --cta-dogear: var(--cmc-red-orange); }
+.cta-card--warning   { --cta-fill: var(--cmc-goldenrod);  --cta-text: var(--cmc-brown); --cta-dogear: var(--cmc-teal); }
+
+/* Dogear — folded-paper triangle in the top-right corner of emphasized cards.
+   Built from two layered gradients so the brown fold-line is a real
+   stripe (not a drop-shadow silhouette) that meets the card's borders
+   at both endpoints with no gap. */
+.cta-card--taped::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background:
+    /* Top layer: dogear color in the upper-right triangle, excluding a
+       2.5px-wide diagonal sliver near the hypotenuse */
+    linear-gradient(to bottom left,
+      var(--cta-dogear, var(--cmc-parchment)) 0,
+      var(--cta-dogear, var(--cmc-parchment)) 46%,
+      transparent 46%,
+      transparent 100%),
+    /* Bottom layer: brown across the upper-right triangle */
+    linear-gradient(to bottom left,
+      var(--cmc-brown) 50%,
+      transparent 50%);
+  border-top-right-radius: 4px;
+}
+
+.row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">.cta-card — colored callouts in retro spirit · brown stroke + offset shadow + halftone overlay</div>
+
+  <div class="row">
+    <div class="cta-card cta-card--primary">
+      <div class="cta-card__eyebrow">Become a member</div>
+      <div class="cta-card__title">Join the Collective</div>
+      <div class="cta-card__body">Access practice space, events, and a community of musicians.</div>
+      <a class="cta-card__btn" href="#">Join now</a>
+    </div>
+    <div class="cta-card cta-card--navy cta-card--taped" style="--tape-tilt: 2deg;">
+      <div class="cta-card__eyebrow">Volunteer</div>
+      <div class="cta-card__title">Help run the room</div>
+      <div class="cta-card__body">Set up shows, host meetups, support fellow musicians.</div>
+      <a class="cta-card__btn" href="#">Get involved</a>
+    </div>
+    <div class="cta-card cta-card--accent">
+      <div class="cta-card__eyebrow">Support us</div>
+      <div class="cta-card__title">Keep it going</div>
+      <div class="cta-card__body">Your year-end gift goes back into the room — gear, rent, programs.</div>
+      <a class="cta-card__btn" href="#">Contribute</a>
+    </div>
+  </div>
+
+  <div class="label" style="margin-top: 14px;">With dogear — contrasting fold color marks emphasized callouts</div>
+
+  <div class="row" style="grid-template-columns: 1fr 1fr; padding-top: 8px;">
+    <div class="cta-card cta-card--warning cta-card--taped">
+      <div class="cta-card__eyebrow">This Thursday</div>
+      <div class="cta-card__title">Real Book Club is back</div>
+      <div class="cta-card__body">Open jam through jazz standards. All skill levels welcome.</div>
+      <a class="cta-card__btn" href="#">RSVP &amp; share</a>
+    </div>
+    <div class="cta-card cta-card--primary cta-card--taped">
+      <div class="cta-card__eyebrow">Year-end</div>
+      <div class="cta-card__title">Closing show · Dec 28</div>
+      <div class="cta-card__body">Three bands, one cassette, no covers. $10 / NOTAFLOF.</div>
+      <a class="cta-card__btn" href="#">Get tickets</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

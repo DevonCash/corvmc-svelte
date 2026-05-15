@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cards — neutral</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1;
+  --cmc-yellow: #ffe28a;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-brown: #5a3d2b;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.preview { padding: 24px 28px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; }
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+.row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+/* Neutral feature card — chunky brown stroke + offset shadow + halftone accent.
+   Icon corner gets a colored notch; title supports marker-underline emphasis. */
+.feature-card {
+  position: relative;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  padding: 22px 22px 24px;
+  border: 2.5px solid var(--cmc-brown);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--cmc-brown);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Faint halftone wash on the lower-right corner — print press feel */
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.14;
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, var(--cmc-brown) 1px, transparent 1.6px);
+  background-size: 7px 7px;
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 60%);
+}
+
+/* Colored notch holding the icon — chunky offset shadow, brown stroke. */
+.feature-card__icon {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: var(--icon-bg, var(--cmc-light-blue));
+  color: var(--icon-fg, var(--cmc-navy));
+  border: 2.5px solid var(--cmc-brown);
+  border-radius: 5px;
+  box-shadow: 3px 3px 0 var(--cmc-brown);
+}
+.feature-card__icon svg { width: 26px; height: 26px; }
+
+.feature-card__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  color: var(--cmc-navy);
+  margin-top: 4px;
+}
+.feature-card__body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+
+/* Color variants for the icon notch */
+.feature-card--orange .feature-card__icon { --icon-bg: var(--cmc-orange);     --icon-fg: #fff; }
+.feature-card--teal   .feature-card__icon { --icon-bg: var(--cmc-teal);       --icon-fg: #fff; }
+.feature-card--gold   .feature-card__icon { --icon-bg: var(--cmc-goldenrod);  --icon-fg: var(--cmc-brown); }
+.feature-card--blue   .feature-card__icon { --icon-bg: var(--cmc-light-blue); --icon-fg: var(--cmc-navy); }
+
+/* Dogear — folded paper corner. Positioned outside the card's content area
+   to overlap the brown border on the top and right edges so the fold
+   replaces those edges cleanly. The drop-shadow draws the diagonal crease. */
+.feature-card--taped::before {
+  content: "";
+  position: absolute;
+  top: -2.5px;
+  right: -2.5px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 42px 42px 0;
+  border-color: transparent var(--cmc-parchment) transparent transparent;
+  z-index: 2;
+  filter: drop-shadow(-2px 2px 0 var(--cmc-brown));
+}
+</style>
+</head>
+<body>
+<div class="preview">
+  <div class="label">.feature-card — neutral cards with retro flair · brown stroke + offset shadow + iconic notch</div>
+
+  <div class="row">
+    <div class="feature-card feature-card--orange">
+      <div class="feature-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
+      <div class="feature-card__title">Practice space</div>
+      <div class="feature-card__body">Affordable hourly rehearsal space with professional equipment for bands and musicians.</div>
+    </div>
+
+    <div class="feature-card feature-card--teal">
+      <div class="feature-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="feature-card__title">Live events weekly</div>
+      <div class="feature-card__body">Regular concerts and showcases featuring local and touring musicians.</div>
+    </div>
+
+    <div class="feature-card feature-card--gold feature-card--taped">
+      <div class="feature-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 14l-7 7-7-7a5 5 0 0 1 7-7 5 5 0 0 1 7 7z"/><path d="M12 5L9.5 7.5l3 3-1.5 1.5 2.5 2.5 4.5-4.5"/>
+        </svg>
+      </div>
+      <div class="feature-card__title">Community that shows up</div>
+      <div class="feature-card__body">Connecting musicians for collaboration, education, and mutual support.</div>
+    </div>
+  </div>
+
+  <div class="label" style="margin-top: 12px;">Variant — feature card with a tape "FEATURED" strip across the corner</div>
+
+  <div class="row" style="grid-template-columns: 1fr 1fr;">
+    <div class="feature-card feature-card--blue feature-card--taped">
+      <div class="feature-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 19a2 2 0 0 1 2-2h14V4H5a2 2 0 0 0-2 2v13z"/><path d="M3 19a2 2 0 0 0 2 2h14v-4"/>
+        </svg>
+      </div>
+      <div class="feature-card__title">Education for everyone</div>
+      <div class="feature-card__body">Workshops, masterclasses, and mentorship programs for musicians of all levels — beginners welcome.</div>
+    </div>
+
+    <div class="feature-card feature-card--orange">
+      <div class="feature-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3c-4 0-8 2-8 6 0 5 4 12 8 12s8-7 8-12c0-4-4-6-8-6z"/>
+        </svg>
+      </div>
+      <div class="feature-card__title">Gear lending library</div>
+      <div class="feature-card__body">Try amps, pedals, and instruments from our member-supported lending shelf. Low fees, big options.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Room key fob</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.keyfob {
+  position: relative; width: 110px;
+  margin-top: 14px; padding: 26px 10px 0;
+  border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; color: #f4ead8;
+  transform: rotate(-3deg);
+  overflow: hidden;
+  /* Glossy plastic — top highlight + body color + bottom shadow */
+  background:
+    linear-gradient(125deg,
+      rgba(255,255,255,0) 30%,
+      rgba(255,255,255,0.10) 48%,
+      rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, #234866 0%, #163049 100%);
+}
+.keyfob::before {
+  content: ""; position: absolute; top: 5px; left: 50%;
+  transform: translateX(-50%); width: 18px; height: 18px;
+  border-radius: 50%; background: #c08a1a;
+}
+.keyfob::after {
+  content: ""; position: absolute; top: 11px; left: 50%;
+  transform: translateX(-50%); width: 6px; height: 6px;
+  border-radius: 50%; background: #0d0f12;
+}
+.keyfob__num {
+  font-family: "Lexend", sans-serif; font-weight: 700;
+  font-size: 52px; line-height: 1; letter-spacing: -0.03em;
+  color: #f4ead8; margin-top: 10px;
+}
+.keyfob__label {
+  font-family: var(--font-chalk); font-size: 11px;
+  letter-spacing: 0.04em; line-height: 1.1;
+  color: #f4ead8; margin-top: 6px;
+  text-transform: uppercase; transform: rotate(-1deg);
+}
+.keyfob__hours {
+  /* Credit-card emboss — letters pushed up out of the plastic.
+     Larger, chunkier, with strong dual-layer highlight + shadow. */
+  padding: 0 0 18px;
+  font-family: "Courier New", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* Letter face slightly lighter than the navy plastic; highlights and
+     shadows do most of the work. */
+  color: #c4cfde;
+  text-shadow:
+    /* Bright top-left highlight (two passes for depth) */
+    -1px -1px 0 rgba(255, 255, 255, 0.85),
+    -1px -1px 1px rgba(255, 255, 255, 0.45),
+    /* Dark bottom-right shadow (two passes) */
+     1px  1px 0 rgba(0, 0, 0, 0.95),
+     2px  2px 1px rgba(0, 0, 0, 0.55);
+}
+.keyfob__label { margin-top: 8px; }
+.keyfob__stripe {
+  align-self: stretch;
+  height: 6px;
+  margin: 16px -10px 18px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%,
+    #ffb500 33.333% 66.666%,
+    #f84d13 66.666% 100%
+  );
+}
+
+
+/* Light outline on dark background */
+.stage--back .keyfob { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Practice Rooms</span>
+    <span class="bar__title">Room key fob</span>
+    <select id="variant" class="bar__select"><option value="0">Room 03 — practice</option><option value="1">Room 01 — drum</option><option value="2">Office — staff</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="keyfob">
+  <div class="keyfob__num" data-slot="num">03</div>
+  <div class="keyfob__label" data-slot="label">Practice Room</div>
+  <div class="keyfob__stripe"></div>
+  <div class="keyfob__hours" data-slot="hours">10a — 10p · Daily</div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="keyfob">
+  <div class="keyfob__num" data-slot="num">03</div>
+  <div class="keyfob__label" data-slot="label">Practice Room</div>
+  <div class="keyfob__stripe"></div>
+  <div class="keyfob__hours" data-slot="hours">10a — 10p · Daily</div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Room 03 — practice",
+    "num": "03",
+    "label": "Practice Room",
+    "hours": "10a — 10p · Daily"
+  },
+  {
+    "__name": "Room 01 — drum",
+    "num": "01",
+    "label": "Drum Room",
+    "hours": "10a — 10p · Daily"
+  },
+  {
+    "__name": "Office — staff",
+    "num": "00",
+    "label": "Office",
+    "hours": "By appointment"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

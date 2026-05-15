@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Eyebrow / poster label</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-yellow: #ffe28a;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1;
+  --cmc-brown: #5a3d2b;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-aged-paper: #ecdfc4;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  padding: 20px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.row { display: flex; gap: 14px; align-items: stretch; }
+.tri-stripe {
+  height: 10px;
+  background: linear-gradient(
+    to bottom,
+    var(--cmc-teal) 0 33.333%,
+    var(--cmc-goldenrod) 33.333% 66.666%,
+    var(--cmc-red-orange) 66.666% 100%
+  );
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+</style>
+</head>
+<body><div class="card">
+  <div class="label">For "CORVALLIS MUSIC COLLECTIVE" headers on posters</div>
+  <div style="display:flex; flex-direction:column; gap:18px;">
+    <div>
+      <div style="font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cmc-orange);">CORVALLIS MUSIC COLLECTIVE</div>
+      <div style="font-size:11px; color:var(--fg-3); margin-top:6px; font-family: ui-monospace, Menlo, monospace;">700 · 13px · tracking 0.08em · uppercase</div>
+    </div>
+    <div style="background:var(--cmc-navy); padding:10px 16px; border-radius:4px; align-self:flex-start;">
+      <div style="font-size:14px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#ffb500;">CORVALLIS MUSIC COLLECTIVE</div>
+    </div>
+    <div style="font-size:11px; color:var(--fg-3);">Common as a banner-on-color on posters · contrast with goldenrod or cream</div>
+  </div></div></body>
+</html>

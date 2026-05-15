@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Monocolor mark</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap");
+:root { --cmc-navy:#003b5c; --cmc-orange:#e5771e; --fg:#1a2330; --fg-2:#4a5563; --fg-3:#7a8290; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; font-family:"Lexend",system-ui,sans-serif; background:#fffbf6; color:var(--fg); -webkit-font-smoothing: antialiased; }
+.card { padding: 20px 24px; height: 100vh; display: flex; flex-direction: column; gap: 14px; }
+.label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); }
+.row { display:flex; gap:14px; flex:1; }
+.tile { flex:1; height:170px; display:flex; align-items:center; justify-content:center; border-radius:8px; position:relative; }
+
+/* Monocolor speaker — reassemble Figma's Subtract*.svg parts into a single positioned mark.
+   Source: /Page-1/Logo-Unenclosed-Mono — 174.81 × 122.295 group. */
+.mono-mark {
+  position: relative;
+  width: 174.81px;
+  height: 122.295px;
+  transform-origin: center;
+  display: block;
+}
+.mono-mark svg { position: absolute; }
+.mono-mark .sound { left: 100.979px; top: 8.201px; width: 73.831px; height: 100.445px; overflow: visible; }
+.mono-mark .sound > svg { transform-origin: 0 0; }
+/* The 5 sound paths in the Figma group are the same 59.089×14.704 path placed at 5 angles.
+   Approximate positions/rotations derived from screenshot. */
+.mono-mark .sound .s1 { left: 0; top: 0; transform: rotate(-30deg); }
+.mono-mark .sound .s2 { left: 4px; top: 28px; transform: rotate(-12deg); }
+.mono-mark .sound .s3 { left: 8px; top: 52px; transform: rotate(0deg); }
+.mono-mark .sound .s4 { left: 4px; top: 70px; transform: rotate(14deg); }
+.mono-mark .sound .s5 { left: 0; top: 86px; transform: rotate(32deg); }
+.mono-mark .body { left: 0; top: 0; width: 97.201px; height: 122.295px; }
+.mono-mark .cone-top { left: 48.082px; top: 15.181px; width: 36.943px; height: 42.479px; }
+.mono-mark .cone-bot { left: 48.082px; top: 66.124px; width: 36.943px; height: 42.479px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <div class="tile" style="background:#fff; border:1px solid rgba(0,0,0,0.08); color:#1a2330;">
+      <div class="mono-mark">
+        <svg class="body" viewBox="0 0 97.201 122.295" fill="currentColor"><path d="M 90.508 5.641 C 92.357 5.785 94.335 7.222 96.429 9.938 C 96.43 10.049 96.683 44.444 97.193 113.121 C 97.305 116.599 96.224 118.508 93.943 118.854 C 55.597 121.15 36.427 122.295 36.427 122.295 C 36.346 122.281 25.615 120.468 4.231 116.851 C 1.358 116.709 -0.041 114.638 0.026 110.642 C 0.026 110.642 0.058 78.695 0.121 14.81 C -0.354 12.748 0.568 11.539 2.893 11.182 C 2.946 11.164 13.998 7.434 36.05 0 L 90.508 5.641 Z M 38.873 116.79 C 38.873 116.79 56.492 115.737 91.731 113.629 C 93.824 113.309 94.823 111.556 94.716 108.36 C 94.249 45.141 94.015 13.528 94.015 13.528 C 92.094 11.034 90.275 9.714 88.574 9.584 C 55.255 6.131 38.574 4.404 38.525 4.398 C 38.755 79.327 38.873 116.79 38.873 116.79 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-top" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-bot" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+      </div>
+    </div>
+    <div class="tile" style="background:var(--cmc-navy); color:#fff;">
+      <div class="mono-mark">
+        <svg class="body" viewBox="0 0 97.201 122.295" fill="currentColor"><path d="M 90.508 5.641 C 92.357 5.785 94.335 7.222 96.429 9.938 C 96.43 10.049 96.683 44.444 97.193 113.121 C 97.305 116.599 96.224 118.508 93.943 118.854 C 55.597 121.15 36.427 122.295 36.427 122.295 C 36.346 122.281 25.615 120.468 4.231 116.851 C 1.358 116.709 -0.041 114.638 0.026 110.642 C 0.026 110.642 0.058 78.695 0.121 14.81 C -0.354 12.748 0.568 11.539 2.893 11.182 C 2.946 11.164 13.998 7.434 36.05 0 L 90.508 5.641 Z M 38.873 116.79 C 38.873 116.79 56.492 115.737 91.731 113.629 C 93.824 113.309 94.823 111.556 94.716 108.36 C 94.249 45.141 94.015 13.528 94.015 13.528 C 92.094 11.034 90.275 9.714 88.574 9.584 C 55.255 6.131 38.574 4.404 38.525 4.398 C 38.755 79.327 38.873 116.79 38.873 116.79 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-top" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-bot" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+      </div>
+    </div>
+    <div class="tile" style="background:var(--cmc-orange); color:#fff;">
+      <div class="mono-mark">
+        <svg class="body" viewBox="0 0 97.201 122.295" fill="currentColor"><path d="M 90.508 5.641 C 92.357 5.785 94.335 7.222 96.429 9.938 C 96.43 10.049 96.683 44.444 97.193 113.121 C 97.305 116.599 96.224 118.508 93.943 118.854 C 55.597 121.15 36.427 122.295 36.427 122.295 C 36.346 122.281 25.615 120.468 4.231 116.851 C 1.358 116.709 -0.041 114.638 0.026 110.642 C 0.026 110.642 0.058 78.695 0.121 14.81 C -0.354 12.748 0.568 11.539 2.893 11.182 C 2.946 11.164 13.998 7.434 36.05 0 L 90.508 5.641 Z M 38.873 116.79 C 38.873 116.79 56.492 115.737 91.731 113.629 C 93.824 113.309 94.823 111.556 94.716 108.36 C 94.249 45.141 94.015 13.528 94.015 13.528 C 92.094 11.034 90.275 9.714 88.574 9.584 C 55.255 6.131 38.574 4.404 38.525 4.398 C 38.755 79.327 38.873 116.79 38.873 116.79 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-top" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+        <svg class="cone-bot" viewBox="0 0 36.943 42.479" fill="currentColor"><path d="M 18.472 0 C 28.672 0 36.943 9.511 36.943 21.24 C 36.943 32.969 28.672 42.479 18.472 42.479 C 8.271 42.478 0 32.969 0 21.24 C 0 9.511 8.271 0 18.472 0 Z M 18.473 5.571 C 10.946 5.571 4.846 12.588 4.846 21.24 C 4.846 29.895 10.946 36.908 18.473 36.908 C 26 36.908 32.099 29.895 32.1 21.24 C 32.099 12.589 26 5.572 18.473 5.571 Z M 18.473 13.961 C 21.968 13.961 24.803 17.22 24.803 21.24 C 24.803 25.26 21.968 28.516 18.473 28.517 C 14.977 28.517 12.143 25.26 12.143 21.24 C 12.143 17.22 14.977 13.961 18.473 13.961 Z" fill-rule="nonzero"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="label" style="text-align:center;">Single-ink mark · vector paths from Figma "Logo Unenclosed Mono" (no enclosing circle, no side lettering) · sound lines omitted in this preview</div>
+</div>
+</body>
+</html>

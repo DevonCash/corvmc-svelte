@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>Wordmark</title><style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e; --cmc-yellow: #ffe28a; --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13; --cmc-navy: #003b5c; --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1; --cmc-brown: #5a3d2b; --cmc-cream: #fffbf6;
+  --fg: #1a2330; --fg-2: #4a5563; --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream); color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card { padding: 20px 24px; height: 100vh; display: flex; flex-direction: column; gap: 14px; }
+.label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); }
+</style></head>
+<body><div class="card">
+  <div class="label">Sticker + wordmark · Lexend 700</div>
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; gap: 28px; padding: 12px;">
+    <img src="../assets/logos/cmc-speaker.png" alt="" style="height: 160px; width:auto;"/>
+    <div style="font-family:'Lexend', sans-serif; font-weight:700; line-height: 0.98; letter-spacing:-0.01em;">
+      <div style="font-size:42px; color: var(--cmc-teal);">Corvallis</div>
+      <div style="font-size:42px; color: var(--cmc-teal);">Music</div>
+      <div style="font-size:42px; color: var(--cmc-teal);">Collective</div>
+    </div>
+  </div>
+  <div class="label" style="text-align:center;">cmc-speaker.png + Lexend 700 in CMC teal — the canonical wordmark today</div>
+</div></body></html>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Poster matte</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.poster {
+  width: 150px; position: relative;
+  padding: 4px; background: #ffe2cd;
+  transform: rotate(-2deg);
+}
+.poster::before {
+  content: ""; position: absolute; top: -4px; left: 50%;
+  transform: translateX(-50%); width: 36px; height: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.4) 0 4px, transparent 4px 5px),
+    rgba(184,221,225,0.9);
+  border-radius: 1px;
+}
+.poster__art {
+  width: 100%; height: 184px;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+}
+.poster__art--rainbow {
+  background: repeating-linear-gradient(45deg, #f84d13 0 14px, #ffb500 14px 28px, #00859b 28px 42px);
+}
+.poster__art--sunburst {
+  background:
+    conic-gradient(from -90deg at 50% 100%,
+      transparent 0 5deg, #ffb500 5deg 12deg,
+      transparent 12deg 30deg, #f84d13 30deg 38deg,
+      transparent 38deg 55deg, #ffb500 55deg 62deg,
+      transparent 62deg 80deg, #f84d13 80deg 88deg,
+      transparent 88deg 105deg, #ffb500 105deg 112deg,
+      transparent 112deg 130deg, #f84d13 130deg 138deg,
+      transparent 138deg 155deg, #ffb500 155deg 162deg,
+      transparent 162deg 180deg),
+    #fffbf6;
+}
+.poster__art--stripes {
+  background: linear-gradient(180deg,
+    #00859b 0 33%, #ffb500 33% 66%, #f84d13 66% 100%);
+}
+.poster__cap {
+  padding: 8px 4px 4px; text-align: center;
+  font-family: "Lexend", sans-serif; font-weight: 700;
+  font-size: 10px; color: #5a3d2b;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+
+/* Light outline on dark background */
+.stage--back .poster { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Event listings · gallery</span>
+    <span class="bar__title">Poster matte</span>
+    <select id="variant" class="bar__select"><option value="0">Real Book Club</option><option value="1">Open House sunburst</option><option value="2">Cassette Showcase</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="poster">
+  <div class="poster__art" data-slot-class="art">
+    <span style="display:none"></span>
+  </div>
+  <div class="poster__cap" data-slot="cap">Real Book Club</div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="poster">
+  <div class="poster__art" data-slot-class="art">
+    <span style="display:none"></span>
+  </div>
+  <div class="poster__cap" data-slot="cap">Real Book Club</div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Real Book Club",
+    "artClass": "poster__art--rainbow",
+    "cap": "Real Book Club"
+  },
+  {
+    "__name": "Open House sunburst",
+    "artClass": "poster__art--sunburst",
+    "cap": "Open House!"
+  },
+  {
+    "__name": "Cassette Showcase",
+    "artClass": "poster__art--stripes",
+    "cap": "Cassette Showcase"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  document.querySelectorAll('.poster__art').forEach(el => {
+    el.className = 'poster__art ' + (data.artClass || '');
+  });
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

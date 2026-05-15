@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Footer mini</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-yellow: #ffe28a;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-light-blue: #b8dde1;
+  --cmc-brown: #5a3d2b;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --cmc-aged-paper: #ecdfc4;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  padding: 20px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.row { display: flex; gap: 14px; align-items: stretch; }
+.tri-stripe {
+  height: 10px;
+  background: linear-gradient(
+    to bottom,
+    var(--cmc-teal) 0 33.333%,
+    var(--cmc-goldenrod) 33.333% 66.666%,
+    var(--cmc-red-orange) 66.666% 100%
+  );
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+</style>
+</head>
+<body><div class="card">
+  <div style="display:flex; flex-direction:column;">
+    <div class="tri-stripe" style="height:8px; border-top-left-radius:6px; border-top-right-radius:6px;"></div>
+    <div style="background:#ffe2cd; padding:20px 22px; display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; border-bottom-left-radius:6px; border-bottom-right-radius:6px;">
+      <div style="display:flex; gap:18px; font-size:12px; color:var(--fg);">
+        <span>About</span><span>Bylaws</span><span>Contact</span><span>Privacy</span>
+      </div>
+      <div style="display:flex; gap:10px; font-size:18px; color:var(--cmc-navy);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.5-4.5-10-10-10S2 6.5 2 12c0 5 3.7 9.1 8.4 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7C18.3 21.1 22 17 22 12z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--fg-3); margin-top:10px; text-align:center;">© 2026 Corvallis Music Collective. 501(c)(3) nonprofit.</div>
+  </div></div></body>
+</html>

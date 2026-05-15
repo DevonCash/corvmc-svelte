@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Lexend feature settings</title><style>
+@import url("../colors_and_type.css");
+@import url("../retro_flourishes.css");
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background: var(--cmc-cream); color: var(--fg-1); -webkit-font-smoothing: antialiased; }
+.card {
+  padding: 20px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+</style></head>
+<body><div class="card">
+  <div class="label">font-feature-settings · cv05 (single-story g) + cv11 (single-story a)</div>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 18px; flex:1; align-items:center;">
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="label" style="color:var(--fg-2)">Default Lexend</div>
+      <div style="font-family: 'Lexend'; font-feature-settings: normal; font-weight:600; font-size:54px; line-height:1; letter-spacing:-0.01em; color:var(--cmc-navy);">aag</div>
+      <div style="font-family: 'Lexend'; font-feature-settings: normal; font-size:14px; color:var(--fg-2);">imagining a garage band</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="label" style="color:var(--cmc-orange)">Retro Lexend (system default)</div>
+      <div style="font-family: 'Lexend'; font-feature-settings: 'cv05','cv11'; font-weight:600; font-size:54px; line-height:1; letter-spacing:-0.01em; color:var(--cmc-navy);">aag</div>
+      <div style="font-family: 'Lexend'; font-feature-settings: 'cv05','cv11'; font-size:14px; color:var(--fg-2);">imagining a garage band</div>
+    </div>
+  </div>
+  <div style="font-size:11px; color:var(--fg-3); line-height:1.55;">Single-story a + g (right) reads ~10% friendlier and shifts the family toward a humanist 70s sans (Avant Garde, Eurostile lineage) without swapping fonts. Applied globally via <code style="font-family:ui-monospace;">--font-features-body</code>.</div></div></body>
+</html>

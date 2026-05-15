@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Handwriting · chalkpen + Sharpie</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-goldenrod: #ffb500;
+  --cmc-red-orange: #f84d13;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-brown: #5a3d2b;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --fg: #1a2330;
+  --fg-2: #4a5563;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  padding: 20px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+.row { display: flex; gap: 16px; align-items: stretch; }
+
+/* Chalkpen sample — real gaffer tape strip with marker on top */
+.chalk-strip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chalk-tape {
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cmc-orange);
+  border-radius: 2px;
+}
+.chalk-tape span {
+  font-family: "Permanent Marker", "Lexend", sans-serif;
+  font-size: 36px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+  transform: rotate(-2deg);
+  line-height: 1;
+}
+.role {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--fg);
+}
+.role em {
+  color: var(--cmc-orange);
+  font-weight: 700;
+  font-style: normal;
+}
+.use {
+  font-size: 11.5px;
+  color: var(--fg-2);
+  line-height: 1.5;
+}
+
+/* Sharpie sample — paper rules with handwritten lines */
+.script-paper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.script-sheet {
+  height: 78px;
+  padding: 8px 14px;
+  background:
+    repeating-linear-gradient(180deg,
+      transparent 0 19px,
+      rgba(0,0,90,0.07) 19px 20px),
+    var(--cmc-parchment);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.script-sheet span {
+  display: block;
+  font-family: "Caveat", "Permanent Marker", cursive;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cmc-brown);
+  line-height: 1.05;
+  transform: rotate(-0.8deg);
+}
+.script-sheet small {
+  display: block;
+  font-family: "Caveat", cursive;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(90, 61, 43, 0.72);
+  line-height: 1;
+  margin-top: 2px;
+  transform: rotate(0.6deg);
+}
+
+.rule {
+  border: none;
+  border-top: 1px solid rgba(90, 61, 43, 0.18);
+  margin: 4px 0;
+}
+.principle {
+  font-size: 12px;
+  color: var(--fg-2);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.principle strong { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">Handwriting — two tools, two surfaces · used <em>only</em> on physical objects</div>
+
+  <div class="row">
+    <div class="chalk-strip">
+      <div class="chalk-tape"><span>Fragile</span></div>
+      <div class="role"><em>Permanent Marker</em> · chalkpen on gaffer tape</div>
+      <div class="use">All-caps, single weight, slight rotation. Used on gaffer tape labels, hazard tags, primary CTAs in tape form, and red marker annotations (ENCORE, SOLD OUT, DEMO).</div>
+    </div>
+
+    <div class="script-paper">
+      <div class="script-sheet">
+        <span>your band</span>
+        <small>Thu 7pm · jam</small>
+      </div>
+      <div class="role"><em>Caveat</em> · ballpoint or Sharpie on paper</div>
+      <div class="use">Mixed case, leans right, lighter weight. Used on setlist items, taped-up reminders, hand-written captions on cassette labels and ticket stubs.</div>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="principle">
+    <strong>Never in product UI.</strong> Lexend handles every functional
+    string — buttons, labels, body, headings. Handwriting only appears on
+    objects that would actually be hand-labeled in the room: a strip of
+    tape, a paper setlist, a cassette inlay, a ticket stub.
+  </div>
+</div>
+</body>
+</html>

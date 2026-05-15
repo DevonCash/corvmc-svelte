@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Membership pass</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.pass {
+  position: relative; width: 250px; aspect-ratio: 5 / 3;
+  background: #ffe2cd; border: 1px solid rgba(90,61,43,0.2);
+  border-radius: 8px; transform: rotate(-1.4deg);
+  padding: 14px 14px 12px; display: flex; flex-direction: column;
+}
+.pass__hole {
+  position: absolute; top: -2px; left: 50%;
+  transform: translateX(-50%); width: 14px; height: 5px;
+  background: #000; border-radius: 2px;
+}
+.pass__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.pass__brand {
+  font-family: "Lexend", sans-serif; font-weight: 600;
+  font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #5a3d2b; line-height: 1.2;
+}
+.pass__brand strong { display: block; color: #003b5c; font-size: 10px; }
+.pass__tier {
+  font-family: "Lexend", sans-serif; font-weight: 700;
+  font-size: 14px; letter-spacing: 0.06em;
+  line-height: 0.95; color: #e5771e;
+  text-transform: uppercase; text-align: right;
+}
+.pass__tier small {
+  display: block; font-size: 7.5px;
+  letter-spacing: 0.18em; color: rgba(229, 119, 30, 0.7);
+  margin-top: 3px; font-weight: 600;
+}
+.pass__stripe {
+  margin: 8px -14px 0; height: 4px;
+  background: linear-gradient(to bottom,
+    #00859b 0 33.333%, #ffb500 33.333% 66.666%, #f84d13 66.666% 100%);
+}
+.pass__body { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; }
+.pass__photo {
+  width: 46px; height: 46px; border-radius: 4px;
+  background: #ff8c42; display: flex;
+  align-items: center; justify-content: center;
+  font-family: "Lexend", sans-serif; font-weight: 700;
+  font-size: 17px; color: #1a1410;
+}
+.pass__info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.pass__name { font-family: "Lexend", sans-serif; font-weight: 700; font-size: 13px; color: #003b5c; line-height: 1.1; }
+.pass__role { font-size: 10px; color: #5a4d3b; }
+.pass__no { font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; color: rgba(90, 61, 43, 0.6); letter-spacing: 0.08em; margin-top: 1px; }
+.pass__footer { width: 100%; margin-top: auto; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pass__footer-label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 7.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: rgba(90, 61, 43, 0.7);
+}
+.pass__bands {
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #003b5c;
+}
+
+
+/* Light outline on dark background */
+.stage--back .pass { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Membership</span>
+    <span class="bar__title">Membership pass</span>
+    <select id="variant" class="bar__select"><option value="0">Sustainer · 6/10 hrs</option><option value="1">Member · 9/10 hrs</option><option value="2">Supporter · 2/10 hrs</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="pass">
+  <span class="pass__hole"></span>
+  <div class="pass__header">
+    <div class="pass__brand">Corvallis Music<br><strong>Collective</strong></div>
+    <div class="pass__tier"><span data-slot="tier">Sustainer</span><small data-slot="tierMeta">since 2024</small></div>
+  </div>
+  <div class="pass__stripe"></div>
+  <div class="pass__body">
+    <div class="pass__photo" data-slot="initials">MR</div>
+    <div class="pass__info">
+      <div class="pass__name" data-slot="name">Maya Rivera</div>
+      <div class="pass__role" data-slot="role">Bass · Vocals</div>
+      <div class="pass__no" data-slot="no">Member No. 0142</div>
+    </div>
+  </div>
+  <div class="pass__footer">
+    <div class="pass__footer-label">Plays with</div>
+    <div class="pass__bands" data-slot="bands">The Backline Trio · Real Book Quintet</div>
+  </div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="pass">
+  <span class="pass__hole"></span>
+  <div class="pass__header">
+    <div class="pass__brand">Corvallis Music<br><strong>Collective</strong></div>
+    <div class="pass__tier"><span data-slot="tier">Sustainer</span><small data-slot="tierMeta">since 2024</small></div>
+  </div>
+  <div class="pass__stripe"></div>
+  <div class="pass__body">
+    <div class="pass__photo" data-slot="initials">MR</div>
+    <div class="pass__info">
+      <div class="pass__name" data-slot="name">Maya Rivera</div>
+      <div class="pass__role" data-slot="role">Bass · Vocals</div>
+      <div class="pass__no" data-slot="no">Member No. 0142</div>
+    </div>
+  </div>
+  <div class="pass__footer">
+    <div class="pass__footer-label">Plays with</div>
+    <div class="pass__bands" data-slot="bands">The Backline Trio · Real Book Quintet</div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Sustainer · Maya R.",
+    "tier": "Sustainer",
+    "tierMeta": "since 2024",
+    "initials": "MR",
+    "name": "Maya Rivera",
+    "role": "Bass · Vocals",
+    "no": "Member No. 0142",
+    "bands": "The Backline Trio · Real Book Quintet"
+  },
+  {
+    "__name": "Member · Devon C.",
+    "tier": "Member",
+    "tierMeta": "since 2025",
+    "initials": "DC",
+    "name": "Devon Cash",
+    "role": "Guitar · Engineer",
+    "no": "Member No. 0287",
+    "bands": "Cassette Showcase · solo"
+  },
+  {
+    "__name": "Supporter · Sam K.",
+    "tier": "Supporter",
+    "tierMeta": "since 2025",
+    "initials": "SK",
+    "name": "Sam Kowalczyk",
+    "role": "Drums",
+    "no": "Member No. 0331",
+    "bands": "Open Mic regulars"
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike tape</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.spike { width: 240px; display: flex; flex-direction: column; gap: 8px; }
+.spike__labels {
+  display: flex; justify-content: space-between;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px; letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.stage--house .spike__labels { color: #8a7a5c; }
+.stage--back  .spike__labels { color: #828a98; }
+.spike__rail {
+  position: relative; height: 12px;
+  background: #e3ddcc; border-radius: 1px;
+  transform: rotate(-0.4deg);
+}
+.spike__lit {
+  position: absolute; top: 0; left: 0; height: 100%;
+  background: #ffc828; border-radius: 1px;
+}
+.spike__marks {
+  position: absolute; inset: 0;
+  display: flex; justify-content: space-between; padding: 0 4px;
+}
+.spike__mark { width: 2px; height: 20px; background: rgba(22,20,15,0.65); margin-top: -4px; }
+.spike__mark--major { height: 24px; width: 3px; }
+.spike__caption { font-size: 11.5px; line-height: 1.5; }
+.stage--house .spike__caption { color: #5a4d3b; }
+.stage--back  .spike__caption { color: #b6b0a6; }
+
+
+/* Light outline on dark background */
+.stage--back .spike__rail { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Wayfinding · progress</span>
+    <span class="bar__title">Spike tape</span>
+    <select id="variant" class="bar__select"><option value="0">Step 2 of 4 — 55%</option><option value="1">Step 4 of 4 — 100%</option><option value="2">Step 1 of 4 — 12%</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="spike">
+  <div class="spike__labels">
+    <span data-slot="l1">Tier</span>
+    <span data-slot="l2">Info</span>
+    <span data-slot="l3">Pay</span>
+    <span data-slot="l4">Done</span>
+  </div>
+  <div class="spike__rail">
+    <div class="spike__lit" style="width: 55%;"></div>
+    <div class="spike__marks">
+      <span class="spike__mark spike__mark--major"></span>
+      <span class="spike__mark"></span>
+      <span class="spike__mark"></span>
+      <span class="spike__mark spike__mark--major"></span>
+    </div>
+  </div>
+  <div class="spike__caption" data-slot="caption">Step 2 of 4 — Tell us about your band.</div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="spike">
+  <div class="spike__labels">
+    <span data-slot="l1">Tier</span>
+    <span data-slot="l2">Info</span>
+    <span data-slot="l3">Pay</span>
+    <span data-slot="l4">Done</span>
+  </div>
+  <div class="spike__rail">
+    <div class="spike__lit" style="width: 55%;"></div>
+    <div class="spike__marks">
+      <span class="spike__mark spike__mark--major"></span>
+      <span class="spike__mark"></span>
+      <span class="spike__mark"></span>
+      <span class="spike__mark spike__mark--major"></span>
+    </div>
+  </div>
+  <div class="spike__caption" data-slot="caption">Step 2 of 4 — Tell us about your band.</div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Step 2 of 4 — 55%",
+    "l1": "Tier",
+    "l2": "Info",
+    "l3": "Pay",
+    "l4": "Done",
+    "caption": "Step 2 of 4 — Tell us about your band.",
+    "__lit": 55
+  },
+  {
+    "__name": "Step 4 of 4 — 100%",
+    "l1": "Tier",
+    "l2": "Info",
+    "l3": "Pay",
+    "l4": "Done",
+    "caption": "Step 4 of 4 — All set. Welcome to CMC.",
+    "__lit": 100
+  },
+  {
+    "__name": "Step 1 of 4 — 12%",
+    "l1": "Tier",
+    "l2": "Info",
+    "l3": "Pay",
+    "l4": "Done",
+    "caption": "Step 1 of 4 — Pick a membership tier.",
+    "__lit": 12
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+</body>
+</html>

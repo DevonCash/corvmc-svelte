@@ -1,26 +1,16 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
+	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import { formatDateTime, formatCents } from '$lib/utils/format';
 
 	let { data }: { data: PageServerData } = $props();
 
 	type Payment = (typeof data.payments)[number];
-
-	const columns: Column<Payment>[] = [
-		{ key: 'paidAt', header: 'Date', sortable: true },
-		{ key: 'userName', header: 'Member' },
-		{ key: 'amountCents', header: 'Amount', sortable: true },
-		{ key: 'paymentMethod', header: 'Method' },
-		{ key: 'status', header: 'Status' },
-		{ key: 'id', header: 'Record' }
-	];
 
 	function buildPageHref(page: number): string {
 		const params = new URLSearchParams();
@@ -75,34 +65,28 @@
 	</form>
 
 	<!-- Table -->
-	<DataTable data={data.payments} {columns} empty="No payment records found">
-		{#snippet row(p)}
-			<tr class="hover">
-				<td>{formatDateTime(p.paidAt)}</td>
-				<td onclick={(e) => e.stopPropagation()} style="padding-inline: 0;">
-					<MemberLink name={p.userName ?? 'Unknown'} email={p.userEmail} userId={p.userId} class="p-7 px-4" />
-				</td>
-				<td>
-					<span class="font-medium">{formatCents(p.amountCents)}</span>
-				</td>
-				<td>
-					<span class="badge badge-outline badge-sm">{p.paymentMethod}</span>
-				</td>
-				<td>
-					<StatusBadge status={p.status} />
-				</td>
-				<td>
-					<div class="flex items-center gap-2">
-						<CopyableId value={p.id} label="Stripe" />
-						{#if p.reservationId}
-							<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
-								View reservation
-							</a>
-						{/if}
-					</div>
-				</td>
-			</tr>
-		{/snippet}
+	<DataTable data={data.payments} empty="No payment records found">
+		<Column key="paidAt" header="Date" sortable type="datetime" />
+		<MemberColumn nameKey="userName" emailKey="userEmail" userIdKey="userId" />
+		<Column key="amountCents" header="Amount" sortable type="currency" />
+		<Column key="paymentMethod" header="Method" type="badge" />
+		<Column key="status" header="Status">
+			{#snippet cell(_, p: Payment)}
+				<StatusBadge status={p.status} />
+			{/snippet}
+		</Column>
+		<Column key="id" header="Record">
+			{#snippet cell(_, p: Payment)}
+				<div class="flex items-center gap-2">
+					<CopyableId value={p.id} label="Stripe" />
+					{#if p.reservationId}
+						<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
+							View reservation
+						</a>
+					{/if}
+				</div>
+			{/snippet}
+		</Column>
 	</DataTable>
 
 	<Pagination page={data.page} totalPages={data.totalPages} buildHref={buildPageHref} />

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Amp cabinet</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Permanent+Marker&family=Caveat:wght@500;600;700&display=swap");
+
+* { box-sizing: border-box; }
+:root {
+  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
+  --font-script: "Caveat", "Permanent Marker", cursive;
+}
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  background: #161b22;
+  color: #e6dcd0;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  padding: 14px 22px;
+  background: #1d232c;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.bar__label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #828a98;
+  flex-shrink: 0;
+}
+.bar__title {
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6dcd0;
+  flex: 1;
+}
+.bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #262d38;
+  color: #e6dcd0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 6px 28px 6px 12px;
+  font-family: "Lexend", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23ff8c42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.bar__select:focus { outline: 1px solid #ff8c42; outline-offset: 1px; }
+.stages {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+}
+.stage--house { background: #fffbf6; }
+.stage--back  { background: #161b22; }
+.stage__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stage--house .stage__label { color: rgba(0,0,0,0.35); }
+.stage--back  .stage__label { color: rgba(255,255,255,0.3); }
+
+
+.amp {
+  position: relative; width: 220px; padding: 14px 12px 16px;
+  border-radius: 4px;
+  /* Deep black wood frame with a faint top highlight so the edge reads */
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.04) 0 1px,
+      transparent 1px),
+    #0a0805;
+}
+.amp::before, .amp::after {
+  content: ""; position: absolute; top: 5px;
+  width: 5px; height: 5px; border-radius: 50%; background: #c08a1a;
+}
+.amp::before { left: 5px; } .amp::after { right: 5px; }
+.amp__grille {
+  position: relative; min-height: 152px; border-radius: 2px;
+  /* Salt-and-pepper / tweed grille cloth — warm tan base with two
+     overlapping dot patterns for the woven texture. */
+  background:
+    radial-gradient(circle, rgba(0,0,0,0.2) 0.6px, transparent 1.1px) 0 0,
+    radial-gradient(circle, rgba(255,255,255,0.25) 0.5px, transparent 0.9px) 1.5px 1.5px,
+    #b8a47a;
+  background-size: 3.2px 3.2px, 3.2px 3.2px, 100% 100%;
+  /* Inset shadow makes the cloth feel recessed inside the cabinet */
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.55),
+    inset 0 -1px 0 rgba(0,0,0,0.45);
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  padding: 16px 14px 14px;
+}
+.amp__title {
+  font-family: "Lexend", sans-serif; font-weight: 700;
+  font-size: 15px; line-height: 1.15;
+  letter-spacing: -0.005em;
+  color: #1a1410;
+  margin: 0 0 4px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.18);
+}
+.amp__copy {
+  font-size: 11px;
+  color: rgba(26,20,16,0.78);
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+
+/* ── Tweak-controlled amp text ──────────────────────────────────────── */
+:root {
+  --t-title-color: #ffffff;
+  --t-title-shadow: 0 1px 0 rgba(0,0,0,0.85), 0 2px 4px rgba(0,0,0,0.55);
+  --t-copy-color: rgba(255,255,255,0.92);
+  --t-copy-shadow: none;
+}
+.amp__title {
+  color: var(--t-title-color);
+  text-shadow: var(--t-title-shadow);
+}
+.amp__copy {
+  color: var(--t-copy-color);
+  text-shadow: var(--t-copy-shadow);
+}
+
+/* Tweaks panel */
+.tweaks {
+  position: fixed; right: 20px; bottom: 20px; z-index: 1000;
+  width: 260px;
+  background: #1d232c;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 14px 14px 16px;
+  font-family: "Lexend", system-ui, sans-serif;
+  color: #e6dcd0;
+  display: none;
+  box-shadow: 0 18px 40px -12px rgba(0,0,0,0.7);
+}
+.tweaks.is-open { display: block; }
+.tweaks__header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.tweaks__title {
+  font-size: 12px; font-weight: 700; color: #e6dcd0;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.tweaks__close {
+  background: transparent; border: none; color: #828a98;
+  cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px;
+}
+.tweaks__close:hover { color: #e6dcd0; }
+.tweak { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.tweak__label {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #828a98; font-weight: 600;
+}
+.tweak__swatches { display: flex; gap: 6px; }
+.tweak__swatch {
+  flex: 1;
+  height: 28px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  position: relative;
+  background: var(--sw, #fff);
+}
+.tweak__swatch.is-on {
+  border-color: #ff8c42;
+  box-shadow: 0 0 0 2px rgba(255,140,66,0.25);
+}
+.tweak__shadow-row { display: flex; gap: 4px; }
+.tweak__shadow-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: #262d38;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  color: #b6b0a6;
+  font-family: inherit; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tweak__shadow-btn.is-on {
+  border-color: #ff8c42; color: #e6dcd0;
+}
+
+/* Light outline on dark background */
+.stage--back .amp { box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar">
+    <span class="bar__label">Gear Library</span>
+    <span class="bar__title">Amp cabinet</span>
+    <select id="variant" class="bar__select"><option value="0">Gear Library</option><option value="1">Stage gear</option><option value="2">Recording booth</option></select>
+  </div>
+  <div class="stages">
+    <div class="stage stage--house">
+      <span class="stage__label">Houselights</span>
+      
+<div class="amp">
+  <div class="amp__grille">
+    <h4 class="amp__title" data-slot="title">Borrow a pedal, a kick, a tuner.</h4>
+    <p class="amp__copy" data-slot="copy">40 instruments in the loaner library. Two-week loans.</p>
+  </div>
+</div>
+    </div>
+    <div class="stage stage--back">
+      <span class="stage__label">Backstage</span>
+      
+<div class="amp">
+  <div class="amp__grille">
+    <h4 class="amp__title" data-slot="title">Borrow a pedal, a kick, a tuner.</h4>
+    <p class="amp__copy" data-slot="copy">40 instruments in the loaner library. Two-week loans.</p>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<script>
+window.__variants = [
+  {
+    "__name": "Gear Library",
+    "title": "Borrow a pedal, a kick, a tuner.",
+    "copy": "40 instruments in the loaner library. Two-week loans."
+  },
+  {
+    "__name": "Stage gear",
+    "title": "PA, monitors, mics — set up at 6 PM.",
+    "copy": "Members can reserve front-of-house gear for showcases."
+  },
+  {
+    "__name": "Recording booth",
+    "title": "Track demos in the booth.",
+    "copy": "USB interface, 2 mics, ProTools — reserve hourly."
+  }
+];
+
+const v = window.__variants || [];
+const sel = document.getElementById('variant');
+function apply(idx) {
+  const data = v[idx] || {};
+  Object.keys(data).forEach(k => {
+    document.querySelectorAll('[data-slot="' + k + '"]').forEach(el => {
+      el.textContent = data[k];
+    });
+  });
+  if (data.__lit !== undefined) {
+    document.querySelectorAll('.pass__hours-bar').forEach(bar => {
+      const total = bar.children.length;
+      [...bar.children].forEach((c, i) => {
+        c.classList.toggle('lit', i < data.__lit);
+      });
+    });
+    document.querySelectorAll('.spike__lit').forEach(s => {
+      s.style.width = (data.__lit) + '%';
+    });
+  }
+}
+sel.addEventListener('change', e => apply(+e.target.value));
+apply(0);
+
+</script>
+
+<!-- Tweaks panel -->
+<div class="tweaks" id="tweaks">
+  <div class="tweaks__header">
+    <div class="tweaks__title">Tweaks · Amp text</div>
+    <button class="tweaks__close" id="tweaks-close" aria-label="Close">×</button>
+  </div>
+  <div class="tweak">
+    <div class="tweak__label">Title color</div>
+    <div class="tweak__swatches" id="title-swatches">
+      <div class="tweak__swatch" data-key="titleColor" data-value="#ffffff" style="--sw:#ffffff"></div>
+      <div class="tweak__swatch" data-key="titleColor" data-value="#fffbf6" style="--sw:#fffbf6"></div>
+      <div class="tweak__swatch" data-key="titleColor" data-value="#ffe28a" style="--sw:#ffe28a"></div>
+      <div class="tweak__swatch" data-key="titleColor" data-value="#1a1410" style="--sw:#1a1410"></div>
+    </div>
+  </div>
+  <div class="tweak">
+    <div class="tweak__label">Title shadow</div>
+    <div class="tweak__shadow-row" id="shadow-buttons">
+      <button class="tweak__shadow-btn" data-key="titleShadow" data-value="strong">Strong</button>
+      <button class="tweak__shadow-btn" data-key="titleShadow" data-value="medium">Medium</button>
+      <button class="tweak__shadow-btn" data-key="titleShadow" data-value="subtle">Subtle</button>
+      <button class="tweak__shadow-btn" data-key="titleShadow" data-value="none">None</button>
+    </div>
+  </div>
+  <div class="tweak">
+    <div class="tweak__label">Body color</div>
+    <div class="tweak__swatches">
+      <div class="tweak__swatch" data-key="copyColor" data-value="rgba(255,255,255,0.92)" style="--sw:#ffffff"></div>
+      <div class="tweak__swatch" data-key="copyColor" data-value="rgba(255,251,246,0.85)" style="--sw:#fffbf6"></div>
+      <div class="tweak__swatch" data-key="copyColor" data-value="rgba(26,20,16,0.78)" style="--sw:#1a1410"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "titleColor": "#fffbf6",
+  "titleShadow": "none",
+  "copyColor": "rgba(255,255,255,0.92)"
+}/*EDITMODE-END*/;
+
+const shadowMap = {
+  strong: '0 1px 0 rgba(0,0,0,0.95), 0 2px 6px rgba(0,0,0,0.7), 0 0 16px rgba(0,0,0,0.4)',
+  medium: '0 1px 0 rgba(0,0,0,0.85), 0 2px 4px rgba(0,0,0,0.55)',
+  subtle: '0 1px 0 rgba(0,0,0,0.4)',
+  none: 'none'
+};
+
+let tweakState = {...TWEAK_DEFAULTS};
+
+function applyTweaks() {
+  const root = document.documentElement;
+  root.style.setProperty('--t-title-color', tweakState.titleColor);
+  root.style.setProperty('--t-title-shadow', shadowMap[tweakState.titleShadow] || shadowMap.medium);
+  root.style.setProperty('--t-copy-color', tweakState.copyColor);
+  // update active swatch states
+  document.querySelectorAll('.tweak__swatch').forEach(el => {
+    el.classList.toggle('is-on', el.dataset.value === tweakState[el.dataset.key]);
+  });
+  document.querySelectorAll('.tweak__shadow-btn').forEach(el => {
+    el.classList.toggle('is-on', el.dataset.value === tweakState[el.dataset.key]);
+  });
+}
+
+function setTweak(key, value) {
+  tweakState[key] = value;
+  applyTweaks();
+  try {
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: value } }, '*');
+  } catch (e) {}
+}
+
+// Wire up swatch + button clicks
+document.addEventListener('click', e => {
+  const sw = e.target.closest('.tweak__swatch, .tweak__shadow-btn');
+  if (sw && sw.dataset.key) setTweak(sw.dataset.key, sw.dataset.value);
+});
+
+// Activation protocol — register listener BEFORE announcing availability
+const panel = document.getElementById('tweaks');
+const closeBtn = document.getElementById('tweaks-close');
+window.addEventListener('message', e => {
+  if (!e.data || typeof e.data !== 'object') return;
+  if (e.data.type === '__activate_edit_mode') panel.classList.add('is-open');
+  if (e.data.type === '__deactivate_edit_mode') panel.classList.remove('is-open');
+});
+closeBtn.addEventListener('click', () => {
+  panel.classList.remove('is-open');
+  try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch (e) {}
+});
+try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch (e) {}
+
+applyTweaks();
+</script>
+
+</body>
+</html>

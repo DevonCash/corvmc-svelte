@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Buttons</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
+:root {
+  --cmc-orange: #e5771e;
+  --cmc-navy: #003b5c;
+  --cmc-teal: #00859b;
+  --cmc-red-orange: #f84d13;
+  --cmc-goldenrod: #ffb500;
+  --cmc-brown: #5a3d2b;
+  --cmc-cream: #fffbf6;
+  --cmc-parchment: #ffe2cd;
+  --fg: #1a2330;
+  --fg-3: #7a8290;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin:0; padding:0;
+  font-family:"Lexend", system-ui, sans-serif;
+  background: var(--cmc-cream);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.card { padding: 26px 30px; min-height: 100vh; display: flex; flex-direction: column; gap: 18px; }
+.label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); }
+.row { display: flex; flex-wrap: wrap; gap: 18px 18px; align-items: center; }
+
+/* Hard-bordered retro button — chunky 2.5px outline, offset shadow.
+   Press depresses into the shadow. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--btn-fill, var(--cmc-orange));
+  color: var(--btn-text, #fff);
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  border: 2.5px solid var(--cmc-brown);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--cmc-brown);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  cursor: pointer;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--cmc-brown); }
+.btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--cmc-brown); }
+
+.btn--primary  { --btn-fill: var(--cmc-orange);     --btn-text: #fff; }
+.btn--navy     { --btn-fill: var(--cmc-navy);       --btn-text: #fff; }
+.btn--teal     { --btn-fill: var(--cmc-teal);       --btn-text: #fff; }
+.btn--red      { --btn-fill: var(--cmc-red-orange); --btn-text: #fff; }
+.btn--gold     { --btn-fill: var(--cmc-goldenrod);  --btn-text: var(--cmc-brown); }
+.btn--neutral  { --btn-fill: var(--cmc-cream);      --btn-text: var(--cmc-brown); }
+
+.btn--lg { padding: 16px 32px; font-size: 17px; }
+.btn--sm { padding: 8px 16px; font-size: 13px; border-width: 2px; box-shadow: 3px 3px 0 var(--cmc-brown); }
+.btn--sm:hover { box-shadow: 4px 4px 0 var(--cmc-brown); }
+.btn--sm:active { box-shadow: 0 0 0 var(--cmc-brown); transform: translate(3px, 3px); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">.btn — hard-bordered retro button · 2.5px brown stroke · offset chunky shadow</div>
+
+  <div class="row">
+    <a href="#" class="btn btn--primary">Become a Member</a>
+    <a href="#" class="btn btn--navy">Volunteer</a>
+    <a href="#" class="btn btn--teal">Real Book Club</a>
+    <a href="#" class="btn btn--red">Donate</a>
+  </div>
+
+  <div class="row">
+    <a href="#" class="btn btn--gold">Apply to Perform</a>
+    <a href="#" class="btn btn--neutral">Cancel</a>
+  </div>
+
+  <div class="label" style="margin-top: 6px;">Size variants — sm · default · lg</div>
+
+  <div class="row">
+    <a href="#" class="btn btn--primary btn--sm">RSVP</a>
+    <a href="#" class="btn btn--primary">Become a Member</a>
+    <a href="#" class="btn btn--primary btn--lg">Join Our Community!</a>
+  </div>
+
+  <div class="label" style="margin-top: 6px;">Press state — depresses into its own shadow</div>
+
+  <div class="row" style="align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+      <div style="font-size: 11px; color: var(--fg-3);">Rest</div>
+      <a href="#" class="btn btn--primary">Save changes</a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+      <div style="font-size: 11px; color: var(--fg-3);">Hover</div>
+      <a href="#" class="btn btn--primary" style="transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--cmc-brown);">Save changes</a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+      <div style="font-size: 11px; color: var(--fg-3);">Press</div>
+      <a href="#" class="btn btn--primary" style="transform: translate(4px, 4px); box-shadow: 0 0 0 var(--cmc-brown);">Save changes</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
