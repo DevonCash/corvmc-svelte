@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	let { href, label, icon } = $props() as {
+	let { href, label, icon }: {
 		href: string;
 		label: string;
 		icon?: Snippet;
-	};
+	} = $props();
 </script>
 
 <li>
