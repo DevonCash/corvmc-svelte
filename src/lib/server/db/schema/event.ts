@@ -1,13 +1,13 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { reservation } from './reservation';
 
 export const event = sqliteTable(
 	'event',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		title: text('title').notNull(),
 		description: text('description'),
 		startsAt: timestamp('starts_at').notNull(),

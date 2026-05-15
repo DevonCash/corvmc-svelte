@@ -1,13 +1,13 @@
 import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
 
 export const reservation = sqliteTable(
 	'reservation',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		bookerType: text('booker_type').notNull(),
 		bookerId: text('booker_id').notNull(),
 		createdByUserId: text('created_by_user_id')
@@ -40,7 +40,7 @@ export const reservation = sqliteTable(
 export const closure = sqliteTable(
 	'closure',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		reason: text('reason').notNull(),
 		startsAt: timestamp('starts_at').notNull(),
 		endsAt: timestamp('ends_at').notNull(),

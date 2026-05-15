@@ -1,11 +1,11 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 
 export const recurringSeries = sqliteTable(
 	'recurring_series',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		supersededBy: text('superseded_by'),
 		prototypeType: text('prototype_type').notNull(),
 		prototypeId: text('prototype_id').notNull(),

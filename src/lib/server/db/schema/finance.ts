@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, zodJson } from './columns';
+import { z } from 'zod';
 import { user } from './auth';
 import { reservation } from './reservation';
 
@@ -51,7 +52,7 @@ export const creditTransaction = sqliteTable(
 		source: text('source').notNull(),
 		sourceId: text('source_id'),
 		description: text('description').notNull(),
-		metadata: text('metadata', { mode: 'json' }).notNull().default({}),
+		metadata: zodJson(z.record(z.string(), z.unknown()).default({}))('metadata'),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
 	(t) => [

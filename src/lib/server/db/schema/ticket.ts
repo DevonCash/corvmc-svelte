@@ -1,13 +1,13 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { event } from './event';
 
 export const ticket = sqliteTable(
 	'ticket',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
 			.references(() => event.id, { onDelete: 'cascade' }),

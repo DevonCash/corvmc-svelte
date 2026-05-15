@@ -1,6 +1,8 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, zodJson } from './columns';
+import { z } from 'zod';
+import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
 
 // ---------------------------------------------------------------------------
 // better-auth core tables
@@ -19,7 +21,7 @@ export const user = sqliteTable('user', {
 	// corvmc extensions
 	pronouns: text('pronouns'),
 	phone: text('phone'),
-	settings: text('settings', { mode: 'json' }),
+	settings: zodJson(z.record(z.string(), z.unknown()).nullable().default(null))('settings'),
 	stripeId: text('stripe_id'),
 	pmType: text('pm_type'),
 	pmLastFour: text('pm_last_four'),
@@ -33,8 +35,8 @@ export const user = sqliteTable('user', {
 	tagline: text('tagline'),
 	lookingForBand: integer('looking_for_band', { mode: 'boolean' }).notNull().default(false),
 	directoryVisibility: text('directory_visibility').notNull().default('members'),
-	directoryContact: text('directory_contact', { mode: 'json' }),
-	links: text('links', { mode: 'json' })
+	directoryContact: zodJson(directoryContactSchema)('directory_contact'),
+	links: zodJson(profileLinksSchema)('links')
 });
 
 export const userInstrument = sqliteTable(

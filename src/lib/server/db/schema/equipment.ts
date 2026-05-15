@@ -1,10 +1,10 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 import { user } from './auth';
 
 export const equipmentCategory = sqliteTable('equipment_category', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	displayOrder: integer('display_order').notNull().default(0),
 	pricingTier: text('pricing_tier').notNull(),
@@ -15,7 +15,7 @@ export const equipmentCategory = sqliteTable('equipment_category', {
 export const equipment = sqliteTable(
 	'equipment',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull(),
 		description: text('description'),
 		categoryId: text('category_id')
@@ -50,7 +50,7 @@ export const equipment = sqliteTable(
 export const equipmentLoan = sqliteTable(
 	'equipment_loan',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		equipmentId: text('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
 		userId: text('user_id')
 			.notNull()

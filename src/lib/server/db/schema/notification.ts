@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid, zodJson } from './columns';
+import { z } from 'zod';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
@@ -10,7 +11,7 @@ import { user } from './auth';
 export const notification = sqliteTable(
 	'notification',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -18,7 +19,7 @@ export const notification = sqliteTable(
 		title: text('title').notNull(),
 		body: text('body'),
 		href: text('href'),
-		data: text('data', { mode: 'json' }),
+		data: zodJson(z.record(z.string(), z.unknown()).nullable().default(null))('data'),
 		readAt: timestamp('read_at'),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},
@@ -35,7 +36,7 @@ export const notification = sqliteTable(
 export const notificationPreference = sqliteTable(
 	'notification_preference',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),

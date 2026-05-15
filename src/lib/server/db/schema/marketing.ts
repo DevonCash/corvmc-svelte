@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ import { user } from './auth';
 export const subscriber = sqliteTable(
 	'subscriber',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		email: text('email').notNull().unique(),
 		name: text('name'),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
@@ -24,7 +24,7 @@ export const subscriber = sqliteTable(
 // ---------------------------------------------------------------------------
 
 export const audience = sqliteTable('audience', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
@@ -39,7 +39,7 @@ export const audience = sqliteTable('audience', {
 export const audienceMember = sqliteTable(
 	'audience_member',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		subscriberId: text('subscriber_id')
 			.notNull()
 			.references(() => subscriber.id, { onDelete: 'cascade' }),
@@ -62,7 +62,7 @@ export const audienceMember = sqliteTable(
 export const campaign = sqliteTable(
 	'campaign',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		subject: text('subject').notNull(),
 		markdownBody: text('markdown_body').notNull(),
 		htmlBody: text('html_body').notNull(),

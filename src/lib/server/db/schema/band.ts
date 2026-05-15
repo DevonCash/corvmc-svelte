@@ -1,12 +1,13 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, uuid, zodJson } from './columns';
 import { user } from './auth';
+import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
 
 export const band = sqliteTable(
 	'band',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull().unique(),
 		slug: text('slug').notNull().unique(),
 		bio: text('bio'),
@@ -22,8 +23,8 @@ export const band = sqliteTable(
 		tagline: text('tagline'),
 		lookingForMembers: integer('looking_for_members', { mode: 'boolean' }).notNull().default(false),
 		directoryVisibility: text('directory_visibility').notNull().default('public'),
-		directoryContact: text('directory_contact', { mode: 'json' }),
-		links: text('links', { mode: 'json' })
+		directoryContact: zodJson(directoryContactSchema)('directory_contact'),
+		links: zodJson(profileLinksSchema)('links')
 	},
 	(t) => [
 		index('idx_band_slug').on(t.slug)
@@ -46,7 +47,7 @@ export const bandGenre = sqliteTable(
 export const bandMember = sqliteTable(
 	'band_member',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		bandId: text('band_id')
 			.notNull()
 			.references(() => band.id, { onDelete: 'cascade' }),
