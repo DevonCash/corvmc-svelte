@@ -38,7 +38,6 @@
 <Modal title="Delete Band" bind:open={showDeleteModal}>
 	<Form
 		remote={deleteBandForm}
-		initial={{}}
 		successToast="Band deleted"
 		errorToast="Failed to delete band"
 		onsuccess={() => goto('/member/bands')}

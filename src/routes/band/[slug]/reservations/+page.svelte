@@ -67,7 +67,6 @@
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
 									<Form
 										remote={cancel}
-										initial={{ reservationId: res.id }}
 										successToast="Reservation cancelled"
 										errorToast="Failed to cancel"
 										onsuccess={() => invalidateAll()}

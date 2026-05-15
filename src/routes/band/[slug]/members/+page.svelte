@@ -27,8 +27,6 @@
 	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
 	let selectedUser = $state<{ id: string; name: string; email: string } | null>(null);
 	let searching = $state(false);
-	const inviteInitial = { userId: '', role: 'member', position: '' };
-
 	// Transfer ownership modal
 	let showTransferModal = $state(false);
 	let transferTarget = $state<{ userId: string; name: string } | null>(null);
@@ -103,7 +101,6 @@
 									{@const remove = removeMember.for(member.id)}
 									<Form
 										remote={remove}
-										initial={{ memberId: member.id }}
 										successToast="Member removed"
 										errorToast="Failed to remove"
 										onsuccess={() => invalidateAll()}
@@ -152,7 +149,6 @@
 								{@const revoke = revokeInvitation.for(invite.id)}
 								<Form
 									remote={revoke}
-									initial={{ memberId: invite.id }}
 									successToast="Invitation revoked"
 									errorToast="Failed to revoke"
 									onsuccess={() => invalidateAll()}
@@ -182,7 +178,6 @@
 <Modal title="Invite Member" bind:open={showInviteModal}>
 	<Form
 		remote={inviteMember}
-		initial={inviteInitial}
 		successToast="Invitation sent"
 		errorToast="Failed to send invitation"
 		onsuccess={() => {
@@ -196,7 +191,6 @@
 			<Field
 				label="Search by name or email"
 				id="user-search"
-				issues={inviteMember.fields.userId.issues()}
 			>
 				<input
 					id="user-search"
@@ -234,7 +228,6 @@
 					label="Role"
 					id="invite-role"
 					type="select"
-					issues={inviteMember.fields.role.issues()}
 				>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
@@ -243,7 +236,6 @@
 				<Field
 					label="Position"
 					name="invite-position"
-					issues={inviteMember.fields.position.issues()}
 					type="text"
 					placeholder="e.g. Guitar"
 				/>
@@ -266,7 +258,6 @@
 	{#if transferTarget}
 		<Form
 			remote={transferOwner}
-			initial={{ newOwnerId: transferTarget.userId }}
 			successToast="Ownership transferred"
 			errorToast="Failed to transfer"
 			onsuccess={() => {
@@ -295,7 +286,6 @@
 <Modal title="Leave Band" bind:open={showLeaveModal}>
 	<Form
 		remote={leave}
-		initial={{}}
 		successToast="You have left the band"
 		errorToast="Failed to leave"
 		onsuccess={() => goto('/member/bands')}

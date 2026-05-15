@@ -11,15 +11,6 @@
 
 	let { data }: { data: PageServerData } = $props();
 
-	const profileInitial = $derived({
-		name: data.user.name,
-		pronouns: data.user.pronouns ?? '',
-		phone: data.user.phone ?? ''
-	});
-
-	const passwordInitial = { currentPassword: '', newPassword: '', confirmPassword: '' };
-	const deleteInitial = { password: '' };
-
 	let showPasswordModal = $state(false);
 	let showDeleteModal = $state(false);
 
@@ -74,13 +65,12 @@
 	<InfoCard title="Contact Information">
 		<Form
 			remote={updateProfile}
-			initial={profileInitial}
 			successToast="Contact info updated"
 			errorToast="Update failed"
 		>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
-					<FormField label="Name" id="name" issues={updateProfile.fields.name.issues()}>
+					<FormField label="Name" id="name">
 						<input
 							id="name"
 							name="name"
@@ -91,7 +81,7 @@
 						/>
 					</FormField>
 
-					<FormField label="Pronouns" id="pronouns" issues={updateProfile.fields.pronouns.issues()}>
+					<FormField label="Pronouns" id="pronouns">
 						<input
 							id="pronouns"
 							name="pronouns"
@@ -103,7 +93,7 @@
 					</FormField>
 				</div>
 
-				<FormField type="email" label="Email" id="email" issues={[]}>
+				<FormField type="email" label="Email" id="email">
 					<input
 						id="email"
 						type="email"
@@ -114,7 +104,7 @@
 					<p class="text-xs opacity-50 mt-1">Contact staff to change your email address.</p>
 				</FormField>
 
-				<FormField label="Phone" id="phone" issues={updateProfile.fields.phone.issues()}>
+				<FormField label="Phone" id="phone">
 					<input
 						id="phone"
 						name="phone"
@@ -210,13 +200,12 @@
 	<Modal title="Change Password" bind:open={showPasswordModal}>
 		<Form
 			remote={changePassword}
-			initial={passwordInitial}
 			successToast="Password changed"
 			errorToast="Password change failed"
 			onsuccess={() => (showPasswordModal = false)}
 		>
 			<div class="space-y-4">
-				<FormField label="Current password" id="currentPassword" issues={changePassword.fields.currentPassword.issues()}>
+				<FormField label="Current password" id="currentPassword">
 					<input
 						id="currentPassword"
 						name="currentPassword"
@@ -226,7 +215,7 @@
 					/>
 				</FormField>
 
-				<FormField label="New password" id="newPassword" issues={changePassword.fields.newPassword.issues()}>
+				<FormField label="New password" id="newPassword">
 					<input
 						id="newPassword"
 						name="newPassword"
@@ -236,7 +225,7 @@
 					/>
 				</FormField>
 
-				<FormField label="Confirm new password" id="confirmPassword" issues={changePassword.fields.confirmPassword.issues()}>
+				<FormField label="Confirm new password" id="confirmPassword">
 					<input
 						id="confirmPassword"
 						name="confirmPassword"
@@ -256,7 +245,6 @@
 	<Modal title="Delete Account" bind:open={showDeleteModal}>
 		<Form
 			remote={deleteAccount}
-			initial={deleteInitial}
 			successToast="Account deleted"
 			errorToast="Deletion failed"
 			onsuccess={() => goto('/demo/better-auth/login')}
@@ -272,7 +260,6 @@
 				<FormField
 					label="Enter your password to confirm"
 					id="password"
-					issues={deleteAccount.fields.password.issues()}
 				>
 					<input
 						id="password"

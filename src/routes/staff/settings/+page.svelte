@@ -23,12 +23,6 @@
 			{@const instance = updateProduct.for(product.key)}
 			<Form
 				remote={instance}
-				initial={{
-					key: product.key,
-					name: product.name,
-					description: product.description ?? '',
-					unitAmountCents: String(product.unitAmountCents)
-				}}
 				successToast="{product.name} updated"
 			>
 				<div class="card bg-base-100 shadow">

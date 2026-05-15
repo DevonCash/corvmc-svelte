@@ -16,9 +16,7 @@
 	let { data, children }: { data: LayoutData; children: any } = $props();
 
 	const base = $derived(`/band/${data.band.slug}`);
-	const isOwnerOrAdmin = $derived(
-		data.userRole === 'owner' || data.userRole === 'admin'
-	);
+	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');
 
 	const navItems = $derived([
 		{ href: base, label: 'Dashboard', icon: IconLayoutDashboard },
@@ -52,10 +50,16 @@
 	<div class="drawer-side z-40">
 		<label for="band-drawer" class="drawer-overlay"></label>
 		<Sidebar {navItems} title={data.band.name} badge="Band">
-			{#snippet footer()}
-				<div class="border-t border-base-300 p-4">
-					<a href="/member/bands" class="btn btn-ghost btn-sm btn-block justify-start">
-						← Back to My Bands
+			{#snippet brand()}
+				<div class="flex items-center justify-between px-6 py-5">
+					<div class="flex items-center gap-2">
+						<span class="truncate text-xl font-bold">{data.band.name}</span>
+					</div>
+				</div>
+				<div class="border-t border-base-300 ">
+					<a href="/member/bands" class="btn btn-block rounded-none border-none justify-start btn-ghost btn-sm">
+						← Back to Member View
+						{#snippet icon()}<IconLayoutDashboard size={20} />{/snippet}
 					</a>
 				</div>
 			{/snippet}

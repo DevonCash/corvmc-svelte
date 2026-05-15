@@ -120,7 +120,6 @@
 	<!-- Band details form -->
 	<Form
 		remote={updateBand}
-		{initial}
 		successToast="Profile updated"
 		errorToast="Failed to update"
 		onsuccess={() => {
@@ -133,7 +132,7 @@
 		}}
 	>
 		<div class="space-y-4">
-			<FormField label="Band Name" id="band-name" issues={updateBand.fields.name.issues()}>
+			<FormField label="Band Name" id="band-name">
 				<input
 					id="band-name"
 					name="name"
@@ -144,7 +143,7 @@
 				/>
 			</FormField>
 
-			<FormField label="Bio" id="band-bio" issues={updateBand.fields.bio.issues()}>
+			<FormField label="Bio" id="band-bio">
 				<textarea
 					id="band-bio"
 					name="bio"

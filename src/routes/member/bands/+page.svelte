@@ -16,7 +16,6 @@
 	const active = $derived(data.active);
 
 	let showCreateModal = $state(false);
-	const createInitial = { name: '', bio: '' };
 </script>
 
 <div class="max-w-2xl space-y-6">
@@ -46,7 +45,6 @@
 								<div class="flex gap-2">
 									<Form
 										remote={accept}
-										initial={{ memberId: invite.id }}
 										successToast="Invitation accepted"
 										errorToast="Failed to accept"
 										onsuccess={() => invalidateAll()}
@@ -56,7 +54,6 @@
 									</Form>
 									<Form
 										remote={decline}
-										initial={{ memberId: invite.id }}
 										successToast="Invitation declined"
 										errorToast="Failed to decline"
 										onsuccess={() => invalidateAll()}
@@ -103,7 +100,6 @@
 <Modal title="Create Band" bind:open={showCreateModal}>
 	<Form
 		remote={createBand}
-		initial={createInitial}
 		successToast="Band created"
 		errorToast="Failed to create band"
 		onsuccess={(result) => {
@@ -112,7 +108,7 @@
 		}}
 	>
 		<div class="space-y-4">
-			<FormField label="Band name" id="band-name" issues={createBand.fields.name.issues()}>
+			<FormField label="Band name" id="band-name">
 				<input
 					id="band-name"
 					name="name"
@@ -123,7 +119,7 @@
 				/>
 			</FormField>
 
-			<FormField label="Bio" id="band-bio" issues={createBand.fields.bio.issues()}>
+			<FormField label="Bio" id="band-bio">
 				<textarea
 					id="band-bio"
 					name="bio"

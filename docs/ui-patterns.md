@@ -69,47 +69,62 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 ```svelte
 <Form
   remote={saveItem}
-  initial={{ name: '', email: '' }}
   successToast="Saved"
   errorToast="Save failed"
   onsuccess={(result) => { /* navigate, refresh, etc. */ }}
 >
-  <!-- form fields -->
+  <FormField name="name" type="text" value={item.name} />
+  <FormField name="email" type="email" value={item.email} />
   <SubmitButton label="Save" class="btn-primary" />
 </Form>
 ```
 
 Props:
 - `remote` — a remote form from `data.remote.ts`
-- `initial` — object whose keys are tracked for dirty detection. Only include fields the user edits; hidden fields (like IDs) can be excluded to avoid false dirty state
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
 
-The `Form` sets a `FormContext` that `SubmitButton` reads for status-driven rendering.
+### How dirty tracking works
+
+Dirty tracking is bottom-up. Each `FormField` listens for `input` and `change` events (via event delegation on its wrapper) and notifies the `FormContext`. The Form's status moves from `idle` → `dirty` when any field fires a change. `SubmitButton` is disabled until the form is dirty, and `FormGuard` blocks navigation while there are unsaved changes.
+
+This means any input nested inside a `FormField` — whether it's a built-in type or custom markup via the `children` snippet — participates in change tracking automatically. No extra wiring needed.
 
 ## FormField component
 
 Wraps the label + error + input triple that repeats on every form. Use this instead of manually writing `div.form-control > label + error loop + input`.
 
+### Built-in input mode (preferred)
+
+When FormField knows the input type, it renders the input itself:
+
 ```svelte
-<FormField label="Email" id="email" issues={remote.fields.email.issues()}>
-  <input
-    id="email"
-    name="email"
-    type="email"
-    value={item.email}
-    class="input input-bordered"
-  />
+<FormField name="email" type="email" label="Email address" value={item.email} />
+<FormField name="bio" type="textarea" value={item.bio} />
+<FormField name="role" type="select" options={roleOptions} value={item.role} />
+<FormField name="active" type="toggle" value={item.active} checkboxLabel="Active" />
+```
+
+### Custom input mode
+
+For inputs FormField can't render (date pickers, file uploads, compound inputs), pass markup as children. Event delegation on the wrapper handles change tracking automatically — no manual wiring needed:
+
+```svelte
+<FormField name="startDate" label="Start date">
+  <MyDatePicker name="startDate" value={item.startDate} />
 </FormField>
 ```
 
-Props:
-- `label` — field label text
-- `id` — ties the label's `for` to the input's `id`
-- `issues` — pass `remote.fields.<name>.issues()` for validation errors
-- `class` — extra classes on the wrapper div
+### Key props
 
-Works with any input type: `<input>`, `<select>`, `<textarea>`, `<TagInput>`, compound inputs with a hidden field, etc.
+- `name` — **required inside a Form**. Must match the field name in the remote form's Zod schema. This is how FormField looks up validation issues from the Form context and how the value is submitted.
+- `label` — field label text. Auto-derived from `name` if omitted.
+- `type` — input type for built-in rendering: `text`, `email`, `tel`, `number`, `password`, `textarea`, `select`, `tags`, `checkbox`, `toggle`
+- `value` — current value (for built-in inputs)
+- `description` — help text shown below the label when there are no validation errors
+- `readonly` — disables the input and shows a read-only display
+- `class` — extra classes on the wrapper fieldset
+- `issues` — only needed when using FormField **outside** a `<Form>`. Inside a Form, issues are pulled from the form context automatically using `name`.
 
 ## SubmitButton
 

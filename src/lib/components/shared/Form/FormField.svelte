@@ -49,13 +49,11 @@
 		id: _id,
 		name: _name,
 		type,
-		disabled: pending || readonly,
-		onchange: () => form?.changed(),
-		oninput: () => form?.changed()
+		disabled: pending || readonly
 	});
 </script>
 
-<fieldset class="fieldset {className}">
+<fieldset class="fieldset {className}" oninput={() => form?.changed()} onchange={() => form?.changed()}>
 	<legend class="fieldset-legend">
 		{_label}
 	</legend>
@@ -82,12 +80,12 @@
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="checkbox" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} onchange={() => form?.changed()} />
+			<input type="checkbox" class="checkbox" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} onchange={() => form?.changed()} />
+			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'select' && rest.multiple}
@@ -104,7 +102,6 @@
 				const vals = Array.from(sel.selectedOptions, (o) => o.value);
 				const hidden = sel.previousElementSibling as HTMLInputElement;
 				hidden.value = JSON.stringify(vals);
-				form?.changed();
 			}}
 		>
 			{#each rest.options as option}
