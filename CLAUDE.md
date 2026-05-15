@@ -1,3 +1,17 @@
+## New Feature Checklist
+
+When building a new feature, follow these phases in order:
+
+1. **Design** — Understand the domain and map workflows before proposing any models. Produce a spec in `docs/` if the feature touches multiple files or introduces new schema.
+2. **Schema** — Add columns/tables via drizzle schema files. Do not write migrations — the user will generate them with `drizzle-kit`. Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB shapes, enums, etc.).
+3. **Services** — Build server-side logic in `src/lib/server/<domain>/`. Keep query functions and mutation functions separated. Validate inputs in the service layer with explicit limits (max lengths, max items).
+4. **Routes & UI** — Build pages using the patterns in `docs/ui-patterns.md`. Add `data.remote.ts` files for form/query handling. Add nav links in the relevant layout (`member`, `band`, `staff`).
+5. **Seed data** — Update `scripts/seed-dev.ts` so the feature has realistic data for local development. Use `@anatine/zod-mock` to generate fake data from Zod schemas. Use pools of sample values and randomized assignment for domain-specific fields.
+6. **Tests** — Write tests that describe intended behavior, not current implementation. Use service-level mocks where direct DB access isn't practical. Failing tests are fine if they reflect unfinished business logic.
+7. **Verify** — Run `svelte-check` and confirm no new type errors in the files you touched. Pre-existing errors in unrelated files can be ignored.
+8. **Document** — Update `docs/parity-report.md` with the new feature row. If a design spec was produced, it should already be in `docs/`.
+9. **Commit** — Use a descriptive commit message summarizing what the feature adds. No co-author lines.
+
 ## UI Patterns
 
 Before building or modifying any page, read `docs/ui-patterns.md`. It defines the shared components (Form, FormField, SubmitButton, PageHeader, StatusBadge, etc.) and composition patterns that all pages must follow. Use it whenever creating new routes, adding forms, or touching page layout.
