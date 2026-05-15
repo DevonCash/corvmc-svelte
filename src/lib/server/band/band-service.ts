@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, ilike, notInArray, inArray } from 'drizzle-orm';
+import { eq, and, ne, gt, sql, or, ilike, notInArray, inArray, isNull, isNotNull, count, like } from 'drizzle-orm';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
@@ -164,7 +164,7 @@ export async function getBySlug(slug: string) {
 		})
 		.from(band)
 		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(eq(band.slug, slug))
+		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
 		.groupBy(band.id);
 
 	return row ?? null;
@@ -194,7 +194,7 @@ export async function listForUser(
 		.select(props)
 		.from(bandMember)
 		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.where(eq(bandMember.userId, userId))
+		.where(and(eq(bandMember.userId, userId), isNull(band.deletedAt)))
 		.orderBy(band.name);
 }
 
@@ -465,6 +465,114 @@ export async function leaveBand(bandId: string, userId: string) {
 		.delete(bandMember)
 		.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, userId)));
 }
+
+// ---------------------------------------------------------------------------
+// Staff queries
+// ---------------------------------------------------------------------------
+
+export async function listAll(opts?: { search?: string; status?: 'active' | 'deactivated' }) {
+	const conditions = [];
+
+	if (opts?.search) {
+		conditions.push(ilike(band.name, `%${opts.search}%`));
+	}
+	if (opts?.status === 'active') {
+		conditions.push(isNull(band.deletedAt));
+	} else if (opts?.status === 'deactivated') {
+		conditions.push(isNotNull(band.deletedAt));
+	}
+
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	return db
+		.select({
+			id: band.id,
+			name: band.name,
+			slug: band.slug,
+			ownerId: band.ownerId,
+			ownerName: user.name,
+			memberCount: sql<number>`(
+				select count(*) from band_member bm
+				where bm.band_id = ${band.id} and bm.status = 'active'
+			)`,
+			createdAt: band.createdAt,
+			deletedAt: band.deletedAt
+		})
+		.from(band)
+		.innerJoin(user, eq(user.id, band.ownerId))
+		.where(where)
+		.orderBy(band.name);
+}
+
+export async function getByIdWithDetails(bandId: string) {
+	const [row] = await db
+		.select({
+			id: band.id,
+			name: band.name,
+			slug: band.slug,
+			bio: band.bio,
+			ownerId: band.ownerId,
+			ownerName: user.name,
+			ownerEmail: user.email,
+			avatarKey: band.avatarKey,
+			createdAt: band.createdAt,
+			updatedAt: band.updatedAt,
+			deletedAt: band.deletedAt,
+			memberCount: sql<number>`(
+				select count(*) from band_member bm
+				where bm.band_id = ${band.id} and bm.status = 'active'
+			)`
+		})
+		.from(band)
+		.innerJoin(user, eq(user.id, band.ownerId))
+		.where(eq(band.id, bandId));
+
+	return row ?? null;
+}
+
+export async function deactivate(bandId: string) {
+	const [row] = await db
+		.update(band)
+		.set({ deletedAt: new Date(), updatedAt: new Date() })
+		.where(and(eq(band.id, bandId), isNull(band.deletedAt)))
+		.returning();
+
+	if (!row) throw new BandNotFoundError();
+
+	// Cancel all future band reservations
+	const futureReservations = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerId, bandId),
+				gt(reservation.startsAt, new Date()),
+				ne(reservation.status, 'cancelled')
+			)
+		);
+
+	for (const r of futureReservations) {
+		await cancelReservation(r.id, row.ownerId, 'Band deactivated', { staffOverride: true });
+	}
+
+	return row;
+}
+
+export async function reactivate(bandId: string) {
+	const [row] = await db
+		.update(band)
+		.set({ deletedAt: null, updatedAt: new Date() })
+		.where(and(eq(band.id, bandId), isNotNull(band.deletedAt)))
+		.returning();
+
+	if (!row) throw new BandNotFoundError();
+	return row;
+}
+
+// ---------------------------------------------------------------------------
+// Role check
+// ---------------------------------------------------------------------------
 
 export async function getUserRole(bandId: string, userId: string): Promise<BandRole | null> {
 	const [row] = await db

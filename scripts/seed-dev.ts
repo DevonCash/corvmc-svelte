@@ -621,6 +621,24 @@ async function seedBands(users: SeedUser[]) {
 		}
 	}
 
+	// One deactivated band
+	const deactivatedOwner = users[BAND_NAMES.length % users.length];
+	const [deactivated] = await db.insert(band).values({
+		name: 'Disbanded Project',
+		slug: 'disbanded-project',
+		bio: 'This band was deactivated by staff.',
+		ownerId: deactivatedOwner.id,
+		deletedAt: new Date(Date.now() - 10 * 86400000)
+	}).returning();
+	await db.insert(bandMember).values({
+		bandId: deactivated.id,
+		userId: deactivatedOwner.id,
+		role: 'owner',
+		position: 'Guitar',
+		status: 'active'
+	});
+	bands.push(deactivated);
+
 	return bands;
 }
 

@@ -17,6 +17,7 @@
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import NotificationBell from '$lib/components/shared/NotificationBell.svelte';
+	import PanelSwitcher from '$lib/components/shared/PanelSwitcher.svelte';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
 </script>
@@ -46,6 +47,9 @@
 						<NotificationBell />
 					</div>
 				</div>
+				{#if data.isStaff}
+					<PanelSwitcher current="member" />
+				{/if}
 			{/snippet}
 			{#snippet navigation()}
 				<NavItem href="/member" label="Dashboard">

@@ -64,7 +64,7 @@
 	<!-- Nav links -->
 	<ul class="menu w-full flex-1">
 		{@render navigation?.()}
-		{#each navItems as item, i (item.label)}
+		{#each navItems ?? [] as item, i (item.label)}
 			{#if isNavItem(item)}
 				<NavItem href={item.href} label={item.label}>
 					{#snippet icon()}<item.icon size={20} />{/snippet}

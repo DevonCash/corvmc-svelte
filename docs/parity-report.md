@@ -26,6 +26,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Settings | ManageOrganizationSettings | ✅ Settings page | Hourly rate, buffer, hours; Laravel has more org settings |
 | Payments view | OrderResource, TicketOrders | ✅ /staff/payments | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
 | Recurring reservations | RecurringReservations resource | ✅ /staff/recurring | List active/cancelled series, cancel action. Member UI in reservations page |
+| Bands | BandResource (via tenancy) | ✅ /staff/bands | List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation |
 | Equipment | Equipment resource | — | Not started |
 | Volunteering | VolunteerReportPage, PendingHourLogs | — | Not started |
 | Sponsors | Sponsors resource | — | Not started |

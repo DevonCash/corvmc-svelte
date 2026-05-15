@@ -13,7 +13,8 @@ export const band = pgTable(
 			.references(() => user.id, { onDelete: 'set null' }),
 		avatarKey: text('avatar_key'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+		deletedAt: timestamp('deleted_at', { withTimezone: true })
 	},
 	(t) => [index('idx_band_slug').on(t.slug)]
 );
