@@ -2,7 +2,7 @@ CREATE TABLE "payment_record" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
 	"reservation_id" uuid,
-	"stripe_customer_id" text NOT NULL,
+	"stripe_customer_id" text,
 	"amount_cents" integer NOT NULL,
 	"currency" text DEFAULT 'usd' NOT NULL,
 	"payment_method" text NOT NULL,

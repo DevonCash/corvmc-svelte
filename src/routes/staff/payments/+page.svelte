@@ -75,7 +75,7 @@
 	</form>
 
 	<!-- Table -->
-	<DataTable data={data.payments} {columns} empty="No payment records found" pageSize={data.pageSize}>
+	<DataTable data={data.payments} {columns} empty="No payment records found">
 		{#snippet row(p)}
 			<tr class="hover">
 				<td>{formatDateTime(p.paidAt)}</td>

@@ -16,7 +16,7 @@ export const paymentRecord = pgTable(
 		reservationId: uuid('reservation_id').references(() => reservation.id, {
 			onDelete: 'set null'
 		}),
-		stripeCustomerId: text('stripe_customer_id').notNull(),
+		stripeCustomerId: text('stripe_customer_id'),
 		amountCents: integer('amount_cents').notNull(),
 		currency: text('currency').notNull().default('usd'),
 		paymentMethod: text('payment_method').notNull(), // 'Cash' | 'Credits'

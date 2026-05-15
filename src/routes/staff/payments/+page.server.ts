@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	const status = url.searchParams.get('status') ?? '';
 	const from = url.searchParams.get('from') ?? '';
 	const to = url.searchParams.get('to') ?? '';
-	const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'));
+	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
 	const { rows, total } = await list(
 		{
@@ -27,7 +27,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		payments: rows,
 		total,
 		page,
-		pageSize: PAGE_SIZE,
 		totalPages: Math.ceil(total / PAGE_SIZE),
 		filters: { search, method, status, from, to }
 	};

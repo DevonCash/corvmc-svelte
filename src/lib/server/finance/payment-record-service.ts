@@ -2,6 +2,9 @@ import { db } from '$lib/server/db';
 import { paymentRecord } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, desc, and, gte, lte, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+
+const TZ = 'America/Los_Angeles';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,14 +52,20 @@ const baseSelect = {
 	refundedAt: paymentRecord.refundedAt
 };
 
+/** Escape LIKE/ILIKE wildcards so user input is treated literally. */
+function escapeLike(input: string): string {
+	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
+}
+
 function buildFilters(filters: PaymentRecordFilters): SQL[] {
 	const conditions: SQL[] = [];
 
 	if (filters.search) {
+		const escaped = escapeLike(filters.search);
 		conditions.push(
 			or(
-				ilike(user.name, `%${filters.search}%`),
-				ilike(user.email, `%${filters.search}%`)
+				ilike(user.name, `%${escaped}%`),
+				ilike(user.email, `%${escaped}%`)
 			)!
 		);
 	}
@@ -70,11 +79,11 @@ function buildFilters(filters: PaymentRecordFilters): SQL[] {
 	}
 
 	if (filters.from) {
-		conditions.push(gte(paymentRecord.paidAt, new Date(filters.from + 'T00:00:00')));
+		conditions.push(gte(paymentRecord.paidAt, buildDateInTz(filters.from, '00:00', TZ)));
 	}
 
 	if (filters.to) {
-		conditions.push(lte(paymentRecord.paidAt, new Date(filters.to + 'T23:59:59')));
+		conditions.push(lte(paymentRecord.paidAt, buildDateInTz(filters.to, '23:59', TZ)));
 	}
 
 	return conditions;

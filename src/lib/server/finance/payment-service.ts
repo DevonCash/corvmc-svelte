@@ -185,18 +185,22 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			...(stripeCustomerId && { customer_details: { customer: stripeCustomerId } })
 		});
 
-		// Cache locally
-		await db.insert(paymentRecord).values({
-			id: stripeRecord.id,
-			userId,
-			reservationId: metadata.reservation_id ?? null,
-			stripeCustomerId: stripeCustomerId ?? '',
-			amountCents: 0,
-			currency: 'usd',
-			paymentMethod: 'Credits',
-			status: 'completed',
-			paidAt: new Date()
-		});
+		// Cache locally — best-effort; Stripe is the source of truth
+		try {
+			await db.insert(paymentRecord).values({
+				id: stripeRecord.id,
+				userId,
+				reservationId: metadata.reservation_id ?? null,
+				stripeCustomerId: stripeCustomerId ?? null,
+				amountCents: 0,
+				currency: 'usd',
+				paymentMethod: 'Credits',
+				status: 'completed',
+				paidAt: new Date()
+			});
+		} catch (err) {
+			console.error('[payment-cache] Failed to cache credits payment record:', err);
+		}
 
 		return { paid: true, stripePaymentRecordId: stripeRecord.id };
 	}
@@ -320,18 +324,22 @@ export async function recordCashPayment(options: CashPaymentOptions): Promise<{ 
 		customer_details: { customer: stripeCustomerId }
 	});
 
-	// Cache locally
-	await db.insert(paymentRecord).values({
-		id: stripeRecord.id,
-		userId,
-		reservationId: metadata.reservation_id ?? null,
-		stripeCustomerId,
-		amountCents,
-		currency: 'usd',
-		paymentMethod: 'Cash',
-		status: 'completed',
-		paidAt: new Date()
-	});
+	// Cache locally — best-effort; Stripe is the source of truth
+	try {
+		await db.insert(paymentRecord).values({
+			id: stripeRecord.id,
+			userId,
+			reservationId: metadata.reservation_id ?? null,
+			stripeCustomerId,
+			amountCents,
+			currency: 'usd',
+			paymentMethod: 'Cash',
+			status: 'completed',
+			paidAt: new Date()
+		});
+	} catch (err) {
+		console.error('[payment-cache] Failed to cache cash payment record:', err);
+	}
 
 	return { paymentRecordId: stripeRecord.id };
 }
