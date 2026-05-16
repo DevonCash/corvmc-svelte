@@ -4,6 +4,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
+	import { IconSearch, IconUserPlus } from '@tabler/icons-svelte';
 	import type { ProfileLink } from '$lib/types/profile';
 
 	let activeTab = $state<'members' | 'bands'>('members');
@@ -106,7 +107,10 @@
 									{/if}
 								</div>
 								{#if member.lookingForBand}
-									<span class="badge badge-primary badge-sm whitespace-nowrap">Looking for band</span>
+									<span class="badge badge-primary badge-sm whitespace-nowrap gap-1">
+										<IconSearch size={12} />
+										Looking for band
+									</span>
 								{/if}
 							</div>
 							{#if member.instruments?.length || member.genres?.length}
@@ -157,7 +161,10 @@
 									{/if}
 								</div>
 								{#if b.lookingForMembers}
-									<span class="badge badge-primary badge-sm whitespace-nowrap">Recruiting</span>
+									<span class="badge badge-primary badge-sm whitespace-nowrap gap-1">
+										<IconUserPlus size={12} />
+										Recruiting
+									</span>
 								{/if}
 							</div>
 							{#if b.genres?.length}

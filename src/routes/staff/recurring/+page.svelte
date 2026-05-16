@@ -5,7 +5,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { cancelSeries } from './data.remote';
 	import type { StaffRecurringResponse } from '$lib/types/api';
@@ -61,12 +63,17 @@
 		</Column>
 		<Column key="frequencyLabel" header="Frequency" shrink>
 			{#snippet cell(_, s)}
-				<span class="badge badge-outline badge-sm">{s.frequencyLabel}</span>
+				<span class="badge badge-outline badge-sm gap-1">
+					<IconRepeat size={12} />
+					{s.frequencyLabel}
+				</span>
 			{/snippet}
 		</Column>
 		<Column key="bookerType" header="Booker" shrink>
 			{#snippet cell(_, s)}
-				<span class="badge badge-outline badge-sm">{s.bookerType}</span>
+				<span class="tooltip" data-tip={s.bookerType}>
+					<BookerTypeIcon type={s.bookerType} size={16} />
+				</span>
 			{/snippet}
 		</Column>
 		<Column key="createdAt" header="Created" type="date" sortable shrink />

@@ -8,6 +8,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import type { MemberEquipmentResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberEquipmentResponse } = $props();
@@ -65,8 +66,16 @@
 					{#if eq.description}
 						<p class="text-xs opacity-70 line-clamp-2">{eq.description}</p>
 					{/if}
-					<div class="flex flex-wrap gap-1 mt-1">
-						<span class="badge badge-outline badge-xs">{eq.condition}</span>
+					<div class="flex flex-wrap items-center gap-1 mt-1">
+						<span class="tooltip" data-tip={eq.condition}>
+							{#if eq.condition === 'good'}
+								<IconCircleCheck size={14} class="text-success" />
+							{:else if eq.condition === 'fair'}
+								<IconAlertCircle size={14} class="text-warning" />
+							{:else}
+								<IconAlertTriangle size={14} class="text-error" />
+							{/if}
+						</span>
 						<span class="badge badge-ghost badge-xs">{priceLabel(eq.pricingTier)}</span>
 						<span class="badge badge-xs" class:badge-error={eq.availableQuantity <= 0}>
 							{eq.availableQuantity} available
