@@ -1,16 +1,23 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
-	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import Modal from './Modal.svelte';
+	import Button from './Button.svelte';
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 
 	// ---------------------------------------------------------------------------
 	// Props
 	// ---------------------------------------------------------------------------
+
+	type Status = 'idle' | 'pending' | 'success' | 'error';
+
+	interface TriggerProps {
+		onclick: () => void;
+		disabled: boolean;
+		status: Status;
+	}
 
 	let {
 		action,
@@ -23,6 +30,7 @@
 		modalTitle,
 		form: formSnippet,
 		body,
+		trigger,
 		submitLabel,
 		canSubmit = true,
 		maxWidth = 'max-w-lg',
@@ -43,10 +51,9 @@
 		errorLabel?: string;
 		confirm?: string;
 		modalTitle?: string;
-		/** Form fields rendered inside the default modal layout (title bar + submit button). Receives { close }. */
 		form?: Snippet<[{ close: () => void }]>;
-		/** Full-control modal body. Replaces entire modal content area. Receives { close, run, status }. */
 		body?: Snippet<[{ close: () => void; run: () => void; status: Status }]>;
+		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
 		canSubmit?: boolean;
 		maxWidth?: string;
@@ -71,26 +78,12 @@
 	// Shared state
 	// ---------------------------------------------------------------------------
 
-	type Status = 'idle' | 'pending' | 'success' | 'error';
 	let status = $state<Status>('idle');
-	let buttonEl: HTMLButtonElement | undefined = $state();
-
 	let dialogOpen = $state(false);
 
 	function close() {
 		dialogOpen = false;
 	}
-
-	// ---------------------------------------------------------------------------
-	// Keyboard shortcut
-	// ---------------------------------------------------------------------------
-
-	let keys = useShortcut(
-		() => shortcut,
-		() => {
-			if (!buttonEl?.disabled) handleClick();
-		}
-	);
 
 	// ---------------------------------------------------------------------------
 	// Direct / confirm / callback+form / callback+body action mode
@@ -139,35 +132,23 @@
 	}
 </script>
 
-<!-- Trigger button -->
-<button
-	bind:this={buttonEl}
-	type="button"
-	class="btn {className}"
-	class:btn-success={status === 'success'}
-	class:btn-error={status === 'error'}
-	disabled={disabled || status === 'pending'}
-	onclick={handleClick}
-	{...rest}
->
-	{#if status === 'pending'}
-		<span class="loading loading-spinner loading-sm"></span>
+<!-- Trigger -->
+{#if trigger}
+	{@render trigger({ onclick: handleClick, disabled: disabled || status === 'pending', status })}
+{:else}
+	<Button
 		{label}
-	{:else if status === 'success'}
-		<IconCheck size={20} />
+		{icon}
+		{shortcut}
+		{status}
 		{successLabel}
-	{:else if status === 'error'}
-		<IconX size={20} />
 		{errorLabel}
-	{:else}
-		{#if keys.modHeld && keys.parsed}
-			<kbd class="kbd kbd-sm text-base-content">{shortcutLabel(keys.parsed)}</kbd>
-		{:else if icon}
-			{@render icon()}
-		{/if}
-		{label}
-	{/if}
-</button>
+		disabled={disabled || status === 'pending'}
+		onclick={handleClick}
+		class={className}
+		{...rest}
+	/>
+{/if}
 
 <!-- Confirm dialog (callback + confirm string, no form/body) -->
 {#if !isForm && confirm && !formSnippet && !body}
