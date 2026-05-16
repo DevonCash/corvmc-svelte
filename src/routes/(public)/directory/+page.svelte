@@ -92,7 +92,20 @@
 						<a href="/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
 							<div class="vinyl-card__sleeve-wrap">
 								<div class="vinyl-card__disc">
-									<div class="vinyl-card__label">{b.name}</div>
+									<div class="vinyl-card__label">
+										<svg class="vinyl-card__arc" viewBox="0 0 100 100">
+											<defs>
+												<path id="arc-top-{b.id}" d="M 15,50 a 35,35 0 1,1 70,0" fill="none" />
+												<path id="arc-bot-{b.id}" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
+											</defs>
+											<text>
+												<textPath href="#arc-top-{b.id}" startOffset="50%" text-anchor="middle">{b.name}</textPath>
+											</text>
+											<text>
+												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">{b.tagline ? b.tagline : `${b.memberCount} member${b.memberCount === 1 ? '' : 's'}`}</textPath>
+											</text>
+										</svg>
+									</div>
 								</div>
 								<div class="vinyl-card__sleeve">
 									<div class="vinyl-card__sleeve-art">
