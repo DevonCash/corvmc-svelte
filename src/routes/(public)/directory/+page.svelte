@@ -100,10 +100,10 @@
 												<path id="arc-bot-{b.id}" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
 											</defs>
 											<text>
-												<textPath href="#arc-top-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music</textPath>
+												<textPath href="#arc-top-{b.id}" startOffset="50%" text-anchor="middle">{b.name}</textPath>
 											</text>
 											<text>
-												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Collective</textPath>
+												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
 											</text>
 										</svg>
 										<img class="vinyl-card__logo" src={speakerLogo} alt="" />

@@ -510,9 +510,9 @@ p {
   text-transform: uppercase;
 }
 .vinyl-card__arc text:last-child {
-  font-size: 5px;
+  font-size: 4.2px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   fill: rgba(255, 255, 255, 0.8);
 }
 .vinyl-card__logo {
