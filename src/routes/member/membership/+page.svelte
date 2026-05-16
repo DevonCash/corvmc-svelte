@@ -11,7 +11,7 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);

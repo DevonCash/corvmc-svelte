@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import StatCard from '$lib/components/shared/StatCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	type RecentUser = (typeof data.recentUsers)[number];
 

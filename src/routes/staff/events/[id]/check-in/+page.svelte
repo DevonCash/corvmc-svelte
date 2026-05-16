@@ -1,12 +1,11 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { checkInTicket } from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	let search = $state('');
 	let checkingIn = $state<string | null>(null);

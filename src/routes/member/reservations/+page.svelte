@@ -4,7 +4,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);

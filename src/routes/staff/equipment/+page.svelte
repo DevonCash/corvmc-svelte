@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -8,7 +7,7 @@
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
 	import { equipmentConditions, equipmentStatuses, pricingTiers, type EquipmentCondition, type EquipmentStatus, type PricingTier } from '$lib/server/equipment/types';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	let showAddModal = $state(false);
 	let showCategoryModal = $state(false);

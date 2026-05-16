@@ -233,10 +233,12 @@ describe('members page load', () => {
 			}
 		] as any);
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			parent: async () => ({ band: { id: 'band-1' } })
-		} as any)) as any;
+		const { GET } = await import('../../../../routes/api/bands/[slug]/members/+server');
+		const response = await GET({
+			params: { slug: 'the-velvet-underground' },
+			locals: { user: testUser }
+		} as any);
+		const result = await response.json();
 
 		expect(result.active).toHaveLength(1);
 		expect(result.active[0].userName).toBe('Alice');

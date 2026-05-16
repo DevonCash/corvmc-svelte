@@ -208,10 +208,12 @@ describe('reservations page load', () => {
 			}
 		];
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			parent: async () => ({ band: { id: 'band-1' } })
-		} as any)) as any;
+		const { GET } = await import('../../../../routes/api/bands/[slug]/reservations/+server');
+		const response = await GET({
+			params: { slug: 'the-velvet-underground' },
+			locals: { user: testUser }
+		} as any);
+		const result = await response.json();
 
 		expect(result.upcoming).toBeDefined();
 		expect(result.past).toBeDefined();

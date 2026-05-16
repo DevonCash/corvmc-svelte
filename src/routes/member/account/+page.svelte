@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -18,7 +17,7 @@
 		unsubscribeFromList
 	} from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 
 	interface NotifPref {

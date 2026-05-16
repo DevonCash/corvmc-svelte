@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -25,7 +24,7 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);

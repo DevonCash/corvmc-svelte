@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
@@ -8,7 +7,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	type Payment = (typeof data.payments)[number];
 

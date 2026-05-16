@@ -1,7 +1,6 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 </script>
 
 <div class="max-w-md mx-auto p-6 text-center space-y-4">

@@ -1,16 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
+import type { Actions } from './$types';
 import {
-	getSubscription,
 	createCheckoutSession,
 	updateQuantity,
-	resume,
-	createBillingPortalUrl
+	resume
 } from '$lib/server/finance/subscription-service';
-import { getAllBalances } from '$lib/server/finance/credit-service';
-import { getCommunityStats } from '$lib/server/finance/community-stats';
-import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
-import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 
 // ---------------------------------------------------------------------------
@@ -21,49 +15,7 @@ import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 const MIN_QUANTITY = 2;
 
 // ---------------------------------------------------------------------------
-// Load
-// ---------------------------------------------------------------------------
-
-export const load: PageServerLoad = async (event) => {
-	const user = event.locals.user!;
-
-	const [subscription, credits, communityStats, contributionConfig, billingPortalUrl] = await Promise.all([
-		user.stripeId ? getSubscription(user.stripeId) : Promise.resolve(null),
-		getAllBalances(user.id),
-		getCommunityStats(),
-		getProductConfig('contribution'),
-		user.stripeId
-			? createBillingPortalUrl(user.stripeId, `${event.url.origin}/member/membership`)
-			: Promise.resolve(null)
-	]);
-
-	// Calculate "used this month" for the credit balance card.
-	// The most recent monthly_allocation amount is the total for this period;
-	// current balance is what's left.
-	let allocatedThisMonth = 0;
-	if (subscription && credits.free_hours != null) {
-		// Subscription quantity = free hours allocated this month
-		allocatedThisMonth = subscription.quantity;
-	}
-	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
-
-	return {
-		subscription,
-		credits,
-		billingPortalUrl,
-		communityStats,
-		allocatedThisMonth,
-		usedThisMonth,
-		contributionUnitCents: contributionConfig.unitAmountCents,
-		feeSchedule: {
-			// Pre-calculate some example fees for the subscription form
-			perUnit: calculateTotalWithFeeCoverage(contributionConfig.unitAmountCents).feeCents
-		}
-	};
-};
-
-// ---------------------------------------------------------------------------
-// Actions
+// Helpers
 // ---------------------------------------------------------------------------
 
 function parseQuantity(formData: FormData): number {
@@ -76,6 +28,10 @@ function parseQuantity(formData: FormData): number {
 	}
 	return dollars / DOLLARS_PER_UNIT;
 }
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
 
 export const actions: Actions = {
 	createSubscription: async (event) => {

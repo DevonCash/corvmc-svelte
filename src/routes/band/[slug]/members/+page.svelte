@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
@@ -16,7 +15,7 @@
 		leave
 	} from './data.remote';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');

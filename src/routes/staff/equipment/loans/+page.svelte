@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -7,7 +6,7 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { loanStatuses } from '$lib/server/equipment/types';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 </script>
 
 <div class="space-y-6">

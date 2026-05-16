@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -10,7 +9,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { createBand, acceptInvite, declineInvite } from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	const pending = $derived(data.pending);
 	const active = $derived(data.active);

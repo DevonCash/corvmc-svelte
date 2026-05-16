@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -10,7 +9,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	type Reservation = (typeof data.reservations)[number];
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { LayoutData } from './$types';
 	import {
 		IconLayoutDashboard,
 		IconUsersGroup,
@@ -11,7 +10,7 @@
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 
-	let { data, children }: { data: LayoutData; children: any } = $props();
+	let { data, children }: { data: any; children: any } = $props();
 
 	const base = $derived(`/band/${data.band.slug}`);
 	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');

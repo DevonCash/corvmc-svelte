@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -11,7 +10,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	const evt = $derived(data.event);
 

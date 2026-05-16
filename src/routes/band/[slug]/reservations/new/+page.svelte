@@ -7,7 +7,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	const band = $derived(data.band);
 

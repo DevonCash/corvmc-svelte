@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -7,7 +6,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	type Series = (typeof data.series)[number];
 

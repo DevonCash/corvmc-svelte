@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { LayoutServerData } from './$types';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
@@ -18,7 +17,7 @@
 		IconTool
 	} from '@tabler/icons-svelte';
 
-	let { data, children }: { data: LayoutServerData; children: any } = $props();
+	let { data, children }: { data: any; children: any } = $props();
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },

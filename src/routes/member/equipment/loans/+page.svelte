@@ -1,12 +1,11 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	let activeTab = $state<'active' | 'past'>('active');
 </script>

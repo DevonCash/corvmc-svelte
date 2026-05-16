@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 
 	const members = $derived(data.members);
 	const bands = $derived(data.bands);

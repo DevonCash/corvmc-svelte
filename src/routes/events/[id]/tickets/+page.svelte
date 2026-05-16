@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import { enhance } from '$app/forms';
 
-	let { data, form }: { data: PageData; form: any } = $props();
+	let { data, form }: { data: any; form: any } = $props();
 
 	let quantity = $state(1);
 	let attendeeName = $state('');

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
@@ -7,7 +6,7 @@
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
 	const freeHours = $derived(data.credits.free_hours ?? 0);

@@ -1,7 +1,6 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 
 	let email = $state('');
 	let name = $state('');

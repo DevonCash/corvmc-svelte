@@ -1,12 +1,11 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
 	import { default as DataTable, type Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: any } = $props();
 	let showCreateModal = $state(false);
 
 	type Event = (typeof data.events)[number];

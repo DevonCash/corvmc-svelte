@@ -1,8 +1,7 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import { formatCents } from '$lib/utils/format';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-US', {

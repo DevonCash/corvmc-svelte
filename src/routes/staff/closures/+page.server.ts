@@ -1,24 +1,8 @@
 import { fail } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
+import type { Actions } from './$types';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { eq, desc, gt } from 'drizzle-orm';
-
-export const load: PageServerLoad = async () => {
-	const closures = await db
-		.select()
-		.from(closure)
-		.orderBy(desc(closure.startsAt));
-
-	return {
-		closures: closures.map((c) => ({
-			id: c.id,
-			reason: c.reason,
-			startsAt: c.startsAt.toISOString(),
-			endsAt: c.endsAt.toISOString()
-		}))
-	};
-};
+import { eq } from 'drizzle-orm';
 
 export const actions: Actions = {
 	create: async ({ request }) => {

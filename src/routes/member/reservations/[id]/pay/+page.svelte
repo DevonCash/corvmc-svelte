@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);

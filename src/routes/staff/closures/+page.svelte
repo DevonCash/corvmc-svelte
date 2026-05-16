@@ -3,7 +3,7 @@
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	const closures = $derived(data.closures);
 

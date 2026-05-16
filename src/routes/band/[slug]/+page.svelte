@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: any } = $props();
 
 	const band = $derived(data.band);
 	const upcoming = $derived(data.upcoming);
