@@ -455,6 +455,7 @@ p {
   position: relative;
   display: block;
   width: 100%;
+  max-width: 220px;
   cursor: pointer;
   --vinyl-label: var(--cmc-orange);
 }

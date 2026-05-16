@@ -88,7 +88,7 @@
 			{#if bands.length === 0}
 				<EmptyState message="No public band profiles yet." />
 			{:else}
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
 					{#each bands as b, i (b.id)}
 						<a href="/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
 							<div class="vinyl-card__sleeve-wrap">
