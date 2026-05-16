@@ -1,7 +1,7 @@
 <script lang="ts">
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import speakerLogo from '$lib/assets/cmc-speaker.png';
+	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import type { DirectoryResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryResponse } = $props();
