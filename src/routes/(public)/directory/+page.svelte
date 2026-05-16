@@ -2,6 +2,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
+	import speakerMono from '$lib/assets/cmc-speaker-mono.svg';
 	import type { DirectoryResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryResponse } = $props();
@@ -127,7 +128,7 @@
 												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
 											</text>
 										</svg>
-										<img class="vinyl-card__logo" src={speakerLogo} alt="" />
+										<img class="vinyl-card__logo" src={speakerMono} alt="" />
 									</div>
 								</div>
 								<div class="vinyl-card__sleeve">
