@@ -698,18 +698,18 @@ p {
 .id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; justify-content: center; flex: 1; }
 .id-card__name {
   font-weight: 700;
-  font-size: 5cqi;
+  font-size: 5.8cqi;
   line-height: 1.15;
   color: var(--cmc-navy);
 }
 .id-card__pronouns {
   font-weight: 400;
-  font-size: 2.8cqi;
+  font-size: 3.2cqi;
   color: var(--fg-3);
   margin-left: 0.5cqi;
 }
 .id-card__role {
-  font-size: 3.4cqi;
+  font-size: 3.8cqi;
   color: var(--fg-2);
 }
 .id-card__badges {
@@ -720,7 +720,7 @@ p {
 }
 .id-card__seeking {
   font-weight: 600;
-  font-size: 2.4cqi;
+  font-size: 2.8cqi;
   letter-spacing: 0.04em;
   color: var(--cmc-orange);
   margin-top: 0.5cqi;
@@ -730,7 +730,7 @@ p {
 .id-tag {
   display: inline-block;
   font-weight: 700;
-  font-size: 2.5cqi;
+  font-size: 2.9cqi;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -750,7 +750,7 @@ p {
 }
 .id-card__bands::before {
   content: "▸";
-  font-size: 2.2cqi;
+  font-size: 2.6cqi;
   color: rgba(90, 61, 43, 0.35);
   margin-right: -0.5cqi;
 }
@@ -762,7 +762,7 @@ p {
   gap: 3cqi;
 }
 .id-card__since {
-  font-size: 2.2cqi;
+  font-size: 2.6cqi;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
