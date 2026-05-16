@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
@@ -18,11 +19,10 @@
 	let activeTab = $state<'upcoming' | 'past'>('upcoming');
 </script>
 
-<div class="max-w-2xl space-y-6">
-	<PageHeader title="Reservations" subtitle={band.name}>
+<PageHeader title="Reservations" subtitle={band.name}>
 		<a href="reservations/new" class="btn btn-sm btn-primary">Book a Session</a>
 	</PageHeader>
-
+<PageContent width="2xl">
 	<TabBar
 		tabs={[
 			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
@@ -111,4 +111,4 @@
 			</div>
 		{/if}
 	{/if}
-</div>
+</PageContent>

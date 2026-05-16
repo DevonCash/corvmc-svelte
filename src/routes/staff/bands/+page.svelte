@@ -5,6 +5,7 @@
 	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -19,8 +20,7 @@
 	let selectedOwner = $state<{ id: string; name: string; email: string } | null>(null);
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Bands">
+<PageHeader title="Bands">
 		<Action
 			action={async () => {
 				const result = await createBand({
@@ -60,7 +60,7 @@
 			{/snippet}
 		</Action>
 	</PageHeader>
-
+<PageContent>
 	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} clearHref="/staff/bands" empty="No bands found">
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
@@ -77,4 +77,4 @@
 		<Column key="memberCount" header="Members" sortable />
 		<Column key="createdAt" header="Created" sortable type="date" />
 	</DataTable>
-</div>
+</PageContent>

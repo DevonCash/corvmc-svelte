@@ -3,6 +3,7 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { loanStatuses } from '$lib/types/equipment';
@@ -11,8 +12,8 @@
 	let { data }: { data: StaffEquipmentLoansResponse } = $props();
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Equipment Loans" backHref="/staff/equipment" />
+<PageHeader title="Equipment Loans" backHref="/staff/equipment" />
+<PageContent>
 
 	<DataTable data={data.loans} rowHref={(l) => `/staff/equipment/loans/${l.id}`} clearHref="/staff/equipment/loans" empty="No loans found">
 		{#snippet toolbar()}
@@ -46,4 +47,4 @@
 			{/snippet}
 		</Column>
 	</DataTable>
-</div>
+</PageContent>

@@ -5,6 +5,8 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { cancelReservation, cancelSeries } from './data.remote';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import type { MemberReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberReservationsResponse } = $props();
@@ -24,11 +26,10 @@
 	};
 </script>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">My Reservations</h1>
-		<a href="/member/reservations/new" class="btn btn-primary">Book a Session</a>
-	</div>
+<PageHeader title="My Reservations">
+	<a href="/member/reservations/new" class="btn btn-primary">Book a Session</a>
+</PageHeader>
+<PageContent>
 
 	<TabBar
 		tabs={[
@@ -129,4 +130,4 @@
 			{/snippet}
 		</DataTable>
 	{/if}
-</div>
+</PageContent>

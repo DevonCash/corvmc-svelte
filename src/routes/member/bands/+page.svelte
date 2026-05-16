@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -18,13 +19,12 @@
 	let showCreateModal = $state(false);
 </script>
 
-<div class="max-w-2xl space-y-6">
-	<PageHeader title="My Bands" subtitle="Member">
+<PageHeader title="My Bands" subtitle="Member">
 		<button class="btn btn-primary btn-sm" onclick={() => (showCreateModal = true)}>
 			Create Band
 		</button>
 	</PageHeader>
-
+<PageContent width="2xl">
 	<!-- Pending invitations -->
 	{#if pending.length > 0}
 		<section>
@@ -94,7 +94,7 @@
 			</div>
 		{/if}
 	</section>
-</div>
+</PageContent>
 
 <!-- Create Band Modal -->
 <Modal title="Create Band" bind:open={showCreateModal}>

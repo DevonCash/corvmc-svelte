@@ -3,6 +3,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -14,8 +15,8 @@
 	let { data }: { data: StaffRecurringResponse } = $props();
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Recurring Reservations" />
+<PageHeader title="Recurring Reservations" />
+<PageContent>
 
 	<div class="flex items-center gap-2">
 		<a
@@ -93,4 +94,4 @@
 			{/snippet}
 		</Column>
 	</DataTable>
-</div>
+</PageContent>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { fullDate, formatTime } from '$lib/utils/format';
@@ -19,8 +20,8 @@
 	);
 </script>
 
-<div class="max-w-2xl mx-auto space-y-6">
-	<PageHeader title="My Tickets" />
+<PageHeader title="My Tickets" />
+<PageContent width="2xl">
 
 	{#if data.tickets.length === 0}
 		<EmptyState
@@ -74,4 +75,4 @@
 			</div>
 		{/if}
 	{/if}
-</div>
+</PageContent>

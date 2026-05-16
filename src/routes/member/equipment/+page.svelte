@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import Modal from '$lib/components/shared/Modal.svelte';
@@ -37,8 +38,7 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Equipment Catalog">
+<PageHeader title="Equipment Catalog">
 		<div class="flex items-center gap-3">
 			{#if data.creditBalance > 0}
 				<span class="badge badge-info">{data.creditBalance} credits</span>
@@ -46,7 +46,7 @@
 			<a href="/member/equipment/loans" class="btn btn-sm btn-ghost">My Loans</a>
 		</div>
 	</PageHeader>
-
+<PageContent>
 	<DataTable
 		data={data.equipment}
 		groupBy={(eq) => eq.categoryName}
@@ -101,7 +101,7 @@
 			Describe Your Request
 		</button>
 	</div>
-</div>
+</PageContent>
 
 <Modal bind:open={showRequestModal} title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`} maxWidth="max-w-md">
 	<Form

@@ -2,6 +2,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import type { DirectoryBandResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryBandResponse } = $props();
@@ -12,9 +14,8 @@
 	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);
 </script>
 
-<div class="max-w-2xl mx-auto space-y-6 p-6">
-	<a href="/member/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
-
+<PageHeader title={band.name} backHref="/member/directory" />
+<PageContent width="2xl">
 	<!-- Band header -->
 	<div class="flex items-center gap-4">
 		<div class="avatar placeholder">
@@ -27,7 +28,6 @@
 			</div>
 		</div>
 		<div>
-			<h1 class="text-2xl font-bold">{band.name}</h1>
 			{#if band.tagline}
 				<p class="opacity-60">{band.tagline}</p>
 			{:else}
@@ -115,4 +115,4 @@
 			{/each}
 		</div>
 	</section>
-</div>
+</PageContent>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -14,8 +15,8 @@
 	let showDeleteModal = $state(false);
 </script>
 
-<div class="max-w-md space-y-6">
-	<PageHeader title="Settings" subtitle={band.name} />
+<PageHeader title="Settings" subtitle={band.name} />
+<PageContent width="md">
 
 	<section class="space-y-4">
 		<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
@@ -33,7 +34,7 @@
 			</div>
 		</div>
 	</section>
-</div>
+</PageContent>
 
 <Modal title="Delete Band" bind:open={showDeleteModal}>
 	<Form

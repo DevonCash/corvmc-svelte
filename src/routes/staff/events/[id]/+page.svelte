@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -180,8 +181,7 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto space-y-6">
-	<PageHeader title={evt.title} backHref="/staff/events">
+<PageHeader title={evt.title} backHref="/staff/events">
 		<div class="flex items-center gap-2">
 			{#if evt.ticketingEnabled}
 				<a href="/staff/events/{evt.id}/check-in" class="btn btn-sm btn-ghost">Check-in</a>
@@ -213,7 +213,7 @@
 			{/if}
 		</div>
 	</PageHeader>
-
+<PageContent width="3xl">
 	<!-- Status -->
 	<div class="flex items-center gap-2">
 		<StatusBadge status={evt.status} />
@@ -490,4 +490,4 @@
 		<p>{data.creator.name} ({data.creator.email})</p>
 		<p class="text-sm opacity-50">Created {fullDate(evt.createdAt)}</p>
 	</InfoCard>
-</div>
+</PageContent>

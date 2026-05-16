@@ -13,6 +13,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -41,7 +42,7 @@
 				{/snippet}
 			</SubmitButton>
 		</PageHeader>
-
+		<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Equipment Info">
 				<div class="grid grid-cols-1 gap-x-2">
@@ -119,9 +120,10 @@
 				</div>
 			</InfoCard>
 		</div>
+		</PageContent>
 	</Form>
 
-	<!-- Loan History -->
+	<PageContent width="3xl">
 	<InfoCard title="Loan History">
 		<DataTable data={loanHistory} rowHref={(loan) => `/staff/equipment/loans/${loan.id}`} empty="No loan history">
 			<Column key="userName" header="Member" stopClick>
@@ -154,5 +156,4 @@
 			</Column>
 		</DataTable>
 	</InfoCard>
-
-
+	</PageContent>

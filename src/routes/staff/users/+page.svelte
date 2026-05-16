@@ -3,6 +3,7 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { IconUserCog, IconUserShield, IconUserHeart, IconDots, IconEye, IconCopy, IconUserUp } from '@tabler/icons-svelte';
 	import type { StaffUsersResponse } from '$lib/types/api';
 
@@ -28,11 +29,10 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Users">
+<PageHeader title="Users">
 		<span class="text-sm opacity-60">{data.pagination.total} total</span>
 	</PageHeader>
-
+<PageContent>
 	<DataTable data={data.users} rowHref={(u) => `/staff/users/${u.id}`} clearHref="/staff/users" empty="No users found">
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.search} placeholder="Search by name or email..." class="w-full max-w-sm" />
@@ -81,4 +81,4 @@
 			{/snippet}
 		</Column>
 	</DataTable>
-</div>
+</PageContent>

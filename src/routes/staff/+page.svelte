@@ -3,6 +3,7 @@
 	import StatCard from '$lib/components/shared/StatCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import type { StaffDashboardResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffDashboardResponse } = $props();
@@ -21,8 +22,8 @@
 	];
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Dashboard" />
+<PageHeader title="Dashboard" />
+<PageContent>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		<StatCard title="Total Members" value={data.stats.totalUsers} />
@@ -42,4 +43,4 @@
 			</tr>
 		{/snippet}
 	</DataTable>
-</div>
+</PageContent>

@@ -5,6 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 	import type { BandLayoutResponse } from '$lib/types/api';
 
@@ -81,8 +82,8 @@
 	let initial = $derived({ startTime: '', endTime: '', notes: '' });
 </script>
 
-	<div class="max-w-md space-y-6">
-		<PageHeader title="Book a Session" subtitle={band.name} />
+	<PageHeader title="Book a Session" subtitle={band.name} />
+	<PageContent width="md">
 
 		<!-- Date picker is a navigation control, lives outside the Form -->
 		<div class="form-control">
@@ -193,6 +194,6 @@
 				/>
 			</div>
 		</Form>
-	</div>
+	</PageContent>
 
 

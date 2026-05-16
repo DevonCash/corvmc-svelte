@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -60,15 +61,14 @@
 	}
 </script>
 
-<div class="max-w-2xl space-y-6">
-	<PageHeader title="Members" subtitle={data.band.name}>
+<PageHeader title="Members" subtitle={data.band.name}>
 		{#if isOwner || isAdmin}
 			<button class="btn btn-sm btn-primary" onclick={() => (showInviteModal = true)}>
 				Invite Member
 			</button>
 		{/if}
 	</PageHeader>
-
+<PageContent width="2xl">
 	<!-- Active members -->
 	<section>
 		<h2 class="mb-3 text-lg font-semibold">Active Members ({data.active.length})</h2>
@@ -168,7 +168,7 @@
 			</button>
 		</div>
 	{/if}
-</div>
+</PageContent>
 
 <!-- Invite Member Modal -->
 <Modal title="Invite Member" bind:open={showInviteModal}>

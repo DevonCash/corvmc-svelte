@@ -3,6 +3,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
 	import ResolveModal from './ResolveModal.svelte';
@@ -46,8 +47,7 @@
 	];
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Reservations">
+<PageHeader title="Reservations">
 		<div class="flex gap-2">
 			<button
 				class="btn btn-sm {data.counts.unresolved > 0 ? 'btn-warning' : 'btn-ghost'}"
@@ -61,7 +61,7 @@
 			<CreateReservation />
 		</div>
 	</PageHeader>
-
+<PageContent>
 	<TabBar
 		tabs={[
 			{
@@ -117,7 +117,7 @@
 			</tr>
 		{/snippet}
 	</DataTable>
-</div>
+</PageContent>
 
 <ResolveModal
 	bind:open={resolveOpen}

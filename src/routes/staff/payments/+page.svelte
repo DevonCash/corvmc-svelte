@@ -4,6 +4,7 @@
 	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
@@ -26,8 +27,8 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Payments" />
+<PageHeader title="Payments" />
+<PageContent>
 
 	<DataTable data={data.payments} clearHref="/staff/payments" empty="No payment records found">
 		{#snippet toolbar()}
@@ -67,4 +68,4 @@
 	</DataTable>
 
 	<Pagination page={data.page} totalPages={data.totalPages} buildHref={buildPageHref} />
-</div>
+</PageContent>

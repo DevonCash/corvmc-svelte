@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { getAudienceOptions, getPreview, createDraft, createAndSend, createAndSchedule } from './data.remote';
 
 	let subject = $state('');
@@ -90,7 +91,7 @@
 </script>
 
 	<PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
-
+<PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 		<!-- Editor pane -->
 		<div class="space-y-4">
@@ -208,5 +209,4 @@
 			</div>
 		</div>
 	</div>
-
-
+</PageContent>

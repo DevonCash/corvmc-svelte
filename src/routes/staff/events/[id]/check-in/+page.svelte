@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -37,8 +38,8 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto space-y-6">
-	<PageHeader title="Check-in: {data.event.title}" backHref="/staff/events/{data.event.id}" />
+<PageHeader title="Check-in: {data.event.title}" backHref="/staff/events/{data.event.id}" />
+<PageContent width="3xl">
 
 	<!-- Stats -->
 	<div class="flex gap-6">
@@ -97,4 +98,4 @@
 			</p>
 		{/if}
 	</div>
-</div>
+</PageContent>
