@@ -458,7 +458,7 @@ p {
   cursor: pointer;
   --vinyl-label: var(--cmc-orange);
 }
-.vinyl-card:hover { z-index: 2; }
+.vinyl-card:hover { z-index: 10; }
 
 .vinyl-card__disc {
   position: absolute;
