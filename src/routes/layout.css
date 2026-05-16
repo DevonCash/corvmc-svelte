@@ -480,6 +480,7 @@ p {
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
   z-index: 1;
+  pointer-events: none;
 }
 .vinyl-card:hover .vinyl-card__disc {
   transform: translate(10%, -50%) rotate(60deg);
