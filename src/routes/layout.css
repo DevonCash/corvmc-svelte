@@ -991,10 +991,28 @@ p {
   transition: transform 350ms cubic-bezier(0.25, 0.7, 0.3, 1);
   transform-origin: right center;
 }
-.ticket:hover .ticket__stub {
+.ticket:hover .ticket__stub,
+.program-block:has(.program-block__cta:hover) .ticket__stub {
   transform: translateX(36px) rotate(7deg);
 }
-.ticket:hover .ticket__perf { opacity: 0; }
+.ticket:hover .ticket__perf,
+.program-block:has(.program-block__cta:hover) .ticket__perf { opacity: 0; }
+
+/* Keyfob swing on CTA hover */
+.keyfob {
+  transition: transform 400ms cubic-bezier(0.25, 0.7, 0.3, 1);
+}
+.program-block:has(.program-block__cta:hover) .keyfob {
+  transform: rotate(4deg);
+}
+
+/* Setlist wiggle on CTA hover */
+.setlist {
+  transition: transform 350ms cubic-bezier(0.25, 0.7, 0.3, 1);
+}
+.program-block:has(.program-block__cta:hover) .setlist {
+  transform: rotate(0.8deg) translateY(-3px);
+}
 .ticket__admit {
   font-weight: 700;
   font-size: 11px;

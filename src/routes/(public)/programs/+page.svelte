@@ -20,7 +20,7 @@
 </section>
 
 <!-- Practice Space -->
-<section class="section-tint-success py-16 px-6">
+<section class="section-tint-success py-16 px-6 program-block">
 	<div class="max-w-5xl mx-auto">
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 			<div>
@@ -37,21 +37,12 @@
 					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">Practice space access requires a free CMC membership.</p>
 				</div>
 			</div>
-			<div class="flex flex-col items-center gap-6">
-				<!-- Amp + Key Fob decorative cluster -->
-				<div class="flex items-end gap-5">
-					<div class="amp">
-						<div class="amp__grille">
-							<h4 class="amp__title">Gear Library</h4>
-							<p class="amp__copy">40+ instruments available. Two-week loans for members.</p>
-						</div>
-					</div>
-					<div class="keyfob">
-						<div class="keyfob__num">03</div>
-						<div class="keyfob__label">Practice Room</div>
-						<div class="keyfob__stripe"></div>
-						<div class="keyfob__hours">10a — 10p</div>
-					</div>
+			<div class="flex flex-col items-center justify-center">
+				<div class="keyfob">
+					<div class="keyfob__num">03</div>
+					<div class="keyfob__label">Practice Room</div>
+					<div class="keyfob__stripe"></div>
+					<div class="keyfob__hours">10a — 10p</div>
 				</div>
 			</div>
 		</div>
@@ -61,17 +52,17 @@
 				<div class="text-4xl font-bold" style="color: var(--cmc-navy)">$15/hour</div>
 				<div class="text-sm mt-1" style="color: var(--fg-2)">All equipment included</div>
 			</div>
-			<div class="rounded-lg p-6 text-center" style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)">
+			<a href="/login?redirect=/member" class="program-block__cta rounded-lg p-6 text-center" style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)">
 				<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">Sustaining Members</div>
 				<div class="text-4xl font-bold" style="color: var(--cmc-orange)">up to 10 Free Hours</div>
 				<div class="text-sm mt-1" style="color: var(--fg-2)">then $15/hour</div>
-			</div>
+			</a>
 		</div>
 	</div>
 </section>
 
 <!-- Shows & Performances -->
-<section class="section-tint-primary py-16 px-6">
+<section class="section-tint-primary py-16 px-6 program-block">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
 			<span class="sticker-badge sticker-badge--orange" style="margin-bottom: 12px">Shows</span>
@@ -90,12 +81,11 @@
 					From intimate acoustic sets to full band productions, we create spaces where musicians can grow, collaborate, and celebrate the power of live music.
 				</p>
 				<div class="flex flex-wrap gap-3">
-					<a href="/events" class="btn btn-primary retro-btn">View Upcoming Shows</a>
+					<a href="/events" class="program-block__cta btn btn-primary retro-btn">View Upcoming Shows</a>
 					<a href="/contact" class="btn btn-outline retro-btn" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Apply to Perform</a>
 				</div>
 			</div>
-			<!-- Ticket + Cassette decorative cluster -->
-			<div class="flex flex-col items-center gap-6">
+			<div class="flex flex-col items-center justify-center">
 				<div class="ticket">
 					<div class="ticket__main">
 						<span class="ticket__eyebrow">Corvallis Music Collective</span>
@@ -110,25 +100,13 @@
 					<div class="ticket__perf"></div>
 					<div class="ticket__stub"><span class="ticket__admit">Admit One</span></div>
 				</div>
-				<div class="cassette">
-					<div class="cassette__label">
-						<span class="cassette__side">Side A</span>
-						<h4 class="cassette__band">your band</h4>
-						<p class="cassette__title">3-track demo &middot; submit yours</p>
-						<span class="cassette__stamp">Demo</span>
-					</div>
-					<div class="cassette__deck">
-						<div class="cassette__spool"></div>
-						<div class="cassette__spool"></div>
-					</div>
-				</div>
 			</div>
 		</div>
 	</div>
 </section>
 
 <!-- Meetups & Clubs -->
-<section class="section-tint-warning py-16 px-6">
+<section class="section-tint-warning py-16 px-6 program-block">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
 			<span class="sticker-badge" style="margin-bottom: 12px">Clubs</span>
@@ -138,7 +116,6 @@
 			</p>
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-			<!-- Setlist decorative element -->
 			<div class="flex justify-center">
 				<div class="setlist">
 					<div class="setlist__header">This Week<small>Recurring schedule</small></div>
@@ -191,7 +168,7 @@
 					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
 						Come chat with — or just listen to — other local musicians about gear, gigs, and everything music-related.
 					</p>
-					<span class="sticker-badge sticker-badge--orange sticker-badge--sm">Last Thursday &middot; 6:30 PM</span>
+					<a href="/events" class="program-block__cta sticker-badge sticker-badge--orange sticker-badge--sm">Last Thursday &middot; 6:30 PM</a>
 				</div>
 			</div>
 		</div>
