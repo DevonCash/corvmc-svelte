@@ -4,6 +4,7 @@
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
 	import type { MemberEquipmentLoansResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberEquipmentLoansResponse } = $props();
@@ -73,21 +74,31 @@
 
 					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
 						{#if loan.quantity > 1}
-							<dt class="opacity-60">Quantity</dt>
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Quantity">
+								<IconHash size={14} /><span class="hidden sm:inline">Qty</span>
+							</dt>
 							<dd>{loan.quantity}</dd>
 						{/if}
-						<dt class="opacity-60">Requested pickup</dt>
+						<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Requested pickup">
+							<IconCalendar size={14} /><span class="hidden sm:inline">Pickup</span>
+						</dt>
 						<dd>{formatDate(loan.requestedPickupDate)}</dd>
 						{#if loan.scheduledPickupDate}
-							<dt class="opacity-60">Confirmed pickup</dt>
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Confirmed pickup">
+								<IconCalendarCheck size={14} /><span class="hidden sm:inline">Confirmed</span>
+							</dt>
 							<dd>{formatDate(loan.scheduledPickupDate)}</dd>
 						{/if}
 						{#if loan.dueDate}
-							<dt class="opacity-60">Due</dt>
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Due date">
+								<IconClock size={14} /><span class="hidden sm:inline">Due</span>
+							</dt>
 							<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</dd>
 						{/if}
 						{#if loan.dailyRateCents != null}
-							<dt class="opacity-60">Rate</dt>
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Daily rate">
+								<IconCoin size={14} /><span class="hidden sm:inline">Rate</span>
+							</dt>
 							<dd>{formatCents(loan.dailyRateCents)}/day</dd>
 						{/if}
 					</dl>

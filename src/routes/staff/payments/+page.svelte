@@ -6,6 +6,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import type { StaffPaymentsResponse } from '$lib/types/api';
 
@@ -41,7 +42,11 @@
 		<Column key="paidAt" header="Date" sortable type="datetime" />
 		<MemberColumn nameKey="userName" emailKey="userEmail" userIdKey="userId" />
 		<Column key="amountCents" header="Amount" sortable type="currency" />
-		<Column key="paymentMethod" header="Method" type="badge" />
+		<Column key="paymentMethod" header="Method" shrink>
+			{#snippet cell(_, p: Payment)}
+				<PaymentMethodIcon method={p.paymentMethod} />
+			{/snippet}
+		</Column>
 		<Column key="status" header="Status">
 			{#snippet cell(_, p: Payment)}
 				<StatusBadge status={p.status} />

@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { IconMail, IconBell } from '@tabler/icons-svelte';
 	import {
 		updateProfile,
 		changePassword,
@@ -141,8 +142,8 @@
 					<thead>
 						<tr>
 							<th>Notification</th>
-							<th class="text-center w-20">Email</th>
-							<th class="text-center w-20">In-app</th>
+							<th class="text-center w-20"><span class="tooltip" data-tip="Email"><IconMail size={16} /></span></th>
+							<th class="text-center w-20"><span class="tooltip" data-tip="In-app"><IconBell size={16} /></span></th>
 						</tr>
 					</thead>
 					<tbody>

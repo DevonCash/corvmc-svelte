@@ -6,6 +6,7 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
 	import { cancelSeries } from './data.remote';
 	import type { StaffRecurringResponse } from '$lib/types/api';
@@ -51,7 +52,10 @@
 		</Column>
 		<Column key="frequencyLabel" header="Schedule">
 			{#snippet cell(_, s)}
-				<div>{formatScheduleLabel(s.frequencyLabel, s.startsAt)}</div>
+				<div class="flex items-center gap-1">
+					<IconRepeat size={14} class="opacity-60 shrink-0" />
+					{formatScheduleLabel(s.frequencyLabel, s.startsAt)}
+				</div>
 				<div class="text-sm opacity-60">
 					{formatTimeRange(s.startsAt, s.endsAt)}
 					<span class="mx-1">·</span>

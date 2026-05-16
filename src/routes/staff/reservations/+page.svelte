@@ -4,10 +4,12 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import { IconCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import type { StaffReservationsResponse } from '$lib/types/api';
 
@@ -17,18 +19,18 @@
 
 	let resolveOpen = $state(false);
 
-	function paymentStatus(r: Reservation): { label: string; class: string } {
-		if (r.status === 'no_show') return { label: 'No-show', class: 'badge-error' };
+	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
+		if (r.status === 'no_show') return { label: 'No-show', color: 'text-error', icon: IconUserX };
 		if (r.status === 'cancelled') {
 			return r.stripePaymentRecordId
-				? { label: 'Refunded', class: 'badge-error' }
-				: { label: 'Cancelled', class: 'badge-ghost' };
+				? { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp }
+				: { label: 'Cancelled', color: 'opacity-40', icon: IconCircleX };
 		}
-		if (r.status === 'scheduled') return { label: 'Unpaid', class: 'badge-warning' };
+		if (r.status === 'scheduled') return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
 		// confirmed or completed
 		return r.stripePaymentRecordId
-			? { label: 'Paid', class: 'badge-success' }
-			: { label: 'Comped', class: 'badge-info' };
+			? { label: 'Paid', color: 'text-success', icon: IconCheck }
+			: { label: 'Comped', color: 'text-info', icon: IconGift };
 	}
 
 	function dayLabel(r: Reservation): string {
@@ -102,11 +104,15 @@
 					{:else}
 						<div>{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}</div>
 						{@const ps = paymentStatus(r)}
-						<span class="badge badge-sm {ps.class}">{ps.label}</span>
+						<span class="tooltip" data-tip={ps.label}>
+							<ps.icon size={16} class={ps.color} />
+						</span>
 					{/if}
 				</td>
 				<td>
-					<span class="badge badge-outline badge-sm">{r.bookerType}</span>
+					<span class="tooltip" data-tip={r.bookerType}>
+						<BookerTypeIcon type={r.bookerType} size={16} />
+					</span>
 				</td>
 			</tr>
 		{/snippet}
