@@ -101,15 +101,15 @@
 										{initials(b.name)}
 									{/if}
 								</div>
-								<div class="vinyl-card__sleeve-info">
-									<div class="vinyl-card__band">{b.name}</div>
-									<div class="vinyl-card__meta">
-										{#if b.tagline}
-											{b.tagline}
-										{:else}
-											{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
-										{/if}
-									</div>
+							</div>
+							<div class="vinyl-card__caption">
+								<div class="vinyl-card__band">{b.name}</div>
+								<div class="vinyl-card__meta">
+									{#if b.tagline}
+										{b.tagline}
+									{:else}
+										{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
+									{/if}
 								</div>
 							</div>
 						</a>
