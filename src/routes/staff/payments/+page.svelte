@@ -6,8 +6,9 @@
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
+	import type { StaffPaymentsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffPaymentsResponse } = $props();
 
 	type Payment = (typeof data.payments)[number];
 

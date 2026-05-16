@@ -68,11 +68,13 @@ beforeEach(() => {
 
 describe('band layout load', () => {
 	it('resolves band by slug and returns band data with user role', async () => {
-		const { load } = await import('./[slug]/+layout.server');
-		const result = (await load({
+		const { GET } = await import('../api/bands/[slug]/layout/+server');
+		const response = await GET({
 			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser }
-		} as any)) as any;
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.band.id).toBe('band-1');
 		expect(result.band.name).toBe('The Velvet Underground');
@@ -83,12 +85,13 @@ describe('band layout load', () => {
 	it('throws 404 for unknown slug', async () => {
 		getBySlugResult = null;
 
-		const { load } = await import('./[slug]/+layout.server');
+		const { GET } = await import('../api/bands/[slug]/layout/+server');
 
 		await expect(
-			load({
+			GET({
 				params: { slug: 'nonexistent' },
-				locals: { user: testUser }
+				locals: { user: testUser },
+				url: new URL('http://localhost')
 			} as any)
 		).rejects.toThrow();
 	});
@@ -97,12 +100,13 @@ describe('band layout load', () => {
 		getUserRoleResult = null;
 		hasAnyRoleResult = false;
 
-		const { load } = await import('./[slug]/+layout.server');
+		const { GET } = await import('../api/bands/[slug]/layout/+server');
 
 		await expect(
-			load({
+			GET({
 				params: { slug: 'the-velvet-underground' },
-				locals: { user: testUser }
+				locals: { user: testUser },
+				url: new URL('http://localhost')
 			} as any)
 		).rejects.toThrow();
 	});
@@ -111,11 +115,13 @@ describe('band layout load', () => {
 		getUserRoleResult = null;
 		hasAnyRoleResult = true;
 
-		const { load } = await import('./[slug]/+layout.server');
-		const result = (await load({
+		const { GET } = await import('../api/bands/[slug]/layout/+server');
+		const response = await GET({
 			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser }
-		} as any)) as any;
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.band.id).toBe('band-1');
 		expect(result.userRole).toBe('staff');
@@ -123,12 +129,13 @@ describe('band layout load', () => {
 	});
 
 	it('throws 401 when not authenticated', async () => {
-		const { load } = await import('./[slug]/+layout.server');
+		const { GET } = await import('../api/bands/[slug]/layout/+server');
 
 		await expect(
-			load({
+			GET({
 				params: { slug: 'the-velvet-underground' },
-				locals: {}
+				locals: {},
+				url: new URL('http://localhost')
 			} as any)
 		).rejects.toThrow();
 	});
@@ -154,12 +161,13 @@ describe('band dashboard load', () => {
 			}
 		];
 
-		const { load } = await import('./[slug]/+page.server');
-		const result = (await load({
-			parent: async () => ({
-				band: { id: 'band-1', slug: 'the-velvet-underground' }
-			})
-		} as any)) as any;
+		const { GET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
+		const response = await GET({
+			params: { slug: 'the-velvet-underground' },
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.upcoming).toHaveLength(1);
 		expect(result.upcoming[0].status).toBe('confirmed');
@@ -169,12 +177,13 @@ describe('band dashboard load', () => {
 	it('returns empty array when no upcoming reservations', async () => {
 		selectResult = [];
 
-		const { load } = await import('./[slug]/+page.server');
-		const result = (await load({
-			parent: async () => ({
-				band: { id: 'band-1', slug: 'the-velvet-underground' }
-			})
-		} as any)) as any;
+		const { GET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
+		const response = await GET({
+			params: { slug: 'the-velvet-underground' },
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.upcoming).toHaveLength(0);
 	});

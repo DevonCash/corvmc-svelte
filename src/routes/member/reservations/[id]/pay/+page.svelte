@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
+	import type { ReservationPayResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: ReservationPayResponse } = $props();
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);

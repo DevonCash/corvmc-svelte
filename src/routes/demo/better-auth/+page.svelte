@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { AuthMeResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: AuthMeResponse } = $props();
 </script>
 
 <h1>Hi, {data.user.name}!</h1>

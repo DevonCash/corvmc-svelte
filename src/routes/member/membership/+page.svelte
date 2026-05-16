@@ -10,8 +10,9 @@
 		CreditBalanceCard,
 		CancelledBanner
 	} from '$lib/components/member/membership';
+	import type { MembershipResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MembershipResponse } = $props();
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);

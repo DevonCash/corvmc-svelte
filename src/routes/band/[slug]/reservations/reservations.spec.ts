@@ -213,7 +213,7 @@ describe('reservations page load', () => {
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser }
 		} as any);
-		const result = await response.json();
+		const result = await response.json() as any;
 
 		expect(result.upcoming).toBeDefined();
 		expect(result.past).toBeDefined();

@@ -8,8 +8,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation } from './data.remote';
+	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: BandLayoutResponse & BandReservationsResponse } = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);

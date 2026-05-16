@@ -5,8 +5,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateBandModal from './CreateBandModal.svelte';
+	import type { StaffBandsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffBandsResponse } = $props();
 	let showCreateModal = $state(false);
 </script>
 

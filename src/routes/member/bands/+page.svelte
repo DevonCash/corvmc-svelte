@@ -8,8 +8,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { createBand, acceptInvite, declineInvite } from './data.remote';
+	import type { MemberBandsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MemberBandsResponse } = $props();
 
 	const pending = $derived(data.pending);
 	const active = $derived(data.active);

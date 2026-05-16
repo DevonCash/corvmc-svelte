@@ -3,8 +3,9 @@
 	import StatCard from '$lib/components/shared/StatCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import type { StaffDashboardResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffDashboardResponse } = $props();
 
 	type RecentUser = (typeof data.recentUsers)[number];
 

@@ -124,10 +124,12 @@ describe('account page load', () => {
 
 		queryResults = [[user]];
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			locals: { user: { id: 'user-1' } }
-		} as any)) as any;
+		const { GET } = await import('../../api/me/account/+server');
+		const response = await GET({
+			locals: { user: { id: 'user-1' } },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.user.name).toBe('Alice');
 		expect(result.user.email).toBe('alice@example.com');
@@ -136,20 +138,20 @@ describe('account page load', () => {
 	});
 
 	it('throws 401 when not authenticated', async () => {
-		const { load } = await import('./+page.server');
+		const { GET } = await import('../../api/me/account/+server');
 
 		await expect(
-			load({ locals: {} } as any)
+			GET({ locals: {}, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 
 	it('throws 404 when user not found in database', async () => {
 		queryResults = [[]];
 
-		const { load } = await import('./+page.server');
+		const { GET } = await import('../../api/me/account/+server');
 
 		await expect(
-			load({ locals: { user: { id: 'ghost' } } } as any)
+			GET({ locals: { user: { id: 'ghost' } }, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 });

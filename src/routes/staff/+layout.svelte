@@ -16,8 +16,9 @@
 		IconMailbox,
 		IconTool
 	} from '@tabler/icons-svelte';
+	import type { StaffLayoutResponse } from '$lib/types/api';
 
-	let { data, children }: { data: any; children: any } = $props();
+	let { data, children }: { data: StaffLayoutResponse; children: import('svelte').Snippet } = $props();
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },

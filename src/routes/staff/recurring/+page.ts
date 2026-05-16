@@ -1,6 +1,7 @@
 import type { PageLoad } from './$types';
+import type { StaffRecurringResponse } from '$lib/types/api';
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const res = await fetch('/api/staff/recurring' + url.search);
-	return await res.json();
+	return (await res.json()) as StaffRecurringResponse;
 };

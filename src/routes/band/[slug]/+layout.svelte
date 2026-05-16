@@ -9,8 +9,9 @@
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
+	import type { BandLayoutResponse } from '$lib/types/api';
 
-	let { data, children }: { data: any; children: any } = $props();
+	let { data, children }: { data: BandLayoutResponse; children: import('svelte').Snippet } = $props();
 
 	const base = $derived(`/band/${data.band.slug}`);
 	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');
@@ -31,7 +32,7 @@
 
 <AppShell
 	drawerId="band-drawer"
-	user={data.user}
+	user={data.user!}
 	{panels}
 	activePanel={data.band.slug}
 >

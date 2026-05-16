@@ -6,8 +6,9 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatCents } from '$lib/utils/format';
+	import type { MemberEquipmentResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MemberEquipmentResponse } = $props();
 
 	let showRequestModal = $state(false);
 	let selectedEquipmentId = $state<string | undefined>(undefined);

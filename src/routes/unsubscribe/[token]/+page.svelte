@@ -1,6 +1,7 @@
 <script lang="ts">
+	import type { UnsubscribeResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: UnsubscribeResponse } = $props();
 </script>
 
 <div class="max-w-md mx-auto p-6 text-center space-y-4">

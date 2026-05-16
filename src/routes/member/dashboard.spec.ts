@@ -68,10 +68,12 @@ describe('member dashboard load', () => {
 		// select 3: user reservations
 		selectResults.set('userRes', []);
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			locals: { user: testUser }
-		} as any)) as any;
+		const { GET } = await import('../api/me/dashboard/+server');
+		const response = await GET({
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.pendingInviteCount).toBe(2);
 	});
@@ -99,10 +101,12 @@ describe('member dashboard load', () => {
 		// select 4: band reservations
 		selectResults.set('bandRes', [bandRes]);
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			locals: { user: testUser }
-		} as any)) as any;
+		const { GET } = await import('../api/me/dashboard/+server');
+		const response = await GET({
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		const bandReservation = result.weekReservations.find(
 			(r: any) => r.bookerType === 'band'
@@ -116,10 +120,12 @@ describe('member dashboard load', () => {
 		selectResults.set('pendingCount', [{ count: 0 }]);
 		selectResults.set('userRes', []);
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			locals: { user: testUser }
-		} as any)) as any;
+		const { GET } = await import('../api/me/dashboard/+server');
+		const response = await GET({
+			locals: { user: testUser },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.pendingInviteCount).toBe(0);
 	});

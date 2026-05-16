@@ -52,7 +52,7 @@ describe('/staff dashboard load', () => {
 			mockUser({ name: 'Bob' })
 		];
 
-		// The dashboard load runs 5 parallel queries via Promise.all:
+		// The dashboard GET runs 5 parallel queries via Promise.all:
 		// [totalUsers, totalRoles, totalPermissions, newUsersThisMonth, recentUsers]
 		queryResults = [
 			[{ value: 42 }],      // totalUsers count
@@ -62,8 +62,12 @@ describe('/staff dashboard load', () => {
 			recentUsers            // recent users
 		];
 
-		const { load } = await import('./+page.server');
-		const result = (await load({} as any)) as any;
+		const { GET } = await import('../api/staff/dashboard/+server');
+		const response = await GET({
+			locals: { user: mockUser({ id: 'staff-1' }) },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.stats.totalUsers).toBe(42);
 		expect(result.stats.totalRoles).toBe(4);
@@ -84,7 +88,7 @@ describe('/staff/users list load', () => {
 			mockUser({ id: 'u2', name: 'Bob' })
 		];
 
-		// The user list load runs:
+		// The user list GET runs:
 		// 1. total count
 		// 2. paginated users
 		// 3. role rows for those users
@@ -97,10 +101,12 @@ describe('/staff/users list load', () => {
 			]
 		];
 
-		const { load } = await import('./users/+page.server');
-		const result = (await load({
+		const { GET } = await import('../api/staff/users/+server');
+		const response = await GET({
+			locals: { user: mockUser({ id: 'staff-1' }) },
 			url: new URL('http://localhost/staff/users')
-		} as any)) as any;
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.users).toHaveLength(2);
 		expect(result.users[0].roles).toEqual(['admin']);
@@ -116,10 +122,12 @@ describe('/staff/users list load', () => {
 			[]
 		];
 
-		const { load } = await import('./users/+page.server');
-		const result = (await load({
+		const { GET } = await import('../api/staff/users/+server');
+		const response = await GET({
+			locals: { user: mockUser({ id: 'staff-1' }) },
 			url: new URL('http://localhost/staff/users?q=alice')
-		} as any)) as any;
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.search).toBe('alice');
 		expect(result.users).toHaveLength(0);

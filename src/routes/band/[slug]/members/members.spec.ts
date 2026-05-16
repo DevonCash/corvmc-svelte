@@ -238,7 +238,7 @@ describe('members page load', () => {
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser }
 		} as any);
-		const result = await response.json();
+		const result = await response.json() as any;
 
 		expect(result.active).toHaveLength(1);
 		expect(result.active[0].userName).toBe('Alice');

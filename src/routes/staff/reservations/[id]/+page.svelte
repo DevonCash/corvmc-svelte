@@ -23,8 +23,9 @@
 	} from '$lib/utils/format';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
+	import type { StaffReservationDetailResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffReservationDetailResponse } = $props();
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);

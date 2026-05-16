@@ -3,8 +3,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { fullDate, formatTime } from '$lib/utils/format';
+	import type { MemberTicketsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MemberTicketsResponse } = $props();
 
 	const upcoming = $derived(
 		data.tickets.filter(

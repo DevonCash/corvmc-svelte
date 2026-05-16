@@ -11,8 +11,9 @@
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import type { MemberLayoutResponse } from '$lib/types/api';
 
-	let { data, children }: { data: any; children: any } = $props();
+	let { data, children }: { data: MemberLayoutResponse; children: import('svelte').Snippet } = $props();
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import type { DirectoryResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: DirectoryResponse } = $props();
 
 	const members = $derived(data.members);
 	const bands = $derived(data.bands);

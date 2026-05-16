@@ -3,8 +3,9 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
+	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: BandLayoutResponse & BandUpcomingResponse } = $props();
 
 	const band = $derived(data.band);
 	const upcoming = $derived(data.upcoming);

@@ -4,8 +4,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import type { StaffEventsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffEventsResponse } = $props();
 	let showCreateModal = $state(false);
 
 	type Event = (typeof data.events)[number];

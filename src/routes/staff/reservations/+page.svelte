@@ -8,8 +8,9 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import type { StaffReservationsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffReservationsResponse } = $props();
 
 	type Reservation = (typeof data.reservations)[number];
 

@@ -4,8 +4,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { checkInTicket } from './data.remote';
+	import type { StaffCheckInResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffCheckInResponse } = $props();
 
 	let search = $state('');
 	let checkingIn = $state<string | null>(null);

@@ -4,8 +4,9 @@
 	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
+	import type { MemberEquipmentLoansResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MemberEquipmentLoansResponse } = $props();
 
 	let activeTab = $state<'active' | 'past'>('active');
 </script>

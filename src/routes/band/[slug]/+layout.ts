@@ -1,5 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
+import type { BandLayoutResponse } from '$lib/types/api';
 
 export const load: LayoutLoad = async ({ fetch, params }) => {
 	const res = await fetch(`/api/bands/${params.slug}/layout`);
@@ -9,5 +10,5 @@ export const load: LayoutLoad = async ({ fetch, params }) => {
 	if (res.status === 403) error(403, 'You are not a member of this band');
 	if (!res.ok) error(res.status, await res.text());
 
-	return await res.json();
+	return (await res.json()) as BandLayoutResponse;
 };

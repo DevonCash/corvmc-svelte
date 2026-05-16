@@ -16,8 +16,9 @@
 		subscribeToList,
 		unsubscribeFromList
 	} from './data.remote';
+	import type { AccountResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: AccountResponse } = $props();
 
 
 	interface NotifPref {

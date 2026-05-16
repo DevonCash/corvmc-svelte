@@ -1,6 +1,7 @@
 <script lang="ts">
+	import type { AudiencesResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: AudiencesResponse } = $props();
 
 	let email = $state('');
 	let name = $state('');

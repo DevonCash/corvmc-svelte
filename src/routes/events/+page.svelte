@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { formatCents } from '$lib/utils/format';
+	import type { EventsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: EventsResponse } = $props();
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-US', {

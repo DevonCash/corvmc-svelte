@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { type Column, default as DataTable } from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import type { StaffUsersResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffUsersResponse } = $props();
 
 	type User = (typeof data.users)[number];
 

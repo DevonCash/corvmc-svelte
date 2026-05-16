@@ -6,8 +6,9 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
+	import type { BandLayoutResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: BandLayoutResponse } = $props();
 
 	const band = $derived(data.band);
 

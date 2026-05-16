@@ -6,8 +6,9 @@
 	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
 	import { equipmentConditions, equipmentStatuses, pricingTiers, type EquipmentCondition, type EquipmentStatus, type PricingTier } from '$lib/server/equipment/types';
+	import type { StaffEquipmentResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffEquipmentResponse } = $props();
 
 	let showAddModal = $state(false);
 	let showCategoryModal = $state(false);

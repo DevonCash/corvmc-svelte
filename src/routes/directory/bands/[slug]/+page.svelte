@@ -2,8 +2,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import type { DirectoryBandResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: DirectoryBandResponse } = $props();
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);

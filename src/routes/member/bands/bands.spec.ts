@@ -75,10 +75,12 @@ beforeEach(() => {
 
 describe('bands page load', () => {
 	it('splits bands into pending and active', async () => {
-		const { load } = await import('./+page.server');
-		const result = (await load({
-			locals: { user: { id: 'user-1' } }
-		} as any)) as any;
+		const { GET } = await import('../../api/me/bands/+server');
+		const response = await GET({
+			locals: { user: { id: 'user-1' } },
+			url: new URL('http://localhost')
+		} as any);
+		const result = await response.json() as any;
 
 		expect(result.pending).toHaveLength(1);
 		expect(result.pending[0].name).toBe('Sonic Youth');
@@ -87,18 +89,21 @@ describe('bands page load', () => {
 	});
 
 	it('calls listForUser with the current user id', async () => {
-		const { load } = await import('./+page.server');
-		await load({ locals: { user: { id: 'user-1' } } } as any);
+		const { GET } = await import('../../api/me/bands/+server');
+		await GET({
+			locals: { user: { id: 'user-1' } },
+			url: new URL('http://localhost')
+		} as any);
 
 		expect(bandServiceMock.listForUser).toHaveBeenCalledWith('user-1');
 	});
 
 	it('redirects when not authenticated', async () => {
-		const { load } = await import('./+page.server');
+		const { GET } = await import('../../api/me/bands/+server');
 
-		// redirect throws in SvelteKit
+		// error() throws in SvelteKit
 		await expect(
-			load({ locals: {} } as any)
+			GET({ locals: {}, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 });

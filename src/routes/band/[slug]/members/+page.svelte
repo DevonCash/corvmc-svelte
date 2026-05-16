@@ -14,8 +14,9 @@
 		transferOwner,
 		leave
 	} from './data.remote';
+	import type { BandLayoutResponse, BandMembersResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: BandLayoutResponse & BandMembersResponse } = $props();
 
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');

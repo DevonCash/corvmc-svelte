@@ -2,8 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import type { StaffClosuresResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffClosuresResponse } = $props();
 
 	const closures = $derived(data.closures);
 

@@ -9,8 +9,9 @@
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
+	import type { StaffEventDetailResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffEventDetailResponse } = $props();
 
 	const evt = $derived(data.event);
 

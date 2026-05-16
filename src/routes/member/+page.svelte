@@ -5,8 +5,9 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
+	import type { DashboardResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: DashboardResponse } = $props();
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
 	const freeHours = $derived(data.credits.free_hours ?? 0);

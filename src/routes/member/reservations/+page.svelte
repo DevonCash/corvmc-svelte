@@ -3,8 +3,9 @@
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import type { MemberReservationsResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: MemberReservationsResponse } = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);

@@ -5,8 +5,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { loanStatuses } from '$lib/server/equipment/types';
+	import type { StaffEquipmentLoansResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffEquipmentLoansResponse } = $props();
 </script>
 
 <div class="space-y-6">

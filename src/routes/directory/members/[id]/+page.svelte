@@ -1,8 +1,9 @@
 <script lang="ts">
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import type { DirectoryMemberResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: DirectoryMemberResponse } = $props();
 	const member = $derived(data.member);
 	const contact = $derived(member.directoryContact ?? {});
 	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);

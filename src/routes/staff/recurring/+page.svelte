@@ -5,8 +5,9 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
+	import type { StaffRecurringResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: StaffRecurringResponse } = $props();
 
 	type Series = (typeof data.series)[number];
 

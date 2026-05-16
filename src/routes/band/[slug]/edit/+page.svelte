@@ -5,8 +5,9 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { updateBand } from './data.remote';
+	import type { BandLayoutResponse } from '$lib/types/api';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: BandLayoutResponse } = $props();
 
 	const band = $derived(data.band);
 
