@@ -65,6 +65,7 @@
 		data,
 		columns: columnsProp,
 		row: rowSnippet,
+		card: cardSnippet,
 		children,
 		toolbar,
 		groupBy,
@@ -72,6 +73,7 @@
 		clearHref,
 		pageSize = 20,
 		empty = 'No items found',
+		gridClass = 'grid grid-cols-1 gap-3',
 		class: className = ''
 	}: {
 		data: T[];
@@ -79,6 +81,8 @@
 		columns?: Column<T>[];
 		/** Full control over row rendering. Receives the sorted row item. */
 		row?: Snippet<[T]>;
+		/** Card layout mode. Renders a CSS grid of cards instead of a table. */
+		card?: Snippet<[T]>;
 		/** Column child components register via this slot. */
 		children?: Snippet;
 		/** Filter controls rendered above the table inside a GET form. */
@@ -93,6 +97,8 @@
 		pageSize?: number;
 		/** Message shown when data is empty. */
 		empty?: string;
+		/** CSS classes for the card grid container. Default: 'grid grid-cols-1 gap-3'. */
+		gridClass?: string;
 		class?: string;
 	} = $props();
 
@@ -202,6 +208,9 @@
 	// Cell formatting (built-in types)
 	// ---------------------------------------------------------------------------
 
+	const isCardMode = $derived(!!cardSnippet);
+	const sortableColumns = $derived(columns.filter((c) => c.sortable));
+
 	function formatCell(value: unknown, type: ColumnType): string {
 		if (value == null) return '—';
 		switch (type) {
@@ -230,7 +239,58 @@
 	</form>
 {/if}
 
-{#if columns.length > 0}
+{#if isCardMode}
+	<!-- Card mode: sort dropdown -->
+	{#if sortableColumns.length > 0}
+		<div class="flex items-center gap-2">
+			<span class="text-sm opacity-60">Sort by</span>
+			<select
+				class="select select-bordered select-sm"
+				value={sortKey ?? ''}
+				onchange={(e) => {
+					const val = e.currentTarget.value;
+					if (val) toggleSort(val); else { sortKey = null; }
+				}}
+			>
+				<option value="">Default</option>
+				{#each sortableColumns as col}
+					<option value={col.key}>{col.header}</option>
+				{/each}
+			</select>
+			{#if sortKey}
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm btn-square"
+					onclick={() => (sortDir = sortDir === 'asc' ? 'desc' : 'asc')}
+					title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+				>
+					{sortDir === 'asc' ? '▲' : '▼'}
+				</button>
+			{/if}
+		</div>
+	{/if}
+
+	<!-- Card mode: grid -->
+	{#if paged.length > 0}
+		<div class={gridClass}>
+			{#each paged as item, idx (idx)}
+				{#if groupBy}
+					{@const label = groupBy(item)}
+					{@const prevLabel = idx > 0 ? groupBy(paged[idx - 1]) : null}
+					{#if label !== prevLabel}
+						<div class="col-span-full py-2 text-xs font-semibold tracking-wide uppercase opacity-60">
+							{label}
+						</div>
+					{/if}
+				{/if}
+				{@render cardSnippet!(item)}
+			{/each}
+		</div>
+	{:else}
+		<p class="text-center opacity-60 py-8">{empty}</p>
+	{/if}
+{:else if columns.length > 0}
+	<!-- Table mode -->
 	<div class="overflow-x-auto">
 		<table class="table {className}">
 			<thead>
@@ -306,42 +366,42 @@
 			</tbody>
 		</table>
 	</div>
+{/if}
 
-	{#if pageCount > 1}
-		<div class="flex items-center justify-between px-4 py-3">
-			<span class="text-sm opacity-60">
-				Page {pageIndex + 1} of {pageCount}
-			</span>
-			<div class="join">
-				<button
-					class="btn join-item btn-sm"
-					disabled={pageIndex === 0}
-					onclick={() => (pageIndex = 0)}
-				>
-					&laquo;
-				</button>
-				<button
-					class="btn join-item btn-sm"
-					disabled={pageIndex === 0}
-					onclick={() => pageIndex--}
-				>
-					&lsaquo;
-				</button>
-				<button
-					class="btn join-item btn-sm"
-					disabled={pageIndex >= pageCount - 1}
-					onclick={() => pageIndex++}
-				>
-					&rsaquo;
-				</button>
-				<button
-					class="btn join-item btn-sm"
-					disabled={pageIndex >= pageCount - 1}
-					onclick={() => (pageIndex = pageCount - 1)}
-				>
-					&raquo;
-				</button>
-			</div>
+{#if pageCount > 1}
+	<div class="flex items-center justify-between px-4 py-3">
+		<span class="text-sm opacity-60">
+			Page {pageIndex + 1} of {pageCount}
+		</span>
+		<div class="join">
+			<button
+				class="btn join-item btn-sm"
+				disabled={pageIndex === 0}
+				onclick={() => (pageIndex = 0)}
+			>
+				&laquo;
+			</button>
+			<button
+				class="btn join-item btn-sm"
+				disabled={pageIndex === 0}
+				onclick={() => pageIndex--}
+			>
+				&lsaquo;
+			</button>
+			<button
+				class="btn join-item btn-sm"
+				disabled={pageIndex >= pageCount - 1}
+				onclick={() => pageIndex++}
+			>
+				&rsaquo;
+			</button>
+			<button
+				class="btn join-item btn-sm"
+				disabled={pageIndex >= pageCount - 1}
+				onclick={() => (pageIndex = pageCount - 1)}
+			>
+				&raquo;
+			</button>
 		</div>
-	{/if}
+	</div>
 {/if}

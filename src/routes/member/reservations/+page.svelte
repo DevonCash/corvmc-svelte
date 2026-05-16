@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { cancelReservation, cancelSeries } from './data.remote';
 	import type { MemberReservationsResponse } from '$lib/types/api';
@@ -41,114 +41,92 @@
 	/>
 
 	{#if activeTab === 'upcoming'}
-		{#if upcoming.length === 0}
-			<div class="text-center py-12 opacity-60">
-				<p>No upcoming reservations.</p>
-				<a href="/member/reservations/new" class="link link-primary mt-2 inline-block">
-					Book your first session
-				</a>
-			</div>
-		{:else}
-			<div class="space-y-3">
-				{#each upcoming as res}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
-								</p>
-								<p class="text-sm opacity-60">
-									{formatDuration(res.startsAt, res.endsAt)}
-									{#if res.notes} &middot; {res.notes}{/if}
-								</p>
-							</div>
-							<div class="flex items-center gap-2">
-								{#if res.recurringSeriesId}
-									<span class="badge badge-outline badge-sm">recurring</span>
-								{/if}
-								<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
-								{#if res.status === 'scheduled'}
-									<a href="/member/reservations/{res.id}/pay" class="btn btn-primary btn-sm">
-										Pay Now
-									</a>
-								{/if}
-								{#if res.status === 'scheduled' || res.status === 'confirmed'}
-									<Action
-										action={() => cancelReservation({ reservationId: res.id })}
-										label="Cancel"
-										confirm="Cancel this reservation?"
-										successToast="Reservation cancelled"
-										onsuccess={() => invalidateAll()}
-										class="btn-ghost btn-sm"
-									/>
-								{/if}
-							</div>
+		<DataTable data={upcoming} gridClass="grid grid-cols-1 gap-3" empty="No upcoming reservations.">
+			{#snippet card(res)}
+				<div class="card bg-base-100 shadow-sm">
+					<div class="card-body flex-row items-center justify-between py-4">
+						<div>
+							<p class="font-medium">
+								{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+							</p>
+							<p class="text-sm opacity-60">
+								{formatDuration(res.startsAt, res.endsAt)}
+								{#if res.notes} &middot; {res.notes}{/if}
+							</p>
 						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	{/if}
-
-	{#if activeTab === 'recurring'}
-		{#if recurringSeries.length === 0}
-			<div class="text-center py-12 opacity-60">
-				<p>No active recurring reservations.</p>
-				<p class="text-sm mt-1">
-					Sustaining members can set up recurring reservations when booking.
-				</p>
-			</div>
-		{:else}
-			<div class="space-y-3">
-				{#each recurringSeries as series}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(series.startsAt)} &middot; {formatTime(series.startsAt)}–{formatTime(series.endsAt)}
-								</p>
-								<p class="text-sm opacity-60">
-									{series.frequencyLabel} &middot;
-									{formatDuration(series.startsAt, series.endsAt)}
-								</p>
-							</div>
-							<div class="flex items-center gap-2">
-								<span class="badge badge-success">active</span>
+						<div class="flex items-center gap-2">
+							{#if res.recurringSeriesId}
+								<span class="badge badge-outline badge-sm">recurring</span>
+							{/if}
+							<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
+							{#if res.status === 'scheduled'}
+								<a href="/member/reservations/{res.id}/pay" class="btn btn-primary btn-sm">
+									Pay Now
+								</a>
+							{/if}
+							{#if res.status === 'scheduled' || res.status === 'confirmed'}
 								<Action
-									action={() => cancelSeries({ seriesId: series.id })}
-									label="Cancel Series"
-									confirm="Cancel this recurring series? Future reservations will not be created."
-									successToast="Series cancelled"
+									action={() => cancelReservation({ reservationId: res.id })}
+									label="Cancel"
+									confirm="Cancel this reservation?"
+									successToast="Reservation cancelled"
 									onsuccess={() => invalidateAll()}
 									class="btn-ghost btn-sm"
 								/>
-							</div>
+							{/if}
 						</div>
 					</div>
-				{/each}
-			</div>
-		{/if}
+				</div>
+			{/snippet}
+		</DataTable>
+	{/if}
+
+	{#if activeTab === 'recurring'}
+		<DataTable data={recurringSeries} gridClass="grid grid-cols-1 gap-3" empty="No active recurring reservations.">
+			{#snippet card(series)}
+				<div class="card bg-base-100 shadow-sm">
+					<div class="card-body flex-row items-center justify-between py-4">
+						<div>
+							<p class="font-medium">
+								{formatDate(series.startsAt)} &middot; {formatTime(series.startsAt)}–{formatTime(series.endsAt)}
+							</p>
+							<p class="text-sm opacity-60">
+								{series.frequencyLabel} &middot;
+								{formatDuration(series.startsAt, series.endsAt)}
+							</p>
+						</div>
+						<div class="flex items-center gap-2">
+							<span class="badge badge-success">active</span>
+							<Action
+								action={() => cancelSeries({ seriesId: series.id })}
+								label="Cancel Series"
+								confirm="Cancel this recurring series? Future reservations will not be created."
+								successToast="Series cancelled"
+								onsuccess={() => invalidateAll()}
+								class="btn-ghost btn-sm"
+							/>
+						</div>
+					</div>
+				</div>
+			{/snippet}
+		</DataTable>
 	{/if}
 
 	{#if activeTab === 'past'}
-		{#if past.length === 0}
-			<EmptyState message="No past reservations." />
-		{:else}
-			<div class="space-y-3">
-				{#each past as res}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
-								</p>
-								<p class="text-sm opacity-60">{formatDuration(res.startsAt, res.endsAt)}</p>
-							</div>
-							<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
+		<DataTable data={past} gridClass="grid grid-cols-1 gap-3" empty="No past reservations.">
+			{#snippet card(res)}
+				<div class="card bg-base-100 shadow-sm">
+					<div class="card-body flex-row items-center justify-between py-4">
+						<div>
+							<p class="font-medium">
+								{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+							</p>
+							<p class="text-sm opacity-60">{formatDuration(res.startsAt, res.endsAt)}</p>
 						</div>
+						<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
 					</div>
-				{/each}
-			</div>
-		{/if}
+				</div>
+			{/snippet}
+		</DataTable>
 	{/if}
 </div>

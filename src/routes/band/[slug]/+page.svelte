@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/types/api';
@@ -42,33 +42,29 @@
 			</a>
 		</div>
 
-		{#if upcoming.length === 0}
-			<EmptyState message="No upcoming sessions scheduled." />
-		{:else}
-			<div class="space-y-3">
-				{#each upcoming as res (res.id)}
-					<div class="card bg-base-100 shadow">
-						<div class="card-body py-4 flex-row items-center justify-between">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
-								</p>
-								<p class="text-sm opacity-60">
-									{formatDuration(res.startsAt, res.endsAt)}
-									{#if res.bookedByName}
-										&middot; Booked by {res.bookedByName}
-									{/if}
-									{#if res.notes}
-										&middot; {res.notes}
-									{/if}
-								</p>
-							</div>
-							<StatusBadge status={res.status} />
+		<DataTable data={upcoming} gridClass="grid grid-cols-1 gap-3" empty="No upcoming sessions scheduled.">
+			{#snippet card(res)}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body py-4 flex-row items-center justify-between">
+						<div>
+							<p class="font-medium">
+								{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+							</p>
+							<p class="text-sm opacity-60">
+								{formatDuration(res.startsAt, res.endsAt)}
+								{#if res.bookedByName}
+									&middot; Booked by {res.bookedByName}
+								{/if}
+								{#if res.notes}
+									&middot; {res.notes}
+								{/if}
+							</p>
 						</div>
+						<StatusBadge status={res.status} />
 					</div>
-				{/each}
-			</div>
-		{/if}
+				</div>
+			{/snippet}
+		</DataTable>
 	</section>
 
 	<!-- Quick links -->

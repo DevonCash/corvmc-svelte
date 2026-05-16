@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -72,68 +72,64 @@
 	<!-- Active members -->
 	<section>
 		<h2 class="mb-3 text-lg font-semibold">Active Members ({data.active.length})</h2>
-		{#if data.active.length === 0}
-			<EmptyState message="No active members." />
-		{:else}
-			<div class="space-y-2">
-				{#each data.active as member (member.id)}
-					<div class="card bg-base-100 shadow">
-						<div class="card-body flex-row items-center justify-between py-3">
-							<div class="flex items-center gap-3">
-								<div class="placeholder avatar">
-									<div class="w-8 rounded-full bg-neutral text-neutral-content">
-										<span class="text-xs">{member.userName?.charAt(0).toUpperCase() ?? '?'}</span>
-									</div>
-								</div>
-								<div>
-									<p class="font-medium">{member.userName}</p>
-									<p class="text-xs opacity-60">
-										{member.userEmail}
-										{#if member.position}
-											&middot; {member.position}
-										{/if}
-									</p>
+		<DataTable data={data.active} gridClass="grid grid-cols-1 gap-2" empty="No active members.">
+			{#snippet card(member)}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body flex-row items-center justify-between py-3">
+						<div class="flex items-center gap-3">
+							<div class="placeholder avatar">
+								<div class="w-8 rounded-full bg-neutral text-neutral-content">
+									<span class="text-xs">{member.userName?.charAt(0).toUpperCase() ?? '?'}</span>
 								</div>
 							</div>
-							<div class="flex items-center gap-2">
-								<StatusBadge status={member.role} />
-								{#if (isOwner || isAdmin) && member.role !== 'owner'}
-									{@const remove = removeMember.for(member.id)}
-									<Form
-										remote={remove}
-										successToast="Member removed"
-										errorToast="Failed to remove"
-										onsuccess={() => invalidateAll()}
-									>
-										<input type="hidden" name="memberId" value={member.id} />
-										<SubmitButton label="Remove" class="btn-ghost btn-xs" />
-									</Form>
-								{/if}
-								{#if isOwner && member.role !== 'owner'}
-									<button
-										class="btn btn-ghost btn-xs"
-										onclick={() => {
-											transferTarget = { userId: member.userId, name: member.userName ?? '' };
-											showTransferModal = true;
-										}}
-									>
-										Transfer
-									</button>
-								{/if}
+							<div>
+								<p class="font-medium">{member.userName}</p>
+								<p class="text-xs opacity-60">
+									{member.userEmail}
+									{#if member.position}
+										&middot; {member.position}
+									{/if}
+								</p>
 							</div>
 						</div>
+						<div class="flex items-center gap-2">
+							<StatusBadge status={member.role} />
+							{#if (isOwner || isAdmin) && member.role !== 'owner'}
+								{@const remove = removeMember.for(member.id)}
+								<Form
+									remote={remove}
+									successToast="Member removed"
+									errorToast="Failed to remove"
+									onsuccess={() => invalidateAll()}
+								>
+									<input type="hidden" name="memberId" value={member.id} />
+									<SubmitButton label="Remove" class="btn-ghost btn-xs" />
+								</Form>
+							{/if}
+							{#if isOwner && member.role !== 'owner'}
+								<button
+									class="btn btn-ghost btn-xs"
+									onclick={() => {
+										transferTarget = { userId: member.userId, name: member.userName ?? '' };
+										showTransferModal = true;
+									}}
+								>
+									Transfer
+								</button>
+							{/if}
+						</div>
 					</div>
-				{/each}
-			</div>
-		{/if}
+				</div>
+			{/snippet}
+		</DataTable>
 	</section>
 
 	<!-- Pending invitations -->
 	{#if data.pending.length > 0}
 		<section>
 			<h2 class="mb-3 text-lg font-semibold">Pending Invitations ({data.pending.length})</h2>
-			<div class="space-y-2">
-				{#each data.pending as invite (invite.id)}
+			<DataTable data={data.pending} gridClass="grid grid-cols-1 gap-2" empty="No pending invitations.">
+				{#snippet card(invite)}
 					<div class="card bg-base-100 shadow">
 						<div class="card-body flex-row items-center justify-between py-3">
 							<div>
@@ -159,8 +155,8 @@
 							{/if}
 						</div>
 					</div>
-				{/each}
-			</div>
+				{/snippet}
+			</DataTable>
 		</section>
 	{/if}
 
