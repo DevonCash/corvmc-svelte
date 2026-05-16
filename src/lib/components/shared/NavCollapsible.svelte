@@ -3,11 +3,13 @@
 	import { page } from '$app/state';
 
 	let {
+		href,
 		label,
 		icon,
 		childHrefs,
 		children
 	}: {
+		href: string;
 		label: string;
 		icon?: Snippet;
 		childHrefs: string[];
@@ -18,10 +20,10 @@
 </script>
 
 <li>
-	<span class="menu-dropdown-toggle" class:menu-dropdown-show={isOpen}>
+	<a {href} class="menu-dropdown-toggle" class:menu-dropdown-show={isOpen}>
 		{@render icon?.()}
 		{label}
-	</span>
+	</a>
 	{#if isOpen}
 		<ul class="menu-dropdown menu-dropdown-show">
 			{@render children()}

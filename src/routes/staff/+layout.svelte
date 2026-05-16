@@ -51,6 +51,7 @@
 				{#snippet icon()}<IconUsers size={20} />{/snippet}
 			</NavItem>
 			<NavCollapsible
+				href="/staff/reservations"
 				label="Reservations"
 				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
 			>
