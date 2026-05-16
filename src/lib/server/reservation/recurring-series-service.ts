@@ -57,6 +57,7 @@ export interface SeriesListItem {
 	createdAt: Date;
 	cancelledAt: Date | null;
 	userName: string;
+	userPronouns: string | null;
 	bookerType: string;
 	bookerId: string;
 	startsAt: Date;
@@ -277,6 +278,7 @@ export async function listActive(): Promise<SeriesListItem[]> {
 			createdAt: recurringSeries.createdAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
+			userPronouns: user.pronouns,
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -311,6 +313,7 @@ export async function listAll(): Promise<SeriesListItem[]> {
 			createdAt: recurringSeries.createdAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
+			userPronouns: user.pronouns,
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -344,6 +347,7 @@ export async function listForUser(userId: string): Promise<SeriesListItem[]> {
 			createdAt: recurringSeries.createdAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
+			userPronouns: user.pronouns,
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,

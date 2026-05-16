@@ -4,6 +4,7 @@
 	let {
 		name,
 		email,
+		pronouns,
 		userId,
 		avatarUrl = '',
 		class: extraClass = '',
@@ -11,6 +12,7 @@
 	}: {
 		name: string;
 		email?: string;
+		pronouns?: string | null;
 		userId?: string;
 		avatarUrl?: string;
 		class?: string;
@@ -26,7 +28,7 @@
 		<Avatar class='size-8' src={avatarUrl} {name} />
 	{/if}
 	<div class="min-w-0">
-		<p class="font-medium">{name}</p>
+		<p class="font-medium">{name}{#if pronouns} <span class="text-xs font-normal opacity-60">{pronouns}</span>{/if}</p>
 		{#if email}<span class="link text-sm opacity-60">{email}</span>{/if}
 	</div>
 </a>

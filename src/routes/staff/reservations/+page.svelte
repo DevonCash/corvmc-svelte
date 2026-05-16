@@ -96,7 +96,7 @@
 				<td class="w-px">
 					<StatusBadge status={r.status} class='size-6'/>
 				</td>
-				<td class="w-full">
+				<td>
 					<div class="flex items-center gap-1">
 						{formatTimeRange(r.startsAt, r.endsAt)}
 						{#if r.recurringSeriesId}
@@ -114,7 +114,7 @@
 								<BookerTypeIcon type={r.bookerType} size={16} />
 							</span>
 						{/if}
-						<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} class='p-7 px-4'/>
+						<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} userId={r.createdByUserId} class='p-7 px-4'/>
 					</div>
 				</td>
 				<td>

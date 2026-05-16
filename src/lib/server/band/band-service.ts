@@ -209,7 +209,8 @@ export async function getMembers(bandId: string) {
 			invitedById: bandMember.invitedById,
 			createdAt: bandMember.createdAt,
 			userName: user.name,
-			userEmail: user.email
+			userEmail: user.email,
+			userPronouns: user.pronouns
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
@@ -514,6 +515,7 @@ export async function getByIdWithDetails(bandId: string) {
 			ownerId: band.ownerId,
 			ownerName: user.name,
 			ownerEmail: user.email,
+			ownerPronouns: user.pronouns,
 			avatarKey: band.avatarKey,
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,

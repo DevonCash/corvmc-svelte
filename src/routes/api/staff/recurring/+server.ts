@@ -21,6 +21,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		series: filtered.map((s) => ({
 			id: s.id,
 			userName: s.userName,
+			userPronouns: s.userPronouns,
 			frequencyLabel: s.frequencyLabel,
 			bookerType: s.bookerType,
 			startsAt: s.startsAt.toISOString(),

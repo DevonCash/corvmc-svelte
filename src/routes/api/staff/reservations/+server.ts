@@ -57,7 +57,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
 			memberName: user.name,
-			memberEmail: user.email
+			memberEmail: user.email,
+			memberPronouns: user.pronouns
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -75,7 +76,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
 			memberName: user.name,
-			memberEmail: user.email
+			memberEmail: user.email,
+			memberPronouns: user.pronouns
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))

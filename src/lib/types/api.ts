@@ -421,6 +421,7 @@ export interface StaffReservationsResponse {
 		recurringSeriesId: string | null;
 		memberName: string;
 		memberEmail: string;
+		memberPronouns: string | null;
 	}[];
 	unresolved: {
 		id: string;
@@ -431,6 +432,7 @@ export interface StaffReservationsResponse {
 		notes: string | null;
 		memberName: string;
 		memberEmail: string;
+		memberPronouns: string | null;
 	}[];
 	tab: string;
 	search: string;
@@ -537,6 +539,7 @@ export interface StaffRecurringResponse {
 	series: {
 		id: string;
 		userName: string;
+		userPronouns: string | null;
 		frequencyLabel: string;
 		bookerType: string;
 		startsAt: string;

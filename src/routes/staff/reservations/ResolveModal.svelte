@@ -22,6 +22,7 @@
 			notes: string | null;
 			memberName: string;
 			memberEmail: string;
+			memberPronouns: string | null;
 		}>;
 		hourlyRateCents: number;
 	} = $props();
@@ -64,7 +65,7 @@
 					<div class="card-body p-4">
 						<div class="flex justify-between mb-2">
 							<div>
-								<MemberLink name={r.memberName} email={r.memberEmail} />
+								<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} />
 							</div>
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>

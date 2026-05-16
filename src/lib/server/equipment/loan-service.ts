@@ -395,7 +395,8 @@ export async function getLoanById(id: string) {
 			categoryName: equipmentCategory.name,
 			pricingTier: equipmentCategory.pricingTier,
 			userName: user.name,
-			userEmail: user.email
+			userEmail: user.email,
+			userPronouns: user.pronouns
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -413,6 +414,7 @@ export async function getLoanById(id: string) {
 		pricingTier: row.pricingTier,
 		userName: row.userName,
 		userEmail: row.userEmail,
+		userPronouns: row.userPronouns,
 		isOverdue:
 			row.loan.status === 'checked_out' &&
 			row.loan.dueDate != null &&
@@ -444,7 +446,8 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 			loan: equipmentLoan,
 			equipmentName: equipment.name,
 			userName: user.name,
-			userEmail: user.email
+			userEmail: user.email,
+			userPronouns: user.pronouns
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -457,6 +460,7 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 		equipmentName: row.equipmentName,
 		userName: row.userName,
 		userEmail: row.userEmail,
+		userPronouns: row.userPronouns,
 		isOverdue:
 			row.loan.status === 'checked_out' &&
 			row.loan.dueDate != null &&
