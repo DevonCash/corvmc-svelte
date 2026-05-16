@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import type { ReservationPayResponse } from '$lib/types/api';
 
 	let { data }: { data: ReservationPayResponse } = $props();
@@ -48,8 +50,8 @@
 	const chargeTotal = $derived(remainingCents + feeCents);
 </script>
 
-<div class="max-w-md mx-auto space-y-6">
-	<h1 class="text-2xl font-bold">Pay for Your Session</h1>
+<PageHeader title="Pay for Your Session" />
+<PageContent width="md">
 
 	<div class="card bg-base-100 shadow-sm">
 		<div class="card-body">
@@ -137,4 +139,4 @@
 	</form>
 
 	<a href="/member/reservations" class="btn btn-ghost w-full">Back to Reservations</a>
-</div>
+</PageContent>

@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { getMember } from '../../data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
@@ -17,8 +18,7 @@
 
 	{#if member}
 		<PageHeader title={member.name} subtitle="Member Profile" backHref="/member/directory" />
-
-		<div class="max-w-2xl space-y-6">
+		<PageContent width="2xl">
 			<!-- Header -->
 			<div class="flex items-center gap-4">
 				<div class="avatar placeholder">
@@ -105,7 +105,7 @@
 			{#if links.length > 0}
 				<ProfileEmbeds {links} />
 			{/if}
-		</div>
+		</PageContent>
 	{:else}
 		<Alert type="warning">
 			Member not found or profile is hidden.

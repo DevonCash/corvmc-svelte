@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -74,8 +75,8 @@
 	}
 </script>
 
-<div class="max-w-md space-y-6">
-	<PageHeader title="Edit Profile" subtitle={band.name} />
+<PageHeader title="Edit Profile" subtitle={band.name} />
+<PageContent width="md">
 
 	<!-- Avatar -->
 	<div class="space-y-2">
@@ -159,4 +160,4 @@
 			</div>
 		</div>
 	</Form>
-</div>
+</PageContent>

@@ -5,6 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
@@ -35,7 +36,7 @@
 				{/snippet}
 			</SubmitButton>
 		</PageHeader>
-
+		<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Profile card -->
 			<InfoCard title="Account Info">
@@ -77,7 +78,6 @@
 			</InfoCard>
 		</div>
 
-		<!-- Info card -->
 		<InfoCard title="Details" class='bg-base-200 shadow-none'>
 			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
 				<dt class="opacity-60">User ID</dt>
@@ -95,9 +95,10 @@
 				{/if}
 			</dl>
 		</InfoCard>
+		</PageContent>
 	</Form>
 
-	<!-- Payment records (separate boundary so failures don't block the user form) -->
+	<PageContent width="3xl">
 	{#await getUserPayments(id)}
 		<div class="flex items-center justify-center p-6">
 			<span class="loading loading-spinner loading-sm"></span>
@@ -142,7 +143,6 @@
 			</InfoCard>
 		{/if}
 	{:catch}
-		<Alert type="warning" class="mt-6">Could not load payment records.</Alert>
+		<Alert type="warning">Could not load payment records.</Alert>
 	{/await}
-
-
+	</PageContent>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -65,8 +66,8 @@
 	onMount(loadPrefs);
 </script>
 
-<div class="max-w-2xl space-y-6">
-	<PageHeader title="Account Settings" />
+<PageHeader title="Account Settings" />
+<PageContent width="2xl">
 
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">
@@ -336,4 +337,4 @@
 			</div>
 		</div>
 	</InfoCard>
-</div>
+</PageContent>

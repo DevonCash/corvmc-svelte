@@ -3,6 +3,7 @@
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -20,8 +21,8 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Closures" />
+<PageHeader title="Closures" />
+<PageContent>
 
 	<InfoCard title="Add Closure">
 		<Form remote={createClosure} successToast="Closure added" onsuccess={() => invalidateAll()}>
@@ -64,4 +65,4 @@
 			{/each}
 		</div>
 	{/if}
-</div>
+</PageContent>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { default as DataTable, type Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
@@ -32,13 +33,12 @@
 	];
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Events">
+<PageHeader title="Events">
 		<button class="btn btn-sm btn-primary" onclick={() => (showCreateModal = true)}
 			>New Event</button
 		>
 	</PageHeader>
-
+<PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
 	<DataTable data={data.events} {columns} groupBy={dayLabel} empty="No events yet">
@@ -73,4 +73,4 @@
 			</tr>
 		{/snippet}
 	</DataTable>
-</div>
+</PageContent>

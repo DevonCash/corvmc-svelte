@@ -6,6 +6,8 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import type { DashboardResponse } from '$lib/types/api';
 
 	let { data }: { data: DashboardResponse } = $props();
@@ -15,8 +17,8 @@
 	const pendingInvites = $derived(data.pendingInviteCount ?? 0);
 </script>
 
-<div class="space-y-6">
-	<h1 class="text-2xl font-bold">Dashboard</h1>
+<PageHeader title="Dashboard" />
+<PageContent>
 
 	{#if pendingInvites > 0}
 		<Alert type="info" href="/member/bands" class="shadow-sm">
@@ -138,4 +140,4 @@
 			</div>
 		{/if}
 	</InfoCard>
-</div>
+</PageContent>

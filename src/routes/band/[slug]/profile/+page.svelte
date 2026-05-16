@@ -5,6 +5,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
@@ -49,7 +50,7 @@
 				{/snippet}
 			</SubmitButton>
 		</PageHeader>
-
+		<PageContent width="3xl">
 		<input type="hidden" name="genres" value={JSON.stringify(genres)} />
 		<input type="hidden" name="links" value={JSON.stringify(links)} />
 
@@ -153,6 +154,5 @@
 				</FormField>
 			</InfoCard>
 		</div>
+		</PageContent>
 	</Form>
-
-

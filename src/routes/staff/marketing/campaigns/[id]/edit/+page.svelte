@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import {
 		getCampaignDetail,
 		getAudienceOptions,
@@ -137,7 +138,7 @@
 	<PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
 		<button class="btn btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</button>
 	</PageHeader>
-
+<PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 		<!-- Editor pane -->
 		<div class="space-y-4">
@@ -254,5 +255,4 @@
 			</div>
 		</div>
 	</div>
-
-
+</PageContent>

@@ -10,11 +10,64 @@ Every page under a panel layout (staff, member, or band) follows this shape:
 <PageHeader title="Page Title" subtitle="Panel">
   <!-- optional right-side actions (SubmitButton, links, etc.) -->
 </PageHeader>
-
-<!-- page content -->
+<PageContent width="full">
+  <!-- page body -->
+</PageContent>
 ```
 
 Always use `<PageHeader>` for the page title. Never write a bare `<h1>`.
+
+### PageContent
+
+Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.
+
+```svelte
+import PageContent from '$lib/components/shared/PageContent.svelte';
+```
+
+Props:
+- `width` — `'full'` (default), `'md'`, `'2xl'`, or `'3xl'`. Adds `max-w-*` + `mx-auto`.
+- `class` — extra classes on the wrapper div.
+
+#### Standard page (full-width)
+
+```svelte
+<PageHeader title="Users" subtitle="Staff" />
+<PageContent>
+  <DataTable ... />
+</PageContent>
+```
+
+#### Constrained detail page
+
+```svelte
+<PageHeader title={item.name} subtitle="Equipment" backHref="/staff/equipment" />
+<PageContent width="3xl">
+  <InfoCard title="Details">...</InfoCard>
+</PageContent>
+```
+
+#### Form-wrapping page (save button in header)
+
+When `<Form>` must wrap both the header (for SubmitButton) and the body fields, place PageContent inside the Form:
+
+```svelte
+<Form remote={updateItem} successToast="Saved">
+  <PageHeader title={item.name}>
+    <SubmitButton />
+  </PageHeader>
+  <PageContent width="3xl">
+    <InfoCard title="Info">
+      <Field name="name" ... />
+    </InfoCard>
+  </PageContent>
+</Form>
+
+<!-- Non-form content gets its own PageContent -->
+<PageContent width="3xl">
+  <InfoCard title="History">...</InfoCard>
+</PageContent>
+```
 
 ### Loading and error states
 

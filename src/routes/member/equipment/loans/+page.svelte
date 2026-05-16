@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -11,11 +12,10 @@
 	let activeTab = $state<'active' | 'past'>('active');
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="My Equipment Loans">
+<PageHeader title="My Equipment Loans">
 		<a href="/member/equipment" class="btn btn-ghost btn-sm">Browse Catalog</a>
 	</PageHeader>
-
+<PageContent>
 	<!-- Tabs -->
 	<div role="tablist" class="tabs-bordered tabs">
 		<button
@@ -130,4 +130,4 @@
 			<p class="text-center opacity-60 py-8">No past loans.</p>
 		{/each}
 	{/if}
-</div>
+</PageContent>

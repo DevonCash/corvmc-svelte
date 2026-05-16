@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getMembers, getBands, getInstrumentSuggestions, getGenreSuggestions } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
@@ -28,8 +29,7 @@
 </script>
 
 	<PageHeader title="Directory" subtitle="Community" />
-
-	<div class="space-y-4">
+	<PageContent>
 		<!-- Search & Filters -->
 		<div class="flex flex-wrap gap-3 items-end">
 			<input
@@ -172,6 +172,4 @@
 				{/snippet}
 			</DataTable>
 		{/if}
-	</div>
-
-
+	</PageContent>

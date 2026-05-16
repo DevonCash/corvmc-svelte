@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -27,7 +28,7 @@
 				/>
 			{/if}
 		</PageHeader>
-
+		<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Details">
 				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
@@ -67,6 +68,7 @@
 				{@html campaign.htmlBody}
 			</div>
 		</InfoCard>
+		</PageContent>
 	{/if}
 
 

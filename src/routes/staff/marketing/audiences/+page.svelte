@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { getAudiences, createAudienceCommand } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -73,7 +74,7 @@
 			{/snippet}
 		</Action>
 	</PageHeader>
-
+<PageContent>
 	<DataTable data={audiences} rowHref={(a) => `/staff/marketing/audiences/${a.id}`} empty="No audiences yet. Create one to start building your email lists.">
 		<Column key="name" header="Name" sortable>
 			{#snippet cell(_, a)}
@@ -97,3 +98,4 @@
 		</Column>
 		<Column key="createdAt" header="Created" type="date" shrink sortable />
 	</DataTable>
+</PageContent>

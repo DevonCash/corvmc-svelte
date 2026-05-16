@@ -15,6 +15,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -42,7 +43,7 @@
 				{/snippet}
 			</SubmitButton>
 		</PageHeader>
-
+		<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Band Info">
 				<div class="grid grid-cols-1 gap-x-2">
@@ -94,10 +95,11 @@
 				</div>
 			</InfoCard>
 		</div>
+		</PageContent>
 	</Form>
 
-	<!-- Members -->
-	<InfoCard title="Members" class="mb-6">
+	<PageContent width="3xl">
+	<InfoCard title="Members">
 		<DataTable data={members} empty="No members">
 			<Column key="userName" header="Member" stopClick>
 				{#snippet cell(_, m)}
@@ -147,7 +149,6 @@
 		</DataTable>
 	</InfoCard>
 
-	<!-- Recent Reservations -->
 	<InfoCard title="Recent Reservations">
 		<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`} empty="No reservations">
 			<Column key="startsAt" header="Date">
@@ -177,5 +178,4 @@
 			</Column>
 		</DataTable>
 	</InfoCard>
-
-
+	</PageContent>

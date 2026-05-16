@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -52,8 +53,7 @@
 	});
 </script>
 
-<div class="mx-auto max-w-3xl space-y-6">
-	<PageHeader title="Reservation" backHref="/staff/reservations">
+<PageHeader title="Reservation" backHref="/staff/reservations">
 		<div class="flex items-center gap-2">
 			<div class="divider mx-0 divider-horizontal"></div>
 
@@ -121,7 +121,7 @@
 			{/if}
 		</div>
 	</PageHeader>
-
+<PageContent width="3xl">
 	<!-- Hero card -->
 	<div class="card bg-base-100 shadow">
 		<div class="card-body">
@@ -224,4 +224,4 @@
 			{/if}
 		</InfoCard>
 	{/if}
-</div>
+</PageContent>

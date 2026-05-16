@@ -4,6 +4,8 @@
 	import { getSlots, getMembershipStatus, bookReservation } from './data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	// Resolve date from URL, default to today
@@ -90,8 +92,8 @@
 	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
 </script>
 
-	<div class="space-y-6 max-w-md">
-		<h1 class="text-2xl font-bold">Book a Session</h1>
+	<PageHeader title="Book a Session" />
+	<PageContent width="md">
 
 		<!-- Date picker is a navigation control, lives outside the Form -->
 		<div class="form-control">
@@ -226,6 +228,6 @@
 				/>
 			</div>
 		</Form>
-	</div>
+	</PageContent>
 
 

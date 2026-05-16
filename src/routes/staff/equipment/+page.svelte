@@ -4,6 +4,7 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Modal from '$lib/components/shared/Modal.svelte';
@@ -29,8 +30,7 @@
 	}>(null);
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Equipment">
+<PageHeader title="Equipment">
 		<div class="flex gap-2">
 			<button class="btn btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
 				Categories
@@ -66,7 +66,7 @@
 			</Action>
 		</div>
 	</PageHeader>
-
+<PageContent>
 	<DataTable data={data.equipment} rowHref={(e) => `/staff/equipment/${e.id}`} clearHref="/staff/equipment" empty="No equipment found">
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search name, serial, resource ID..." class="w-64" />
@@ -108,7 +108,7 @@
 			{/snippet}
 		</Column>
 	</DataTable>
-</div>
+</PageContent>
 
 <Modal bind:open={showCategoryModal} title="Manage Categories" maxWidth="max-w-lg">
 	<div class="mb-4 overflow-x-auto">

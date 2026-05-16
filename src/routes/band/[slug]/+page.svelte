@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
@@ -14,8 +15,8 @@
 	);
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Dashboard" subtitle={band.name} />
+<PageHeader title="Dashboard" subtitle={band.name} />
+<PageContent>
 
 	<!-- Band overview -->
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -78,4 +79,4 @@
 			</a>
 		{/if}
 	</div>
-</div>
+</PageContent>

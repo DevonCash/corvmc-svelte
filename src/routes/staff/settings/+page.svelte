@@ -3,6 +3,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatDollars } from '$lib/utils/format';
 
 	let products = $derived(await getProducts());
@@ -10,7 +11,7 @@
 
 	<PageHeader title="Settings" subtitle="Staff" />
 
-	<div class="max-w-2xl space-y-6">
+	<PageContent width="2xl">
 		<h2 class="text-lg font-semibold">Stripe Products</h2>
 		<p class="text-sm opacity-70">
 			Configure the products and pricing used for checkout. Changes to names and descriptions sync
@@ -115,6 +116,4 @@
 				</div>
 			</Form>
 		{/each}
-	</div>
-
-
+	</PageContent>
