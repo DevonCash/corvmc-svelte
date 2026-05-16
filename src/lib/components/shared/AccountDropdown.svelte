@@ -15,7 +15,7 @@
 
 	async function signOut() {
 		await fetch('/api/auth/sign-out', { method: 'POST' });
-		goto('/demo/better-auth/login');
+		goto('/login');
 	}
 </script>
 

@@ -308,7 +308,7 @@
 						successToast="Account deleted"
 						errorToast="Deletion failed"
 						class="btn-error btn-sm"
-						onsuccess={() => goto('/demo/better-auth/login')}
+						onsuccess={() => goto('/login')}
 					>
 						{#snippet form({ close })}
 							<div class="alert alert-error">

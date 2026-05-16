@@ -154,7 +154,7 @@
 
 					{#if !data.isAuthenticated}
 						<p class="text-sm text-center opacity-60">
-							<a href="/demo/better-auth/login" class="link">Sign in</a> for member discounts
+							<a href="/login" class="link">Sign in</a> for member discounts
 						</p>
 					{/if}
 				</div>

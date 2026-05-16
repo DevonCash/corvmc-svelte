@@ -4,6 +4,6 @@ import type { AccountResponse } from '$lib/types/api';
 
 export const load: PageLoad = async ({ fetch }) => {
 	const res = await fetch('/api/me/account');
-	if (res.status === 401) redirect(302, '/demo/better-auth/login');
+	if (res.status === 401) redirect(302, '/login');
 	return (await res.json()) as AccountResponse;
 };

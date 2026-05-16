@@ -12,7 +12,7 @@ export async function apiFetch<T = unknown>(
 	const res = await fetch(path, opts);
 
 	if (res.status === 401) {
-		redirect(302, '/demo/better-auth/login');
+		redirect(302, '/login');
 	}
 
 	if (!res.ok) {
