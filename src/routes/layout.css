@@ -522,11 +522,9 @@ p {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 48%;
-  height: 48%;
+  width: 70%;
+  height: 70%;
   object-fit: contain;
-  mask-image: radial-gradient(circle, transparent 8%, black 9%);
-  -webkit-mask-image: radial-gradient(circle, transparent 8%, black 9%);
   filter: brightness(0) invert(1);
   opacity: 0.92;
   pointer-events: none;
@@ -718,12 +716,24 @@ p {
   flex-wrap: wrap;
   margin-top: 1cqi;
 }
-.id-card__seeking {
-  font-weight: 600;
-  font-size: 2.8cqi;
-  letter-spacing: 0.04em;
-  color: var(--cmc-orange);
-  margin-top: 0.5cqi;
+.id-card__gaff {
+  position: absolute;
+  bottom: 11cqi;
+  right: -2cqi;
+  padding: 0.8cqi 3cqi;
+  background: #1a1a1a;
+  color: #e5e5e5;
+  font-weight: 700;
+  font-size: 2.6cqi;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  /* Torn-edge texture on left/right */
+  clip-path: polygon(
+    0% 8%, 1% 0%, 3% 12%, 5% 2%, 7% 6%, 99% 4%, 100% 10%, 99.5% 92%, 100% 98%,
+    97% 88%, 95% 100%, 93% 90%, 7% 96%, 5% 100%, 3% 92%, 1% 98%, 0% 90%
+  );
+  z-index: 2;
 }
 
 /* --- ID Tag — embossed text --- */
@@ -897,315 +907,6 @@ p {
   margin: 0;
 }
 
-/* ---------------------------------------------------------------------------
-   Key Fob — plastic room key for practice space
-   --------------------------------------------------------------------------- */
-.keyfob {
-  position: relative;
-  width: 110px;
-  margin-top: 14px;
-  padding: 26px 10px 0;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  color: #f4ead8;
-  transform: rotate(-3deg);
-  overflow: hidden;
-  background:
-    linear-gradient(125deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.10) 48%, rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, #234866 0%, #163049 100%);
-}
-.keyfob::before {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #c08a1a;
-}
-.keyfob::after {
-  content: "";
-  position: absolute;
-  top: 11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #0d0f12;
-}
-.keyfob__num {
-  font-weight: 700;
-  font-size: 52px;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: #f4ead8;
-  margin-top: 10px;
-}
-.keyfob__label {
-  font-family: var(--font-chalk);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  color: #f4ead8;
-  margin-top: 8px;
-  text-transform: uppercase;
-  transform: rotate(-1deg);
-}
-.keyfob__stripe {
-  align-self: stretch;
-  height: 6px;
-  margin: 16px -10px 18px;
-  background: linear-gradient(to bottom,
-    #00859b 0 33.333%, #ffb500 33.333% 66.666%, #f84d13 66.666% 100%);
-}
-.keyfob__hours {
-  padding: 0 0 18px;
-  font-family: "Courier New", ui-monospace, Menlo, monospace;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #c4cfde;
-  text-shadow:
-    -1px -1px 0 rgba(255,255,255,0.85),
-    -1px -1px 1px rgba(255,255,255,0.45),
-     1px  1px 0 rgba(0,0,0,0.95),
-     2px  2px 1px rgba(0,0,0,0.55);
-}
-
-/* ---------------------------------------------------------------------------
-   Ticket Stub — golden event ticket with tear-off stub
-   --------------------------------------------------------------------------- */
-.ticket {
-  position: relative;
-  display: flex;
-  width: 240px;
-  border-radius: 3px;
-  color: #1a1410;
-  transform: rotate(-2deg);
-  background: transparent;
-  cursor: pointer;
-}
-.ticket__main {
-  flex: 1;
-  padding: 12px 12px 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  background: #edc46a;
-  border-radius: 3px 0 0 3px;
-  clip-path: polygon(
-    0 0, 100% 0,
-    97% 5%, 100% 10%, 97% 15%, 100% 20%, 97% 25%, 100% 30%,
-    97% 35%, 100% 40%, 97% 45%, 100% 50%, 97% 55%, 100% 60%,
-    97% 65%, 100% 70%, 97% 75%, 100% 80%, 97% 85%, 100% 90%,
-    97% 95%, 100% 100%,
-    0 100%
-  );
-}
-.ticket__eyebrow {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 8px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #c63015;
-  font-weight: 700;
-}
-.ticket__title {
-  font-family: var(--font-chalk);
-  font-size: 19px;
-  line-height: 0.95;
-  color: #1a1410;
-  margin: 4px 0;
-}
-.ticket__when {
-  font-family: var(--font-script);
-  font-size: 15px;
-  font-weight: 700;
-  color: #1a1410;
-  line-height: 1.05;
-  margin: 0;
-}
-.ticket__where {
-  font-family: var(--font-script);
-  font-size: 12px;
-  color: rgba(26,20,16,0.72);
-  line-height: 1.15;
-  margin: 0;
-}
-.ticket__price {
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1.5px dashed rgba(26,20,16,0.4);
-  display: flex;
-  justify-content: space-between;
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #c63015;
-}
-.ticket__price span:last-child { color: rgba(26,20,16,0.55); }
-.ticket__perf {
-  width: 2px;
-  background: repeating-linear-gradient(180deg, rgba(26,20,16,0.55) 0 3px, transparent 3px 6px);
-  z-index: 1;
-  transition: opacity 250ms ease;
-}
-.ticket__stub {
-  width: 42px;
-  padding: 8px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #dfb04f;
-  border-radius: 0 3px 3px 0;
-  clip-path: polygon(
-    3% 5%, 0 10%, 3% 15%, 0 20%, 3% 25%, 0 30%,
-    3% 35%, 0 40%, 3% 45%, 0 50%, 3% 55%, 0 60%,
-    3% 65%, 0 70%, 3% 75%, 0 80%, 3% 85%, 0 90%,
-    3% 95%, 0 100%,
-    100% 100%, 100% 0, 0 0
-  );
-  transition: transform 350ms cubic-bezier(0.25, 0.7, 0.3, 1);
-  transform-origin: right center;
-}
-.ticket:hover .ticket__stub,
-.program-block:has(.program-block__cta:hover) .ticket__stub {
-  transform: translateX(36px) rotate(7deg);
-}
-.ticket:hover .ticket__perf,
-.program-block:has(.program-block__cta:hover) .ticket__perf { opacity: 0; }
-
-/* Keyfob swing on CTA hover */
-.keyfob {
-  transition: transform 400ms cubic-bezier(0.25, 0.7, 0.3, 1);
-}
-.program-block:has(.program-block__cta:hover) .keyfob {
-  transform: rotate(4deg);
-}
-
-/* Setlist wiggle on CTA hover */
-.setlist {
-  transition: transform 350ms cubic-bezier(0.25, 0.7, 0.3, 1);
-}
-.program-block:has(.program-block__cta:hover) .setlist {
-  transform: rotate(0.8deg) translateY(-3px);
-}
-.ticket__admit {
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: #c63015;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  line-height: 1;
-}
-
-/* ---------------------------------------------------------------------------
-   Setlist — torn paper with handwritten schedule
-   --------------------------------------------------------------------------- */
-.setlist {
-  position: relative;
-  width: 220px;
-  padding: 30px 18px 22px;
-  background: #f4ead8;
-  color: #16140f;
-  transform: rotate(-1.4deg);
-}
-.setlist::before, .setlist::after {
-  content: "";
-  position: absolute;
-  top: -8px;
-  width: 42px;
-  height: 17px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 5px, rgba(0,0,0,0.10) 5px 6px),
-    var(--cmc-orange);
-}
-.setlist::before { left: 10px; transform: rotate(-14deg); }
-.setlist::after  { right: 10px; transform: rotate(11deg); }
-.setlist__header {
-  font-family: var(--font-chalk);
-  font-size: 18px;
-  line-height: 1;
-  margin-bottom: 8px;
-  transform: rotate(-1deg);
-  transform-origin: left;
-}
-.setlist__header small {
-  display: block;
-  font-family: var(--font-script);
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(22,20,15,0.6);
-  margin-top: 4px;
-}
-.setlist__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  counter-reset: cue;
-}
-.setlist__item {
-  counter-increment: cue;
-  display: grid;
-  grid-template-columns: 16px 1fr auto;
-  align-items: baseline;
-  gap: 6px;
-  padding: 3px 0 4px;
-  border-bottom: 1px dashed rgba(22,20,15,0.18);
-  font-family: var(--font-script);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.1;
-}
-.setlist__item::before {
-  content: counter(cue) ".";
-  font-family: var(--font-script);
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(22,20,15,0.55);
-}
-.setlist__item--strike { position: relative; color: rgba(22,20,15,0.5); }
-.setlist__item--strike::after {
-  content: "";
-  position: absolute;
-  left: 16px;
-  right: 26px;
-  top: 55%;
-  height: 2px;
-  background: rgba(22,20,15,0.55);
-  transform: rotate(-0.6deg);
-}
-.setlist__item .time {
-  font-family: var(--font-script);
-  font-size: 12px;
-  color: rgba(22,20,15,0.6);
-  font-weight: 600;
-}
-.setlist__encore {
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 2px solid rgba(22,20,15,0.55);
-  font-family: var(--font-chalk);
-  font-size: 15px;
-  line-height: 1;
-  color: #c63015;
-  transform: rotate(-1.4deg);
-  transform-origin: left;
-}
 
 /* ---------------------------------------------------------------------------
    Cassette Tape — retro demo tape with rainbow stripes

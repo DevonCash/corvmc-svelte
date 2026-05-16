@@ -2,7 +2,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
-	import speakerMono from '$lib/assets/cmc-speaker-mono.svg';
+	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 	import type { DirectoryResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryResponse } = $props();
@@ -91,11 +91,11 @@
 											{/each}
 										</div>
 									{/if}
-									{#if member.lookingForBand}
-										<div class="id-card__seeking">Seeking a band</div>
-									{/if}
 								</div>
 							</div>
+							{#if member.lookingForBand}
+								<div class="id-card__gaff">seeking a band</div>
+							{/if}
 							<div class="id-card__footer">
 								<div class="id-card__since">Member since {new Date(member.memberSince).getFullYear()}</div>
 								<div class="id-card__barcode" aria-hidden="true"></div>
@@ -128,7 +128,7 @@
 												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
 											</text>
 										</svg>
-										<img class="vinyl-card__logo" src={speakerMono} alt="" />
+										<img class="vinyl-card__logo" src={logoMono} alt="" />
 									</div>
 								</div>
 								<div class="vinyl-card__sleeve">

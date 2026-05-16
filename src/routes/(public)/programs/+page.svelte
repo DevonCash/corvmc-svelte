@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { IconMusic, IconMicrophone, IconUsers, IconInfoCircle, IconBulb } from '@tabler/icons-svelte';
+	import Keyfob from '$lib/components/illustrations/Keyfob.svelte';
+	import Ticket from '$lib/components/illustrations/Ticket.svelte';
+	import Setlist from '$lib/components/illustrations/Setlist.svelte';
 </script>
 
 <svelte:head>
@@ -38,12 +41,7 @@
 				</div>
 			</div>
 			<div class="flex flex-col items-center justify-center">
-				<div class="keyfob">
-					<div class="keyfob__num">03</div>
-					<div class="keyfob__label">Practice Room</div>
-					<div class="keyfob__stripe"></div>
-					<div class="keyfob__hours">10a — 10p</div>
-				</div>
+				<Keyfob class="w-[clamp(120px,40%,200px)] -rotate-3" />
 			</div>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-10">
@@ -86,20 +84,7 @@
 				</div>
 			</div>
 			<div class="flex flex-col items-center justify-center">
-				<div class="ticket">
-					<div class="ticket__main">
-						<span class="ticket__eyebrow">Corvallis Music Collective</span>
-						<h4 class="ticket__title">Showcase Night</h4>
-						<p class="ticket__when">Fri Dec 13 &middot; 7 PM</p>
-						<p class="ticket__where">6775 SW Philomath Blvd</p>
-						<div class="ticket__price">
-							<span>$5 NOTAFLOF</span>
-							<span>Doors 6:30</span>
-						</div>
-					</div>
-					<div class="ticket__perf"></div>
-					<div class="ticket__stub"><span class="ticket__admit">Admit One</span></div>
-				</div>
+				<Ticket class="w-[clamp(240px,85%,420px)] -rotate-2" />
 			</div>
 		</div>
 	</div>
@@ -117,24 +102,7 @@
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 			<div class="flex justify-center">
-				<div class="setlist">
-					<div class="setlist__header">This Week<small>Recurring schedule</small></div>
-					<ul class="setlist__list">
-						<li class="setlist__item">
-							<span>Real Book Club</span><span class="time">1st Thu</span>
-						</li>
-						<li class="setlist__item">
-							<span>Songwriter Circle</span><span class="time">2nd Sat</span>
-						</li>
-						<li class="setlist__item">
-							<span>Open Practice</span><span class="time">Weekly</span>
-						</li>
-						<li class="setlist__item">
-							<span>Monthly Meetup</span><span class="time">Last Thu</span>
-						</li>
-					</ul>
-					<div class="setlist__encore">Open Jam after every meetup!</div>
-				</div>
+				<Setlist class="w-[clamp(200px,80%,340px)] -rotate-[1.4deg]" />
 			</div>
 			<div class="flex flex-col gap-5">
 				<div class="rounded-lg p-6" style="background: color-mix(in oklch, var(--cmc-yellow) 25%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-yellow) 30%, transparent)">
