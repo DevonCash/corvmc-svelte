@@ -51,7 +51,7 @@
 							<div class="id-card__header">
 								<div class="id-card__brand">
 									<img src={speakerLogo} alt="" class="id-card__logo" />
-									Corvallis Music Collective
+									<span>Corvallis Music<br/>Collective</span>
 								</div>
 								<div class="id-card__tag">MEMBER</div>
 							</div>
