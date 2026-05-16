@@ -543,9 +543,13 @@ p {
 }
 .vinyl-card__sleeve-wrap {
   position: relative;
+  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
+}
+.vinyl-card:hover .vinyl-card__sleeve-wrap {
+  transform: rotate(-3deg);
 }
 .vinyl-card:hover .vinyl-card__sleeve {
-  transform: translateX(-8%) rotate(-3deg);
+  transform: translateX(-8%);
 }
 .vinyl-card__sleeve::after { display: none; }
 .vinyl-card__sleeve-art {
