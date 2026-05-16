@@ -531,7 +531,7 @@ p {
   position: relative;
 }
 .vinyl-card:hover .vinyl-card__sleeve {
-  transform: translateX(-8%);
+  transform: translateX(-8%) rotate(-3deg);
 }
 .vinyl-card__sleeve::after { display: none; }
 .vinyl-card__sleeve-art {
