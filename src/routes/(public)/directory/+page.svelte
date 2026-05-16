@@ -1,6 +1,7 @@
 <script lang="ts">
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import speakerLogo from '$lib/assets/cmc-speaker.png';
 	import type { DirectoryResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryResponse } = $props();
@@ -105,6 +106,7 @@
 												<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">{b.tagline ? b.tagline : `${b.memberCount} member${b.memberCount === 1 ? '' : 's'}`}</textPath>
 											</text>
 										</svg>
+										<img class="vinyl-card__logo" src={speakerLogo} alt="" />
 									</div>
 								</div>
 								<div class="vinyl-card__sleeve">
