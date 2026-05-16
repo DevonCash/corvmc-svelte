@@ -5,7 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { loanStatuses } from '$lib/server/equipment/types';
+	import { loanStatuses } from '$lib/types/equipment';
 	import type { StaffEquipmentLoansResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffEquipmentLoansResponse } = $props();

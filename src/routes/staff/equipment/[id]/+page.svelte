@@ -15,10 +15,10 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { equipmentConditions, equipmentStatuses } from '$lib/server/equipment/types';
+	import { equipmentConditions, equipmentStatuses } from '$lib/types/equipment';
 
 	let id = $derived(page.params.id!);
 	let item = $derived(await getEquipment(id));
@@ -97,14 +97,14 @@
 
 				<div class="mt-4 flex gap-2">
 					{#if isDeactivated}
-						<AsyncButton
+						<Action
 							action={() => reactivateEquipment({})}
 							label="Reactivate"
 							successToast="Equipment reactivated"
 							class="btn-success btn-sm"
 						/>
 					{:else}
-						<AsyncButton
+						<Action
 							action={async () => {
 								if (!window.confirm('Deactivate this equipment?')) return;
 								await deactivateEquipment({});

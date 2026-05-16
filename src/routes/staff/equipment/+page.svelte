@@ -4,23 +4,19 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
 	import {
 		equipmentConditions,
 		equipmentStatuses,
 		pricingTiers,
-		type EquipmentCondition,
-		type EquipmentStatus,
 		type PricingTier
-	} from '$lib/server/equipment/types';
-	import { Field } from '$lib/components/shared/Form';
+	} from '$lib/types/equipment';
 	import Action from '$lib/components/shared/Action.svelte';
 	import type { StaffEquipmentResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
 
-	let showAddModal = $state(false);
 	let showCategoryModal = $state(false);
 
 	// Category management
@@ -30,35 +26,6 @@
 		displayOrder: number;
 		pricingTier: PricingTier;
 	}>(null);
-
-	// Add equipment form state
-	let newEquipment = $state({
-		name: '',
-		description: '',
-		categoryId: '',
-		totalQuantity: 1,
-		outOfOrderQuantity: 0,
-		serialNumber: '',
-		resourceId: '',
-		condition: 'good' as EquipmentCondition,
-		status: 'available' as EquipmentStatus,
-		notes: ''
-	});
-
-	function resetNewEquipment() {
-		newEquipment = {
-			name: '',
-			description: '',
-			categoryId: '',
-			totalQuantity: 1,
-			outOfOrderQuantity: 0,
-			serialNumber: '',
-			resourceId: '',
-			condition: 'good',
-			status: 'available',
-			notes: ''
-		};
-	}
 </script>
 
 <div class="space-y-6">
@@ -67,13 +34,33 @@
 			<button class="btn btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
 				Categories
 			</button>
-			<button class="btn btn-sm btn-primary" onclick={() => (showAddModal = true)}>
-				Add Equipment
-			</button>
-			<Action label="Add Equipment">
-				{#snippet form()}
-					<Field name="name" type="text" />
-					
+			<Action
+				action={addEquipment}
+				label="Add Equipment"
+				modalTitle="Add Equipment"
+				class="btn-primary btn-sm"
+				successToast="Equipment added"
+				onsuccess={() => window.location.reload()}
+			>
+				{#snippet form({ close })}
+					<FormField name="name" type="text" label="Name" />
+					<FormField name="description" type="textarea" label="Description" />
+					<div class="grid grid-cols-2 gap-3">
+						<FormField name="categoryId" type="select" label="Category"
+							options={data.categories.map((c) => ({ value: c.id, label: c.name }))} />
+						<FormField name="condition" type="select" label="Condition"
+							value="good"
+							options={equipmentConditions.map((c) => ({ value: c, label: c }))} />
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<FormField name="totalQuantity" type="number" label="Total Quantity" value={1} />
+						<FormField name="outOfOrderQuantity" type="number" label="Out of Order" value={0} />
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<FormField name="serialNumber" type="text" label="Serial Number" />
+						<FormField name="resourceId" type="text" label="Resource ID" />
+					</div>
+					<FormField name="notes" type="textarea" label="Notes" />
 				{/snippet}
 			</Action>
 		</div>
@@ -122,147 +109,6 @@
 	</DataTable>
 </div>
 
-<!-- Add Equipment Modal -->
-{#if showAddModal}
-	<dialog class="modal-open modal">
-		<div class="modal-box max-w-lg">
-			<h3 class="mb-4 text-lg font-bold">Add Equipment</h3>
-			<form
-				onsubmit={async (e) => {
-					e.preventDefault();
-					await addEquipment({
-						...newEquipment,
-						description: newEquipment.description || undefined,
-						serialNumber: newEquipment.serialNumber || undefined,
-						resourceId: newEquipment.resourceId || undefined,
-						notes: newEquipment.notes || undefined
-					});
-					showAddModal = false;
-					resetNewEquipment();
-					window.location.reload();
-				}}
-				class="space-y-3"
-			>
-				<div>
-					<label class="label-text label" for="eq-name">Name</label>
-					<input
-						id="eq-name"
-						type="text"
-						class="input-bordered input w-full"
-						bind:value={newEquipment.name}
-						required
-					/>
-				</div>
-				<div>
-					<label class="label-text label" for="eq-desc">Description</label>
-					<textarea
-						id="eq-desc"
-						class="textarea-bordered textarea w-full"
-						bind:value={newEquipment.description}
-					></textarea>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="label-text label" for="eq-cat">Category</label>
-						<select
-							id="eq-cat"
-							class="select-bordered select w-full"
-							bind:value={newEquipment.categoryId}
-							required
-						>
-							<option value="" disabled>Select...</option>
-							{#each data.categories as cat}
-								<option value={cat.id}>{cat.name}</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<label class="label-text label" for="eq-condition">Condition</label>
-						<select
-							id="eq-condition"
-							class="select-bordered select w-full"
-							bind:value={newEquipment.condition}
-						>
-							{#each equipmentConditions as c}
-								<option value={c}>{c}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="label-text label" for="eq-qty">Total Quantity</label>
-						<input
-							id="eq-qty"
-							type="number"
-							min="1"
-							class="input-bordered input w-full"
-							bind:value={newEquipment.totalQuantity}
-						/>
-					</div>
-					<div>
-						<label class="label-text label" for="eq-ooo">Out of Order</label>
-						<input
-							id="eq-ooo"
-							type="number"
-							min="0"
-							class="input-bordered input w-full"
-							bind:value={newEquipment.outOfOrderQuantity}
-						/>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="label-text label" for="eq-serial">Serial Number</label>
-						<input
-							id="eq-serial"
-							type="text"
-							class="input-bordered input w-full"
-							bind:value={newEquipment.serialNumber}
-						/>
-					</div>
-					<div>
-						<label class="label-text label" for="eq-resource">Resource ID</label>
-						<input
-							id="eq-resource"
-							type="text"
-							class="input-bordered input w-full"
-							bind:value={newEquipment.resourceId}
-						/>
-					</div>
-				</div>
-				<div>
-					<label class="label-text label" for="eq-notes">Notes</label>
-					<textarea
-						id="eq-notes"
-						class="textarea-bordered textarea w-full"
-						bind:value={newEquipment.notes}
-					></textarea>
-				</div>
-				<div class="modal-action">
-					<button
-						type="button"
-						class="btn btn-ghost"
-						onclick={() => {
-							showAddModal = false;
-							resetNewEquipment();
-						}}>Cancel</button
-					>
-					<button type="submit" class="btn btn-primary">Add</button>
-				</div>
-			</form>
-		</div>
-		<form method="dialog" class="modal-backdrop">
-			<button
-				onclick={() => {
-					showAddModal = false;
-					resetNewEquipment();
-				}}>close</button
-			>
-		</form>
-	</dialog>
-{/if}
-
 <!-- Category Management Modal -->
 {#if showCategoryModal}
 	<dialog class="modal-open modal">
@@ -296,7 +142,7 @@
 												pricingTier: cat.pricingTier as PricingTier
 											})}>Edit</button
 									>
-									<AsyncButton
+									<Action
 										action={async () => {
 											if (!window.confirm(`Delete "${cat.name}"? Category must have no equipment.`))
 												return;

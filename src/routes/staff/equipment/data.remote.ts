@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { command } from '$app/server';
+import { command, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	createEquipment,
@@ -9,7 +9,7 @@ import {
 } from '$lib/server/equipment/equipment-service';
 import { createEquipmentSchema, createCategorySchema, updateCategorySchema } from '$lib/server/equipment/types';
 
-export const addEquipment = command(createEquipmentSchema, async (data) => {
+export const addEquipment = form(createEquipmentSchema, async (data) => {
 	await requireStaff();
 	const item = await createEquipment(data);
 	return { equipmentId: item.id };
