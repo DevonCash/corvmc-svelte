@@ -11,11 +11,14 @@
 		children: Snippet;
 	} = $props();
 
-	const widthClass = $derived(
-		width === 'full' ? '' : `max-w-screen-${width} mx-auto`
-	);
+	const widthClass: Record<string, string> = {
+		full: '',
+		md: 'max-w-md mx-auto',
+		'2xl': 'max-w-2xl mx-auto',
+		'3xl': 'max-w-3xl mx-auto'
+	};
 </script>
 
-<div class="space-y-6 {widthClass} {className}">
+<div class="space-y-6 {widthClass[width]} {className}">
 	{@render children()}
 </div>
