@@ -37,7 +37,7 @@
 		confirmed: { icon: IconCircleCheck, color: 'text-info' },
 		completed: { icon: IconCircleCheckFilled, color: 'text-success' },
 		no_show: { icon: IconUserX, color: 'text-error' },
-		cancelled: { icon: IconCircleX, color: 'opacity-40' },
+		cancelled: { icon: IconCircleX, color: 'text-base-content' },
 		refunded: { icon: IconArrowBackUp, color: 'text-error' },
 
 		// Event statuses

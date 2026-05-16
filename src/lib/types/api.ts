@@ -418,6 +418,7 @@ export interface StaffReservationsResponse {
 		notes: string | null;
 		stripePaymentRecordId: string | null;
 		createdByUserId: string;
+		recurringSeriesId: string | null;
 		memberName: string;
 		memberEmail: string;
 	}[];

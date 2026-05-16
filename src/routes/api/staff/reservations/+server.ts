@@ -55,6 +55,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			createdByUserId: reservation.createdByUserId,
+			recurringSeriesId: reservation.recurringSeriesId,
 			memberName: user.name,
 			memberEmail: user.email
 		})

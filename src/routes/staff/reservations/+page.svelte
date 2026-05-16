@@ -10,7 +10,7 @@
 	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import { IconCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX } from '@tabler/icons-svelte';
+	import { IconCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import type { StaffReservationsResponse } from '$lib/types/api';
 
@@ -25,7 +25,7 @@
 		if (r.status === 'cancelled') {
 			return r.stripePaymentRecordId
 				? { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp }
-				: { label: 'Cancelled', color: 'opacity-40', icon: IconCircleX };
+				: { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
 		}
 		if (r.status === 'scheduled') return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
 		// confirmed or completed
@@ -35,15 +35,21 @@
 	}
 
 	function dayLabel(r: Reservation): string {
-		return formatDate(r.startsAt);
+		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const now = new Date();
+		const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const label = formatDate(r.startsAt);
+		if (localDate === today) return `${label} (Today)`;
+		if (localDate === tomorrow) return `${label} (Tomorrow)`;
+		return label;
 	}
 
 	const columns: Column<Reservation>[] = [
 		{ key: 'status', header: '' },
-		{ key: 'memberName', header: 'Reserved for', sortable: true },
 		{ key: 'startsAt', header: 'Time', sortable: true },
-		{ key: 'stripePaymentRecordId', header: 'Payment' },
-		{ key: 'bookerType', header: 'Booker' }
+		{ key: 'memberName', header: 'Reserved for', sortable: true },
+		{ key: 'stripePaymentRecordId', header: 'Payment' }
 	];
 </script>
 
@@ -90,29 +96,39 @@
 				<td class="w-px">
 					<StatusBadge status={r.status} class='size-6'/>
 				</td>
-				<td class="w-px" onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
-					<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} class='p-7 px-4'/>
-				</td>
 				<td class="w-full">
-					<div>{formatTimeRange(r.startsAt, r.endsAt)}</div>
+					<div class="flex items-center gap-1">
+						{formatTimeRange(r.startsAt, r.endsAt)}
+						{#if r.recurringSeriesId}
+							<span class="tooltip" data-tip="Recurring">
+								<IconRepeat size={14} class="text-base-content" />
+							</span>
+						{/if}
+					</div>
 					<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
 				</td>
-
+				<td class="w-px" onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
+					<div class="flex items-center gap-1">
+						{#if r.bookerType !== 'user'}
+							<span class="tooltip" data-tip={r.bookerType}>
+								<BookerTypeIcon type={r.bookerType} size={16} />
+							</span>
+						{/if}
+						<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} class='p-7 px-4'/>
+					</div>
+				</td>
 				<td>
 					{#if r.bookerType === 'event'}
 						<span class="text-sm opacity-40">—</span>
 					{:else}
-						<div>{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}</div>
 						{@const ps = paymentStatus(r)}
-						<span class="tooltip" data-tip={ps.label}>
-							<ps.icon size={16} class={ps.color} />
-						</span>
+						<div class="flex items-center gap-1">
+							{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}
+							<span class="tooltip" data-tip={ps.label}>
+								<ps.icon size={16} class={ps.color} />
+							</span>
+						</div>
 					{/if}
-				</td>
-				<td>
-					<span class="tooltip" data-tip={r.bookerType}>
-						<BookerTypeIcon type={r.bookerType} size={16} />
-					</span>
 				</td>
 			</tr>
 		{/snippet}
