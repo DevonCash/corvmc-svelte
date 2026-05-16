@@ -695,7 +695,7 @@ p {
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
-.id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; justify-content: center; flex: 1; }
+.id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; flex: 1; }
 .id-card__name {
   font-weight: 700;
   font-size: 5.8cqi;
