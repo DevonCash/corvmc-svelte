@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/schema/equipment';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, sql, like, inArray, or, desc } from 'drizzle-orm';
+import { primaryRoleFor } from '$lib/server/authorization';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
@@ -396,7 +397,8 @@ export async function getLoanById(id: string) {
 			pricingTier: equipmentCategory.pricingTier,
 			userName: user.name,
 			userEmail: user.email,
-			userPronouns: user.pronouns
+			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id)
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -415,6 +417,7 @@ export async function getLoanById(id: string) {
 		userName: row.userName,
 		userEmail: row.userEmail,
 		userPronouns: row.userPronouns,
+		userRole: row.userRole,
 		isOverdue:
 			row.loan.status === 'checked_out' &&
 			row.loan.dueDate != null &&
@@ -447,7 +450,8 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 			equipmentName: equipment.name,
 			userName: user.name,
 			userEmail: user.email,
-			userPronouns: user.pronouns
+			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id)
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -461,6 +465,7 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 		userName: row.userName,
 		userEmail: row.userEmail,
 		userPronouns: row.userPronouns,
+		userRole: row.userRole,
 		isOverdue:
 			row.loan.status === 'checked_out' &&
 			row.loan.dueDate != null &&

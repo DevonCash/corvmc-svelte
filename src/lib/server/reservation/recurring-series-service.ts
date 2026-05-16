@@ -3,6 +3,7 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { primaryRoleFor } from '$lib/server/authorization';
 import { buildRRule, describeFrequency } from './rrule-helpers';
 import type { RecurringFrequency } from './config';
 
@@ -58,6 +59,7 @@ export interface SeriesListItem {
 	cancelledAt: Date | null;
 	userName: string;
 	userPronouns: string | null;
+	userRole: string | null;
 	bookerType: string;
 	bookerId: string;
 	startsAt: Date;
@@ -279,6 +281,7 @@ export async function listActive(): Promise<SeriesListItem[]> {
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -314,6 +317,7 @@ export async function listAll(): Promise<SeriesListItem[]> {
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -348,6 +352,7 @@ export async function listForUser(userId: string): Promise<SeriesListItem[]> {
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,

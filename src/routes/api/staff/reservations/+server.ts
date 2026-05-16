@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { hasAnyRole } from '$lib/server/authorization';
+import { hasAnyRole, primaryRoleFor } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
@@ -58,7 +58,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			recurringSeriesId: reservation.recurringSeriesId,
 			memberName: user.name,
 			memberEmail: user.email,
-			memberPronouns: user.pronouns
+			memberPronouns: user.pronouns,
+			memberRole: primaryRoleFor(user.id)
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -77,7 +78,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			notes: reservation.notes,
 			memberName: user.name,
 			memberEmail: user.email,
-			memberPronouns: user.pronouns
+			memberPronouns: user.pronouns,
+			memberRole: primaryRoleFor(user.id)
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))

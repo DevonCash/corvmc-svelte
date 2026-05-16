@@ -48,7 +48,7 @@
 	<DataTable data={data.series} empty="No recurring series found">
 		<Column key="userName" header="Member" stopClick>
 			{#snippet cell(_, s)}
-				<MemberLink name={s.userName} pronouns={s.userPronouns} userId={undefined} />
+				<MemberLink name={s.userName} pronouns={s.userPronouns} role={s.userRole} userId={undefined} />
 			{/snippet}
 		</Column>
 		<Column key="frequencyLabel" header="Schedule">

@@ -6,12 +6,16 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import { IconCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
+	import { IconCheck, IconCircleCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import { visibleActions } from '$lib/utils/reservation-actions';
+	import { confirmReservation, completeReservation } from './data.remote';
+	import { invalidateAll } from '$app/navigation';
 	import type { StaffReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffReservationsResponse } = $props();
@@ -114,7 +118,7 @@
 								<BookerTypeIcon type={r.bookerType} size={16} />
 							</span>
 						{/if}
-						<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} userId={r.createdByUserId} class='p-7 px-4'/>
+						<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} role={r.memberRole} userId={r.createdByUserId} class='p-7 px-4'/>
 					</div>
 				</td>
 				<td>
@@ -129,6 +133,32 @@
 							</span>
 						</div>
 					{/if}
+				</td>
+				<td class="w-px" onclick={(e) => e.stopPropagation()}>
+					<div class="flex items-center gap-1">
+						{#if visibleActions(r.status, r.startsAt, r.endsAt).has('confirm')}
+							<Action
+								action={() => confirmReservation({ reservationId: r.id })}
+								label="Confirm"
+								successToast="Confirmed"
+								class="btn-ghost btn-xs btn-square"
+								onsuccess={() => invalidateAll()}
+							>
+								{#snippet icon()}<IconCheck size={16} />{/snippet}
+							</Action>
+						{/if}
+						{#if visibleActions(r.status, r.startsAt, r.endsAt).has('complete')}
+							<Action
+								action={() => completeReservation({ reservationId: r.id })}
+								label="Complete"
+								successToast="Completed"
+								class="btn-ghost btn-xs btn-square"
+								onsuccess={() => invalidateAll()}
+							>
+								{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
+							</Action>
+						{/if}
+					</div>
 				</td>
 			</tr>
 		{/snippet}

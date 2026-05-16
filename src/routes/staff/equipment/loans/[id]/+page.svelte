@@ -51,7 +51,7 @@
 				<dd class="font-mono text-xs">{loan.id}</dd>
 
 				<dt class="opacity-60">Member</dt>
-				<dd><MemberLink name={loan.userName} email={loan.userEmail} pronouns={loan.userPronouns} userId={loan.userId} /></dd>
+				<dd><MemberLink name={loan.userName} email={loan.userEmail} pronouns={loan.userPronouns} role={loan.userRole} userId={loan.userId} /></dd>
 
 				<dt class="opacity-60">Equipment</dt>
 				<dd>

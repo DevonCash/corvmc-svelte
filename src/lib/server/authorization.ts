@@ -2,7 +2,29 @@ import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql, type SQL } from 'drizzle-orm';
+import { user } from '$lib/server/db/schema/auth';
+
+/**
+ * Correlated subquery returning the highest-priority role name for a given user ID column.
+ * Priority: admin > staff > sustaining > member (fallback).
+ * Use inside a drizzle `.select()` as a computed column, e.g. `primaryRole: primaryRoleFor(user.id)`.
+ */
+export function primaryRoleFor(userIdCol: SQL | typeof user.id) {
+	return sql<string>`(
+		select r.name from roles r
+		inner join model_has_roles mhr on mhr.role_id = r.id
+		where mhr.user_id = ${userIdCol}
+		order by case r.name
+			when 'admin' then 0
+			when 'staff' then 1
+			when 'sustaining' then 2
+			when 'member' then 3
+			else 4
+		end
+		limit 1
+	)`;
+}
 
 /**
  * Check whether a user has a specific role.

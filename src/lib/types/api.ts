@@ -422,6 +422,7 @@ export interface StaffReservationsResponse {
 		memberName: string;
 		memberEmail: string;
 		memberPronouns: string | null;
+		memberRole: string | null;
 	}[];
 	unresolved: {
 		id: string;
@@ -433,6 +434,7 @@ export interface StaffReservationsResponse {
 		memberName: string;
 		memberEmail: string;
 		memberPronouns: string | null;
+		memberRole: string | null;
 	}[];
 	tab: string;
 	search: string;
@@ -540,6 +542,7 @@ export interface StaffRecurringResponse {
 		id: string;
 		userName: string;
 		userPronouns: string | null;
+		userRole: string | null;
 		frequencyLabel: string;
 		bookerType: string;
 		startsAt: string;

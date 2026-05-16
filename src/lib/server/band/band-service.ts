@@ -3,6 +3,7 @@ import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, notInArray, inArray, isNull, isNotNull, count } from 'drizzle-orm';
+import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
@@ -210,7 +211,8 @@ export async function getMembers(bandId: string) {
 			createdAt: bandMember.createdAt,
 			userName: user.name,
 			userEmail: user.email,
-			userPronouns: user.pronouns
+			userPronouns: user.pronouns,
+			userRole: primaryRoleFor(user.id)
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
@@ -516,6 +518,7 @@ export async function getByIdWithDetails(bandId: string) {
 			ownerName: user.name,
 			ownerEmail: user.email,
 			ownerPronouns: user.pronouns,
+			ownerRole: primaryRoleFor(user.id),
 			avatarKey: band.avatarKey,
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,

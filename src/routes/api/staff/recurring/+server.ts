@@ -22,6 +22,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			id: s.id,
 			userName: s.userName,
 			userPronouns: s.userPronouns,
+			userRole: s.userRole,
 			frequencyLabel: s.frequencyLabel,
 			bookerType: s.bookerType,
 			startsAt: s.startsAt.toISOString(),
