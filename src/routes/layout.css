@@ -272,3 +272,82 @@ p {
     );
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Section tints — alternating tinted backgrounds from the design system.
+   Use `color-mix` with brand accents to tint against the page background.
+   --------------------------------------------------------------------------- */
+.section-tint-primary   { background: color-mix(in oklch, var(--cmc-orange) 18%, var(--bg-page)); }
+.section-tint-success   { background: color-mix(in oklch, #2ea076 12%, var(--bg-page)); }
+.section-tint-warning   { background: color-mix(in oklch, var(--cmc-yellow) 35%, var(--bg-page)); }
+.section-tint-info      { background: color-mix(in oklch, var(--cmc-light-blue) 32%, var(--bg-page)); }
+.section-tint-secondary { background: color-mix(in oklch, var(--cmc-navy) 8%, var(--bg-page)); }
+
+/* ---------------------------------------------------------------------------
+   Sunburst — radiating goldenrod rays from the upper-right.
+   Apply to a positioned container; renders behind content via ::after.
+   --------------------------------------------------------------------------- */
+.sunburst {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.sunburst::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.18;
+  pointer-events: none;
+  background:
+    conic-gradient(
+      from -90deg at 100% 0%,
+      var(--cmc-goldenrod) 0 6deg, transparent 6deg 18deg,
+      var(--cmc-goldenrod) 18deg 24deg, transparent 24deg 36deg,
+      var(--cmc-goldenrod) 36deg 42deg, transparent 42deg 54deg,
+      var(--cmc-goldenrod) 54deg 60deg, transparent 60deg 72deg,
+      var(--cmc-goldenrod) 72deg 78deg, transparent 78deg 90deg,
+      var(--cmc-goldenrod) 90deg 96deg, transparent 96deg 360deg
+    );
+}
+
+/* ---------------------------------------------------------------------------
+   Retro buttons — hard-bordered with brown outline + drop shadow.
+   Pair with DaisyUI's btn as an override: `btn retro-btn`
+   --------------------------------------------------------------------------- */
+.retro-btn {
+  border: 2.5px solid var(--cmc-brown);
+  box-shadow: 4px 4px 0 var(--cmc-brown);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.retro-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--cmc-brown);
+}
+.retro-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--cmc-brown);
+}
+
+/* ---------------------------------------------------------------------------
+   Washi-tape badges — semi-transparent stripe texture + slight rotation.
+   --------------------------------------------------------------------------- */
+.washi-badge {
+  display: inline-block;
+  padding: 5px 11px;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  color: var(--cmc-brown);
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, transparent 14%, transparent 86%, rgba(0,0,0,0.06) 100%),
+    repeating-linear-gradient(90deg, transparent 0 6px, rgba(255,255,255,0.18) 6px 7px),
+    var(--badge-color, rgba(255, 181, 0, 0.92));
+  box-shadow:
+    0 0.5px 0 rgba(0, 0, 0, 0.06),
+    0 1px 1px rgba(40, 25, 10, 0.08);
+  transform: rotate(var(--badge-tilt, -1deg));
+}
