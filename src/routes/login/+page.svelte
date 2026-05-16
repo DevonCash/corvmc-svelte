@@ -1,11 +1,50 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import favicon from '$lib/assets/favicon.svg';
 
-	let { form }: { form: any } = $props();
+	let mode = $state<'login' | 'register'>('login');
+	let error = $state('');
+	let loading = $state(false);
 
-	let modeOverride = $state<'login' | 'register' | null>(null);
-	let mode = $derived(modeOverride ?? (form?.mode === 'register' ? 'register' : 'login'));
+	let name = $state('');
+	let email = $state('');
+	let password = $state('');
+
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		error = '';
+		loading = true;
+
+		try {
+			const endpoint = mode === 'login'
+				? '/api/auth/sign-in/email'
+				: '/api/auth/sign-up/email';
+
+			const body: Record<string, string> = { email, password };
+			if (mode === 'register') body.name = name;
+
+			const res = await fetch(endpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+
+			if (!res.ok) {
+				const data = await res.json().catch(() => null);
+				error = mode === 'login'
+					? 'Invalid email or password.'
+					: data?.message ?? 'Registration failed. Please try again.';
+				return;
+			}
+
+			const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
+			await goto(redirectTo, { invalidateAll: true });
+		} catch {
+			error = 'Something went wrong. Please try again.';
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -26,26 +65,20 @@
 					{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
 				</h2>
 
-				{#if form?.message}
+				{#if error}
 					<div class="alert alert-error text-sm">
-						{form.message}
+						{error}
 					</div>
 				{/if}
 
-				<form
-					method="post"
-					action={mode === 'login' ? '?/login' : '?/register'}
-					use:enhance
-					class="flex flex-col gap-3"
-				>
+				<form onsubmit={handleSubmit} class="flex flex-col gap-3">
 					{#if mode === 'register'}
 						<label class="floating-label">
 							<span>Name</span>
 							<input
 								type="text"
-								name="name"
 								placeholder="Name"
-								value={form?.name ?? ''}
+								bind:value={name}
 								required
 								class="input input-bordered w-full"
 							/>
@@ -56,9 +89,8 @@
 						<span>Email</span>
 						<input
 							type="email"
-							name="email"
 							placeholder="Email"
-							value={form?.email ?? ''}
+							bind:value={email}
 							required
 							class="input input-bordered w-full"
 						/>
@@ -68,15 +100,18 @@
 						<span>Password</span>
 						<input
 							type="password"
-							name="password"
 							placeholder="Password"
+							bind:value={password}
 							required
 							minlength={mode === 'register' ? 8 : undefined}
 							class="input input-bordered w-full"
 						/>
 					</label>
 
-					<button type="submit" class="btn btn-primary w-full mt-1">
+					<button type="submit" class="btn btn-primary w-full mt-1" disabled={loading}>
+						{#if loading}
+							<span class="loading loading-spinner loading-sm"></span>
+						{/if}
 						{mode === 'login' ? 'Sign in' : 'Create account'}
 					</button>
 				</form>
@@ -85,7 +120,7 @@
 
 				<button
 					class="btn btn-ghost btn-sm"
-					onclick={() => { modeOverride = mode === 'login' ? 'register' : 'login'; }}
+					onclick={() => { mode = mode === 'login' ? 'register' : 'login'; error = ''; }}
 				>
 					{mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
 				</button>
