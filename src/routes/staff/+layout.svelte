@@ -3,6 +3,7 @@
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
+	import NavCollapsible from '$lib/components/shared/NavCollapsible.svelte';
 	import {
 		IconHome,
 		IconUsers,
@@ -49,17 +50,28 @@
 			<NavItem href="/staff/users" label="Users">
 				{#snippet icon()}<IconUsers size={20} />{/snippet}
 			</NavItem>
-			<NavItem href="/staff/reservations" label="Reservations">
+			<NavCollapsible
+				label="Reservations"
+				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
+			>
 				{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
-			</NavItem>
+				{#snippet children()}
+					<NavItem href="/staff/reservations" label="All Reservations">
+						{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
+					</NavItem>
+					<NavItem href="/staff/recurring" label="Recurring">
+						{#snippet icon()}<IconRepeat size={20} />{/snippet}
+					</NavItem>
+					<NavItem href="/staff/closures" label="Closures">
+						{#snippet icon()}<IconBan size={20} />{/snippet}
+					</NavItem>
+				{/snippet}
+			</NavCollapsible>
 			<NavItem href="/staff/events" label="Events">
 				{#snippet icon()}<IconCalendarEvent size={20} />{/snippet}
 			</NavItem>
 			<NavItem href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/closures" label="Closures">
-				{#snippet icon()}<IconBan size={20} />{/snippet}
 			</NavItem>
 			<NavItem href="/staff/equipment" label="Equipment">
 				{#snippet icon()}<IconTool size={20} />{/snippet}
@@ -78,9 +90,6 @@
 		<NavGroup title="System">
 			<NavItem href="/staff/payments" label="Payments">
 				{#snippet icon()}<IconCash size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/recurring" label="Recurring">
-				{#snippet icon()}<IconRepeat size={20} />{/snippet}
 			</NavItem>
 			<NavItem href="/staff/settings" label="Settings">
 				{#snippet icon()}<IconSettings size={20} />{/snippet}
