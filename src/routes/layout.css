@@ -457,15 +457,15 @@ p {
   width: 100%;
   cursor: pointer;
   --vinyl-label: var(--cmc-orange);
-  transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1);
+  overflow: hidden;
 }
-.vinyl-card:hover { transform: translateY(-2px); z-index: 2; }
+.vinyl-card:hover { z-index: 2; overflow: visible; }
 
 .vinyl-card__disc {
   position: absolute;
-  right: 2%;
+  left: 10%;
   top: 50%;
-  width: 55%;
+  width: 80%;
   aspect-ratio: 1;
   transform: translateY(-50%);
   border-radius: 50%;
@@ -479,11 +479,11 @@ p {
   box-shadow:
     0 4px 10px rgba(0, 0, 0, 0.4),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: transform 400ms cubic-bezier(.34, 1.2, .64, 1);
+  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
   z-index: 1;
 }
 .vinyl-card:hover .vinyl-card__disc {
-  transform: translate(14%, -50%) rotate(30deg);
+  transform: translate(52%, -50%) rotate(60deg);
 }
 
 .vinyl-card__label {
@@ -519,25 +519,19 @@ p {
 
 .vinyl-card__sleeve {
   position: relative;
-  width: 62%;
+  width: 100%;
   background: var(--cmc-cream);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.25),
     inset 0 0 0 1px rgba(0, 0, 0, 0.08);
   z-index: 2;
   overflow: hidden;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
 }
-.vinyl-card__sleeve::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 8%;
-  bottom: 8%;
-  width: 6px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent);
-  pointer-events: none;
+.vinyl-card:hover .vinyl-card__sleeve {
+  transform: translateX(-8%);
 }
+.vinyl-card__sleeve::after { display: none; }
 .vinyl-card__sleeve-art {
   aspect-ratio: 1;
   width: 100%;
