@@ -118,6 +118,33 @@ export function formatDurationAndAmount(startsAt: string, endsAt: string, hourly
 	return `${label} · ${formatDurationAmount(startsAt, endsAt, hourlyRateCents)}`;
 }
 
+/** "May 3, 2026" — month, day, year without weekday */
+export function formatMonthDayYear(iso: string): string {
+	return new Date(iso).toLocaleDateString('en-US', {
+		timeZone: TZ,
+		month: 'long',
+		day: 'numeric',
+		year: 'numeric'
+	});
+}
+
+/** "Every Sunday", "Every other Tuesday", "1st Saturday of each month" */
+export function formatScheduleLabel(frequencyLabel: string, startsAtIso: string): string {
+	const d = new Date(startsAtIso);
+	const dayName = d.toLocaleDateString('en-US', { timeZone: TZ, weekday: 'long' });
+
+	if (frequencyLabel === 'Weekly') return `Every ${dayName}`;
+	if (frequencyLabel === 'Every 2 weeks') return `Every other ${dayName}`;
+	if (frequencyLabel === 'Monthly') {
+		const dayOfMonth = Number(d.toLocaleDateString('en-US', { timeZone: TZ, day: 'numeric' }));
+		const nth = Math.ceil(dayOfMonth / 7);
+		const ordinal = nth === 1 ? '1st' : nth === 2 ? '2nd' : nth === 3 ? '3rd' : `${nth}th`;
+		return `${ordinal} ${dayName} of each month`;
+	}
+
+	return frequencyLabel;
+}
+
 /** Convert HH:MM slot time to display: "14:30" → "2:30 PM" */
 export function formatSlotTime(time: string): string {
 	const [h, m] = time.split(':').map(Number);

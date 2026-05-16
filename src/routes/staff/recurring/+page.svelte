@@ -6,7 +6,7 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
+	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
 	import { cancelSeries } from './data.remote';
 	import type { StaffRecurringResponse } from '$lib/types/api';
 
@@ -49,9 +49,9 @@
 				<MemberLink name={s.userName} userId={undefined} />
 			{/snippet}
 		</Column>
-		<Column key="startsAt" header="Day / Time" sortable>
+		<Column key="frequencyLabel" header="Schedule">
 			{#snippet cell(_, s)}
-				<div>{formatDate(s.startsAt)}</div>
+				<div>{formatScheduleLabel(s.frequencyLabel, s.startsAt)}</div>
 				<div class="text-sm opacity-60">
 					{formatTimeRange(s.startsAt, s.endsAt)}
 					<span class="mx-1">·</span>
@@ -59,14 +59,9 @@
 				</div>
 			{/snippet}
 		</Column>
-		<Column key="frequencyLabel" header="Frequency" shrink>
+		<Column key="startsAt" header="Starts" type="date" sortable shrink>
 			{#snippet cell(_, s)}
-				<span class="badge badge-outline badge-sm">{s.frequencyLabel}</span>
-			{/snippet}
-		</Column>
-		<Column key="bookerType" header="Booker" shrink>
-			{#snippet cell(_, s)}
-				<span class="badge badge-outline badge-sm">{s.bookerType}</span>
+				{formatMonthDayYear(s.startsAt)}
 			{/snippet}
 		</Column>
 		<Column key="createdAt" header="Created" type="date" sortable shrink />
