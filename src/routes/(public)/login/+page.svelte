@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import favicon from '$lib/assets/favicon.svg';
 
 	let mode = $state<'login' | 'register'>('login');
 	let error = $state('');
@@ -51,14 +50,8 @@
 	<title>{mode === 'login' ? 'Sign in' : 'Create account'} — CorvMC</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center bg-base-200 px-4">
+<div class="flex items-center justify-center py-16 px-4">
 	<div class="w-full max-w-sm">
-		<div class="flex flex-col items-center mb-8">
-			<img src={favicon} alt="CorvMC" class="w-16 h-16 mb-3" />
-			<h1 class="text-2xl font-bold">CorvMC</h1>
-			<div class="tri-stripe w-24 mt-2 rounded-full"></div>
-		</div>
-
 		<div class="card bg-base-100 shadow-xl">
 			<div class="card-body gap-4">
 				<h2 class="card-title justify-center text-lg">

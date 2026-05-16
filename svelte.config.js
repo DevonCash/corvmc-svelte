@@ -1,11 +1,20 @@
 import { mdsvex } from 'mdsvex';
 import adapter from '@sveltejs/adapter-cloudflare';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	compilerOptions: {
 		// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
-		runes: ({ filename }) => (filename.split(/[/\\]/).includes('node_modules') ? undefined : true),
+		runes: ({ filename }) => {
+			if (filename.split(/[/\\]/).includes('node_modules')) return undefined;
+			if (/\.(md|svx)$/.test(filename)) return undefined;
+			if (filename.includes('/layouts/')) return undefined;
+			return true;
+		},
 		experimental: {
 			async: true
 		}
@@ -26,7 +35,12 @@ const config = {
 			})
 		}
 	},
-	preprocess: [mdsvex({ extensions: ['.svx', '.md'] })],
+	preprocess: [
+		mdsvex({
+			extensions: ['.svx', '.md'],
+			layout: { _: join(__dirname, 'src/lib/layouts/prose.svelte') }
+		})
+	],
 	extensions: ['.svelte', '.svx', '.md']
 };
 

@@ -1,0 +1,38 @@
+---
+title: About CMC
+description: Building and connecting music communities around Corvallis since 2024.
+---
+
+# About CMC
+
+**Building and connecting music communities around Corvallis since 2024.**
+
+The Corvallis Music Collective exists to foster an inclusive, vibrant music community. We provide affordable practice space, performance opportunities, educational programs, and connections that support local musicians — bridging genres, skill levels, and generations.
+
+## Our Values
+
+- **Inclusivity** — Welcoming musicians of all backgrounds, genres, and skill levels.
+- **Accessibility** — Keeping our offerings affordable so cost is never a barrier.
+- **Community** — Building meaningful connections and collaborations between musicians.
+- **Growth** — Supporting artists in developing their craft and reaching new audiences.
+- **Sustainability** — Creating lasting resources that serve the Corvallis music scene for years to come.
+
+## Our Story
+
+- **January 2024** — Founded by a group of local musicians frustrated by the lack of affordable practice space in Corvallis.
+- **April 2024** — Held our first fundraiser event, bringing the community together around a shared vision.
+- **June 2024** — Received 501(c)(3) nonprofit status.
+- **August 2024** — Signed a lease on our practice space at 6775 A Philomath Blvd.
+- **January 2025** — Hosted our first concert. Since then, we've put on 25+ live performances.
+
+## Leadership
+
+The Corvallis Music Collective is governed by a volunteer Board of Directors.
+
+**Devon Cash** — President
+
+## Join Us
+
+Whether you're a seasoned performer or just picking up an instrument for the first time, there's a place for you here.
+
+[Become a Member](/login?redirect=/member) | [Contribute](/contribute)
