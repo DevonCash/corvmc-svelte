@@ -19,6 +19,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let id = $derived(page.params.id!);
@@ -96,96 +98,84 @@
 
 	<!-- Members -->
 	<InfoCard title="Members" class="mb-6">
-		<div class="overflow-x-auto">
-			<table class="table table-sm">
-				<thead>
-					<tr>
-						<th>Member</th>
-						<th>Role</th>
-						<th>Position</th>
-						<th>Status</th>
-						<th>Joined</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each members as m (m.id)}
-						<tr class="hover">
-							<td>
-								<MemberLink name={m.userName} email={m.userEmail} userId={m.userId} />
-							</td>
-							<td>
-								<span class="badge badge-outline badge-sm">{m.role}</span>
-							</td>
-							<td class="text-sm opacity-70">{m.position ?? '—'}</td>
-							<td><StatusBadge status={m.status} /></td>
-							<td class="text-sm">{new Date(m.createdAt).toLocaleDateString()}</td>
-							<td class="text-right">
-								{#if m.role !== 'owner'}
-									<div class="flex gap-1 justify-end">
-										{#if m.status === 'active' && m.role !== 'owner'}
-											<Action
-												action={() => transferBandOwnership({ newOwnerId: m.userId })}
-												label="Make owner"
-												confirm={`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`}
-												successToast="Ownership transferred"
-												class="btn-ghost btn-xs"
-											/>
-										{/if}
-										<Action
-											action={() => removeBandMember({ memberId: m.id })}
-											label="Remove"
-											confirm={`Remove ${m.userName} from this band?`}
-											successToast="Member removed"
-											class="btn-ghost btn-xs text-error"
-										/>
-									</div>
-								{/if}
-							</td>
-						</tr>
-					{:else}
-						<tr>
-							<td colspan="6" class="text-center opacity-60 py-4">No members</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<DataTable data={members} empty="No members">
+			<Column key="userName" header="Member" stopClick>
+				{#snippet cell(_, m)}
+					<MemberLink name={m.userName} email={m.userEmail} userId={m.userId} />
+				{/snippet}
+			</Column>
+			<Column key="role" header="Role" shrink>
+				{#snippet cell(_, m)}
+					<span class="badge badge-outline badge-sm">{m.role}</span>
+				{/snippet}
+			</Column>
+			<Column key="position" header="Position">
+				{#snippet cell(_, m)}
+					<span class="text-sm opacity-70">{m.position ?? '—'}</span>
+				{/snippet}
+			</Column>
+			<Column key="status" header="Status" shrink>
+				{#snippet cell(_, m)}
+					<StatusBadge status={m.status} />
+				{/snippet}
+			</Column>
+			<Column key="createdAt" header="Joined" type="date" shrink />
+			<Column key="actions" header="" shrink stopClick>
+				{#snippet cell(_, m)}
+					{#if m.role !== 'owner'}
+						<div class="flex gap-1 justify-end">
+							{#if m.status === 'active' && m.role !== 'owner'}
+								<Action
+									action={() => transferBandOwnership({ newOwnerId: m.userId })}
+									label="Make owner"
+									confirm={`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`}
+									successToast="Ownership transferred"
+									class="btn-ghost btn-xs"
+								/>
+							{/if}
+							<Action
+								action={() => removeBandMember({ memberId: m.id })}
+								label="Remove"
+								confirm={`Remove ${m.userName} from this band?`}
+								successToast="Member removed"
+								class="btn-ghost btn-xs text-error"
+							/>
+						</div>
+					{/if}
+				{/snippet}
+			</Column>
+		</DataTable>
 	</InfoCard>
 
 	<!-- Recent Reservations -->
 	<InfoCard title="Recent Reservations">
-		<div class="overflow-x-auto">
-			<table class="table table-sm">
-				<thead>
-					<tr>
-						<th>Date</th>
-						<th>Time</th>
-						<th>Status</th>
-						<th>Booked by</th>
-						<th>Notes</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each reservations as r (r.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() => window.location.href = `/staff/reservations/${r.id}`}
-						>
-							<td>{formatDate(r.startsAt.toISOString())}</td>
-							<td class="text-sm">{formatTimeRange(r.startsAt.toISOString(), r.endsAt.toISOString())}</td>
-							<td><StatusBadge status={r.status} /></td>
-							<td class="text-sm">{r.bookedByName ?? '—'}</td>
-							<td class="text-sm opacity-70 max-w-xs truncate">{r.notes ?? '—'}</td>
-						</tr>
-					{:else}
-						<tr>
-							<td colspan="5" class="text-center opacity-60 py-4">No reservations</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`} empty="No reservations">
+			<Column key="startsAt" header="Date">
+				{#snippet cell(_, r)}
+					{formatDate(r.startsAt.toISOString())}
+				{/snippet}
+			</Column>
+			<Column key="time" header="Time">
+				{#snippet cell(_, r)}
+					<span class="text-sm">{formatTimeRange(r.startsAt.toISOString(), r.endsAt.toISOString())}</span>
+				{/snippet}
+			</Column>
+			<Column key="status" header="Status" shrink>
+				{#snippet cell(_, r)}
+					<StatusBadge status={r.status} />
+				{/snippet}
+			</Column>
+			<Column key="bookedByName" header="Booked by">
+				{#snippet cell(_, r)}
+					<span class="text-sm">{r.bookedByName ?? '—'}</span>
+				{/snippet}
+			</Column>
+			<Column key="notes" header="Notes">
+				{#snippet cell(_, r)}
+					<span class="text-sm opacity-70 max-w-xs truncate">{r.notes ?? '—'}</span>
+				{/snippet}
+			</Column>
+		</DataTable>
 	</InfoCard>
 
 

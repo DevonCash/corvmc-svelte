@@ -17,6 +17,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { equipmentConditions, equipmentStatuses } from '$lib/types/equipment';
 
@@ -121,44 +123,36 @@
 
 	<!-- Loan History -->
 	<InfoCard title="Loan History">
-		<div class="overflow-x-auto">
-			<table class="table table-sm">
-				<thead>
-					<tr>
-						<th>Member</th>
-						<th>Status</th>
-						<th>Requested</th>
-						<th>Due</th>
-						<th>Charge</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each loanHistory as loan (loan.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() => window.location.href = `/staff/equipment/loans/${loan.id}`}
-						>
-							<td>
-								<MemberLink name={loan.userName} email={loan.userEmail} userId={loan.userId} />
-							</td>
-							<td>
-								<StatusBadge status={loan.status} />
-								{#if loan.isOverdue}
-									<span class="badge badge-error badge-xs ml-1">Overdue</span>
-								{/if}
-							</td>
-							<td class="text-sm">{formatDate(loan.requestedPickupDate.toISOString())}</td>
-							<td class="text-sm">{loan.dueDate ? formatDate(loan.dueDate.toISOString()) : '—'}</td>
-							<td class="text-sm">{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}</td>
-						</tr>
-					{:else}
-						<tr>
-							<td colspan="5" class="text-center opacity-60 py-4">No loan history</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<DataTable data={loanHistory} rowHref={(loan) => `/staff/equipment/loans/${loan.id}`} empty="No loan history">
+			<Column key="userName" header="Member" stopClick>
+				{#snippet cell(_, loan)}
+					<MemberLink name={loan.userName} email={loan.userEmail} userId={loan.userId} />
+				{/snippet}
+			</Column>
+			<Column key="status" header="Status" shrink>
+				{#snippet cell(_, loan)}
+					<StatusBadge status={loan.status} />
+					{#if loan.isOverdue}
+						<span class="badge badge-error badge-xs ml-1">Overdue</span>
+					{/if}
+				{/snippet}
+			</Column>
+			<Column key="requestedPickupDate" header="Requested" shrink>
+				{#snippet cell(_, loan)}
+					{formatDate(loan.requestedPickupDate.toISOString())}
+				{/snippet}
+			</Column>
+			<Column key="dueDate" header="Due" shrink>
+				{#snippet cell(_, loan)}
+					{loan.dueDate ? formatDate(loan.dueDate.toISOString()) : '—'}
+				{/snippet}
+			</Column>
+			<Column key="totalChargeCents" header="Charge" shrink>
+				{#snippet cell(_, loan)}
+					{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}
+				{/snippet}
+			</Column>
+		</DataTable>
 	</InfoCard>
 
 

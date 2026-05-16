@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getAudiences } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import CreateAudienceModal from './CreateAudienceModal.svelte';
 
 	let showCreateModal = $state(false);
@@ -16,47 +17,28 @@
 
 	<CreateAudienceModal bind:open={showCreateModal} />
 
-	{#if audiences.length === 0}
-		<EmptyState message="No audiences yet. Create one to start building your email lists." />
-	{:else}
-		<div class="overflow-x-auto">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Name</th>
-						<th>Subscribers</th>
-						<th>Opt-in</th>
-						<th>Created</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each audiences as a (a.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() => (window.location.href = `/staff/marketing/audiences/${a.id}`)}
-						>
-							<td>
-								<div>
-									<p class="font-medium">{a.name}</p>
-									{#if a.description}
-										<p class="text-sm opacity-60 truncate max-w-xs">{a.description}</p>
-									{/if}
-								</div>
-							</td>
-							<td>{a.subscriberCount}</td>
-							<td>
-								{#if a.allowOptIn}
-									<span class="badge badge-success badge-sm">Public</span>
-								{:else}
-									<span class="badge badge-ghost badge-sm">Staff only</span>
-								{/if}
-							</td>
-							<td class="text-sm">{new Date(a.createdAt).toLocaleDateString()}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
+	<DataTable data={audiences} rowHref={(a) => `/staff/marketing/audiences/${a.id}`} empty="No audiences yet. Create one to start building your email lists.">
+		<Column key="name" header="Name" sortable>
+			{#snippet cell(_, a)}
+				<div>
+					<p class="font-medium">{a.name}</p>
+					{#if a.description}
+						<p class="text-sm opacity-60 truncate max-w-xs">{a.description}</p>
+					{/if}
+				</div>
+			{/snippet}
+		</Column>
+		<Column key="subscriberCount" header="Subscribers" sortable shrink />
+		<Column key="allowOptIn" header="Opt-in" shrink>
+			{#snippet cell(_, a)}
+				{#if a.allowOptIn}
+					<span class="badge badge-success badge-sm">Public</span>
+				{:else}
+					<span class="badge badge-ghost badge-sm">Staff only</span>
+				{/if}
+			{/snippet}
+		</Column>
+		<Column key="createdAt" header="Created" type="date" shrink sortable />
+	</DataTable>
 
 

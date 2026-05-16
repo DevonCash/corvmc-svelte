@@ -8,6 +8,8 @@
 	import { publishEvent, cancelEvent, updateEvent, checkRebook, checkConflicts } from './data.remote';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import type { StaffEventDetailResponse } from '$lib/types/api';
 
@@ -426,28 +428,24 @@
 		<!-- Ticket list -->
 		{#if data.tickets.length > 0}
 			<InfoCard title="Tickets ({data.tickets.length})">
-				<div class="overflow-x-auto">
-					<table class="table table-sm">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Email</th>
-								<th>Code</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each data.tickets as ticket (ticket.id)}
-								<tr>
-									<td>{ticket.attendeeName}</td>
-									<td class="text-sm opacity-70">{ticket.attendeeEmail}</td>
-									<td class="font-mono text-sm">{ticket.code}</td>
-									<td><StatusBadge status={ticket.status} /></td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<DataTable data={data.tickets} empty="No tickets">
+					<Column key="attendeeName" header="Name" sortable />
+					<Column key="attendeeEmail" header="Email">
+						{#snippet cell(_, t)}
+							<span class="text-sm opacity-70">{t.attendeeEmail}</span>
+						{/snippet}
+					</Column>
+					<Column key="code" header="Code" shrink>
+						{#snippet cell(_, t)}
+							<span class="font-mono text-sm">{t.code}</span>
+						{/snippet}
+					</Column>
+					<Column key="status" header="Status" shrink>
+						{#snippet cell(_, t)}
+							<StatusBadge status={t.status} />
+						{/snippet}
+					</Column>
+				</DataTable>
 			</InfoCard>
 		{/if}
 	{/if}

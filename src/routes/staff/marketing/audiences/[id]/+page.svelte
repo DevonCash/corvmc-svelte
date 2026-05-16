@@ -5,6 +5,8 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import {
 		getAudienceDetail,
 		getAudienceSubscribers,
@@ -21,25 +23,6 @@
 
 	let newEmail = $state('');
 	let newName = $state('');
-	let addingSubscriber = $state(false);
-
-	async function handleAddSubscriber() {
-		if (!newEmail.trim()) return;
-		addingSubscriber = true;
-		try {
-			await addSubscriberCommand({
-				email: newEmail.trim(),
-				name: newName.trim() || undefined
-			});
-			toast.success('Subscriber added');
-			newEmail = '';
-			newName = '';
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to add subscriber');
-		} finally {
-			addingSubscriber = false;
-		}
-	}
 </script>
 
 	{#if audienceData}
@@ -112,87 +95,82 @@
 
 		<!-- Add Subscriber -->
 		<InfoCard title="Add Subscriber" class="mb-6">
-			<form
-				onsubmit={(e) => {
-					e.preventDefault();
-					handleAddSubscriber();
+			<Action
+				action={async () => {
+					await addSubscriberCommand({
+						email: newEmail.trim(),
+						name: newName.trim() || undefined
+					});
+					newEmail = '';
+					newName = '';
 				}}
-				class="flex flex-wrap gap-2 items-end"
+				label="Add Subscriber"
+				modalTitle="Add Subscriber"
+				canSubmit={!!newEmail.trim()}
+				successToast="Subscriber added"
+				class="btn-primary btn-sm"
 			>
-				<div>
-					<label for="sub-email" class="text-xs opacity-60">Email</label>
-					<input
-						id="sub-email"
-						type="email"
-						bind:value={newEmail}
-						placeholder="email@example.com"
-						class="input-bordered input input-sm"
-						required
-					/>
-				</div>
-				<div>
-					<label for="sub-name" class="text-xs opacity-60">Name (optional)</label>
-					<input
-						id="sub-name"
-						type="text"
-						bind:value={newName}
-						placeholder="Name"
-						class="input-bordered input input-sm"
-					/>
-				</div>
-				<button type="submit" class="btn btn-primary btn-sm" disabled={!newEmail.trim() || addingSubscriber}>
-					{#if addingSubscriber}
-						<span class="loading loading-sm loading-spinner"></span>
-					{/if}
-					Add
-				</button>
-			</form>
+				{#snippet form({ close })}
+					<div>
+						<label for="sub-email" class="text-xs opacity-60">Email</label>
+						<input
+							id="sub-email"
+							type="email"
+							bind:value={newEmail}
+							placeholder="email@example.com"
+							class="input-bordered input w-full"
+							required
+						/>
+					</div>
+					<div>
+						<label for="sub-name" class="text-xs opacity-60">Name (optional)</label>
+						<input
+							id="sub-name"
+							type="text"
+							bind:value={newName}
+							placeholder="Name"
+							class="input-bordered input w-full"
+						/>
+					</div>
+				{/snippet}
+			</Action>
 		</InfoCard>
 
 		<!-- Subscriber List -->
 		<InfoCard title="Subscribers ({audienceData.subscriberCount})">
-			<div class="overflow-x-auto">
-				<table class="table table-sm">
-					<thead>
-						<tr>
-							<th>Email</th>
-							<th>Name</th>
-							<th>Status</th>
-							<th>Joined</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each subscribers as s (s.id)}
-							<tr class={s.unsubscribedAt ? 'opacity-40' : ''}>
-								<td class="font-mono text-sm">{s.email}</td>
-								<td>{s.name ?? '—'}</td>
-								<td>
-									{#if s.unsubscribedAt}
-										<span class="badge badge-ghost badge-xs">Unsubscribed</span>
-									{:else}
-										<span class="badge badge-success badge-xs">Active</span>
-									{/if}
-								</td>
-								<td class="text-sm">{new Date(s.createdAt).toLocaleDateString()}</td>
-								<td class="text-right">
-									<Action
-										action={() => removeSubscriberCommand({ subscriberId: s.subscriberId })}
-										label="Remove"
-										confirm={`Remove ${s.email} from this audience?`}
-										successToast="Subscriber removed"
-										class="btn-ghost btn-xs text-error"
-									/>
-								</td>
-							</tr>
+			<DataTable data={subscribers} empty="No subscribers yet">
+				<Column key="email" header="Email">
+					{#snippet cell(_, s)}
+						<span class="font-mono text-sm">{s.email}</span>
+					{/snippet}
+				</Column>
+				<Column key="name" header="Name">
+					{#snippet cell(_, s)}
+						{s.name ?? '—'}
+					{/snippet}
+				</Column>
+				<Column key="status" header="Status" shrink>
+					{#snippet cell(_, s)}
+						{#if s.unsubscribedAt}
+							<span class="badge badge-ghost badge-xs">Unsubscribed</span>
 						{:else}
-							<tr>
-								<td colspan="5" class="text-center opacity-60 py-4">No subscribers yet</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+							<span class="badge badge-success badge-xs">Active</span>
+						{/if}
+					{/snippet}
+				</Column>
+				<Column key="createdAt" header="Joined" type="date" shrink />
+				<Column key="actions" header="" shrink stopClick>
+					{#snippet cell(_, s)}
+						<Action
+							action={() => removeSubscriberCommand({ subscriberId: s.subscriberId })}
+							label="Remove"
+							confirm={`Remove ${s.email} from this audience?`}
+							successToast="Subscriber removed"
+							class="btn-ghost btn-xs text-error"
+						/>
+					{/snippet}
+				</Column>
+			</DataTable>
 		</InfoCard>
 	{/if}
 

@@ -2,7 +2,8 @@
 	import { getCampaigns } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 
 	let statusFilter = $state('');
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
@@ -21,56 +22,46 @@
 		</select>
 	</div>
 
-	{#if campaigns.length === 0}
-		<EmptyState message="No campaigns yet." />
-	{:else}
-		<div class="overflow-x-auto">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Subject</th>
-						<th>Status</th>
-						<th>Audiences</th>
-						<th>Recipients</th>
-						<th>Date</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each campaigns as c (c.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() => {
-								if (c.status === 'draft') {
-									window.location.href = `/staff/marketing/campaigns/${c.id}/edit`;
-								} else {
-									window.location.href = `/staff/marketing/campaigns/${c.id}`;
-								}
-							}}
-						>
-							<td class="font-medium">{c.subject}</td>
-							<td><StatusBadge status={c.status} /></td>
-							<td class="text-sm">
-								{#if c.audienceNames.length > 0}
-									{c.audienceNames.join(', ')}
-								{:else}
-									<span class="opacity-40">—</span>
-								{/if}
-							</td>
-							<td class="text-sm">{c.recipientCount ?? '—'}</td>
-							<td class="text-sm">
-								{#if c.sentAt}
-									{new Date(c.sentAt).toLocaleDateString()}
-								{:else if c.scheduledFor}
-									{new Date(c.scheduledFor).toLocaleString()}
-								{:else}
-									{new Date(c.createdAt).toLocaleDateString()}
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
+	<DataTable
+		data={campaigns}
+		rowHref={(c) => c.status === 'draft' ? `/staff/marketing/campaigns/${c.id}/edit` : `/staff/marketing/campaigns/${c.id}`}
+		empty="No campaigns yet."
+	>
+		<Column key="subject" header="Subject" sortable>
+			{#snippet cell(_, c)}
+				<span class="font-medium">{c.subject}</span>
+			{/snippet}
+		</Column>
+		<Column key="status" header="Status" shrink>
+			{#snippet cell(_, c)}
+				<StatusBadge status={c.status} />
+			{/snippet}
+		</Column>
+		<Column key="audienceNames" header="Audiences">
+			{#snippet cell(_, c)}
+				{#if c.audienceNames.length > 0}
+					{c.audienceNames.join(', ')}
+				{:else}
+					<span class="opacity-40">—</span>
+				{/if}
+			{/snippet}
+		</Column>
+		<Column key="recipientCount" header="Recipients" shrink>
+			{#snippet cell(_, c)}
+				{c.recipientCount ?? '—'}
+			{/snippet}
+		</Column>
+		<Column key="date" header="Date" shrink>
+			{#snippet cell(_, c)}
+				{#if c.sentAt}
+					{new Date(c.sentAt).toLocaleDateString()}
+				{:else if c.scheduledFor}
+					{new Date(c.scheduledFor).toLocaleString()}
+				{:else}
+					{new Date(c.createdAt).toLocaleDateString()}
+				{/if}
+			{/snippet}
+		</Column>
+	</DataTable>
 
 

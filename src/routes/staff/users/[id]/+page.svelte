@@ -8,6 +8,8 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
+	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import { formatDateTime, formatCents } from '$lib/utils/format';
 	import Alert from '$lib/components/shared/Alert.svelte';
@@ -103,39 +105,40 @@
 	{:then payments}
 		{#if payments.length > 0}
 			<InfoCard title="Payment Records" class="mt-6">
-				<div class="overflow-x-auto">
-					<table class="table table-sm">
-						<thead>
-							<tr>
-								<th>Date</th>
-								<th>Amount</th>
-								<th>Method</th>
-								<th>Status</th>
-								<th>Record</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each payments as p (p.id)}
-								<tr class="hover">
-									<td>{formatDateTime(p.paidAt)}</td>
-									<td class="font-medium">{formatCents(p.amountCents)}</td>
-									<td><span class="badge badge-outline badge-sm">{p.paymentMethod}</span></td>
-									<td><StatusBadge status={p.status} /></td>
-									<td>
-										<div class="flex items-center gap-2">
-											<CopyableId value={p.id} label="Stripe" />
-											{#if p.reservationId}
-												<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
-													View
-												</a>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<DataTable data={payments} empty="No payments">
+					<Column key="paidAt" header="Date">
+						{#snippet cell(_, p)}
+							{formatDateTime(p.paidAt)}
+						{/snippet}
+					</Column>
+					<Column key="amountCents" header="Amount" shrink sortable>
+						{#snippet cell(_, p)}
+							<span class="font-medium">{formatCents(p.amountCents)}</span>
+						{/snippet}
+					</Column>
+					<Column key="paymentMethod" header="Method" shrink>
+						{#snippet cell(_, p)}
+							<span class="badge badge-outline badge-sm">{p.paymentMethod}</span>
+						{/snippet}
+					</Column>
+					<Column key="status" header="Status" shrink>
+						{#snippet cell(_, p)}
+							<StatusBadge status={p.status} />
+						{/snippet}
+					</Column>
+					<Column key="id" header="Record" shrink stopClick>
+						{#snippet cell(_, p)}
+							<div class="flex items-center gap-2">
+								<CopyableId value={p.id} label="Stripe" />
+								{#if p.reservationId}
+									<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
+										View
+									</a>
+								{/if}
+							</div>
+						{/snippet}
+					</Column>
+				</DataTable>
 			</InfoCard>
 		{/if}
 	{:catch}
