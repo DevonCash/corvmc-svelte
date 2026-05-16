@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IconMusic, IconMicrophone, IconUsers, IconGuitarPick, IconInfoCircle, IconBulb } from '@tabler/icons-svelte';
+	import { IconMusic, IconMicrophone, IconUsers, IconInfoCircle, IconBulb } from '@tabler/icons-svelte';
 </script>
 
 <svelte:head>
@@ -24,8 +24,8 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 			<div>
-				<div class="eyebrow" style="color: var(--cmc-navy)">Practice Space</div>
-				<h2 class="text-3xl font-bold leading-tight mt-2 mb-4">Affordable Practice Space for Musicians</h2>
+				<span class="sticker-badge sticker-badge--teal" style="margin-bottom: 12px">Practice Space</span>
+				<h2 class="text-3xl font-bold leading-tight mt-3 mb-4">Affordable Practice Space for Musicians</h2>
 				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
 					Our practice rooms are equipped with professional gear and designed for musicians who need a reliable space to rehearse, record demos, and develop their craft.
 				</p>
@@ -37,7 +37,7 @@
 					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">Practice space access requires a free CMC membership.</p>
 				</div>
 			</div>
-			<div class="rounded-lg p-6" style="background: color-mix(in oklch, #2ea076 15%, var(--surface)); border: 1px solid color-mix(in oklch, #2ea076 20%, transparent)">
+			<div class="rounded-lg p-6 paper-tape" style="background: color-mix(in oklch, #2ea076 15%, var(--surface)); border: 1px solid color-mix(in oklch, #2ea076 20%, transparent); --tape-color: rgba(0, 133, 155, 0.7); --tape-x: 60%; --tape-rotate: 2deg">
 				<div class="flex items-center gap-3 mb-4">
 					<IconMusic size={26} style="color: var(--cmc-navy)" />
 					<h3 class="text-xl font-bold">Room Features</h3>
@@ -71,13 +71,14 @@
 <section class="section-tint-primary py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">Shows & Performances</h2>
+			<span class="sticker-badge sticker-badge--orange" style="margin-bottom: 12px">Shows</span>
+			<h2 class="text-4xl font-bold tracking-tight mb-3 mt-3">Shows & Performances</h2>
 			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
 				Showcase your talent and connect with the community through our regular performance opportunities.
 			</p>
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-			<div class="rounded-lg p-6" style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)">
+			<div class="rounded-lg p-6 paper-tape" style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent); --tape-color: rgba(255, 181, 0, 0.78); --tape-x: 12%; --tape-rotate: -2deg">
 				<div class="flex items-center gap-3 mb-4">
 					<IconMicrophone size={26} style="color: var(--cmc-orange)" />
 					<h3 class="text-xl font-bold">Performance Opportunities</h3>
@@ -111,7 +112,8 @@
 <section class="section-tint-warning py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">Meetups & Clubs</h2>
+			<span class="sticker-badge" style="margin-bottom: 12px">Clubs</span>
+			<h2 class="text-4xl font-bold tracking-tight mb-3 mt-3">Meetups & Clubs</h2>
 			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
 				Connect with like-minded musicians through our regular meetups, learning sessions, and specialty clubs.
 			</p>
@@ -140,20 +142,20 @@
 						<IconUsers size={22} style="color: var(--cmc-navy)" />
 						<h3 class="text-lg font-bold">Songwriter Circle</h3>
 					</div>
-					<p class="text-sm leading-relaxed mb-2" style="color: var(--fg-2)">
+					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
 						Monthly gathering for sharing original songs, getting feedback, and collaborating on new material.
 					</p>
-					<div class="text-sm font-bold">2nd Saturday &middot; 2:00 PM</div>
+					<span class="sticker-badge sticker-badge--teal sticker-badge--sm">2nd Saturday &middot; 2:00 PM</span>
 				</div>
 				<div class="rounded-lg p-6" style="background: var(--surface); border: 1px solid var(--surface-border)">
 					<div class="flex items-center gap-3 mb-2">
 						<IconMicrophone size={22} style="color: var(--cmc-navy)" />
 						<h3 class="text-lg font-bold">Monthly Meetup</h3>
 					</div>
-					<p class="text-sm leading-relaxed mb-2" style="color: var(--fg-2)">
+					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
 						Come chat with — or just listen to — other local musicians about gear, gigs, and everything music-related. Everyone is welcome!
 					</p>
-					<div class="text-sm font-bold">Last Thursday &middot; 6:30 PM</div>
+					<span class="sticker-badge sticker-badge--orange sticker-badge--sm">Last Thursday &middot; 6:30 PM</span>
 				</div>
 			</div>
 		</div>
@@ -171,14 +173,14 @@
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
 			{#each [
-				{ num: '1', title: 'Join CMC', desc: 'Become a member to access all programs.' },
-				{ num: '2', title: 'Choose Your Path', desc: 'Practice, perform, or join our clubs.' },
-				{ num: '3', title: 'Make Music', desc: 'Connect and create with the community.' }
+				{ num: '1', title: 'Join CMC', desc: 'Become a member to access all programs.', badge: 'sticker-badge--teal' },
+				{ num: '2', title: 'Choose Your Path', desc: 'Practice, perform, or join our clubs.', badge: 'sticker-badge--orange' },
+				{ num: '3', title: 'Make Music', desc: 'Connect and create with the community.', badge: '' }
 			] as step}
 				<div class="text-center flex flex-col items-center gap-3">
-					<div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold" style="background: var(--cmc-orange); color: #fff">
+					<span class="sticker-badge {step.badge}" style="font-size: 18px; padding: 10px 18px; transform: rotate({step.num === '2' ? '2' : step.num === '3' ? '-1' : '-2'}deg)">
 						{step.num}
-					</div>
+					</span>
 					<h3 class="text-lg font-bold">{step.title}</h3>
 					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{step.desc}</p>
 				</div>

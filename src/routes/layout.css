@@ -721,3 +721,32 @@ p {
 .sticker-badge--orange { background: var(--cmc-orange); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
 .sticker-badge--teal   { background: var(--cmc-teal); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
 .sticker-badge--sm { padding: 3px 8px; font-size: 10px; }
+
+/* ---------------------------------------------------------------------------
+   Paper Tape — washi-tape strip across a corner of a card
+   --------------------------------------------------------------------------- */
+.paper-tape {
+  position: relative;
+  --tape-color: rgba(255, 181, 0, 0.78);
+  --tape-w: 110px;
+  --tape-h: 22px;
+  --tape-x: 18%;
+  --tape-y: -10px;
+  --tape-rotate: -3deg;
+}
+.paper-tape::before {
+  content: "";
+  position: absolute;
+  left: var(--tape-x);
+  top: var(--tape-y);
+  width: var(--tape-w);
+  height: var(--tape-h);
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, transparent 12%, transparent 88%, rgba(0,0,0,0.06) 100%),
+    repeating-linear-gradient(90deg, transparent 0 8px, rgba(255,255,255,0.16) 8px 9px),
+    var(--tape-color);
+  transform: rotate(var(--tape-rotate));
+  transform-origin: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+  z-index: 2;
+}
