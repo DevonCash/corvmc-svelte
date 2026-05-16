@@ -1,12 +1,12 @@
-import type { PageServerLoad } from './$types';
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import {
 	listPublicMembers,
 	listPublicBands
 } from '$lib/server/directory/directory-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
-import type { ProfileLink } from '$lib/types/profile';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const GET: RequestHandler = async ({ url }) => {
 	const r2Available = isConfigured();
 
 	const search = url.searchParams.get('search') || undefined;
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		listPublicBands({ search, genres, lookingForMembers })
 	]);
 
-	return {
+	return json({
 		members: members.map((m) => ({
 			id: m.id,
 			name: m.name,
@@ -47,5 +47,5 @@ export const load: PageServerLoad = async ({ url }) => {
 			genres: b.genres,
 			lookingForMembers: b.lookingForMembers
 		}))
-	};
+	});
 };

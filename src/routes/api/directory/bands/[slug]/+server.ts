@@ -1,5 +1,5 @@
-import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
@@ -7,7 +7,7 @@ import { eq, and, sql, isNull } from 'drizzle-orm';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
 import type { ProfileLink, DirectoryContact } from '$lib/types/profile';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const r2Available = isConfigured();
 
 	const [row] = await db
@@ -58,7 +58,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			user.name
 		);
 
-	return {
+	return json({
 		band: {
 			id: row.id,
 			name: row.name,
@@ -80,5 +80,5 @@ export const load: PageServerLoad = async ({ params }) => {
 			userName: m.userName,
 			userImage: m.userImage
 		}))
-	};
+	});
 };

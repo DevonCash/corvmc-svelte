@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import { fullDate, formatTime } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const evt = $derived(data.event);
 </script>

@@ -77,10 +77,11 @@ describe('directory page load', () => {
 			}
 		];
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
+		const mod = await import('../../routes/api/directory/+server');
+		const response = await (mod.GET as Function)({
 			url: new URL('http://localhost/directory')
-		} as any)) as any;
+		});
+		const result = await response.json();
 
 		expect(result.members).toHaveLength(2);
 		expect(result.members[0].name).toBe('Alice');
@@ -102,10 +103,11 @@ describe('directory page load', () => {
 			}
 		];
 
-		const { load } = await import('./+page.server');
-		const result = (await load({
+		const mod = await import('../../routes/api/directory/+server');
+		const response = await (mod.GET as Function)({
 			url: new URL('http://localhost/directory')
-		} as any)) as any;
+		});
+		const result = await response.json();
 
 		expect(result.bands[0].bio!.length).toBeLessThanOrEqual(124); // 120 + "…"
 	});
@@ -135,10 +137,11 @@ describe('public band profile load', () => {
 			{ id: 'm-2', userId: 'u-2', role: 'member', position: 'Drums', userName: 'Bob', userImage: null }
 		]);
 
-		const { load } = await import('./bands/[slug]/+page.server');
-		const result = (await load({
+		const mod = await import('../../routes/api/directory/bands/[slug]/+server');
+		const response = await (mod.GET as Function)({
 			params: { slug: 'the-strokes' }
-		} as any)) as any;
+		});
+		const result = await response.json();
 
 		expect(result.band.name).toBe('The Strokes');
 		expect(result.members).toHaveLength(2);
@@ -149,10 +152,10 @@ describe('public band profile load', () => {
 	it('throws 404 for unknown slug', async () => {
 		selectResults.push([]); // no band found
 
-		const { load } = await import('./bands/[slug]/+page.server');
+		const mod = await import('../../routes/api/directory/bands/[slug]/+server');
 
 		await expect(
-			load({ params: { slug: 'nonexistent' } } as any)
+			(mod.GET as Function)({ params: { slug: 'nonexistent' } })
 		).rejects.toThrow('Band not found');
 	});
 });

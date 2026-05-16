@@ -1,27 +1,27 @@
-import { error, json } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { getAudienceBySlug, addSubscriber } from '$lib/server/marketing/audience-service';
 import { findOrCreateByEmail } from '$lib/server/marketing/subscriber-service';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const audience = await getAudienceBySlug(params.slug);
 	if (!audience || !audience.allowOptIn) throw error(404, 'List not found');
 
-	return {
+	return json({
 		audience: {
 			id: audience.id,
 			name: audience.name,
 			slug: audience.slug,
 			description: audience.description
 		}
-	};
+	});
 };
 
-export const POST = async ({ params, request }) => {
+export const POST: RequestHandler = async ({ params, request }) => {
 	const audience = await getAudienceBySlug(params.slug);
 	if (!audience || !audience.allowOptIn) throw error(404, 'List not found');
 
-	const body = await request.json();
+	const body = await request.json() as { email?: string; name?: string };
 	const email = body.email?.trim()?.toLowerCase();
 	if (!email) throw error(400, 'Email is required');
 

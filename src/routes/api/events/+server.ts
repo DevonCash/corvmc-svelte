@@ -1,12 +1,13 @@
-import type { PageServerLoad } from './$types';
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
 
-export const load: PageServerLoad = async () => {
+export const GET: RequestHandler = async () => {
 	const events = await listUpcoming();
 	const r2Available = isConfigured();
 
-	return {
+	return json({
 		events: events.map((e) => ({
 			id: e.id,
 			title: e.title,
@@ -19,5 +20,5 @@ export const load: PageServerLoad = async () => {
 			ticketingEnabled: e.ticketingEnabled,
 			ticketPrice: e.ticketPrice
 		}))
-	};
+	});
 };

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	let email = $state('');
 	let name = $state('');
@@ -15,7 +15,7 @@
 		errorMsg = '';
 
 		try {
-			const res = await fetch(`/subscribe/${data.audience.slug}`, {
+			const res = await fetch(`/api/marketing/audiences/${data.audience.slug}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined })

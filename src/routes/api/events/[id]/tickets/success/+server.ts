@@ -1,9 +1,9 @@
-import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { getById } from '$lib/server/event/event-service';
 import { getTicketsByPurchase } from '$lib/server/ticket/ticket-service';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const purchaseId = url.searchParams.get('purchase_id');
 	if (!purchaseId) throw error(400, 'Missing purchase ID');
 
@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const tickets = await getTicketsByPurchase(purchaseId);
 	if (tickets.length === 0) throw error(404, 'Purchase not found');
 
-	return {
+	return json({
 		event: {
 			id: evt.id,
 			title: evt.title,
@@ -28,5 +28,5 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			attendeeEmail: t.attendeeEmail,
 			status: t.status
 		}))
-	};
+	});
 };

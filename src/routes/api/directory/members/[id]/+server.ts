@@ -1,13 +1,13 @@
-import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { getMemberProfile } from '$lib/server/directory/directory-service';
 import type { ProfileLink, DirectoryContact } from '$lib/types/profile';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const member = await getMemberProfile(params.id, 'public');
 	if (!member) throw error(404, 'Member not found');
 
-	return {
+	return json({
 		member: {
 			id: member.id,
 			name: member.name,
@@ -21,5 +21,5 @@ export const load: PageServerLoad = async ({ params }) => {
 			directoryContact: member.directoryContact as DirectoryContact | null,
 			links: (member.links as ProfileLink[] | null) ?? []
 		}
-	};
+	});
 };

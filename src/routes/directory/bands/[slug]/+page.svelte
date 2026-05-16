@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);
