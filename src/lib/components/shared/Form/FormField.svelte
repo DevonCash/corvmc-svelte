@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
 	import TagInput from './TagInput.svelte';
+	import FileUpload from './FileUpload.svelte';
 	import { getFormContext } from './Form.svelte';
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
-	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle';
+	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file';
 
 	let {
 		label,
@@ -18,6 +19,9 @@
 		readonly,
 		issues: propIssues,
 		children,
+		upload,
+		accept,
+		src,
 		...rest
 	}: {
 		name?: string;
@@ -31,6 +35,9 @@
 		value?: any;
 		readonly?: boolean;
 		issues?: RemoteFormIssue[] | null;
+		upload?: (file: File) => Promise<string>;
+		accept?: string;
+		src?: string;
 		[key: string]: any;
 	} = $props();
 
@@ -88,6 +95,8 @@
 			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
+	{:else if type === 'file' && upload}
+		<FileUpload name={_name} {upload} {accept} value={rest.value} {src} disabled={pending || readonly} />
 	{:else if type === 'select' && rest.multiple}
 		{@const selectedValues = Array.isArray(rest.value) ? rest.value : []}
 		<input type="hidden" name={_name} value={JSON.stringify(selectedValues)} />

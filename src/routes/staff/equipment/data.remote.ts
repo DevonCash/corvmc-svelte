@@ -9,9 +9,16 @@ import {
 } from '$lib/server/equipment/equipment-service';
 import { createEquipmentSchema, createCategorySchema, updateCategorySchema } from '$lib/server/equipment/types';
 
-export const addEquipment = form(createEquipmentSchema, async (data) => {
+export const addEquipment = form('unchecked', async (data, issue) => {
 	await requireStaff();
-	const item = await createEquipment(data);
+	const result = createEquipmentSchema.safeParse(data);
+	if (!result.success) {
+		for (const err of result.error.issues) {
+			issue(err.path, err.message);
+		}
+		return;
+	}
+	const item = await createEquipment(result.data);
 	return { equipmentId: item.id };
 });
 
