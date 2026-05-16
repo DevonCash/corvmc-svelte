@@ -225,7 +225,7 @@ interface SeedReservation { id: string; createdByUserId: string; startsAt: Date;
 
 async function seedRoles(): SeedRole[] {
 	console.log('Seeding roles...');
-	const roles = ['admin', 'staff', 'member', 'volunteer'];
+	const roles = ['admin', 'staff', 'member', 'volunteer', 'sustaining'];
 	const inserted: SeedRole[] = [];
 	for (const name of roles) {
 		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
@@ -329,6 +329,7 @@ async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: Seed
 	const staffRole = roles.find((r) => r.name === 'staff')!;
 	const memberRole = roles.find((r) => r.name === 'member')!;
 	const volunteerRole = roles.find((r) => r.name === 'volunteer')!;
+	const sustainingRole = roles.find((r) => r.name === 'sustaining')!;
 
 	await db.insert(modelHasRole).values([
 		{ roleId: adminRole.id, userId: adminUser.id },
@@ -353,6 +354,10 @@ async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: Seed
 
 	for (const u of pickN(users, 6)) {
 		await db.insert(modelHasRole).values({ roleId: volunteerRole.id, userId: u.id }).onConflictDoNothing();
+	}
+
+	for (const u of pickN(users, 8)) {
+		await db.insert(modelHasRole).values({ roleId: sustainingRole.id, userId: u.id }).onConflictDoNothing();
 	}
 }
 
