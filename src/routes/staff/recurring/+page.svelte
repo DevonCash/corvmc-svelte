@@ -1,31 +1,21 @@
 <script lang="ts">
-	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
+	import { invalidateAll } from '$app/navigation';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
+	import { cancelSeries } from './data.remote';
 	import type { StaffRecurringResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffRecurringResponse } = $props();
-
-	type Series = (typeof data.series)[number];
-
-	const columns: Column<Series>[] = [
-		{ key: 'userName', header: 'Member' },
-		{ key: 'startsAt', header: 'Day / Time', sortable: true },
-		{ key: 'frequencyLabel', header: 'Frequency' },
-		{ key: 'bookerType', header: 'Booker' },
-		{ key: 'createdAt', header: 'Created', sortable: true },
-		{ key: 'cancelledAt', header: 'Status' },
-		{ key: 'id', header: '' }
-	];
 </script>
 
 <div class="space-y-6">
 	<PageHeader title="Recurring Reservations" />
 
-	<!-- Filters -->
 	<div class="flex items-center gap-2">
 		<a
 			href="/staff/recurring?filter=active"
@@ -53,44 +43,55 @@
 		</a>
 	</div>
 
-	<!-- Table -->
-	<DataTable data={data.series} {columns} empty="No recurring series found">
-		{#snippet row(s)}
-			<tr class="hover">
-				<td onclick={(e) => e.stopPropagation()} style="padding-inline: 0;">
-					<MemberLink name={s.userName} userId={undefined} class="p-7 px-4" />
-				</td>
-				<td>
-					<div>{formatDate(s.startsAt)}</div>
-					<div class="text-sm opacity-60">
-						{formatTimeRange(s.startsAt, s.endsAt)}
-						<span class="mx-1">·</span>
-						{formatDuration(s.startsAt, s.endsAt)}
-					</div>
-				</td>
-				<td>
-					<span class="badge badge-outline badge-sm">{s.frequencyLabel}</span>
-				</td>
-				<td>
-					<span class="badge badge-outline badge-sm">{s.bookerType}</span>
-				</td>
-				<td>{formatDate(s.createdAt)}</td>
-				<td>
-					{#if s.cancelledAt}
-						<StatusBadge status="cancelled" />
-					{:else}
-						<StatusBadge status="active" />
-					{/if}
-				</td>
-				<td>
-					{#if !s.cancelledAt}
-						<form method="post" action="?/cancel">
-							<input type="hidden" name="seriesId" value={s.id} />
-							<button type="submit" class="btn btn-ghost btn-xs text-error">Cancel</button>
-						</form>
-					{/if}
-				</td>
-			</tr>
-		{/snippet}
+	<DataTable data={data.series} empty="No recurring series found">
+		<Column key="userName" header="Member" stopClick>
+			{#snippet cell(_, s)}
+				<MemberLink name={s.userName} userId={undefined} />
+			{/snippet}
+		</Column>
+		<Column key="startsAt" header="Day / Time" sortable>
+			{#snippet cell(_, s)}
+				<div>{formatDate(s.startsAt)}</div>
+				<div class="text-sm opacity-60">
+					{formatTimeRange(s.startsAt, s.endsAt)}
+					<span class="mx-1">·</span>
+					{formatDuration(s.startsAt, s.endsAt)}
+				</div>
+			{/snippet}
+		</Column>
+		<Column key="frequencyLabel" header="Frequency" shrink>
+			{#snippet cell(_, s)}
+				<span class="badge badge-outline badge-sm">{s.frequencyLabel}</span>
+			{/snippet}
+		</Column>
+		<Column key="bookerType" header="Booker" shrink>
+			{#snippet cell(_, s)}
+				<span class="badge badge-outline badge-sm">{s.bookerType}</span>
+			{/snippet}
+		</Column>
+		<Column key="createdAt" header="Created" type="date" sortable shrink />
+		<Column key="cancelledAt" header="Status" shrink>
+			{#snippet cell(_, s)}
+				{#if s.cancelledAt}
+					<StatusBadge status="cancelled" />
+				{:else}
+					<StatusBadge status="active" />
+				{/if}
+			{/snippet}
+		</Column>
+		<Column key="id" header="" shrink stopClick>
+			{#snippet cell(_, s)}
+				{#if !s.cancelledAt}
+					<Action
+						action={() => cancelSeries({ seriesId: s.id })}
+						label="Cancel"
+						confirm="Cancel this recurring series? Future reservations will not be created."
+						successToast="Series cancelled"
+						onsuccess={() => invalidateAll()}
+						class="btn-ghost btn-xs text-error"
+					/>
+				{/if}
+			{/snippet}
+		</Column>
 	</DataTable>
 </div>

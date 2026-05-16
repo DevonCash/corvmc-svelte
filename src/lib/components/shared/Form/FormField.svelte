@@ -6,7 +6,7 @@
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
-	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file';
+	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file';
 
 	let {
 		label,
@@ -22,6 +22,7 @@
 		upload,
 		accept,
 		src,
+		value = $bindable(),
 		...rest
 	}: {
 		name?: string;
@@ -77,28 +78,28 @@
 		{@render input(_id)}
 	{:else if readonly}
 		<p class="input-bordered input w-full">
-			<span class="grow">{rest.value}</span>
+			<span class="grow">{value}</span>
 			<IconPencilOff class="size-5 opacity-20" />
 		</p>
 	{:else if type === 'textarea'}
-		<textarea class="textarea-bordered textarea w-full" class:ghost={readonly} {...inputProps}
+		<textarea class="textarea-bordered textarea w-full" class:ghost={readonly} {...inputProps} bind:value
 		></textarea>
 	{:else if type === 'tags'}
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="checkbox" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} />
+			<input type="checkbox" class="checkbox" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="toggle" checked={rest.value} disabled={pending || readonly} id={_id} name={_name} />
+			<input type="checkbox" class="toggle" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'file' && upload}
-		<FileUpload name={_name} {upload} {accept} value={rest.value} {src} disabled={pending || readonly} />
+		<FileUpload name={_name} {upload} {accept} {value} {src} disabled={pending || readonly} />
 	{:else if type === 'select' && rest.multiple}
-		{@const selectedValues = Array.isArray(rest.value) ? rest.value : []}
+		{@const selectedValues = Array.isArray(value) ? value : []}
 		<input type="hidden" name={_name} value={JSON.stringify(selectedValues)} />
 		<select
 			class="select-bordered select w-full"
@@ -122,12 +123,12 @@
 	{:else if type === 'select'}
 		<select class="select-bordered select w-full" class:ghost={readonly} {...rest} {...inputProps}>
 			{#each rest.options as option}
-				<option value={option.value} selected={option.value === rest.value}>
+				<option value={option.value} selected={option.value === value}>
 					{option.label}
 				</option>
 			{/each}
 		</select>
 	{:else}
-		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...inputProps} />
+		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
 </fieldset>

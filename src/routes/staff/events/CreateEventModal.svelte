@@ -2,13 +2,12 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import { Field } from '$lib/components/shared/Form';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import { checkConflicts, createEvent } from './data.remote';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
-	// Form state
 	let title = $state('');
 	let description = $state('');
 	let eventDate = $state(new Date().toISOString().split('T')[0]);
@@ -26,7 +25,6 @@
 	let submitting = $state(false);
 	let hasConflicts = $state(false);
 
-	// When reservation is toggled on, default reservation times to event times
 	$effect(() => {
 		if (reserveSpace && !reservationStartTime && eventStartTime) {
 			reservationStartTime = eventStartTime;
@@ -67,7 +65,6 @@
 				overrideConflicts: hasConflicts
 			});
 
-			// Upload poster if selected
 			if (posterFile && result?.eventId) {
 				const formData = new FormData();
 				formData.append('poster', posterFile);
@@ -111,92 +108,26 @@
 		reservationEndTime = '';
 		posterFile = null;
 	}
-
-	function close() {
-		open = false;
-	}
 </script>
 
 <Modal bind:open title="New Event" maxWidth="max-w-md" onclose={resetForm}>
 	<svelte:boundary>
 		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
-			<FormField label="Title" id="title" issues={[]}>
-				<input
-					type="text"
-					id="title"
-					bind:value={title}
-					placeholder="Event title"
-					class="input input-bordered w-full"
-					required
-				/>
-			</FormField>
-
-			<FormField label="Description" id="description" issues={[]}>
-				<textarea
-					id="description"
-					bind:value={description}
-					placeholder="Optional description (markdown supported)"
-					class="textarea textarea-bordered w-full"
-					rows="3"
-				></textarea>
-			</FormField>
-
-			<FormField label="Date" id="eventDate" issues={[]}>
-				<input
-					type="date"
-					id="eventDate"
-					bind:value={eventDate}
-					class="input input-bordered w-full"
-					required
-				/>
-			</FormField>
+			<Field name="title" type="text" label="Title" bind:value={title} />
+			<Field name="description" type="textarea" label="Description" bind:value={description} />
+			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
 			<div class="grid grid-cols-2 gap-4">
-				<FormField label="Start time" id="eventStartTime" issues={[]}>
-					<input
-						type="time"
-						id="eventStartTime"
-						bind:value={eventStartTime}
-						class="input input-bordered w-full"
-						required
-					/>
-				</FormField>
-
-				<FormField label="End time" id="eventEndTime" issues={[]}>
-					<input
-						type="time"
-						id="eventEndTime"
-						bind:value={eventEndTime}
-						class="input input-bordered w-full"
-						required
-					/>
-				</FormField>
+				<Field name="eventStartTime" type="time" label="Start time" bind:value={eventStartTime} />
+				<Field name="eventEndTime" type="time" label="End time" bind:value={eventEndTime} />
 			</div>
 
-			<FormField label="Doors time" id="doorsTime" issues={[]}>
-				<input
-					type="time"
-					id="doorsTime"
-					bind:value={doorsTime}
-					placeholder="Optional"
-					class="input input-bordered w-full"
-				/>
-			</FormField>
+			<Field name="doorsTime" type="time" label="Doors time" bind:value={doorsTime} />
+			<Field name="tags" type="text" label="Tags" bind:value={tags} />
 
-			<FormField label="Tags" id="tags" issues={[]}>
-				<input
-					type="text"
-					id="tags"
-					bind:value={tags}
-					placeholder="e.g. open mic, workshop, jam"
-					class="input input-bordered w-full"
-				/>
-			</FormField>
-
-			<FormField label="Poster image" id="poster" issues={[]}>
+			<Field name="poster" label="Poster image">
 				<input
 					type="file"
-					id="poster"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handleFileSelect}
 					class="file-input file-input-bordered w-full"
@@ -204,55 +135,23 @@
 				{#if posterFile}
 					<p class="text-sm opacity-60 mt-1">{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)</p>
 				{/if}
-			</FormField>
+			</Field>
 
-			<!-- Ticketing toggle -->
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-3">
-					<input type="checkbox" bind:checked={ticketingEnabled} class="toggle" />
-					<span class="label-text">Enable ticketing</span>
-				</label>
-			</div>
+			<Field name="ticketingEnabled" type="toggle" value={ticketingEnabled}
+				checkboxLabel="Enable ticketing" />
 
 			{#if ticketingEnabled}
 				<div class="card bg-base-200 p-4 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
-						<FormField label="Ticket price ($)" id="ticketPrice" issues={[]}>
-							<input
-								type="number"
-								id="ticketPrice"
-								bind:value={ticketPriceDollars}
-								min="0.01"
-								step="0.01"
-								placeholder="15.00"
-								class="input input-bordered w-full"
-								required
-							/>
-						</FormField>
-
-						<FormField label="Capacity" id="ticketQuantity" issues={[]}>
-							<input
-								type="number"
-								id="ticketQuantity"
-								bind:value={ticketQuantity}
-								min="1"
-								step="1"
-								placeholder="Unlimited"
-								class="input input-bordered w-full"
-							/>
-						</FormField>
+						<Field name="ticketPrice" type="number" label="Ticket price ($)" bind:value={ticketPriceDollars} />
+						<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					</div>
 					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
 				</div>
 			{/if}
 
-			<!-- Reserve space toggle -->
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-3">
-					<input type="checkbox" bind:checked={reserveSpace} class="toggle" />
-					<span class="label-text">Reserve practice space</span>
-				</label>
-			</div>
+			<Field name="reserveSpace" type="toggle" value={reserveSpace}
+				checkboxLabel="Reserve practice space" />
 
 			{#if reserveSpace}
 				<div class="card bg-base-200 p-4 space-y-4">
@@ -261,23 +160,8 @@
 					</p>
 
 					<div class="grid grid-cols-2 gap-4">
-						<FormField label="Reservation start" id="reservationStartTime" issues={[]}>
-							<input
-								type="time"
-								id="reservationStartTime"
-								bind:value={reservationStartTime}
-								class="input input-bordered w-full"
-							/>
-						</FormField>
-
-						<FormField label="Reservation end" id="reservationEndTime" issues={[]}>
-							<input
-								type="time"
-								id="reservationEndTime"
-								bind:value={reservationEndTime}
-								class="input input-bordered w-full"
-							/>
-						</FormField>
+						<Field name="reservationStartTime" type="time" label="Reservation start" bind:value={reservationStartTime} />
+						<Field name="reservationEndTime" type="time" label="Reservation end" bind:value={reservationEndTime} />
 					</div>
 
 					{#if reserveSpace}
@@ -292,9 +176,8 @@
 				</div>
 			{/if}
 
-			<!-- Footer -->
 			<div class="modal-action">
-				<button type="button" class="btn btn-ghost" onclick={close}>Cancel</button>
+				<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
 				<button
 					type="submit"
 					class="btn {hasConflicts ? 'btn-warning' : 'btn-primary'}"

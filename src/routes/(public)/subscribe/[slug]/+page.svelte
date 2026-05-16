@@ -1,38 +1,29 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import type { AudienceDetailResponse } from '$lib/types/api';
 
 	let { data }: { data: AudienceDetailResponse } = $props();
 
-	let email = $state('');
-	let name = $state('');
-	let submitting = $state(false);
 	let success = $state(false);
-	let errorMsg = $state('');
 
-	async function handleSubmit() {
-		if (!email.trim()) return;
-		submitting = true;
-		errorMsg = '';
+	async function handleSubmit(formData: FormData) {
+		const email = (formData.get('email') as string).trim();
+		const name = (formData.get('name') as string)?.trim() || undefined;
+		if (!email) return;
 
-		try {
-			const res = await fetch(`/api/marketing/audiences/${data.audience.slug}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined })
-			});
+		const res = await fetch(`/api/marketing/audiences/${data.audience.slug}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, name })
+		});
 
-			if (!res.ok) {
-				const body = await res.json().catch(() => null);
-				throw new Error(body?.message ?? 'Something went wrong');
-			}
-
-			success = true;
-		} catch (err) {
-			errorMsg = err instanceof Error ? err.message : 'Something went wrong';
-		} finally {
-			submitting = false;
+		if (!res.ok) {
+			const body = await res.json().catch(() => null);
+			throw new Error(body?.message ?? 'Something went wrong');
 		}
+
+		success = true;
 	}
 </script>
 
@@ -47,50 +38,10 @@
 	{#if success}
 		<Alert type="success">You're subscribed! Look out for our next email.</Alert>
 	{:else}
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				handleSubmit();
-			}}
-			class="space-y-4"
-		>
-			<div>
-				<label for="sub-email" class="label text-sm font-medium">Email</label>
-				<input
-					id="sub-email"
-					type="email"
-					bind:value={email}
-					placeholder="your@email.com"
-					class="input-bordered input w-full"
-					required
-				/>
-			</div>
-
-			<div>
-				<label for="sub-name" class="label text-sm font-medium">Name (optional)</label>
-				<input
-					id="sub-name"
-					type="text"
-					bind:value={name}
-					placeholder="Your name"
-					class="input-bordered input w-full"
-				/>
-			</div>
-
-			{#if errorMsg}
-				<Alert type="error" class="text-sm">{errorMsg}</Alert>
-			{/if}
-
-			<button
-				type="submit"
-				class="btn btn-primary w-full"
-				disabled={!email.trim() || submitting}
-			>
-				{#if submitting}
-					<span class="loading loading-sm loading-spinner"></span>
-				{/if}
-				Subscribe
-			</button>
-		</form>
+		<Form action={handleSubmit} class="space-y-4">
+			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
+			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
+			<SubmitButton label="Subscribe" class="btn-primary w-full" />
+		</Form>
 	{/if}
 </div>

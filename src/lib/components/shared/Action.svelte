@@ -3,7 +3,7 @@
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
-	import { Dialog } from 'bits-ui';
+	import Modal from './Modal.svelte';
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
@@ -171,137 +171,87 @@
 
 <!-- Confirm dialog (callback + confirm string, no form/body) -->
 {#if !isForm && confirm && !formSnippet && !body}
-	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Portal>
-			<Dialog.Overlay class="modal modal-open bg-black/40" />
-			<Dialog.Content class="modal modal-open">
-				<div class="modal-box max-w-sm">
-					<Dialog.Title class="text-lg font-bold">Confirm</Dialog.Title>
-					<p class="py-4">{confirm}</p>
-					<div class="modal-action">
-						<Dialog.Close class="btn btn-ghost">Cancel</Dialog.Close>
-						<button type="button" class="btn {className}" onclick={handleConfirm}>
-							{label}
-						</button>
-					</div>
-				</div>
-			</Dialog.Content>
-		</Dialog.Portal>
-	</Dialog.Root>
+	<Modal bind:open={dialogOpen} title="Confirm" maxWidth="max-w-sm">
+		<p class="py-4">{confirm}</p>
+		<div class="modal-action">
+			<button type="button" class="btn btn-ghost" onclick={close}>Cancel</button>
+			<button type="button" class="btn {className}" onclick={handleConfirm}>
+				{label}
+			</button>
+		</div>
+	</Modal>
 {/if}
 
 <!-- Callback + body modal (full control — consumer owns entire content area) -->
 {#if !isForm && body}
-	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Portal>
-			<Dialog.Overlay class="modal modal-open bg-black/40" />
-			<Dialog.Content class="modal modal-open">
-				<div class="modal-box {maxWidth}">
-					{@render body({ close, run, status })}
-				</div>
-			</Dialog.Content>
-		</Dialog.Portal>
-	</Dialog.Root>
+	<Modal bind:open={dialogOpen} {maxWidth}>
+		{@render body({ close, run, status })}
+	</Modal>
 {/if}
 
 <!-- Callback + form modal (default layout with title bar + submit button) -->
 {#if !isForm && formSnippet && !body}
-	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Portal>
-			<Dialog.Overlay class="modal modal-open bg-black/40" />
-			<Dialog.Content class="modal modal-open">
-				<div class="modal-box {maxWidth}">
-					<div class="flex items-center justify-between mb-4">
-						{#if modalTitle}
-							<Dialog.Title class="text-lg font-bold">{modalTitle}</Dialog.Title>
-						{/if}
-						<Dialog.Close class="btn btn-sm btn-ghost btn-circle">✕</Dialog.Close>
-					</div>
-
-					<div class="space-y-4">
-						{@render formSnippet({ close })}
-						<div class="flex justify-end pt-2">
-							<button
-								type="button"
-								class="btn {className}"
-								disabled={!canSubmit || status === 'pending'}
-								onclick={run}
-							>
-								{#if status === 'pending'}
-									<span class="loading loading-spinner loading-sm"></span>
-								{/if}
-								{submitLabel ?? label}
-							</button>
-						</div>
-					</div>
-				</div>
-			</Dialog.Content>
-		</Dialog.Portal>
-	</Dialog.Root>
+	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
+		<div class="space-y-4">
+			{@render formSnippet({ close })}
+			<div class="flex justify-end pt-2">
+				<button
+					type="button"
+					class="btn {className}"
+					disabled={!canSubmit || status === 'pending'}
+					onclick={run}
+				>
+					{#if status === 'pending'}
+						<span class="loading loading-spinner loading-sm"></span>
+					{/if}
+					{submitLabel ?? label}
+				</button>
+			</div>
+		</div>
+	</Modal>
 {/if}
 
 <!-- Form modal with RemoteForm + form snippet (default layout) -->
 {#if isForm && formSnippet && !body}
-	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Portal>
-			<Dialog.Overlay class="modal modal-open bg-black/40" />
-			<Dialog.Content class="modal modal-open">
-				<div class="modal-box {maxWidth}">
-					<div class="flex items-center justify-between mb-4">
-						{#if modalTitle}
-							<Dialog.Title class="text-lg font-bold">{modalTitle}</Dialog.Title>
-						{/if}
-						<Dialog.Close class="btn btn-sm btn-ghost btn-circle">✕</Dialog.Close>
-					</div>
-
-					<Form
-						remote={action as RemoteForm<any, any>}
-						{successToast}
-						{errorToast}
-						onsuccess={(result) => {
-							dialogOpen = false;
-							onsuccess?.(result);
-						}}
-						onfailure={(issues) => {
-							onfailure?.(issues);
-						}}
-					>
-						<div class="space-y-4">
-							{@render formSnippet({ close })}
-							<div class="flex justify-end pt-2">
-								<SubmitButton label={submitLabel ?? label} class={className} />
-							</div>
-						</div>
-					</Form>
+	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
+		<Form
+			remote={action as RemoteForm<any, any>}
+			{successToast}
+			{errorToast}
+			onsuccess={(result) => {
+				dialogOpen = false;
+				onsuccess?.(result);
+			}}
+			onfailure={(issues) => {
+				onfailure?.(issues);
+			}}
+		>
+			<div class="space-y-4">
+				{@render formSnippet({ close })}
+				<div class="flex justify-end pt-2">
+					<SubmitButton label={submitLabel ?? label} class={className} />
 				</div>
-			</Dialog.Content>
-		</Dialog.Portal>
-	</Dialog.Root>
+			</div>
+		</Form>
+	</Modal>
 {/if}
 
 <!-- Form modal with RemoteForm + body snippet (full control) -->
 {#if isForm && body}
-	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Portal>
-			<Dialog.Overlay class="modal modal-open bg-black/40" />
-			<Dialog.Content class="modal modal-open">
-				<div class="modal-box {maxWidth}">
-					<Form
-						remote={action as RemoteForm<any, any>}
-						{successToast}
-						{errorToast}
-						onsuccess={(result) => {
-							dialogOpen = false;
-							onsuccess?.(result);
-						}}
-						onfailure={(issues) => {
-							onfailure?.(issues);
-						}}
-					>
-						{@render body({ close, run: () => {}, status })}
-					</Form>
-				</div>
-			</Dialog.Content>
-		</Dialog.Portal>
-	</Dialog.Root>
+	<Modal bind:open={dialogOpen} {maxWidth}>
+		<Form
+			remote={action as RemoteForm<any, any>}
+			{successToast}
+			{errorToast}
+			onsuccess={(result) => {
+				dialogOpen = false;
+				onsuccess?.(result);
+			}}
+			onfailure={(issues) => {
+				onfailure?.(issues);
+			}}
+		>
+			{@render body({ close, run: () => {}, status })}
+		</Form>
+	</Modal>
 {/if}

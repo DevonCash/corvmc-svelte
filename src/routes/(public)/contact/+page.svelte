@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 
-	let name = $state('');
-	let email = $state('');
-	let subject = $state('General Inquiry');
-	let message = $state('');
 	let submitted = $state(false);
-	let loading = $state(false);
 
 	const subjects = [
 		'General Inquiry',
@@ -17,13 +13,10 @@
 		'Donations'
 	];
 
-	async function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		loading = true;
+	async function handleSubmit(data: FormData) {
 		// TODO: wire up to an API endpoint or email service
 		await new Promise((r) => setTimeout(r, 500));
 		submitted = true;
-		loading = false;
 	}
 </script>
 
@@ -44,45 +37,17 @@
 					Thanks for reaching out! We'll get back to you soon.
 				</div>
 			{:else}
-				<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+				<Form action={handleSubmit} class="flex flex-col gap-4">
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<label class="floating-label">
-							<span>Name</span>
-							<input type="text" placeholder="Name" bind:value={name} required class="input input-bordered w-full" />
-						</label>
-						<label class="floating-label">
-							<span>Email</span>
-							<input type="email" placeholder="Email" bind:value={email} required class="input input-bordered w-full" />
-						</label>
+						<Field name="name" type="text" label="Name" />
+						<Field name="email" type="email" label="Email" />
 					</div>
-
-					<label class="floating-label">
-						<span>Subject</span>
-						<select bind:value={subject} class="select select-bordered w-full">
-							{#each subjects as s}
-								<option value={s}>{s}</option>
-							{/each}
-						</select>
-					</label>
-
-					<label class="floating-label">
-						<span>Message</span>
-						<textarea
-							placeholder="Message"
-							bind:value={message}
-							required
-							rows="5"
-							class="textarea textarea-bordered w-full"
-						></textarea>
-					</label>
-
-					<button type="submit" class="btn btn-primary" disabled={loading}>
-						{#if loading}
-							<span class="loading loading-spinner loading-sm"></span>
-						{/if}
-						Send Message
-					</button>
-				</form>
+					<Field name="subject" type="select" label="Subject"
+						value="General Inquiry"
+						options={subjects.map((s) => ({ value: s, label: s }))} />
+					<Field name="message" type="textarea" label="Message" />
+					<SubmitButton label="Send Message" class="btn-primary" />
+				</Form>
 			{/if}
 		</div>
 

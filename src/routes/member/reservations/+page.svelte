@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { cancelReservation, cancelSeries } from './data.remote';
 	import type { MemberReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberReservationsResponse } = $props();
@@ -71,10 +73,14 @@
 									</a>
 								{/if}
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
-									<form method="POST" action="?/cancel" use:enhance>
-										<input type="hidden" name="reservationId" value={res.id} />
-										<button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
-									</form>
+									<Action
+										action={() => cancelReservation({ reservationId: res.id })}
+										label="Cancel"
+										confirm="Cancel this reservation?"
+										successToast="Reservation cancelled"
+										onsuccess={() => invalidateAll()}
+										class="btn-ghost btn-sm"
+									/>
 								{/if}
 							</div>
 						</div>
@@ -108,10 +114,14 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<span class="badge badge-success">active</span>
-								<form method="POST" action="?/cancelSeries" use:enhance>
-									<input type="hidden" name="seriesId" value={series.id} />
-									<button type="submit" class="btn btn-ghost btn-sm">Cancel Series</button>
-								</form>
+								<Action
+									action={() => cancelSeries({ seriesId: series.id })}
+									label="Cancel Series"
+									confirm="Cancel this recurring series? Future reservations will not be created."
+									successToast="Series cancelled"
+									onsuccess={() => invalidateAll()}
+									class="btn-ghost btn-sm"
+								/>
 							</div>
 						</div>
 					</div>

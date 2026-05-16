@@ -1,48 +1,38 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 
 	let mode = $state<'login' | 'register'>('login');
 	let error = $state('');
-	let loading = $state(false);
 
-	let name = $state('');
-	let email = $state('');
-	let password = $state('');
-
-	async function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
+	async function handleSubmit(data: FormData) {
 		error = '';
-		loading = true;
+		const endpoint = mode === 'login'
+			? '/api/auth/sign-in/email'
+			: '/api/auth/sign-up/email';
 
-		try {
-			const endpoint = mode === 'login'
-				? '/api/auth/sign-in/email'
-				: '/api/auth/sign-up/email';
+		const body: Record<string, string> = {
+			email: data.get('email') as string,
+			password: data.get('password') as string
+		};
+		if (mode === 'register') body.name = data.get('name') as string;
 
-			const body: Record<string, string> = { email, password };
-			if (mode === 'register') body.name = name;
+		const res = await fetch(endpoint, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		});
 
-			const res = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-
-			if (!res.ok) {
-				const data = await res.json().catch(() => null);
-				error = mode === 'login'
-					? 'Invalid email or password.'
-					: data?.message ?? 'Registration failed. Please try again.';
-				return;
-			}
-
-			const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
-			await goto(redirectTo, { invalidateAll: true });
-		} catch {
-			error = 'Something went wrong. Please try again.';
-		} finally {
-			loading = false;
+		if (!res.ok) {
+			const json = await res.json().catch(() => null);
+			error = mode === 'login'
+				? 'Invalid email or password.'
+				: json?.message ?? 'Registration failed. Please try again.';
+			throw new Error(error);
 		}
+
+		const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
+		await goto(redirectTo, { invalidateAll: true });
 	}
 </script>
 
@@ -64,50 +54,18 @@
 					</div>
 				{/if}
 
-				<form onsubmit={handleSubmit} class="flex flex-col gap-3">
+				<Form action={handleSubmit} errorToast="" class="flex flex-col gap-3">
 					{#if mode === 'register'}
-						<label class="floating-label">
-							<span>Name</span>
-							<input
-								type="text"
-								placeholder="Name"
-								bind:value={name}
-								required
-								class="input input-bordered w-full"
-							/>
-						</label>
+						<Field name="name" type="text" label="Name" />
 					{/if}
-
-					<label class="floating-label">
-						<span>Email</span>
-						<input
-							type="email"
-							placeholder="Email"
-							bind:value={email}
-							required
-							class="input input-bordered w-full"
-						/>
-					</label>
-
-					<label class="floating-label">
-						<span>Password</span>
-						<input
-							type="password"
-							placeholder="Password"
-							bind:value={password}
-							required
-							minlength={mode === 'register' ? 8 : undefined}
-							class="input input-bordered w-full"
-						/>
-					</label>
-
-					<button type="submit" class="btn btn-primary w-full mt-1" disabled={loading}>
-						{#if loading}
-							<span class="loading loading-spinner loading-sm"></span>
-						{/if}
-						{mode === 'login' ? 'Sign in' : 'Create account'}
-					</button>
-				</form>
+					<Field name="email" type="email" label="Email" />
+					<Field name="password" type="password" label="Password"
+						minlength={mode === 'register' ? 8 : undefined} />
+					<SubmitButton
+						label={mode === 'login' ? 'Sign in' : 'Create account'}
+						class="btn-primary w-full mt-1"
+					/>
+				</Form>
 
 				<div class="divider my-0 text-xs">OR</div>
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { command, form } from '$app/server';
+import { invalid } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	createEquipment,
@@ -13,12 +14,14 @@ export const addEquipment = form('unchecked', async (data, issue) => {
 	await requireStaff();
 	const result = createEquipmentSchema.safeParse(data);
 	if (!result.success) {
-		for (const err of result.error.issues) {
-			issue(err.path, err.message);
-		}
-		return;
+		invalid(
+			...result.error.issues.map((err) => {
+				const key = String(err.path[0]);
+				return (issue as any)[key]?.(err.message);
+			}).filter(Boolean)
+		);
 	}
-	const item = await createEquipment(result.data);
+	const item = await createEquipment(result.data!);
 	return { equipmentId: item.id };
 });
 

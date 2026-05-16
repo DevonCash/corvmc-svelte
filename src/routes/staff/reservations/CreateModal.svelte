@@ -1,26 +1,20 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { searchMembers, getSlots, checkConflicts, createReservation } from './data.remote';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { Field } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
-	let open = $state(false);
-
-	// Form state
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);
 	let date = $state(new Date().toISOString().split('T')[0]);
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
-	let submitting = $state(false);
 
 	const slotData = $derived(await getSlots(date));
 
-	// Slot options for selects
 	const startOptions = $derived.by(() => {
 		if (!slotData) return [];
 		return slotData.slots.map((s) => ({
@@ -67,34 +61,6 @@
 			.padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
 	}
 
-	async function handleSubmit() {
-		if (!selectedMember || !date || !startTime || !endTime) return;
-		submitting = true;
-
-		try {
-			const result = await createReservation({
-				memberId: selectedMember.id,
-				date,
-				startTime,
-				endTime,
-				notes: notes || undefined
-			});
-
-			toast.success('Reservation created');
-			open = false;
-			resetForm();
-			await invalidateAll();
-
-			if (result?.reservationId) {
-				goto(`/staff/reservations/${result.reservationId}`);
-			}
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to create reservation');
-		} finally {
-			submitting = false;
-		}
-	}
-
 	function resetForm() {
 		selectedMember = null;
 		date = new Date().toISOString().split('T')[0];
@@ -102,42 +68,49 @@
 		endTime = '';
 		notes = '';
 	}
-
-	function close() {
-		open = false;
-	}
 </script>
 
-<button class="btn btn-sm btn-primary" onclick={() => (open = true)}>
-	New Reservation
-</button>
-<Modal bind:open title="New Reservation" maxWidth="max-w-md" onclose={resetForm}>
-	<svelte:boundary>
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				handleSubmit();
-			}}
-			class="space-y-4"
-		>
-			<!-- Member -->
-			<FormField label="Member" id="member" issues={[]}>
+<Action
+	action={async () => {
+		const result = await createReservation({
+			memberId: selectedMember!.id,
+			date,
+			startTime,
+			endTime,
+			notes: notes || undefined
+		});
+		resetForm();
+		return result;
+	}}
+	label="New Reservation"
+	modalTitle="New Reservation"
+	submitLabel="Create Reservation"
+	canSubmit={!!selectedMember && !!date && !!startTime && !!endTime}
+	successToast="Reservation created"
+	class="btn-primary btn-sm"
+	maxWidth="max-w-md"
+	onsuccess={async (result) => {
+		const r = result as { reservationId?: string };
+		await invalidateAll();
+		if (r?.reservationId) goto(`/staff/reservations/${r.reservationId}`);
+	}}
+>
+	{#snippet form({ close })}
+		<svelte:boundary>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">Member</legend>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={selectedMember}
 					placeholder="Search by name or email..."
 				/>
-			</FormField>
+			</fieldset>
 
-			<!-- Date -->
-			<FormField label="Date" id="date" issues={[]}>
-				<input type="date" id="date" bind:value={date} class="input-bordered input w-full" />
-			</FormField>
+			<Field name="date" type="date" label="Date" bind:value={date} />
 
-			<!-- Start time -->
-			<FormField label="Start time" id="startTime" issues={[]}>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">Start time</legend>
 				<select
-					id="startTime"
 					bind:value={startTime}
 					class="select-bordered select w-full"
 					disabled={!slotData}
@@ -149,12 +122,11 @@
 						</option>
 					{/each}
 				</select>
-			</FormField>
+			</fieldset>
 
-			<!-- End time -->
-			<FormField label="End time" id="endTime" issues={[]}>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">End time</legend>
 				<select
-					id="endTime"
 					bind:value={endTime}
 					class="select-bordered select w-full"
 					disabled={!startTime}
@@ -166,41 +138,17 @@
 						</option>
 					{/each}
 				</select>
-			</FormField>
+			</fieldset>
 
-			<!-- Conflict warnings -->
 			<ConflictWarnings {date} {startTime} {endTime} {checkConflicts} />
 
-			<!-- Notes -->
-			<FormField label="Notes" id="notes" issues={[]}>
-				<textarea
-					id="notes"
-					bind:value={notes}
-					placeholder="Optional notes..."
-					class="textarea-bordered textarea w-full"
-					rows="2"
-				></textarea>
-			</FormField>
+			<Field name="notes" type="textarea" label="Notes" bind:value={notes} />
 
-			<!-- Footer -->
-			<div class="modal-action">
-				<button type="button" class="btn btn-ghost" onclick={close}>Cancel</button>
-				<button
-					type="submit"
-					class="btn btn-success"
-					disabled={!selectedMember || !date || !startTime || !endTime || submitting}
-				>
-					{#if submitting}
-						<span class="loading loading-sm loading-spinner"></span>
-					{/if}
-					Create Reservation
-				</button>
-			</div>
-		</form>
-		{#snippet pending()}
-			<div class="flex items-center justify-center p-8">
-				<span class="loading loading-md loading-spinner"></span>
-			</div>
-		{/snippet}
-	</svelte:boundary>
-</Modal>
+			{#snippet pending()}
+				<div class="flex items-center justify-center p-8">
+					<span class="loading loading-md loading-spinner"></span>
+				</div>
+			{/snippet}
+		</svelte:boundary>
+	{/snippet}
+</Action>

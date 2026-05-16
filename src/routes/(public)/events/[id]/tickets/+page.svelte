@@ -1,17 +1,21 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
-	import { enhance } from '$app/forms';
+	import { purchaseTickets } from './data.remote';
 
-	let { data, form }: { data: any; form: any } = $props();
+	let { data }: { data: any } = $props();
 
 	let quantity = $state(1);
 	let attendeeName = $state('');
 	let attendeeEmail = $state('');
 	let coverFees = $state(false);
 	let submitting = $state(false);
+	let errorMsg = $state('');
 
 	const evt = $derived(data!.event);
 	const unitPrice = $derived(evt.ticketPrice);
@@ -23,12 +27,41 @@
 	const maxQuantity = $derived(
 		data.remaining !== null ? Math.min(data.remaining, 10) : 10
 	);
+
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		if (!attendeeName || !attendeeEmail) return;
+		submitting = true;
+		errorMsg = '';
+
+		try {
+			const result = await purchaseTickets({
+				eventId: page.params.id!,
+				quantity,
+				attendeeName: attendeeName.trim(),
+				attendeeEmail: attendeeEmail.trim(),
+				coverFees
+			});
+
+			if (result?.redirectUrl) {
+				if (result.redirectUrl.startsWith('http')) {
+					window.location.href = result.redirectUrl;
+				} else {
+					await goto(result.redirectUrl);
+				}
+			}
+		} catch (err) {
+			errorMsg = err instanceof Error ? err.message : 'Something went wrong';
+			toast.error(errorMsg);
+		} finally {
+			submitting = false;
+		}
+	}
 </script>
 
 <div class="max-w-lg mx-auto space-y-6">
 	<PageHeader title="Get Tickets" backHref="/events" />
 
-	<!-- Event summary -->
 	<div class="card bg-base-100 shadow">
 		<div class="card-body">
 			<h2 class="card-title">{evt.title}</h2>
@@ -64,27 +97,15 @@
 	{#if soldOut}
 		<div class="alert alert-warning">This event is sold out.</div>
 	{:else}
-		<!-- Purchase form -->
-		<form
-			method="POST"
-			action="?/purchase"
-			use:enhance={() => {
-				submitting = true;
-				return async ({ update }) => {
-					submitting = false;
-					await update();
-				};
-			}}
-		>
+		<form onsubmit={handleSubmit}>
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
-					{#if form?.error}
-						<div class="alert alert-error text-sm">{form.error}</div>
+					{#if errorMsg}
+						<Alert type="error">{errorMsg}</Alert>
 					{/if}
 
-					<FormField label="Number of tickets" id="quantity" issues={[]}>
+					<Field label="Number of tickets" name="quantity">
 						<select
-							id="quantity"
 							name="quantity"
 							bind:value={quantity}
 							class="select select-bordered w-full"
@@ -93,44 +114,15 @@
 								<option value={n}>{n}</option>
 							{/each}
 						</select>
-					</FormField>
+					</Field>
 
-					<FormField label="Name" id="attendeeName" issues={[]}>
-						<input
-							type="text"
-							id="attendeeName"
-							name="attendeeName"
-							bind:value={attendeeName}
-							placeholder="Your name"
-							class="input input-bordered w-full"
-							required
-						/>
-					</FormField>
+					<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
 
-					<FormField label="Email" id="attendeeEmail" issues={[]}>
-						<input
-							type="email"
-							id="attendeeEmail"
-							name="attendeeEmail"
-							bind:value={attendeeEmail}
-							placeholder="your@email.com"
-							class="input input-bordered w-full"
-							required
-						/>
-					</FormField>
+					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 
-					<!-- Fee coverage -->
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="checkbox"
-							name="coverFees"
-							bind:checked={coverFees}
-							class="checkbox checkbox-sm"
-						/>
-						<span class="label-text">Cover processing fees so the collective receives the full amount</span>
-					</label>
+					<Field name="coverFees" type="checkbox" value={coverFees}
+						checkboxLabel="Cover processing fees so the collective receives the full amount" />
 
-					<!-- Total -->
 					<div class="border-t border-base-200 pt-4">
 						<div class="flex justify-between text-lg font-medium">
 							<span>Total</span>

@@ -42,6 +42,17 @@ export async function requireStaff() {
 }
 
 /**
+ * Assert the current request is from an authenticated user.
+ * Throws 401 via SvelteKit error() if not.
+ * Returns the authenticated user for convenience.
+ */
+export async function requireMember() {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
+	return locals.user;
+}
+
+/**
  * Get all role names for a user.
  */
 export async function getUserRoles(userId: string): Promise<string[]> {

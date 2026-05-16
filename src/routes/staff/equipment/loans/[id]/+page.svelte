@@ -12,6 +12,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
@@ -19,14 +20,6 @@
 	let loan = $derived(await getLoan(id));
 	let availableEquipment = $derived(await getAvailableEquipment());
 
-	// Schedule form
-	let scheduleEquipmentId = $state('');
-	let schedulePickupDate = $state('');
-
-	// Checkout form
-	let checkoutDueDate = $state('');
-
-	// Return form
 	let returnNotes = $state('');
 
 	let chargePreview = $derived.by(() => {
@@ -137,71 +130,47 @@
 		<InfoCard title="Actions">
 			{#if loan.status === 'requested'}
 				<h4 class="text-sm font-semibold mb-3">Schedule Pickup</h4>
-				<form
-					onsubmit={async (e) => {
-						e.preventDefault();
-						await schedule({
-							equipmentId: scheduleEquipmentId || (loan.equipmentId ?? ''),
-							scheduledPickupDate: new Date(schedulePickupDate)
-						});
-					}}
-					class="space-y-3"
-				>
+				<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
 					{#if !loan.equipmentId}
-						<div>
-							<label class="label label-text" for="schedule-eq">Assign Equipment</label>
-							<select id="schedule-eq" class="select select-bordered select-sm w-full" bind:value={scheduleEquipmentId} required>
-								<option value="" disabled>Select equipment...</option>
+						<Field name="equipmentId" label="Assign Equipment">
+							<select class="select select-bordered w-full" name="equipmentId" required>
+								<option value="" disabled selected>Select equipment...</option>
 								{#each availableEquipment as eq}
 									{#if eq.availableQuantity > 0}
 										<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
 									{/if}
 								{/each}
 							</select>
-						</div>
+						</Field>
+					{:else}
+						<input type="hidden" name="equipmentId" value={loan.equipmentId} />
 					{/if}
-					<div>
-						<label class="label label-text" for="schedule-date">Pickup Date</label>
-						<input id="schedule-date" type="date" class="input input-bordered input-sm w-full" bind:value={schedulePickupDate} required />
-					</div>
+					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
-						<button type="submit" class="btn btn-primary btn-sm">Schedule</button>
+						<SubmitButton label="Schedule" class="btn-primary btn-sm" />
 						<Action
-							action={async () => {
-								if (!window.confirm('Cancel this loan request?')) return;
-								await cancel({});
-							}}
+							action={() => cancel({})}
+							confirm="Cancel this loan request?"
 							label="Cancel Request"
 							class="btn-ghost btn-sm text-error"
 						/>
 					</div>
-				</form>
+				</Form>
 
 			{:else if loan.status === 'scheduled'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Checked Out</h4>
-				<form
-					onsubmit={async (e) => {
-						e.preventDefault();
-						await checkout({ dueDate: new Date(checkoutDueDate) });
-					}}
-					class="space-y-3"
-				>
-					<div>
-						<label class="label label-text" for="checkout-due">Due Date</label>
-						<input id="checkout-due" type="date" class="input input-bordered input-sm w-full" bind:value={checkoutDueDate} required />
-					</div>
+				<Form remote={checkout} successToast="Checked out" class="space-y-3">
+					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
-						<button type="submit" class="btn btn-primary btn-sm">Check Out</button>
+						<SubmitButton label="Check Out" class="btn-primary btn-sm" />
 						<Action
-							action={async () => {
-								if (!window.confirm('Cancel this loan?')) return;
-								await cancel({});
-							}}
+							action={() => cancel({})}
+							confirm="Cancel this loan?"
 							label="Cancel"
 							class="btn-ghost btn-sm text-error"
 						/>
 					</div>
-				</form>
+				</Form>
 
 			{:else if loan.status === 'checked_out'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Returned</h4>
@@ -212,23 +181,20 @@
 					</div>
 				{/if}
 
-				<form
-					onsubmit={async (e) => {
-						e.preventDefault();
-						const msg = chargePreview
-							? `Mark as returned? This will charge ${formatCents(chargePreview.total)}.`
-							: 'Mark as returned?';
-						if (!window.confirm(msg)) return;
-						await markReturned({ staffNotes: returnNotes || undefined });
-					}}
-					class="space-y-3"
+				<Action
+					action={() => markReturned({ staffNotes: returnNotes || undefined })}
+					confirm={chargePreview
+						? `Mark as returned? This will charge ${formatCents(chargePreview.total)}.`
+						: 'Mark as returned?'}
+					label="Mark Returned"
+					modalTitle="Confirm Return"
+					class="btn-primary btn-sm"
+					successToast="Marked as returned"
 				>
-					<div>
-						<label class="label label-text" for="return-notes">Staff Notes (optional)</label>
-						<textarea id="return-notes" class="textarea textarea-bordered textarea-sm w-full" bind:value={returnNotes}></textarea>
-					</div>
-					<button type="submit" class="btn btn-primary btn-sm">Mark Returned</button>
-				</form>
+					{#snippet form({ close })}
+						<Field name="staffNotes" type="textarea" label="Staff Notes (optional)" bind:value={returnNotes} />
+					{/snippet}
+				</Action>
 
 			{:else}
 				<p class="text-sm opacity-60">

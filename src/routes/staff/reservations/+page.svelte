@@ -5,7 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ResolveModal from './ResolveModal.svelte';
-	import CreateModal from './CreateModal.svelte';
+	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
@@ -56,7 +56,7 @@
 					<span class="badge badge-sm">{data.counts.unresolved}</span>
 				{/if}
 			</button>
-			
+			<CreateReservation />
 		</div>
 	</PageHeader>
 
@@ -118,4 +118,3 @@
 	unresolved={data.unresolved}
 	hourlyRateCents={data.hourlyRateCents}
 />
-<CreateModal />

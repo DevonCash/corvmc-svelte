@@ -1,15 +1,32 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import type { AudiencesResponse } from '$lib/types/api';
 
 	let { data }: { data: AudiencesResponse } = $props();
 
-	let email = $state('');
-	let name = $state('');
 	let selectedAudienceId = $state('');
-	let submitting = $state(false);
 	let success = $state(false);
-	let errorMsg = $state('');
+
+	async function handleSubmit(formData: FormData) {
+		const email = (formData.get('email') as string).trim();
+		const name = (formData.get('name') as string)?.trim() || undefined;
+		if (!email || !selectedAudienceId) return;
+
+		const slug = data.audiences.find((a) => a.id === selectedAudienceId)?.slug;
+		const res = await fetch(`/api/marketing/audiences/${slug}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, name })
+		});
+
+		if (!res.ok) {
+			const body = await res.json().catch(() => null);
+			throw new Error(body?.message ?? 'Something went wrong');
+		}
+
+		success = true;
+	}
 </script>
 
 <div class="max-w-lg mx-auto p-6 space-y-6">
@@ -24,8 +41,6 @@
 			class="btn btn-ghost btn-sm"
 			onclick={() => {
 				success = false;
-				email = '';
-				name = '';
 				selectedAudienceId = '';
 			}}
 		>
@@ -34,37 +49,8 @@
 	{:else if data.audiences.length === 0}
 		<p class="text-center opacity-60">No mailing lists are currently accepting signups.</p>
 	{:else}
-		<form
-			method="POST"
-			onsubmit={async (e) => {
-				e.preventDefault();
-				if (!email.trim() || !selectedAudienceId) return;
-				submitting = true;
-				errorMsg = '';
-
-				try {
-					const res = await fetch(`/api/marketing/audiences/${data.audiences.find((a: any) => a.id === selectedAudienceId)?.slug}`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined })
-					});
-
-					if (!res.ok) {
-						const body = await res.json().catch(() => null);
-						throw new Error(body?.message ?? 'Something went wrong');
-					}
-
-					success = true;
-				} catch (err) {
-					errorMsg = err instanceof Error ? err.message : 'Something went wrong';
-				} finally {
-					submitting = false;
-				}
-			}}
-			class="space-y-4"
-		>
-			<div>
-				<label for="sub-list" class="label text-sm font-medium">Choose a list</label>
+		<Form action={handleSubmit} class="space-y-4">
+			<Field name="audience" label="Choose a list">
 				<div class="space-y-2">
 					{#each data.audiences as a (a.id)}
 						<label class="label cursor-pointer gap-3 border rounded-lg px-4 py-3 {selectedAudienceId === a.id ? 'border-primary bg-primary/10' : 'border-base-300'}">
@@ -84,45 +70,12 @@
 						</label>
 					{/each}
 				</div>
-			</div>
+			</Field>
 
-			<div>
-				<label for="sub-email" class="label text-sm font-medium">Email</label>
-				<input
-					id="sub-email"
-					type="email"
-					bind:value={email}
-					placeholder="your@email.com"
-					class="input-bordered input w-full"
-					required
-				/>
-			</div>
+			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
+			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
 
-			<div>
-				<label for="sub-name" class="label text-sm font-medium">Name (optional)</label>
-				<input
-					id="sub-name"
-					type="text"
-					bind:value={name}
-					placeholder="Your name"
-					class="input-bordered input w-full"
-				/>
-			</div>
-
-			{#if errorMsg}
-				<Alert type="error" class="text-sm">{errorMsg}</Alert>
-			{/if}
-
-			<button
-				type="submit"
-				class="btn btn-primary w-full"
-				disabled={!email.trim() || !selectedAudienceId || submitting}
-			>
-				{#if submitting}
-					<span class="loading loading-sm loading-spinner"></span>
-				{/if}
-				Subscribe
-			</button>
-		</form>
+			<SubmitButton label="Subscribe" class="btn-primary w-full" />
+		</Form>
 	{/if}
 </div>

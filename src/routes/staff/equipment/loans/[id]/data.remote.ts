@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
-import { query, command, getRequestEvent } from '$app/server';
+import { error, invalid } from '@sveltejs/kit';
+import { query, command, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	getLoanById,
@@ -24,21 +24,37 @@ export const getAvailableEquipment = query(z.void(), async () => {
 	return listEquipment({ status: 'available' });
 });
 
-export const schedule = command(scheduleLoanSchema, async (data) => {
+export const schedule = form('unchecked', async (data, issue) => {
 	await requireStaff();
+	const result = scheduleLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues.map((err: any) => {
+			const key = String(err.path[0] ?? '');
+			return (issue as any)[key]?.(err.message);
+		}).filter(Boolean);
+		invalid(...issues);
+	}
 	const { params } = getRequestEvent();
 	await scheduleLoan(params.id!, {
-		equipmentId: data.equipmentId,
-		scheduledPickupDate: new Date(data.scheduledPickupDate)
+		equipmentId: result.data!.equipmentId,
+		scheduledPickupDate: result.data!.scheduledPickupDate
 	});
 	void getLoan(params.id!).refresh();
 	return { success: true };
 });
 
-export const checkout = command(checkoutLoanSchema, async (data) => {
+export const checkout = form('unchecked', async (data, issue) => {
 	await requireStaff();
+	const result = checkoutLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues.map((err: any) => {
+			const key = String(err.path[0] ?? '');
+			return (issue as any)[key]?.(err.message);
+		}).filter(Boolean);
+		invalid(...issues);
+	}
 	const { params } = getRequestEvent();
-	await checkoutLoan(params.id!, { dueDate: new Date(data.dueDate) });
+	await checkoutLoan(params.id!, { dueDate: result.data!.dueDate });
 	void getLoan(params.id!).refresh();
 	return { success: true };
 });

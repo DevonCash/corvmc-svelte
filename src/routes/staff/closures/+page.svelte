@@ -1,7 +1,14 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import { Field } from '$lib/components/shared/Form';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { createClosure, deleteClosure } from './data.remote';
 	import type { StaffClosuresResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffClosuresResponse } = $props();
@@ -14,36 +21,20 @@
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">Closures</h1>
+	<PageHeader title="Closures" />
 
-	<div class="card bg-base-100 shadow-sm">
-		<div class="card-body">
-			<h2 class="card-title text-lg">Add Closure</h2>
-			<form method="POST" action="?/create" use:enhance class="space-y-3">
-				<div class="form-control">
-					<label class="label" for="reason">
-						<span class="label-text">Reason</span>
-					</label>
-					<input id="reason" name="reason" type="text" class="input input-bordered" required placeholder="Maintenance, event, holiday..." />
-				</div>
+	<InfoCard title="Add Closure">
+		<Form remote={createClosure} successToast="Closure added" onsuccess={() => invalidateAll()}>
+			<div class="space-y-3">
+				<Field name="reason" type="text" label="Reason" />
 				<div class="grid grid-cols-2 gap-4">
-					<div class="form-control">
-						<label class="label" for="startsAt">
-							<span class="label-text">Start</span>
-						</label>
-						<input id="startsAt" name="startsAt" type="datetime-local" class="input input-bordered" required />
-					</div>
-					<div class="form-control">
-						<label class="label" for="endsAt">
-							<span class="label-text">End</span>
-						</label>
-						<input id="endsAt" name="endsAt" type="datetime-local" class="input input-bordered" required />
-					</div>
+					<Field name="startsAt" type="datetime-local" label="Start" />
+					<Field name="endsAt" type="datetime-local" label="End" />
 				</div>
-				<button type="submit" class="btn btn-primary">Add Closure</button>
-			</form>
-		</div>
-	</div>
+				<SubmitButton label="Add Closure" class="btn-primary" />
+			</div>
+		</Form>
+	</InfoCard>
 
 	{#if closures.length === 0}
 		<EmptyState message="No closures." />
@@ -59,10 +50,14 @@
 							</p>
 						</div>
 						{#if isFuture(c.startsAt)}
-							<form method="POST" action="?/delete" use:enhance>
-								<input type="hidden" name="closureId" value={c.id} />
-								<button type="submit" class="btn btn-ghost btn-sm text-error">Delete</button>
-							</form>
+							<Action
+								action={() => deleteClosure({ closureId: c.id })}
+								label="Delete"
+								confirm="Delete this closure?"
+								successToast="Closure deleted"
+								onsuccess={() => invalidateAll()}
+								class="btn-ghost btn-sm text-error"
+							/>
 						{/if}
 					</div>
 				</div>
