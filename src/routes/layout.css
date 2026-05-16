@@ -597,7 +597,6 @@ p {
   background: #ffe8d6;
   width: 100%;
   max-width: 320px;
-  aspect-ratio: 5 / 3;
   border-radius: 10px;
   box-shadow:
     0 14px 26px -10px rgba(20, 20, 25, 0.4),
@@ -608,7 +607,8 @@ p {
   transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1), box-shadow 220ms ease;
   cursor: pointer;
   padding: 0;
-  container-type: size;
+  aspect-ratio: 5 / 3;
+  container-type: inline-size;
 }
 .id-card:hover {
   transform: rotate(0deg) translateY(-3px);
@@ -624,7 +624,7 @@ p {
 .id-card:nth-child(7n)     { --tilt: -1.8deg; }
 
 .id-card__header {
-  padding: 5.5cqi 5cqi 2.5cqi;
+  padding: 4cqi 5cqi 2.5cqi;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -664,8 +664,8 @@ p {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -1.5cqb;
-  height: 1.5cqb;
+  bottom: -1cqi;
+  height: 1cqi;
   background: linear-gradient(
     to bottom,
     var(--cmc-teal) 0 33.333%,
@@ -677,12 +677,12 @@ p {
   flex: 1;
   display: flex;
   gap: 3.5cqi;
-  padding: 4cqi 5cqi;
-  align-items: center;
+  padding: 5cqi 5cqi 4cqi;
+  align-items: stretch;
 }
 .id-card__photo {
   width: 17.5cqi;
-  height: 17.5cqi;
+  align-self: stretch;
   border-radius: 4px;
   background: var(--photo-bg, var(--cmc-light-blue));
   color: var(--cmc-navy);
@@ -695,12 +695,18 @@ p {
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
-.id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; }
+.id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; justify-content: center; flex: 1; }
 .id-card__name {
   font-weight: 700;
   font-size: 5cqi;
   line-height: 1.15;
   color: var(--cmc-navy);
+}
+.id-card__pronouns {
+  font-weight: 400;
+  font-size: 2.8cqi;
+  color: var(--fg-3);
+  margin-left: 0.5cqi;
 }
 .id-card__role {
   font-size: 3.4cqi;
@@ -710,7 +716,79 @@ p {
   display: flex;
   gap: 1.2cqi;
   flex-wrap: wrap;
-  margin-top: 1.2cqi;
+  margin-top: 1cqi;
+}
+.id-card__seeking {
+  font-weight: 600;
+  font-size: 2.4cqi;
+  letter-spacing: 0.04em;
+  color: var(--cmc-orange);
+  margin-top: 0.5cqi;
+}
+
+/* --- ID Tag — embossed text --- */
+.id-tag {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 2.5cqi;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(90, 61, 43, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.id-tag--teal {
+  color: rgba(0, 133, 155, 0.5);
+}
+.id-tag--band {
+  color: rgba(0, 59, 92, 0.5);
+}
+.id-card__bands {
+  display: flex;
+  gap: 1.2cqi;
+  flex-wrap: wrap;
+}
+.id-card__bands::before {
+  content: "▸";
+  font-size: 2.2cqi;
+  color: rgba(90, 61, 43, 0.35);
+  margin-right: -0.5cqi;
+}
+.id-card__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 5cqi 3cqi;
+  gap: 3cqi;
+}
+.id-card__since {
+  font-size: 2.2cqi;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(90, 61, 43, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+.id-card__barcode {
+  flex: 1;
+  max-width: 28cqi;
+  height: 5cqi;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(90, 61, 43, 0.35) 0 0.5cqi,
+    transparent 0.5cqi 1cqi,
+    rgba(90, 61, 43, 0.35) 1cqi 1.3cqi,
+    transparent 1.3cqi 2cqi,
+    rgba(90, 61, 43, 0.35) 2cqi 2.3cqi,
+    transparent 2.3cqi 3.2cqi,
+    rgba(90, 61, 43, 0.35) 3.2cqi 3.5cqi,
+    transparent 3.5cqi 4cqi,
+    rgba(90, 61, 43, 0.35) 4cqi 5cqi,
+    transparent 5cqi 5.4cqi,
+    rgba(90, 61, 43, 0.35) 5.4cqi 5.7cqi,
+    transparent 5.7cqi 6.5cqi
+  );
 }
 
 /* ---------------------------------------------------------------------------

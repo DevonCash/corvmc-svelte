@@ -34,7 +34,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			tagline: m.tagline,
 			instruments: m.instruments,
 			genres: m.genres,
-			lookingForBand: m.lookingForBand
+			lookingForBand: m.lookingForBand,
+			memberSince: m.createdAt,
+			bands: m.bands
 		})),
 		bands: bands.map((b) => ({
 			id: b.id,

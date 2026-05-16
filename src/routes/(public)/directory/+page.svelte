@@ -64,21 +64,40 @@
 									{/if}
 								</div>
 								<div class="id-card__info">
-									<div class="id-card__name">{member.name}</div>
+									<div class="id-card__name">
+										{member.name}
+										{#if member.pronouns}
+											<span class="id-card__pronouns">{member.pronouns}</span>
+										{/if}
+									</div>
 									{#if member.tagline}
 										<div class="id-card__role">{member.tagline}</div>
 									{/if}
 									{#if member.instruments?.length || member.genres?.length}
 										<div class="id-card__badges">
-											{#each (member.instruments ?? []).slice(0, 2) as inst}
-												<span class="sticker-badge sticker-badge--sm sticker-badge--teal">{inst}</span>
+											{#each member.instruments ?? [] as inst}
+												<span class="id-tag id-tag--teal">{inst}</span>
 											{/each}
-											{#each (member.genres ?? []).slice(0, 2) as genre}
-												<span class="sticker-badge sticker-badge--sm">{genre}</span>
+											{#each member.genres ?? [] as genre}
+												<span class="id-tag">{genre}</span>
 											{/each}
 										</div>
 									{/if}
+									{#if member.bands?.length}
+										<div class="id-card__bands">
+											{#each member.bands as b}
+												<span class="id-tag id-tag--band">{b.name}</span>
+											{/each}
+										</div>
+									{/if}
+									{#if member.lookingForBand}
+										<div class="id-card__seeking">Seeking a band</div>
+									{/if}
 								</div>
+							</div>
+							<div class="id-card__footer">
+								<div class="id-card__since">Member since {new Date(member.memberSince).getFullYear()}</div>
+								<div class="id-card__barcode" aria-hidden="true"></div>
 							</div>
 						</a>
 					{/each}

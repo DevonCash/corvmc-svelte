@@ -55,6 +55,33 @@ async function fetchUserGenres(userIds: string[]) {
 	return map;
 }
 
+async function fetchUserBands(userIds: string[]) {
+	if (userIds.length === 0) return new Map<string, { name: string; slug: string }[]>();
+	const rows = await db
+		.select({
+			userId: bandMember.userId,
+			bandName: band.name,
+			bandSlug: band.slug
+		})
+		.from(bandMember)
+		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.where(
+			and(
+				inArray(bandMember.userId, userIds),
+				eq(bandMember.status, 'active'),
+				isNull(band.deletedAt),
+				inArray(band.directoryVisibility, ['members', 'public'])
+			)
+		);
+	const map = new Map<string, { name: string; slug: string }[]>();
+	for (const r of rows) {
+		const list = map.get(r.userId) ?? [];
+		list.push({ name: r.bandName, slug: r.bandSlug });
+		map.set(r.userId, list);
+	}
+	return map;
+}
+
 async function fetchBandGenres(bandIds: string[]) {
 	if (bandIds.length === 0) return new Map<string, string[]>();
 	const rows = await db
@@ -83,7 +110,8 @@ const memberSelect = {
 	tagline: user.tagline,
 	lookingForBand: user.lookingForBand,
 	directoryContact: user.directoryContact,
-	links: user.links
+	links: user.links,
+	createdAt: user.createdAt
 } as const;
 
 function memberWhereConditions(
@@ -123,14 +151,16 @@ function memberWhereConditions(
 
 async function hydrateMembers<T extends { id: string }>(rows: T[]) {
 	const ids = rows.map(r => r.id);
-	const [instrumentsMap, genresMap] = await Promise.all([
+	const [instrumentsMap, genresMap, bandsMap] = await Promise.all([
 		fetchUserInstruments(ids),
-		fetchUserGenres(ids)
+		fetchUserGenres(ids),
+		fetchUserBands(ids)
 	]);
 	return rows.map(r => ({
 		...r,
 		instruments: instrumentsMap.get(r.id) ?? [],
-		genres: genresMap.get(r.id) ?? []
+		genres: genresMap.get(r.id) ?? [],
+		bands: bandsMap.get(r.id) ?? []
 	}));
 }
 

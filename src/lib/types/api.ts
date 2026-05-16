@@ -560,6 +560,8 @@ export interface DirectoryResponse {
 		instruments: string[];
 		genres: string[];
 		lookingForBand: boolean;
+		memberSince: string;
+		bands: { name: string; slug: string }[];
 	}[];
 	bands: {
 		id: string;
