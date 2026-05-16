@@ -643,8 +643,8 @@ p {
   max-width: 65%;
 }
 .id-card__logo {
-  width: 5.5cqi;
-  height: 5.5cqi;
+  height: 8cqi;
+  width: auto;
   object-fit: contain;
   flex-shrink: 0;
 }
