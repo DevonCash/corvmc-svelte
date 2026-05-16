@@ -5,6 +5,7 @@
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let id = $derived(page.params.id!);
 	let member = $derived(await getMember(id));
@@ -14,7 +15,6 @@
 	let hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);
 </script>
 
-<svelte:boundary>
 	{#if member}
 		<PageHeader title={member.name} subtitle="Member Profile" backHref="/member/directory" />
 
@@ -107,22 +107,12 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="alert alert-warning">
-			<p>Member not found or profile is hidden.</p>
-			<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
-		</div>
+		<Alert type="warning">
+			Member not found or profile is hidden.
+			{#snippet action()}
+				<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+			{/snippet}
+		</Alert>
 	{/if}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load profile: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

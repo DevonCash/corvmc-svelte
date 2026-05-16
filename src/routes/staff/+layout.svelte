@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
@@ -86,5 +87,17 @@
 			</NavItem>
 		</NavGroup>
 	{/snippet}
-	{@render children()}
+	<svelte:boundary>
+		{@render children()}
+
+		{#snippet pending()}
+			<div class="flex items-center justify-center p-12">
+				<span class="loading loading-spinner loading-lg"></span>
+			</div>
+		{/snippet}
+
+		{#snippet failed(error, reset)}
+			<Alert type="error" {reset}>Failed to load: {String(error)}</Alert>
+		{/snippet}
+	</svelte:boundary>
 </AppShell>

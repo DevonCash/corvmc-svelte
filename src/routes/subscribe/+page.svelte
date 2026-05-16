@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import type { AudiencesResponse } from '$lib/types/api';
 
 	let { data }: { data: AudiencesResponse } = $props();
@@ -18,9 +19,7 @@
 	</div>
 
 	{#if success}
-		<div class="alert alert-success">
-			<p>You've been subscribed! Check your inbox for future updates.</p>
-		</div>
+		<Alert type="success">You've been subscribed! Check your inbox for future updates.</Alert>
 		<button
 			class="btn btn-ghost btn-sm"
 			onclick={() => {
@@ -111,7 +110,7 @@
 			</div>
 
 			{#if errorMsg}
-				<div class="alert alert-error text-sm">{errorMsg}</div>
+				<Alert type="error" class="text-sm">{errorMsg}</Alert>
 			{/if}
 
 			<button

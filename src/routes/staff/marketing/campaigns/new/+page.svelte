@@ -89,7 +89,6 @@
 	}
 </script>
 
-<svelte:boundary>
 	<PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
 
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -210,16 +209,4 @@
 		</div>
 	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

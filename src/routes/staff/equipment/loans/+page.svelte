@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -13,28 +14,12 @@
 <div class="space-y-6">
 	<PageHeader title="Equipment Loans" backHref="/staff/equipment" />
 
-	<!-- Filters -->
-	<form method="get" class="flex flex-wrap items-end gap-2">
-		<input
-			type="text"
-			name="q"
-			value={data.filters.search}
-			placeholder="Search by member..."
-			class="input-bordered input input-sm w-48"
-		/>
-		<select name="status" class="select-bordered select select-sm">
-			<option value="">All statuses</option>
-			{#each loanStatuses as s}
-				<option value={s} selected={data.filters.status === s}>{s.replace('_', ' ')}</option>
-			{/each}
-		</select>
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
-		{#if data.filters.search || data.filters.status}
-			<a href="/staff/equipment/loans" class="btn btn-ghost btn-sm">Clear</a>
-		{/if}
-	</form>
-
-	<DataTable data={data.loans} rowHref={(l) => `/staff/equipment/loans/${l.id}`} empty="No loans found">
+	<DataTable data={data.loans} rowHref={(l) => `/staff/equipment/loans/${l.id}`} clearHref="/staff/equipment/loans" empty="No loans found">
+		{#snippet toolbar()}
+			<Filter.Search name="q" value={data.filters.search} placeholder="Search by member..." />
+			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
+				options={loanStatuses} />
+		{/snippet}
 		<Column key="userName" header="Member" sortable />
 		<Column key="equipmentName" header="Equipment">
 			{#snippet cell(_, l)}

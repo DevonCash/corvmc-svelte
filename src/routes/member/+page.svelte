@@ -3,6 +3,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 	import type { DashboardResponse } from '$lib/types/api';
@@ -18,12 +19,9 @@
 	<h1 class="text-2xl font-bold">Dashboard</h1>
 
 	{#if pendingInvites > 0}
-		<a href="/member/bands" class="alert alert-info shadow-sm">
-			<span>
-				You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
-			</span>
-			<span class="link font-medium">View</span>
-		</a>
+		<Alert type="info" href="/member/bands" class="shadow-sm">
+			You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
+		</Alert>
 	{/if}
 
 	<!-- Quick links -->

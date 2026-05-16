@@ -2,6 +2,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateBandModal from './CreateBandModal.svelte';
@@ -20,28 +21,12 @@
 
 	<CreateBandModal bind:open={showCreateModal} />
 
-	<!-- Filters -->
-	<form method="get" class="flex flex-wrap items-end gap-2">
-		<input
-			type="text"
-			name="q"
-			value={data.filters.search}
-			placeholder="Search by name..."
-			class="input-bordered input input-sm w-48"
-		/>
-		<select name="status" class="select-bordered select select-sm">
-			<option value="">All statuses</option>
-			<option value="active" selected={data.filters.status === 'active'}>Active</option>
-			<option value="deactivated" selected={data.filters.status === 'deactivated'}>Deactivated</option>
-		</select>
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
-		{#if data.filters.search || data.filters.status}
-			<a href="/staff/bands" class="btn btn-ghost btn-sm">Clear</a>
-		{/if}
-	</form>
-
-	<!-- Table -->
-	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} empty="No bands found">
+	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} clearHref="/staff/bands" empty="No bands found">
+		{#snippet toolbar()}
+			<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
+			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
+				options={[['active', 'Active'], ['deactivated', 'Deactivated']]} />
+		{/snippet}
 		<Column key="deletedAt" header="" shrink>
 			{#snippet cell(_, b)}
 				<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ResolveModal from './ResolveModal.svelte';
@@ -72,31 +73,13 @@
 		active={data.tab}
 	/>
 
-	<!-- Filters -->
-	<form method="get" class="flex flex-wrap items-end gap-2">
-		<input type="hidden" name="tab" value={data.tab} />
-		<input
-			type="text"
-			name="q"
-			value={data.search}
-			placeholder="Search name or email..."
-			class="input-bordered input input-sm w-48"
-		/>
-		<input
-			type="date"
-			name="from"
-			value={data.dateFrom ?? ''}
-			class="input-bordered input input-sm"
-		/>
-		<input type="date" name="to" value={data.dateTo ?? ''} class="input-bordered input input-sm" />
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
-		{#if data.search || data.dateFrom || data.dateTo || data.statusFilter.length > 0}
-			<a href="/staff/reservations?tab={data.tab}" class="btn btn-ghost btn-sm">Clear</a>
-		{/if}
-	</form>
-
-	<!-- Table -->
-	<DataTable data={data.reservations} {columns} groupBy={dayLabel} empty="No reservations found">
+	<DataTable data={data.reservations} {columns} groupBy={dayLabel} clearHref="/staff/reservations?tab={data.tab}" empty="No reservations found">
+		{#snippet toolbar()}
+			<input type="hidden" name="tab" value={data.tab} />
+			<Filter.Search name="q" value={data.search} placeholder="Search name or email..." />
+			<Filter.Date name="from" value={data.dateFrom ?? ''} />
+			<Filter.Date name="to" value={data.dateTo ?? ''} />
+		{/snippet}
 		{#snippet row(r)}
 			<tr
 				class="hover cursor-pointer"

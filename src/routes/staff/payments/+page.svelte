@@ -2,6 +2,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -27,45 +28,16 @@
 <div class="space-y-6">
 	<PageHeader title="Payments" />
 
-	<!-- Filters -->
-	<form method="get" class="flex flex-wrap items-end gap-2">
-		<input
-			type="text"
-			name="q"
-			value={data.filters.search}
-			placeholder="Search name or email..."
-			class="input-bordered input input-sm w-48"
-		/>
-		<select name="method" class="select-bordered select select-sm">
-			<option value="">All methods</option>
-			<option value="Cash" selected={data.filters.method === 'Cash'}>Cash</option>
-			<option value="Credits" selected={data.filters.method === 'Credits'}>Credits</option>
-		</select>
-		<select name="status" class="select-bordered select select-sm">
-			<option value="">All statuses</option>
-			<option value="completed" selected={data.filters.status === 'completed'}>Completed</option>
-			<option value="refunded" selected={data.filters.status === 'refunded'}>Refunded</option>
-		</select>
-		<input
-			type="date"
-			name="from"
-			value={data.filters.from}
-			class="input-bordered input input-sm"
-		/>
-		<input
-			type="date"
-			name="to"
-			value={data.filters.to}
-			class="input-bordered input input-sm"
-		/>
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
-		{#if data.filters.search || data.filters.method || data.filters.status || data.filters.from || data.filters.to}
-			<a href="/staff/payments" class="btn btn-ghost btn-sm">Clear</a>
-		{/if}
-	</form>
-
-	<!-- Table -->
-	<DataTable data={data.payments} empty="No payment records found">
+	<DataTable data={data.payments} clearHref="/staff/payments" empty="No payment records found">
+		{#snippet toolbar()}
+			<Filter.Search name="q" value={data.filters.search} placeholder="Search name or email..." />
+			<Filter.Select name="method" value={data.filters.method} placeholder="All methods"
+				options={[['Cash', 'Cash'], ['Credits', 'Credits']]} />
+			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
+				options={[['completed', 'Completed'], ['refunded', 'Refunded']]} />
+			<Filter.Date name="from" value={data.filters.from} />
+			<Filter.Date name="to" value={data.filters.to} />
+		{/snippet}
 		<Column key="paidAt" header="Date" sortable type="datetime" />
 		<MemberColumn nameKey="userName" emailKey="userEmail" userIdKey="userId" />
 		<Column key="amountCents" header="Amount" sortable type="currency" />

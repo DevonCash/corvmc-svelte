@@ -38,7 +38,6 @@
 	});
 </script>
 
-<svelte:boundary>
 	<PageHeader
 		subtitle="Equipment Loan"
 		title={loan.equipmentName ?? 'Free-form Request'}
@@ -239,16 +238,4 @@
 		</InfoCard>
 	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load loan: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

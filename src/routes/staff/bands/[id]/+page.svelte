@@ -29,7 +29,6 @@
 	let isDeactivated = $derived(!!band.deletedAt);
 </script>
 
-<svelte:boundary>
 	<Form remote={updateBand} successToast="Band updated">
 		<PageHeader subtitle="Band" title={band.name} backHref="/staff/bands">
 			{#if isDeactivated}
@@ -189,16 +188,4 @@
 		</div>
 	</InfoCard>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load band: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

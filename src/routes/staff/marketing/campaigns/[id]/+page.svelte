@@ -11,7 +11,6 @@
 	let campaign = $derived(await getCampaignDetail(id));
 </script>
 
-<svelte:boundary>
 	{#if campaign}
 		<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
 			<StatusBadge status={campaign.status} />
@@ -70,16 +69,4 @@
 		</InfoCard>
 	{/if}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load campaign: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

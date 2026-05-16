@@ -27,7 +27,6 @@
 	let genreSuggestions = $derived(await getGenreSuggestions());
 </script>
 
-<svelte:boundary>
 	<PageHeader title="Directory" subtitle="Community" />
 
 	<div class="space-y-4">
@@ -185,16 +184,4 @@
 		{/if}
 	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load directory: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

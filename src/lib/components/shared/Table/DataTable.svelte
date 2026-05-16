@@ -66,8 +66,10 @@
 		columns: columnsProp,
 		row: rowSnippet,
 		children,
+		toolbar,
 		groupBy,
 		rowHref,
+		clearHref,
 		pageSize = 20,
 		empty = 'No items found',
 		class: className = ''
@@ -79,10 +81,14 @@
 		row?: Snippet<[T]>;
 		/** Column child components register via this slot. */
 		children?: Snippet;
+		/** Filter controls rendered above the table inside a GET form. */
+		toolbar?: Snippet;
 		/** Group rows by a label derived from each item. */
 		groupBy?: (item: T) => string;
 		/** Make rows clickable — returns the href for a given row. */
 		rowHref?: (item: T) => string;
+		/** Href for the "Clear" filter link. Shown when any filter field has a value. */
+		clearHref?: string;
 		/** Rows per page. Default 20. */
 		pageSize?: number;
 		/** Message shown when data is empty. */
@@ -179,6 +185,22 @@
 	});
 
 	// ---------------------------------------------------------------------------
+	// Toolbar / filter form
+	// ---------------------------------------------------------------------------
+
+	let filterFormEl = $state<HTMLFormElement>();
+
+	const hasActiveFilters = $derived.by(() => {
+		if (!filterFormEl) return false;
+		for (const el of filterFormEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+			'[data-filter]'
+		)) {
+			if (el.value.trim() !== '') return true;
+		}
+		return false;
+	});
+
+	// ---------------------------------------------------------------------------
 	// Cell formatting (built-in types)
 	// ---------------------------------------------------------------------------
 
@@ -199,6 +221,16 @@
 
 <!-- Mount Column children (renderless — they just register via context) -->
 {@render children?.()}
+
+{#if toolbar}
+	<form method="get" class="flex flex-wrap items-end gap-2" bind:this={filterFormEl}>
+		{@render toolbar()}
+		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
+		{#if clearHref && hasActiveFilters}
+			<a href={clearHref} class="btn btn-ghost btn-sm">Clear</a>
+		{/if}
+	</form>
+{/if}
 
 {#if columns.length > 0}
 	<div class="overflow-x-auto">

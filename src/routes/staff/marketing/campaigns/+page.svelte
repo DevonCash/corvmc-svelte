@@ -8,7 +8,6 @@
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-<svelte:boundary>
 	<PageHeader title="Campaigns" subtitle="Marketing">
 		<a href="/staff/marketing/campaigns/new" class="btn btn-sm btn-primary">New Campaign</a>
 	</PageHeader>
@@ -74,16 +73,4 @@
 		</div>
 	{/if}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load campaigns: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

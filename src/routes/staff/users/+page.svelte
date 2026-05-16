@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { type Column, default as DataTable } from '$lib/components/shared/Table/DataTable.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import type { StaffUsersResponse } from '$lib/types/api';
 
@@ -31,22 +32,10 @@
 		<span class="text-sm opacity-60">{data.pagination.total} total</span>
 	</PageHeader>
 
-	<!-- Search -->
-	<form method="get" class="flex gap-2">
-		<input
-			type="text"
-			name="q"
-			value={data.search}
-			placeholder="Search by name or email..."
-			class="input-bordered input w-full max-w-sm"
-		/>
-		<button type="submit" class="btn btn-primary">Search</button>
-		{#if data.search}
-			<a href="/staff/users" class="btn btn-ghost">Clear</a>
-		{/if}
-	</form>
-
-	<DataTable data={data.users} {columns} empty="No users found">
+	<DataTable data={data.users} {columns} clearHref="/staff/users" empty="No users found">
+		{#snippet toolbar()}
+			<Filter.Search name="q" value={data.search} placeholder="Search by name or email..." class="w-full max-w-sm" />
+		{/snippet}
 		{#snippet row(u: User)}
 			<tr class="hover">
 				<td>

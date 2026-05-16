@@ -42,7 +42,6 @@
 	}
 </script>
 
-<svelte:boundary>
 	{#if audienceData}
 		<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
 			<Action
@@ -197,16 +196,4 @@
 		</InfoCard>
 	{/if}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load audience: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
+	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
@@ -51,35 +52,14 @@
 		</div>
 	</PageHeader>
 
-	<!-- Filters -->
-	<form method="get" class="flex flex-wrap items-end gap-2">
-		<input
-			type="text"
-			name="q"
-			value={data.filters.search}
-			placeholder="Search name, serial, resource ID..."
-			class="input-bordered input input-sm w-64"
-		/>
-		<select name="category" class="select-bordered select select-sm">
-			<option value="">All categories</option>
-			{#each data.categories as cat}
-				<option value={cat.id} selected={data.filters.categoryId === cat.id}>{cat.name}</option>
-			{/each}
-		</select>
-		<select name="status" class="select-bordered select select-sm">
-			<option value="">All statuses</option>
-			{#each equipmentStatuses as s}
-				<option value={s} selected={data.filters.status === s}>{s}</option>
-			{/each}
-		</select>
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
-		{#if data.filters.search || data.filters.categoryId || data.filters.status}
-			<a href="/staff/equipment" class="btn btn-ghost btn-sm">Clear</a>
-		{/if}
-	</form>
-
-	<!-- Equipment Table -->
-	<DataTable data={data.equipment} rowHref={(e) => `/staff/equipment/${e.id}`} empty="No equipment found">
+	<DataTable data={data.equipment} rowHref={(e) => `/staff/equipment/${e.id}`} clearHref="/staff/equipment" empty="No equipment found">
+		{#snippet toolbar()}
+			<Filter.Search name="q" value={data.filters.search} placeholder="Search name, serial, resource ID..." class="w-64" />
+			<Filter.Select name="category" value={data.filters.categoryId} placeholder="All categories"
+				options={data.categories.map((c) => ({ value: c.id, label: c.name }))} />
+			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
+				options={equipmentStatuses} />
+		{/snippet}
 		<Column key="name" header="Name" sortable />
 		<Column key="categoryName" header="Category" sortable>
 			{#snippet cell(_, e)}

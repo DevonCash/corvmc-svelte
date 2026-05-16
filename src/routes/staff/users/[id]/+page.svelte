@@ -10,6 +10,7 @@
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import { formatDateTime, formatCents } from '$lib/utils/format';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
@@ -21,7 +22,6 @@
 	);
 </script>
 
-<svelte:boundary>
 	<Form remote={updateUser} successToast="Changes saved">
 		<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
 			{#if member.deletedAt}
@@ -139,22 +139,7 @@
 			</InfoCard>
 		{/if}
 	{:catch}
-		<div class="alert alert-warning mt-6">
-			<p>Could not load payment records.</p>
-		</div>
+		<Alert type="warning" class="mt-6">Could not load payment records.</Alert>
 	{/await}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		{@debug error}
-		<div class="alert alert-error">
-			<p>Failed to load user: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

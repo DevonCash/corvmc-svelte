@@ -8,7 +8,6 @@
 	let audiences = $derived(await getAudiences());
 </script>
 
-<svelte:boundary>
 	<PageHeader title="Audiences" subtitle="Marketing">
 		<button class="btn btn-sm btn-primary" onclick={() => (showCreateModal = true)}>
 			New Audience
@@ -60,16 +59,4 @@
 		</div>
 	{/if}
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load audiences: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

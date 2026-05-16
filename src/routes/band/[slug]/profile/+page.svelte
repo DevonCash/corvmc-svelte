@@ -41,7 +41,6 @@
 	}
 </script>
 
-<svelte:boundary>
 	<Form remote={saveProfile} successToast="Band profile saved">
 		<PageHeader subtitle="Band Profile" title="Directory Profile">
 			<SubmitButton shortcut="mod+s">
@@ -156,16 +155,4 @@
 		</div>
 	</Form>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(error, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load band profile: {String(error)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

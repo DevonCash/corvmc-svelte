@@ -81,7 +81,6 @@
 	let initial = $derived({ startTime: '', endTime: '', notes: '' });
 </script>
 
-<svelte:boundary>
 	<div class="max-w-md space-y-6">
 		<PageHeader title="Book a Session" subtitle={band.name} />
 
@@ -196,16 +195,4 @@
 		</Form>
 	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(err, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load available times: {String(err)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>

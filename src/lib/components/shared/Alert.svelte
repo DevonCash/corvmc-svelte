@@ -1,0 +1,43 @@
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+
+	type AlertType = 'info' | 'warning' | 'error' | 'success';
+
+	const typeClass: Record<AlertType, string> = {
+		info: 'alert-info',
+		warning: 'alert-warning',
+		error: 'alert-error',
+		success: 'alert-success'
+	};
+
+	let {
+		type = 'info',
+		href,
+		reset,
+		children,
+		action,
+		class: className = ''
+	}: {
+		type?: AlertType;
+		href?: string;
+		reset?: () => void;
+		children: Snippet;
+		action?: Snippet;
+		class?: string;
+	} = $props();
+</script>
+
+{#if href}
+	<a {href} class="alert {typeClass[type]} {className}">
+		<span>{@render children()}</span>
+	</a>
+{:else}
+	<div class="alert {typeClass[type]} {className}" role="alert">
+		<p>{@render children()}</p>
+		{#if reset}
+			<button class="btn btn-sm" onclick={reset}>Retry</button>
+		{:else if action}
+			{@render action()}
+		{/if}
+	</div>
+{/if}

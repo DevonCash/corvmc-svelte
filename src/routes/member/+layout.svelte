@@ -11,6 +11,7 @@
 	import NavItem from '$lib/components/shared/NavItem.svelte';
 	import NavGroup from '$lib/components/shared/NavGroup.svelte';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import type { MemberLayoutResponse } from '$lib/types/api';
 
 	let { data, children }: { data: MemberLayoutResponse; children: import('svelte').Snippet } = $props();
@@ -72,5 +73,17 @@
 			{#snippet icon()}<IconStar />{/snippet}
 		</NavItem>
 	{/snippet}
-	{@render children()}
+	<svelte:boundary>
+		{@render children()}
+
+		{#snippet pending()}
+			<div class="flex items-center justify-center p-12">
+				<span class="loading loading-spinner loading-lg"></span>
+			</div>
+		{/snippet}
+
+		{#snippet failed(error, reset)}
+			<Alert type="error" {reset}>Failed to load: {String(error)}</Alert>
+		{/snippet}
+	</svelte:boundary>
 </AppShell>

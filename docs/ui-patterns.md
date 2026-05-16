@@ -4,34 +4,23 @@ When building or modifying pages in this app, use the shared components and patt
 
 ## Page structure
 
-Every page under a panel layout (staff or member) follows this shape:
+Every page under a panel layout (staff, member, or band) follows this shape:
 
 ```svelte
-<svelte:boundary>
-  <PageHeader title="Page Title" subtitle="Panel">
-    <!-- optional right-side actions (SubmitButton, links, etc.) -->
-  </PageHeader>
+<PageHeader title="Page Title" subtitle="Panel">
+  <!-- optional right-side actions (SubmitButton, links, etc.) -->
+</PageHeader>
 
-  <!-- page content -->
-
-  {#snippet pending()}
-    <div class="flex items-center justify-center p-12">
-      <span class="loading loading-spinner loading-lg"></span>
-    </div>
-  {/snippet}
-
-  {#snippet failed(err, reset)}
-    <div class="alert alert-error">
-      <p>Failed to load: {String(err)}</p>
-      <button class="btn btn-sm" onclick={reset}>Retry</button>
-    </div>
-  {/snippet}
-</svelte:boundary>
+<!-- page content -->
 ```
 
-Use `<svelte:boundary>` whenever the page has async data (`$derived(await ...)`). The pending/failed snippets handle loading and error states.
-
 Always use `<PageHeader>` for the page title. Never write a bare `<h1>`.
+
+### Loading and error states
+
+The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in a `<svelte:boundary>` with default pending (spinner) and failed (Alert with Retry) snippets. Pages **do not** need to add their own boundary, pending, or failed snippets — the layout handles it.
+
+If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 
 ## Remote functions (data.remote.ts)
 
@@ -272,6 +261,36 @@ Renders a daisyUI badge colored by status string. Handles underscore-to-space co
 
 Built-in variants: `scheduled` (warning), `confirmed` (info), `completed` (success), `no_show` (error), `cancelled` (ghost), `active` (success), `pending` (warning), `error` (error). Unknown statuses fall back to `badge-ghost`.
 
+## Alert
+
+DaisyUI alert banner for inline messages, errors, and warnings. Not to be confused with Bits UI's AlertDialog (which is used inside the `Action` component for confirmation dialogs).
+
+```svelte
+<!-- Simple message -->
+<Alert type="success">You've been subscribed!</Alert>
+
+<!-- Inline error -->
+<Alert type="error" class="text-sm">{errorMsg}</Alert>
+
+<!-- With action button -->
+<Alert type="warning">
+  Member not found.
+  {#snippet action()}
+    <a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+  {/snippet}
+</Alert>
+
+<!-- As a link -->
+<Alert type="info" href="/member/bands" class="shadow-sm">
+  You have 3 pending band invitations.
+</Alert>
+
+<!-- With retry (used by layout boundary) -->
+<Alert type="error" {reset}>Failed to load: {String(error)}</Alert>
+```
+
+Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` instead of `<div>`), `reset` (adds a Retry button), `action` (snippet for custom action content), `class`.
+
 ## MemberLink
 
 Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
@@ -445,6 +464,44 @@ Group rows by a label with `groupBy`:
 ```svelte
 <DataTable data={reservations} groupBy={(r) => formatDate(r.startsAt)}>
 ```
+
+### Toolbar (filters)
+
+DataTable can host a filter bar via the `toolbar` snippet. It wraps the content in a `<form method="get">` with a Filter button and a conditional Clear link.
+
+```svelte
+import * as Filter from '$lib/components/shared/Table/Filter';
+
+<DataTable data={bands} clearHref="/staff/bands" empty="No bands found">
+  {#snippet toolbar()}
+    <Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
+    <Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
+      options={[['active', 'Active'], ['deactivated', 'Deactivated']]} />
+  {/snippet}
+  <Column key="name" header="Name" sortable />
+</DataTable>
+```
+
+The Clear link appears automatically when any `[data-filter]` element has a value and hides otherwise. Hidden inputs (for sticky params like `tab`) don't trigger the Clear link.
+
+For extra toolbar content that isn't a filter (hidden inputs, custom markup), place it directly in the snippet — only elements with `data-filter` affect the Clear link visibility:
+
+```svelte
+{#snippet toolbar()}
+  <input type="hidden" name="tab" value={data.tab} />
+  <Filter.Search name="q" value={data.search} />
+  <Filter.Date name="from" value={data.dateFrom ?? ''} />
+  <Filter.Date name="to" value={data.dateTo ?? ''} />
+{/snippet}
+```
+
+#### Filter helpers
+
+All three render a single styled input with the `data-filter` attribute.
+
+- **`Filter.Search`** — text input. Props: `name` (default `"q"`), `value`, `placeholder` (default `"Search..."`), `class` (default `"w-48"`).
+- **`Filter.Select`** — select dropdown. Props: `name`, `value`, `placeholder` (default `"All"`), `options` (accepts `string[]`, `[value, label][]`, or `{ value, label }[]`), `class`. String arrays auto-convert underscores to spaces in labels.
+- **`Filter.Date`** — date input. Props: `name`, `value`, `class`.
 
 ### Pagination
 

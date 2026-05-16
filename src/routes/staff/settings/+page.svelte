@@ -8,7 +8,6 @@
 	let products = $derived(await getProducts());
 </script>
 
-<svelte:boundary>
 	<PageHeader title="Settings" subtitle="Staff" />
 
 	<div class="max-w-2xl space-y-6">
@@ -118,16 +117,4 @@
 		{/each}
 	</div>
 
-	{#snippet pending()}
-		<div class="flex items-center justify-center p-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{/snippet}
 
-	{#snippet failed(err, reset)}
-		<div class="alert alert-error">
-			<p>Failed to load settings: {String(err)}</p>
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
-		</div>
-	{/snippet}
-</svelte:boundary>
