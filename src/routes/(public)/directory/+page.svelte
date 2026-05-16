@@ -9,118 +9,113 @@
 	const bands = $derived(data.bands);
 
 	let activeTab = $state<'members' | 'bands'>('members');
+
+	const bandColors = ['#e5771e', '#003b5c', '#00859b', '#f84d13', '#ffb500', '#5a3d2b'];
+
+	function initials(name: string): string {
+		return name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+	}
 </script>
 
-<div class="mx-auto max-w-4xl space-y-6 p-6">
-	<h1 class="text-2xl font-bold">Directory</h1>
+<svelte:head>
+	<title>Directory | Corvallis Music Collective</title>
+	<meta name="description" content="Musicians and bands in the Corvallis Music Collective." />
+</svelte:head>
 
-	<TabBar
-		tabs={[
-			{ key: 'members', label: `Members (${members.length})` },
-			{ key: 'bands', label: `Bands (${bands.length})` }
-		]}
-		active={activeTab}
-		onchange={(key) => (activeTab = key as 'members' | 'bands')}
-	/>
+<section class="py-16 px-6">
+	<div class="max-w-5xl mx-auto">
+		<div class="text-center mb-8">
+			<h1 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-navy)">Directory</h1>
+			<p class="text-base" style="color: var(--fg-2)">Musicians and bands in the Corvallis Music Collective</p>
+		</div>
 
-	{#if activeTab === 'members'}
-		{#if members.length === 0}
-			<EmptyState message="No public member profiles yet." />
-		{:else}
-			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-				{#each members as member (member.id)}
-					<a
-						href="/directory/members/{member.id}"
-						class="card bg-base-100 shadow-sm transition-shadow hover:shadow-md"
-					>
-						<div class="card-body py-4">
-							<div class="flex items-center gap-3">
-								<div class="placeholder avatar">
-									<div class="w-12 rounded-full bg-neutral text-neutral-content">
-										{#if member.image}
-											<img src={member.image} alt={member.name} class="rounded-full" />
-										{:else}
-											<span class="text-lg">{member.name.charAt(0).toUpperCase()}</span>
-										{/if}
-									</div>
-								</div>
-								<div class="min-w-0 flex-1">
-									<p class="font-medium truncate">{member.name}</p>
-									{#if member.tagline}
-										<p class="text-sm opacity-60 truncate">{member.tagline}</p>
-									{:else if member.pronouns}
-										<p class="text-xs opacity-60">{member.pronouns}</p>
-									{/if}
-								</div>
-								{#if member.lookingForBand}
-									<span class="badge badge-primary badge-sm whitespace-nowrap">Looking for band</span>
-								{/if}
+		<div class="flex justify-center mb-10">
+			<TabBar
+				tabs={[
+					{ key: 'members', label: `Musicians (${members.length})` },
+					{ key: 'bands', label: `Bands (${bands.length})` }
+				]}
+				active={activeTab}
+				onchange={(key) => (activeTab = key as 'members' | 'bands')}
+			/>
+		</div>
+
+		{#if activeTab === 'members'}
+			{#if members.length === 0}
+				<EmptyState message="No public member profiles yet." />
+			{:else}
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+					{#each members as member (member.id)}
+						<a href="/directory/members/{member.id}" class="id-card">
+							<div class="id-card__hole"></div>
+							<div class="id-card__header">
+								<div class="id-card__brand">Corvallis Music Collective</div>
+								<div class="id-card__tag">MEMBER</div>
 							</div>
-							{#if member.instruments?.length || member.genres?.length}
-								<div class="flex flex-wrap gap-1 mt-2">
-									{#each (member.instruments ?? []).slice(0, 3) as inst}
-										<span class="badge badge-outline badge-xs">{inst}</span>
-									{/each}
-									{#each (member.genres ?? []).slice(0, 3) as genre}
-										<span class="badge badge-ghost badge-xs">{genre}</span>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</a>
-				{/each}
-			</div>
-		{/if}
-	{/if}
-
-	{#if activeTab === 'bands'}
-		{#if bands.length === 0}
-			<EmptyState message="No public band profiles yet." />
-		{:else}
-			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-				{#each bands as b (b.id)}
-					<a
-						href="/directory/bands/{b.slug}"
-						class="card bg-base-100 shadow-sm transition-shadow hover:shadow-md"
-					>
-						<div class="card-body py-4">
-							<div class="flex items-center gap-3">
-								<div class="placeholder avatar">
-									<div class="w-10 rounded-full bg-neutral text-neutral-content">
-										{#if b.avatarUrl}
-											<img src={b.avatarUrl} alt={b.name} class="rounded-full" />
-										{:else}
-											<span>{b.name.charAt(0).toUpperCase()}</span>
-										{/if}
-									</div>
-								</div>
-								<div class="min-w-0 flex-1">
-									<p class="font-medium">{b.name}</p>
-									{#if b.tagline}
-										<p class="text-sm opacity-60 truncate">{b.tagline}</p>
+							<div class="id-card__body">
+								<div class="id-card__photo">
+									{#if member.image}
+										<img src={member.image} alt={member.name} class="w-full h-full object-cover rounded" />
 									{:else}
-										<p class="text-xs opacity-60">
-											{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
-										</p>
+										{initials(member.name)}
 									{/if}
 								</div>
-								{#if b.lookingForMembers}
-									<span class="badge badge-primary badge-sm whitespace-nowrap">Recruiting</span>
-								{/if}
-							</div>
-							{#if b.genres?.length}
-								<div class="flex flex-wrap gap-1 mt-2">
-									{#each b.genres.slice(0, 4) as genre}
-										<span class="badge badge-ghost badge-xs">{genre}</span>
-									{/each}
+								<div class="id-card__info">
+									<div class="id-card__name">{member.name}</div>
+									{#if member.tagline}
+										<div class="id-card__role">{member.tagline}</div>
+									{/if}
+									{#if member.instruments?.length || member.genres?.length}
+										<div class="id-card__badges">
+											{#each (member.instruments ?? []).slice(0, 2) as inst}
+												<span class="sticker-badge sticker-badge--sm sticker-badge--teal">{inst}</span>
+											{/each}
+											{#each (member.genres ?? []).slice(0, 2) as genre}
+												<span class="sticker-badge sticker-badge--sm">{genre}</span>
+											{/each}
+										</div>
+									{/if}
 								</div>
-							{:else if b.bio}
-								<p class="mt-2 text-sm opacity-70">{b.bio}</p>
-							{/if}
-						</div>
-					</a>
-				{/each}
-			</div>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
 		{/if}
-	{/if}
-</div>
+
+		{#if activeTab === 'bands'}
+			{#if bands.length === 0}
+				<EmptyState message="No public band profiles yet." />
+			{:else}
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+					{#each bands as b, i (b.id)}
+						<a href="/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
+							<div class="vinyl-card__disc">
+								<div class="vinyl-card__label">{b.name}</div>
+							</div>
+							<div class="vinyl-card__sleeve">
+								<div class="vinyl-card__sleeve-art">
+									{#if b.avatarUrl}
+										<img src={b.avatarUrl} alt={b.name} class="w-full h-full object-cover" />
+									{:else}
+										{initials(b.name)}
+									{/if}
+								</div>
+								<div class="vinyl-card__sleeve-info">
+									<div class="vinyl-card__band">{b.name}</div>
+									<div class="vinyl-card__meta">
+										{#if b.tagline}
+											{b.tagline}
+										{:else}
+											{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
+										{/if}
+									</div>
+								</div>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
+		{/if}
+	</div>
+</section>

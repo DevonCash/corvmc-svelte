@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatCents } from '$lib/utils/format';
+	import speakerLogo from '$lib/assets/cmc-speaker.png';
 	import type { EventsResponse } from '$lib/types/api';
 
 	let { data }: { data: EventsResponse } = $props();
@@ -7,8 +8,8 @@
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-US', {
 			timeZone: 'America/Los_Angeles',
-			weekday: 'long',
-			month: 'long',
+			weekday: 'short',
+			month: 'short',
 			day: 'numeric'
 		});
 	}
@@ -25,62 +26,63 @@
 		if (!tags) return [];
 		return tags.split(',').map((t) => t.trim()).filter(Boolean);
 	}
-
-	function truncate(text: string, maxLen: number): string {
-		if (text.length <= maxLen) return text;
-		return text.slice(0, maxLen).trimEnd() + '…';
-	}
 </script>
 
-<div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
-	<h1 class="text-3xl font-bold">Upcoming Events</h1>
+<svelte:head>
+	<title>Events | Corvallis Music Collective</title>
+	<meta name="description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
+</svelte:head>
 
-	{#if data.events.length === 0}
-		<p class="text-lg opacity-60">No upcoming events right now. Check back soon!</p>
-	{:else}
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-			{#each data.events as evt (evt.id)}
-				<div class="card bg-base-100 shadow">
-					{#if evt.posterUrl}
-						<figure>
-							<img src={evt.posterUrl} alt={evt.title} class="w-full h-48 object-cover" />
-						</figure>
-					{/if}
-					<div class="card-body">
-						<h2 class="card-title">{evt.title}</h2>
+{#if data.events.length === 0}
+	<section class="py-16 px-6">
+		<div class="max-w-4xl mx-auto text-center">
+			<h1 class="text-4xl font-bold tracking-tight mb-4" style="color: var(--cmc-navy)">Upcoming Events</h1>
+			<p class="text-lg" style="color: var(--fg-2)">No upcoming events right now. Check back soon!</p>
+		</div>
+	</section>
+{:else}
+	<section class="corkboard py-16 px-6">
+		<div class="max-w-6xl mx-auto">
+			<div class="text-center mb-10">
+				<h1 class="text-4xl font-bold tracking-tight mb-2" style="color: var(--cmc-cream); text-shadow: 0 2px 8px rgba(0,0,0,0.25)">Upcoming Events</h1>
+				<p class="text-base" style="color: var(--cmc-cream); opacity: 0.92; text-shadow: 0 1px 3px rgba(0,0,0,0.3)">Shows, jams, and meetups from the Collective</p>
+			</div>
 
-						<p class="text-sm opacity-70">
-							{formatDate(evt.startsAt)}
-						</p>
-						<p class="text-sm opacity-70">
-							{#if evt.doorsAt}
-								Doors {formatTime(evt.doorsAt)} · Show {formatTime(evt.startsAt)}
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+				{#each data.events as evt (evt.id)}
+					<a href="/events/{evt.id}" class="poster-card">
+						<figure class="poster-card__figure">
+							{#if evt.posterUrl}
+								<img src={evt.posterUrl} alt={evt.title} />
 							{:else}
-								{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+								<div class="flex flex-col items-center justify-center gap-2 p-6 text-center" style="color: var(--cmc-navy)">
+									<img src={speakerLogo} alt="" class="h-16 w-auto opacity-40" />
+									<span class="text-sm font-bold opacity-50">{evt.title}</span>
+								</div>
 							{/if}
-						</p>
-
-						{#if evt.description}
-							<p class="mt-2 opacity-80">{truncate(evt.description, 200)}</p>
-						{/if}
-
+						</figure>
+						<div class="poster-card__caption">
+							<img class="poster-card__logo" src={speakerLogo} alt="" />
+							<div class="poster-card__caption-text">
+								<div class="poster-card__title">{evt.title}</div>
+								<div class="poster-card__date">
+									{formatDate(evt.startsAt)} · {formatTime(evt.startsAt)}
+									{#if evt.ticketingEnabled && evt.ticketPrice}
+										· {formatCents(evt.ticketPrice)}
+									{/if}
+								</div>
+							</div>
+						</div>
 						{#if parseTags(evt.tags).length > 0}
-							<div class="mt-2 flex gap-1 flex-wrap">
+							<div class="flex gap-1.5 flex-wrap px-3 pb-3" style="background: var(--cmc-parchment)">
 								{#each parseTags(evt.tags) as tag (tag)}
-									<span class="badge badge-outline badge-sm">{tag}</span>
+									<span class="sticker-badge sticker-badge--sm">{tag}</span>
 								{/each}
 							</div>
 						{/if}
-
-						{#if evt.ticketingEnabled && evt.ticketPrice}
-							<div class="card-actions justify-between items-center mt-4">
-								<span class="font-medium">{formatCents(evt.ticketPrice)}</span>
-								<a href="/events/{evt.id}/tickets" class="btn btn-primary btn-sm">Get Tickets</a>
-							</div>
-						{/if}
-					</div>
-				</div>
-			{/each}
+					</a>
+				{/each}
+			</div>
 		</div>
-	{/if}
-</div>
+	</section>
+{/if}

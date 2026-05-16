@@ -351,3 +351,373 @@ p {
     0 1px 1px rgba(40, 25, 10, 0.08);
   transform: rotate(var(--badge-tilt, -1deg));
 }
+
+/* ---------------------------------------------------------------------------
+   Corkboard — warm peg-board texture for skeuo backdrops.
+   --------------------------------------------------------------------------- */
+.corkboard {
+  background-color: #c89866;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(120, 70, 30, 0.18) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 60%, rgba(120, 70, 30, 0.22) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 12% 78%, rgba(120, 70, 30, 0.16) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 88% 12%, rgba(120, 70, 30, 0.20) 0 1.8px, transparent 2.5px),
+    radial-gradient(circle at 50% 90%, rgba(120, 70, 30, 0.14) 0 2px, transparent 3px),
+    radial-gradient(ellipse at center, #d09e6e 0%, #b2814f 70%, #9c6c3b 100%);
+  background-size: 26px 26px, 22px 22px, 30px 30px, 18px 18px, 24px 24px, 100% 100%;
+  box-shadow: inset 0 0 80px rgba(70, 40, 15, 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+   Poster Card — event poster tacked to a wall with parchment border
+   --------------------------------------------------------------------------- */
+.poster-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 380px;
+  border: 5px solid var(--cmc-parchment);
+  background: var(--cmc-parchment);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 8px 18px -8px rgba(40, 25, 10, 0.35);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transform: rotate(var(--tilt, 0deg));
+  transform-origin: top center;
+  transition: transform 300ms cubic-bezier(.34, 1.25, .64, 1), box-shadow 300ms ease;
+  will-change: transform;
+}
+.poster-card:hover {
+  transform: rotate(calc(var(--tilt, 0deg) * -3));
+  z-index: 10;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 14px 26px -8px rgba(40, 25, 10, 0.45);
+}
+.poster-card:nth-child(3n + 1) { --tilt: -1deg; }
+.poster-card:nth-child(3n + 2) { --tilt:  1.4deg; }
+.poster-card:nth-child(3n + 3) { --tilt: -0.6deg; }
+.poster-card:nth-child(5n)     { --tilt:  1deg; }
+.poster-card:nth-child(7n)     { --tilt: -1.5deg; }
+
+.poster-card__figure {
+  aspect-ratio: 8.5 / 11;
+  background: color-mix(in oklch, var(--cmc-light-blue) 60%, transparent);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.poster-card__figure img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.poster-card__caption {
+  background: var(--cmc-parchment);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.poster-card__logo {
+  height: 36px;
+  width: auto;
+  flex-shrink: 0;
+}
+.poster-card__caption-text { min-width: 0; flex: 1; }
+.poster-card__title {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.25;
+  color: var(--cmc-brown);
+  margin-bottom: 3px;
+}
+.poster-card__date {
+  font-size: 11px;
+  color: var(--cmc-brown);
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------------------
+   Vinyl Card — band as a 12" record + sleeve
+   --------------------------------------------------------------------------- */
+.vinyl-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 13 / 9;
+  cursor: pointer;
+  --vinyl-label: var(--cmc-orange);
+  transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1);
+}
+.vinyl-card:hover { transform: translateY(-2px); z-index: 2; }
+
+.vinyl-card__disc {
+  position: absolute;
+  right: 2%;
+  top: 50%;
+  width: 55%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #1a1a1a 0 1.5%, transparent 1.6%),
+    radial-gradient(circle, var(--vinyl-label) 0 30%, transparent 30.1%),
+    repeating-radial-gradient(circle, #181818 0 1px, #0e0e0e 1px 2px),
+    radial-gradient(circle, transparent 0 92%, rgba(255, 255, 255, 0.06) 93%, transparent 100%),
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12) 0 8%, transparent 30%),
+    #0a0a0a;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: transform 400ms cubic-bezier(.34, 1.2, .64, 1);
+  z-index: 1;
+}
+.vinyl-card:hover .vinyl-card__disc {
+  transform: translate(14%, -50%) rotate(30deg);
+}
+
+.vinyl-card__label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 56%;
+  height: 56%;
+  border-radius: 50%;
+  background: var(--vinyl-label);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: #fff;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  padding: 6%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+.vinyl-card__label::after {
+  content: "";
+  position: absolute;
+  width: 8%;
+  height: 8%;
+  background: #1a1a1a;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.6);
+}
+
+.vinyl-card__sleeve {
+  position: relative;
+  width: 62%;
+  height: 100%;
+  background: var(--cmc-cream);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+.vinyl-card__sleeve::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 8%;
+  bottom: 8%;
+  width: 6px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent);
+  pointer-events: none;
+}
+.vinyl-card__sleeve-art {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vinyl-label);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+  background-image:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.18) 1px, transparent 1.5px),
+    linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%);
+  background-size: 6px 6px, 100% 100%;
+}
+.vinyl-card__sleeve-info {
+  padding: 8px 14px 10px;
+  background: var(--cmc-cream);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.vinyl-card__band {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--cmc-navy);
+  line-height: 1.2;
+}
+.vinyl-card__meta {
+  font-size: 0.7rem;
+  color: var(--fg-2);
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   ID Card — laminated CMC membership card with lanyard clip
+   --------------------------------------------------------------------------- */
+.id-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #fbfcfd 0%, #f0f0ed 100%);
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  border-radius: 10px;
+  box-shadow:
+    0 14px 26px -10px rgba(20, 20, 25, 0.4),
+    0 4px 10px -4px rgba(20, 20, 25, 0.2),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: visible;
+  transform: rotate(var(--tilt, -1deg));
+  transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1), box-shadow 220ms ease;
+  cursor: pointer;
+  padding: 0;
+  background-image:
+    linear-gradient(135deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%, transparent 100%),
+    linear-gradient(180deg, #fbfcfd 0%, #f0f0ed 100%);
+}
+.id-card:hover {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow:
+    0 20px 34px -10px rgba(20, 20, 25, 0.45),
+    0 6px 14px -4px rgba(20, 20, 25, 0.25),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+.id-card:nth-child(3n + 1) { --tilt: -1.2deg; }
+.id-card:nth-child(3n + 2) { --tilt:  0.8deg; }
+.id-card:nth-child(3n + 3) { --tilt: -0.3deg; }
+.id-card:nth-child(5n)     { --tilt:  1.6deg; }
+.id-card:nth-child(7n)     { --tilt: -1.8deg; }
+
+.id-card__hole {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 7px;
+  background: rgba(40, 40, 45, 0.9);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.5);
+}
+.id-card__header {
+  padding: 18px 16px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+.id-card__brand {
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--cmc-orange);
+  line-height: 1.1;
+  max-width: 60%;
+}
+.id-card__tag {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--cmc-teal);
+  line-height: 1;
+  padding: 3px 8px;
+  border: 1.5px solid var(--cmc-teal);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.id-card__header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 3px;
+  background: linear-gradient(
+    to bottom,
+    var(--cmc-teal) 0 33.333%,
+    var(--cmc-goldenrod) 33.333% 66.666%,
+    var(--cmc-red-orange) 66.666% 100%
+  );
+}
+.id-card__body {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  align-items: center;
+}
+.id-card__photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  background: var(--photo-bg, var(--cmc-light-blue));
+  color: var(--cmc-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+.id-card__info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.id-card__name {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.15;
+  color: var(--cmc-navy);
+}
+.id-card__role {
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.id-card__badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Sticker Badge — rectangular allcaps label with rotation + shadow
+   --------------------------------------------------------------------------- */
+.sticker-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--cmc-goldenrod);
+  color: var(--cmc-brown);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  transform: rotate(-1.5deg);
+  box-shadow: 1.5px 1.5px 0 var(--cmc-brown);
+  white-space: nowrap;
+}
+.sticker-badge--orange { background: var(--cmc-orange); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
+.sticker-badge--teal   { background: var(--cmc-teal); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
+.sticker-badge--sm { padding: 3px 8px; font-size: 10px; }
