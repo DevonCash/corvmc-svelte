@@ -11,7 +11,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
@@ -166,7 +166,7 @@
 					</div>
 					<div class="flex gap-2">
 						<button type="submit" class="btn btn-primary btn-sm">Schedule</button>
-						<AsyncButton
+						<Action
 							action={async () => {
 								if (!window.confirm('Cancel this loan request?')) return;
 								await cancel({});
@@ -192,7 +192,7 @@
 					</div>
 					<div class="flex gap-2">
 						<button type="submit" class="btn btn-primary btn-sm">Check Out</button>
-						<AsyncButton
+						<Action
 							action={async () => {
 								if (!window.confirm('Cancel this loan?')) return;
 								await cancel({});

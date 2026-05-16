@@ -1,124 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1778616606528,
-      "tag": "0000_core-schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778617424567,
-      "tag": "0001_staff-admin",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778630664390,
-      "tag": "0002_modern_zemo",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778655625976,
-      "tag": "0003_dusty_azazel",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1778695163631,
-      "tag": "0004_married_tyger_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1778718373223,
-      "tag": "0005_dapper_sunset_bain",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1778739844784,
-      "tag": "0006_nappy_mother_askani",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1778796438788,
-      "tag": "0007_mixed_human_torch",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1778886000000,
-      "tag": "0008_payment_record_cache",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1778802665948,
-      "tag": "0009_fluffy_purifiers",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1778803146188,
-      "tag": "0010_tired_cardiac",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1778828076765,
-      "tag": "0011_overconfident_lady_deathstrike",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1778830789627,
-      "tag": "0012_square_eternals",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1778865872146,
-      "tag": "0013_clever_may_parker",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1778867477235,
-      "tag": "0014_nostalgic_micromax",
-      "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "7",
-      "when": 1778873183039,
-      "tag": "0015_far_vulture",
-      "breakpoints": true
-    },
-    {
-      "idx": 16,
-      "version": "7",
-      "when": 1778878791072,
-      "tag": "0016_whole_fixer",
+      "version": "6",
+      "when": 1778960092919,
+      "tag": "0000_superb_payback",
       "breakpoints": true
     }
   ]

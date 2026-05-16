@@ -1,1 +1,0 @@
-ALTER TABLE "recurring_series" ALTER COLUMN "prototype_id" SET DATA TYPE uuid;

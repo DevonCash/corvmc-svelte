@@ -12,8 +12,8 @@
  */
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { getPlatformProxy } from 'wrangler';
+import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/auth';
@@ -38,26 +38,9 @@ import {
 	equipment,
 	equipmentLoan
 } from '../src/lib/server/db/schema/equipment';
-import { readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-// Find the local D1 SQLite file
-function findD1SqlitePath(): string {
-	const base = resolve('.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
-	for (const entry of readdirSync(base)) {
-		if (entry.endsWith('.sqlite') && !entry.startsWith('metadata')) {
-			return resolve(base, entry);
-		}
-	}
-	throw new Error('No D1 SQLite file found. Run `pnpm db:push` first.');
-}
-
-const sqlitePath = findD1SqlitePath();
-console.log(`Using SQLite: ${sqlitePath}`);
-const sqlite = new Database(sqlitePath);
-sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = OFF');
-const db = drizzle(sqlite);
+const { env, dispose } = await getPlatformProxy();
+const db = drizzle(env.DB);
+await db.run(sql`PRAGMA foreign_keys = OFF`);
 
 function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
@@ -103,6 +86,16 @@ function ptDate(daysOffset: number, hour: number, minute = 0): Date {
 	d.setDate(d.getDate() + daysOffset);
 	d.setUTCHours(hour + 7, minute, 0, 0);
 	return d;
+}
+
+async function batchInsert<T extends Record<string, unknown>>(table: any, rows: T[], batchSize = 10): Promise<T[]> {
+	const results: T[] = [];
+	for (let i = 0; i < rows.length; i += batchSize) {
+		const batch = rows.slice(i, i + batchSize);
+		const returned = await db.insert(table).values(batch).returning();
+		results.push(...returned);
+	}
+	return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +199,7 @@ const SAMPLE_LINKS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
-function deleteAll() {
+async function deleteAll() {
 	console.log('Deleting all data...');
 	const tables = [
 		'equipment_loan', 'equipment', 'equipment_category',
@@ -221,7 +214,7 @@ function deleteAll() {
 		'session', 'account', 'verification', 'user'
 	];
 	for (const t of tables) {
-		sqlite.exec(`DELETE FROM "${t}"`);
+		await db.run(sql.raw(`DELETE FROM "${t}"`));
 	}
 }
 
@@ -230,18 +223,18 @@ interface SeedUser { id: string; name: string; email: string }
 interface SeedEvent { id: string; status: string; startsAt: Date }
 interface SeedReservation { id: string; createdByUserId: string; startsAt: Date; endsAt: Date; status: string }
 
-function seedRoles(): SeedRole[] {
+async function seedRoles(): SeedRole[] {
 	console.log('Seeding roles...');
 	const roles = ['admin', 'staff', 'member', 'volunteer'];
 	const inserted: SeedRole[] = [];
 	for (const name of roles) {
-		const [r] = db.insert(role).values({ name, guardName: 'web' }).returning().all();
+		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
 		inserted.push(r);
 	}
 	return inserted;
 }
 
-function seedUsers(count: number): SeedUser[] {
+async function seedUsers(count: number): SeedUser[] {
 	console.log(`Seeding ${count} users...`);
 	const users: SeedUser[] = [];
 	const usedEmails = new Set<string>();
@@ -270,7 +263,7 @@ function seedUsers(count: number): SeedUser[] {
 			: null;
 		const visibility = !hasProfile ? 'hidden' : Math.random() > 0.6 ? 'public' : 'members';
 
-		const [u] = db.insert(user).values({
+		const [u] = await db.insert(user).values({
 			id,
 			name,
 			email,
@@ -287,14 +280,14 @@ function seedUsers(count: number): SeedUser[] {
 			links: memberLinks,
 			createdAt,
 			updatedAt: createdAt
-		}).returning().all();
+		}).returning();
 
 		// Junction tables for instruments and genres
 		for (const instrument of memberInstruments) {
-			db.insert(userInstrument).values({ userId: id, instrument }).run();
+			await db.insert(userInstrument).values({ userId: id, instrument });
 		}
 		for (const genre of memberGenres) {
-			db.insert(userGenre).values({ userId: id, genre }).run();
+			await db.insert(userGenre).values({ userId: id, genre });
 		}
 
 		users.push({ ...u, email });
@@ -308,16 +301,16 @@ async function seedAdminUser(): Promise<SeedUser> {
 	const now = new Date();
 	const hashedPassword = await hashPassword('password');
 
-	const [adminUser] = db.insert(user).values({
+	const [adminUser] = await db.insert(user).values({
 		id,
 		name: 'Admin',
 		email: 'admin@corvallismusic.org',
 		emailVerified: true,
 		createdAt: now,
 		updatedAt: now
-	}).returning().all();
+	}).returning();
 
-	db.insert(account).values({
+	await db.insert(account).values({
 		id: randomUUID(),
 		accountId: id,
 		providerId: 'credential',
@@ -325,45 +318,45 @@ async function seedAdminUser(): Promise<SeedUser> {
 		password: hashedPassword,
 		createdAt: now,
 		updatedAt: now
-	}).run();
+	});
 
 	return { ...adminUser, email: 'admin@corvallismusic.org' };
 }
 
-function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: SeedRole[]) {
+async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: SeedRole[]) {
 	console.log('Assigning roles...');
 	const adminRole = roles.find((r) => r.name === 'admin')!;
 	const staffRole = roles.find((r) => r.name === 'staff')!;
 	const memberRole = roles.find((r) => r.name === 'member')!;
 	const volunteerRole = roles.find((r) => r.name === 'volunteer')!;
 
-	db.insert(modelHasRole).values([
+	await db.insert(modelHasRole).values([
 		{ roleId: adminRole.id, userId: adminUser.id },
 		{ roleId: staffRole.id, userId: adminUser.id },
 		{ roleId: memberRole.id, userId: adminUser.id }
-	]).run();
+	]);
 
 	for (let i = 0; i < 2; i++) {
-		db.insert(modelHasRole).values([
+		await db.insert(modelHasRole).values([
 			{ roleId: adminRole.id, userId: users[i].id },
 			{ roleId: staffRole.id, userId: users[i].id }
-		]).run();
+		]);
 	}
 
 	for (let i = 2; i < 5; i++) {
-		db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id }).run();
+		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
 	}
 
 	for (const u of users) {
-		db.insert(modelHasRole).values({ roleId: memberRole.id, userId: u.id }).run();
+		await db.insert(modelHasRole).values({ roleId: memberRole.id, userId: u.id });
 	}
 
 	for (const u of pickN(users, 6)) {
-		db.insert(modelHasRole).values({ roleId: volunteerRole.id, userId: u.id }).onConflictDoNothing().run();
+		await db.insert(modelHasRole).values({ roleId: volunteerRole.id, userId: u.id }).onConflictDoNothing();
 	}
 }
 
-function seedReservations(users: SeedUser[]): SeedReservation[] {
+async function seedReservations(users: SeedUser[]): SeedReservation[] {
 	console.log('Seeding reservations...');
 	const rows: SeedReservation[] = [];
 
@@ -380,7 +373,7 @@ function seedReservations(users: SeedUser[]): SeedReservation[] {
 			const status = Math.random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
 			const member = pick(users);
 
-			const [r] = db.insert(reservation).values({
+			const [r] = await db.insert(reservation).values({
 				bookerType: 'user',
 				bookerId: member.id,
 				createdByUserId: member.id,
@@ -389,7 +382,7 @@ function seedReservations(users: SeedUser[]): SeedReservation[] {
 				endsAt,
 				notes: Math.random() > 0.7 ? 'Band practice' : null,
 				cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null
-			}).returning().all();
+			}).returning();
 			rows.push(r);
 		}
 	}
@@ -407,7 +400,7 @@ function seedReservations(users: SeedUser[]): SeedReservation[] {
 			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
 			const member = pick(users);
 
-			const [r] = db.insert(reservation).values({
+			const [r] = await db.insert(reservation).values({
 				bookerType: 'user',
 				bookerId: member.id,
 				createdByUserId: member.id,
@@ -415,7 +408,7 @@ function seedReservations(users: SeedUser[]): SeedReservation[] {
 				startsAt,
 				endsAt,
 				notes: Math.random() > 0.6 ? pick(['Drum practice', 'Guitar lesson prep', 'Recording session']) : null
-			}).returning().all();
+			}).returning();
 			rows.push(r);
 		}
 	}
@@ -423,27 +416,27 @@ function seedReservations(users: SeedUser[]): SeedReservation[] {
 	return rows;
 }
 
-function seedClosures() {
+async function seedClosures() {
 	console.log('Seeding closures...');
-	db.insert(closure).values([
+	await db.insert(closure).values([
 		{ reason: 'Holiday closure — New Year', startsAt: ptDate(-30, 0), endsAt: ptDate(-29, 23, 59) },
 		{ reason: 'Building maintenance — HVAC replacement', startsAt: ptDate(21, 8), endsAt: ptDate(22, 18) },
 		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) }
-	]).run();
+	]);
 }
 
-function seedEvents(users: SeedUser[]): SeedEvent[] {
+async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	console.log('Seeding events...');
 	const rows: SeedEvent[] = [];
 	const staffUsers = users.slice(0, 6);
 
-	function createEventReservation(
+	async function createEventReservation(
 		day: number, eventStartHour: number, eventEndHour: number,
 		createdByUserId: string, reservationStatus: string
-	): string {
+	): Promise<string> {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
-		const [r] = db.insert(reservation).values({
+		const [r] = await db.insert(reservation).values({
 			bookerType: 'event',
 			bookerId: 'event',
 			createdByUserId,
@@ -452,7 +445,7 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 			endsAt,
 			notes: 'Event space reservation',
 			cancellationReason: reservationStatus === 'cancelled' ? 'Event cancelled' : null
-		}).returning().all();
+		}).returning();
 		return r.id;
 	}
 
@@ -468,10 +461,10 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = createEventReservation(day, hour, hour + duration, creator.id, 'completed');
+			reservationId = await createEventReservation(day, hour, hour + duration, creator.id, 'completed');
 		}
 
-		const [e] = db.insert(event).values({
+		const [e] = await db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'Join us for an evening of live music and community.',
 			startsAt, endsAt,
@@ -479,7 +472,7 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 			status: 'published',
 			publishedAt, tags, reservationId,
 			createdByUserId: creator.id
-		}).returning().all();
+		}).returning();
 		rows.push(e);
 	}
 
@@ -494,10 +487,10 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = createEventReservation(day, hour, hour + duration, creator.id, 'confirmed');
+			reservationId = await createEventReservation(day, hour, hour + duration, creator.id, 'confirmed');
 		}
 
-		const [e] = db.insert(event).values({
+		const [e] = await db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'An evening of live performances at the Collective.',
 			startsAt, endsAt,
@@ -506,7 +499,7 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 			publishedAt: new Date(),
 			tags, reservationId,
 			createdByUserId: creator.id
-		}).returning().all();
+		}).returning();
 		rows.push(e);
 	}
 
@@ -517,10 +510,10 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
+			reservationId = await createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
 		}
 
-		const [e] = db.insert(event).values({
+		const [e] = await db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'Details TBD',
 			startsAt: ptDate(day, hour),
@@ -529,48 +522,48 @@ function seedEvents(users: SeedUser[]): SeedEvent[] {
 			tags: pick(EVENT_TAGS_POOL),
 			reservationId,
 			createdByUserId: creator.id
-		}).returning().all();
+		}).returning();
 		rows.push(e);
 	}
 
 	const cancelledCreator = pick(staffUsers);
-	const cancelledResId = createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
-	const [cancelled] = db.insert(event).values({
+	const cancelledResId = await createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
+	const [cancelled] = await db.insert(event).values({
 		title: 'Cancelled: Outdoor Festival',
 		description: 'Unfortunately cancelled due to weather.',
 		startsAt: ptDate(7, 14), endsAt: ptDate(7, 20),
 		status: 'cancelled', tags: 'community, all ages',
 		reservationId: cancelledResId,
 		createdByUserId: cancelledCreator.id
-	}).returning().all();
+	}).returning();
 	rows.push(cancelled);
 
-	const [cancelledNoRes] = db.insert(event).values({
+	const [cancelledNoRes] = await db.insert(event).values({
 		title: 'Cancelled: Benefit Concert',
 		description: 'Cancelled — performer unavailable.',
 		startsAt: ptDate(14, 19), endsAt: ptDate(14, 22),
 		status: 'cancelled', tags: 'ticketed, community',
 		createdByUserId: pick(staffUsers).id
-	}).returning().all();
+	}).returning();
 	rows.push(cancelledNoRes);
 
 	return rows;
 }
 
-function seedProductConfig() {
+async function seedProductConfig() {
 	console.log('Seeding product config...');
-	db.insert(productConfig).values([
+	await db.insert(productConfig).values([
 		{ key: 'contribution', name: 'Monthly Contribution', description: 'Sustaining member monthly contribution', unitAmountCents: 500, unitLabel: 'per unit / month' },
 		{ key: 'rehearsal', name: 'Rehearsal Space', description: 'Practice room hourly rate', unitAmountCents: 1500, unitLabel: 'per hour' },
 		{ key: 'fee_coverage', name: 'Fee Coverage', description: 'Covers payment processing fees', unitAmountCents: 0, unitLabel: null }
-	]).run();
+	]);
 }
 
-function seedCreditTransactions(users: SeedUser[]) {
+async function seedCreditTransactions(users: SeedUser[]) {
 	console.log('Seeding credit transactions...');
 	for (const u of users.slice(0, 12)) {
 		const hours = randomInt(2, 8);
-		db.insert(creditTransaction).values({
+		await db.insert(creditTransaction).values({
 			userId: u.id,
 			creditType: 'free_hours',
 			amount: hours,
@@ -578,11 +571,11 @@ function seedCreditTransactions(users: SeedUser[]) {
 			source: 'subscription_allocation',
 			description: 'Monthly free hours allocation',
 			metadata: { period: 'May 2026' }
-		}).run();
+		});
 
 		if (Math.random() > 0.4) {
 			const used = randomInt(1, Math.min(3, hours));
-			db.insert(creditTransaction).values({
+			await db.insert(creditTransaction).values({
 				userId: u.id,
 				creditType: 'free_hours',
 				amount: -used,
@@ -590,12 +583,12 @@ function seedCreditTransactions(users: SeedUser[]) {
 				source: 'reservation',
 				description: 'Applied to reservation',
 				metadata: {}
-			}).run();
+			});
 		}
 	}
 }
 
-function seedBands(users: SeedUser[]) {
+async function seedBands(users: SeedUser[]) {
 	console.log('Seeding bands...');
 	const bands = [];
 
@@ -607,7 +600,7 @@ function seedBands(users: SeedUser[]) {
 		const bandLinks = Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 2)) : null;
 		const bandVisibility = Math.random() > 0.8 ? 'hidden' : Math.random() > 0.4 ? 'public' : 'members';
 
-		const [b] = db.insert(band).values({
+		const [b] = await db.insert(band).values({
 			name: BAND_NAMES[i],
 			slug,
 			bio: `${BAND_NAMES[i]} is a local band from Corvallis.`,
@@ -616,48 +609,48 @@ function seedBands(users: SeedUser[]) {
 			lookingForMembers: Math.random() > 0.6,
 			directoryVisibility: bandVisibility,
 			links: bandLinks
-		}).returning().all();
+		}).returning();
 		bands.push(b);
 
 		for (const g of genres) {
-			db.insert(bandGenre).values({ bandId: b.id, genre: g }).run();
+			await db.insert(bandGenre).values({ bandId: b.id, genre: g });
 		}
 
-		db.insert(bandMember).values({
+		await db.insert(bandMember).values({
 			bandId: b.id, userId: owner.id,
 			role: 'owner', position: pick(BAND_POSITIONS), status: 'active'
-		}).run();
+		});
 
 		const memberCount = randomInt(1, 3);
 		const candidates = users.filter((u) => u.id !== owner.id);
 		const members = pickN(candidates, memberCount);
 		for (const m of members) {
-			db.insert(bandMember).values({
+			await db.insert(bandMember).values({
 				bandId: b.id, userId: m.id,
 				role: 'member', position: pick(BAND_POSITIONS),
 				status: Math.random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
-			}).run();
+			});
 		}
 	}
 
 	const deactivatedOwner = users[BAND_NAMES.length % users.length];
-	const [deactivated] = db.insert(band).values({
+	const [deactivated] = await db.insert(band).values({
 		name: 'Disbanded Project', slug: 'disbanded-project',
 		bio: 'This band was deactivated by staff.',
 		ownerId: deactivatedOwner.id,
 		deletedAt: new Date(Date.now() - 10 * 86400000)
-	}).returning().all();
-	db.insert(bandMember).values({
+	}).returning();
+	await db.insert(bandMember).values({
 		bandId: deactivated.id, userId: deactivatedOwner.id,
 		role: 'owner', position: 'Guitar', status: 'active'
-	}).run();
+	});
 	bands.push(deactivated);
 
 	return bands;
 }
 
-function seedRecurringSeries(users: SeedUser[]) {
+async function seedRecurringSeries(users: SeedUser[]) {
 	console.log('Seeding recurring series...');
 	const rows = [];
 	const frequencies = ['weekly', 'biweekly', 'monthly'] as const;
@@ -672,36 +665,36 @@ function seedRecurringSeries(users: SeedUser[]) {
 		const protoStart = ptDate(dayOffset - 14, hour);
 		const protoEnd = ptDate(dayOffset - 14, hour + duration);
 
-		const [proto] = db.insert(reservation).values({
+		const [proto] = await db.insert(reservation).values({
 			bookerType: 'user', bookerId: member.id,
 			createdByUserId: member.id, status: 'completed',
 			startsAt: protoStart, endsAt: protoEnd,
 			notes: `Recurring ${freq} practice`
-		}).returning().all();
+		}).returning();
 
 		const rrule = seedRRule(protoStart, freq);
 
-		const [series] = db.insert(recurringSeries).values({
+		const [series] = await db.insert(recurringSeries).values({
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
 			rrule
-		}).returning().all();
+		}).returning();
 		rows.push(series);
 
-		db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
+		await db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
 
 		for (let w = 1; w <= 2; w++) {
 			const instStart = ptDate(dayOffset - 14 + w * 7, hour);
 			const instEnd = ptDate(dayOffset - 14 + w * 7, hour + duration);
 			const status = instStart < new Date() ? 'completed' : 'scheduled';
 
-			db.insert(reservation).values({
+			await db.insert(reservation).values({
 				bookerType: 'user', bookerId: member.id,
 				createdByUserId: member.id, status,
 				startsAt: instStart, endsAt: instEnd,
 				notes: `Recurring ${freq} practice`,
 				recurringSeriesId: series.id
-			}).run();
+			});
 		}
 	}
 
@@ -710,30 +703,30 @@ function seedRecurringSeries(users: SeedUser[]) {
 		const protoStart = ptDate(-21, 14);
 		const protoEnd = ptDate(-21, 16);
 
-		const [proto] = db.insert(reservation).values({
+		const [proto] = await db.insert(reservation).values({
 			bookerType: 'user', bookerId: member.id,
 			createdByUserId: member.id, status: 'completed',
 			startsAt: protoStart, endsAt: protoEnd,
 			notes: 'Cancelled recurring session'
-		}).returning().all();
+		}).returning();
 
 		const rrule = seedRRule(protoStart, 'weekly');
 
-		const [series] = db.insert(recurringSeries).values({
+		const [series] = await db.insert(recurringSeries).values({
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
 			rrule,
 			cancelledAt: new Date(Date.now() - 7 * 86400000)
-		}).returning().all();
+		}).returning();
 		rows.push(series);
 
-		db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
+		await db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
 	}
 
 	return rows;
 }
 
-function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
+async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
 	console.log('Seeding payment records...');
 	const rows = [];
 
@@ -746,7 +739,7 @@ function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) 
 		const amountCents = hours * 1500;
 		const method = Math.random() > 0.3 ? 'Cash' : 'Credits';
 
-		const [p] = db.insert(paymentRecord).values({
+		const [p] = await db.insert(paymentRecord).values({
 			id: `pr_seed_${randomUUID().slice(0, 8)}`,
 			userId: r.createdByUserId,
 			reservationId: r.id,
@@ -756,14 +749,14 @@ function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) 
 			status: Math.random() > 0.1 ? 'completed' : 'refunded',
 			paidAt: r.startsAt,
 			refundedAt: Math.random() > 0.9 ? new Date() : null
-		}).returning().all();
+		}).returning();
 		rows.push(p);
 	}
 
 	return rows;
 }
 
-function seedTickets(users: SeedUser[], events: SeedEvent[]) {
+async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 	console.log('Seeding tickets...');
 	const rows = [];
 	const publishedEvents = events.filter((e) => e.status === 'published');
@@ -778,7 +771,7 @@ function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 			const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
 			const isPast = evt.startsAt < new Date();
 
-			const [t] = db.insert(ticket).values({
+			const [t] = await db.insert(ticket).values({
 				eventId: evt.id,
 				purchaseId,
 				userId: buyer.id,
@@ -788,7 +781,7 @@ function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 				status: isPast ? (Math.random() > 0.2 ? 'used' : 'pending') : 'pending',
 				checkedInAt: isPast && Math.random() > 0.3 ? evt.startsAt : null,
 				checkedInByUserId: isPast && Math.random() > 0.3 ? users[0].id : null
-			}).returning().all();
+			}).returning();
 			rows.push(t);
 		}
 	}
@@ -796,7 +789,7 @@ function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 	return rows;
 }
 
-function seedNotifications(users: SeedUser[]) {
+async function seedNotifications(users: SeedUser[]) {
 	console.log('Seeding notifications...');
 	const rows = [];
 
@@ -819,7 +812,7 @@ function seedNotifications(users: SeedUser[]) {
 			const createdAt = new Date(Date.now() - daysAgo * 86400000);
 			const isRead = Math.random() > 0.4;
 
-			const [row] = db.insert(notification).values({
+			const [row] = await db.insert(notification).values({
 				userId: u.id,
 				type: n.type,
 				title: n.title,
@@ -827,7 +820,7 @@ function seedNotifications(users: SeedUser[]) {
 				href: n.href,
 				readAt: isRead ? new Date(createdAt.getTime() + randomInt(1, 24) * 3600000) : null,
 				createdAt
-			}).returning().all();
+			}).returning();
 			rows.push(row);
 		}
 	}
@@ -835,7 +828,7 @@ function seedNotifications(users: SeedUser[]) {
 	return rows;
 }
 
-function seedNotificationPreferences(users: SeedUser[]) {
+async function seedNotificationPreferences(users: SeedUser[]) {
 	console.log('Seeding notification preferences...');
 	const rows = [];
 	const configurableTypes = [
@@ -849,12 +842,12 @@ function seedNotificationPreferences(users: SeedUser[]) {
 	for (const u of customizers) {
 		const tweaked = pickN(configurableTypes, randomInt(1, 3));
 		for (const nt of tweaked) {
-			const [row] = db.insert(notificationPreference).values({
+			const [row] = await db.insert(notificationPreference).values({
 				userId: u.id,
 				notificationType: nt,
 				emailEnabled: Math.random() > 0.3,
 				inAppEnabled: Math.random() > 0.2
-			}).returning().all();
+			}).returning();
 			rows.push(row);
 		}
 	}
@@ -862,24 +855,24 @@ function seedNotificationPreferences(users: SeedUser[]) {
 	return rows;
 }
 
-function seedMarketing(users: SeedUser[]) {
+async function seedMarketing(users: SeedUser[]) {
 	console.log('Seeding marketing...');
 
-	const audienceRows = db.insert(audience).values([
+	const audienceRows = await db.insert(audience).values([
 		{ id: randomUUID(), name: 'Newsletter', slug: 'newsletter', description: 'Monthly updates from CorvMC.', allowOptIn: true },
 		{ id: randomUUID(), name: 'Event Updates', slug: 'event-updates', description: 'Get notified about upcoming shows.', allowOptIn: true },
 		{ id: randomUUID(), name: 'Member Announcements', slug: 'member-announcements', description: 'Important announcements for members.', allowOptIn: false },
 		{ id: randomUUID(), name: 'Public Updates', slug: 'public-updates', description: 'General updates and news.', allowOptIn: true }
-	]).returning().all();
+	]).returning();
 
-	const subscriberRows = db.insert(subscriber).values(
+	const subscriberRows = await db.insert(subscriber).values(
 		users.map((u) => ({ id: randomUUID(), email: u.email, name: u.name, userId: u.id }))
-	).returning().all();
+	).returning();
 
 	const externalEmails = ['fan1@example.com', 'fan2@example.com', 'localpress@example.com', 'musicblog@example.com', 'concertgoer@example.com', 'neighbor@example.com', 'sponsor@example.com'];
-	const externalSubs = db.insert(subscriber).values(
+	const externalSubs = await db.insert(subscriber).values(
 		externalEmails.map((email) => ({ id: randomUUID(), email, name: email.split('@')[0].replace(/\d+/g, ''), userId: null }))
-	).returning().all();
+	).returning();
 
 	const allSubs = [...subscriberRows, ...externalSubs];
 
@@ -898,7 +891,7 @@ function seedMarketing(users: SeedUser[]) {
 	}
 
 	if (membershipRows.length > 0) {
-		db.insert(audienceMember).values(membershipRows).run();
+		await batchInsert(audienceMember, membershipRows);
 	}
 
 	const adminUser = users[0];
@@ -909,60 +902,60 @@ function seedMarketing(users: SeedUser[]) {
 	];
 
 	for (const c of sentCampaigns) {
-		const [row] = db.insert(campaign).values({
+		const [row] = await db.insert(campaign).values({
 			id: randomUUID(), subject: c.subject, markdownBody: c.markdownBody,
 			htmlBody: `<p>${c.markdownBody.replace(/\n/g, '</p><p>')}</p>`,
 			scheduledFor: c.sentAt, sentAt: c.sentAt, sentById: adminUser.id, recipientCount: c.recipientCount
-		}).returning().all();
-		db.insert(campaignAudience).values([
+		}).returning();
+		await db.insert(campaignAudience).values([
 			{ campaignId: row.id, audienceId: audienceRows[0].id },
 			{ campaignId: row.id, audienceId: audienceRows[1].id }
-		]).run();
+		]);
 	}
 
-	const [scheduled] = db.insert(campaign).values({
+	const [scheduled] = await db.insert(campaign).values({
 		id: randomUUID(), subject: 'Upcoming: Spring Concert Series',
 		markdownBody: '# Spring Concert Series\n\nMore details coming soon.',
 		htmlBody: '<p>Spring Concert Series preview</p>',
 		scheduledFor: new Date(Date.now() + 3 * 86400000),
 		sentAt: null, sentById: adminUser.id, recipientCount: null
-	}).returning().all();
-	db.insert(campaignAudience).values([
+	}).returning();
+	await db.insert(campaignAudience).values([
 		{ campaignId: scheduled.id, audienceId: audienceRows[0].id },
 		{ campaignId: scheduled.id, audienceId: audienceRows[3].id }
-	]).run();
+	]);
 
-	const [draft1] = db.insert(campaign).values({
+	const [draft1] = await db.insert(campaign).values({
 		id: randomUUID(), subject: 'New Practice Room Hours',
 		markdownBody: '# Updated Hours\n\nPractice rooms available until 11pm on weekends.',
 		htmlBody: '<p>Draft</p>', scheduledFor: null, sentAt: null, sentById: adminUser.id, recipientCount: null
-	}).returning().all();
-	db.insert(campaignAudience).values({ campaignId: draft1.id, audienceId: audienceRows[2].id }).run();
+	}).returning();
+	await db.insert(campaignAudience).values({ campaignId: draft1.id, audienceId: audienceRows[2].id });
 
-	const [draft2] = db.insert(campaign).values({
+	const [draft2] = await db.insert(campaign).values({
 		id: randomUUID(), subject: 'Volunteer Opportunities',
 		markdownBody: '# Help Out at CorvMC\n\nWe\'re looking for volunteers.',
 		htmlBody: '<p>Draft</p>', scheduledFor: null, sentAt: null, sentById: adminUser.id, recipientCount: null
-	}).returning().all();
-	db.insert(campaignAudience).values({ campaignId: draft2.id, audienceId: audienceRows[0].id }).run();
+	}).returning();
+	await db.insert(campaignAudience).values({ campaignId: draft2.id, audienceId: audienceRows[0].id });
 
 	return { audiences: audienceRows.length, subscribers: allSubs.length, memberships: membershipRows.length, campaigns: sentCampaigns.length + 3 };
 }
 
-function seedEquipment(users: SeedUser[]) {
+async function seedEquipment(users: SeedUser[]) {
 	console.log('Seeding equipment...');
 
-	const categories = db.insert(equipmentCategory).values([
+	const categories = await db.insert(equipmentCategory).values([
 		{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
 		{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
 		{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
 		{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
 		{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' }
-	]).returning().all();
+	]).returning();
 
 	const catByName = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 
-	const items = db.insert(equipment).values([
+	const items = await batchInsert(equipment, [
 		{ id: randomUUID(), name: 'Fender Stratocaster', description: 'Sunburst finish, maple neck.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'FEN-STR-2019-0041', resourceId: 'EQ-001', condition: 'good', status: 'available' },
 		{ id: randomUUID(), name: 'Gibson Les Paul Standard', description: 'Cherry burst.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'GIB-LP-2021-1187', resourceId: 'EQ-002', condition: 'excellent', status: 'available' },
 		{ id: randomUUID(), name: 'Ibanez SR500 Bass', description: '4-string active bass.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'IBZ-SR5-2020-0223', resourceId: 'EQ-003', condition: 'fair', status: 'available' },
@@ -978,13 +971,13 @@ function seedEquipment(users: SeedUser[]) {
 		{ id: randomUUID(), name: 'Instrument Cable (15ft)', description: '1/4" TS cable.', categoryId: catByName['Cables & Accessories'], totalQuantity: 8, condition: 'good', status: 'available' },
 		{ id: randomUUID(), name: 'Mic Stand (Boom)', description: 'Tripod base with boom arm.', categoryId: catByName['Cables & Accessories'], totalQuantity: 6, outOfOrderQuantity: 1, condition: 'good', status: 'available' },
 		{ id: randomUUID(), name: 'Yamaha MG10XU Mixer', description: '10-channel mixer. Being repaired.', categoryId: catByName['Amplifiers'], totalQuantity: 1, serialNumber: 'YAM-MG10-2020-0331', resourceId: 'EQ-015', condition: 'poor', status: 'maintenance' }
-	]).returning().all();
+	], 5);
 
 	const itemByName = Object.fromEntries(items.map((i) => [i.name, i]));
 	const now = new Date();
 	const day = 86400000;
 
-	const loans = db.insert(equipmentLoan).values([
+	const loans = await batchInsert(equipmentLoan, [
 		{ id: randomUUID(), equipmentId: itemByName['Fender Stratocaster'].id, userId: users[0].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 10 * day), scheduledPickupDate: new Date(now.getTime() - 9 * day), dueDate: new Date(now.getTime() + 3 * day), checkedOutAt: new Date(now.getTime() - 9 * day), status: 'checked_out', dailyRateCents: 500, memberNotes: 'Need it for a gig this weekend' },
 		{ id: randomUUID(), equipmentId: itemByName['Shure SM58'].id, userId: users[1].id, quantity: 2, requestedPickupDate: new Date(now.getTime() - 14 * day), scheduledPickupDate: new Date(now.getTime() - 13 * day), dueDate: new Date(now.getTime() - 2 * day), checkedOutAt: new Date(now.getTime() - 13 * day), status: 'checked_out', dailyRateCents: 500 },
 		{ id: randomUUID(), equipmentId: itemByName['Gibson Les Paul Standard'].id, userId: users[2].id, quantity: 1, requestedPickupDate: new Date(now.getTime() + 2 * day), status: 'requested', memberNotes: 'Would love to try this for a recording session' },
@@ -993,7 +986,7 @@ function seedEquipment(users: SeedUser[]) {
 		{ id: randomUUID(), equipmentId: itemByName['Fender Blues Deluxe'].id, userId: users[0].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 30 * day), scheduledPickupDate: new Date(now.getTime() - 29 * day), dueDate: new Date(now.getTime() - 22 * day), checkedOutAt: new Date(now.getTime() - 29 * day), returnedAt: new Date(now.getTime() - 23 * day), status: 'returned', dailyRateCents: 500, totalChargeCents: 3000, creditsCents: 2000, cashCents: 1000, staffNotes: 'Returned in good condition' },
 		{ id: randomUUID(), equipmentId: itemByName['XLR Cable (25ft)'].id, userId: users[1].id, quantity: 3, requestedPickupDate: new Date(now.getTime() - 20 * day), scheduledPickupDate: new Date(now.getTime() - 19 * day), dueDate: new Date(now.getTime() - 15 * day), checkedOutAt: new Date(now.getTime() - 19 * day), returnedAt: new Date(now.getTime() - 16 * day), status: 'returned', dailyRateCents: 0, totalChargeCents: 0, creditsCents: 0, cashCents: 0, staffNotes: 'Sustaining member — accessories free' },
 		{ id: randomUUID(), equipmentId: itemByName['AKG P420 Condenser'].id, userId: users[5].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 7 * day), status: 'cancelled' }
-	]).returning().all();
+	], 3);
 
 	return { categories: categories.length, items: items.length, loans: loans.length };
 }
@@ -1005,28 +998,28 @@ function seedEquipment(users: SeedUser[]) {
 async function main() {
 	console.log('\nStarting dev seed...\n');
 
-	deleteAll();
+	await deleteAll();
 
-	const roles = seedRoles();
+	const roles = await seedRoles();
 	const adminUser = await seedAdminUser();
-	const users = seedUsers(20);
-	seedUserRoles(users, adminUser, roles);
+	const users = await seedUsers(20);
+	await seedUserRoles(users, adminUser, roles);
 	const allUsers = [adminUser, ...users];
-	const reservations = seedReservations(allUsers);
-	seedClosures();
-	const events = seedEvents(allUsers);
-	const bands = seedBands(allUsers);
-	const series = seedRecurringSeries(allUsers);
-	const payments = seedPaymentRecords(allUsers, reservations);
-	const tickets = seedTickets(allUsers, events);
-	const notifications = seedNotifications(allUsers);
-	const preferences = seedNotificationPreferences(allUsers);
-	seedProductConfig();
-	seedCreditTransactions(allUsers);
-	const marketing = seedMarketing(allUsers);
-	const eq = seedEquipment(allUsers);
+	const reservations = await seedReservations(allUsers);
+	await seedClosures();
+	const events = await seedEvents(allUsers);
+	const bands = await seedBands(allUsers);
+	const series = await seedRecurringSeries(allUsers);
+	const payments = await seedPaymentRecords(allUsers, reservations);
+	const tickets = await seedTickets(allUsers, events);
+	const notifications = await seedNotifications(allUsers);
+	const preferences = await seedNotificationPreferences(allUsers);
+	await seedProductConfig();
+	await seedCreditTransactions(allUsers);
+	const marketing = await seedMarketing(allUsers);
+	const eq = await seedEquipment(allUsers);
 
-	sqlite.pragma('foreign_keys = ON');
+	await db.run(sql`PRAGMA foreign_keys = ON`);
 
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
@@ -1043,8 +1036,7 @@ async function main() {
 	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.campaigns} campaigns`);
 	console.log(`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`);
 
-	sqlite.pragma('wal_checkpoint(TRUNCATE)');
-	sqlite.close();
+	await dispose();
 }
 
 main().catch((err) => {

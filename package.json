@@ -16,16 +16,15 @@
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
-		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
+		"db:migrate": "wrangler d1 migrations apply corvmc-db --local",
 		"db:studio": "drizzle-kit studio",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"stripe:sync-webhooks": "tsx scripts/sync-webhooks.ts",
 		"db:seed": "tsx scripts/seed-dev.ts",
-		"db:reset": "drizzle-kit push --force && pnpm db:seed"
+		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate && pnpm db:seed"
 	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",

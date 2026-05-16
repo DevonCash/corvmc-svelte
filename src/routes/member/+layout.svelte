@@ -5,7 +5,8 @@
 		IconCalendar,
 		IconTicket,
 		IconAddressBook,
-		IconTool
+		IconTool,
+		IconPlus
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
@@ -54,6 +55,11 @@
 		</NavItem>
 
 		<NavGroup title="My Bands">
+			{#snippet action()}
+				<a href="/member/bands/create" class="btn btn-ghost btn-xs btn-square" title="Create Band">
+					<IconPlus size={14} />
+				</a>
+			{/snippet}
 			{#each data.userBands as band}
 				<NavItem href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
@@ -65,6 +71,9 @@
 					{/snippet}
 				</NavItem>
 			{/each}
+			<NavItem href="/member/bands/create" label="Create Band">
+				{#snippet icon()}<IconPlus size={20} />{/snippet}
+			</NavItem>
 		</NavGroup>
 
 		<div class="flex grow"></div>

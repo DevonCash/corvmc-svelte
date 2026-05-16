@@ -3,6 +3,7 @@
 	import { IconMenu2, IconMusic, IconChevronDown } from '@tabler/icons-svelte';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
+	import logo from '$lib/assets/cmc-compact-logo.svg';
 
 	export interface PanelTab {
 		key: string;
@@ -46,7 +47,9 @@
 			<IconMenu2 size={20} />
 		</label>
 
-		<a href="/member" class="text-lg font-bold hidden lg:inline">CorvMC</a>
+		<a href="/member" class="hidden lg:inline">
+			<img src={logo} alt="CorvMC" class="h-6" />
+		</a>
 
 		<!-- Panel tabs - desktop only -->
 		<div class="hidden lg:flex items-center gap-1 ml-4">
@@ -94,7 +97,9 @@
 		</div>
 
 		<!-- Mobile brand -->
-		<span class="text-lg font-bold lg:hidden">CorvMC</span>
+		<span class="lg:hidden">
+			<img src={logo} alt="CorvMC" class="h-5" />
+		</span>
 	</div>
 
 	<!-- Right: notifications + account -->

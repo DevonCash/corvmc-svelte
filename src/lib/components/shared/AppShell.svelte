@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 	import { Toaster } from 'svelte-sonner';
 	import AppTopbar from './AppTopbar.svelte';
 	import type { PanelTab } from './AppTopbar.svelte';
@@ -22,9 +23,14 @@
 		navigation: Snippet;
 		children: Snippet;
 	} = $props();
+
+	let mounted = $state(false);
+	onMount(() => (mounted = true));
 </script>
 
-<Toaster position="bottom-right" richColors closeButton />
+{#if mounted}
+	<Toaster position="bottom-right" richColors closeButton />
+{/if}
 
 <AppTopbar {drawerId} {user} {panels} {activePanel} />
 <div class="tri-stripe"></div>
