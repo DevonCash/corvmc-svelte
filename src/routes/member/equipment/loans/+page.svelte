@@ -1,9 +1,9 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
+	import Action from '$lib/components/shared/Action.svelte';
 	import type { MemberEquipmentLoansResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberEquipmentLoansResponse } = $props();
@@ -13,11 +13,11 @@
 
 <div class="space-y-6">
 	<PageHeader title="My Equipment Loans">
-		<a href="/member/equipment" class="btn btn-sm btn-ghost">Browse Catalog</a>
+		<a href="/member/equipment" class="btn btn-ghost btn-sm">Browse Catalog</a>
 	</PageHeader>
 
 	<!-- Tabs -->
-	<div role="tablist" class="tabs tabs-bordered">
+	<div role="tablist" class="tabs-bordered tabs">
 		<button
 			role="tab"
 			class="tab"
@@ -39,34 +39,39 @@
 	<!-- Loan Cards -->
 	{#if activeTab === 'active'}
 		{#each data.active as loan (loan.id)}
-			<div class="card bg-base-100 border shadow-sm">
+			<div class="card border bg-base-100 shadow-sm">
 				<div class="card-body p-4">
 					<div class="flex items-start justify-between">
 						<div>
 							<h3 class="font-semibold">
 								{loan.equipmentName ?? 'Free-form Request'}
 							</h3>
-							<div class="flex gap-2 mt-1">
+							<div class="mt-1 flex gap-2">
 								<StatusBadge status={loan.status} />
 								{#if loan.isOverdue}
-									<span class="badge badge-error badge-sm">Overdue</span>
+									<span class="badge badge-sm badge-error">Overdue</span>
 								{/if}
 							</div>
 						</div>
 						{#if loan.status === 'requested' || loan.status === 'scheduled'}
-							<AsyncButton
+							<Action
+								confirm="Cancel this loan request?"
+								action={() =>
+									cancelMyLoan({ loanId: loan.id }).then(() => window.location.reload())}
+							/>
+							<!-- <AsyncButton
 								action={async () => {
 									if (!window.confirm('Cancel this loan request?')) return;
 									await cancelMyLoan({ loanId: loan.id });
 									window.location.reload();
 								}}
 								label="Cancel"
-								class="btn-ghost btn-sm text-error"
-							/>
+								class="text-error btn-ghost btn-sm"
+							/> -->
 						{/if}
 					</div>
 
-					<dl class="grid gap-x-4 gap-y-1 text-sm mt-2" style="grid-template-columns: auto 1fr;">
+					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
 						{#if loan.quantity > 1}
 							<dt class="opacity-60">Quantity</dt>
 							<dd>{loan.quantity}</dd>
@@ -88,7 +93,7 @@
 					</dl>
 
 					{#if loan.memberNotes}
-						<p class="text-xs opacity-60 mt-2 bg-base-200 rounded p-2">{loan.memberNotes}</p>
+						<p class="mt-2 rounded bg-base-200 p-2 text-xs opacity-60">{loan.memberNotes}</p>
 					{/if}
 				</div>
 			</div>
@@ -97,14 +102,14 @@
 		{/each}
 	{:else}
 		{#each data.past as loan (loan.id)}
-			<div class="card bg-base-100 border shadow-sm opacity-80">
+			<div class="card border bg-base-100 opacity-80 shadow-sm">
 				<div class="card-body p-4">
 					<div class="flex items-start justify-between">
 						<h3 class="font-semibold">{loan.equipmentName ?? 'Free-form Request'}</h3>
 						<StatusBadge status={loan.status} />
 					</div>
 
-					<dl class="grid gap-x-4 gap-y-1 text-sm mt-2" style="grid-template-columns: auto 1fr;">
+					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
 						{#if loan.returnedAt}
 							<dt class="opacity-60">Returned</dt>
 							<dd>{formatDate(loan.returnedAt)}</dd>

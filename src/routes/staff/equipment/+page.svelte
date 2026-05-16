@@ -6,7 +6,16 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import AsyncButton from '$lib/components/shared/AsyncButton.svelte';
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
-	import { equipmentConditions, equipmentStatuses, pricingTiers, type EquipmentCondition, type EquipmentStatus, type PricingTier } from '$lib/server/equipment/types';
+	import {
+		equipmentConditions,
+		equipmentStatuses,
+		pricingTiers,
+		type EquipmentCondition,
+		type EquipmentStatus,
+		type PricingTier
+	} from '$lib/server/equipment/types';
+	import { Field } from '$lib/components/shared/Form';
+	import Action from '$lib/components/shared/Action.svelte';
 	import type { StaffEquipmentResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
@@ -15,7 +24,12 @@
 	let showCategoryModal = $state(false);
 
 	// Category management
-	let editingCategory = $state<null | { id: string; name: string; displayOrder: number; pricingTier: PricingTier }>(null);
+	let editingCategory = $state<null | {
+		id: string;
+		name: string;
+		displayOrder: number;
+		pricingTier: PricingTier;
+	}>(null);
 
 	// Add equipment form state
 	let newEquipment = $state({
@@ -33,9 +47,16 @@
 
 	function resetNewEquipment() {
 		newEquipment = {
-			name: '', description: '', categoryId: '', totalQuantity: 1,
-			outOfOrderQuantity: 0, serialNumber: '', resourceId: '',
-			condition: 'good', status: 'available', notes: ''
+			name: '',
+			description: '',
+			categoryId: '',
+			totalQuantity: 1,
+			outOfOrderQuantity: 0,
+			serialNumber: '',
+			resourceId: '',
+			condition: 'good',
+			status: 'available',
+			notes: ''
 		};
 	}
 </script>
@@ -43,12 +64,18 @@
 <div class="space-y-6">
 	<PageHeader title="Equipment">
 		<div class="flex gap-2">
-			<button class="btn btn-sm btn-ghost" onclick={() => (showCategoryModal = true)}>
+			<button class="btn btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
 				Categories
 			</button>
 			<button class="btn btn-sm btn-primary" onclick={() => (showAddModal = true)}>
 				Add Equipment
 			</button>
+			<Action label="Add Equipment">
+				{#snippet form()}
+					<Field name="name" type="text" />
+					
+				{/snippet}
+			</Action>
 		</div>
 	</PageHeader>
 
@@ -97,9 +124,9 @@
 
 <!-- Add Equipment Modal -->
 {#if showAddModal}
-	<dialog class="modal modal-open">
+	<dialog class="modal-open modal">
 		<div class="modal-box max-w-lg">
-			<h3 class="font-bold text-lg mb-4">Add Equipment</h3>
+			<h3 class="mb-4 text-lg font-bold">Add Equipment</h3>
 			<form
 				onsubmit={async (e) => {
 					e.preventDefault();
@@ -117,17 +144,32 @@
 				class="space-y-3"
 			>
 				<div>
-					<label class="label label-text" for="eq-name">Name</label>
-					<input id="eq-name" type="text" class="input input-bordered w-full" bind:value={newEquipment.name} required />
+					<label class="label-text label" for="eq-name">Name</label>
+					<input
+						id="eq-name"
+						type="text"
+						class="input-bordered input w-full"
+						bind:value={newEquipment.name}
+						required
+					/>
 				</div>
 				<div>
-					<label class="label label-text" for="eq-desc">Description</label>
-					<textarea id="eq-desc" class="textarea textarea-bordered w-full" bind:value={newEquipment.description}></textarea>
+					<label class="label-text label" for="eq-desc">Description</label>
+					<textarea
+						id="eq-desc"
+						class="textarea-bordered textarea w-full"
+						bind:value={newEquipment.description}
+					></textarea>
 				</div>
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label class="label label-text" for="eq-cat">Category</label>
-						<select id="eq-cat" class="select select-bordered w-full" bind:value={newEquipment.categoryId} required>
+						<label class="label-text label" for="eq-cat">Category</label>
+						<select
+							id="eq-cat"
+							class="select-bordered select w-full"
+							bind:value={newEquipment.categoryId}
+							required
+						>
 							<option value="" disabled>Select...</option>
 							{#each data.categories as cat}
 								<option value={cat.id}>{cat.name}</option>
@@ -135,8 +177,12 @@
 						</select>
 					</div>
 					<div>
-						<label class="label label-text" for="eq-condition">Condition</label>
-						<select id="eq-condition" class="select select-bordered w-full" bind:value={newEquipment.condition}>
+						<label class="label-text label" for="eq-condition">Condition</label>
+						<select
+							id="eq-condition"
+							class="select-bordered select w-full"
+							bind:value={newEquipment.condition}
+						>
 							{#each equipmentConditions as c}
 								<option value={c}>{c}</option>
 							{/each}
@@ -145,47 +191,85 @@
 				</div>
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label class="label label-text" for="eq-qty">Total Quantity</label>
-						<input id="eq-qty" type="number" min="1" class="input input-bordered w-full" bind:value={newEquipment.totalQuantity} />
+						<label class="label-text label" for="eq-qty">Total Quantity</label>
+						<input
+							id="eq-qty"
+							type="number"
+							min="1"
+							class="input-bordered input w-full"
+							bind:value={newEquipment.totalQuantity}
+						/>
 					</div>
 					<div>
-						<label class="label label-text" for="eq-ooo">Out of Order</label>
-						<input id="eq-ooo" type="number" min="0" class="input input-bordered w-full" bind:value={newEquipment.outOfOrderQuantity} />
+						<label class="label-text label" for="eq-ooo">Out of Order</label>
+						<input
+							id="eq-ooo"
+							type="number"
+							min="0"
+							class="input-bordered input w-full"
+							bind:value={newEquipment.outOfOrderQuantity}
+						/>
 					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label class="label label-text" for="eq-serial">Serial Number</label>
-						<input id="eq-serial" type="text" class="input input-bordered w-full" bind:value={newEquipment.serialNumber} />
+						<label class="label-text label" for="eq-serial">Serial Number</label>
+						<input
+							id="eq-serial"
+							type="text"
+							class="input-bordered input w-full"
+							bind:value={newEquipment.serialNumber}
+						/>
 					</div>
 					<div>
-						<label class="label label-text" for="eq-resource">Resource ID</label>
-						<input id="eq-resource" type="text" class="input input-bordered w-full" bind:value={newEquipment.resourceId} />
+						<label class="label-text label" for="eq-resource">Resource ID</label>
+						<input
+							id="eq-resource"
+							type="text"
+							class="input-bordered input w-full"
+							bind:value={newEquipment.resourceId}
+						/>
 					</div>
 				</div>
 				<div>
-					<label class="label label-text" for="eq-notes">Notes</label>
-					<textarea id="eq-notes" class="textarea textarea-bordered w-full" bind:value={newEquipment.notes}></textarea>
+					<label class="label-text label" for="eq-notes">Notes</label>
+					<textarea
+						id="eq-notes"
+						class="textarea-bordered textarea w-full"
+						bind:value={newEquipment.notes}
+					></textarea>
 				</div>
 				<div class="modal-action">
-					<button type="button" class="btn btn-ghost" onclick={() => { showAddModal = false; resetNewEquipment(); }}>Cancel</button>
+					<button
+						type="button"
+						class="btn btn-ghost"
+						onclick={() => {
+							showAddModal = false;
+							resetNewEquipment();
+						}}>Cancel</button
+					>
 					<button type="submit" class="btn btn-primary">Add</button>
 				</div>
 			</form>
 		</div>
 		<form method="dialog" class="modal-backdrop">
-			<button onclick={() => { showAddModal = false; resetNewEquipment(); }}>close</button>
+			<button
+				onclick={() => {
+					showAddModal = false;
+					resetNewEquipment();
+				}}>close</button
+			>
 		</form>
 	</dialog>
 {/if}
 
 <!-- Category Management Modal -->
 {#if showCategoryModal}
-	<dialog class="modal modal-open">
+	<dialog class="modal-open modal">
 		<div class="modal-box max-w-lg">
-			<h3 class="font-bold text-lg mb-4">Manage Categories</h3>
+			<h3 class="mb-4 text-lg font-bold">Manage Categories</h3>
 
-			<div class="overflow-x-auto mb-4">
+			<div class="mb-4 overflow-x-auto">
 				<table class="table table-sm">
 					<thead>
 						<tr>
@@ -204,16 +288,23 @@
 								<td class="text-right">
 									<button
 										class="btn btn-ghost btn-xs"
-										onclick={() => (editingCategory = { id: cat.id, name: cat.name, displayOrder: cat.displayOrder, pricingTier: cat.pricingTier as PricingTier })}
-									>Edit</button>
+										onclick={() =>
+											(editingCategory = {
+												id: cat.id,
+												name: cat.name,
+												displayOrder: cat.displayOrder,
+												pricingTier: cat.pricingTier as PricingTier
+											})}>Edit</button
+									>
 									<AsyncButton
 										action={async () => {
-											if (!window.confirm(`Delete "${cat.name}"? Category must have no equipment.`)) return;
+											if (!window.confirm(`Delete "${cat.name}"? Category must have no equipment.`))
+												return;
 											await removeCategory({ id: cat.id });
 											window.location.reload();
 										}}
 										label="Delete"
-										class="btn-ghost btn-xs text-error"
+										class="text-error btn-ghost btn-xs"
 									/>
 								</td>
 							</tr>
@@ -229,9 +320,18 @@
 				onsubmit={async (e) => {
 					e.preventDefault();
 					if (editingCategory?.id) {
-						await editCategory({ id: editingCategory.id, name: editingCategory.name, displayOrder: editingCategory.displayOrder, pricingTier: editingCategory.pricingTier });
+						await editCategory({
+							id: editingCategory.id,
+							name: editingCategory.name,
+							displayOrder: editingCategory.displayOrder,
+							pricingTier: editingCategory.pricingTier
+						});
 					} else if (editingCategory) {
-						await addCategory({ name: editingCategory.name, displayOrder: editingCategory.displayOrder, pricingTier: editingCategory.pricingTier });
+						await addCategory({
+							name: editingCategory.name,
+							displayOrder: editingCategory.displayOrder,
+							pricingTier: editingCategory.pricingTier
+						});
 					}
 					editingCategory = null;
 					window.location.reload();
@@ -240,31 +340,63 @@
 			>
 				<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
 				{#if !editingCategory}
-					<button type="button" class="btn btn-sm btn-outline" onclick={() => (editingCategory = { id: '', name: '', displayOrder: 0, pricingTier: 'accessory' as PricingTier })}>
+					<button
+						type="button"
+						class="btn btn-outline btn-sm"
+						onclick={() =>
+							(editingCategory = {
+								id: '',
+								name: '',
+								displayOrder: 0,
+								pricingTier: 'accessory' as PricingTier
+							})}
+					>
 						+ New Category
 					</button>
 				{:else}
 					<div class="grid grid-cols-3 gap-3">
 						<div class="col-span-2">
-							<label class="label label-text" for="cat-name">Name</label>
-							<input id="cat-name" type="text" class="input input-bordered input-sm w-full" bind:value={editingCategory.name} required />
+							<label class="label-text label" for="cat-name">Name</label>
+							<input
+								id="cat-name"
+								type="text"
+								class="input-bordered input input-sm w-full"
+								bind:value={editingCategory.name}
+								required
+							/>
 						</div>
 						<div>
-							<label class="label label-text" for="cat-order">Order</label>
-							<input id="cat-order" type="number" min="0" class="input input-bordered input-sm w-full" bind:value={editingCategory.displayOrder} />
+							<label class="label-text label" for="cat-order">Order</label>
+							<input
+								id="cat-order"
+								type="number"
+								min="0"
+								class="input-bordered input input-sm w-full"
+								bind:value={editingCategory.displayOrder}
+							/>
 						</div>
 					</div>
 					<div>
-						<label class="label label-text" for="cat-tier">Pricing Tier</label>
-						<select id="cat-tier" class="select select-bordered select-sm w-full" bind:value={editingCategory.pricingTier}>
+						<label class="label-text label" for="cat-tier">Pricing Tier</label>
+						<select
+							id="cat-tier"
+							class="select-bordered select w-full select-sm"
+							bind:value={editingCategory.pricingTier}
+						>
 							{#each pricingTiers as t}
 								<option value={t}>{t} ({t === 'major' ? '$5/day' : '$1/day'})</option>
 							{/each}
 						</select>
 					</div>
 					<div class="flex gap-2">
-						<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editingCategory = null)}>Cancel</button>
-						<button type="submit" class="btn btn-primary btn-sm">{editingCategory.id ? 'Save' : 'Add'}</button>
+						<button
+							type="button"
+							class="btn btn-ghost btn-sm"
+							onclick={() => (editingCategory = null)}>Cancel</button
+						>
+						<button type="submit" class="btn btn-sm btn-primary"
+							>{editingCategory.id ? 'Save' : 'Add'}</button
+						>
 					</div>
 				{/if}
 			</form>
