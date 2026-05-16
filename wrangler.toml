@@ -1,0 +1,9 @@
+name = "corvmc"
+compatibility_date = "2025-05-15"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "corvmc-db"
+database_id = "local"
+migrations_dir = "drizzle"

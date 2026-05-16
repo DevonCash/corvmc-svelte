@@ -2,6 +2,13 @@ import type { LayoutLoad } from './$types';
 import type { AuthMeResponse } from '$lib/types/api';
 
 export const load: LayoutLoad = async ({ fetch }) => {
-	const data = (await fetch('/api/auth/me').then((r) => r.json())) as AuthMeResponse;
-	return { user: data.user };
+	try {
+		const res = await fetch('/api/auth/me');
+		if (!res.ok) return { user: null };
+		const data = (await res.json()) as AuthMeResponse;
+		return { user: data.user ?? null };
+	} catch {
+		return { user: null };
+	}
 };
+

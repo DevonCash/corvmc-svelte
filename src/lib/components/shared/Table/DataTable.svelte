@@ -192,10 +192,8 @@
 
 	const hasActiveFilters = $derived.by(() => {
 		if (!filterFormEl) return false;
-		for (const el of filterFormEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-			'[data-filter]'
-		)) {
-			if (el.value.trim() !== '') return true;
+		for (const el of filterFormEl.querySelectorAll('[data-filter]')) {
+			if ((el as HTMLInputElement).value?.trim() !== '') return true;
 		}
 		return false;
 	});

@@ -1,23 +1,22 @@
 /**
- * Seed the database with fake data for UI development.
+ * Seed the local D1 database with fake data for UI development.
  *
  * Usage:
- *   npx tsx scripts/seed-dev.ts
+ *   pnpm db:seed
  *
- * This is DESTRUCTIVE — it truncates all app tables and rebuilds from scratch.
+ * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch.
  * Do not run against production.
  *
  * Prerequisites:
- *   - DATABASE_URL env var set
- *   - Migrations already applied (npx drizzle-kit migrate)
+ *   - Local D1 SQLite file exists (run `pnpm db:push` first)
  */
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
-import postgres from 'postgres';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
-import { user, account } from '../src/lib/server/db/schema/auth';
+import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/auth';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
@@ -26,7 +25,7 @@ import { ticket } from '../src/lib/server/db/schema/ticket';
 import { productConfig } from '../src/lib/server/db/schema/product-config';
 import { creditTransaction, paymentRecord } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { band, bandMember } from '../src/lib/server/db/schema/band';
+import { band, bandMember, bandGenre } from '../src/lib/server/db/schema/band';
 import {
 	subscriber,
 	audience,
@@ -39,7 +38,27 @@ import {
 	equipment,
 	equipmentLoan
 } from '../src/lib/server/db/schema/equipment';
-// Build RRULE strings inline to avoid pulling rrule CJS dependency into seed script
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Find the local D1 SQLite file
+function findD1SqlitePath(): string {
+	const base = resolve('.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
+	for (const entry of readdirSync(base)) {
+		if (entry.endsWith('.sqlite') && !entry.startsWith('metadata')) {
+			return resolve(base, entry);
+		}
+	}
+	throw new Error('No D1 SQLite file found. Run `pnpm db:push` first.');
+}
+
+const sqlitePath = findD1SqlitePath();
+console.log(`Using SQLite: ${sqlitePath}`);
+const sqlite = new Database(sqlitePath);
+sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('foreign_keys = OFF');
+const db = drizzle(sqlite);
+
 function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
 	const y = startsAt.getUTCFullYear();
@@ -62,9 +81,6 @@ function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): str
 	}
 }
 
-const client = postgres(process.env.DATABASE_URL!);
-const db = drizzle(client);
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -82,11 +98,9 @@ function randomInt(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/** Returns a Date in America/Los_Angeles at the given hour offset from today */
 function ptDate(daysOffset: number, hour: number, minute = 0): Date {
 	const d = new Date();
 	d.setDate(d.getDate() + daysOffset);
-	// Build an ISO string in PT then parse. We approximate PT as UTC-7.
 	d.setUTCHours(hour + 7, minute, 0, 0);
 	return d;
 }
@@ -128,8 +142,6 @@ const CLOSURE_REASONS = [
 	'Private rental', 'Deep cleaning', 'Equipment installation',
 	'Electrical work', 'Plumbing repair'
 ];
-
-const CREDIT_TYPES = ['free_hours', 'equipment'];
 
 const BAND_NAMES = [
 	'The Voltage Thieves', 'Half Past Never', 'Cardboard Satellites',
@@ -194,57 +206,44 @@ const SAMPLE_LINKS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
-async function truncateAll() {
-	console.log('Truncating all tables...');
-	await db.execute(sql`
-		TRUNCATE TABLE
-			equipment_loan,
-			equipment,
-			equipment_category,
-			campaign_audience,
-			campaign,
-			audience_member,
-			audience,
-			subscriber,
-			notification_preference,
-			notification,
-			ticket,
-			band_member,
-			band,
-			payment_record,
-			credit_transaction,
-			recurring_series,
-			event,
-			closure,
-			reservation,
-			model_has_roles,
-			model_has_permissions,
-			role_has_permissions,
-			roles,
-			permissions,
-			product_config,
-			session,
-			account,
-			verification,
-			"user"
-		CASCADE
-	`);
+function deleteAll() {
+	console.log('Deleting all data...');
+	const tables = [
+		'equipment_loan', 'equipment', 'equipment_category',
+		'campaign_audience', 'campaign', 'audience_member', 'audience', 'subscriber',
+		'notification_preference', 'notification',
+		'ticket', 'band_genre', 'band_member', 'band',
+		'payment_record', 'credit_transaction',
+		'recurring_series', 'event', 'closure', 'reservation',
+		'model_has_roles', 'model_has_permissions', 'role_has_permissions',
+		'roles', 'permissions', 'product_config',
+		'user_instrument', 'user_genre',
+		'session', 'account', 'verification', 'user'
+	];
+	for (const t of tables) {
+		sqlite.exec(`DELETE FROM "${t}"`);
+	}
 }
 
-async function seedRoles() {
+interface SeedRole { id: number; name: string }
+interface SeedUser { id: string; name: string; email: string }
+interface SeedEvent { id: string; status: string; startsAt: Date }
+interface SeedReservation { id: string; createdByUserId: string; startsAt: Date; endsAt: Date; status: string }
+
+function seedRoles(): SeedRole[] {
 	console.log('Seeding roles...');
 	const roles = ['admin', 'staff', 'member', 'volunteer'];
-	const inserted = [];
+	const inserted: SeedRole[] = [];
 	for (const name of roles) {
-		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
+		const [r] = db.insert(role).values({ name, guardName: 'web' }).returning().all();
 		inserted.push(r);
 	}
 	return inserted;
 }
 
-async function seedUsers(count: number) {
+function seedUsers(count: number): SeedUser[] {
 	console.log(`Seeding ${count} users...`);
-	const users = [];
+	const users: SeedUser[] = [];
 	const usedEmails = new Set<string>();
 
 	for (let i = 0; i < count; i++) {
@@ -253,7 +252,6 @@ async function seedUsers(count: number) {
 		const name = `${first} ${last}`;
 		let email = `${first.toLowerCase()}.${last.toLowerCase()}@example.com`;
 
-		// Ensure unique emails
 		let suffix = 1;
 		while (usedEmails.has(email)) {
 			email = `${first.toLowerCase()}.${last.toLowerCase()}${suffix}@example.com`;
@@ -264,44 +262,45 @@ async function seedUsers(count: number) {
 		const id = randomUUID();
 		const createdAt = new Date(Date.now() - randomInt(7, 365) * 86400000);
 
-		// Profile data: ~70% of users have some profile info
 		const hasProfile = Math.random() > 0.3;
-		const memberInstruments = hasProfile ? pickN(INSTRUMENTS, randomInt(1, 3)) : null;
-		const memberGenres = hasProfile ? pickN(GENRES, randomInt(1, 3)) : null;
+		const memberInstruments = hasProfile ? pickN(INSTRUMENTS, randomInt(1, 3)) : [];
+		const memberGenres = hasProfile ? pickN(GENRES, randomInt(1, 3)) : [];
 		const memberLinks = hasProfile && Math.random() > 0.4
 			? pickN(SAMPLE_LINKS, randomInt(1, 3))
 			: null;
 		const visibility = !hasProfile ? 'hidden' : Math.random() > 0.6 ? 'public' : 'members';
 
-		const [u] = await db.insert(user).values({
+		const [u] = db.insert(user).values({
 			id,
 			name,
 			email,
 			emailVerified: true,
 			pronouns: pick(PRONOUNS),
 			phone: Math.random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
-			credits: { free_hours: randomInt(0, 8), equipment: randomInt(0, 3) },
+			creditFreeHours: randomInt(0, 8),
+			creditEquipment: randomInt(0, 3),
 			bio: hasProfile ? pick(MEMBER_BIOS) : null,
 			tagline: hasProfile ? pick(TAGLINES) : null,
-			instruments: memberInstruments,
-			genres: memberGenres,
 			lookingForBand: hasProfile && Math.random() > 0.7,
 			directoryVisibility: visibility,
 			directoryContact: visibility === 'public' ? { email } : null,
 			links: memberLinks,
 			createdAt,
 			updatedAt: createdAt
-		}).returning();
+		}).returning().all();
 
-		users.push(u);
+		// Junction tables for instruments and genres
+		for (const instrument of memberInstruments) {
+			db.insert(userInstrument).values({ userId: id, instrument }).run();
+		}
+		for (const genre of memberGenres) {
+			db.insert(userGenre).values({ userId: id, genre }).run();
+		}
+
+		users.push({ ...u, email });
 	}
 	return users;
 }
-
-interface SeedRole { id: number; name: string }
-interface SeedUser { id: string; name: string }
-interface SeedEvent { id: string; status: string; startsAt: Date }
-interface SeedReservation { id: string; createdByUserId: string; startsAt: Date; endsAt: Date; status: string }
 
 async function seedAdminUser(): Promise<SeedUser> {
 	console.log('Seeding admin user (admin@corvallismusic.org)...');
@@ -309,16 +308,16 @@ async function seedAdminUser(): Promise<SeedUser> {
 	const now = new Date();
 	const hashedPassword = await hashPassword('password');
 
-	const [adminUser] = await db.insert(user).values({
+	const [adminUser] = db.insert(user).values({
 		id,
 		name: 'Admin',
 		email: 'admin@corvallismusic.org',
 		emailVerified: true,
 		createdAt: now,
 		updatedAt: now
-	}).returning();
+	}).returning().all();
 
-	await db.insert(account).values({
+	db.insert(account).values({
 		id: randomUUID(),
 		accountId: id,
 		providerId: 'credential',
@@ -326,55 +325,48 @@ async function seedAdminUser(): Promise<SeedUser> {
 		password: hashedPassword,
 		createdAt: now,
 		updatedAt: now
-	});
+	}).run();
 
-	return adminUser;
+	return { ...adminUser, email: 'admin@corvallismusic.org' };
 }
 
-async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: SeedRole[]) {
+function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: SeedRole[]) {
 	console.log('Assigning roles...');
 	const adminRole = roles.find((r) => r.name === 'admin')!;
 	const staffRole = roles.find((r) => r.name === 'staff')!;
 	const memberRole = roles.find((r) => r.name === 'member')!;
 	const volunteerRole = roles.find((r) => r.name === 'volunteer')!;
 
-	// Admin user gets admin + staff + member
-	await db.insert(modelHasRole).values([
+	db.insert(modelHasRole).values([
 		{ roleId: adminRole.id, userId: adminUser.id },
 		{ roleId: staffRole.id, userId: adminUser.id },
 		{ roleId: memberRole.id, userId: adminUser.id }
-	]);
+	]).run();
 
-	// First 2 fake users are also admin + staff
 	for (let i = 0; i < 2; i++) {
-		await db.insert(modelHasRole).values([
+		db.insert(modelHasRole).values([
 			{ roleId: adminRole.id, userId: users[i].id },
 			{ roleId: staffRole.id, userId: users[i].id }
-		]);
+		]).run();
 	}
 
-	// Next 3 are staff only
 	for (let i = 2; i < 5; i++) {
-		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
+		db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id }).run();
 	}
 
-	// All users get the member role
 	for (const u of users) {
-		await db.insert(modelHasRole).values({ roleId: memberRole.id, userId: u.id });
+		db.insert(modelHasRole).values({ roleId: memberRole.id, userId: u.id }).run();
 	}
 
-	// Random volunteers
 	for (const u of pickN(users, 6)) {
-		await db.insert(modelHasRole).values({ roleId: volunteerRole.id, userId: u.id }).onConflictDoNothing();
+		db.insert(modelHasRole).values({ roleId: volunteerRole.id, userId: u.id }).onConflictDoNothing().run();
 	}
 }
 
-async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
+function seedReservations(users: SeedUser[]): SeedReservation[] {
 	console.log('Seeding reservations...');
-	const statuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled'] as const;
 	const rows: SeedReservation[] = [];
 
-	// Past reservations (mostly completed)
 	for (let day = -14; day < 0; day++) {
 		const count = randomInt(1, 4);
 		let hour = randomInt(9, 14);
@@ -382,13 +374,13 @@ async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 			const duration = pick([1, 1.5, 2]);
 			const startsAt = ptDate(day, hour);
 			const endsAt = ptDate(day, hour + duration);
-			hour += duration + 0.5; // leave a gap
+			hour += duration + 0.5;
 			if (hour > 21) break;
 
 			const status = Math.random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
 			const member = pick(users);
 
-			const [r] = await db.insert(reservation).values({
+			const [r] = db.insert(reservation).values({
 				bookerType: 'user',
 				bookerId: member.id,
 				createdByUserId: member.id,
@@ -397,12 +389,11 @@ async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 				endsAt,
 				notes: Math.random() > 0.7 ? 'Band practice' : null,
 				cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null
-			}).returning();
+			}).returning().all();
 			rows.push(r);
 		}
 	}
 
-	// Today and future reservations (scheduled/confirmed)
 	for (let day = 0; day <= 14; day++) {
 		const count = randomInt(1, 3);
 		let hour = randomInt(10, 15);
@@ -416,7 +407,7 @@ async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
 			const member = pick(users);
 
-			const [r] = await db.insert(reservation).values({
+			const [r] = db.insert(reservation).values({
 				bookerType: 'user',
 				bookerId: member.id,
 				createdByUserId: member.id,
@@ -424,7 +415,7 @@ async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 				startsAt,
 				endsAt,
 				notes: Math.random() > 0.6 ? pick(['Drum practice', 'Guitar lesson prep', 'Recording session']) : null
-			}).returning();
+			}).returning().all();
 			rows.push(r);
 		}
 	}
@@ -432,51 +423,27 @@ async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 	return rows;
 }
 
-async function seedClosures() {
+function seedClosures() {
 	console.log('Seeding closures...');
-	const rows = [];
-
-	// A past closure
-	const [c1] = await db.insert(closure).values({
-		reason: 'Holiday closure — New Year',
-		startsAt: ptDate(-30, 0),
-		endsAt: ptDate(-29, 23, 59)
-	}).returning();
-	rows.push(c1);
-
-	// A future closure
-	const [c2] = await db.insert(closure).values({
-		reason: 'Building maintenance — HVAC replacement',
-		startsAt: ptDate(21, 8),
-		endsAt: ptDate(22, 18)
-	}).returning();
-	rows.push(c2);
-
-	// Another future closure
-	const [c3] = await db.insert(closure).values({
-		reason: pick(CLOSURE_REASONS),
-		startsAt: ptDate(35, 0),
-		endsAt: ptDate(35, 23, 59)
-	}).returning();
-	rows.push(c3);
-
-	return rows;
+	db.insert(closure).values([
+		{ reason: 'Holiday closure — New Year', startsAt: ptDate(-30, 0), endsAt: ptDate(-29, 23, 59) },
+		{ reason: 'Building maintenance — HVAC replacement', startsAt: ptDate(21, 8), endsAt: ptDate(22, 18) },
+		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) }
+	]).run();
 }
 
-async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
+function seedEvents(users: SeedUser[]): SeedEvent[] {
 	console.log('Seeding events...');
 	const rows: SeedEvent[] = [];
-	const staffUsers = users.slice(0, 6); // admin + first 5 fake users are staff
+	const staffUsers = users.slice(0, 6);
 
-	/** Create a reservation for the event's space, with 30min setup/teardown buffer. */
-	async function createEventReservation(
+	function createEventReservation(
 		day: number, eventStartHour: number, eventEndHour: number,
 		createdByUserId: string, reservationStatus: string
-	): Promise<string> {
+	): string {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
-
-		const [r] = await db.insert(reservation).values({
+		const [r] = db.insert(reservation).values({
 			bookerType: 'event',
 			bookerId: 'event',
 			createdByUserId,
@@ -485,11 +452,10 @@ async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 			endsAt,
 			notes: 'Event space reservation',
 			cancellationReason: reservationStatus === 'cancelled' ? 'Event cancelled' : null
-		}).returning();
+		}).returning().all();
 		return r.id;
 	}
 
-	// Past events (published) — reservations are completed
 	for (let i = 0; i < 6; i++) {
 		const day = -randomInt(3, 30);
 		const hour = randomInt(18, 20);
@@ -502,25 +468,21 @@ async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + duration, creator.id, 'completed');
+			reservationId = createEventReservation(day, hour, hour + duration, creator.id, 'completed');
 		}
 
-		const [e] = await db.insert(event).values({
+		const [e] = db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'Join us for an evening of live music and community.',
-			startsAt,
-			endsAt,
+			startsAt, endsAt,
 			doorsAt: ptDate(day, hour - 0.5),
 			status: 'published',
-			publishedAt,
-			tags,
-			reservationId,
+			publishedAt, tags, reservationId,
 			createdByUserId: creator.id
-		}).returning();
+		}).returning().all();
 		rows.push(e);
 	}
 
-	// Upcoming events (published) — reservations are confirmed
 	for (let i = 0; i < 4; i++) {
 		const day = randomInt(3, 28);
 		const hour = randomInt(18, 20);
@@ -532,25 +494,22 @@ async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + duration, creator.id, 'confirmed');
+			reservationId = createEventReservation(day, hour, hour + duration, creator.id, 'confirmed');
 		}
 
-		const [e] = await db.insert(event).values({
+		const [e] = db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'An evening of live performances at the Collective.',
-			startsAt,
-			endsAt,
+			startsAt, endsAt,
 			doorsAt: ptDate(day, hour - 0.5),
 			status: 'published',
 			publishedAt: new Date(),
-			tags,
-			reservationId,
+			tags, reservationId,
 			createdByUserId: creator.id
-		}).returning();
+		}).returning().all();
 		rows.push(e);
 	}
 
-	// Draft events — reservations are scheduled (not yet confirmed)
 	for (let i = 0; i < 2; i++) {
 		const day = randomInt(14, 45);
 		const hour = randomInt(18, 20);
@@ -558,10 +517,10 @@ async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
+			reservationId = createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
 		}
 
-		const [e] = await db.insert(event).values({
+		const [e] = db.insert(event).values({
 			title: pick(EVENT_TITLES),
 			description: 'Details TBD',
 			startsAt: ptDate(day, hour),
@@ -570,74 +529,48 @@ async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 			tags: pick(EVENT_TAGS_POOL),
 			reservationId,
 			createdByUserId: creator.id
-		}).returning();
+		}).returning().all();
 		rows.push(e);
 	}
 
-	// Cancelled event with cancelled reservation
 	const cancelledCreator = pick(staffUsers);
-	const cancelledResId = await createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
-	const [cancelled] = await db.insert(event).values({
+	const cancelledResId = createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
+	const [cancelled] = db.insert(event).values({
 		title: 'Cancelled: Outdoor Festival',
 		description: 'Unfortunately cancelled due to weather.',
-		startsAt: ptDate(7, 14),
-		endsAt: ptDate(7, 20),
-		status: 'cancelled',
-		tags: 'community, all ages',
+		startsAt: ptDate(7, 14), endsAt: ptDate(7, 20),
+		status: 'cancelled', tags: 'community, all ages',
 		reservationId: cancelledResId,
 		createdByUserId: cancelledCreator.id
-	}).returning();
+	}).returning().all();
 	rows.push(cancelled);
 
-	// Cancelled event without reservation
-	const [cancelledNoRes] = await db.insert(event).values({
+	const [cancelledNoRes] = db.insert(event).values({
 		title: 'Cancelled: Benefit Concert',
 		description: 'Cancelled — performer unavailable.',
-		startsAt: ptDate(14, 19),
-		endsAt: ptDate(14, 22),
-		status: 'cancelled',
-		tags: 'ticketed, community',
+		startsAt: ptDate(14, 19), endsAt: ptDate(14, 22),
+		status: 'cancelled', tags: 'ticketed, community',
 		createdByUserId: pick(staffUsers).id
-	}).returning();
+	}).returning().all();
 	rows.push(cancelledNoRes);
 
 	return rows;
 }
 
-async function seedProductConfig() {
+function seedProductConfig() {
 	console.log('Seeding product config...');
-	await db.insert(productConfig).values([
-		{
-			key: 'contribution',
-			name: 'Monthly Contribution',
-			description: 'Sustaining member monthly contribution',
-			unitAmountCents: 500,
-			unitLabel: 'per unit / month'
-		},
-		{
-			key: 'rehearsal',
-			name: 'Rehearsal Space',
-			description: 'Practice room hourly rate',
-			unitAmountCents: 1500,
-			unitLabel: 'per hour'
-		},
-		{
-			key: 'fee_coverage',
-			name: 'Fee Coverage',
-			description: 'Covers payment processing fees',
-			unitAmountCents: 0,
-			unitLabel: null
-		}
-	]);
+	db.insert(productConfig).values([
+		{ key: 'contribution', name: 'Monthly Contribution', description: 'Sustaining member monthly contribution', unitAmountCents: 500, unitLabel: 'per unit / month' },
+		{ key: 'rehearsal', name: 'Rehearsal Space', description: 'Practice room hourly rate', unitAmountCents: 1500, unitLabel: 'per hour' },
+		{ key: 'fee_coverage', name: 'Fee Coverage', description: 'Covers payment processing fees', unitAmountCents: 0, unitLabel: null }
+	]).run();
 }
 
-async function seedCreditTransactions(users: SeedUser[]) {
+function seedCreditTransactions(users: SeedUser[]) {
 	console.log('Seeding credit transactions...');
-
 	for (const u of users.slice(0, 12)) {
-		// Monthly allocation
 		const hours = randomInt(2, 8);
-		await db.insert(creditTransaction).values({
+		db.insert(creditTransaction).values({
 			userId: u.id,
 			creditType: 'free_hours',
 			amount: hours,
@@ -645,25 +578,24 @@ async function seedCreditTransactions(users: SeedUser[]) {
 			source: 'subscription_allocation',
 			description: 'Monthly free hours allocation',
 			metadata: { period: 'May 2026' }
-		});
+		}).run();
 
-		// Maybe some usage
 		if (Math.random() > 0.4) {
 			const used = randomInt(1, Math.min(3, hours));
-			await db.insert(creditTransaction).values({
+			db.insert(creditTransaction).values({
 				userId: u.id,
 				creditType: 'free_hours',
 				amount: -used,
 				balanceAfter: hours - used,
 				source: 'reservation',
-				description: `Applied to reservation`,
+				description: 'Applied to reservation',
 				metadata: {}
-			});
+			}).run();
 		}
 	}
 }
 
-async function seedBands(users: SeedUser[]) {
+function seedBands(users: SeedUser[]) {
 	console.log('Seeding bands...');
 	const bands = [];
 
@@ -671,178 +603,150 @@ async function seedBands(users: SeedUser[]) {
 		const owner = users[i % users.length];
 		const slug = BAND_NAMES[i].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
 
-		const bandGenres = pickN(GENRES, randomInt(1, 3));
+		const genres = pickN(GENRES, randomInt(1, 3));
 		const bandLinks = Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 2)) : null;
 		const bandVisibility = Math.random() > 0.8 ? 'hidden' : Math.random() > 0.4 ? 'public' : 'members';
 
-		const [b] = await db.insert(band).values({
+		const [b] = db.insert(band).values({
 			name: BAND_NAMES[i],
 			slug,
 			bio: `${BAND_NAMES[i]} is a local band from Corvallis.`,
 			ownerId: owner.id,
 			tagline: Math.random() > 0.3 ? `${pick(GENRES)} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis` : null,
-			genres: bandGenres,
 			lookingForMembers: Math.random() > 0.6,
 			directoryVisibility: bandVisibility,
 			links: bandLinks
-		}).returning();
+		}).returning().all();
 		bands.push(b);
 
-		// Owner as band member
-		await db.insert(bandMember).values({
-			bandId: b.id,
-			userId: owner.id,
-			role: 'owner',
-			position: pick(BAND_POSITIONS),
-			status: 'active'
-		});
+		for (const g of genres) {
+			db.insert(bandGenre).values({ bandId: b.id, genre: g }).run();
+		}
 
-		// 1-3 additional members
+		db.insert(bandMember).values({
+			bandId: b.id, userId: owner.id,
+			role: 'owner', position: pick(BAND_POSITIONS), status: 'active'
+		}).run();
+
 		const memberCount = randomInt(1, 3);
 		const candidates = users.filter((u) => u.id !== owner.id);
 		const members = pickN(candidates, memberCount);
 		for (const m of members) {
-			await db.insert(bandMember).values({
-				bandId: b.id,
-				userId: m.id,
-				role: 'member',
-				position: pick(BAND_POSITIONS),
+			db.insert(bandMember).values({
+				bandId: b.id, userId: m.id,
+				role: 'member', position: pick(BAND_POSITIONS),
 				status: Math.random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
-			});
+			}).run();
 		}
 	}
 
-	// One deactivated band
 	const deactivatedOwner = users[BAND_NAMES.length % users.length];
-	const [deactivated] = await db.insert(band).values({
-		name: 'Disbanded Project',
-		slug: 'disbanded-project',
+	const [deactivated] = db.insert(band).values({
+		name: 'Disbanded Project', slug: 'disbanded-project',
 		bio: 'This band was deactivated by staff.',
 		ownerId: deactivatedOwner.id,
 		deletedAt: new Date(Date.now() - 10 * 86400000)
-	}).returning();
-	await db.insert(bandMember).values({
-		bandId: deactivated.id,
-		userId: deactivatedOwner.id,
-		role: 'owner',
-		position: 'Guitar',
-		status: 'active'
-	});
+	}).returning().all();
+	db.insert(bandMember).values({
+		bandId: deactivated.id, userId: deactivatedOwner.id,
+		role: 'owner', position: 'Guitar', status: 'active'
+	}).run();
 	bands.push(deactivated);
 
 	return bands;
 }
 
-async function seedRecurringSeries(users: SeedUser[]) {
+function seedRecurringSeries(users: SeedUser[]) {
 	console.log('Seeding recurring series...');
 	const rows = [];
 	const frequencies = ['weekly', 'biweekly', 'monthly'] as const;
 
-	// 4 active recurring series
 	for (let i = 0; i < 4; i++) {
 		const member = users[i % users.length];
 		const freq = frequencies[i % frequencies.length];
-		const dayOffset = i; // spread across different days
+		const dayOffset = i;
 		const hour = 10 + i * 2;
 		const duration = pick([1, 1.5, 2]);
 
-		const protoStart = ptDate(dayOffset - 14, hour); // started 2 weeks ago
+		const protoStart = ptDate(dayOffset - 14, hour);
 		const protoEnd = ptDate(dayOffset - 14, hour + duration);
 
-		// Create the prototype reservation
-		const [proto] = await db.insert(reservation).values({
-			bookerType: 'user',
-			bookerId: member.id,
-			createdByUserId: member.id,
-			status: 'completed',
-			startsAt: protoStart,
-			endsAt: protoEnd,
+		const [proto] = db.insert(reservation).values({
+			bookerType: 'user', bookerId: member.id,
+			createdByUserId: member.id, status: 'completed',
+			startsAt: protoStart, endsAt: protoEnd,
 			notes: `Recurring ${freq} practice`
-		}).returning();
+		}).returning().all();
 
 		const rrule = seedRRule(protoStart, freq);
 
-		const [series] = await db.insert(recurringSeries).values({
+		const [series] = db.insert(recurringSeries).values({
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
 			rrule
-		}).returning();
+		}).returning().all();
 		rows.push(series);
 
-		// Link prototype to the series
-		await db.execute(
-			sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`
-		);
+		db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
 
-		// Create a couple of generated instances
 		for (let w = 1; w <= 2; w++) {
 			const instStart = ptDate(dayOffset - 14 + w * 7, hour);
 			const instEnd = ptDate(dayOffset - 14 + w * 7, hour + duration);
 			const status = instStart < new Date() ? 'completed' : 'scheduled';
 
-			await db.insert(reservation).values({
-				bookerType: 'user',
-				bookerId: member.id,
-				createdByUserId: member.id,
-				status,
-				startsAt: instStart,
-				endsAt: instEnd,
+			db.insert(reservation).values({
+				bookerType: 'user', bookerId: member.id,
+				createdByUserId: member.id, status,
+				startsAt: instStart, endsAt: instEnd,
 				notes: `Recurring ${freq} practice`,
 				recurringSeriesId: series.id
-			});
+			}).run();
 		}
 	}
 
-	// 1 cancelled series
 	{
 		const member = users[5];
 		const protoStart = ptDate(-21, 14);
 		const protoEnd = ptDate(-21, 16);
 
-		const [proto] = await db.insert(reservation).values({
-			bookerType: 'user',
-			bookerId: member.id,
-			createdByUserId: member.id,
-			status: 'completed',
-			startsAt: protoStart,
-			endsAt: protoEnd,
+		const [proto] = db.insert(reservation).values({
+			bookerType: 'user', bookerId: member.id,
+			createdByUserId: member.id, status: 'completed',
+			startsAt: protoStart, endsAt: protoEnd,
 			notes: 'Cancelled recurring session'
-		}).returning();
+		}).returning().all();
 
 		const rrule = seedRRule(protoStart, 'weekly');
 
-		const [series] = await db.insert(recurringSeries).values({
+		const [series] = db.insert(recurringSeries).values({
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
 			rrule,
-			cancelledAt: new Date(Date.now() - 7 * 86400000) // cancelled a week ago
-		}).returning();
+			cancelledAt: new Date(Date.now() - 7 * 86400000)
+		}).returning().all();
 		rows.push(series);
 
-		await db.execute(
-			sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`
-		);
+		db.run(sql`UPDATE reservation SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
 	}
 
 	return rows;
 }
 
-async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
+function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
 	console.log('Seeding payment records...');
 	const rows = [];
 
-	// Payments for completed/confirmed reservations
 	const payableReservations = reservations
 		.filter((r) => ['completed', 'confirmed', 'scheduled'].includes(r.status))
 		.slice(0, 25);
 
 	for (const r of payableReservations) {
 		const hours = Math.round((r.endsAt.getTime() - r.startsAt.getTime()) / 3600000 * 2) / 2;
-		const amountCents = hours * 1500; // $15/hr
+		const amountCents = hours * 1500;
 		const method = Math.random() > 0.3 ? 'Cash' : 'Credits';
 
-		const [p] = await db.insert(paymentRecord).values({
+		const [p] = db.insert(paymentRecord).values({
 			id: `pr_seed_${randomUUID().slice(0, 8)}`,
 			userId: r.createdByUserId,
 			reservationId: r.id,
@@ -852,21 +756,19 @@ async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservati
 			status: Math.random() > 0.1 ? 'completed' : 'refunded',
 			paidAt: r.startsAt,
 			refundedAt: Math.random() > 0.9 ? new Date() : null
-		}).returning();
+		}).returning().all();
 		rows.push(p);
 	}
 
 	return rows;
 }
 
-async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
+function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 	console.log('Seeding tickets...');
 	const rows = [];
-
 	const publishedEvents = events.filter((e) => e.status === 'published');
 
 	for (const evt of publishedEvents) {
-		// 2-6 tickets per event
 		const ticketCount = randomInt(2, 6);
 		const purchaseId = randomUUID();
 		const buyers = pickN(users, ticketCount);
@@ -876,7 +778,7 @@ async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 			const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
 			const isPast = evt.startsAt < new Date();
 
-			const [t] = await db.insert(ticket).values({
+			const [t] = db.insert(ticket).values({
 				eventId: evt.id,
 				purchaseId,
 				userId: buyer.id,
@@ -886,7 +788,7 @@ async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 				status: isPast ? (Math.random() > 0.2 ? 'used' : 'pending') : 'pending',
 				checkedInAt: isPast && Math.random() > 0.3 ? evt.startsAt : null,
 				checkedInByUserId: isPast && Math.random() > 0.3 ? users[0].id : null
-			}).returning();
+			}).returning().all();
 			rows.push(t);
 		}
 	}
@@ -894,7 +796,7 @@ async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 	return rows;
 }
 
-async function seedNotifications(users: SeedUser[]) {
+function seedNotifications(users: SeedUser[]) {
 	console.log('Seeding notifications...');
 	const rows = [];
 
@@ -908,7 +810,6 @@ async function seedNotifications(users: SeedUser[]) {
 		{ type: 'event_cancellation', title: 'Event cancelled', body: 'Outdoor Festival has been cancelled. Your tickets will be refunded.', href: '/member/tickets' }
 	];
 
-	// Give each user 0-5 notifications, mix of read and unread
 	for (const u of users) {
 		const count = randomInt(0, 5);
 		const selected = pickN(types, count);
@@ -918,7 +819,7 @@ async function seedNotifications(users: SeedUser[]) {
 			const createdAt = new Date(Date.now() - daysAgo * 86400000);
 			const isRead = Math.random() > 0.4;
 
-			const [row] = await db.insert(notification).values({
+			const [row] = db.insert(notification).values({
 				userId: u.id,
 				type: n.type,
 				title: n.title,
@@ -926,7 +827,7 @@ async function seedNotifications(users: SeedUser[]) {
 				href: n.href,
 				readAt: isRead ? new Date(createdAt.getTime() + randomInt(1, 24) * 3600000) : null,
 				createdAt
-			}).returning();
+			}).returning().all();
 			rows.push(row);
 		}
 	}
@@ -934,7 +835,7 @@ async function seedNotifications(users: SeedUser[]) {
 	return rows;
 }
 
-async function seedNotificationPreferences(users: SeedUser[]) {
+function seedNotificationPreferences(users: SeedUser[]) {
 	console.log('Seeding notification preferences...');
 	const rows = [];
 	const configurableTypes = [
@@ -943,19 +844,17 @@ async function seedNotificationPreferences(users: SeedUser[]) {
 		'band_invitation_accepted', 'recurring_skipped'
 	];
 
-	// ~30% of users have customized preferences
 	const customizers = pickN(users, Math.ceil(users.length * 0.3));
 
 	for (const u of customizers) {
-		// Each customizer tweaks 1-3 notification types
 		const tweaked = pickN(configurableTypes, randomInt(1, 3));
 		for (const nt of tweaked) {
-			const [row] = await db.insert(notificationPreference).values({
+			const [row] = db.insert(notificationPreference).values({
 				userId: u.id,
 				notificationType: nt,
 				emailEnabled: Math.random() > 0.3,
 				inAppEnabled: Math.random() > 0.2
-			}).returning();
+			}).returning().all();
 			rows.push(row);
 		}
 	}
@@ -963,508 +862,138 @@ async function seedNotificationPreferences(users: SeedUser[]) {
 	return rows;
 }
 
-// ---------------------------------------------------------------------------
-// Marketing
-// ---------------------------------------------------------------------------
-
-async function seedMarketing(users: SeedUser[]) {
+function seedMarketing(users: SeedUser[]) {
 	console.log('Seeding marketing...');
 
-	// Create audiences
-	const audienceRows = await db
-		.insert(audience)
-		.values([
-			{
-				id: randomUUID(),
-				name: 'Newsletter',
-				slug: 'newsletter',
-				description: 'Monthly updates from CorvMC — events, news, and community highlights.',
-				allowOptIn: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Event Updates',
-				slug: 'event-updates',
-				description: 'Get notified about upcoming shows and events.',
-				allowOptIn: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Member Announcements',
-				slug: 'member-announcements',
-				description: 'Important announcements for CorvMC members.',
-				allowOptIn: false
-			},
-			{
-				id: randomUUID(),
-				name: 'Public Updates',
-				slug: 'public-updates',
-				description: 'General updates and news from CorvMC.',
-				allowOptIn: true
-			}
-		])
-		.returning();
+	const audienceRows = db.insert(audience).values([
+		{ id: randomUUID(), name: 'Newsletter', slug: 'newsletter', description: 'Monthly updates from CorvMC.', allowOptIn: true },
+		{ id: randomUUID(), name: 'Event Updates', slug: 'event-updates', description: 'Get notified about upcoming shows.', allowOptIn: true },
+		{ id: randomUUID(), name: 'Member Announcements', slug: 'member-announcements', description: 'Important announcements for members.', allowOptIn: false },
+		{ id: randomUUID(), name: 'Public Updates', slug: 'public-updates', description: 'General updates and news.', allowOptIn: true }
+	]).returning().all();
 
-	// Create subscribers for all users
-	const subscriberRows = await db
-		.insert(subscriber)
-		.values(
-			users.map((u) => ({
-				id: randomUUID(),
-				email: u.email,
-				name: u.name,
-				userId: u.id
-			}))
-		)
-		.returning();
+	const subscriberRows = db.insert(subscriber).values(
+		users.map((u) => ({ id: randomUUID(), email: u.email, name: u.name, userId: u.id }))
+	).returning().all();
 
-	// Add some external subscribers
-	const externalEmails = [
-		'fan1@example.com',
-		'fan2@example.com',
-		'localpress@example.com',
-		'musicblog@example.com',
-		'concertgoer@example.com',
-		'neighbor@example.com',
-		'sponsor@example.com'
-	];
-
-	const externalSubs = await db
-		.insert(subscriber)
-		.values(
-			externalEmails.map((email) => ({
-				id: randomUUID(),
-				email,
-				name: email.split('@')[0].replace(/\d+/g, ''),
-				userId: null
-			}))
-		)
-		.returning();
+	const externalEmails = ['fan1@example.com', 'fan2@example.com', 'localpress@example.com', 'musicblog@example.com', 'concertgoer@example.com', 'neighbor@example.com', 'sponsor@example.com'];
+	const externalSubs = db.insert(subscriber).values(
+		externalEmails.map((email) => ({ id: randomUUID(), email, name: email.split('@')[0].replace(/\d+/g, ''), userId: null }))
+	).returning().all();
 
 	const allSubs = [...subscriberRows, ...externalSubs];
 
-	// Add subscribers to audiences with randomized membership
 	const membershipRows: { id: string; subscriberId: string; audienceId: string; unsubscribedAt: Date | null }[] = [];
-
 	for (const sub of allSubs) {
 		for (const aud of audienceRows) {
-			// ~70% chance of being in each audience
 			if (Math.random() < 0.7) {
-				// ~10% chance of being unsubscribed
-				const unsubscribed = Math.random() < 0.1;
 				membershipRows.push({
 					id: randomUUID(),
 					subscriberId: sub.id,
 					audienceId: aud.id,
-					unsubscribedAt: unsubscribed ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) : null
+					unsubscribedAt: Math.random() < 0.1 ? new Date(Date.now() - Math.random() * 30 * 86400000) : null
 				});
 			}
 		}
 	}
 
 	if (membershipRows.length > 0) {
-		await db.insert(audienceMember).values(membershipRows);
+		db.insert(audienceMember).values(membershipRows).run();
 	}
 
-	// Create campaigns in various states
-	const adminUser = users[0]; // first user is admin
+	const adminUser = users[0];
 
 	const sentCampaigns = [
-		{
-			subject: 'Welcome to the CorvMC Newsletter!',
-			markdownBody: '# Welcome!\n\nThanks for subscribing to the CorvMC newsletter. We\'ll keep you posted on all the latest happenings.\n\n## What\'s coming up\n\nStay tuned for event announcements and community updates.',
-			sentAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-			scheduledFor: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-			recipientCount: 18
-		},
-		{
-			subject: 'February Events Roundup',
-			markdownBody: '# February Events\n\nHere\'s what happened this month at CorvMC:\n\n- **Open Mic Night** — Great turnout!\n- **Jazz Workshop** — Thanks to everyone who participated.\n\nSee you next month!',
-			sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-			scheduledFor: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-			recipientCount: 15
-		}
+		{ subject: 'Welcome to the CorvMC Newsletter!', markdownBody: '# Welcome!\n\nThanks for subscribing.', sentAt: new Date(Date.now() - 14 * 86400000), recipientCount: 18 },
+		{ subject: 'February Events Roundup', markdownBody: '# February Events\n\nHere\'s what happened this month.', sentAt: new Date(Date.now() - 7 * 86400000), recipientCount: 15 }
 	];
 
 	for (const c of sentCampaigns) {
-		const [row] = await db
-			.insert(campaign)
-			.values({
-				id: randomUUID(),
-				subject: c.subject,
-				markdownBody: c.markdownBody,
-				htmlBody: `<p>${c.markdownBody.replace(/\n/g, '</p><p>')}</p>`,
-				scheduledFor: c.scheduledFor,
-				sentAt: c.sentAt,
-				sentById: adminUser.id,
-				recipientCount: c.recipientCount
-			})
-			.returning();
-
-		// Attach to first two audiences
-		await db.insert(campaignAudience).values([
+		const [row] = db.insert(campaign).values({
+			id: randomUUID(), subject: c.subject, markdownBody: c.markdownBody,
+			htmlBody: `<p>${c.markdownBody.replace(/\n/g, '</p><p>')}</p>`,
+			scheduledFor: c.sentAt, sentAt: c.sentAt, sentById: adminUser.id, recipientCount: c.recipientCount
+		}).returning().all();
+		db.insert(campaignAudience).values([
 			{ campaignId: row.id, audienceId: audienceRows[0].id },
 			{ campaignId: row.id, audienceId: audienceRows[1].id }
-		]);
+		]).run();
 	}
 
-	// Scheduled campaign
-	const [scheduled] = await db
-		.insert(campaign)
-		.values({
-			id: randomUUID(),
-			subject: 'Upcoming: Spring Concert Series',
-			markdownBody: '# Spring Concert Series\n\nWe\'re excited to announce our spring lineup! More details coming soon.\n\nMark your calendars for March 15th.',
-			htmlBody: '<p>Spring Concert Series preview</p>',
-			scheduledFor: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-			sentAt: null,
-			sentById: adminUser.id,
-			recipientCount: null
-		})
-		.returning();
-
-	await db.insert(campaignAudience).values([
+	const [scheduled] = db.insert(campaign).values({
+		id: randomUUID(), subject: 'Upcoming: Spring Concert Series',
+		markdownBody: '# Spring Concert Series\n\nMore details coming soon.',
+		htmlBody: '<p>Spring Concert Series preview</p>',
+		scheduledFor: new Date(Date.now() + 3 * 86400000),
+		sentAt: null, sentById: adminUser.id, recipientCount: null
+	}).returning().all();
+	db.insert(campaignAudience).values([
 		{ campaignId: scheduled.id, audienceId: audienceRows[0].id },
 		{ campaignId: scheduled.id, audienceId: audienceRows[3].id }
-	]);
+	]).run();
 
-	// Draft campaigns
-	const [draft1] = await db
-		.insert(campaign)
-		.values({
-			id: randomUUID(),
-			subject: 'New Practice Room Hours',
-			markdownBody: '# Updated Hours\n\nStarting next month, practice rooms will be available until 11pm on weekends.\n\n{{subscriber_name}}, we hope this helps your schedule!',
-			htmlBody: '<p>Draft - practice room hours</p>',
-			scheduledFor: null,
-			sentAt: null,
-			sentById: adminUser.id,
-			recipientCount: null
-		})
-		.returning();
+	const [draft1] = db.insert(campaign).values({
+		id: randomUUID(), subject: 'New Practice Room Hours',
+		markdownBody: '# Updated Hours\n\nPractice rooms available until 11pm on weekends.',
+		htmlBody: '<p>Draft</p>', scheduledFor: null, sentAt: null, sentById: adminUser.id, recipientCount: null
+	}).returning().all();
+	db.insert(campaignAudience).values({ campaignId: draft1.id, audienceId: audienceRows[2].id }).run();
 
-	await db.insert(campaignAudience).values({
-		campaignId: draft1.id,
-		audienceId: audienceRows[2].id
-	});
+	const [draft2] = db.insert(campaign).values({
+		id: randomUUID(), subject: 'Volunteer Opportunities',
+		markdownBody: '# Help Out at CorvMC\n\nWe\'re looking for volunteers.',
+		htmlBody: '<p>Draft</p>', scheduledFor: null, sentAt: null, sentById: adminUser.id, recipientCount: null
+	}).returning().all();
+	db.insert(campaignAudience).values({ campaignId: draft2.id, audienceId: audienceRows[0].id }).run();
 
-	const [draft2] = await db
-		.insert(campaign)
-		.values({
-			id: randomUUID(),
-			subject: 'Volunteer Opportunities',
-			markdownBody: '# Help Out at CorvMC\n\nWe\'re looking for volunteers for the upcoming fundraiser. If you\'re interested, reply to this email!',
-			htmlBody: '<p>Draft - volunteer opportunities</p>',
-			scheduledFor: null,
-			sentAt: null,
-			sentById: adminUser.id,
-			recipientCount: null
-		})
-		.returning();
-
-	await db.insert(campaignAudience).values({
-		campaignId: draft2.id,
-		audienceId: audienceRows[0].id
-	});
-
-	return {
-		audiences: audienceRows.length,
-		subscribers: allSubs.length,
-		memberships: membershipRows.length,
-		campaigns: sentCampaigns.length + 3 // 2 sent + 1 scheduled + 2 drafts
-	};
+	return { audiences: audienceRows.length, subscribers: allSubs.length, memberships: membershipRows.length, campaigns: sentCampaigns.length + 3 };
 }
 
-// ---------------------------------------------------------------------------
-// Equipment
-// ---------------------------------------------------------------------------
-
-async function seedEquipment(users: SeedUser[]) {
+function seedEquipment(users: SeedUser[]) {
 	console.log('Seeding equipment...');
 
-	const categories = await db
-		.insert(equipmentCategory)
-		.values([
-			{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' }
-		])
-		.returning();
+	const categories = db.insert(equipmentCategory).values([
+		{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' }
+	]).returning().all();
 
 	const catByName = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 
-	const items = await db
-		.insert(equipment)
-		.values([
-			{
-				id: randomUUID(),
-				name: 'Fender Stratocaster',
-				description: 'Sunburst finish, maple neck. Great all-rounder.',
-				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'FEN-STR-2019-0041',
-				resourceId: 'EQ-001',
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Gibson Les Paul Standard',
-				description: 'Cherry burst. Heavy but sounds incredible.',
-				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'GIB-LP-2021-1187',
-				resourceId: 'EQ-002',
-				condition: 'excellent',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Ibanez SR500 Bass',
-				description: '4-string active bass. Lightweight mahogany body.',
-				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'IBZ-SR5-2020-0223',
-				resourceId: 'EQ-003',
-				condition: 'fair',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Fender Blues Deluxe',
-				description: '40W tube combo. Clean and overdrive channels.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'FEN-BD-2018-0912',
-				resourceId: 'EQ-004',
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Orange CR120 Head + 4x12 Cab',
-				description: 'Solid state 120W head with matching cabinet.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'ORG-CR120-2022-0055',
-				resourceId: 'EQ-005',
-				condition: 'excellent',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'QSC K12.2 Powered Speaker',
-				description: '2000W powered PA speaker. Great for rehearsals and small shows.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 2,
-				resourceId: 'EQ-006',
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Shure SM58',
-				description: 'Industry-standard dynamic vocal mic.',
-				categoryId: catByName['Microphones'],
-				totalQuantity: 6,
-				outOfOrderQuantity: 1,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Shure SM57',
-				description: 'Instrument mic. Amps, snares, everything.',
-				categoryId: catByName['Microphones'],
-				totalQuantity: 4,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'AKG P420 Condenser',
-				description: 'Large-diaphragm condenser. Needs phantom power.',
-				categoryId: catByName['Microphones'],
-				totalQuantity: 2,
-				resourceId: 'EQ-009',
-				condition: 'excellent',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'DW 5000 Kick Pedal',
-				description: 'Single chain drive kick pedal.',
-				categoryId: catByName['Drum Hardware'],
-				totalQuantity: 2,
-				condition: 'fair',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Snare Stand',
-				description: 'Heavy-duty double-braced snare stand.',
-				categoryId: catByName['Drum Hardware'],
-				totalQuantity: 3,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'XLR Cable (25ft)',
-				description: 'Standard balanced XLR cable.',
-				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 12,
-				outOfOrderQuantity: 2,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Instrument Cable (15ft)',
-				description: '1/4" TS cable for guitars and basses.',
-				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 8,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Mic Stand (Boom)',
-				description: 'Tripod base with telescoping boom arm.',
-				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 6,
-				outOfOrderQuantity: 1,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Yamaha MG10XU Mixer',
-				description: '10-channel mixer with USB and effects. Currently being repaired.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'YAM-MG10-2020-0331',
-				resourceId: 'EQ-015',
-				condition: 'poor',
-				status: 'maintenance'
-			}
-		])
-		.returning();
+	const items = db.insert(equipment).values([
+		{ id: randomUUID(), name: 'Fender Stratocaster', description: 'Sunburst finish, maple neck.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'FEN-STR-2019-0041', resourceId: 'EQ-001', condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Gibson Les Paul Standard', description: 'Cherry burst.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'GIB-LP-2021-1187', resourceId: 'EQ-002', condition: 'excellent', status: 'available' },
+		{ id: randomUUID(), name: 'Ibanez SR500 Bass', description: '4-string active bass.', categoryId: catByName['Guitars'], totalQuantity: 1, serialNumber: 'IBZ-SR5-2020-0223', resourceId: 'EQ-003', condition: 'fair', status: 'available' },
+		{ id: randomUUID(), name: 'Fender Blues Deluxe', description: '40W tube combo.', categoryId: catByName['Amplifiers'], totalQuantity: 1, serialNumber: 'FEN-BD-2018-0912', resourceId: 'EQ-004', condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Orange CR120 Head + 4x12 Cab', description: 'Solid state 120W.', categoryId: catByName['Amplifiers'], totalQuantity: 1, serialNumber: 'ORG-CR120-2022-0055', resourceId: 'EQ-005', condition: 'excellent', status: 'available' },
+		{ id: randomUUID(), name: 'QSC K12.2 Powered Speaker', description: '2000W powered PA speaker.', categoryId: catByName['Amplifiers'], totalQuantity: 2, resourceId: 'EQ-006', condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Shure SM58', description: 'Dynamic vocal mic.', categoryId: catByName['Microphones'], totalQuantity: 6, outOfOrderQuantity: 1, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Shure SM57', description: 'Instrument mic.', categoryId: catByName['Microphones'], totalQuantity: 4, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'AKG P420 Condenser', description: 'Large-diaphragm condenser.', categoryId: catByName['Microphones'], totalQuantity: 2, resourceId: 'EQ-009', condition: 'excellent', status: 'available' },
+		{ id: randomUUID(), name: 'DW 5000 Kick Pedal', description: 'Single chain drive.', categoryId: catByName['Drum Hardware'], totalQuantity: 2, condition: 'fair', status: 'available' },
+		{ id: randomUUID(), name: 'Snare Stand', description: 'Heavy-duty double-braced.', categoryId: catByName['Drum Hardware'], totalQuantity: 3, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'XLR Cable (25ft)', description: 'Standard balanced XLR.', categoryId: catByName['Cables & Accessories'], totalQuantity: 12, outOfOrderQuantity: 2, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Instrument Cable (15ft)', description: '1/4" TS cable.', categoryId: catByName['Cables & Accessories'], totalQuantity: 8, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Mic Stand (Boom)', description: 'Tripod base with boom arm.', categoryId: catByName['Cables & Accessories'], totalQuantity: 6, outOfOrderQuantity: 1, condition: 'good', status: 'available' },
+		{ id: randomUUID(), name: 'Yamaha MG10XU Mixer', description: '10-channel mixer. Being repaired.', categoryId: catByName['Amplifiers'], totalQuantity: 1, serialNumber: 'YAM-MG10-2020-0331', resourceId: 'EQ-015', condition: 'poor', status: 'maintenance' }
+	]).returning().all();
 
 	const itemByName = Object.fromEntries(items.map((i) => [i.name, i]));
 	const now = new Date();
-	const day = 24 * 60 * 60 * 1000;
+	const day = 86400000;
 
-	const loans = await db
-		.insert(equipmentLoan)
-		.values([
-			// Active: checked out, due in 3 days
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Fender Stratocaster'].id,
-				userId: users[0].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 10 * day),
-				scheduledPickupDate: new Date(now.getTime() - 9 * day),
-				dueDate: new Date(now.getTime() + 3 * day),
-				checkedOutAt: new Date(now.getTime() - 9 * day),
-				status: 'checked_out',
-				dailyRateCents: 500,
-				memberNotes: 'Need it for a gig this weekend'
-			},
-			// Active: checked out and overdue
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Shure SM58'].id,
-				userId: users[1].id,
-				quantity: 2,
-				requestedPickupDate: new Date(now.getTime() - 14 * day),
-				scheduledPickupDate: new Date(now.getTime() - 13 * day),
-				dueDate: new Date(now.getTime() - 2 * day),
-				checkedOutAt: new Date(now.getTime() - 13 * day),
-				status: 'checked_out',
-				dailyRateCents: 500
-			},
-			// Requested: waiting for staff
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Gibson Les Paul Standard'].id,
-				userId: users[2].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 2 * day),
-				status: 'requested',
-				memberNotes: 'Would love to try this for a recording session'
-			},
-			// Scheduled: pickup confirmed
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['QSC K12.2 Powered Speaker'].id,
-				userId: users[3].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 1 * day),
-				scheduledPickupDate: new Date(now.getTime() + 1 * day),
-				status: 'scheduled',
-				memberNotes: 'Need for band practice in Room B'
-			},
-			// Free-form request (no equipmentId)
-			{
-				id: randomUUID(),
-				equipmentId: null,
-				userId: users[4].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 3 * day),
-				status: 'requested',
-				memberNotes: 'Looking for a bass amp that can handle a loud drummer — something 300W+'
-			},
-			// Past: returned with charges
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Fender Blues Deluxe'].id,
-				userId: users[0].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 30 * day),
-				scheduledPickupDate: new Date(now.getTime() - 29 * day),
-				dueDate: new Date(now.getTime() - 22 * day),
-				checkedOutAt: new Date(now.getTime() - 29 * day),
-				returnedAt: new Date(now.getTime() - 23 * day),
-				status: 'returned',
-				dailyRateCents: 500,
-				totalChargeCents: 3000,
-				creditsCents: 2000,
-				cashCents: 1000,
-				staffNotes: 'Returned in good condition'
-			},
-			// Past: returned accessory (free for sustaining)
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['XLR Cable (25ft)'].id,
-				userId: users[1].id,
-				quantity: 3,
-				requestedPickupDate: new Date(now.getTime() - 20 * day),
-				scheduledPickupDate: new Date(now.getTime() - 19 * day),
-				dueDate: new Date(now.getTime() - 15 * day),
-				checkedOutAt: new Date(now.getTime() - 19 * day),
-				returnedAt: new Date(now.getTime() - 16 * day),
-				status: 'returned',
-				dailyRateCents: 0,
-				totalChargeCents: 0,
-				creditsCents: 0,
-				cashCents: 0,
-				staffNotes: 'Sustaining member — accessories free'
-			},
-			// Past: cancelled
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['AKG P420 Condenser'].id,
-				userId: users[5].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 7 * day),
-				status: 'cancelled'
-			}
-		])
-		.returning();
+	const loans = db.insert(equipmentLoan).values([
+		{ id: randomUUID(), equipmentId: itemByName['Fender Stratocaster'].id, userId: users[0].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 10 * day), scheduledPickupDate: new Date(now.getTime() - 9 * day), dueDate: new Date(now.getTime() + 3 * day), checkedOutAt: new Date(now.getTime() - 9 * day), status: 'checked_out', dailyRateCents: 500, memberNotes: 'Need it for a gig this weekend' },
+		{ id: randomUUID(), equipmentId: itemByName['Shure SM58'].id, userId: users[1].id, quantity: 2, requestedPickupDate: new Date(now.getTime() - 14 * day), scheduledPickupDate: new Date(now.getTime() - 13 * day), dueDate: new Date(now.getTime() - 2 * day), checkedOutAt: new Date(now.getTime() - 13 * day), status: 'checked_out', dailyRateCents: 500 },
+		{ id: randomUUID(), equipmentId: itemByName['Gibson Les Paul Standard'].id, userId: users[2].id, quantity: 1, requestedPickupDate: new Date(now.getTime() + 2 * day), status: 'requested', memberNotes: 'Would love to try this for a recording session' },
+		{ id: randomUUID(), equipmentId: itemByName['QSC K12.2 Powered Speaker'].id, userId: users[3].id, quantity: 1, requestedPickupDate: new Date(now.getTime() + 1 * day), scheduledPickupDate: new Date(now.getTime() + 1 * day), status: 'scheduled', memberNotes: 'Need for band practice' },
+		{ id: randomUUID(), equipmentId: null, userId: users[4].id, quantity: 1, requestedPickupDate: new Date(now.getTime() + 3 * day), status: 'requested', memberNotes: 'Looking for a bass amp 300W+' },
+		{ id: randomUUID(), equipmentId: itemByName['Fender Blues Deluxe'].id, userId: users[0].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 30 * day), scheduledPickupDate: new Date(now.getTime() - 29 * day), dueDate: new Date(now.getTime() - 22 * day), checkedOutAt: new Date(now.getTime() - 29 * day), returnedAt: new Date(now.getTime() - 23 * day), status: 'returned', dailyRateCents: 500, totalChargeCents: 3000, creditsCents: 2000, cashCents: 1000, staffNotes: 'Returned in good condition' },
+		{ id: randomUUID(), equipmentId: itemByName['XLR Cable (25ft)'].id, userId: users[1].id, quantity: 3, requestedPickupDate: new Date(now.getTime() - 20 * day), scheduledPickupDate: new Date(now.getTime() - 19 * day), dueDate: new Date(now.getTime() - 15 * day), checkedOutAt: new Date(now.getTime() - 19 * day), returnedAt: new Date(now.getTime() - 16 * day), status: 'returned', dailyRateCents: 0, totalChargeCents: 0, creditsCents: 0, cashCents: 0, staffNotes: 'Sustaining member — accessories free' },
+		{ id: randomUUID(), equipmentId: itemByName['AKG P420 Condenser'].id, userId: users[5].id, quantity: 1, requestedPickupDate: new Date(now.getTime() - 7 * day), status: 'cancelled' }
+	]).returning().all();
 
 	return { categories: categories.length, items: items.length, loans: loans.length };
 }
@@ -1473,63 +1002,36 @@ async function seedEquipment(users: SeedUser[]) {
 // Main
 // ---------------------------------------------------------------------------
 
-async function confirmDestructive() {
-	if (process.env.NODE_ENV === 'production') {
-		console.error('Refusing to seed: NODE_ENV is "production".');
-		process.exit(1);
-	}
-
-	const url = new URL(process.env.DATABASE_URL!);
-	const host = url.hostname;
-	const dbName = url.pathname.replace('/', '');
-
-	console.log(`\n  Database host: ${host}`);
-	console.log(`  Database name: ${dbName}\n`);
-	console.log('  This will TRUNCATE ALL TABLES and replace them with fake data.');
-
-	const readline = await import('readline');
-	const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-	const answer = await new Promise<string>((resolve) => {
-		rl.question('\n  Is this a dev/test database? Type "yes" to continue: ', resolve);
-	});
-	rl.close();
-
-	if (answer.trim().toLowerCase() !== 'yes') {
-		console.log('Aborted.');
-		process.exit(0);
-	}
-}
-
 async function main() {
-	await confirmDestructive();
 	console.log('\nStarting dev seed...\n');
 
-	await truncateAll();
+	deleteAll();
 
-	const roles = await seedRoles();
+	const roles = seedRoles();
 	const adminUser = await seedAdminUser();
-	const users = await seedUsers(20);
-	await seedUserRoles(users, adminUser, roles);
+	const users = seedUsers(20);
+	seedUserRoles(users, adminUser, roles);
 	const allUsers = [adminUser, ...users];
-	const reservations = await seedReservations(allUsers);
-	const closures = await seedClosures();
-	const events = await seedEvents(allUsers);
-	const bands = await seedBands(allUsers);
-	const series = await seedRecurringSeries(allUsers);
-	const payments = await seedPaymentRecords(allUsers, reservations);
-	const tickets = await seedTickets(allUsers, events);
-	const notifications = await seedNotifications(allUsers);
-	const preferences = await seedNotificationPreferences(allUsers);
-	await seedProductConfig();
-	await seedCreditTransactions(allUsers);
-	const marketing = await seedMarketing(allUsers);
-	const eq = await seedEquipment(allUsers);
+	const reservations = seedReservations(allUsers);
+	seedClosures();
+	const events = seedEvents(allUsers);
+	const bands = seedBands(allUsers);
+	const series = seedRecurringSeries(allUsers);
+	const payments = seedPaymentRecords(allUsers, reservations);
+	const tickets = seedTickets(allUsers, events);
+	const notifications = seedNotifications(allUsers);
+	const preferences = seedNotificationPreferences(allUsers);
+	seedProductConfig();
+	seedCreditTransactions(allUsers);
+	const marketing = seedMarketing(allUsers);
+	const eq = seedEquipment(allUsers);
+
+	sqlite.pragma('foreign_keys = ON');
 
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
-	console.log(`  ${closures.length} closures`);
 	console.log(`  ${events.length} events`);
 	console.log(`  ${bands.length} bands`);
 	console.log(`  ${series.length} recurring series`);
@@ -1538,11 +1040,11 @@ async function main() {
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
 	console.log('  3 product configs');
-	console.log('  credit transactions for 12 users');
-	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.memberships} memberships, ${marketing.campaigns} campaigns`);
+	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.campaigns} campaigns`);
 	console.log(`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`);
 
-	await client.end();
+	sqlite.pragma('wal_checkpoint(TRUNCATE)');
+	sqlite.close();
 }
 
 main().catch((err) => {
