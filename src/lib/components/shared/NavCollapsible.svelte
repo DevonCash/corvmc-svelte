@@ -20,7 +20,7 @@
 </script>
 
 <li>
-	<a {href} class="menu-dropdown-toggle" class:menu-dropdown-show={isOpen}>
+	<a {href}>
 		{@render icon?.()}
 		{label}
 	</a>
