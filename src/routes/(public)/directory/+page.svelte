@@ -90,16 +90,18 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
 					{#each bands as b, i (b.id)}
 						<a href="/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
-							<div class="vinyl-card__disc">
-								<div class="vinyl-card__label">{b.name}</div>
-							</div>
-							<div class="vinyl-card__sleeve">
-								<div class="vinyl-card__sleeve-art">
-									{#if b.avatarUrl}
-										<img src={b.avatarUrl} alt={b.name} class="w-full h-full object-cover" />
-									{:else}
-										{initials(b.name)}
-									{/if}
+							<div class="vinyl-card__sleeve-wrap">
+								<div class="vinyl-card__disc">
+									<div class="vinyl-card__label">{b.name}</div>
+								</div>
+								<div class="vinyl-card__sleeve">
+									<div class="vinyl-card__sleeve-art">
+										{#if b.avatarUrl}
+											<img src={b.avatarUrl} alt={b.name} class="w-full h-full object-cover" />
+										{:else}
+											{initials(b.name)}
+										{/if}
+									</div>
 								</div>
 							</div>
 							<div class="vinyl-card__caption">

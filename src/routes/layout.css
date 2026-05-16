@@ -527,6 +527,9 @@ p {
   overflow: hidden;
   transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
 }
+.vinyl-card__sleeve-wrap {
+  position: relative;
+}
 .vinyl-card:hover .vinyl-card__sleeve {
   transform: translateX(-8%);
 }
