@@ -457,17 +457,16 @@ p {
   width: 100%;
   cursor: pointer;
   --vinyl-label: var(--cmc-orange);
-  overflow: hidden;
 }
-.vinyl-card:hover { z-index: 2; overflow: visible; }
+.vinyl-card:hover { z-index: 2; }
 
 .vinyl-card__disc {
   position: absolute;
-  left: 10%;
+  left: 50%;
   top: 50%;
   width: 80%;
   aspect-ratio: 1;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background:
     radial-gradient(circle, #1a1a1a 0 1.5%, transparent 1.6%),
@@ -483,7 +482,7 @@ p {
   z-index: 1;
 }
 .vinyl-card:hover .vinyl-card__disc {
-  transform: translate(52%, -50%) rotate(60deg);
+  transform: translate(10%, -50%) rotate(60deg);
 }
 
 .vinyl-card__label {
