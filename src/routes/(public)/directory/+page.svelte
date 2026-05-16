@@ -48,7 +48,6 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
 					{#each members as member (member.id)}
 						<a href="/directory/members/{member.id}" class="id-card">
-							<div class="id-card__hole"></div>
 							<div class="id-card__header">
 								<div class="id-card__brand">Corvallis Music Collective</div>
 								<div class="id-card__tag">MEMBER</div>
