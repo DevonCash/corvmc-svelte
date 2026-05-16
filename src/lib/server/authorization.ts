@@ -64,3 +64,38 @@ export async function getUserRoles(userId: string): Promise<string[]> {
 
 	return rows.map((r) => r.name);
 }
+
+/**
+ * Assign a role to a user. No-op if already assigned.
+ */
+export async function assignRole(userId: string, roleName: string): Promise<void> {
+	const [found] = await db
+		.select({ id: role.id })
+		.from(role)
+		.where(eq(role.name, roleName))
+		.limit(1);
+
+	if (!found) return;
+
+	await db
+		.insert(modelHasRole)
+		.values({ roleId: found.id, userId })
+		.onConflictDoNothing();
+}
+
+/**
+ * Remove a role from a user. No-op if not assigned.
+ */
+export async function removeRole(userId: string, roleName: string): Promise<void> {
+	const [found] = await db
+		.select({ id: role.id })
+		.from(role)
+		.where(eq(role.name, roleName))
+		.limit(1);
+
+	if (!found) return;
+
+	await db
+		.delete(modelHasRole)
+		.where(and(eq(modelHasRole.roleId, found.id), eq(modelHasRole.userId, userId)));
+}
