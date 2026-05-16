@@ -49,7 +49,10 @@
 					{#each members as member (member.id)}
 						<a href="/directory/members/{member.id}" class="id-card">
 							<div class="id-card__header">
-								<div class="id-card__brand">Corvallis Music Collective</div>
+								<div class="id-card__brand">
+									<img src={speakerLogo} alt="" class="id-card__logo" />
+									Corvallis Music Collective
+								</div>
 								<div class="id-card__tag">MEMBER</div>
 							</div>
 							<div class="id-card__body">

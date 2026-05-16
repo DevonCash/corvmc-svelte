@@ -608,7 +608,7 @@ p {
   transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1), box-shadow 220ms ease;
   cursor: pointer;
   padding: 0;
-  container-type: inline-size;
+  container-type: size;
 }
 .id-card:hover {
   transform: rotate(0deg) translateY(-3px);
@@ -632,12 +632,21 @@ p {
   position: relative;
 }
 .id-card__brand {
+  display: flex;
+  align-items: center;
+  gap: 1.5cqi;
   font-weight: 700;
   font-size: 3.3cqi;
   letter-spacing: 0.02em;
-  color: var(--cmc-orange);
+  color: var(--cmc-teal);
   line-height: 1.1;
-  max-width: 60%;
+  max-width: 65%;
+}
+.id-card__logo {
+  width: 5.5cqi;
+  height: 5.5cqi;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .id-card__tag {
   font-weight: 700;
@@ -655,8 +664,8 @@ p {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -1cqi;
-  height: 1cqi;
+  bottom: -1.5cqb;
+  height: 1.5cqb;
   background: linear-gradient(
     to bottom,
     var(--cmc-teal) 0 33.333%,
