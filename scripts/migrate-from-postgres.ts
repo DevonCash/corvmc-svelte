@@ -33,7 +33,7 @@ import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
-import { creditTransaction } from '../src/lib/server/db/schema/finance';
+import { paymentCache, creditTransaction } from '../src/lib/server/db/schema/finance';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import {
@@ -826,6 +826,46 @@ async function migrateInvitations() {
 	console.log(`  ✓ Migrated ${invitations.length} invitations`);
 }
 
+async function migratePayments() {
+	console.log('── Payments ──');
+	const charges = await pg`SELECT * FROM charges ORDER BY id`;
+	console.log(`  Source: ${charges.length} charges`);
+
+	if (!COMMIT) return;
+
+	const fallbackUserId = lookupId('users', 162)!;
+	let migrated = 0;
+
+	for (const c of charges) {
+		const userId = lookupId('users', c.user_id) ?? fallbackUserId;
+		let reservationId: string | null = null;
+		if (c.chargeable_type === 'rehearsal_reservation' && c.chargeable_id) {
+			reservationId = lookupId('reservations', c.chargeable_id);
+		}
+
+		try {
+			await db.insert(paymentCache).values({
+				id: mapId('charges', c.id),
+				userId,
+				reservationId,
+				stripeCustomerId: null,
+				amountCents: Number(c.amount),
+				currency: 'usd',
+				paymentMethod: c.payment_method ?? 'unknown',
+				status: c.status === 'paid' ? 'completed' : (c.status ?? 'pending'),
+				paidAt: ts(c.paid_at ?? c.created_at)!,
+				refundedAt: null,
+				createdAt: ts(c.created_at)!
+			}).onConflictDoNothing();
+			migrated++;
+		} catch (err) {
+			console.warn(`  ⚠ Skipped charge ${c.id}: ${(err as Error).message}`);
+		}
+	}
+
+	console.log(`  ✓ Migrated ${migrated} payments`);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -842,6 +882,7 @@ async function main() {
 	await migrateEvents();
 	await migrateTickets();
 	await migrateCreditTransactions();
+	await migratePayments();
 	await migrateEquipment();
 	await migrateNotifications();
 	await migrateInvitations();
