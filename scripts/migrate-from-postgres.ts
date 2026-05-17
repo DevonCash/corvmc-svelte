@@ -278,8 +278,8 @@ async function migrateRoles() {
 	const roles = await pg`SELECT * FROM roles ORDER BY id`;
 	const permissions = await pg`SELECT * FROM permissions ORDER BY id`;
 	const rolePerms = await pg`SELECT * FROM role_has_permissions`;
-	const modelRoles = await pg`SELECT * FROM model_has_roles WHERE model_type = 'App\\Models\\User'`;
-	const modelPerms = await pg`SELECT * FROM model_has_permissions WHERE model_type = 'App\\Models\\User'`;
+	const modelRoles = await pg`SELECT * FROM model_has_roles`;
+	const modelPerms = await pg`SELECT * FROM model_has_permissions`;
 
 	console.log(`  Source: ${roles.length} roles, ${permissions.length} permissions, ${modelRoles.length} user-role assignments`);
 
