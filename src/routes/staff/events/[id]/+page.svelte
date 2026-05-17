@@ -6,7 +6,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { publishEvent, cancelEvent, updateEvent, checkRebook, checkConflicts } from './data.remote';
+	import { publishEvent, unpublishEvent, cancelEvent, compTickets, updateEvent, checkRebook, checkConflicts } from './data.remote';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -175,6 +175,11 @@
 		return new Date(`${date}T${time}:00`).toISOString();
 	}
 
+	// Comp ticket state
+	let compName = $state('');
+	let compEmail = $state('');
+	let compQuantity = $state(1);
+
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
 		return tags.split(',').map((t) => t.trim()).filter(Boolean);
@@ -197,6 +202,17 @@
 					label="Publish"
 					successToast="Published"
 					class="btn-success btn-sm"
+					onsuccess={() => invalidateAll()}
+				/>
+			{/if}
+
+			{#if evt.status === 'published'}
+				<Action
+					action={() => unpublishEvent({ eventId: evt.id })}
+					label="Unpublish"
+					confirm="Revert this event to draft? It will no longer be visible to the public."
+					successToast="Reverted to draft"
+					class="btn-warning btn-outline btn-sm"
 					onsuccess={() => invalidateAll()}
 				/>
 			{/if}
@@ -421,6 +437,48 @@
 					<a href="/events/{evt.id}/tickets" class="link link-primary text-sm" target="_blank">
 						View purchase page →
 					</a>
+				</div>
+			{/if}
+
+			{#if evt.status !== 'cancelled'}
+				<div class="mt-4 pt-4 border-t border-base-200">
+					<Action
+						action={() => {
+							const result = compTickets({
+								eventId: evt.id,
+								attendeeName: compName,
+								attendeeEmail: compEmail,
+								quantity: compQuantity
+							});
+							compName = '';
+							compEmail = '';
+							compQuantity = 1;
+							return result;
+						}}
+						label="Comp Tickets"
+						modalTitle="Comp Tickets"
+						successToast="Comp tickets issued"
+						class="btn-sm btn-primary btn-outline"
+						canSubmit={!!compName && !!compEmail && compQuantity >= 1}
+						onsuccess={() => invalidateAll()}
+					>
+						{#snippet form({ close })}
+							<div class="space-y-3">
+								<label class="form-control w-full">
+									<div class="label"><span class="label-text">Attendee name</span></div>
+									<input type="text" class="input input-bordered w-full" bind:value={compName} />
+								</label>
+								<label class="form-control w-full">
+									<div class="label"><span class="label-text">Email</span></div>
+									<input type="email" class="input input-bordered w-full" bind:value={compEmail} />
+								</label>
+								<label class="form-control w-full">
+									<div class="label"><span class="label-text">Quantity</span></div>
+									<input type="number" class="input input-bordered w-full" bind:value={compQuantity} min="1" max="50" />
+								</label>
+							</div>
+						{/snippet}
+					</Action>
 				</div>
 			{/if}
 		</InfoCard>

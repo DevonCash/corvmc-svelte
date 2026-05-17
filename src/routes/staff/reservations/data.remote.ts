@@ -7,7 +7,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { eq, like, or } from 'drizzle-orm';
 import { requireStaff } from '$lib/server/authorization';
 import { getAvailableSlots, getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
-import { staffCreate } from '$lib/server/reservation/reservation-service';
+import { staffCreate, confirm } from '$lib/server/reservation/reservation-service';
 import { markComplete, markNoShow, recordCashAndComplete } from '$lib/server/reservation/reservation-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -134,6 +134,24 @@ export const resolveComplete = command(
 export const resolveNoShow = command(resolveSchema, async (data) => {
 	await requireStaff();
 	await markNoShow(data.reservationId);
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Forms — inline table actions
+// ---------------------------------------------------------------------------
+
+const idSchema = z.object({ reservationId: z.string().min(1) });
+
+export const confirmReservation = command(idSchema, async (data) => {
+	await requireStaff();
+	await confirm(data.reservationId);
+	return { success: true };
+});
+
+export const completeReservation = command(idSchema, async (data) => {
+	await requireStaff();
+	await markComplete(data.reservationId);
 	return { success: true };
 });
 

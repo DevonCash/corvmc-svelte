@@ -111,6 +111,28 @@ export async function cancelPurchase(purchaseId: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Cancel individual ticket
+// ---------------------------------------------------------------------------
+
+export async function cancelTicket(ticketId: string): Promise<void> {
+	const [row] = await db
+		.select({ status: ticket.status })
+		.from(ticket)
+		.where(eq(ticket.id, ticketId))
+		.limit(1);
+
+	if (!row) throw new Error('Ticket not found');
+	if (row.status !== 'pending' && row.status !== 'valid') {
+		throw new Error(`Cannot cancel ticket with status "${row.status}"`);
+	}
+
+	await db
+		.update(ticket)
+		.set({ status: 'cancelled', updatedAt: new Date() })
+		.where(eq(ticket.id, ticketId));
+}
+
+// ---------------------------------------------------------------------------
 // Check in
 // ---------------------------------------------------------------------------
 

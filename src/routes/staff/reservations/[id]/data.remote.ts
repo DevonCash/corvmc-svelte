@@ -12,7 +12,7 @@ import {
 	markNoShow,
 	recordCashAndComplete
 } from '$lib/server/reservation/reservation-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { recordCashPayment, refund } from '$lib/server/finance/payment-service';
 import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
 
 const idSchema = z.object({ reservationId: z.string().min(1) });
@@ -40,6 +40,27 @@ export const cancelReservation = command(
 	async (data) => {
 		const staff = await requireStaff();
 		await cancel(data.reservationId, staff.id, data.reason, { staffOverride: true });
+		return { success: true };
+	}
+);
+
+export const compReservation = command(idSchema, async (data) => {
+	await requireStaff();
+	await confirm(data.reservationId);
+	return { success: true };
+});
+
+export const refundReservation = command(
+	idSchema.extend({
+		userId: z.string().min(1),
+		stripePaymentRecordId: z.string().min(1)
+	}),
+	async (data) => {
+		await requireStaff();
+		await refund({
+			userId: data.userId,
+			stripePaymentRecordId: data.stripePaymentRecordId
+		});
 		return { success: true };
 	}
 );

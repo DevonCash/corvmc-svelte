@@ -329,6 +329,29 @@ export async function publish(eventId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// unpublish()
+// ---------------------------------------------------------------------------
+
+export async function unpublish(eventId: string): Promise<void> {
+	const existing = await getById(eventId);
+	if (!existing) throw new Error('Event not found');
+	if (existing.status !== 'published') {
+		throw new Error(`Cannot unpublish an event with status "${existing.status}"`);
+	}
+
+	const { getTicketsSold } = await import('$lib/server/ticket/ticket-service');
+	const sold = await getTicketsSold(eventId);
+	if (sold > 0) {
+		throw new Error(`Cannot unpublish: ${sold} ticket(s) have been sold`);
+	}
+
+	await db
+		.update(event)
+		.set({ status: 'draft', publishedAt: null, updatedAt: new Date() })
+		.where(and(eq(event.id, eventId), eq(event.status, 'published')));
+}
+
+// ---------------------------------------------------------------------------
 // cancel()
 // ---------------------------------------------------------------------------
 

@@ -9,8 +9,13 @@
 		removeBandMember,
 		transferBandOwnership,
 		deactivateBand,
-		reactivateBand
+		reactivateBand,
+		searchUsers,
+		inviteMember,
+		updateMemberRole,
+		revokeInvite
 	} from './data.remote';
+	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -30,6 +35,32 @@
 	let reservations = $derived(await getBandReservations(id));
 
 	let isDeactivated = $derived(!!band.deletedAt);
+
+	// Invite state
+	let inviteQuery = $state('');
+	let inviteRole = $state<'admin' | 'member'>('member');
+	let invitePosition = $state('');
+	let inviteUserId = $state('');
+	let inviteUserName = $state('');
+	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
+	let searching = $state(false);
+
+	async function handleSearch() {
+		if (inviteQuery.length < 2) { searchResults = []; return; }
+		searching = true;
+		try {
+			searchResults = await searchUsers(inviteQuery);
+		} finally {
+			searching = false;
+		}
+	}
+
+	function selectUser(u: { id: string; name: string }) {
+		inviteUserId = u.id;
+		inviteUserName = u.name;
+		searchResults = [];
+		inviteQuery = '';
+	}
 </script>
 
 	<Form remote={updateBand} successToast="Band updated">
@@ -100,15 +131,90 @@
 
 	<PageContent width="3xl">
 	<InfoCard title="Members">
+		{#snippet header(title)}
+			<header class="flex justify-between items-center">
+				<span class="card-title">{title}</span>
+				<Action
+					action={() => {
+						const result = inviteMember({ userId: inviteUserId, role: inviteRole, position: invitePosition || undefined });
+						inviteUserId = '';
+						inviteUserName = '';
+						inviteRole = 'member';
+						invitePosition = '';
+						return result;
+					}}
+					label="Add Member"
+					modalTitle="Invite Member"
+					successToast="Invitation sent"
+					class="btn-sm btn-primary"
+					canSubmit={!!inviteUserId}
+					onsuccess={() => invalidateAll()}
+				>
+					{#snippet form({ close })}
+						<div class="space-y-3">
+							{#if inviteUserId}
+								<div class="flex items-center justify-between bg-base-200 rounded p-2">
+									<span class="font-medium">{inviteUserName}</span>
+									<button type="button" class="btn btn-ghost btn-xs" onclick={() => { inviteUserId = ''; inviteUserName = ''; }}>Change</button>
+								</div>
+							{:else}
+								<label class="form-control w-full">
+									<div class="label"><span class="label-text">Search members</span></div>
+									<input
+										type="text"
+										class="input input-bordered w-full"
+										bind:value={inviteQuery}
+										oninput={handleSearch}
+										placeholder="Name or email..."
+									/>
+								</label>
+								{#if searchResults.length > 0}
+									<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
+										{#each searchResults as u}
+											<button type="button" class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm" onclick={() => selectUser(u)}>
+												<span class="font-medium">{u.name}</span>
+												<span class="opacity-60 ml-1">{u.email}</span>
+											</button>
+										{/each}
+									</div>
+								{/if}
+							{/if}
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Role</span></div>
+								<select class="select select-bordered w-full" bind:value={inviteRole}>
+									<option value="member">Member</option>
+									<option value="admin">Admin</option>
+								</select>
+							</label>
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Position (optional)</span></div>
+								<input type="text" class="input input-bordered w-full" bind:value={invitePosition} placeholder="e.g. Guitarist" />
+							</label>
+						</div>
+					{/snippet}
+				</Action>
+			</header>
+		{/snippet}
 		<DataTable data={members} empty="No members">
 			<Column key="userName" header="Member" stopClick>
 				{#snippet cell(_, m)}
 					<MemberLink name={m.userName} email={m.userEmail} pronouns={m.userPronouns} role={m.userRole} userId={m.userId} />
 				{/snippet}
 			</Column>
-			<Column key="role" header="Role" shrink>
+			<Column key="role" header="Role" shrink stopClick>
 				{#snippet cell(_, m)}
-					<span class="badge badge-outline badge-sm">{m.role}</span>
+					{#if m.role !== 'owner' && m.status === 'active'}
+						<select
+							class="select select-bordered select-xs"
+							value={m.role}
+							onchange={(e) => updateMemberRole({ memberId: m.id, role: e.currentTarget.value as 'admin' | 'member' })}
+						>
+							<option value="member">Member</option>
+							<option value="admin">Admin</option>
+						</select>
+					{:else}
+						<span class="badge badge-outline badge-sm">{m.role}</span>
+					{/if}
 				{/snippet}
 			</Column>
 			<Column key="position" header="Position">
@@ -126,7 +232,17 @@
 				{#snippet cell(_, m)}
 					{#if m.role !== 'owner'}
 						<div class="flex gap-1 justify-end">
-							{#if m.status === 'active' && m.role !== 'owner'}
+							{#if m.status === 'pending'}
+								<Action
+									action={() => revokeInvite({ memberId: m.id })}
+									label="Revoke"
+									confirm={`Revoke invitation for ${m.userName}?`}
+									successToast="Invitation revoked"
+									class="btn-ghost btn-xs text-warning"
+									onsuccess={() => invalidateAll()}
+								/>
+							{/if}
+							{#if m.status === 'active'}
 								<Action
 									action={() => transferBandOwnership({ newOwnerId: m.userId })}
 									label="Make owner"

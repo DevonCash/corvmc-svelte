@@ -4,7 +4,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { checkInTicket } from './data.remote';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { checkInTicket, cancelTicket } from './data.remote';
 	import type { StaffCheckInResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffCheckInResponse } = $props();
@@ -75,6 +76,8 @@
 					<div class="flex items-center gap-3">
 						{#if ticket.status === 'checked_in'}
 							<StatusBadge status="checked_in" />
+						{:else if ticket.status === 'cancelled'}
+							<StatusBadge status="cancelled" />
 						{:else}
 							<button
 								class="btn btn-primary btn-sm"
@@ -86,6 +89,14 @@
 								{/if}
 								Check In
 							</button>
+							<Action
+								action={() => cancelTicket({ ticketId: ticket.id })}
+								label="Cancel"
+								confirm={`Cancel ticket for ${ticket.attendeeName}?`}
+								successToast="Ticket cancelled"
+								class="btn-ghost btn-sm text-error"
+								onsuccess={() => invalidateAll()}
+							/>
 						{/if}
 					</div>
 				</div>

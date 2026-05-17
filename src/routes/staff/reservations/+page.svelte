@@ -136,7 +136,7 @@
 				</td>
 				<td class="w-px" onclick={(e) => e.stopPropagation()}>
 					<div class="flex items-center gap-1">
-						{#if visibleActions(r.status, r.startsAt, r.endsAt).has('confirm')}
+						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
 							<Action
 								action={() => confirmReservation({ reservationId: r.id })}
 								label="Confirm"
@@ -147,7 +147,7 @@
 								{#snippet icon()}<IconCheck size={16} />{/snippet}
 							</Action>
 						{/if}
-						{#if visibleActions(r.status, r.startsAt, r.endsAt).has('complete')}
+						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
 							<Action
 								action={() => completeReservation({ reservationId: r.id })}
 								label="Complete"

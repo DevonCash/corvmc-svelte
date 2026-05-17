@@ -9,15 +9,34 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { createClosure, deleteClosure } from './data.remote';
+	import { createClosure, updateClosure, deleteClosure } from './data.remote';
 	import type { StaffClosuresResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffClosuresResponse } = $props();
 
 	const closures = $derived(data.closures);
 
+	let editId = $state<string | null>(null);
+	let editReason = $state('');
+	let editStartsAt = $state('');
+	let editEndsAt = $state('');
+
 	function isFuture(iso: string): boolean {
 		return new Date(iso) > new Date();
+	}
+
+	function toLocalDatetime(iso: string): string {
+		const d = new Date(iso);
+		const offset = d.getTimezoneOffset();
+		const local = new Date(d.getTime() - offset * 60000);
+		return local.toISOString().slice(0, 16);
+	}
+
+	function startEdit(c: { id: string; reason: string; startsAt: string; endsAt: string }) {
+		editId = c.id;
+		editReason = c.reason;
+		editStartsAt = toLocalDatetime(c.startsAt);
+		editEndsAt = toLocalDatetime(c.endsAt);
 	}
 </script>
 
@@ -43,22 +62,56 @@
 		<div class="space-y-3">
 			{#each closures as c}
 				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body flex-row items-center justify-between py-4">
-						<div>
-							<p class="font-medium">{c.reason}</p>
-							<p class="text-sm opacity-60">
-								{formatDateTime(c.startsAt)} — {formatDateTime(c.endsAt)}
-							</p>
-						</div>
-						{#if isFuture(c.startsAt)}
-							<Action
-								action={() => deleteClosure({ closureId: c.id })}
-								label="Delete"
-								confirm="Delete this closure?"
-								successToast="Closure deleted"
-								onsuccess={() => invalidateAll()}
-								class="btn-ghost btn-sm text-error"
-							/>
+					<div class="card-body py-4">
+						{#if editId === c.id}
+							<div class="space-y-3">
+								<input type="text" bind:value={editReason} class="input input-bordered w-full input-sm" />
+								<div class="grid grid-cols-2 gap-4">
+									<input type="datetime-local" bind:value={editStartsAt} class="input input-bordered input-sm" />
+									<input type="datetime-local" bind:value={editEndsAt} class="input input-bordered input-sm" />
+								</div>
+								<div class="flex justify-end gap-2">
+									<button class="btn btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</button>
+									<Action
+										action={() => {
+											const result = updateClosure({
+												closureId: c.id,
+												reason: editReason,
+												startsAt: editStartsAt,
+												endsAt: editEndsAt
+											});
+											editId = null;
+											return result;
+										}}
+										label="Save"
+										successToast="Closure updated"
+										class="btn-primary btn-sm"
+										onsuccess={() => invalidateAll()}
+									/>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="font-medium">{c.reason}</p>
+									<p class="text-sm opacity-60">
+										{formatDateTime(c.startsAt)} — {formatDateTime(c.endsAt)}
+									</p>
+								</div>
+								{#if isFuture(c.startsAt)}
+									<div class="flex gap-1">
+										<button class="btn btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</button>
+										<Action
+											action={() => deleteClosure({ closureId: c.id })}
+											label="Delete"
+											confirm="Delete this closure?"
+											successToast="Closure deleted"
+											onsuccess={() => invalidateAll()}
+											class="btn-ghost btn-sm text-error"
+										/>
+									</div>
+								{/if}
+							</div>
 						{/if}
 					</div>
 				</div>

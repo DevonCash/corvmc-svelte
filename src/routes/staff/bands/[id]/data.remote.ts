@@ -13,7 +13,11 @@ import {
 	removeMember,
 	transferOwnership,
 	deactivate,
-	reactivate
+	reactivate,
+	invite,
+	updateMember,
+	revokeInvitation,
+	searchMembers
 } from '$lib/server/band/band-service';
 
 // ---------------------------------------------------------------------------
@@ -111,6 +115,60 @@ export const reactivateBand = command(z.object({}), async () => {
 	await requireStaff();
 	const { params } = getRequestEvent();
 	await reactivate(params.id!);
+	void getBand(params.id!).refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Member management
+// ---------------------------------------------------------------------------
+
+export const searchUsers = query(z.string(), async (q) => {
+	await requireStaff();
+	if (!q || q.length < 2) return [];
+	const { params } = getRequestEvent();
+	return searchMembers(q, params.id!);
+});
+
+export const inviteMember = command(
+	z.object({
+		userId: z.string().min(1),
+		role: z.enum(['admin', 'member']),
+		position: z.string().optional()
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+		const { params } = getRequestEvent();
+		await invite(params.id!, data.userId, data.role, data.position ?? null, staff.id);
+		void getBandMembers(params.id!).refresh();
+		void getBand(params.id!).refresh();
+		return { success: true };
+	}
+);
+
+export const updateMemberRole = command(
+	z.object({
+		memberId: z.string().min(1),
+		role: z.enum(['admin', 'member']),
+		position: z.string().optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		await updateMember(data.memberId, {
+			role: data.role,
+			position: data.position ?? undefined
+		});
+		const { params } = getRequestEvent();
+		void getBandMembers(params.id!).refresh();
+		return { success: true };
+	}
+);
+
+export const revokeInvite = command(memberIdSchema, async (data) => {
+	await requireStaff();
+	await revokeInvitation(data.memberId);
+	const { params } = getRequestEvent();
+	void getBandMembers(params.id!).refresh();
 	void getBand(params.id!).refresh();
 	return { success: true };
 });

@@ -45,7 +45,7 @@
 		</a>
 	</div>
 
-	<DataTable data={data.series} empty="No recurring series found">
+	<DataTable data={data.series} rowHref={(s) => `/staff/recurring/${s.id}`} empty="No recurring series found">
 		<Column key="userName" header="Member" stopClick>
 			{#snippet cell(_, s)}
 				<MemberLink name={s.userName} pronouns={s.userPronouns} role={s.userRole} userId={undefined} />

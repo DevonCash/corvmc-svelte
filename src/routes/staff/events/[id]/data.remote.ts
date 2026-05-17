@@ -3,10 +3,12 @@ import { command, query } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	publish,
+	unpublish,
 	cancel,
 	update,
 	checkRebookNeeded
 } from '$lib/server/event/event-service';
+import { createTickets, getTicketsRemaining } from '$lib/server/ticket/ticket-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 
@@ -78,11 +80,45 @@ export const publishEvent = command(
 	}
 );
 
+export const unpublishEvent = command(
+	z.object({ eventId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+		await unpublish(data.eventId);
+		return { success: true };
+	}
+);
+
 export const cancelEvent = command(
 	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
 		const staff = await requireStaff();
 		await cancel(data.eventId, staff.id);
+		return { success: true };
+	}
+);
+
+export const compTickets = command(
+	z.object({
+		eventId: z.string().min(1),
+		attendeeName: z.string().min(1).max(255),
+		attendeeEmail: z.string().email(),
+		quantity: z.number().int().min(1).max(50)
+	}),
+	async (data) => {
+		await requireStaff();
+		const remaining = await getTicketsRemaining(data.eventId);
+		if (remaining !== null && data.quantity > remaining) {
+			throw new Error(`Only ${remaining} ticket(s) remaining`);
+		}
+		await createTickets({
+			eventId: data.eventId,
+			purchaseId: `comp-${crypto.randomUUID()}`,
+			quantity: data.quantity,
+			attendeeName: data.attendeeName,
+			attendeeEmail: data.attendeeEmail,
+			status: 'valid'
+		});
 		return { success: true };
 	}
 );
