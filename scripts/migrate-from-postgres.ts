@@ -33,7 +33,7 @@ import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
-import { paymentCache, creditTransaction } from '../src/lib/server/db/schema/finance';
+import { creditTransaction } from '../src/lib/server/db/schema/finance';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import {
@@ -826,44 +826,33 @@ async function migrateInvitations() {
 	console.log(`  ✓ Migrated ${invitations.length} invitations`);
 }
 
-async function migratePayments() {
-	console.log('── Payments ──');
-	const charges = await pg`SELECT * FROM charges ORDER BY id`;
-	console.log(`  Source: ${charges.length} charges`);
+async function exportCashPayments() {
+	console.log('── Cash Payments (export only) ──');
+	const charges = await pg`
+		SELECT c.*, u.name as user_name, u.email as user_email, u.stripe_id
+		FROM charges c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.payment_method IN ('cash', 'venmo', 'card', 'manual')
+		AND c.status = 'paid'
+		ORDER BY c.paid_at
+	`;
+	console.log(`  Source: ${charges.length} paid cash/venmo/card/manual charges`);
 
-	if (!COMMIT) return;
+	const records = charges.map((c) => ({
+		stripeCustomerId: c.stripe_id ?? null,
+		userName: c.user_name,
+		userEmail: c.user_email,
+		amountCents: Number(c.amount),
+		paymentMethod: c.payment_method,
+		paidAt: ts(c.paid_at)!,
+		notes: c.notes,
+		reservationId: c.chargeable_id ? lookupId('reservations', c.chargeable_id) : null,
+		legacyChargeId: c.id
+	}));
 
-	const fallbackUserId = lookupId('users', 162)!;
-	let migrated = 0;
-
-	for (const c of charges) {
-		const userId = lookupId('users', c.user_id) ?? fallbackUserId;
-		let reservationId: string | null = null;
-		if (c.chargeable_type === 'rehearsal_reservation' && c.chargeable_id) {
-			reservationId = lookupId('reservations', c.chargeable_id);
-		}
-
-		try {
-			await db.insert(paymentCache).values({
-				id: mapId('charges', c.id),
-				userId,
-				reservationId,
-				stripeCustomerId: null,
-				amountCents: Number(c.amount),
-				currency: 'usd',
-				paymentMethod: c.payment_method ?? 'unknown',
-				status: c.status === 'paid' ? 'completed' : (c.status ?? 'pending'),
-				paidAt: ts(c.paid_at ?? c.created_at)!,
-				refundedAt: null,
-				createdAt: ts(c.created_at)!
-			}).onConflictDoNothing();
-			migrated++;
-		} catch (err) {
-			console.warn(`  ⚠ Skipped charge ${c.id}: ${(err as Error).message}`);
-		}
-	}
-
-	console.log(`  ✓ Migrated ${migrated} payments`);
+	const outPath = resolve(import.meta.dirname!, 'cash-payments.json');
+	writeFileSync(outPath, JSON.stringify(records, null, 2));
+	console.log(`  ✓ Exported ${records.length} records to ${outPath}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -882,7 +871,7 @@ async function main() {
 	await migrateEvents();
 	await migrateTickets();
 	await migrateCreditTransactions();
-	await migratePayments();
+	await exportCashPayments();
 	await migrateEquipment();
 	await migrateNotifications();
 	await migrateInvitations();
