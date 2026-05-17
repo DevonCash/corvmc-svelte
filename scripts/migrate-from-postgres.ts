@@ -838,17 +838,21 @@ async function exportCashPayments() {
 	`;
 	console.log(`  Source: ${charges.length} paid cash/venmo/card/manual charges`);
 
-	const records = charges.map((c) => ({
+	const records = charges.map((c) => {
+		const raw = Number(c.amount);
+		const amountCents = raw > 10000 ? Math.round(raw / 100) : raw;
+		return {
 		stripeCustomerId: c.stripe_id ?? null,
 		userName: c.user_name,
 		userEmail: c.user_email,
-		amountCents: Number(c.amount),
+		amountCents,
 		paymentMethod: c.payment_method,
 		paidAt: ts(c.paid_at)!,
 		notes: c.notes,
 		reservationId: c.chargeable_id ? lookupId('reservations', c.chargeable_id) : null,
 		legacyChargeId: c.id
-	}));
+	};
+	});
 
 	const outPath = resolve(import.meta.dirname!, 'cash-payments.json');
 	writeFileSync(outPath, JSON.stringify(records, null, 2));
