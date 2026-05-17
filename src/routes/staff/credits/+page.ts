@@ -1,0 +1,7 @@
+import type { PageLoad } from './$types';
+import type { StaffCreditsResponse } from '$lib/types/api';
+
+export const load: PageLoad = async ({ fetch, url }) => {
+	const res = await fetch('/api/staff/credits' + url.search);
+	return (await res.json()) as StaffCreditsResponse;
+};

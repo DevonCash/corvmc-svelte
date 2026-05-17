@@ -537,6 +537,26 @@ export interface StaffPaymentsResponse {
 	filters: { search: string; method: string; status: string; from: string; to: string };
 }
 
+export interface StaffCreditsResponse {
+	transactions: {
+		id: number;
+		userId: string;
+		userName: string | null;
+		userEmail: string;
+		creditType: string;
+		amount: number;
+		balanceAfter: number;
+		source: string;
+		sourceId: string | null;
+		description: string;
+		createdAt: string;
+	}[];
+	total: number;
+	page: number;
+	totalPages: number;
+	filters: { search: string; creditType: string; source: string; from: string; to: string };
+}
+
 export interface StaffRecurringResponse {
 	series: {
 		id: string;

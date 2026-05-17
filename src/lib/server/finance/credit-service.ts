@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, sql, gte } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc, like, or, type SQL } from 'drizzle-orm';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	isCreditType,
 	creditTypeConfig,
@@ -226,4 +227,114 @@ export async function allocateEquipmentCredits(
 	sourceId?: string
 ): Promise<number> {
 	return addCredits(userId, 'equipment_credits', amount, 'monthly_allocation', sourceId);
+}
+
+// ---------------------------------------------------------------------------
+// Transaction listing
+// ---------------------------------------------------------------------------
+
+const TZ = 'America/Los_Angeles';
+
+export interface CreditTransactionRow {
+	id: number;
+	userId: string;
+	userName: string | null;
+	userEmail: string;
+	creditType: string;
+	amount: number;
+	balanceAfter: number;
+	source: string;
+	sourceId: string | null;
+	description: string;
+	createdAt: string;
+}
+
+export interface CreditTransactionFilters {
+	search?: string;
+	creditType?: string;
+	source?: string;
+	from?: string;
+	to?: string;
+}
+
+function escapeLike(input: string): string {
+	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
+}
+
+function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
+	const conditions: SQL[] = [];
+
+	if (filters.search) {
+		const escaped = escapeLike(filters.search);
+		conditions.push(
+			or(
+				like(user.name, `%${escaped}%`),
+				like(user.email, `%${escaped}%`)
+			)!
+		);
+	}
+
+	if (filters.creditType) {
+		conditions.push(eq(creditTransaction.creditType, filters.creditType));
+	}
+
+	if (filters.source) {
+		conditions.push(eq(creditTransaction.source, filters.source));
+	}
+
+	if (filters.from) {
+		conditions.push(gte(creditTransaction.createdAt, buildDateInTz(filters.from, '00:00', TZ)));
+	}
+
+	if (filters.to) {
+		conditions.push(lte(creditTransaction.createdAt, buildDateInTz(filters.to, '23:59', TZ)));
+	}
+
+	return conditions;
+}
+
+const transactionSelect = {
+	id: creditTransaction.id,
+	userId: creditTransaction.userId,
+	userName: user.name,
+	userEmail: user.email,
+	creditType: creditTransaction.creditType,
+	amount: creditTransaction.amount,
+	balanceAfter: creditTransaction.balanceAfter,
+	source: creditTransaction.source,
+	sourceId: creditTransaction.sourceId,
+	description: creditTransaction.description,
+	createdAt: creditTransaction.createdAt
+};
+
+export async function listTransactions(
+	filters: CreditTransactionFilters = {},
+	limit = 50,
+	offset = 0
+): Promise<{ rows: CreditTransactionRow[]; total: number }> {
+	const conditions = buildTransactionFilters(filters);
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const rows = await db
+		.select(transactionSelect)
+		.from(creditTransaction)
+		.innerJoin(user, eq(user.id, creditTransaction.userId))
+		.where(where)
+		.orderBy(desc(creditTransaction.createdAt))
+		.limit(limit)
+		.offset(offset);
+
+	const [countRow] = await db
+		.select({ count: sql<number>`cast(count(*) as int)` })
+		.from(creditTransaction)
+		.innerJoin(user, eq(user.id, creditTransaction.userId))
+		.where(where);
+
+	return {
+		rows: rows.map((row) => ({
+			...row,
+			createdAt: row.createdAt.toISOString()
+		})),
+		total: countRow?.count ?? 0
+	};
 }

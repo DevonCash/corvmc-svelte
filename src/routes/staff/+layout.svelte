@@ -10,6 +10,7 @@
 		IconBan,
 		IconSettings,
 		IconCash,
+		IconCoins,
 		IconRepeat,
 		IconMusic,
 		IconMail,
@@ -96,6 +97,9 @@
 		<Nav.Group title="System">
 			<Nav.Item href="/staff/payments" label="Payments">
 				{#snippet icon()}<IconCash size={20} />{/snippet}
+			</Nav.Item>
+			<Nav.Item href="/staff/credits" label="Credits">
+				{#snippet icon()}<IconCoins size={20} />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/settings" label="Settings">
 				{#snippet icon()}<IconSettings size={20} />{/snippet}
