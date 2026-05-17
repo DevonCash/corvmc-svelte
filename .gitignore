@@ -28,6 +28,9 @@ test-results
 storybook-static
 test-results.json
 
+# Migration
+scripts/.id-map.json
+
 # Coverage
 coverage/
 
