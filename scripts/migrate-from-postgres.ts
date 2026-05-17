@@ -465,7 +465,7 @@ async function migrateReservations() {
 	for (const e of eventOrganizers) {
 		eventOrganizerMap[String(e.id)] = e.organizer_id ? String(e.organizer_id) : null;
 	}
-	const fallbackUserId = Object.values(idMap['users'] ?? {})[0] ?? null;
+	const fallbackUserId = lookupId('users', 162)!;
 
 	for (const r of reservations) {
 		const id = mapId('reservations', r.id);
@@ -476,9 +476,8 @@ async function migrateReservations() {
 			const orgId = eventOrganizerMap[String(r.reservable_id)];
 			bookerId = orgId ? lookupId('users', orgId) : fallbackUserId;
 		} else {
-			bookerId = lookupId('users', r.reservable_id);
+			bookerId = lookupId('users', r.reservable_id) ?? fallbackUserId;
 		}
-		if (!bookerId) continue;
 		const bookerType = 'user';
 
 		// Map status
@@ -539,8 +538,7 @@ async function migrateEvents() {
 
 	if (!COMMIT) return;
 
-	// Find a fallback user (first user in the map) for events with no organizer
-	const fallbackUserId = Object.values(idMap['users'] ?? {})[0] ?? null;
+	const fallbackUserId = lookupId('users', 162)!;
 
 	for (const e of events) {
 		const id = mapId('events', e.id);
