@@ -459,10 +459,25 @@ async function migrateReservations() {
 
 	if (!COMMIT) return;
 
+	// Build event→organizer lookup for event-type reservations
+	const eventOrganizers = await pg`SELECT id, organizer_id FROM events`;
+	const eventOrganizerMap: Record<string, string | null> = {};
+	for (const e of eventOrganizers) {
+		eventOrganizerMap[String(e.id)] = e.organizer_id ? String(e.organizer_id) : null;
+	}
+	const fallbackUserId = Object.values(idMap['users'] ?? {})[0] ?? null;
+
 	for (const r of reservations) {
 		const id = mapId('reservations', r.id);
 
-		const bookerId = lookupId('users', r.reservable_id);
+		let bookerId: string | null;
+		const rType = String(r.reservable_type ?? '').toLowerCase();
+		if (rType === 'event') {
+			const orgId = eventOrganizerMap[String(r.reservable_id)];
+			bookerId = orgId ? lookupId('users', orgId) : fallbackUserId;
+		} else {
+			bookerId = lookupId('users', r.reservable_id);
+		}
 		if (!bookerId) continue;
 		const bookerType = 'user';
 
