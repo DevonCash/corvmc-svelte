@@ -461,17 +461,10 @@ async function migrateReservations() {
 
 	for (const r of reservations) {
 		const id = mapId('reservations', r.id);
-		const userId = lookupId('users', r.user_id);
-		if (!userId) continue;
 
-		// Map reservable type — in Laravel it's the polymorphic owner
-		let bookerType = 'user';
-		let bookerId = userId;
-		if (r.reservable_type?.includes('Band')) {
-			bookerType = 'band';
-			const mappedBand = lookupId('band_profiles', r.reservable_id);
-			if (mappedBand) bookerId = mappedBand;
-		}
+		const bookerId = lookupId('users', r.reservable_id);
+		if (!bookerId) continue;
+		const bookerType = 'user';
 
 		// Map status
 		let status = 'scheduled';
@@ -487,7 +480,7 @@ async function migrateReservations() {
 			id,
 			bookerType,
 			bookerId,
-			createdByUserId: userId,
+			createdByUserId: bookerId,
 			status,
 			startsAt: ts(r.reserved_at)!,
 			endsAt: ts(r.reserved_until)!,
@@ -531,35 +524,48 @@ async function migrateEvents() {
 
 	if (!COMMIT) return;
 
+	// Find a fallback user (first user in the map) for events with no organizer
+	const fallbackUserId = Object.values(idMap['users'] ?? {})[0] ?? null;
+
 	for (const e of events) {
 		const id = mapId('events', e.id);
-		const createdByUserId = lookupId('users', e.organizer_id);
+		const createdByUserId = lookupId('users', e.organizer_id) ?? fallbackUserId;
 		if (!createdByUserId) continue;
+		if (!e.start_datetime) continue;
 
 		let status = 'draft';
 		if (e.status === 'approved' && e.published_at) status = 'published';
 		else if (e.status === 'approved') status = 'draft';
 		else if (e.status === 'cancelled') status = 'cancelled';
+		else if (e.status === 'scheduled' && e.published_at) status = 'published';
 
-		await db.insert(event).values({
-			id,
-			title: e.title || 'Untitled Event',
-			description: e.description,
-			startsAt: ts(e.start_time)!,
-			endsAt: ts(e.end_time ?? e.start_time)!,
-			doorsAt: ts(e.doors_time),
-			status,
-			publishedAt: ts(e.published_at),
-			reservationId: null,
-			posterKey: null,
-			tags: e.event_type,
-			ticketingEnabled: !!e.ticket_price,
-			ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
-			ticketQuantity: null,
-			createdByUserId,
-			createdAt: ts(e.created_at)!,
-			updatedAt: ts(e.updated_at)!
-		}).onConflictDoNothing();
+		let startsAt = ts(e.start_datetime)!;
+		let endsAt = ts(e.end_datetime ?? e.start_datetime)!;
+		if (endsAt < startsAt) [startsAt, endsAt] = [endsAt, startsAt];
+
+		try {
+			await db.insert(event).values({
+				id,
+				title: e.title || 'Untitled Event',
+				description: e.description,
+				startsAt,
+				endsAt,
+				doorsAt: ts(e.doors_datetime),
+				status,
+				publishedAt: ts(e.published_at),
+				reservationId: null,
+				posterKey: null,
+				tags: e.event_type,
+				ticketingEnabled: !!e.ticket_price,
+				ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
+				ticketQuantity: null,
+				createdByUserId,
+				createdAt: ts(e.created_at)!,
+				updatedAt: ts(e.updated_at)!
+			}).onConflictDoNothing();
+		} catch (err) {
+			console.warn(`  ⚠ Skipped event ${e.id} (${e.title}): ${(err as Error).message}`);
+		}
 	}
 
 	console.log(`  ✓ Migrated ${events.length} events`);
@@ -577,7 +583,12 @@ async function migrateTickets() {
 		return;
 	}
 
-	const tickets = await pg`SELECT * FROM tickets ORDER BY id`;
+	const tickets = await pg`
+		SELECT t.*, o.event_id, o.user_id, o.uuid as order_uuid
+		FROM tickets t
+		JOIN ticket_orders o ON o.id = t.ticket_order_id
+		ORDER BY t.id
+	`;
 	console.log(`  Source: ${tickets.length} tickets`);
 
 	if (!COMMIT) return;
@@ -587,20 +598,24 @@ async function migrateTickets() {
 		if (!eventId) continue;
 		const userId = t.user_id ? lookupId('users', t.user_id) : null;
 
-		await db.insert(ticket).values({
-			id: mapId('tickets', t.id),
-			eventId,
-			purchaseId: t.purchase_id ?? t.order_id ?? mapId('ticket_purchases', t.id),
-			userId,
-			attendeeName: t.attendee_name ?? t.name ?? 'Unknown',
-			attendeeEmail: t.attendee_email ?? t.email ?? '',
-			code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
-			status: t.status ?? 'confirmed',
-			checkedInAt: ts(t.checked_in_at),
-			checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
-			createdAt: ts(t.created_at)!,
-			updatedAt: ts(t.updated_at)!
-		}).onConflictDoNothing();
+		try {
+			await db.insert(ticket).values({
+				id: mapId('tickets', t.id),
+				eventId,
+				purchaseId: t.order_uuid ?? mapId('ticket_purchases', t.id),
+				userId,
+				attendeeName: t.attendee_name ?? 'Unknown',
+				attendeeEmail: t.attendee_email ?? '',
+				code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
+				status: t.status === 'valid' ? 'confirmed' : (t.status ?? 'confirmed'),
+				checkedInAt: ts(t.checked_in_at),
+				checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
+				createdAt: ts(t.created_at)!,
+				updatedAt: ts(t.updated_at)!
+			}).onConflictDoNothing();
+		} catch (err) {
+			console.warn(`  ⚠ Skipped ticket ${t.id}: ${(err as Error).message}`);
+		}
 	}
 
 	console.log(`  ✓ Migrated ${tickets.length} tickets`);
