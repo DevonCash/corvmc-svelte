@@ -22,97 +22,8 @@ export type BandFilters = {
 };
 
 // ---------------------------------------------------------------------------
-// Tag helpers — bulk-fetch junction table rows and group by parent ID
-// ---------------------------------------------------------------------------
-
-async function fetchUserInstruments(userIds: string[]) {
-	if (userIds.length === 0) return new Map<string, string[]>();
-	const rows = await db
-		.select({ userId: userInstrument.userId, instrument: userInstrument.instrument })
-		.from(userInstrument)
-		.where(inArray(userInstrument.userId, userIds));
-	const map = new Map<string, string[]>();
-	for (const r of rows) {
-		const list = map.get(r.userId) ?? [];
-		list.push(r.instrument);
-		map.set(r.userId, list);
-	}
-	return map;
-}
-
-async function fetchUserGenres(userIds: string[]) {
-	if (userIds.length === 0) return new Map<string, string[]>();
-	const rows = await db
-		.select({ userId: userGenre.userId, genre: userGenre.genre })
-		.from(userGenre)
-		.where(inArray(userGenre.userId, userIds));
-	const map = new Map<string, string[]>();
-	for (const r of rows) {
-		const list = map.get(r.userId) ?? [];
-		list.push(r.genre);
-		map.set(r.userId, list);
-	}
-	return map;
-}
-
-async function fetchUserBands(userIds: string[]) {
-	if (userIds.length === 0) return new Map<string, { name: string; slug: string }[]>();
-	const rows = await db
-		.select({
-			userId: bandMember.userId,
-			bandName: band.name,
-			bandSlug: band.slug
-		})
-		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.where(
-			and(
-				inArray(bandMember.userId, userIds),
-				eq(bandMember.status, 'active'),
-				isNull(band.deletedAt),
-				inArray(band.directoryVisibility, ['members', 'public'])
-			)
-		);
-	const map = new Map<string, { name: string; slug: string }[]>();
-	for (const r of rows) {
-		const list = map.get(r.userId) ?? [];
-		list.push({ name: r.bandName, slug: r.bandSlug });
-		map.set(r.userId, list);
-	}
-	return map;
-}
-
-async function fetchBandGenres(bandIds: string[]) {
-	if (bandIds.length === 0) return new Map<string, string[]>();
-	const rows = await db
-		.select({ bandId: bandGenre.bandId, genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(inArray(bandGenre.bandId, bandIds));
-	const map = new Map<string, string[]>();
-	for (const r of rows) {
-		const list = map.get(r.bandId) ?? [];
-		list.push(r.genre);
-		map.set(r.bandId, list);
-	}
-	return map;
-}
-
-// ---------------------------------------------------------------------------
 // Member queries
 // ---------------------------------------------------------------------------
-
-const memberSelect = {
-	id: user.id,
-	name: user.name,
-	pronouns: user.pronouns,
-	image: user.image,
-	bio: user.bio,
-	tagline: user.tagline,
-	lookingForBand: user.lookingForBand,
-	directoryContact: user.directoryContact,
-	links: user.links,
-	createdAt: user.createdAt
-} as const;
 
 function memberWhereConditions(
 	visibility: 'members' | 'public',
@@ -149,39 +60,62 @@ function memberWhereConditions(
 	return conditions;
 }
 
-async function hydrateMembers<T extends { id: string }>(rows: T[]) {
-	const ids = rows.map(r => r.id);
-	const [instrumentsMap, genresMap, bandsMap] = await Promise.all([
-		fetchUserInstruments(ids),
-		fetchUserGenres(ids),
-		fetchUserBands(ids)
-	]);
-	return rows.map(r => ({
-		...r,
-		instruments: instrumentsMap.get(r.id) ?? [],
-		genres: genresMap.get(r.id) ?? [],
-		bands: bandsMap.get(r.id) ?? []
-	}));
+function mapMemberRow(row: {
+	id: string;
+	instruments: { instrument: string }[];
+	genres: { genre: string }[];
+	[key: string]: unknown;
+}) {
+	const { instruments, genres, ...rest } = row;
+	return {
+		...rest,
+		instruments: instruments.map(r => r.instrument),
+		genres: genres.map(r => r.genre),
+	};
 }
 
 /** Members-only directory — all active, non-opted-out members */
 export async function listMembers(filters?: MemberFilters) {
-	const rows = await db
-		.select(memberSelect)
-		.from(user)
-		.where(and(...memberWhereConditions('members', filters)))
-		.orderBy(asc(user.name));
-	return hydrateMembers(rows);
+	const rows = await db.query.user.findMany({
+		where: and(...memberWhereConditions('members', filters)),
+		with: { instruments: true, genres: true },
+		orderBy: asc(user.name),
+		columns: {
+			id: true,
+			name: true,
+			pronouns: true,
+			image: true,
+			bio: true,
+			tagline: true,
+			lookingForBand: true,
+			directoryContact: true,
+			links: true,
+			createdAt: true,
+		},
+	});
+	return rows.map(mapMemberRow);
 }
 
 /** Public directory — only directoryVisibility = 'public' */
 export async function listPublicMembers(filters?: MemberFilters) {
-	const rows = await db
-		.select(memberSelect)
-		.from(user)
-		.where(and(...memberWhereConditions('public', filters)))
-		.orderBy(asc(user.name));
-	return hydrateMembers(rows);
+	const rows = await db.query.user.findMany({
+		where: and(...memberWhereConditions('public', filters)),
+		with: { instruments: true, genres: true },
+		orderBy: asc(user.name),
+		columns: {
+			id: true,
+			name: true,
+			pronouns: true,
+			image: true,
+			bio: true,
+			tagline: true,
+			lookingForBand: true,
+			directoryContact: true,
+			links: true,
+			createdAt: true,
+		},
+	});
+	return rows.map(mapMemberRow);
 }
 
 /** Single member profile */
@@ -197,41 +131,31 @@ export async function getMemberProfile(
 		conditions.push(inArray(user.directoryVisibility, ['members', 'public']));
 	}
 
-	const [row] = await db
-		.select(memberSelect)
-		.from(user)
-		.where(and(...conditions));
+	const row = await db.query.user.findFirst({
+		where: and(...conditions),
+		with: { instruments: true, genres: true },
+		columns: {
+			id: true,
+			name: true,
+			pronouns: true,
+			image: true,
+			bio: true,
+			tagline: true,
+			lookingForBand: true,
+			directoryContact: true,
+			links: true,
+			createdAt: true,
+		},
+	});
 
 	if (!row) return null;
 
-	const [instruments, genres] = await Promise.all([
-		db.select({ instrument: userInstrument.instrument }).from(userInstrument).where(eq(userInstrument.userId, userId)),
-		db.select({ genre: userGenre.genre }).from(userGenre).where(eq(userGenre.userId, userId))
-	]);
-
-	return {
-		...row,
-		instruments: instruments.map(r => r.instrument),
-		genres: genres.map(r => r.genre)
-	};
+	return mapMemberRow(row);
 }
 
 // ---------------------------------------------------------------------------
 // Band queries
 // ---------------------------------------------------------------------------
-
-const bandSelect = {
-	id: band.id,
-	name: band.name,
-	slug: band.slug,
-	bio: band.bio,
-	tagline: band.tagline,
-	avatarKey: band.avatarKey,
-	lookingForMembers: band.lookingForMembers,
-	directoryContact: band.directoryContact,
-	links: band.links,
-	memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
-} as const;
 
 function bandWhereConditions(
 	visibility: 'members' | 'public',
@@ -262,36 +186,66 @@ function bandWhereConditions(
 	return conditions;
 }
 
-async function hydrateBands<T extends { id: string }>(rows: T[]) {
-	const genresMap = await fetchBandGenres(rows.map(r => r.id));
-	return rows.map(r => ({
-		...r,
-		genres: genresMap.get(r.id) ?? []
-	}));
+function mapBandRow(row: {
+	id: string;
+	genres: { genre: string }[];
+	members: { status: string }[];
+	[key: string]: unknown;
+}) {
+	const { genres, members, ...rest } = row;
+	return {
+		...rest,
+		genres: genres.map(r => r.genre),
+		memberCount: members.filter(m => m.status === 'active').length,
+	};
 }
 
 /** Members-only band directory */
 export async function listBands(filters?: BandFilters) {
-	const rows = await db
-		.select(bandSelect)
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(...bandWhereConditions('members', filters)))
-		.groupBy(band.id)
-		.orderBy(asc(band.name));
-	return hydrateBands(rows);
+	const rows = await db.query.band.findMany({
+		where: and(...bandWhereConditions('members', filters)),
+		with: {
+			genres: true,
+			members: { columns: { status: true } },
+		},
+		orderBy: asc(band.name),
+		columns: {
+			id: true,
+			name: true,
+			slug: true,
+			bio: true,
+			tagline: true,
+			avatarKey: true,
+			lookingForMembers: true,
+			directoryContact: true,
+			links: true,
+		},
+	});
+	return rows.map(mapBandRow);
 }
 
 /** Public band directory */
 export async function listPublicBands(filters?: BandFilters) {
-	const rows = await db
-		.select(bandSelect)
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(...bandWhereConditions('public', filters)))
-		.groupBy(band.id)
-		.orderBy(asc(band.name));
-	return hydrateBands(rows);
+	const rows = await db.query.band.findMany({
+		where: and(...bandWhereConditions('public', filters)),
+		with: {
+			genres: true,
+			members: { columns: { status: true } },
+		},
+		orderBy: asc(band.name),
+		columns: {
+			id: true,
+			name: true,
+			slug: true,
+			bio: true,
+			tagline: true,
+			avatarKey: true,
+			lookingForMembers: true,
+			directoryContact: true,
+			links: true,
+		},
+	});
+	return rows.map(mapBandRow);
 }
 
 /** Single band profile by slug */
@@ -307,24 +261,28 @@ export async function getBandProfile(
 		conditions.push(inArray(band.directoryVisibility, ['members', 'public']));
 	}
 
-	const [row] = await db
-		.select(bandSelect)
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(...conditions))
-		.groupBy(band.id);
+	const row = await db.query.band.findFirst({
+		where: and(...conditions),
+		with: {
+			genres: true,
+			members: { columns: { status: true } },
+		},
+		columns: {
+			id: true,
+			name: true,
+			slug: true,
+			bio: true,
+			tagline: true,
+			avatarKey: true,
+			lookingForMembers: true,
+			directoryContact: true,
+			links: true,
+		},
+	});
 
 	if (!row) return null;
 
-	const genres = await db
-		.select({ genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(eq(bandGenre.bandId, row.id));
-
-	return {
-		...row,
-		genres: genres.map(r => r.genre)
-	};
+	return mapBandRow(row);
 }
 
 // ---------------------------------------------------------------------------

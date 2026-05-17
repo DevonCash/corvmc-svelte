@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { timestamp } from './columns';
 import { user } from './auth';
 
@@ -75,3 +75,32 @@ export const roleHasPermission = sqliteTable(
 	},
 	(t) => [primaryKey({ columns: [t.permissionId, t.roleId] })]
 );
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+export const roleRelations = relations(role, ({ many }) => ({
+	users: many(modelHasRole),
+	permissions: many(roleHasPermission),
+}));
+
+export const permissionRelations = relations(permission, ({ many }) => ({
+	users: many(modelHasPermission),
+	roles: many(roleHasPermission),
+}));
+
+export const modelHasRoleRelations = relations(modelHasRole, ({ one }) => ({
+	role: one(role, { fields: [modelHasRole.roleId], references: [role.id] }),
+	user: one(user, { fields: [modelHasRole.userId], references: [user.id] }),
+}));
+
+export const modelHasPermissionRelations = relations(modelHasPermission, ({ one }) => ({
+	permission: one(permission, { fields: [modelHasPermission.permissionId], references: [permission.id] }),
+	user: one(user, { fields: [modelHasPermission.userId], references: [user.id] }),
+}));
+
+export const roleHasPermissionRelations = relations(roleHasPermission, ({ one }) => ({
+	permission: one(permission, { fields: [roleHasPermission.permissionId], references: [permission.id] }),
+	role: one(role, { fields: [roleHasPermission.roleId], references: [role.id] }),
+}));

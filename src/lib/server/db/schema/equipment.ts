@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 import { user } from './auth';
 
@@ -78,3 +78,21 @@ export const equipmentLoan = sqliteTable(
 		check('loan_qty_positive', sql`quantity > 0`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+export const equipmentCategoryRelations = relations(equipmentCategory, ({ many }) => ({
+	equipment: many(equipment),
+}));
+
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
+	category: one(equipmentCategory, { fields: [equipment.categoryId], references: [equipmentCategory.id] }),
+	loans: many(equipmentLoan),
+}));
+
+export const equipmentLoanRelations = relations(equipmentLoan, ({ one }) => ({
+	equipment: one(equipment, { fields: [equipmentLoan.equipmentId], references: [equipment.id] }),
+	user: one(user, { fields: [equipmentLoan.userId], references: [user.id] }),
+}));

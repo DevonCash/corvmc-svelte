@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { timestamp, zodJson } from './columns';
 import { z } from 'zod';
 import { user } from './auth';
@@ -60,3 +60,16 @@ export const creditTransaction = sqliteTable(
 		index('credit_transaction_user_type_idx').on(t.userId, t.creditType)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+export const paymentCacheRelations = relations(paymentCache, ({ one }) => ({
+	user: one(user, { fields: [paymentCache.userId], references: [user.id] }),
+	reservation: one(reservation, { fields: [paymentCache.reservationId], references: [reservation.id] }),
+}));
+
+export const creditTransactionRelations = relations(creditTransaction, ({ one }) => ({
+	user: one(user, { fields: [creditTransaction.userId], references: [user.id] }),
+}));
