@@ -135,16 +135,63 @@ describe('/staff/users list load', () => {
 });
 
 // ---------------------------------------------------------------------------
-// User detail load
-// TODO: Rewrite tests for remote functions (getUser, getAllRoles from data.remote.ts)
+// User detail load (tests data.remote.ts query functions)
 // ---------------------------------------------------------------------------
-describe.skip('/staff/users/[id] detail load', () => {
-	it('returns user with roles and all available roles', () => {
-		// Previously tested +page.server.ts load function.
-		// Now uses remote query — needs new test approach.
+
+vi.mock('$app/server', () => ({
+	getRequestEvent: () => ({
+		locals: { user: { id: 'staff-1' } },
+		params: { id: 'user-1' },
+		request: { headers: new Headers() }
+	}),
+	query: (...args: unknown[]) => {
+		const handler = typeof args[0] === 'function' ? args[0] : args[1];
+		const fn = handler as Function;
+		(fn as any).__ = { type: 'query' };
+		(fn as any).refresh = () => {};
+		return fn;
+	},
+	form: (_schema: unknown, handler: Function) => {
+		(handler as any).__ = { type: 'form' };
+		(handler as any).for = () => handler;
+		return handler;
+	},
+	command: (_schema: unknown, handler: Function) => {
+		(handler as any).__ = { type: 'command' };
+		return handler;
+	}
+}));
+
+describe('/staff/users/[id] detail load', () => {
+	it('returns user with roles and all available roles', async () => {
+		const testUser = mockUser({ id: 'user-1', name: 'Alice' });
+
+		// getUser does 1 select (user row), then getUserRoles
+		queryResults = [
+			[testUser]
+		];
+
+		const { getUser, getAllRoles } = await import('./users/[id]/data.remote');
+
+		const result = await (getUser as Function)('user-1');
+		expect(result.name).toBe('Alice');
+		expect(result.roles).toEqual(['admin']); // from mocked getUserRoles
+
+		// getAllRoles does 1 select (all role rows)
+		const roles = mockStandardRoles();
+		queryResults = [roles];
+		queryIndex = 0;
+
+		const allRoles = await (getAllRoles as Function)();
+		expect(allRoles).toHaveLength(roles.length);
 	});
 
-	it('throws 404 when user not found', () => {
-		// Previously tested +page.server.ts load function.
+	it('throws 404 when user not found', async () => {
+		queryResults = [[]]; // no user row
+		queryIndex = 0;
+
+		const { getUser } = await import('./users/[id]/data.remote');
+
+		await expect((getUser as Function)('nonexistent')).rejects.toThrow();
 	});
 });
