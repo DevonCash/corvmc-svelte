@@ -4,22 +4,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies before importing the module under test
 // ---------------------------------------------------------------------------
 
-// Transaction mock: passes a tx proxy that mimics drizzle's API
-const txSelect = vi.fn();
-const txInsert = vi.fn();
+const { txSelect, txInsert } = vi.hoisted(() => ({
+	txSelect: vi.fn(),
+	txInsert: vi.fn()
+}));
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: vi.fn(),
-		insert: vi.fn(),
-		update: vi.fn(),
-		transaction: vi.fn((fn: (tx: any) => Promise<unknown>) =>
-			fn({
-				select: txSelect,
-				insert: txInsert,
-				update: vi.fn()
-			})
-		)
+		select: txSelect,
+		insert: txInsert,
+		update: vi.fn()
 	}
 }));
 
@@ -49,16 +43,6 @@ import { db } from '$lib/server/db';
 describe('ReservationService', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
-
-		// Re-setup the transaction mock after resetAllMocks
-		vi.mocked(db as any).transaction.mockImplementation(
-			(fn: (tx: any) => Promise<unknown>) =>
-				fn({
-					select: txSelect,
-					insert: txInsert,
-					update: vi.fn()
-				})
-		);
 	});
 
 	describe('create', () => {

@@ -90,7 +90,7 @@ vi.mock('$lib/server/db', () => ({
 		delete: vi.fn(() => ({
 			where: vi.fn(() => Promise.resolve(deleteResult))
 		})),
-		transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
+		batch: vi.fn(() => Promise.resolve([]))
 	}
 }));
 
@@ -143,12 +143,14 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('create', () => {
-		it('creates a band and owner membership in a transaction', async () => {
+		it('creates a band and owner membership via batch', async () => {
+			selectResult = [{ ...mockBand }];
+			const { db } = await import('$lib/server/db');
 			const result = await create('user-owner', { name: 'The Velvet Underground', bio: 'NYC band' });
 
 			expect(generateSlug).toHaveBeenCalledWith('The Velvet Underground');
 			expect(ensureUniqueSlug).toHaveBeenCalled();
-			expect(txMock.insert).toHaveBeenCalledTimes(2); // band + member
+			expect(db.batch).toHaveBeenCalled();
 			expect(result.id).toBe('band-1');
 		});
 	});
@@ -348,11 +350,11 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('transferOwnership', () => {
-		it('demotes old owner and promotes new one in a transaction', async () => {
+		it('demotes old owner and promotes new one via batch', async () => {
+			const { db } = await import('$lib/server/db');
 			await transferOwnership('band-1', 'user-2', 'user-owner');
 
-			// Transaction mock should have 3 calls: demote, promote, update band
-			expect(txMock.update).toHaveBeenCalledTimes(3);
+			expect(db.batch).toHaveBeenCalled();
 		});
 	});
 

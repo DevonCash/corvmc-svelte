@@ -24,33 +24,30 @@ function buildChain() {
 	return proxy;
 }
 
-const txProxy = {
-	update: () => {
-		const chain: any = new Proxy(() => chain, {
-			get(_, prop) {
-				if (prop === 'set') return (data: unknown) => { updatedData.push(data); return chain; };
-				if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
-				return () => chain;
-			}
-		});
-		return chain;
-	},
-	delete: () => {
-		deleteCalled = true;
-		return buildChain();
-	},
-	insert: () => ({
-		values: (rows: unknown) => {
-			insertedRows.push(rows);
-			return Promise.resolve();
-		}
-	})
-};
-
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => buildChain(),
-		transaction: (fn: (tx: typeof txProxy) => Promise<unknown>) => fn(txProxy)
+		update: () => {
+			const chain: any = new Proxy(() => chain, {
+				get(_, prop) {
+					if (prop === 'set') return (data: unknown) => { updatedData.push(data); return chain; };
+					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
+					return () => chain;
+				}
+			});
+			return chain;
+		},
+		delete: () => {
+			deleteCalled = true;
+			return buildChain();
+		},
+		insert: () => ({
+			values: (rows: unknown) => {
+				insertedRows.push(rows);
+				return Promise.resolve();
+			}
+		}),
+		batch: (queries: unknown[]) => Promise.resolve(queries.map(() => undefined))
 	}
 }));
 

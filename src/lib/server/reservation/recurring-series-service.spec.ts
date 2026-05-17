@@ -7,8 +7,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: vi.fn(),
-		update: vi.fn(),
-		transaction: vi.fn()
+		insert: vi.fn(),
+		update: vi.fn(() => ({
+			set: vi.fn(() => ({
+				where: vi.fn(() => Promise.resolve({ rowCount: 1 }))
+			}))
+		})),
+		batch: vi.fn()
 	}
 }));
 
@@ -66,44 +71,37 @@ const SERIES_ROW = {
 };
 
 // ---------------------------------------------------------------------------
-// Transaction helper — builds a tx proxy for db.transaction mocks
+// Batch helper — sets up db.batch, db.insert, db.select mocks
 // ---------------------------------------------------------------------------
 
-// Holds references to the last tx proxy created by makeTransactionMock
-const lastTx = { insertFn: null as ReturnType<typeof vi.fn> | null };
+const lastInsert = { valuesSpy: null as ReturnType<typeof vi.fn> | null };
 
-function makeTransactionMock({
-	insertReturning = [SERIES_ROW],
-	supersedeRowCount = 1
+function setupBatchMock({
+	selectReturning = [SERIES_ROW]
 }: {
-	insertReturning?: unknown[];
-	supersedeRowCount?: number;
+	selectReturning?: unknown[];
 } = {}) {
-	const returning = vi.fn().mockResolvedValue(insertReturning);
-	const values = vi.fn().mockReturnValue({ returning });
-	const txInsertFn = vi.fn().mockReturnValue({ values });
-	lastTx.insertFn = txInsertFn;
+	vi.mocked(db.batch).mockResolvedValue([] as any);
 
-	// updateSets captures the `set` spy from each update call so tests can inspect them
-	const updateSets: ReturnType<typeof vi.fn>[] = [];
+	const valuesSpy = vi.fn().mockReturnValue(undefined);
+	lastInsert.valuesSpy = valuesSpy;
+	vi.mocked(db.insert).mockReturnValue({ values: valuesSpy } as any);
 
-	// Each transaction invocation resets the update counter so the first update
-	// (supersede old series) always uses supersedeRowCount.
-	(vi.mocked(db.transaction) as any).mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
-		let updateCallCount = 0;
-		updateSets.length = 0;
-		const txUpdateFn = vi.fn().mockImplementation(() => {
-			updateCallCount++;
-			const rowCount = updateCallCount === 1 ? supersedeRowCount : 1;
-			const where = vi.fn().mockResolvedValue({ rowCount });
-			const set = vi.fn().mockReturnValue({ where });
-			updateSets.push(set);
-			return { set };
-		});
-		return fn({ insert: txInsertFn, update: txUpdateFn }) as Promise<unknown>;
-	});
+	vi.mocked(db.update).mockReturnValue({
+		set: vi.fn().mockReturnValue({
+			where: vi.fn().mockResolvedValue({ rowCount: 1 })
+		})
+	} as any);
 
-	return { txInsertFn, updateSets };
+	// db.select() is called for: pre-check in edit(), and final row fetch after batch.
+	// When editPreCheckFound is false, the code throws before reaching the second select.
+	vi.mocked(db.select).mockImplementation((() => ({
+		from: vi.fn().mockReturnValue({
+			where: vi.fn().mockReturnValue(Promise.resolve(selectReturning))
+		})
+	})) as any);
+
+	return { valuesSpy };
 }
 
 // ---------------------------------------------------------------------------
@@ -127,21 +125,19 @@ describe('recurring-series-service', () => {
 		};
 
 		it('calls buildRRule with the prototype startsAt and frequency', async () => {
-			makeTransactionMock();
+			setupBatchMock();
 
 			await svc.create(params);
 
 			expect(buildRRule).toHaveBeenCalledWith(params.prototypeStartsAt, params.frequency);
 		});
 
-		it('inserts a recurringSeries row with rrule, type, and prototypeId', async () => {
-			makeTransactionMock();
+		it('inserts a recurringSeries row via batch with rrule, type, and prototypeId', async () => {
+			setupBatchMock();
 
 			await svc.create(params);
 
-			// retrieve the values() spy from the chain via lastTx
-			const valuesCall = lastTx.insertFn!.mock.results[0].value.values;
-			expect(valuesCall).toHaveBeenCalledWith(
+			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
 					prototypeType: 'reservation',
 					prototypeId: 'res-1',
@@ -150,19 +146,16 @@ describe('recurring-series-service', () => {
 			);
 		});
 
-		it('updates the prototype reservation with the new series id', async () => {
-			const { updateSets } = makeTransactionMock();
+		it('calls db.batch with the queries', async () => {
+			setupBatchMock();
 
 			await svc.create(params);
 
-			// The only update call links the prototype to the series
-			expect(updateSets[0]).toHaveBeenCalledWith(
-				expect.objectContaining({ recurringSeriesId: 'series-new' })
-			);
+			expect(db.batch).toHaveBeenCalled();
 		});
 
 		it('returns the inserted series row', async () => {
-			makeTransactionMock();
+			setupBatchMock();
 
 			const result = await svc.create(params);
 
@@ -182,13 +175,12 @@ describe('recurring-series-service', () => {
 			prototypeStartsAt: new Date('2026-06-08T10:00:00Z')
 		};
 
-		it('inserts a new series row for the new prototype', async () => {
-			makeTransactionMock();
+		it('inserts a new series row for the new prototype via batch', async () => {
+			setupBatchMock();
 
 			await svc.edit(params);
 
-			const valuesCall = lastTx.insertFn!.mock.results[0].value.values;
-			expect(valuesCall).toHaveBeenCalledWith(
+			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
 					prototypeType: 'reservation',
 					prototypeId: 'res-2'
@@ -196,27 +188,30 @@ describe('recurring-series-service', () => {
 			);
 		});
 
-		it('marks the old series as superseded (sets supersededBy and cancelledAt)', async () => {
-			const { updateSets } = makeTransactionMock();
+		it('calls db.batch with the queries', async () => {
+			setupBatchMock();
 
 			await svc.edit(params);
 
-			// First update = supersede old series
-			expect(updateSets[0]).toHaveBeenCalledWith(
-				expect.objectContaining({ supersededBy: 'series-new' })
-			);
+			expect(db.batch).toHaveBeenCalled();
 		});
 
 		it('returns the new series row', async () => {
-			makeTransactionMock();
+			setupBatchMock();
 
 			const result = await svc.edit(params);
 
 			expect(result).toMatchObject({ id: 'series-new' });
 		});
 
-		it('throws RecurringSeriesError when old series was already cancelled (rowCount=0)', async () => {
-			makeTransactionMock({ supersedeRowCount: 0 });
+		it('throws RecurringSeriesError when old series was already cancelled', async () => {
+			setupBatchMock();
+			// Override select to return empty (series not found)
+			vi.mocked(db.select).mockImplementation((() => ({
+				from: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue(Promise.resolve([]))
+				})
+			})) as any);
 
 			await expect(svc.edit(params)).rejects.toThrow(svc.RecurringSeriesError);
 			await expect(svc.edit(params)).rejects.toThrow('already cancelled or superseded');

@@ -71,26 +71,26 @@ export async function create(ownerId: string, data: CreateBandData) {
 	const baseSlug = generateSlug(data.name);
 	const slug = await ensureUniqueSlug(baseSlug, band, band.slug);
 
-	return db.transaction(async (tx) => {
-		const [newBand] = await tx
-			.insert(band)
-			.values({
-				name: data.name,
-				slug,
-				bio: data.bio ?? null,
-				ownerId
-			})
-			.returning();
+	const bandId = crypto.randomUUID();
 
-		await tx.insert(bandMember).values({
-			bandId: newBand.id,
+	await db.batch([
+		db.insert(band).values({
+			id: bandId,
+			name: data.name,
+			slug,
+			bio: data.bio ?? null,
+			ownerId
+		}),
+		db.insert(bandMember).values({
+			bandId,
 			userId: ownerId,
 			role: 'owner',
 			status: 'active'
-		});
+		})
+	]);
 
-		return newBand;
-	});
+	const [newBand] = await db.select().from(band).where(eq(band.id, bandId));
+	return newBand;
 }
 
 export async function update(bandId: string, data: UpdateBandData) {
@@ -427,9 +427,8 @@ export async function updateMember(memberId: string, data: UpdateMemberData) {
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {
-	return db.transaction(async (tx) => {
-		// Demote current owner to admin
-		await tx
+	await db.batch([
+		db
 			.update(bandMember)
 			.set({ role: 'admin' })
 			.where(
@@ -438,20 +437,16 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 					eq(bandMember.userId, actorId),
 					eq(bandMember.role, 'owner')
 				)
-			);
-
-		// Promote new owner
-		await tx
+			),
+		db
 			.update(bandMember)
 			.set({ role: 'owner' })
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, newOwnerId)));
-
-		// Update band.ownerId
-		await tx
+			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, newOwnerId))),
+		db
 			.update(band)
 			.set({ ownerId: newOwnerId, updatedAt: new Date() })
-			.where(eq(band.id, bandId));
-	});
+			.where(eq(band.id, bandId))
+	]);
 }
 
 export async function leaveBand(bandId: string, userId: string) {

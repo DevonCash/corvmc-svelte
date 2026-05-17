@@ -1,6 +1,7 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
+import noDbTransaction from './eslint-rules/no-db-transaction.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -44,5 +45,11 @@ export default defineConfig(
 		files: ['**/+page.svelte'],
 		plugins: { custom: { rules: { 'no-raw-form-elements': noRawFormElements } } },
 		rules: { 'custom/no-raw-form-elements': 'warn' }
+	},
+	{
+		files: ['src/lib/server/**/*.ts'],
+		ignores: ['**/*.spec.ts'],
+		plugins: { custom: { rules: { 'no-db-transaction': noDbTransaction } } },
+		rules: { 'custom/no-db-transaction': 'error' }
 	}
 );

@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { user, userInstrument, userGenre } from '$lib/server/db/schema/auth';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
 import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/types/profile';
 
 // ---------------------------------------------------------------------------
@@ -57,42 +58,53 @@ export type MemberProfileData = {
 };
 
 export async function updateMemberProfile(userId: string, data: MemberProfileData) {
-	await db.transaction(async (tx) => {
-		await tx
+	let mergedContact: DirectoryContact | null = null;
+	if (data.directoryContact) {
+		const [existing] = await db
+			.select({ directoryContact: user.directoryContact })
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
+		const prev = (existing?.directoryContact as DirectoryContact) ?? {};
+		mergedContact = validateContact({ ...prev, ...data.directoryContact });
+	}
+
+	const queries: BatchItem<'sqlite'>[] = [
+		db
 			.update(user)
 			.set({
 				bio: data.bio?.slice(0, MAX_BIO) ?? null,
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				lookingForBand: data.lookingForBand ?? false,
 				directoryVisibility: data.directoryVisibility ?? 'members',
-				directoryContact: data.directoryContact
-					? validateContact(data.directoryContact)
-					: null,
+				directoryContact: mergedContact,
 				links: data.links ? validateLinks(data.links) : null,
 				updatedAt: new Date()
 			})
-			.where(eq(user.id, userId));
+			.where(eq(user.id, userId))
+	];
 
-		if (data.instruments !== undefined) {
-			await tx.delete(userInstrument).where(eq(userInstrument.userId, userId));
-			const tags = validateTags(data.instruments);
-			if (tags.length > 0) {
-				await tx.insert(userInstrument).values(
-					tags.map((instrument) => ({ userId, instrument }))
-				);
-			}
+	if (data.instruments !== undefined) {
+		queries.push(db.delete(userInstrument).where(eq(userInstrument.userId, userId)));
+		const tags = validateTags(data.instruments);
+		if (tags.length > 0) {
+			queries.push(
+				db.insert(userInstrument).values(tags.map((instrument) => ({ userId, instrument })))
+			);
 		}
+	}
 
-		if (data.genres !== undefined) {
-			await tx.delete(userGenre).where(eq(userGenre.userId, userId));
-			const tags = validateTags(data.genres);
-			if (tags.length > 0) {
-				await tx.insert(userGenre).values(
-					tags.map((genre) => ({ userId, genre }))
-				);
-			}
+	if (data.genres !== undefined) {
+		queries.push(db.delete(userGenre).where(eq(userGenre.userId, userId)));
+		const tags = validateTags(data.genres);
+		if (tags.length > 0) {
+			queries.push(
+				db.insert(userGenre).values(tags.map((genre) => ({ userId, genre })))
+			);
 		}
-	});
+	}
+
+	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 }
 
 /** Load current profile data for the edit form */
@@ -165,31 +177,42 @@ export async function updateBandProfile(
 ) {
 	await requireBandAdmin(bandId, userId);
 
-	await db.transaction(async (tx) => {
-		await tx
+	let mergedContact: DirectoryContact | null = null;
+	if (data.directoryContact) {
+		const [existing] = await db
+			.select({ directoryContact: band.directoryContact })
+			.from(band)
+			.where(eq(band.id, bandId))
+			.limit(1);
+		const prev = (existing?.directoryContact as DirectoryContact) ?? {};
+		mergedContact = validateContact({ ...prev, ...data.directoryContact });
+	}
+
+	const queries: BatchItem<'sqlite'>[] = [
+		db
 			.update(band)
 			.set({
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				lookingForMembers: data.lookingForMembers ?? false,
 				directoryVisibility: data.directoryVisibility ?? 'public',
-				directoryContact: data.directoryContact
-					? validateContact(data.directoryContact)
-					: null,
+				directoryContact: mergedContact,
 				links: data.links ? validateLinks(data.links) : null,
 				updatedAt: new Date()
 			})
-			.where(eq(band.id, bandId));
+			.where(eq(band.id, bandId))
+	];
 
-		if (data.genres !== undefined) {
-			await tx.delete(bandGenre).where(eq(bandGenre.bandId, bandId));
-			const tags = validateTags(data.genres);
-			if (tags.length > 0) {
-				await tx.insert(bandGenre).values(
-					tags.map((genre) => ({ bandId, genre }))
-				);
-			}
+	if (data.genres !== undefined) {
+		queries.push(db.delete(bandGenre).where(eq(bandGenre.bandId, bandId)));
+		const tags = validateTags(data.genres);
+		if (tags.length > 0) {
+			queries.push(
+				db.insert(bandGenre).values(tags.map((genre) => ({ bandId, genre })))
+			);
 		}
-	});
+	}
+
+	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 }
 
 /** Load current band profile data for the edit form */

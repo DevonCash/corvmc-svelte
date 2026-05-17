@@ -75,25 +75,26 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 
 	const rruleString = buildRRule(prototypeStartsAt, frequency);
 
-	return await db.transaction(async (tx) => {
-		// Insert the series
-		const [series] = await tx
-			.insert(recurringSeries)
-			.values({
-				prototypeType: 'reservation',
-				prototypeId: prototypeReservationId,
-				rrule: rruleString
-			})
-			.returning();
+	const seriesId = crypto.randomUUID();
 
-		// Link the prototype reservation back to this series
-		await tx
+	await db.batch([
+		db.insert(recurringSeries).values({
+			id: seriesId,
+			prototypeType: 'reservation',
+			prototypeId: prototypeReservationId,
+			rrule: rruleString
+		}),
+		db
 			.update(reservation)
-			.set({ recurringSeriesId: series.id, updatedAt: new Date() })
-			.where(eq(reservation.id, prototypeReservationId));
+			.set({ recurringSeriesId: seriesId, updatedAt: new Date() })
+			.where(eq(reservation.id, prototypeReservationId))
+	]);
 
-		return series;
-	});
+	const [series] = await db
+		.select()
+		.from(recurringSeries)
+		.where(eq(recurringSeries.id, seriesId));
+	return series;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,43 +117,47 @@ export async function edit(params: EditSeriesParams): Promise<SeriesRow> {
 
 	const rruleString = buildRRule(prototypeStartsAt, frequency);
 
-	return await db.transaction(async (tx) => {
-		// Create the replacement series
-		const [newSeries] = await tx
-			.insert(recurringSeries)
-			.values({
-				prototypeType: 'reservation',
-				prototypeId: newPrototypeReservationId,
-				rrule: rruleString
-			})
-			.returning();
+	// Verify old series is still active before batching writes
+	const [oldSeries] = await db
+		.select({ id: recurringSeries.id })
+		.from(recurringSeries)
+		.where(
+			and(
+				eq(recurringSeries.id, oldSeriesId),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy)
+			)
+		);
 
-		// Mark the old series as superseded
-		const now = new Date();
-		const supersedeResult = await tx
+	if (!oldSeries) {
+		throw new RecurringSeriesError('Series was already cancelled or superseded');
+	}
+
+	const newSeriesId = crypto.randomUUID();
+	const now = new Date();
+
+	await db.batch([
+		db.insert(recurringSeries).values({
+			id: newSeriesId,
+			prototypeType: 'reservation',
+			prototypeId: newPrototypeReservationId,
+			rrule: rruleString
+		}),
+		db
 			.update(recurringSeries)
-			.set({ supersededBy: newSeries.id, cancelledAt: now })
-			.where(
-				and(
-					eq(recurringSeries.id, oldSeriesId),
-					isNull(recurringSeries.cancelledAt),
-					isNull(recurringSeries.supersededBy)
-				)
-			);
-
-		const rowCount = (supersedeResult as unknown as { rowCount: number }).rowCount ?? 0;
-		if (rowCount === 0) {
-			throw new RecurringSeriesError('Series was already cancelled or superseded');
-		}
-
-		// Link the new prototype back to the new series
-		await tx
+			.set({ supersededBy: newSeriesId, cancelledAt: now })
+			.where(eq(recurringSeries.id, oldSeriesId)),
+		db
 			.update(reservation)
-			.set({ recurringSeriesId: newSeries.id, updatedAt: now })
-			.where(eq(reservation.id, newPrototypeReservationId));
+			.set({ recurringSeriesId: newSeriesId, updatedAt: now })
+			.where(eq(reservation.id, newPrototypeReservationId))
+	]);
 
-		return newSeries;
-	});
+	const [newSeries] = await db
+		.select()
+		.from(recurringSeries)
+		.where(eq(recurringSeries.id, newSeriesId));
+	return newSeries;
 }
 
 // ---------------------------------------------------------------------------

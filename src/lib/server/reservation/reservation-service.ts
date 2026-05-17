@@ -61,40 +61,36 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationValidationError(validation.error!);
 	}
 
-	// Conflict check + insert in a serializable transaction to prevent races
-	return await db.transaction(async (tx) => {
-		// Lock overlapping rows to prevent concurrent inserts
-		const conflicts = await tx
-			.select({ id: reservation.id })
-			.from(reservation)
-			.where(
-				and(
-					ne(reservation.status, 'cancelled'),
-					lt(reservation.startsAt, endsAt),
-					gt(reservation.endsAt, startsAt)
-				)
+	// Conflict check then insert (D1 doesn't support interactive transactions)
+	const conflicts = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				ne(reservation.status, 'cancelled'),
+				lt(reservation.startsAt, endsAt),
+				gt(reservation.endsAt, startsAt)
 			)
-			;
+		);
 
-		if (conflicts.length > 0) {
-			throw new ReservationConflictError();
-		}
+	if (conflicts.length > 0) {
+		throw new ReservationConflictError();
+	}
 
-		const [row] = await tx
-			.insert(reservation)
-			.values({
-				bookerType,
-				bookerId,
-				createdByUserId: userId,
-				status: 'scheduled',
-				startsAt,
-				endsAt,
-				notes: notes ?? null
-			})
-			.returning();
+	const [row] = await db
+		.insert(reservation)
+		.values({
+			bookerType,
+			bookerId,
+			createdByUserId: userId,
+			status: 'scheduled',
+			startsAt,
+			endsAt,
+			notes: notes ?? null
+		})
+		.returning();
 
-		return row;
-	});
+	return row;
 }
 
 // ---------------------------------------------------------------------------
