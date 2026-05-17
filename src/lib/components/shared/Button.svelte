@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { Button as BitsButton } from 'bits-ui';
+	import { Button as BitsButton, Tooltip } from 'bits-ui';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 
@@ -9,6 +9,7 @@
 	let {
 		href,
 		label,
+		title,
 		icon,
 		shortcut,
 		status = 'idle',
@@ -21,6 +22,7 @@
 	}: {
 		href?: string;
 		label?: string;
+		title?: string;
 		icon?: Snippet;
 		shortcut?: string;
 		status?: Status;
@@ -46,12 +48,7 @@
 	);
 </script>
 
-<BitsButton.Root
-	{href}
-	{disabled}
-	class="btn {statusClass || className}"
-	{...rest}
->
+{#snippet buttonContent()}
 	{#if children}
 		{@render children()}
 	{:else if status === 'pending'}
@@ -71,4 +68,40 @@
 		{/if}
 		{label}
 	{/if}
-</BitsButton.Root>
+{/snippet}
+
+{#if title}
+	<Tooltip.Root>
+		<Tooltip.Trigger>
+			{#snippet child({ props })}
+				<BitsButton.Root
+					{...props}
+					{href}
+					{disabled}
+					class="btn {statusClass || className}"
+					{...rest}
+				>
+					{@render buttonContent()}
+				</BitsButton.Root>
+			{/snippet}
+		</Tooltip.Trigger>
+		<Tooltip.Portal>
+			<Tooltip.Content
+				side="bottom"
+				sideOffset={4}
+				class="bg-neutral text-neutral-content text-xs px-2 py-1 rounded shadow-lg z-50"
+			>
+				{title}
+			</Tooltip.Content>
+		</Tooltip.Portal>
+	</Tooltip.Root>
+{:else}
+	<BitsButton.Root
+		{href}
+		{disabled}
+		class="btn {statusClass || className}"
+		{...rest}
+	>
+		{@render buttonContent()}
+	</BitsButton.Root>
+{/if}

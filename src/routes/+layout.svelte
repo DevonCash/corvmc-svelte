@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { Tooltip } from 'bits-ui';
 
 	let { children } = $props();
 </script>
@@ -10,4 +11,6 @@
 	<link href="https://fonts.bunny.net/css?family=lexend:300,400,500,600,700" rel="stylesheet" />
 	<link rel="icon" href={favicon} />
 </svelte:head>
-{@render children()}
+<Tooltip.Provider delayDuration={300}>
+	{@render children()}
+</Tooltip.Provider>
