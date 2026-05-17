@@ -208,6 +208,6 @@ describe('buildSubscriptionLineItem', () => {
 
 		const item = await buildSubscriptionLineItem('contribution', 500, 1, 'month');
 
-		expect(item.price_data.recurring).toEqual({ interval: 'month' });
+		expect(item.price_data!.recurring).toEqual({ interval: 'month' });
 	});
 });

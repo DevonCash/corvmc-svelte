@@ -271,7 +271,7 @@ describe('unsubscribeFromList', () => {
 	});
 
 	it('does nothing if subscriber not found', async () => {
-		vi.mocked(findByUserId).mockResolvedValueOnce(null);
+		vi.mocked(findByUserId).mockResolvedValueOnce(null as any);
 
 		await unsubscribeFromList({ audienceId: 'aud-99' });
 

@@ -303,7 +303,7 @@ describe('/staff/users/[id] updateUser', () => {
 		queryResults = [[mockUser({ id: 'user-1', name: 'Updated Name' })]];
 		queryIndex = 0;
 
-		const result = await (updateUser as Function)({
+		const result = await (updateUser as unknown as Function)({
 			name: 'Updated Name',
 			pronouns: 'they/them',
 			phone: '555-1234',
@@ -329,7 +329,7 @@ describe('/staff/users/[id] updateUser', () => {
 		queryResults = [[mockUser({ id: 'user-1', name: 'No Roles User' })]];
 		queryIndex = 0;
 
-		const result = await (updateUser as Function)({
+		const result = await (updateUser as unknown as Function)({
 			name: 'No Roles User',
 			pronouns: '',
 			phone: '',

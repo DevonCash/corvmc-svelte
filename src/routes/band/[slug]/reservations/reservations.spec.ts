@@ -72,7 +72,7 @@ vi.mock('$lib/server/authorization', () => ({
 }));
 
 const subscriptionServiceMock = {
-	getSubscription: vi.fn(async () => null)
+	getSubscription: vi.fn(async () => null as { id: string; status: string } | null)
 };
 
 vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);

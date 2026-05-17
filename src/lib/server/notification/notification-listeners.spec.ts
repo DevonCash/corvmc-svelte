@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -12,7 +12,7 @@ vi.mock('./dispatcher', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
 
-const mockTemplates: Record<string, vi.Mock> = {
+const mockTemplates: Record<string, Mock> = {
 	ticketConfirmation: vi.fn().mockReturnValue('<html>ticket</html>'),
 	eventCancellation: vi.fn().mockReturnValue('<html>cancelled</html>'),
 	reservationReminder: vi.fn().mockReturnValue('<html>reminder</html>'),

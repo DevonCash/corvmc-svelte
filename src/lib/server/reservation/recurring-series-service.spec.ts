@@ -89,7 +89,7 @@ function makeTransactionMock({
 
 	// Each transaction invocation resets the update counter so the first update
 	// (supersede old series) always uses supersedeRowCount.
-	vi.mocked(db.transaction).mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
+	(vi.mocked(db.transaction) as any).mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
 		let updateCallCount = 0;
 		updateSets.length = 0;
 		const txUpdateFn = vi.fn().mockImplementation(() => {
@@ -231,7 +231,7 @@ describe('recurring-series-service', () => {
 		function setupCancelUpdate(rowCount: number) {
 			const where = vi.fn().mockResolvedValue({ rowCount });
 			const set = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.update).mockReturnValue({ set } as ReturnType<typeof db.update>);
+			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
 			return { set };
 		}
 
@@ -260,13 +260,13 @@ describe('recurring-series-service', () => {
 			const where = vi.fn().mockResolvedValue(rows);
 			const innerJoin = vi.fn().mockReturnValue({ where });
 			const from = vi.fn().mockReturnValue({ innerJoin });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		function setupUpdateForCancel(rowCount: number) {
 			const where = vi.fn().mockResolvedValue({ rowCount });
 			const set = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.update).mockReturnValue({ set } as ReturnType<typeof db.update>);
+			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
 			return { set };
 		}
 
@@ -301,7 +301,7 @@ describe('recurring-series-service', () => {
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		it('returns null when the series does not exist', async () => {
@@ -341,7 +341,7 @@ describe('recurring-series-service', () => {
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		it('returns an empty array when there are no active series', async () => {
@@ -385,7 +385,7 @@ describe('recurring-series-service', () => {
 			const where = vi.fn().mockReturnValue({ limit });
 			const innerJoin = vi.fn().mockReturnValue({ where });
 			const from = vi.fn().mockReturnValue({ innerJoin });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		it('returns null when the reservation has no series', async () => {
@@ -415,7 +415,7 @@ describe('recurring-series-service', () => {
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		it('returns an empty array when there are no series', async () => {
@@ -464,7 +464,7 @@ describe('recurring-series-service', () => {
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as ReturnType<typeof db.select>);
+			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
 		}
 
 		it('returns an empty array when the user has no active series', async () => {
@@ -515,7 +515,7 @@ describe('recurring-series-service', () => {
 				const limit = vi.fn().mockResolvedValue(rows);
 				const where = vi.fn().mockReturnValue({ limit });
 				const from = vi.fn().mockReturnValue({ where });
-				return { from } as ReturnType<typeof db.select>;
+				return { from } as unknown as ReturnType<typeof db.select>;
 			});
 		}
 

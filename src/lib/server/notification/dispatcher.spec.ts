@@ -30,16 +30,16 @@ describe('dispatch', () => {
 	let createNotification: ReturnType<typeof vi.fn>;
 	let getPreference: ReturnType<typeof vi.fn>;
 	let pushToUser: ReturnType<typeof vi.fn>;
-	let dispatch: (params: unknown) => Promise<void>;
+	let dispatch: (params: any) => Promise<void>;
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		({ sendEmail } = await import('./email/postmark-client'));
-		({ createNotification } = await import('./in-app-service'));
-		({ getPreference } = await import('./preference-service'));
-		({ pushToUser } = await import('./sse'));
-		({ dispatch } = await import('./dispatcher'));
+		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<typeof vi.fn>;
+		createNotification = (await import('./in-app-service')).createNotification as unknown as ReturnType<typeof vi.fn>;
+		getPreference = (await import('./preference-service')).getPreference as unknown as ReturnType<typeof vi.fn>;
+		pushToUser = (await import('./sse')).pushToUser as unknown as ReturnType<typeof vi.fn>;
+		dispatch = (await import('./dispatcher')).dispatch as any;
 
 		createNotification.mockResolvedValue(FAKE_ROW);
 	});
@@ -143,13 +143,13 @@ describe('dispatch', () => {
 
 describe('dispatchEmailOnly', () => {
 	let sendEmail: ReturnType<typeof vi.fn>;
-	let dispatchEmailOnly: (params: unknown) => Promise<void>;
+	let dispatchEmailOnly: (params: any) => Promise<void>;
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		({ sendEmail } = await import('./email/postmark-client'));
-		({ dispatchEmailOnly } = await import('./dispatcher'));
+		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<typeof vi.fn>;
+		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
 	});
 
 	it('sends email with the provided params', async () => {
