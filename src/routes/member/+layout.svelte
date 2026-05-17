@@ -10,8 +10,7 @@
 		IconHelp
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import NavItem from '$lib/components/shared/NavItem.svelte';
-	import NavGroup from '$lib/components/shared/NavGroup.svelte';
+	import Nav from '$lib/components/shared/Nav';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import type { MemberLayoutResponse } from '$lib/types/api';
@@ -39,30 +38,30 @@
 		</div>
 	{/snippet}
 	{#snippet navigation()}
-		<NavItem href="/member" label="Dashboard">
+		<Nav.Item href="/member" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
-		</NavItem>
-		<NavItem href="/member/reservations" label="Reservations">
+		</Nav.Item>
+		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconCalendar />{/snippet}
-		</NavItem>
-		<NavItem href="/member/tickets" label="My Tickets">
+		</Nav.Item>
+		<Nav.Item href="/member/tickets" label="My Tickets">
 			{#snippet icon()}<IconTicket />{/snippet}
-		</NavItem>
-		<NavItem href="/member/directory" label="Directory">
+		</Nav.Item>
+		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
-		</NavItem>
-		<NavItem href="/member/equipment" label="Equipment">
+		</Nav.Item>
+		<Nav.Item href="/member/equipment" label="Equipment">
 			{#snippet icon()}<IconTool />{/snippet}
-		</NavItem>
+		</Nav.Item>
 
-		<NavGroup title="My Bands">
+		<Nav.Group title="My Bands">
 			{#snippet action()}
 				<a href="/member/bands/create" class="btn btn-ghost btn-xs btn-square" title="Create Band">
 					<IconPlus size={14} />
 				</a>
 			{/snippet}
 			{#each data.userBands as band}
-				<NavItem href={`/band/${band.slug}`} label={band.name}>
+				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
 						<Avatar
 							class="size-8"
@@ -70,21 +69,21 @@
 							name={band.name}
 						/>
 					{/snippet}
-				</NavItem>
+				</Nav.Item>
 			{/each}
-			<NavItem href="/member/bands/create" label="Create Band">
+			<Nav.Item href="/member/bands/create" label="Create Band">
 				{#snippet icon()}<IconPlus size={20} />{/snippet}
-			</NavItem>
-		</NavGroup>
+			</Nav.Item>
+		</Nav.Group>
 
 		<div class="flex grow"></div>
 
-		<NavItem href="/member/help" label="Help">
+		<Nav.Item href="/member/help" label="Help">
 			{#snippet icon()}<IconHelp />{/snippet}
-		</NavItem>
-		<NavItem href="/member/membership" label="Membership">
+		</Nav.Item>
+		<Nav.Item href="/member/membership" label="Membership">
 			{#snippet icon()}<IconStar />{/snippet}
-		</NavItem>
+		</Nav.Item>
 	{/snippet}
 	<svelte:boundary>
 		{@render children()}

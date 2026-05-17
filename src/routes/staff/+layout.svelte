@@ -1,9 +1,7 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import NavItem from '$lib/components/shared/NavItem.svelte';
-	import NavGroup from '$lib/components/shared/NavGroup.svelte';
-	import NavCollapsible from '$lib/components/shared/NavCollapsible.svelte';
+	import Nav from '$lib/components/shared/Nav';
 	import {
 		IconHome,
 		IconUsers,
@@ -43,66 +41,66 @@
 		</div>
 	{/snippet}
 	{#snippet navigation()}
-		<NavItem href="/staff" label="Dashboard">
+		<Nav.Item href="/staff" label="Dashboard">
 			{#snippet icon()}<IconHome size={20} />{/snippet}
-		</NavItem>
+		</Nav.Item>
 
-		<NavGroup title="Operations">
-			<NavItem href="/staff/users" label="Users">
+		<Nav.Group title="Operations">
+			<Nav.Item href="/staff/users" label="Users">
 				{#snippet icon()}<IconUsers size={20} />{/snippet}
-			</NavItem>
-			<NavCollapsible
+			</Nav.Item>
+			<Nav.Collapsible
 				href="/staff/reservations"
 				label="Reservations"
 				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
 			>
 				{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
 				{#snippet children()}
-					<NavItem href="/staff/reservations" label="All Reservations">
+					<Nav.Item href="/staff/reservations" label="All Reservations">
 						{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
-					</NavItem>
-					<NavItem href="/staff/recurring" label="Recurring">
+					</Nav.Item>
+					<Nav.Item href="/staff/recurring" label="Recurring">
 						{#snippet icon()}<IconRepeat size={20} />{/snippet}
-					</NavItem>
-					<NavItem href="/staff/closures" label="Closures">
+					</Nav.Item>
+					<Nav.Item href="/staff/closures" label="Closures">
 						{#snippet icon()}<IconBan size={20} />{/snippet}
-					</NavItem>
+					</Nav.Item>
 				{/snippet}
-			</NavCollapsible>
-			<NavItem href="/staff/events" label="Events">
+			</Nav.Collapsible>
+			<Nav.Item href="/staff/events" label="Events">
 				{#snippet icon()}<IconCalendarEvent size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/bands" label="Bands">
+			</Nav.Item>
+			<Nav.Item href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/equipment" label="Equipment">
+			</Nav.Item>
+			<Nav.Item href="/staff/equipment" label="Equipment">
 				{#snippet icon()}<IconTool size={20} />{/snippet}
-			</NavItem>
-		</NavGroup>
+			</Nav.Item>
+		</Nav.Group>
 
-		<NavGroup title="Marketing">
-			<NavItem href="/staff/marketing/campaigns" label="Campaigns">
+		<Nav.Group title="Marketing">
+			<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
 				{#snippet icon()}<IconMail size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/marketing/audiences" label="Audiences">
+			</Nav.Item>
+			<Nav.Item href="/staff/marketing/audiences" label="Audiences">
 				{#snippet icon()}<IconMailbox size={20} />{/snippet}
-			</NavItem>
-		</NavGroup>
+			</Nav.Item>
+		</Nav.Group>
 
-		<NavGroup title="Content">
-			<NavItem href="/staff/help" label="Help Articles">
+		<Nav.Group title="Content">
+			<Nav.Item href="/staff/help" label="Help Articles">
 				{#snippet icon()}<IconBook size={20} />{/snippet}
-			</NavItem>
-		</NavGroup>
+			</Nav.Item>
+		</Nav.Group>
 
-		<NavGroup title="System">
-			<NavItem href="/staff/payments" label="Payments">
+		<Nav.Group title="System">
+			<Nav.Item href="/staff/payments" label="Payments">
 				{#snippet icon()}<IconCash size={20} />{/snippet}
-			</NavItem>
-			<NavItem href="/staff/settings" label="Settings">
+			</Nav.Item>
+			<Nav.Item href="/staff/settings" label="Settings">
 				{#snippet icon()}<IconSettings size={20} />{/snippet}
-			</NavItem>
-		</NavGroup>
+			</Nav.Item>
+		</Nav.Group>
 	{/snippet}
 	<svelte:boundary>
 		{@render children()}

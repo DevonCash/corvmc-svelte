@@ -9,7 +9,7 @@
 	} from '@tabler/icons-svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import NavItem from '$lib/components/shared/NavItem.svelte';
+	import Nav from '$lib/components/shared/Nav';
 	import type { BandLayoutResponse } from '$lib/types/api';
 
 	let { data, children }: { data: BandLayoutResponse; children: import('svelte').Snippet } = $props();
@@ -44,27 +44,27 @@
 		</div>
 	{/snippet}
 	{#snippet navigation()}
-		<NavItem href={base} label="Dashboard">
+		<Nav.Item href={base} label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard size={20} />{/snippet}
-		</NavItem>
-		<NavItem href={`${base}/members`} label="Members">
+		</Nav.Item>
+		<Nav.Item href={`${base}/members`} label="Members">
 			{#snippet icon()}<IconUsersGroup size={20} />{/snippet}
-		</NavItem>
-		<NavItem href={`${base}/reservations`} label="Reservations">
+		</Nav.Item>
+		<Nav.Item href={`${base}/reservations`} label="Reservations">
 			{#snippet icon()}<IconCalendar size={20} />{/snippet}
-		</NavItem>
+		</Nav.Item>
 		{#if isOwnerOrAdmin}
-			<NavItem href={`${base}/edit`} label="Edit Band">
+			<Nav.Item href={`${base}/edit`} label="Edit Band">
 				{#snippet icon()}<IconPencil size={20} />{/snippet}
-			</NavItem>
-			<NavItem href={`${base}/profile`} label="Profile">
+			</Nav.Item>
+			<Nav.Item href={`${base}/profile`} label="Profile">
 				{#snippet icon()}<IconUser size={20} />{/snippet}
-			</NavItem>
+			</Nav.Item>
 		{/if}
 		{#if data.userRole === 'owner'}
-			<NavItem href={`${base}/settings`} label="Settings">
+			<Nav.Item href={`${base}/settings`} label="Settings">
 				{#snippet icon()}<IconSettings size={20} />{/snippet}
-			</NavItem>
+			</Nav.Item>
 		{/if}
 	{/snippet}
 	<svelte:boundary>
