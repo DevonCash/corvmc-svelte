@@ -4,11 +4,14 @@ import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/events/register-listeners';
 import { initDb } from '$lib/server/db';
+import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 
 // Register domain event listeners once at startup
 if (!building) {
 	registerListeners();
 }
+
+const resolvedSessions = new Set<string>();
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (event.platform?.env?.DB) {
@@ -20,6 +23,11 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (session) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
+
+		if (!resolvedSessions.has(session.session.id)) {
+			resolvedSessions.add(session.session.id);
+			resolvePendingInvites(session.user.id, session.user.email).catch(console.error);
+		}
 	}
 
 	return svelteKitHandler({ event, resolve, auth, building });

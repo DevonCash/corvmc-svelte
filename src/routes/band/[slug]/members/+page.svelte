@@ -13,7 +13,10 @@
 		removeMember,
 		revokeInvitation,
 		transferOwner,
-		leave
+		leave,
+		getPlatformInvites,
+		inviteByEmail,
+		revokePlatformInviteRemote
 	} from './data.remote';
 	import type { BandLayoutResponse, BandMembersResponse } from '$lib/types/api';
 
@@ -34,6 +37,18 @@
 
 	// Leave band modal
 	let showLeaveModal = $state(false);
+
+	// Platform invites
+	let platformInvites = $state<Awaited<ReturnType<typeof getPlatformInvites>> | null>(null);
+	let inviteMode = $state<'search' | 'email'>('search');
+
+	$effect(() => {
+		if (isOwner || isAdmin) {
+			getPlatformInvites().then((r) => (platformInvites = r));
+		}
+	});
+
+	const looksLikeEmail = $derived(searchQuery.includes('@') && searchQuery.includes('.'));
 
 	async function handleSearch() {
 		if (searchQuery.length < 2) {
@@ -160,6 +175,45 @@
 		</section>
 	{/if}
 
+	<!-- Platform invites (awaiting signup) -->
+	{#if (isOwner || isAdmin) && platformInvites && platformInvites.length > 0}
+		<section>
+			<h2 class="mb-3 text-lg font-semibold">Awaiting Signup ({platformInvites.filter((i) => i.status === 'pending').length})</h2>
+			<DataTable data={platformInvites.filter((i) => i.status === 'pending')} gridClass="grid grid-cols-1 gap-2" empty="No pending email invites.">
+				{#snippet card(invite)}
+					<div class="card bg-base-100 shadow">
+						<div class="card-body flex-row items-center justify-between py-3">
+							<div>
+								<p class="font-medium">{invite.email}</p>
+								<p class="text-xs opacity-60">
+									Invited as {invite.role}
+									{#if invite.position}
+										&middot; {invite.position}
+									{/if}
+									&middot; by {invite.invitedByName}
+								</p>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="badge badge-warning badge-sm">awaiting signup</span>
+								<Form
+									remote={revokePlatformInviteRemote}
+									successToast="Invite revoked"
+									errorToast="Failed to revoke"
+									onsuccess={() => {
+										getPlatformInvites().then((r) => (platformInvites = r));
+									}}
+								>
+									<input type="hidden" name="inviteId" value={invite.id} />
+									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+								</Form>
+							</div>
+						</div>
+					</div>
+				{/snippet}
+			</DataTable>
+		</section>
+	{/if}
+
 	<!-- Leave band (non-owners) -->
 	{#if !isOwner && data.userRole !== 'staff'}
 		<div class="pt-4">
@@ -172,81 +226,128 @@
 
 <!-- Invite Member Modal -->
 <Modal title="Invite Member" bind:open={showInviteModal}>
-	<Form
-		remote={inviteMember}
-		successToast="Invitation sent"
-		errorToast="Failed to send invitation"
-		onsuccess={() => {
-			showInviteModal = false;
-			selectedUser = null;
-			searchQuery = '';
-			invalidateAll();
-		}}
-	>
-		<div class="space-y-4">
-			<Field
-				label="Search by name or email"
-				id="user-search"
-			>
-				<input
-					id="user-search"
-					type="text"
-					class="input-bordered input w-full"
-					placeholder="Start typing a name or email..."
-					value={searchQuery}
-					oninput={onSearchInput}
-					autocomplete="off"
-				/>
-				{#if selectedUser}
-					<input type="hidden" name="userId" value={selectedUser.id} />
-				{/if}
+	<!-- Tab toggle -->
+	<div class="tabs tabs-boxed mb-4">
+		<button
+			class="tab"
+			class:tab-active={inviteMode === 'search'}
+			onclick={() => (inviteMode = 'search')}
+		>
+			Search Members
+		</button>
+		<button
+			class="tab"
+			class:tab-active={inviteMode === 'email'}
+			onclick={() => (inviteMode = 'email')}
+		>
+			Invite by Email
+		</button>
+	</div>
 
-				<!-- Search results dropdown -->
-				{#if searchResults.length > 0 && !selectedUser}
-					<ul class="menu mt-1 max-h-48 overflow-y-auto rounded-box bg-base-200">
-						{#each searchResults as result (result.id)}
-							<li>
-								<button type="button" onclick={() => selectUser(result)}>
-									<span class="font-medium">{result.name}</span>
-									<span class="text-xs opacity-60">{result.email}</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				{#if searching}
-					<p class="mt-1 text-xs opacity-60">Searching...</p>
-				{/if}
-			</Field>
-
-			<div class="grid grid-cols-2 gap-4">
+	{#if inviteMode === 'search'}
+		<Form
+			remote={inviteMember}
+			successToast="Invitation sent"
+			errorToast="Failed to send invitation"
+			onsuccess={() => {
+				showInviteModal = false;
+				selectedUser = null;
+				searchQuery = '';
+				invalidateAll();
+			}}
+		>
+			<div class="space-y-4">
 				<Field
-					label="Role"
-					id="invite-role"
-					type="select"
+					label="Search by name or email"
+					id="user-search"
 				>
-					<option value="member">Member</option>
-					<option value="admin">Admin</option>
+					<input
+						id="user-search"
+						type="text"
+						class="input-bordered input w-full"
+						placeholder="Start typing a name or email..."
+						value={searchQuery}
+						oninput={onSearchInput}
+						autocomplete="off"
+					/>
+					{#if selectedUser}
+						<input type="hidden" name="userId" value={selectedUser.id} />
+					{/if}
+
+					<!-- Search results dropdown -->
+					{#if searchResults.length > 0 && !selectedUser}
+						<ul class="menu mt-1 max-h-48 overflow-y-auto rounded-box bg-base-200">
+							{#each searchResults as result (result.id)}
+								<li>
+									<button type="button" onclick={() => selectUser(result)}>
+										<span class="font-medium">{result.name}</span>
+										<span class="text-xs opacity-60">{result.email}</span>
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					{#if searching}
+						<p class="mt-1 text-xs opacity-60">Searching...</p>
+					{/if}
+					{#if searchQuery.length >= 2 && searchResults.length === 0 && !searching && !selectedUser && looksLikeEmail}
+						<p class="mt-1 text-xs opacity-60">
+							No existing members found.
+							<button type="button" class="link" onclick={() => (inviteMode = 'email')}>
+								Invite {searchQuery} by email?
+							</button>
+						</p>
+					{/if}
 				</Field>
 
-				<Field
-					label="Position"
-					name="invite-position"
-					type="text"
-					placeholder="e.g. Guitar"
-				/>
-			</div>
+				<div class="grid grid-cols-2 gap-4">
+					<Field label="Role" id="invite-role" type="select">
+						<option value="member">Member</option>
+						<option value="admin">Admin</option>
+					</Field>
+					<Field label="Position" name="invite-position" type="text" placeholder="e.g. Guitar" />
+				</div>
 
-			<div class="flex justify-end pt-2">
-				<SubmitButton
-					label="Send Invitation"
-					successLabel="Sent"
-					class="btn-primary"
-					disabled={!selectedUser}
-				/>
+				<div class="flex justify-end pt-2">
+					<SubmitButton
+						label="Send Invitation"
+						successLabel="Sent"
+						class="btn-primary"
+						disabled={!selectedUser}
+					/>
+				</div>
 			</div>
-		</div>
-	</Form>
+		</Form>
+	{:else}
+		<Form
+			remote={inviteByEmail}
+			successToast="Invitation sent"
+			errorToast="Failed to send invitation"
+			onsuccess={() => {
+				showInviteModal = false;
+				searchQuery = '';
+				invalidateAll();
+				getPlatformInvites().then((r) => (platformInvites = r));
+			}}
+		>
+			<div class="space-y-4">
+				<p class="text-sm opacity-70">
+					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a signup link and be automatically added to your band.
+				</p>
+				<Field name="email" type="email" label="Email address" value={looksLikeEmail ? searchQuery : ''} />
+				<div class="grid grid-cols-2 gap-4">
+					<Field label="Role" name="role" type="select">
+						<option value="member">Member</option>
+						<option value="admin">Admin</option>
+					</Field>
+					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
+				</div>
+				<div class="flex justify-end pt-2">
+					<SubmitButton label="Send Email Invite" successLabel="Sent" class="btn-primary" />
+				</div>
+			</div>
+		</Form>
+	{/if}
 </Modal>
 
 <!-- Transfer Ownership Modal -->

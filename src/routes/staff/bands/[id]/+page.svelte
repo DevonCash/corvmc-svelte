@@ -13,7 +13,10 @@
 		searchUsers,
 		inviteMember,
 		updateMemberRole,
-		revokeInvite
+		revokeInvite,
+		getPlatformInvites,
+		inviteByEmail,
+		revokePlatformInvite
 	} from './data.remote';
 	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -33,6 +36,7 @@
 	let band = $derived(await getBand(id));
 	let members = $derived(await getBandMembers(id));
 	let reservations = $derived(await getBandReservations(id));
+	let platformInvites = $derived(await getPlatformInvites(id));
 
 	let isDeactivated = $derived(!!band.deletedAt);
 
@@ -44,6 +48,11 @@
 	let inviteUserName = $state('');
 	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
 	let searching = $state(false);
+
+	// Email invite state
+	let emailInviteAddress = $state('');
+	let emailInviteRole = $state<'admin' | 'member'>('member');
+	let emailInvitePosition = $state('');
 
 	async function handleSearch() {
 		if (inviteQuery.length < 2) { searchResults = []; return; }
@@ -134,6 +143,42 @@
 		{#snippet header(title)}
 			<header class="flex justify-between items-center">
 				<span class="card-title">{title}</span>
+				<div class="flex gap-2">
+				<Action
+					action={() => {
+						const result = inviteByEmail({ email: emailInviteAddress, role: emailInviteRole, position: emailInvitePosition || undefined });
+						emailInviteAddress = '';
+						emailInviteRole = 'member';
+						emailInvitePosition = '';
+						return result;
+					}}
+					label="Invite by Email"
+					modalTitle="Invite by Email"
+					successToast="Email invitation sent"
+					class="btn-sm btn-outline btn-primary"
+					canSubmit={!!emailInviteAddress && emailInviteAddress.includes('@')}
+				>
+					{#snippet form({ close })}
+						<div class="space-y-3">
+							<p class="text-sm opacity-70">Invite someone who doesn't have a CorvMC account. They'll get a signup link and be auto-added to this band.</p>
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Email</span></div>
+								<input type="email" class="input input-bordered w-full" bind:value={emailInviteAddress} placeholder="musician@example.com" />
+							</label>
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Role</span></div>
+								<select class="select select-bordered w-full" bind:value={emailInviteRole}>
+									<option value="member">Member</option>
+									<option value="admin">Admin</option>
+								</select>
+							</label>
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Position (optional)</span></div>
+								<input type="text" class="input input-bordered w-full" bind:value={emailInvitePosition} placeholder="e.g. Bassist" />
+							</label>
+						</div>
+					{/snippet}
+				</Action>
 				<Action
 					action={() => {
 						const result = inviteMember({ userId: inviteUserId, role: inviteRole, position: invitePosition || undefined });
@@ -193,6 +238,7 @@
 						</div>
 					{/snippet}
 				</Action>
+				</div>
 			</header>
 		{/snippet}
 		<DataTable data={members} empty="No members">
@@ -264,6 +310,39 @@
 			</Column>
 		</DataTable>
 	</InfoCard>
+
+	<!-- Platform invites -->
+	{#if platformInvites.filter((i) => i.status === 'pending').length > 0}
+		<InfoCard title="Awaiting Signup">
+			<DataTable data={platformInvites.filter((i) => i.status === 'pending')} empty="No pending email invites">
+				<Column key="email" header="Email" />
+				<Column key="role" header="Role" shrink>
+					{#snippet cell(_, inv)}
+						<span class="badge badge-outline badge-sm">{inv.role}</span>
+					{/snippet}
+				</Column>
+				<Column key="position" header="Position">
+					{#snippet cell(_, inv)}
+						<span class="text-sm opacity-70">{inv.position ?? '—'}</span>
+					{/snippet}
+				</Column>
+				<Column key="invitedByName" header="Invited by" />
+				<Column key="actions" header="" shrink stopClick>
+					{#snippet cell(_, inv)}
+						<Action
+							action={() => revokePlatformInvite({ inviteId: inv.id })}
+							label="Revoke"
+							confirm={`Revoke invite for ${inv.email}?`}
+							successToast="Invite revoked"
+							class="btn-ghost btn-xs text-warning"
+						/>
+					{/snippet}
+				</Column>
+			</DataTable>
+		</InfoCard>
+	{/if}
+
+	<!-- Email invite action (embedded in Members header) -->
 
 	<InfoCard title="Recent Reservations">
 		<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`} empty="No reservations">

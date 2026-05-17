@@ -12,6 +12,11 @@ import {
 	transferOwnership as transferOwnershipService,
 	leaveBand as leaveBandService
 } from '$lib/server/band/band-service';
+import {
+	createInvite as createPlatformInvite,
+	listForBand,
+	revoke as revokePlatformInvite
+} from '$lib/server/band/platform-invite-service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -135,6 +140,45 @@ export const leave = form(
 		const user = requireUser();
 		const band = await requireBand();
 		await leaveBandService(band.id, user.id);
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Platform invites (invite by email)
+// ---------------------------------------------------------------------------
+
+export const getPlatformInvites = query(z.void(), async () => {
+	const { band } = await requireRole('admin');
+	return listForBand(band.id);
+});
+
+export const inviteByEmail = form(
+	z.object({
+		email: z.string().email('Valid email required'),
+		role: z.enum(['admin', 'member']),
+		position: z.string().max(100).optional().default('')
+	}),
+	async (data) => {
+		const { user, band } = await requireRole('admin');
+		const result = await createPlatformInvite(
+			data.email,
+			band.id,
+			data.role,
+			data.position || null,
+			user.id
+		);
+		return { success: true, ...result };
+	}
+);
+
+export const revokePlatformInviteRemote = form(
+	z.object({
+		inviteId: z.string().min(1)
+	}),
+	async (data) => {
+		await requireRole('admin');
+		await revokePlatformInvite(data.inviteId);
 		return { success: true };
 	}
 );

@@ -163,6 +163,25 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Platform invite (non-user) ---
+	domainEvents.on('platform_invite.created', async (event) => {
+		const signupUrl = `${siteUrl}/login?invite=${event.token}`;
+		const html = templates.platformInvitation({
+			email: event.email,
+			bandName: event.bandName,
+			invitedByName: event.invitedByName,
+			role: event.role,
+			signupUrl
+		});
+
+		await dispatchEmailOnly({
+			type: 'platform_invitation',
+			toEmail: event.email,
+			subject: `${event.invitedByName} invited you to join ${event.bandName} on CorvMC`,
+			html
+		});
+	});
+
 	// --- Recurring reservation skipped ---
 	domainEvents.on('reservation.recurring_skipped', async (event) => {
 		const html = templates.recurringSkipped({

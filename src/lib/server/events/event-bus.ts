@@ -164,6 +164,15 @@ export interface EquipmentReturnedEvent {
 	daysBorrowed: number;
 }
 
+export interface PlatformInviteCreatedEvent {
+	email: string;
+	token: string;
+	bandId: string;
+	bandName: string;
+	role: string;
+	invitedByName: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -184,6 +193,7 @@ export type DomainEvents = {
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
+	'platform_invite.created': PlatformInviteCreatedEvent;
 };
 
 // ---------------------------------------------------------------------------

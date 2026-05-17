@@ -1,9 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+
+	let inviteToken = $derived(page.url.searchParams.get('invite'));
+	let inviteMeta = $state<{ bandName: string; inviterName: string; role: string; email: string } | null>(null);
 
 	let mode = $state<'login' | 'register'>('login');
 	let error = $state('');
+
+	$effect(() => {
+		if (inviteToken) {
+			mode = 'register';
+			fetch(`/api/invites/${inviteToken}`)
+				.then((r) => (r.ok ? r.json() : null))
+				.then((data) => { inviteMeta = data as typeof inviteMeta; });
+		}
+	});
 
 	async function handleSubmit(data: FormData) {
 		error = '';
@@ -44,6 +57,12 @@
 	<div class="w-full max-w-sm">
 		<div class="card shadow-xl" style="background: var(--surface); border: 1px solid var(--surface-border)">
 			<div class="card-body gap-4">
+				{#if inviteMeta}
+					<div class="alert alert-info text-sm">
+						<span><strong>{inviteMeta.inviterName}</strong> invited you to join <strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span>
+					</div>
+				{/if}
+
 				<h2 class="card-title justify-center text-lg">
 					{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
 				</h2>
@@ -58,7 +77,7 @@
 					{#if mode === 'register'}
 						<Field name="name" type="text" label="Name" />
 					{/if}
-					<Field name="email" type="email" label="Email" />
+					<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
 					<Field name="password" type="password" label="Password"
 						minlength={mode === 'register' ? 8 : undefined} />
 					<SubmitButton

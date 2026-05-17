@@ -19,6 +19,11 @@ import {
 	revokeInvitation,
 	searchMembers
 } from '$lib/server/band/band-service';
+import {
+	createInvite as createPlatformInvite,
+	listForBand,
+	revoke as revokePlatformInviteService
+} from '$lib/server/band/platform-invite-service';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -172,3 +177,44 @@ export const revokeInvite = command(memberIdSchema, async (data) => {
 	void getBand(params.id!).refresh();
 	return { success: true };
 });
+
+// ---------------------------------------------------------------------------
+// Platform invites (invite by email)
+// ---------------------------------------------------------------------------
+
+export const getPlatformInvites = query(z.string(), async (bandId) => {
+	await requireStaff();
+	return listForBand(bandId);
+});
+
+export const inviteByEmail = command(
+	z.object({
+		email: z.string().email(),
+		role: z.enum(['admin', 'member']),
+		position: z.string().optional()
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+		const { params } = getRequestEvent();
+		const result = await createPlatformInvite(
+			data.email,
+			params.id!,
+			data.role,
+			data.position ?? null,
+			staff.id
+		);
+		void getPlatformInvites(params.id!).refresh();
+		return { success: true, ...result };
+	}
+);
+
+export const revokePlatformInvite = command(
+	z.object({ inviteId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+		await revokePlatformInviteService(data.inviteId);
+		const { params } = getRequestEvent();
+		void getPlatformInvites(params.id!).refresh();
+		return { success: true };
+	}
+);

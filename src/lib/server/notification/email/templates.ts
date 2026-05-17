@@ -150,6 +150,26 @@ export function bandInvitationAccepted(vars: {
 	);
 }
 
+export function platformInvitation(vars: {
+	email: string;
+	bandName: string;
+	invitedByName: string;
+	role: string;
+	signupUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">You've been invited to join a band!</mj-text>
+		<mj-text><strong>{{invitedByName}}</strong> has invited you to join <strong>{{bandName}}</strong> as a {{role}} on CorvMC.</mj-text>
+		<mj-text>CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.</mj-text>
+		<mj-button href="{{signupUrl}}">Create Account &amp; Join</mj-button>
+		<mj-text font-size="12px" color="#888">This invitation expires in 7 days.</mj-text>
+		`,
+		`${vars.invitedByName} invited you to join ${vars.bandName} on CorvMC`,
+		vars
+	);
+}
+
 export function contactFormForward(vars: {
 	senderName: string;
 	senderEmail: string;
