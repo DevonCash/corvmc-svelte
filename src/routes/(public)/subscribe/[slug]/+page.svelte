@@ -19,7 +19,7 @@
 		});
 
 		if (!res.ok) {
-			const body = await res.json().catch(() => null);
+			const body = await res.json().catch(() => null) as { message?: string } | null;
 			throw new Error(body?.message ?? 'Something went wrong');
 		}
 

@@ -37,10 +37,10 @@
 		});
 
 		if (!res.ok) {
-			const json = await res.json().catch(() => null);
+			const body = await res.json().catch(() => null) as { message?: string } | null;
 			error = mode === 'login'
 				? 'Invalid email or password.'
-				: json?.message ?? 'Registration failed. Please try again.';
+				: body?.message ?? 'Registration failed. Please try again.';
 			throw new Error(error);
 		}
 

@@ -41,7 +41,7 @@
 	<div class="min-w-0">
 		<p class="font-medium flex items-center gap-1">
 			<span class="tooltip tooltip-right" data-tip={role ?? 'member'}>
-				<roleIcon size={14} class="opacity-60" />
+				<roleIcon size={14} class="opacity-60"></roleIcon>
 			</span>
 			{name}{#if pronouns} <span class="text-xs font-normal opacity-60">{pronouns}</span>{/if}
 		</p>

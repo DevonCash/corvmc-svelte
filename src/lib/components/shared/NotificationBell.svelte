@@ -25,31 +25,45 @@
 	let open = $state(false);
 	let loading = $state(false);
 	let eventSource: EventSource | null = null;
+	let connectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	function closeEventSource() {
+		eventSource?.close();
+		eventSource = null;
+	}
+
+	function handleBeforeUnload() {
+		closeEventSource();
+	}
 
 	onMount(() => {
 		if (!browser) return;
 
-		// Connect to SSE
-		eventSource = new EventSource('/api/notifications/stream');
+		// Defer connection so it doesn't race with initial page load
+		connectTimeout = setTimeout(() => {
+			eventSource = new EventSource('/api/notifications/stream');
 
-		eventSource.addEventListener('init', (e) => {
-			const data = JSON.parse(e.data);
-			unreadCount = data.unreadCount;
-		});
+			eventSource.addEventListener('init', (e) => {
+				const data = JSON.parse(e.data);
+				unreadCount = data.unreadCount;
+			});
 
-		eventSource.addEventListener('message', (e) => {
-			const notification: Notification = JSON.parse(e.data);
-			notifications = [notification, ...notifications];
-			unreadCount++;
-		});
+			eventSource.addEventListener('message', (e) => {
+				const notification: Notification = JSON.parse(e.data);
+				notifications = [notification, ...notifications];
+				unreadCount++;
+			});
 
-		eventSource.onerror = () => {
-			// EventSource auto-reconnects; nothing to do here
-		};
+			eventSource.onerror = () => {};
+		}, 100);
+
+		window.addEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	onDestroy(() => {
-		eventSource?.close();
+		if (connectTimeout) clearTimeout(connectTimeout);
+		closeEventSource();
+		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	async function toggleDropdown() {
@@ -64,7 +78,7 @@
 		try {
 			const res = await fetch('/api/notifications?limit=10');
 			if (res.ok) {
-				const data = await res.json();
+				const data = await res.json() as { notifications: typeof notifications; unreadCount: number };
 				notifications = data.notifications;
 				unreadCount = data.unreadCount;
 			}

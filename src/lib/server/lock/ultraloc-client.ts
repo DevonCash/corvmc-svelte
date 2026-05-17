@@ -47,7 +47,7 @@ async function getAccessToken(): Promise<string> {
 		throw new Error(`Ultraloc token refresh failed: ${res.status} ${await res.text()}`);
 	}
 
-	const data = await res.json();
+	const data: { access_token: string; expires_in: number } = await res.json();
 	cachedToken = {
 		accessToken: data.access_token,
 		expiresAt: Date.now() + data.expires_in * 1000
@@ -80,7 +80,7 @@ async function apiCall(namespace: string, name: string, payload: Record<string, 
 		throw new Error(`Ultraloc API error: ${res.status} ${await res.text()}`);
 	}
 
-	const body = await res.json();
+	const body: { payload: { error?: { code: string; message: string } } & Record<string, unknown> } = await res.json();
 
 	if (body.payload?.error) {
 		throw new Error(`Ultraloc API error: ${body.payload.error.code} — ${body.payload.error.message}`);

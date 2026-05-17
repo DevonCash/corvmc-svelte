@@ -12,7 +12,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	const user = locals.user;
 	if (!user) error(401, 'Not authenticated');
 
-	const body = await request.json();
+	const body = await request.json() as { all?: boolean; id?: string };
 
 	if (body.all === true) {
 		await markAllRead(user.id);

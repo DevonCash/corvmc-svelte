@@ -115,7 +115,7 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json();
+		const body = await response.json() as any;
 
 		expect(body.found).toBe(2);
 		expect(body.emitted).toBe(2);
@@ -144,7 +144,7 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json();
+		const body = await response.json() as any;
 
 		expect(body.found).toBe(0);
 		expect(body.emitted).toBe(0);
@@ -186,7 +186,7 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json();
+		const body = await response.json() as any;
 
 		expect(body.found).toBe(2);
 		expect(body.emitted).toBe(1);

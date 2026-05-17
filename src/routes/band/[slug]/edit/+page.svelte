@@ -39,7 +39,7 @@
 			});
 
 			if (!res.ok) {
-				const body = await res.json();
+				const body = await res.json() as { error?: string };
 				throw new Error(body.error ?? 'Upload failed');
 			}
 
@@ -62,7 +62,7 @@
 			});
 
 			if (!res.ok) {
-				const body = await res.json();
+				const body = await res.json() as { error?: string };
 				throw new Error(body.error ?? 'Failed to remove avatar');
 			}
 

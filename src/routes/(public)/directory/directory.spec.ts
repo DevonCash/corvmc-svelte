@@ -77,7 +77,7 @@ describe('directory page load', () => {
 			}
 		];
 
-		const mod = await import('../../routes/api/directory/+server');
+		const mod = await import('../../api/directory/+server');
 		const response = await (mod.GET as Function)({
 			url: new URL('http://localhost/directory')
 		});
@@ -103,7 +103,7 @@ describe('directory page load', () => {
 			}
 		];
 
-		const mod = await import('../../routes/api/directory/+server');
+		const mod = await import('../../api/directory/+server');
 		const response = await (mod.GET as Function)({
 			url: new URL('http://localhost/directory')
 		});
@@ -137,7 +137,7 @@ describe('public band profile load', () => {
 			{ id: 'm-2', userId: 'u-2', role: 'member', position: 'Drums', userName: 'Bob', userImage: null }
 		]);
 
-		const mod = await import('../../routes/api/directory/bands/[slug]/+server');
+		const mod = await import('../../api/directory/bands/[slug]/+server');
 		const response = await (mod.GET as Function)({
 			params: { slug: 'the-strokes' }
 		});
@@ -152,7 +152,7 @@ describe('public band profile load', () => {
 	it('throws 404 for unknown slug', async () => {
 		selectResults.push([]); // no band found
 
-		const mod = await import('../../routes/api/directory/bands/[slug]/+server');
+		const mod = await import('../../api/directory/bands/[slug]/+server');
 
 		await expect(
 			(mod.GET as Function)({ params: { slug: 'nonexistent' } })

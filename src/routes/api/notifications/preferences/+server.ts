@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	const user = locals.user;
 	if (!user) error(401, 'Not authenticated');
 
-	const body = await request.json();
+	const body = await request.json() as { notificationType: unknown; email: unknown; inApp: unknown };
 	const { notificationType, email, inApp } = body;
 
 	if (typeof notificationType !== 'string') {
