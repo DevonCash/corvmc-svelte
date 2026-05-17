@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import speakerLogo from '$lib/assets/cmc-speaker.png';
+	import Logo from '$lib/components/shared/Logo.svelte';
 
 	let { user }: { user: { name: string } | null } = $props();
 
@@ -23,7 +23,7 @@
 		<div class="max-w-6xl mx-auto grid items-end gap-x-4 gap-y-1" style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto">
 			<!-- Logo -->
 			<a href="/" class="row-span-2 flex items-center" style="height: 72px">
-				<img src={speakerLogo} alt="" class="h-full w-auto" />
+				<Logo soundLines={false} class="h-full w-auto" />
 			</a>
 
 			<!-- Title -->
