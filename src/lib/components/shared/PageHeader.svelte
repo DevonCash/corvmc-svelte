@@ -13,11 +13,11 @@
 		subtitle?: string;
 	} = $props();
 
-	let scrollY = $state(0);
+
 </script>
 
 <div
-	class="-mx-6 flex items-center justify-between bg-base-100 px-6 py-4"
+	class="sticky top-0 z-10 -mx-6 flex items-center justify-between border-b border-base-300 bg-base-100 px-6 py-4"
 >
 	<div class="flex items-center gap-4">
 		{#if backHref}
