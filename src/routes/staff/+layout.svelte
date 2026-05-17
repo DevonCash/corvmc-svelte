@@ -16,7 +16,13 @@
 		IconMail,
 		IconMailbox,
 		IconTool,
-		IconBook
+		IconBook,
+
+		IconDashboard,
+
+		IconLayoutDashboard
+
+
 	} from '@tabler/icons-svelte';
 	import type { StaffLayoutResponse } from '$lib/types/api';
 
@@ -43,66 +49,66 @@
 	{/snippet}
 	{#snippet navigation()}
 		<Nav.Item href="/staff" label="Dashboard">
-			{#snippet icon()}<IconHome size={20} />{/snippet}
+			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
 
 		<Nav.Group title="Operations">
 			<Nav.Item href="/staff/users" label="Users">
-				{#snippet icon()}<IconUsers size={20} />{/snippet}
+				{#snippet icon()}<IconUsers />{/snippet}
 			</Nav.Item>
 			<Nav.Collapsible
 				href="/staff/reservations"
 				label="Reservations"
 				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
 			>
-				{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
+				{#snippet icon()}<IconClipboardCheck />{/snippet}
 				{#snippet children()}
 					<Nav.Item href="/staff/reservations" label="All Reservations">
-						{#snippet icon()}<IconClipboardCheck size={20} />{/snippet}
+						{#snippet icon()}<IconClipboardCheck />{/snippet}
 					</Nav.Item>
 					<Nav.Item href="/staff/recurring" label="Recurring">
-						{#snippet icon()}<IconRepeat size={20} />{/snippet}
+						{#snippet icon()}<IconRepeat />{/snippet}
 					</Nav.Item>
 					<Nav.Item href="/staff/closures" label="Closures">
-						{#snippet icon()}<IconBan size={20} />{/snippet}
+						{#snippet icon()}<IconBan />{/snippet}
 					</Nav.Item>
 				{/snippet}
 			</Nav.Collapsible>
 			<Nav.Item href="/staff/events" label="Events">
-				{#snippet icon()}<IconCalendarEvent size={20} />{/snippet}
+				{#snippet icon()}<IconCalendarEvent />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/bands" label="Bands">
-				{#snippet icon()}<IconMusic size={20} />{/snippet}
+				{#snippet icon()}<IconMusic />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/equipment" label="Equipment">
-				{#snippet icon()}<IconTool size={20} />{/snippet}
+				{#snippet icon()}<IconTool />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 
 		<Nav.Group title="Marketing">
 			<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
-				{#snippet icon()}<IconMail size={20} />{/snippet}
+				{#snippet icon()}<IconMail />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/marketing/audiences" label="Audiences">
-				{#snippet icon()}<IconMailbox size={20} />{/snippet}
+				{#snippet icon()}<IconMailbox />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 
 		<Nav.Group title="Content">
 			<Nav.Item href="/staff/help" label="Help Articles">
-				{#snippet icon()}<IconBook size={20} />{/snippet}
+				{#snippet icon()}<IconBook />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 
 		<Nav.Group title="System">
 			<Nav.Item href="/staff/payments" label="Payments">
-				{#snippet icon()}<IconCash size={20} />{/snippet}
+				{#snippet icon()}<IconCash />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/credits" label="Credits">
-				{#snippet icon()}<IconCoins size={20} />{/snippet}
+				{#snippet icon()}<IconCoins />{/snippet}
 			</Nav.Item>
 			<Nav.Item href="/staff/settings" label="Settings">
-				{#snippet icon()}<IconSettings size={20} />{/snippet}
+				{#snippet icon()}<IconSettings />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 	{/snippet}

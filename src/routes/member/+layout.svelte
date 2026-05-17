@@ -72,7 +72,7 @@
 				</Nav.Item>
 			{/each}
 			<Nav.Item href="/member/bands/create" label="Create Band">
-				{#snippet icon()}<IconPlus size={20} />{/snippet}
+				{#snippet icon()}<IconPlus />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 

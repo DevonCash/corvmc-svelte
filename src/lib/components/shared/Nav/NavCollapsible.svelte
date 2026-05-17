@@ -30,3 +30,10 @@
 		</ul>
 	{/if}
 </li>
+
+<style>
+	a :global(svg) {
+		width: 20px;
+		height: 20px;
+	}
+</style>

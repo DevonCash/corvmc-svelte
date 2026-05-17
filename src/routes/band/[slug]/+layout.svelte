@@ -45,25 +45,25 @@
 	{/snippet}
 	{#snippet navigation()}
 		<Nav.Item href={base} label="Dashboard">
-			{#snippet icon()}<IconLayoutDashboard size={20} />{/snippet}
+			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
 		<Nav.Item href={`${base}/members`} label="Members">
-			{#snippet icon()}<IconUsersGroup size={20} />{/snippet}
+			{#snippet icon()}<IconUsersGroup />{/snippet}
 		</Nav.Item>
 		<Nav.Item href={`${base}/reservations`} label="Reservations">
-			{#snippet icon()}<IconCalendar size={20} />{/snippet}
+			{#snippet icon()}<IconCalendar />{/snippet}
 		</Nav.Item>
 		{#if isOwnerOrAdmin}
 			<Nav.Item href={`${base}/edit`} label="Edit Band">
-				{#snippet icon()}<IconPencil size={20} />{/snippet}
+				{#snippet icon()}<IconPencil />{/snippet}
 			</Nav.Item>
 			<Nav.Item href={`${base}/profile`} label="Profile">
-				{#snippet icon()}<IconUser size={20} />{/snippet}
+				{#snippet icon()}<IconUser />{/snippet}
 			</Nav.Item>
 		{/if}
 		{#if data.userRole === 'owner'}
 			<Nav.Item href={`${base}/settings`} label="Settings">
-				{#snippet icon()}<IconSettings size={20} />{/snippet}
+				{#snippet icon()}<IconSettings />{/snippet}
 			</Nav.Item>
 		{/if}
 	{/snippet}
