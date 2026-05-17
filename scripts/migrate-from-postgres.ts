@@ -129,11 +129,6 @@ function ts(val: Date | string | null): string | null {
 	return new Date(val).toISOString();
 }
 
-function jsonStr(val: unknown): string | null {
-	if (val === null || val === undefined) return null;
-	return JSON.stringify(val);
-}
-
 async function count(table: string): Promise<number> {
 	const [row] = await pg`SELECT count(*)::int as n FROM ${pg(table)}`;
 	return row.n;
@@ -149,7 +144,6 @@ async function migrateUsers() {
 		SELECT u.*, mp.bio, mp.links, mp.contact, mp.visibility, mp.hometown
 		FROM users u
 		LEFT JOIN member_profiles mp ON mp.user_id = u.id
-		WHERE u.deleted_at IS NULL
 	`;
 	console.log(`  Source: ${users.length} users`);
 
@@ -197,7 +191,12 @@ async function migrateUsers() {
 
 		// Strip sms_ok from contact (migrated separately as notification preference)
 		const hasSmsOk = contactData?.sms_ok;
-		if (contactData) delete contactData.sms_ok;
+		if (contactData) {
+			delete contactData.sms_ok;
+			for (const key of Object.keys(contactData)) {
+				if (contactData[key] === null) delete contactData[key];
+			}
+		}
 
 		await db.insert(user).values({
 			id,
@@ -221,9 +220,9 @@ async function migrateUsers() {
 			tagline: null,
 			lookingForBand: false,
 			directoryVisibility: u.visibility === 'public' ? 'public' : 'members',
-			directoryContact: jsonStr(contactData),
-			links: jsonStr(normalizedLinks)
-		});
+			directoryContact: contactData ?? null,
+			links: normalizedLinks ?? null
+		}).onConflictDoNothing();
 
 		if (hasSmsOk) {
 			await db.insert(notificationPreference).values({
@@ -232,44 +231,43 @@ async function migrateUsers() {
 				emailEnabled: true,
 				inAppEnabled: true,
 				smsEnabled: true
-			});
+			}).onConflictDoNothing();
 		}
 
 		// Create account record for better-auth (credential provider)
 		await db.insert(account).values({
-			id: randomUUID(),
+			id: mapId('accounts', u.id),
 			accountId: id,
 			providerId: 'credential',
 			userId: id,
 			password: u.password, // Laravel bcrypt is compatible with better-auth
 			createdAt: ts(u.created_at)!,
 			updatedAt: ts(u.updated_at)!
-		});
+		}).onConflictDoNothing();
 
 		// Insert instruments/genres
 		const userTags = tagsByProfile[String(u.id)];
 		if (userTags) {
 			for (const instrument of userTags.instruments) {
-				await db.insert(userInstrument).values({ userId: id, instrument });
+				await db.insert(userInstrument).values({ userId: id, instrument }).onConflictDoNothing();
 			}
 			for (const genre of userTags.genres) {
-				await db.insert(userGenre).values({ userId: id, genre });
+				await db.insert(userGenre).values({ userId: id, genre }).onConflictDoNothing();
 			}
 		}
 	}
 
 	// Migrate credit balances from user_credits table
-	const credits = await pg`SELECT * FROM user_credits WHERE deleted_at IS NULL`;
+	const credits = await pg`SELECT * FROM user_credits`;
 	for (const c of credits) {
 		const userId = lookupId('users', c.user_id);
 		if (!userId) continue;
-		await db
-			.update(user)
-			.set({
-				creditFreeHours: c.type === 'free_hours' ? c.balance : undefined,
-				creditEquipment: c.type === 'equipment' ? c.balance : undefined
-			})
-			.where(sql`id = ${userId}`);
+		const creditType = c.type ?? c.credit_type;
+		if (creditType === 'free_hours') {
+			await db.update(user).set({ creditFreeHours: c.balance }).where(sql`id = ${userId}`);
+		} else if (creditType === 'equipment') {
+			await db.update(user).set({ creditEquipment: c.balance }).where(sql`id = ${userId}`);
+		}
 	}
 
 	console.log(`  ✓ Migrated ${users.length} users`);
@@ -294,7 +292,7 @@ async function migrateRoles() {
 			guardName: r.guard_name,
 			createdAt: ts(r.created_at),
 			updatedAt: ts(r.updated_at)
-		});
+		}).onConflictDoNothing();
 	}
 
 	for (const p of permissions) {
@@ -304,14 +302,14 @@ async function migrateRoles() {
 			guardName: p.guard_name,
 			createdAt: ts(p.created_at),
 			updatedAt: ts(p.updated_at)
-		});
+		}).onConflictDoNothing();
 	}
 
 	for (const rp of rolePerms) {
 		await db.insert(roleHasPermission).values({
 			permissionId: rp.permission_id,
 			roleId: rp.role_id
-		});
+		}).onConflictDoNothing();
 	}
 
 	for (const mr of modelRoles) {
@@ -320,7 +318,7 @@ async function migrateRoles() {
 		await db.insert(modelHasRole).values({
 			roleId: mr.role_id,
 			userId
-		});
+		}).onConflictDoNothing();
 	}
 
 	for (const mp of modelPerms) {
@@ -329,7 +327,7 @@ async function migrateRoles() {
 		await db.insert(modelHasPermission).values({
 			permissionId: mp.permission_id,
 			userId
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated roles/permissions`);
@@ -368,8 +366,13 @@ async function migrateBands() {
 				}))
 			: null;
 
-		// Strip sms_ok from contact (not relevant for bands)
-		if (contactData) delete contactData.sms_ok;
+		// Strip sms_ok and null values from contact
+		if (contactData) {
+			delete contactData.sms_ok;
+			for (const key of Object.keys(contactData)) {
+				if (contactData[key] === null) delete contactData[key];
+			}
+		}
 
 		await db.insert(band).values({
 			id,
@@ -384,16 +387,16 @@ async function migrateBands() {
 			tagline: null,
 			lookingForMembers: false,
 			directoryVisibility: b.visibility === 'public' ? 'public' : 'members',
-			directoryContact: jsonStr(contactData),
-			links: jsonStr(normalizedLinks)
-		});
+			directoryContact: contactData ?? null,
+			links: normalizedLinks ?? null
+		}).onConflictDoNothing();
 	}
 
 	// Band genres
 	for (const tag of bandTags) {
 		const bandId = lookupId('band_profiles', tag.band_id);
 		if (!bandId) continue;
-		await db.insert(bandGenre).values({ bandId, genre: tag.name });
+		await db.insert(bandGenre).values({ bandId, genre: tag.name }).onConflictDoNothing();
 	}
 
 	// Band members
@@ -403,7 +406,7 @@ async function migrateBands() {
 		if (!bandId || !userId) continue;
 
 		await db.insert(bandMember).values({
-			id: randomUUID(),
+			id: mapId('band_members', m.id),
 			bandId,
 			userId,
 			role: m.role || 'member',
@@ -411,7 +414,7 @@ async function migrateBands() {
 			status: 'active',
 			invitedById: null,
 			createdAt: ts(m.created_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${bands.length} bands, ${members.length} members`);
@@ -439,7 +442,7 @@ async function migrateRecurringSeries() {
 			rrule: s.recurrence_rule,
 			createdAt: ts(s.created_at)!,
 			cancelledAt: s.status === 'cancelled' ? ts(s.updated_at) : null
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${series.length} recurring series`);
@@ -495,7 +498,7 @@ async function migrateReservations() {
 			recurringSeriesId: recurringId,
 			createdAt: ts(r.created_at)!,
 			updatedAt: ts(r.updated_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${reservations.length} reservations`);
@@ -510,12 +513,12 @@ async function migrateClosures() {
 
 	for (const c of closures) {
 		await db.insert(closure).values({
-			id: randomUUID(),
+			id: mapId('closures', c.id),
 			reason: c.reason || 'Closed',
 			startsAt: ts(c.starts_at ?? c.start_date)!,
 			endsAt: ts(c.ends_at ?? c.end_date)!,
 			createdAt: ts(c.created_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${closures.length} closures`);
@@ -556,7 +559,7 @@ async function migrateEvents() {
 			createdByUserId,
 			createdAt: ts(e.created_at)!,
 			updatedAt: ts(e.updated_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${events.length} events`);
@@ -585,19 +588,19 @@ async function migrateTickets() {
 		const userId = t.user_id ? lookupId('users', t.user_id) : null;
 
 		await db.insert(ticket).values({
-			id: randomUUID(),
+			id: mapId('tickets', t.id),
 			eventId,
-			purchaseId: t.purchase_id ?? t.order_id ?? randomUUID(),
+			purchaseId: t.purchase_id ?? t.order_id ?? mapId('ticket_purchases', t.id),
 			userId,
 			attendeeName: t.attendee_name ?? t.name ?? 'Unknown',
 			attendeeEmail: t.attendee_email ?? t.email ?? '',
-			code: t.code ?? randomUUID().slice(0, 8),
+			code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
 			status: t.status ?? 'confirmed',
 			checkedInAt: ts(t.checked_in_at),
 			checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
 			createdAt: ts(t.created_at)!,
 			updatedAt: ts(t.updated_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${tickets.length} tickets`);
@@ -615,6 +618,7 @@ async function migrateCreditTransactions() {
 		if (!userId) continue;
 
 		await db.insert(creditTransaction).values({
+			id: t.id,
 			userId,
 			creditType: t.credit_type ?? t.type ?? 'free_hours',
 			amount: t.amount,
@@ -622,9 +626,9 @@ async function migrateCreditTransactions() {
 			source: t.source ?? 'legacy',
 			sourceId: t.source_id ? String(t.source_id) : null,
 			description: t.description ?? 'Migrated from legacy system',
-			metadata: jsonStr(t.metadata ?? {}),
+			metadata: t.metadata ? (typeof t.metadata === 'string' ? JSON.parse(t.metadata) : t.metadata) : {},
 			createdAt: ts(t.created_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${txns.length} credit transactions`);
@@ -652,7 +656,7 @@ async function migrateEquipment() {
 	for (const item of items) {
 		const cat = item.category ?? 'General';
 		if (!categories.has(cat)) {
-			const catId = randomUUID();
+			const catId = mapId('equipment_categories', cat);
 			categories.set(cat, catId);
 			await db.insert(equipmentCategory).values({
 				id: catId,
@@ -661,7 +665,7 @@ async function migrateEquipment() {
 				pricingTier: 'standard',
 				createdAt: ts(item.created_at)!,
 				updatedAt: ts(item.updated_at)!
-			});
+			}).onConflictDoNothing();
 		}
 	}
 
@@ -685,7 +689,7 @@ async function migrateEquipment() {
 			createdAt: ts(item.created_at)!,
 			updatedAt: ts(item.updated_at)!,
 			deletedAt: null
-		});
+		}).onConflictDoNothing();
 	}
 
 	for (const loan of loans) {
@@ -694,7 +698,7 @@ async function migrateEquipment() {
 		if (!userId) continue;
 
 		await db.insert(equipmentLoan).values({
-			id: randomUUID(),
+			id: mapId('equipment_loans', loan.id),
 			equipmentId,
 			userId,
 			quantity: loan.quantity ?? 1,
@@ -712,7 +716,7 @@ async function migrateEquipment() {
 			staffNotes: loan.staff_notes,
 			createdAt: ts(loan.created_at)!,
 			updatedAt: ts(loan.updated_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${items.length} equipment items, ${loans.length} loans`);
@@ -737,16 +741,16 @@ async function migrateNotifications() {
 		const data = n.data ? (typeof n.data === 'string' ? JSON.parse(n.data) : n.data) : {};
 
 		await db.insert(notification).values({
-			id: n.id ?? randomUUID(),
+			id: n.id ?? mapId('notifications', n.id ?? userId + n.created_at),
 			userId,
 			type: n.type?.split('\\').pop() ?? 'general',
 			title: data.title ?? data.subject ?? n.type?.split('\\').pop() ?? 'Notification',
 			body: data.body ?? data.message ?? null,
 			href: data.action_url ?? data.url ?? null,
-			data: jsonStr(data),
+			data: data,
 			readAt: ts(n.read_at),
 			createdAt: ts(n.created_at)!
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${notifications.length} notifications`);
@@ -777,9 +781,9 @@ async function migrateInvitations() {
 		if (!bandId || !invitedById) continue;
 
 		await db.insert(platformInvite).values({
-			id: randomUUID(),
+			id: mapId('platform_invites', inv.id),
 			email: inv.email,
-			token: inv.token ?? randomUUID(),
+			token: inv.token ?? mapId('invite_tokens', inv.id),
 			bandId,
 			role: 'member',
 			position: null,
@@ -788,7 +792,7 @@ async function migrateInvitations() {
 			expiresAt: ts(inv.expires_at) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
 			createdAt: ts(inv.created_at)!,
 			acceptedAt: null
-		});
+		}).onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${invitations.length} invitations`);
