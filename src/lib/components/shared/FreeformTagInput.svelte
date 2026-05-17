@@ -42,7 +42,7 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') {
+		if (e.key === 'Enter' || e.key === ',') {
 			e.preventDefault();
 			if (input.trim()) addTag(input);
 		} else if (e.key === 'Backspace' && !input && value.length > 0) {
