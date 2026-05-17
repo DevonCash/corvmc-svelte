@@ -16,11 +16,12 @@
 		children: Snippet;
 	} = $props();
 
-	const isOpen = $derived(childHrefs.some((href) => page.url.pathname.startsWith(href)));
+	let isOpen = $derived(childHrefs.some((href) => page.url.pathname.startsWith(href)));
+	let active = $derived(page.url.pathname === href || page.url.pathname.startsWith(href + '/'));
 </script>
 
 <li>
-	<a {href}>
+	<a {href} class:active>
 		{@render icon?.()}
 		{label}
 	</a>
