@@ -13,4 +13,4 @@ bucket_name="corvmc"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "TODO_CREATE_VIA_WRANGLER"
+id = "fc85459046fe47f9bbfae4f343012041"
