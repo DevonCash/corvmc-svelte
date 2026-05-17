@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getSlots, bookReservation } from '../data.remote';
+	import { getSlots, getBandMembershipStatus, bookReservation } from '../data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -23,6 +23,9 @@
 	const slots = $derived(slotData.slots);
 	const currentDate = $derived(slotData.date);
 	const config = $derived(slotData.config);
+
+	let membershipStatus = $derived(await getBandMembershipStatus());
+	const hasSustainingMember = $derived(membershipStatus.hasSustainingMember);
 
 	let selectedStart = $state('');
 	let selectedEnd = $state('');
@@ -185,27 +188,29 @@
 				></textarea>
 			</div>
 
-			<div class="form-control mt-4">
-				<label class="label" for="recurring">
-					<span class="label-text">Repeat this reservation</span>
-				</label>
-				<select
-					id="recurring"
-					name="recurring"
-					class="select select-bordered"
-					bind:value={recurring}
-				>
-					<option value="">Don't repeat (one-time)</option>
-					<option value="weekly">Weekly</option>
-					<option value="biweekly">Every 2 weeks</option>
-					<option value="monthly">Monthly</option>
-				</select>
-				{#if recurring}
-					<p class="text-sm mt-1 opacity-60">
-						Future instances will be generated automatically.
-					</p>
-				{/if}
-			</div>
+			{#if hasSustainingMember}
+				<div class="form-control mt-4">
+					<label class="label" for="recurring">
+						<span class="label-text">Repeat this reservation</span>
+					</label>
+					<select
+						id="recurring"
+						name="recurring"
+						class="select select-bordered"
+						bind:value={recurring}
+					>
+						<option value="">Don't repeat (one-time)</option>
+						<option value="weekly">Weekly</option>
+						<option value="biweekly">Every 2 weeks</option>
+						<option value="monthly">Monthly</option>
+					</select>
+					{#if recurring}
+						<p class="text-sm mt-1 opacity-60">
+							Future instances will be generated automatically.
+						</p>
+					{/if}
+				</div>
+			{/if}
 
 			<div class="mt-6">
 				<SubmitButton

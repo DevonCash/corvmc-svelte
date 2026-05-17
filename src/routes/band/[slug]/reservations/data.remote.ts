@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { form, query, getRequestEvent } from '$app/server';
-import { getBySlug, getUserRole } from '$lib/server/band/band-service';
+import { getBySlug, getUserRole, getMembers } from '$lib/server/band/band-service';
 import { getAvailableSlots } from '$lib/server/reservation/conflict-service';
 import { create, cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
@@ -15,6 +15,10 @@ import {
 } from '$lib/server/reservation/config';
 import type { RecurringFrequency } from '$lib/server/reservation/config';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
+import { getSubscription } from '$lib/server/finance/subscription-service';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema/auth';
+import { inArray } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +69,30 @@ export const getSlots = query(z.string(), async (dateParam) => {
 	};
 });
 
+/** Check if any active band member has a sustaining membership. */
+export const getBandMembershipStatus = query(z.void(), async () => {
+	const { band } = await requireMember();
+	const members = await getMembers(band.id);
+	const activeUserIds = members
+		.filter((m) => m.status === 'active')
+		.map((m) => m.userId);
+
+	if (activeUserIds.length === 0) return { hasSustainingMember: false };
+
+	const users = await db
+		.select({ stripeId: user.stripeId })
+		.from(user)
+		.where(inArray(user.id, activeUserIds));
+
+	for (const u of users) {
+		if (!u.stripeId) continue;
+		const sub = await getSubscription(u.stripeId);
+		if (sub) return { hasSustainingMember: true };
+	}
+
+	return { hasSustainingMember: false };
+});
+
 // ---------------------------------------------------------------------------
 // Forms
 // ---------------------------------------------------------------------------
@@ -91,6 +119,26 @@ export const bookReservation = form(bandBookingSchema, async (raw) => {
 	});
 
 	if (recurringFrequency) {
+		// Verify at least one band member has a sustaining membership
+		const members = await getMembers(band.id);
+		const activeUserIds = members
+			.filter((m) => m.status === 'active')
+			.map((m) => m.userId);
+		const users = await db
+			.select({ stripeId: user.stripeId })
+			.from(user)
+			.where(inArray(user.id, activeUserIds));
+
+		let hasSustaining = false;
+		for (const u of users) {
+			if (!u.stripeId) continue;
+			const sub = await getSubscription(u.stripeId);
+			if (sub) { hasSustaining = true; break; }
+		}
+		if (!hasSustaining) {
+			throw error(403, 'Recurring reservations require at least one band member with a sustaining membership');
+		}
+
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
