@@ -1,15 +1,39 @@
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { hashPassword, verifyPassword } from 'better-auth/crypto';
+import bcrypt from 'bcryptjs';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
+import { account } from '$lib/server/db/schema/auth';
+import { eq } from 'drizzle-orm';
 
 export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
-	emailAndPassword: { enabled: true },
+	emailAndPassword: {
+		enabled: true,
+		password: {
+			verify: async ({ hash, password }) => {
+				if (hash.startsWith('$2')) {
+					const normalized = hash.replace(/^\$2y\$/, '$2a$');
+					const valid = await bcrypt.compare(password, normalized);
+					if (valid) {
+						const scryptHash = await hashPassword(password);
+						await db
+							.update(account)
+							.set({ password: scryptHash })
+							.where(eq(account.password, hash));
+					}
+					return valid;
+				}
+				return verifyPassword({ hash, password });
+			},
+			hash: hashPassword
+		}
+	},
 	user: {
 		additionalFields: {
 			pronouns: { type: 'string', required: false },
