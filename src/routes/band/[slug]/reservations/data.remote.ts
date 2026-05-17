@@ -4,13 +4,16 @@ import { form, query, getRequestEvent } from '$app/server';
 import { getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { getAvailableSlots } from '$lib/server/reservation/conflict-service';
 import { create, cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { createReservationSchema } from '$lib/server/reservation/types';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	TIME_SLOT_MINUTES,
 	MIN_DURATION_HOURS,
-	MAX_DURATION_HOURS
+	MAX_DURATION_HOURS,
+	RECURRING_FREQUENCIES
 } from '$lib/server/reservation/config';
+import type { RecurringFrequency } from '$lib/server/reservation/config';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 
 // ---------------------------------------------------------------------------
@@ -52,6 +55,7 @@ export const getSlots = query(z.string(), async (dateParam) => {
 	return {
 		date: date.toISOString().split('T')[0],
 		slots,
+		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {
 			hourlyRateCents: rehearsalConfig.unitAmountCents,
 			slotMinutes: TIME_SLOT_MINUTES,
@@ -65,10 +69,15 @@ export const getSlots = query(z.string(), async (dateParam) => {
 // Forms
 // ---------------------------------------------------------------------------
 
-export const bookReservation = form(createReservationSchema, async (raw) => {
+const bandBookingSchema = createReservationSchema.extend({
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional()
+});
+
+export const bookReservation = form(bandBookingSchema, async (raw) => {
 	const { user, band } = await requireMember();
 
-	const data = raw as z.infer<typeof createReservationSchema>;
+	const data = raw as z.infer<typeof bandBookingSchema>;
+	const recurringFrequency = data.recurring || undefined;
 	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
 	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
 
@@ -80,6 +89,14 @@ export const bookReservation = form(createReservationSchema, async (raw) => {
 		endsAt,
 		notes: data.notes
 	});
+
+	if (recurringFrequency) {
+		await createSeries({
+			prototypeReservationId: res.id,
+			frequency: recurringFrequency as RecurringFrequency,
+			prototypeStartsAt: startsAt
+		});
+	}
 
 	return { reservationId: res.id };
 });

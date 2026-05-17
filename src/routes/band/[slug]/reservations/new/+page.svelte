@@ -26,6 +26,7 @@
 
 	let selectedStart = $state('');
 	let selectedEnd = $state('');
+	let recurring = $state('');
 
 	const minSlots = $derived(config.minDurationHours * (60 / config.slotMinutes));
 	const maxSlots = $derived(config.maxDurationHours * (60 / config.slotMinutes));
@@ -79,7 +80,7 @@
 		return (eh * 60 + em - (sh * 60 + sm)) / 60;
 	});
 
-	let initial = $derived({ startTime: '', endTime: '', notes: '' });
+	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
 </script>
 
 	<PageHeader title="Book a Session" subtitle={band.name} />
@@ -184,9 +185,31 @@
 				></textarea>
 			</div>
 
+			<div class="form-control mt-4">
+				<label class="label" for="recurring">
+					<span class="label-text">Repeat this reservation</span>
+				</label>
+				<select
+					id="recurring"
+					name="recurring"
+					class="select select-bordered"
+					bind:value={recurring}
+				>
+					<option value="">Don't repeat (one-time)</option>
+					<option value="weekly">Weekly</option>
+					<option value="biweekly">Every 2 weeks</option>
+					<option value="monthly">Monthly</option>
+				</select>
+				{#if recurring}
+					<p class="text-sm mt-1 opacity-60">
+						Future instances will be generated automatically.
+					</p>
+				{/if}
+			</div>
+
 			<div class="mt-6">
 				<SubmitButton
-					label="Book Session"
+					label={recurring ? 'Book & Start Series' : 'Book Session'}
 					successLabel="Booked!"
 					errorLabel="Booking failed"
 					disabled={!selectedStart || !selectedEnd}
