@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { paymentRecord } from '$lib/server/db/schema/finance';
+import { paymentCache } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, desc, and, gte, lte, like, or, sql, type SQL } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -10,7 +10,7 @@ const TZ = 'America/Los_Angeles';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface PaymentRecordRow {
+export interface PaymentCacheRow {
 	id: string;
 	userId: string;
 	userName: string | null;
@@ -25,7 +25,7 @@ export interface PaymentRecordRow {
 	refundedAt: string | null;
 }
 
-export interface PaymentRecordFilters {
+export interface PaymentCacheFilters {
 	search?: string;
 	method?: string;
 	status?: string;
@@ -38,18 +38,18 @@ export interface PaymentRecordFilters {
 // ---------------------------------------------------------------------------
 
 const baseSelect = {
-	id: paymentRecord.id,
-	userId: paymentRecord.userId,
+	id: paymentCache.id,
+	userId: paymentCache.userId,
 	userName: user.name,
 	userEmail: user.email,
-	reservationId: paymentRecord.reservationId,
-	stripeCustomerId: paymentRecord.stripeCustomerId,
-	amountCents: paymentRecord.amountCents,
-	currency: paymentRecord.currency,
-	paymentMethod: paymentRecord.paymentMethod,
-	status: paymentRecord.status,
-	paidAt: paymentRecord.paidAt,
-	refundedAt: paymentRecord.refundedAt
+	reservationId: paymentCache.reservationId,
+	stripeCustomerId: paymentCache.stripeCustomerId,
+	amountCents: paymentCache.amountCents,
+	currency: paymentCache.currency,
+	paymentMethod: paymentCache.paymentMethod,
+	status: paymentCache.status,
+	paidAt: paymentCache.paidAt,
+	refundedAt: paymentCache.refundedAt
 };
 
 /** Escape LIKE/ILIKE wildcards so user input is treated literally. */
@@ -57,7 +57,7 @@ function escapeLike(input: string): string {
 	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
 }
 
-function buildFilters(filters: PaymentRecordFilters): SQL[] {
+function buildFilters(filters: PaymentCacheFilters): SQL[] {
 	const conditions: SQL[] = [];
 
 	if (filters.search) {
@@ -71,19 +71,19 @@ function buildFilters(filters: PaymentRecordFilters): SQL[] {
 	}
 
 	if (filters.method) {
-		conditions.push(eq(paymentRecord.paymentMethod, filters.method));
+		conditions.push(eq(paymentCache.paymentMethod, filters.method));
 	}
 
 	if (filters.status) {
-		conditions.push(eq(paymentRecord.status, filters.status));
+		conditions.push(eq(paymentCache.status, filters.status));
 	}
 
 	if (filters.from) {
-		conditions.push(gte(paymentRecord.paidAt, buildDateInTz(filters.from, '00:00', TZ)));
+		conditions.push(gte(paymentCache.paidAt, buildDateInTz(filters.from, '00:00', TZ)));
 	}
 
 	if (filters.to) {
-		conditions.push(lte(paymentRecord.paidAt, buildDateInTz(filters.to, '23:59', TZ)));
+		conditions.push(lte(paymentCache.paidAt, buildDateInTz(filters.to, '23:59', TZ)));
 	}
 
 	return conditions;
@@ -94,36 +94,36 @@ function serialize(row: {
 	paidAt: Date;
 	refundedAt: Date | null;
 	[key: string]: unknown;
-}): PaymentRecordRow {
+}): PaymentCacheRow {
 	return {
 		...row,
 		paidAt: row.paidAt.toISOString(),
 		refundedAt: row.refundedAt?.toISOString() ?? null
-	} as PaymentRecordRow;
+	} as PaymentCacheRow;
 }
 
 /** Paginated list of all payment records with optional filters. */
 export async function list(
-	filters: PaymentRecordFilters = {},
+	filters: PaymentCacheFilters = {},
 	limit = 50,
 	offset = 0
-): Promise<{ rows: PaymentRecordRow[]; total: number }> {
+): Promise<{ rows: PaymentCacheRow[]; total: number }> {
 	const conditions = buildFilters(filters);
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
 	const rows = await db
 		.select(baseSelect)
-		.from(paymentRecord)
-		.innerJoin(user, eq(user.id, paymentRecord.userId))
+		.from(paymentCache)
+		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(where)
-		.orderBy(desc(paymentRecord.paidAt))
+		.orderBy(desc(paymentCache.paidAt))
 		.limit(limit)
 		.offset(offset);
 
 	const [countRow] = await db
 		.select({ count: sql<number>`cast(count(*) as int)` })
-		.from(paymentRecord)
-		.innerJoin(user, eq(user.id, paymentRecord.userId))
+		.from(paymentCache)
+		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(where);
 
 	return {
@@ -133,13 +133,13 @@ export async function list(
 }
 
 /** All payment records for a specific user, ordered by most recent. */
-export async function listByUser(userId: string): Promise<PaymentRecordRow[]> {
+export async function listByUser(userId: string): Promise<PaymentCacheRow[]> {
 	const rows = await db
 		.select(baseSelect)
-		.from(paymentRecord)
-		.innerJoin(user, eq(user.id, paymentRecord.userId))
-		.where(eq(paymentRecord.userId, userId))
-		.orderBy(desc(paymentRecord.paidAt));
+		.from(paymentCache)
+		.innerJoin(user, eq(user.id, paymentCache.userId))
+		.where(eq(paymentCache.userId, userId))
+		.orderBy(desc(paymentCache.paidAt));
 
 	return rows.map(serialize);
 }

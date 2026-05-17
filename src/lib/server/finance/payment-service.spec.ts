@@ -79,7 +79,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/finance', () => ({
-	paymentRecord: { id: 'id' }
+	paymentCache: { id: 'id' }
 }));
 
 vi.mock('drizzle-orm', () => ({

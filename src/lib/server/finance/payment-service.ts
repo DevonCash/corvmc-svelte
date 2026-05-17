@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
-import { paymentRecord } from '$lib/server/db/schema/finance';
+import { paymentCache } from '$lib/server/db/schema/finance';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { type CreditType, creditTypes } from './types';
@@ -187,7 +187,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 
 		// Cache locally — best-effort; Stripe is the source of truth
 		try {
-			await db.insert(paymentRecord).values({
+			await db.insert(paymentCache).values({
 				id: stripeRecord.id,
 				userId,
 				reservationId: metadata.reservation_id ?? null,
@@ -326,7 +326,7 @@ export async function recordCashPayment(options: CashPaymentOptions): Promise<{ 
 
 	// Cache locally — best-effort; Stripe is the source of truth
 	try {
-		await db.insert(paymentRecord).values({
+		await db.insert(paymentCache).values({
 			id: stripeRecord.id,
 			userId,
 			reservationId: metadata.reservation_id ?? null,
@@ -375,9 +375,9 @@ export async function refund(options: RefundOptions): Promise<void> {
 
 	// Update local cache
 	await db
-		.update(paymentRecord)
+		.update(paymentCache)
 		.set({ status: 'refunded', refundedAt: new Date() })
-		.where(eq(paymentRecord.id, stripePaymentRecordId));
+		.where(eq(paymentCache.id, stripePaymentRecordId));
 
 	// Reverse credit deductions if a user was involved
 	if (userId) {

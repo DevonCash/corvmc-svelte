@@ -9,8 +9,8 @@ import { reservation } from './reservation';
 // Payment record cache — mirrors Stripe Payment Records created by our app
 // ---------------------------------------------------------------------------
 
-export const paymentRecord = sqliteTable(
-	'payment_record',
+export const paymentCache = sqliteTable(
+	'payment_cache',
 	{
 		id: text('id').primaryKey(),
 		userId: text('user_id')

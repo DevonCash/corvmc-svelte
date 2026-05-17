@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
-import { list } from '$lib/server/finance/payment-record-service';
+import { list } from '$lib/server/finance/payment-cache-service';
 
 const PAGE_SIZE = 50;
 

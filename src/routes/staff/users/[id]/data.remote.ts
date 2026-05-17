@@ -6,7 +6,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq } from 'drizzle-orm';
 import { getUserRoles, requireStaff } from '$lib/server/authorization';
-import { listByUser } from '$lib/server/finance/payment-record-service';
+import { listByUser } from '$lib/server/finance/payment-cache-service';
 import { getAllBalances, addCredits, deductCredits } from '$lib/server/finance/credit-service';
 import type { CreditType } from '$lib/server/finance/types';
 
