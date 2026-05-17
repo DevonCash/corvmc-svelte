@@ -20,14 +20,14 @@
 
 <header>
 	<nav class="px-4 py-3" style="background: var(--bg-page); border-bottom: 1px solid var(--surface-border)">
-		<div class="max-w-6xl mx-auto grid items-center gap-x-4 gap-y-1" style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto">
+		<div class="max-w-6xl mx-auto grid items-end gap-x-4 gap-y-1" style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto">
 			<!-- Logo -->
 			<a href="/" class="row-span-2 flex items-center" style="height: 72px">
 				<img src={speakerLogo} alt="" class="h-full w-auto" />
 			</a>
 
 			<!-- Title -->
-			<div class="text-xl font-bold" style="color: var(--cmc-orange); grid-row: 1; grid-column: 2">
+			<div class="text-2xl font-bold" style="color: var(--cmc-teal); grid-row: 1; grid-column: 2">
 				Corvallis Music Collective
 			</div>
 

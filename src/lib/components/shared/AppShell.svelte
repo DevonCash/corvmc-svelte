@@ -5,6 +5,9 @@
 	import AppTopbar from './AppTopbar.svelte';
 	import type { PanelTab } from './AppTopbar.svelte';
 	import Sidebar from './Sidebar.svelte';
+	import { IconMenu2, IconWorld } from '@tabler/icons-svelte';
+	import logo from '$lib/assets/cmc-compact-logo.svg';
+	import Button from './Button.svelte';
 
 	let {
 		drawerId,
@@ -32,14 +35,14 @@
 	<Toaster position="bottom-right" richColors closeButton />
 {/if}
 
-<AppTopbar {drawerId} {user} {panels} {activePanel} />
-<div class="tri-stripe"></div>
-
 <div class="drawer lg:drawer-open">
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
-	<div class="drawer-content flex flex-col">
-		<main class="flex-1 p-6">
+	<div class="drawer-content flex h-screen flex-col overflow-hidden">
+		<AppTopbar {drawerId} {user} {panels} {activePanel} />
+		<div class="tri-stripe"></div>
+
+		<main class="flex-1 overflow-auto px-6 py-2">
 			{@render children()}
 		</main>
 	</div>
@@ -48,12 +51,17 @@
 		<label for={drawerId} class="drawer-overlay"></label>
 		<Sidebar>
 			{#snippet brand()}
-				{@render brandSnippet?.()}
+				<span class="block flex items-center justify-between h-[48px] px-3">
+					<img src={logo} alt="CorvMC" class="h-full p-2" />
+					<Button class='btn-ghost  btn-square' title='To Public Site' href='/'>
+						<IconWorld class='text-primary size-5' />
+					</Button>
+				</span>
 
 				<!-- Mobile panel nav -->
-				<div class="lg:hidden border-b border-base-300 px-4 py-2">
+				<div class="border-b border-base-300 px-4 py-2 lg:hidden">
 					<select
-						class="select select-sm select-bordered w-full"
+						class="select-bordered select w-full select-sm"
 						value={activePanel}
 						onchange={(e) => {
 							const panel = panels.find((p) => p.key === e.currentTarget.value);

@@ -40,19 +40,15 @@
 
 <svelte:window onclick={handleClickOutside} />
 
-<nav class="navbar bg-base-100 border-b border-base-300 z-50 min-h-0 px-3 py-1.5">
+<nav class="navbar z-50 h-[48px] min-h-0 border-b border-base-300 bg-base-100 px-3 py-1.5 justify-between">
 	<!-- Left: hamburger (mobile) + brand + panel tabs (desktop) -->
-	<div class="flex-1 flex items-center gap-1">
+	<div class="flex items-center gap-2">
 		<label for={drawerId} class="btn btn-square btn-ghost btn-sm lg:hidden">
 			<IconMenu2 size={20} />
 		</label>
 
-		<a href="/member" class="hidden lg:inline">
-			<img src={logo} alt="CorvMC" class="h-6" />
-		</a>
-
 		<!-- Panel tabs - desktop only -->
-		<div class="hidden lg:flex items-center gap-1 ml-4">
+		<div class="ml-4 hidden items-center gap-1 lg:flex">
 			{#each primaryPanels as panel (panel.key)}
 				<a
 					href={panel.href}
@@ -65,7 +61,7 @@
 			{#if bandPanels.length > 0}
 				<div class="bands-dropdown-wrapper relative">
 					<button
-						class="btn btn-sm gap-1 {activeBand ? 'btn-primary' : 'btn-ghost'}"
+						class="btn gap-1 btn-sm {activeBand ? 'btn-primary' : 'btn-ghost'}"
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />
@@ -75,7 +71,7 @@
 
 					{#if bandsOpen}
 						<div
-							class="absolute left-0 top-full z-[1000] mt-1 w-48 rounded-lg border border-base-300 bg-base-100 shadow-lg"
+							class="absolute top-full left-0 z-[1000] mt-1 w-48 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 						>
 							<ul class="menu menu-sm p-2">
 								{#each bandPanels as band (band.key)}
@@ -95,15 +91,15 @@
 				</div>
 			{/if}
 		</div>
-
-		<!-- Mobile brand -->
-		<span class="lg:hidden">
-			<img src={logo} alt="CorvMC" class="h-5" />
-		</span>
 	</div>
 
+	<!-- Mobile brand -->
+	<span class="lg:hidden">
+		<img src={logo} alt="CorvMC" class="h-full" />
+	</span>
+
 	<!-- Right: notifications + account -->
-	<div class="flex-none flex items-center gap-1">
+	<div class="flex flex-none items-center gap-1">
 		<NotificationBell />
 		<AccountDropdown {user} />
 	</div>
