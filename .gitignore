@@ -27,3 +27,9 @@ test-results
 *storybook.log
 storybook-static
 test-results.json
+
+# Coverage
+coverage/
+
+# Claude Code
+.claude/worktrees/
