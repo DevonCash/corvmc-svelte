@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "561c2e6b-7739-46bd-8b5e-e08524f992a3",
-  "prevId": "96cc83ee-49ee-40a5-9f8b-ddfcdb866a9f",
+  "id": "5440ad1c-3192-4898-a609-cc1bf99cbe51",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
       "name": "account",
@@ -3565,9 +3565,7 @@
   "enums": {},
   "_meta": {
     "schemas": {},
-    "tables": {
-      "\"payment_record\"": "\"payment_cache\""
-    },
+    "tables": {},
     "columns": {}
   },
   "internal": {

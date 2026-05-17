@@ -12,11 +12,10 @@ Set up Cloudflare R2 as a generic file storage layer. This comes first because t
 
 Install `@aws-sdk/client-s3`. Add R2 env vars to `.env.example`.
 
-**Env vars:**
-- `R2_ACCOUNT_ID`
-- `R2_ACCESS_KEY_ID`
-- `R2_SECRET_ACCESS_KEY`
-- `R2_BUCKET_NAME`
+**Platform bindings (wrangler.toml):**
+- `R2_BUCKET` — R2 bucket binding, accessed via `platform.env.R2_BUCKET`
+
+**Env vars (secrets):**
 - `R2_PUBLIC_URL` — the public access base URL for the bucket (direct, no transforms)
 - `R2_TRANSFORM_URL` — optional, Cloudflare Image Transformations base URL. When set, `getPublicUrl()` serves images through the transform pipeline (resized, webp). When unset, serves originals directly from `R2_PUBLIC_URL`.
 

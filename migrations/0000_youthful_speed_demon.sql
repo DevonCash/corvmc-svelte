@@ -269,7 +269,7 @@ CREATE TABLE `credit_transaction` (
 --> statement-breakpoint
 CREATE INDEX `credit_transaction_user_idx` ON `credit_transaction` (`user_id`);--> statement-breakpoint
 CREATE INDEX `credit_transaction_user_type_idx` ON `credit_transaction` (`user_id`,`credit_type`);--> statement-breakpoint
-CREATE TABLE `payment_record` (
+CREATE TABLE `payment_cache` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`reservation_id` text,
@@ -285,9 +285,43 @@ CREATE TABLE `payment_record` (
 	FOREIGN KEY (`reservation_id`) REFERENCES `reservation`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE INDEX `idx_payment_record_user` ON `payment_record` (`user_id`);--> statement-breakpoint
-CREATE INDEX `idx_payment_record_reservation` ON `payment_record` (`reservation_id`);--> statement-breakpoint
-CREATE INDEX `idx_payment_record_paid_at` ON `payment_record` (`paid_at`);--> statement-breakpoint
+CREATE INDEX `idx_payment_record_user` ON `payment_cache` (`user_id`);--> statement-breakpoint
+CREATE INDEX `idx_payment_record_reservation` ON `payment_cache` (`reservation_id`);--> statement-breakpoint
+CREATE INDEX `idx_payment_record_paid_at` ON `payment_cache` (`paid_at`);--> statement-breakpoint
+CREATE TABLE `help_articles` (
+	`id` text PRIMARY KEY NOT NULL,
+	`category_id` text NOT NULL,
+	`title` text NOT NULL,
+	`slug` text NOT NULL,
+	`summary` text,
+	`content` text NOT NULL,
+	`source` text DEFAULT 'dynamic' NOT NULL,
+	`min_role` text DEFAULT 'member' NOT NULL,
+	`published` integer DEFAULT false NOT NULL,
+	`sort_order` integer DEFAULT 0 NOT NULL,
+	`created_by_user_id` text,
+	`created_at` text DEFAULT (current_timestamp) NOT NULL,
+	`updated_at` text DEFAULT (current_timestamp) NOT NULL,
+	FOREIGN KEY (`category_id`) REFERENCES `help_categories`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`created_by_user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE INDEX `idx_help_articles_category` ON `help_articles` (`category_id`);--> statement-breakpoint
+CREATE INDEX `idx_help_articles_published` ON `help_articles` (`published`,`min_role`);--> statement-breakpoint
+CREATE UNIQUE INDEX `help_articles_slug_unique` ON `help_articles` (`slug`);--> statement-breakpoint
+CREATE TABLE `help_categories` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`slug` text NOT NULL,
+	`description` text,
+	`icon` text,
+	`sort_order` integer DEFAULT 0 NOT NULL,
+	`min_role` text DEFAULT 'member' NOT NULL,
+	`created_at` text DEFAULT (current_timestamp) NOT NULL,
+	`updated_at` text DEFAULT (current_timestamp) NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `help_categories_slug_unique` ON `help_categories` (`slug`);--> statement-breakpoint
 CREATE TABLE `closure` (
 	`id` text PRIMARY KEY NOT NULL,
 	`reason` text NOT NULL,
@@ -452,4 +486,23 @@ CREATE TABLE `subscriber` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `subscriber_email_unique` ON `subscriber` (`email`);--> statement-breakpoint
-CREATE INDEX `idx_subscriber_user` ON `subscriber` (`user_id`);
+CREATE INDEX `idx_subscriber_user` ON `subscriber` (`user_id`);--> statement-breakpoint
+CREATE TABLE `platform_invite` (
+	`id` text PRIMARY KEY NOT NULL,
+	`email` text NOT NULL,
+	`token` text NOT NULL,
+	`band_id` text NOT NULL,
+	`role` text NOT NULL,
+	`position` text,
+	`invited_by_id` text NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`expires_at` text NOT NULL,
+	`created_at` text DEFAULT (current_timestamp) NOT NULL,
+	`accepted_at` text,
+	FOREIGN KEY (`band_id`) REFERENCES `band`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`invited_by_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `platform_invite_token_unique` ON `platform_invite` (`token`);--> statement-breakpoint
+CREATE INDEX `idx_platform_invite_email` ON `platform_invite` (`email`);--> statement-breakpoint
+CREATE INDEX `idx_platform_invite_band` ON `platform_invite` (`band_id`);

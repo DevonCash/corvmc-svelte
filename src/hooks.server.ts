@@ -4,6 +4,7 @@ import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/events/register-listeners';
 import { initDb } from '$lib/server/db';
+import { initStorage } from '$lib/server/storage';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 
 // Register domain event listeners once at startup
@@ -16,6 +17,9 @@ const resolvedSessions = new Set<string>();
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (event.platform?.env?.DB) {
 		initDb(event.platform.env.DB);
+	}
+	if (event.platform?.env?.R2_BUCKET) {
+		initStorage(event.platform.env.R2_BUCKET);
 	}
 
 	const session = await auth.api.getSession({ headers: event.request.headers });

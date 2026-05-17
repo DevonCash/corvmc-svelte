@@ -3,7 +3,10 @@ compatibility_date = "2025-05-15"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
-binding = "DB"
+binding = "corvmc_db"
 database_name = "corvmc-db"
-database_id = "local"
-migrations_dir = "drizzle"
+database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
+
+[[r2_buckets]]
+binding="R2_BUCKET"
+bucket_name="corvmc"

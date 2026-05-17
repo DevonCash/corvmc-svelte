@@ -51,11 +51,7 @@ wrangler secret put ORIGIN
 wrangler secret put STRIPE_SECRET_KEY
 # Enter sk_live_... key
 
-# R2 credentials (get from Cloudflare dashboard → R2 → Manage R2 API Tokens)
-wrangler secret put R2_ACCOUNT_ID
-wrangler secret put R2_ACCESS_KEY_ID
-wrangler secret put R2_SECRET_ACCESS_KEY
-wrangler secret put R2_BUCKET_NAME
+# R2 bucket is configured as a binding in wrangler.toml (no credentials needed)
 wrangler secret put R2_PUBLIC_URL
 ```
 
