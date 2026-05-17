@@ -17,7 +17,7 @@
 	} = $props();
 
 	let isOpen = $derived(childHrefs.some((href) => page.url.pathname.startsWith(href)));
-	let active = $derived(page.url.pathname === href || page.url.pathname.startsWith(href + '/'));
+	let active = $derived(page.url.pathname === href );
 </script>
 
 <li>
@@ -36,5 +36,9 @@
 	a :global(svg) {
 		width: 20px;
 		height: 20px;
+	}
+
+	a.active {
+		background: oklch(from var(--color-primary) l c h / 20%);
 	}
 </style>

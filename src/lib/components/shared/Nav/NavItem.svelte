@@ -8,7 +8,7 @@
 		icon?: Snippet;
 	} = $props();
 
-	let active = $derived(page.url.pathname === href || page.url.pathname.startsWith(href + '/'));
+	let active = $derived(page.url.pathname === href);
 </script>
 
 <li>
@@ -18,9 +18,13 @@
 	</a>
 </li>
 
-<style>
+<style lang='postcss'>
 	a :global(svg) {
 		width: 20px;
 		height: 20px;
+	}
+
+	a.active {
+		background: oklch(from var(--color-primary) l c h / 50%);
 	}
 </style>
