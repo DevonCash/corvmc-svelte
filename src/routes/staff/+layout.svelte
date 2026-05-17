@@ -16,7 +16,8 @@
 		IconMusic,
 		IconMail,
 		IconMailbox,
-		IconTool
+		IconTool,
+		IconBook
 	} from '@tabler/icons-svelte';
 	import type { StaffLayoutResponse } from '$lib/types/api';
 
@@ -85,6 +86,12 @@
 			</NavItem>
 			<NavItem href="/staff/marketing/audiences" label="Audiences">
 				{#snippet icon()}<IconMailbox size={20} />{/snippet}
+			</NavItem>
+		</NavGroup>
+
+		<NavGroup title="Content">
+			<NavItem href="/staff/help" label="Help Articles">
+				{#snippet icon()}<IconBook size={20} />{/snippet}
 			</NavItem>
 		</NavGroup>
 

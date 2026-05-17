@@ -6,7 +6,8 @@
 		IconTicket,
 		IconAddressBook,
 		IconTool,
-		IconPlus
+		IconPlus,
+		IconHelp
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import NavItem from '$lib/components/shared/NavItem.svelte';
@@ -78,6 +79,9 @@
 
 		<div class="flex grow"></div>
 
+		<NavItem href="/member/help" label="Help">
+			{#snippet icon()}<IconHelp />{/snippet}
+		</NavItem>
 		<NavItem href="/member/membership" label="Membership">
 			{#snippet icon()}<IconStar />{/snippet}
 		</NavItem>

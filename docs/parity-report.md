@@ -196,7 +196,7 @@ Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling c
 
 ## Database schema
 
-The Svelte app has 29 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_record), bands (band, band_member), tickets (ticket), notifications (notification, notification_preference), marketing (subscriber, audience, audience_member, campaign, campaign_audience), and equipment (equipment_category, equipment, equipment_loan).
+The Svelte app has 29 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_cache), bands (band, band_member), tickets (ticket), notifications (notification, notification_preference), marketing (subscriber, audience, audience_member, campaign, campaign_audience), and equipment (equipment_category, equipment, equipment_loan).
 
 Tables that would need to be added for missing features: volunteer_hour_log, sponsor, venue, site_page, kiosk_device.
 
@@ -232,7 +232,7 @@ Features are grouped by dependency. The notification system is foundational — 
 
 1. ~~**Notification system**~~ — ✅ Complete. Postmark email + in-app (database + bell + SSE). emittery domain event bus. User preference UI in account settings. Ticket, event, band, and contact form notifications wired. SMS channel deferred.
 2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
-4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_record` cache table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
+4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_cache` table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
 5. ~~**Recurring reservations**~~ — ✅ Complete. `recurring_series` table with prototype pattern, `rrule` npm package for RFC 5545 scheduling. Generation cron expands series into concrete reservations within 2.5-week window. Sustaining member exclusive. Subscription lapse auto-cancels active series. Staff list page + member booking integration with recurring tab.
 6. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
 7. ~~**Equipment module**~~ — ✅ Complete. Three tables (equipment_category, equipment, equipment_loan). Staff catalog + category management, loan lifecycle (request/schedule/checkout/return/cancel), member catalog browsing + loan requests (specific + free-form), equipment credits (1:1 with subscription, deducted on return), pricing tiers (major $5/day, accessory $1/day, sustaining members get free accessories).

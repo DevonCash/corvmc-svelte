@@ -11,3 +11,4 @@ export * from './marketing';
 export * from './equipment';
 export * from './band';
 export * from './platform-invite';
+export * from './help';
