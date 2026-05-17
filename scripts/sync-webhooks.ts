@@ -18,6 +18,7 @@
  *   - Prints a diff of added/removed events when updating.
  */
 
+import 'dotenv/config';
 import Stripe from 'stripe';
 import { registeredEvents } from '../src/lib/server/finance/webhook-events.js';
 
