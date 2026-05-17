@@ -54,6 +54,9 @@ vi.mock('$lib/server/db', () => ({
 
 const testUser = mockUser({ id: 'user-member', name: 'Test Member' });
 
+const { GET: layoutGET } = await import('../api/bands/[slug]/layout/+server');
+const { GET: upcomingGET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	getBySlugResult = { ...mockBand };
@@ -68,8 +71,7 @@ beforeEach(() => {
 
 describe('band layout load', () => {
 	it('resolves band by slug and returns band data with user role', async () => {
-		const { GET } = await import('../api/bands/[slug]/layout/+server');
-		const response = await GET({
+		const response = await layoutGET({
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser },
 			url: new URL('http://localhost')
@@ -85,10 +87,8 @@ describe('band layout load', () => {
 	it('throws 404 for unknown slug', async () => {
 		getBySlugResult = null;
 
-		const { GET } = await import('../api/bands/[slug]/layout/+server');
-
 		await expect(
-			GET({
+			layoutGET({
 				params: { slug: 'nonexistent' },
 				locals: { user: testUser },
 				url: new URL('http://localhost')
@@ -100,10 +100,8 @@ describe('band layout load', () => {
 		getUserRoleResult = null;
 		hasAnyRoleResult = false;
 
-		const { GET } = await import('../api/bands/[slug]/layout/+server');
-
 		await expect(
-			GET({
+			layoutGET({
 				params: { slug: 'the-velvet-underground' },
 				locals: { user: testUser },
 				url: new URL('http://localhost')
@@ -115,8 +113,7 @@ describe('band layout load', () => {
 		getUserRoleResult = null;
 		hasAnyRoleResult = true;
 
-		const { GET } = await import('../api/bands/[slug]/layout/+server');
-		const response = await GET({
+		const response = await layoutGET({
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser },
 			url: new URL('http://localhost')
@@ -129,10 +126,8 @@ describe('band layout load', () => {
 	});
 
 	it('throws 401 when not authenticated', async () => {
-		const { GET } = await import('../api/bands/[slug]/layout/+server');
-
 		await expect(
-			GET({
+			layoutGET({
 				params: { slug: 'the-velvet-underground' },
 				locals: {},
 				url: new URL('http://localhost')
@@ -161,8 +156,7 @@ describe('band dashboard load', () => {
 			}
 		];
 
-		const { GET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
-		const response = await GET({
+		const response = await upcomingGET({
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser },
 			url: new URL('http://localhost')
@@ -177,8 +171,7 @@ describe('band dashboard load', () => {
 	it('returns empty array when no upcoming reservations', async () => {
 		selectResult = [];
 
-		const { GET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
-		const response = await GET({
+		const response = await upcomingGET({
 			params: { slug: 'the-velvet-underground' },
 			locals: { user: testUser },
 			url: new URL('http://localhost')

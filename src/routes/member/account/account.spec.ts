@@ -101,6 +101,9 @@ vi.mock('$app/server', () => ({
 
 import { auth } from '$lib/server/auth';
 
+const { GET: accountGET } = await import('../../api/me/account/+server');
+const { updateProfile, changePassword } = await import('./data.remote') as any;
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	queryResults = [];
@@ -124,8 +127,7 @@ describe('account page load', () => {
 
 		queryResults = [[user]];
 
-		const { GET } = await import('../../api/me/account/+server');
-		const response = await GET({
+		const response = await accountGET({
 			locals: { user: { id: 'user-1' } },
 			url: new URL('http://localhost')
 		} as any);
@@ -138,20 +140,16 @@ describe('account page load', () => {
 	});
 
 	it('throws 401 when not authenticated', async () => {
-		const { GET } = await import('../../api/me/account/+server');
-
 		await expect(
-			GET({ locals: {}, url: new URL('http://localhost') } as any)
+			accountGET({ locals: {}, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 
 	it('throws 404 when user not found in database', async () => {
 		queryResults = [[]];
 
-		const { GET } = await import('../../api/me/account/+server');
-
 		await expect(
-			GET({ locals: { user: { id: 'ghost' } }, url: new URL('http://localhost') } as any)
+			accountGET({ locals: { user: { id: 'ghost' } }, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 });
@@ -162,8 +160,6 @@ describe('account page load', () => {
 
 describe('updateProfile', () => {
 	it('updates name, pronouns, and phone', async () => {
-		const { updateProfile } = await import('./data.remote') as any;
-
 		await updateProfile({
 			name: 'New Name',
 			pronouns: 'they/them',
@@ -177,8 +173,6 @@ describe('updateProfile', () => {
 	});
 
 	it('clears optional fields when empty strings provided', async () => {
-		const { updateProfile } = await import('./data.remote') as any;
-
 		await updateProfile({
 			name: 'Just Name',
 			pronouns: '',
@@ -196,8 +190,6 @@ describe('updateProfile', () => {
 
 describe('changePassword', () => {
 	it('delegates to better-auth API with correct params', async () => {
-		const { changePassword } = await import('./data.remote') as any;
-
 		await changePassword({
 			currentPassword: 'old-pass',
 			newPassword: 'new-pass-123',

@@ -65,6 +65,9 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
+const { GET: bandsGET } = await import('../../api/me/bands/+server');
+const { createBand, acceptInvite, declineInvite } = await import('./data.remote') as any;
+
 beforeEach(() => {
 	vi.clearAllMocks();
 });
@@ -75,8 +78,7 @@ beforeEach(() => {
 
 describe('bands page load', () => {
 	it('splits bands into pending and active', async () => {
-		const { GET } = await import('../../api/me/bands/+server');
-		const response = await GET({
+		const response = await bandsGET({
 			locals: { user: { id: 'user-1' } },
 			url: new URL('http://localhost')
 		} as any);
@@ -89,8 +91,7 @@ describe('bands page load', () => {
 	});
 
 	it('calls listForUser with the current user id', async () => {
-		const { GET } = await import('../../api/me/bands/+server');
-		await GET({
+		await bandsGET({
 			locals: { user: { id: 'user-1' } },
 			url: new URL('http://localhost')
 		} as any);
@@ -99,11 +100,8 @@ describe('bands page load', () => {
 	});
 
 	it('redirects when not authenticated', async () => {
-		const { GET } = await import('../../api/me/bands/+server');
-
-		// error() throws in SvelteKit
 		await expect(
-			GET({ locals: {}, url: new URL('http://localhost') } as any)
+			bandsGET({ locals: {}, url: new URL('http://localhost') } as any)
 		).rejects.toThrow();
 	});
 });
@@ -114,8 +112,6 @@ describe('bands page load', () => {
 
 describe('createBand', () => {
 	it('calls band-service create and returns slug', async () => {
-		const { createBand } = await import('./data.remote') as any;
-
 		const result = await createBand({ name: 'New Band', bio: 'A great band' });
 
 		expect(bandServiceMock.create).toHaveBeenCalledWith('user-1', {
@@ -126,8 +122,6 @@ describe('createBand', () => {
 	});
 
 	it('omits bio when empty string', async () => {
-		const { createBand } = await import('./data.remote') as any;
-
 		await createBand({ name: 'No Bio Band', bio: '' });
 
 		expect(bandServiceMock.create).toHaveBeenCalledWith('user-1', {
@@ -143,8 +137,6 @@ describe('createBand', () => {
 
 describe('acceptInvite', () => {
 	it('calls acceptInvitation with memberId and userId', async () => {
-		const { acceptInvite } = await import('./data.remote') as any;
-
 		const result = await acceptInvite({ memberId: 'member-42' });
 
 		expect(bandServiceMock.acceptInvitation).toHaveBeenCalledWith('member-42', 'user-1');
@@ -158,8 +150,6 @@ describe('acceptInvite', () => {
 
 describe('declineInvite', () => {
 	it('calls declineInvitation with memberId and userId', async () => {
-		const { declineInvite } = await import('./data.remote') as any;
-
 		const result = await declineInvite({ memberId: 'member-42' });
 
 		expect(bandServiceMock.declineInvitation).toHaveBeenCalledWith('member-42', 'user-1');

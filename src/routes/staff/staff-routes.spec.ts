@@ -45,6 +45,9 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // Dashboard load
 // ---------------------------------------------------------------------------
+const { GET: dashboardGET } = await import('../api/staff/dashboard/+server');
+const { GET: usersGET } = await import('../api/staff/users/+server');
+
 describe('/staff dashboard load', () => {
 	it('returns stats and recent users', async () => {
 		const recentUsers = [
@@ -52,18 +55,15 @@ describe('/staff dashboard load', () => {
 			mockUser({ name: 'Bob' })
 		];
 
-		// The dashboard GET runs 5 parallel queries via Promise.all:
-		// [totalUsers, totalRoles, totalPermissions, newUsersThisMonth, recentUsers]
 		queryResults = [
-			[{ value: 42 }],      // totalUsers count
-			[{ value: 4 }],       // totalRoles count
-			[{ value: 12 }],      // totalPermissions count
-			[{ value: 3 }],       // newUsersThisMonth count
-			recentUsers            // recent users
+			[{ value: 42 }],
+			[{ value: 4 }],
+			[{ value: 12 }],
+			[{ value: 3 }],
+			recentUsers
 		];
 
-		const { GET } = await import('../api/staff/dashboard/+server');
-		const response = await GET({
+		const response = await dashboardGET({
 			locals: { user: mockUser({ id: 'staff-1' }) },
 			url: new URL('http://localhost')
 		} as any);
@@ -88,10 +88,6 @@ describe('/staff/users list load', () => {
 			mockUser({ id: 'u2', name: 'Bob' })
 		];
 
-		// The user list GET runs:
-		// 1. total count
-		// 2. paginated users
-		// 3. role rows for those users
 		queryResults = [
 			[{ value: 2 }],
 			users,
@@ -101,8 +97,7 @@ describe('/staff/users list load', () => {
 			]
 		];
 
-		const { GET } = await import('../api/staff/users/+server');
-		const response = await GET({
+		const response = await usersGET({
 			locals: { user: mockUser({ id: 'staff-1' }) },
 			url: new URL('http://localhost/staff/users')
 		} as any);
@@ -122,8 +117,7 @@ describe('/staff/users list load', () => {
 			[]
 		];
 
-		const { GET } = await import('../api/staff/users/+server');
-		const response = await GET({
+		const response = await usersGET({
 			locals: { user: mockUser({ id: 'staff-1' }) },
 			url: new URL('http://localhost/staff/users?q=alice')
 		} as any);
@@ -162,22 +156,20 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
+const { getUser, getAllRoles } = await import('./users/[id]/data.remote');
+
 describe('/staff/users/[id] detail load', () => {
 	it('returns user with roles and all available roles', async () => {
 		const testUser = mockUser({ id: 'user-1', name: 'Alice' });
 
-		// getUser does 1 select (user row), then getUserRoles
 		queryResults = [
 			[testUser]
 		];
 
-		const { getUser, getAllRoles } = await import('./users/[id]/data.remote');
-
 		const result = await (getUser as Function)('user-1');
 		expect(result.name).toBe('Alice');
-		expect(result.roles).toEqual(['admin']); // from mocked getUserRoles
+		expect(result.roles).toEqual(['admin']);
 
-		// getAllRoles does 1 select (all role rows)
 		const roles = mockStandardRoles();
 		queryResults = [roles];
 		queryIndex = 0;
@@ -187,10 +179,8 @@ describe('/staff/users/[id] detail load', () => {
 	});
 
 	it('throws 404 when user not found', async () => {
-		queryResults = [[]]; // no user row
+		queryResults = [[]];
 		queryIndex = 0;
-
-		const { getUser } = await import('./users/[id]/data.remote');
 
 		await expect((getUser as Function)('nonexistent')).rejects.toThrow();
 	});

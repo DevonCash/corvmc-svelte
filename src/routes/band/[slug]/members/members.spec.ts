@@ -91,6 +91,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
+const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchUsers } = await import('./data.remote') as any;
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
@@ -103,8 +105,6 @@ beforeEach(() => {
 
 describe('inviteMember', () => {
 	it('calls invite with correct params', async () => {
-		const { inviteMember } = await import('./data.remote') as any;
-
 		const result = await inviteMember({
 			userId: 'user-3',
 			role: 'member',
@@ -118,8 +118,6 @@ describe('inviteMember', () => {
 	});
 
 	it('sends null position when empty', async () => {
-		const { inviteMember } = await import('./data.remote') as any;
-
 		await inviteMember({ userId: 'user-3', role: 'admin', position: '' });
 
 		expect(bandServiceMock.invite).toHaveBeenCalledWith(
@@ -130,8 +128,6 @@ describe('inviteMember', () => {
 
 describe('removeMember', () => {
 	it('calls removeMember with memberId', async () => {
-		const { removeMember } = await import('./data.remote') as any;
-
 		const result = await removeMember({ memberId: 'member-42' });
 
 		expect(bandServiceMock.removeMember).toHaveBeenCalledWith('member-42');
@@ -141,8 +137,6 @@ describe('removeMember', () => {
 
 describe('revokeInvitation', () => {
 	it('calls revokeInvitation with memberId', async () => {
-		const { revokeInvitation } = await import('./data.remote') as any;
-
 		const result = await revokeInvitation({ memberId: 'member-42' });
 
 		expect(bandServiceMock.revokeInvitation).toHaveBeenCalledWith('member-42');
@@ -152,8 +146,6 @@ describe('revokeInvitation', () => {
 
 describe('updateMemberRemote', () => {
 	it('calls updateMember with role and position', async () => {
-		const { updateMemberRemote } = await import('./data.remote') as any;
-
 		const result = await updateMemberRemote({
 			memberId: 'member-42',
 			role: 'admin',
@@ -170,8 +162,6 @@ describe('updateMemberRemote', () => {
 
 describe('transferOwner', () => {
 	it('calls transferOwnership with correct params', async () => {
-		const { transferOwner } = await import('./data.remote') as any;
-
 		const result = await transferOwner({ newOwnerId: 'user-3' });
 
 		expect(bandServiceMock.transferOwnership).toHaveBeenCalledWith(
@@ -184,7 +174,6 @@ describe('transferOwner', () => {
 describe('leave', () => {
 	it('calls leaveBand with band and user id', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { leave } = await import('./data.remote') as any;
 
 		const result = await leave({});
 
@@ -195,8 +184,6 @@ describe('leave', () => {
 
 describe('searchUsers', () => {
 	it('returns matching users', async () => {
-		const { searchUsers } = await import('./data.remote') as any;
-
 		const results = await searchUsers('lou');
 
 		expect(bandServiceMock.searchMembers).toHaveBeenCalledWith('lou', 'band-1');
@@ -205,8 +192,6 @@ describe('searchUsers', () => {
 	});
 
 	it('returns empty for short queries', async () => {
-		const { searchUsers } = await import('./data.remote') as any;
-
 		const results = await searchUsers('l');
 
 		expect(bandServiceMock.searchMembers).not.toHaveBeenCalled();

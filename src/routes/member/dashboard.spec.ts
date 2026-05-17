@@ -49,6 +49,8 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 
 const testUser = mockUser({ id: 'user-1', name: 'Test User' });
 
+const { GET: dashboardGET } = await import('../api/me/dashboard/+server');
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectCallIndex = 0;
@@ -61,15 +63,11 @@ beforeEach(() => {
 
 describe('member dashboard load', () => {
 	it('returns pendingInviteCount in load result', async () => {
-		// select 1: userBands (active band memberships)
 		selectResults.set('userBands', []);
-		// select 2: pending invite count
 		selectResults.set('pendingCount', [{ count: 2 }]);
-		// select 3: user reservations
 		selectResults.set('userRes', []);
 
-		const { GET } = await import('../api/me/dashboard/+server');
-		const response = await GET({
+		const response = await dashboardGET({
 			locals: { user: testUser },
 			url: new URL('http://localhost')
 		} as any);
@@ -90,19 +88,14 @@ describe('member dashboard load', () => {
 			createdByUserId: 'user-1'
 		};
 
-		// select 1: userBands
 		selectResults.set('userBands', [
 			{ bandId: 'band-1', bandName: 'The Strokes' }
 		]);
-		// select 2: pending invite count
 		selectResults.set('pendingCount', [{ count: 0 }]);
-		// select 3: user reservations
 		selectResults.set('userRes', []);
-		// select 4: band reservations
 		selectResults.set('bandRes', [bandRes]);
 
-		const { GET } = await import('../api/me/dashboard/+server');
-		const response = await GET({
+		const response = await dashboardGET({
 			locals: { user: testUser },
 			url: new URL('http://localhost')
 		} as any);
@@ -120,8 +113,7 @@ describe('member dashboard load', () => {
 		selectResults.set('pendingCount', [{ count: 0 }]);
 		selectResults.set('userRes', []);
 
-		const { GET } = await import('../api/me/dashboard/+server');
-		const response = await GET({
+		const response = await dashboardGET({
 			locals: { user: testUser },
 			url: new URL('http://localhost')
 		} as any);

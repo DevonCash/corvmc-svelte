@@ -52,6 +52,9 @@ vi.mock('@sveltejs/kit', () => ({
 	}
 }));
 
+const directoryMod = await import('../../api/directory/+server');
+const bandProfileMod = await import('../../api/directory/bands/[slug]/+server');
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectCallIndex = 0;
@@ -81,8 +84,7 @@ describe('directory page load', () => {
 			}
 		];
 
-		const mod = await import('../../api/directory/+server');
-		const response = await (mod.GET as Function)({
+		const response = await (directoryMod.GET as Function)({
 			url: new URL('http://localhost/directory')
 		});
 		const result = await response.json();
@@ -107,8 +109,7 @@ describe('directory page load', () => {
 			}
 		];
 
-		const mod = await import('../../api/directory/+server');
-		const response = await (mod.GET as Function)({
+		const response = await (directoryMod.GET as Function)({
 			url: new URL('http://localhost/directory')
 		});
 		const result = await response.json();
@@ -123,7 +124,6 @@ describe('directory page load', () => {
 
 describe('public band profile load', () => {
 	it('returns band with active members', async () => {
-		// select 1: band
 		selectResults.push([
 			{
 				id: 'b-1',
@@ -139,16 +139,13 @@ describe('public band profile load', () => {
 				memberCount: 2
 			}
 		]);
-		// select 2: genres
 		selectResults.push([{ genre: 'Rock' }]);
-		// select 3: members
 		selectResults.push([
 			{ id: 'm-1', userId: 'u-1', role: 'owner', position: 'Guitar', userName: 'Alice', userImage: null },
 			{ id: 'm-2', userId: 'u-2', role: 'member', position: 'Drums', userName: 'Bob', userImage: null }
 		]);
 
-		const mod = await import('../../api/directory/bands/[slug]/+server');
-		const response = await (mod.GET as Function)({
+		const response = await (bandProfileMod.GET as Function)({
 			params: { slug: 'the-strokes' }
 		});
 		const result = await response.json();
@@ -160,12 +157,10 @@ describe('public band profile load', () => {
 	});
 
 	it('throws 404 for unknown slug', async () => {
-		selectResults.push([]); // no band found
-
-		const mod = await import('../../api/directory/bands/[slug]/+server');
+		selectResults.push([]);
 
 		await expect(
-			(mod.GET as Function)({ params: { slug: 'nonexistent' } })
+			(bandProfileMod.GET as Function)({ params: { slug: 'nonexistent' } })
 		).rejects.toThrow('Band not found');
 	});
 });
