@@ -55,7 +55,8 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 vi.mock('$lib/server/reservation/config', () => ({
 	TIME_SLOT_MINUTES: 30,
 	MIN_DURATION_HOURS: 1,
-	MAX_DURATION_HOURS: 8
+	MAX_DURATION_HOURS: 8,
+	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
 }));
 
 vi.mock('$lib/server/finance/product-config-service', () => ({

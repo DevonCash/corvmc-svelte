@@ -65,9 +65,8 @@ describe('ReservationService', () => {
 		it('creates a reservation when validation passes and no conflict', async () => {
 			vi.mocked(validateBooking).mockReturnValue({ valid: true });
 
-			// tx.select for conflict check (FOR UPDATE) — no conflicts
-			const forUpdate = vi.fn().mockResolvedValue([]);
-			const txWhere = vi.fn().mockReturnValue({ for: forUpdate });
+			// tx.select for conflict check — no conflicts
+			const txWhere = vi.fn().mockResolvedValue([]);
 			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
 			txSelect.mockReturnValue({ from: txFrom });
 
@@ -93,8 +92,7 @@ describe('ReservationService', () => {
 			vi.mocked(validateBooking).mockReturnValue({ valid: true });
 
 			// tx.select returns a conflicting row
-			const forUpdate = vi.fn().mockResolvedValue([{ id: 'existing-res' }]);
-			const txWhere = vi.fn().mockReturnValue({ for: forUpdate });
+			const txWhere = vi.fn().mockResolvedValue([{ id: 'existing-res' }]);
 			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
 			txSelect.mockReturnValue({ from: txFrom });
 

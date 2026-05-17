@@ -50,7 +50,7 @@ export const updateBand = form(
 
 		const updated = await updateBandService(band.id, {
 			name: data.name,
-			bio: data.bio || undefined
+			bio: data.bio
 		});
 
 		return { success: true, slug: updated.slug };

@@ -41,6 +41,10 @@ vi.mock('$lib/server/storage', () => ({
 }));
 
 vi.mock('@sveltejs/kit', () => ({
+	json: (data: unknown, opts?: { status?: number }) => new Response(JSON.stringify(data), {
+		status: opts?.status ?? 200,
+		headers: { 'Content-Type': 'application/json' }
+	}),
 	error: (status: number, message: string) => {
 		const err = new Error(message);
 		(err as any).status = status;
@@ -126,12 +130,18 @@ describe('public band profile load', () => {
 				name: 'The Strokes',
 				slug: 'the-strokes',
 				bio: 'NYC band',
+				tagline: null,
 				avatarKey: null,
 				createdAt: new Date(),
+				lookingForMembers: false,
+				directoryContact: null,
+				links: null,
 				memberCount: 2
 			}
 		]);
-		// select 2: members
+		// select 2: genres
+		selectResults.push([{ genre: 'Rock' }]);
+		// select 3: members
 		selectResults.push([
 			{ id: 'm-1', userId: 'u-1', role: 'owner', position: 'Guitar', userName: 'Alice', userImage: null },
 			{ id: 'm-2', userId: 'u-2', role: 'member', position: 'Drums', userName: 'Bob', userImage: null }

@@ -81,7 +81,7 @@ describe('updateBand', () => {
 
 		expect(bandServiceMock.update).toHaveBeenCalledWith('band-1', {
 			name: 'New Name',
-			bio: null
+			bio: ''
 		});
 	});
 
