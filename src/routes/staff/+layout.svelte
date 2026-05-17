@@ -63,9 +63,6 @@
 			>
 				{#snippet icon()}<IconClipboardCheck />{/snippet}
 				{#snippet children()}
-					<Nav.Item href="/staff/reservations" label="All Reservations">
-						{#snippet icon()}<IconClipboardCheck />{/snippet}
-					</Nav.Item>
 					<Nav.Item href="/staff/recurring" label="Recurring">
 						{#snippet icon()}<IconRepeat />{/snippet}
 					</Nav.Item>
