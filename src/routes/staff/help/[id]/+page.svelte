@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { getArticle, getCategories, updateArticleCommand, deleteArticleCommand } from '../data.remote';
+	import { goto } from '$app/navigation';
+	import { getArticle, getCategories, updateArticleForm, deleteArticleCommand } from '../data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
@@ -12,45 +15,11 @@
 	let article = $derived(await getArticle(id));
 	let categories = $derived(await getCategories());
 
-	let title = $state('');
-	let slug = $state('');
-	let summary = $state('');
-	let content = $state('');
-	let categoryId = $state('');
-	let minRole = $state('member');
-	let published = $state(false);
-	let saving = $state(false);
+	let contentValue = $state('');
 
 	$effect(() => {
-		if (article) {
-			title = article.title;
-			slug = article.slug;
-			summary = article.summary ?? '';
-			content = article.content;
-			categoryId = article.categoryId;
-			minRole = article.minRole;
-			published = article.published;
-		}
+		if (article) contentValue = article.content;
 	});
-
-	async function handleSave() {
-		saving = true;
-		try {
-			await updateArticleCommand({
-				id,
-				categoryId,
-				title: title.trim(),
-				slug: slug.trim(),
-				summary: summary.trim() || undefined,
-				content,
-				minRole,
-				published
-			});
-			invalidateAll();
-		} finally {
-			saving = false;
-		}
-	}
 
 	async function handleDelete() {
 		await deleteArticleCommand({ id });
@@ -61,7 +30,7 @@
 <PageHeader title="Edit Article" subtitle="Help" backHref="/staff/help">
 	<Action
 		action={handleDelete}
-		confirm={`Permanently delete "${title}"?`}
+		confirm={`Permanently delete "${article?.title}"?`}
 	>
 		<button class="btn btn-error btn-sm btn-outline">
 			<IconTrash size={16} /> Delete
@@ -70,69 +39,50 @@
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
-		<div class="space-y-4">
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="form-control">
-					<label class="label"><span class="label-text">Title</span></label>
-					<input type="text" class="input input-bordered" bind:value={title} />
+		<Form
+			remote={updateArticleForm}
+			successToast="Article updated"
+		>
+			<input type="hidden" name="id" value={article.id} />
+
+			<div class="space-y-4">
+				<div class="grid gap-4 sm:grid-cols-2">
+					<FormField name="title" type="text" label="Title" value={article.title} />
+					<FormField name="slug" type="text" label="Slug" value={article.slug} />
 				</div>
-				<div class="form-control">
-					<label class="label"><span class="label-text">Slug</span></label>
-					<input type="text" class="input input-bordered" bind:value={slug} />
+
+				<div class="grid gap-4 sm:grid-cols-3">
+					<FormField name="categoryId" type="select" label="Category" value={article.categoryId}
+						options={categories.map((c) => ({ value: c.id, label: c.name }))} />
+					<FormField name="minRole" type="select" label="Minimum Role" value={article.minRole}
+						options={[
+							{ value: 'member', label: 'Member' },
+							{ value: 'staff', label: 'Staff' },
+							{ value: 'admin', label: 'Admin' }
+						]} />
+					<FormField name="published" type="toggle" label="Status" value={article.published}
+						checkboxLabel="Published" />
+				</div>
+
+				<FormField name="summary" type="text" label="Summary" value={article.summary ?? ''}
+					placeholder="Brief description" />
+
+				<FormField name="content" label="Content">
+					<input type="hidden" name="content" value={contentValue} />
+					<MarkdownEditor bind:value={contentValue} />
+				</FormField>
+
+				{#if article.source === 'static'}
+					<div class="alert alert-info text-sm">
+						This article is synced from a markdown file. Edits here will be overwritten on the next sync.
+					</div>
+				{/if}
+
+				<div class="flex justify-end gap-2">
+					<a href="/staff/help" class="btn btn-ghost">Cancel</a>
+					<SubmitButton label="Save Changes" />
 				</div>
 			</div>
-
-			<div class="grid gap-4 sm:grid-cols-3">
-				<div class="form-control">
-					<label class="label"><span class="label-text">Category</span></label>
-					<select class="select select-bordered" bind:value={categoryId}>
-						{#each categories as cat}
-							<option value={cat.id}>{cat.name}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="form-control">
-					<label class="label"><span class="label-text">Minimum Role</span></label>
-					<select class="select select-bordered" bind:value={minRole}>
-						<option value="member">Member</option>
-						<option value="staff">Staff</option>
-						<option value="admin">Admin</option>
-					</select>
-				</div>
-				<div class="form-control">
-					<label class="label"><span class="label-text">Status</span></label>
-					<label class="label cursor-pointer justify-start gap-3">
-						<input type="checkbox" class="toggle toggle-primary" bind:checked={published} />
-						<span class="label-text">{published ? 'Published' : 'Draft'}</span>
-					</label>
-				</div>
-			</div>
-
-			<div class="form-control">
-				<label class="label"><span class="label-text">Summary</span></label>
-				<input type="text" class="input input-bordered" bind:value={summary} placeholder="Brief description" />
-			</div>
-
-			<div class="form-control">
-				<label class="label"><span class="label-text">Content</span></label>
-				<MarkdownEditor bind:value={content} />
-			</div>
-
-			{#if article.source === 'static'}
-				<div class="alert alert-info text-sm">
-					This article is synced from a markdown file. Edits here will be overwritten on the next sync.
-				</div>
-			{/if}
-
-			<div class="flex justify-end gap-2">
-				<a href="/staff/help" class="btn btn-ghost">Cancel</a>
-				<button class="btn btn-primary" disabled={saving} onclick={handleSave}>
-					{#if saving}
-						<span class="loading loading-spinner loading-sm"></span>
-					{/if}
-					Save Changes
-				</button>
-			</div>
-		</div>
+		</Form>
 	{/if}
 </PageContent>

@@ -16,6 +16,8 @@ When building a new feature, follow these phases in order:
 
 Before building or modifying any page, read `docs/ui-patterns.md`. It defines the shared components (Form, FormField, SubmitButton, PageHeader, StatusBadge, etc.) and composition patterns that all pages must follow. Use it whenever creating new routes, adding forms, or touching page layout.
 
+Every form in a route file must use the `Form`, `FormField`, and `SubmitButton` components from `$lib/components/shared/Form/`. Never use raw `<form>`, `<input>`, or `<select>` elements directly in page files — even for small inline forms. Mutations should use `form()` from `$app/server` in `data.remote.ts` so the `<Form>` component can wire up validation and dirty tracking automatically.
+
 ## Project Configuration
 
 - **Language**: TypeScript

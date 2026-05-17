@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
-	import { getArticles, getCategories, deleteArticleCommand, createCategoryCommand, deleteCategoryCommand } from './data.remote';
+	import { invalidateAll } from '$app/navigation';
+	import { getArticles, getCategories, createCategoryForm, deleteCategoryCommand } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -8,8 +8,10 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
-	import { formatDate } from '$lib/utils/format';
 
 	let articles = $derived(await getArticles());
 	let categories = $derived(await getCategories());
@@ -18,29 +20,10 @@
 		Object.fromEntries(categories.map((c) => [c.id, c.name]))
 	);
 
-	// Category creation state
-	let newCatName = $state('');
-	let newCatSlug = $state('');
+	let catNameValue = $state('');
 
 	function slugFromName(name: string) {
 		return name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
-	}
-
-	async function handleCreateCategory() {
-		if (!newCatName.trim()) return;
-		await createCategoryCommand({
-			name: newCatName.trim(),
-			slug: newCatSlug.trim() || slugFromName(newCatName),
-			sortOrder: categories.length
-		});
-		newCatName = '';
-		newCatSlug = '';
-		invalidateAll();
-	}
-
-	async function handleDeleteArticle(id: string) {
-		await deleteArticleCommand({ id });
-		invalidateAll();
 	}
 
 	async function handleDeleteCategory(id: string) {
@@ -76,19 +59,20 @@
 					</div>
 				{/each}
 			</div>
-			<div class="flex gap-2 mt-4 items-end">
-				<div class="form-control">
-					<label class="label"><span class="label-text text-xs">Name</span></label>
-					<input type="text" class="input input-bordered input-sm w-40" bind:value={newCatName} placeholder="Category name" />
+			<Form remote={createCategoryForm} successToast="Category created" onsuccess={() => invalidateAll()}>
+				<div class="flex gap-2 mt-4 items-end">
+					<FormField name="name" label="Name">
+						<input name="name" type="text" class="input input-bordered input-sm w-40"
+							placeholder="Category name" bind:value={catNameValue} />
+					</FormField>
+					<FormField name="slug" label="Slug">
+						<input name="slug" type="text" class="input input-bordered input-sm w-40"
+							placeholder={slugFromName(catNameValue) || 'auto'} />
+					</FormField>
+					<input type="hidden" name="sortOrder" value={categories.length} />
+					<SubmitButton label="Add" class="btn-primary btn-sm" />
 				</div>
-				<div class="form-control">
-					<label class="label"><span class="label-text text-xs">Slug</span></label>
-					<input type="text" class="input input-bordered input-sm w-40" bind:value={newCatSlug} placeholder={slugFromName(newCatName) || 'auto'} />
-				</div>
-				<button class="btn btn-sm btn-primary" onclick={handleCreateCategory} disabled={!newCatName.trim()}>
-					Add
-				</button>
-			</div>
+			</Form>
 		</div>
 	</details>
 

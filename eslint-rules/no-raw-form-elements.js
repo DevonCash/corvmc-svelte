@@ -1,0 +1,25 @@
+/** @type {import('eslint').Rule.RuleModule} */
+export default {
+	meta: {
+		type: 'suggestion',
+		docs: {
+			description: 'Disallow raw <form> elements in route page files. Use the Form component instead.'
+		},
+		messages: {
+			noRawForm:
+				'Use the <Form> component from $lib/components/shared/Form/ instead of raw <form> elements. See docs/ui-patterns.md.'
+		}
+	},
+	create(context) {
+		const filename = context.filename ?? context.getFilename();
+		if (!filename.includes('+page.svelte')) return {};
+
+		return {
+			SvelteElement(node) {
+				if (node.name?.name === 'form') {
+					context.report({ node, messageId: 'noRawForm' });
+				}
+			}
+		};
+	}
+};

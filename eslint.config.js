@@ -1,5 +1,6 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from 'eslint-plugin-storybook';
+import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -40,8 +41,8 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		files: ['**/+page.svelte'],
+		plugins: { custom: { rules: { 'no-raw-form-elements': noRawFormElements } } },
+		rules: { 'custom/no-raw-form-elements': 'warn' }
 	}
 );

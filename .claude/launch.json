@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["run", "dev", "--port", "5175"],
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "export PATH=$HOME/.local/share/nvm/v26.1.0/bin:$PATH && pnpm run dev --port 5175"],
       "port": 5175
     }
   ]

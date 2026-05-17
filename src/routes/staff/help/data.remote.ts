@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { query, command, getRequestEvent } from '$app/server';
+import { query, command, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	listAllArticles,
@@ -12,6 +12,15 @@ import {
 	deleteCategory,
 	getArticleById
 } from '$lib/server/help/help-service';
+
+function slugify(text: string) {
+	return text
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, '')
+		.replace(/\s+/g, '-')
+		.replace(/-+/g, '-')
+		.trim();
+}
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -39,17 +48,18 @@ export const getArticle = query(z.string(), async (id) => {
 const createArticleSchema = z.object({
 	categoryId: z.string().min(1),
 	title: z.string().trim().min(1).max(255),
-	slug: z.string().trim().min(1).max(255),
+	slug: z.string().trim().max(255).optional().default(''),
 	summary: z.string().trim().max(500).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
-	published: z.boolean().default(false)
+	published: z.string().optional().transform((v) => v === 'on')
 });
 
-export const createArticleCommand = command(createArticleSchema, async (data) => {
+export const createArticleForm = form(createArticleSchema, async (data) => {
 	const staff = await requireStaff();
 	const article = await createArticle({
 		...data,
+		slug: data.slug || slugify(data.title),
 		createdByUserId: staff.id
 	});
 	return { id: article.id };
@@ -57,17 +67,16 @@ export const createArticleCommand = command(createArticleSchema, async (data) =>
 
 const updateArticleSchema = z.object({
 	id: z.string().min(1),
-	categoryId: z.string().min(1).optional(),
-	title: z.string().trim().min(1).max(255).optional(),
-	slug: z.string().trim().min(1).max(255).optional(),
+	categoryId: z.string().min(1),
+	title: z.string().trim().min(1).max(255),
+	slug: z.string().trim().min(1).max(255),
 	summary: z.string().trim().max(500).optional(),
-	content: z.string().min(1).optional(),
-	minRole: z.string().optional(),
-	published: z.boolean().optional(),
-	sortOrder: z.number().int().optional()
+	content: z.string().min(1),
+	minRole: z.string(),
+	published: z.string().optional().transform((v) => v === 'on')
 });
 
-export const updateArticleCommand = command(updateArticleSchema, async (data) => {
+export const updateArticleForm = form(updateArticleSchema, async (data) => {
 	await requireStaff();
 	const { id, ...rest } = data;
 	await updateArticle(id, rest);
@@ -86,16 +95,19 @@ export const deleteArticleCommand = command(z.object({ id: z.string().min(1) }),
 
 const createCategorySchema = z.object({
 	name: z.string().trim().min(1).max(100),
-	slug: z.string().trim().min(1).max(100),
+	slug: z.string().trim().max(100).optional().default(''),
 	description: z.string().trim().max(500).optional(),
 	icon: z.string().max(50).optional(),
-	sortOrder: z.number().int().default(0),
+	sortOrder: z.string().optional().default('0').transform((v) => parseInt(v, 10)),
 	minRole: z.string().default('member')
 });
 
-export const createCategoryCommand = command(createCategorySchema, async (data) => {
+export const createCategoryForm = form(createCategorySchema, async (data) => {
 	await requireStaff();
-	const cat = await createCategory(data);
+	const cat = await createCategory({
+		...data,
+		slug: data.slug || slugify(data.name)
+	});
 	return { id: cat.id };
 });
 
