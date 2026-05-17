@@ -19,7 +19,11 @@ const mockBand = {
 
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
-	getUserRole: vi.fn(async () => 'member' as string | null)
+	getUserRole: vi.fn(async () => 'member' as string | null),
+	getMembers: vi.fn(async () => [
+		{ userId: 'user-owner', status: 'active' },
+		{ userId: 'user-2', status: 'active' }
+	])
 };
 
 vi.mock('$lib/server/band/band-service', () => bandServiceMock);
@@ -67,6 +71,18 @@ vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: vi.fn(async () => false)
 }));
 
+const subscriptionServiceMock = {
+	getSubscription: vi.fn(async () => null)
+};
+
+vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);
+
+const recurringSeriesServiceMock = {
+	create: vi.fn(async () => ({ id: 'series-1' }))
+};
+
+vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
+
 // Mock DB for page load
 let selectResult: unknown[] = [];
 
@@ -110,7 +126,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getSlots, bookReservation, cancelBandReservation } = await import('./data.remote') as any;
+const { getSlots, bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('./data.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -182,6 +198,97 @@ describe('cancelBandReservation', () => {
 			'user-owner'
 		);
 		expect(result.success).toBe(true);
+	});
+});
+
+describe('getBandMembershipStatus', () => {
+	it('returns hasSustainingMember true when a member has an active subscription', async () => {
+		selectResult = [{ stripeId: 'cus_123' }, { stripeId: 'cus_456' }];
+		subscriptionServiceMock.getSubscription.mockResolvedValueOnce({ id: 'sub-1', status: 'active' });
+
+		const result = await getBandMembershipStatus();
+
+		expect(result.hasSustainingMember).toBe(true);
+	});
+
+	it('returns hasSustainingMember false when no members have subscriptions', async () => {
+		selectResult = [{ stripeId: 'cus_123' }];
+		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
+
+		const result = await getBandMembershipStatus();
+
+		expect(result.hasSustainingMember).toBe(false);
+	});
+
+	it('returns hasSustainingMember false when no active members exist', async () => {
+		bandServiceMock.getMembers.mockResolvedValueOnce([
+			{ userId: 'user-1', status: 'inactive' }
+		]);
+
+		const result = await getBandMembershipStatus();
+
+		expect(result.hasSustainingMember).toBe(false);
+	});
+
+	it('skips members without stripeId', async () => {
+		selectResult = [{ stripeId: null }, { stripeId: 'cus_456' }];
+		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
+
+		const result = await getBandMembershipStatus();
+
+		// Only called once (for cus_456), skips the null stripeId
+		expect(subscriptionServiceMock.getSubscription).toHaveBeenCalledTimes(1);
+		expect(result.hasSustainingMember).toBe(false);
+	});
+});
+
+describe('bookReservation with recurring', () => {
+	it('creates a recurring series when frequency is provided and member has sustaining subscription', async () => {
+		selectResult = [{ stripeId: 'cus_123' }];
+		subscriptionServiceMock.getSubscription.mockResolvedValueOnce({ id: 'sub-1', status: 'active' });
+
+		const result = await bookReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00',
+			recurring: 'weekly'
+		});
+
+		expect(reservationServiceMock.create).toHaveBeenCalled();
+		expect(recurringSeriesServiceMock.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prototypeReservationId: 'res-new',
+				frequency: 'weekly'
+			})
+		);
+		expect(result.reservationId).toBe('res-new');
+	});
+
+	it('throws 403 when recurring is requested but no member has sustaining subscription', async () => {
+		selectResult = [{ stripeId: 'cus_123' }];
+		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
+
+		await expect(
+			bookReservation({
+				date: '2026-06-15',
+				startTime: '09:00',
+				endTime: '10:00',
+				recurring: 'monthly'
+			})
+		).rejects.toThrow();
+
+		expect(recurringSeriesServiceMock.create).not.toHaveBeenCalled();
+	});
+
+	it('does not create series when recurring is empty string', async () => {
+		await bookReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00',
+			recurring: ''
+		});
+
+		expect(recurringSeriesServiceMock.create).not.toHaveBeenCalled();
 	});
 });
 

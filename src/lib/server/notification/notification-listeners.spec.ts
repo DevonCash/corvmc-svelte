@@ -158,6 +158,237 @@ describe('band.invitation_sent handler', () => {
 	});
 });
 
+describe('event.cancelled handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('dispatches to ticket holders with userId via dispatch', async () => {
+		await handlers['event.cancelled']({
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			refundNote: 'Full refund within 5 days',
+			ticketHolders: [
+				{ attendeeName: 'Alice', attendeeEmail: 'alice@test.com', userId: 'user-1' }
+			]
+		});
+
+		expect(mockTemplates.eventCancellation).toHaveBeenCalledWith(expect.objectContaining({
+			attendeeName: 'Alice',
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			refundNote: 'Full refund within 5 days'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'event_cancellation',
+			userId: 'user-1',
+			userEmail: 'alice@test.com',
+			title: 'Jazz Night has been cancelled',
+			href: '/member/tickets'
+		}));
+	});
+
+	it('dispatches to ticket holders without userId via dispatchEmailOnly', async () => {
+		await handlers['event.cancelled']({
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			refundNote: 'Full refund within 5 days',
+			ticketHolders: [
+				{ attendeeName: 'Bob', attendeeEmail: 'bob@test.com', userId: null }
+			]
+		});
+
+		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'event_cancellation',
+			toEmail: 'bob@test.com',
+			subject: 'Jazz Night has been cancelled'
+		}));
+	});
+
+	it('continues notifying remaining holders if one fails', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('fail'));
+
+		await handlers['event.cancelled']({
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			refundNote: 'Refund pending',
+			ticketHolders: [
+				{ attendeeName: 'Alice', attendeeEmail: 'alice@test.com', userId: 'user-1' },
+				{ attendeeName: 'Bob', attendeeEmail: 'bob@test.com', userId: 'user-2' }
+			]
+		});
+
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('reservation.confirmation_reminder_due handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('dispatches confirmation reminder notification', async () => {
+		await handlers['reservation.confirmation_reminder_due']({
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			date: 'May 22',
+			startTime: '2:00 PM',
+			endTime: '3:00 PM'
+		});
+
+		expect(mockTemplates.confirmationReminder).toHaveBeenCalledWith(expect.objectContaining({
+			userName: 'Bob',
+			date: 'May 22',
+			startTime: '2:00 PM',
+			endTime: '3:00 PM',
+			siteUrl: 'https://test.corvmc.com'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'confirmation_reminder',
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			title: 'Please confirm your reservation',
+			href: '/member/reservations',
+			emailSubject: 'Please confirm your reservation: May 22'
+		}));
+	});
+});
+
+describe('band.invitation_accepted handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('dispatches notification to each band admin', async () => {
+		await handlers['band.invitation_accepted']({
+			acceptedByName: 'Charlie',
+			bandName: 'The Strokes',
+			bandId: 'band-1',
+			bandAdmins: [
+				{ userId: 'admin-1', userEmail: 'admin1@test.com', userName: 'Alice' },
+				{ userId: 'admin-2', userEmail: 'admin2@test.com', userName: 'Dave' }
+			]
+		});
+
+		expect(mockTemplates.bandInvitationAccepted).toHaveBeenCalledTimes(2);
+		expect(mockTemplates.bandInvitationAccepted).toHaveBeenCalledWith(expect.objectContaining({
+			adminName: 'Alice',
+			acceptedByName: 'Charlie',
+			bandName: 'The Strokes',
+			bandId: 'band-1'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'band_invitation_accepted',
+			userId: 'admin-1',
+			title: 'Charlie joined The Strokes',
+			href: '/member/bands/band-1'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'band_invitation_accepted',
+			userId: 'admin-2'
+		}));
+	});
+
+	it('continues notifying remaining admins if one fails', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('fail'));
+
+		await handlers['band.invitation_accepted']({
+			acceptedByName: 'Charlie',
+			bandName: 'The Strokes',
+			bandId: 'band-1',
+			bandAdmins: [
+				{ userId: 'admin-1', userEmail: 'admin1@test.com', userName: 'Alice' },
+				{ userId: 'admin-2', userEmail: 'admin2@test.com', userName: 'Dave' }
+			]
+		});
+
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('reservation.recurring_skipped handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('dispatches recurring skipped notification', async () => {
+		await handlers['reservation.recurring_skipped']({
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			skippedDate: 'May 25',
+			startTime: '10:00 AM',
+			endTime: '11:00 AM',
+			reason: 'Conflicting event'
+		});
+
+		expect(mockTemplates.recurringSkipped).toHaveBeenCalledWith(expect.objectContaining({
+			userName: 'Bob',
+			skippedDate: 'May 25',
+			startTime: '10:00 AM',
+			endTime: '11:00 AM',
+			reason: 'Conflicting event',
+			siteUrl: 'https://test.corvmc.com'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'recurring_skipped',
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			title: 'Recurring reservation skipped',
+			body: 'May 25 10:00 AM–11:00 AM: Conflicting event',
+			href: '/member/reservations',
+			emailSubject: 'Recurring reservation skipped: May 25'
+		}));
+	});
+});
+
+describe('equipment.loan_scheduled handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('dispatches loan scheduled notification to member', async () => {
+		await handlers['equipment.loan_scheduled']({
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			equipmentName: 'SM58 Microphone',
+			scheduledPickupDate: '2026-06-01'
+		});
+
+		expect(mockTemplates.loanScheduledConfirmation).toHaveBeenCalledWith(expect.objectContaining({
+			userName: 'Bob',
+			equipmentName: 'SM58 Microphone',
+			siteUrl: 'https://test.corvmc.com'
+		}));
+		expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'equipment_loan_scheduled',
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			title: 'Equipment pickup confirmed: SM58 Microphone',
+			href: '/member/equipment/loans'
+		}));
+	});
+});
+
+describe('equipment.loan_requested handler', () => {
+	beforeEach(() => { registerAllNotificationListeners(); });
+
+	it('sends email notification to staff', async () => {
+		await handlers['equipment.loan_requested']({
+			userName: 'Bob',
+			equipmentName: 'SM58 Microphone',
+			memberNotes: 'Need for weekend gig',
+			requestedPickupDate: '2026-06-01',
+			loanId: 'loan-1'
+		});
+
+		expect(mockTemplates.loanRequestedStaffNotification).toHaveBeenCalledWith(expect.objectContaining({
+			userName: 'Bob',
+			equipmentName: 'SM58 Microphone',
+			memberNotes: 'Need for weekend gig',
+			loanId: 'loan-1',
+			siteUrl: 'https://test.corvmc.com'
+		}));
+		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(expect.objectContaining({
+			type: 'equipment_loan_requested',
+			toEmail: 'staff@test.com',
+			subject: 'Equipment request from Bob'
+		}));
+	});
+});
+
 describe('contact.form_submitted handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 

@@ -97,7 +97,16 @@ vi.mock('$lib/server/db/schema/auth', () => ({
 	user: { id: 'id', name: 'name' }
 }));
 
-const { generateCodeString, generateCode, createTickets, fulfillPurchase, cancelPurchase, checkIn, getTicketsSold, getTicketsRemaining } =
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn((...args: unknown[]) => ['eq', ...args]),
+	and: vi.fn((...args: unknown[]) => ['and', ...args]),
+	inArray: vi.fn((...args: unknown[]) => ['inArray', ...args]),
+	sql: vi.fn(),
+	asc: vi.fn((col: unknown) => ['asc', col]),
+	desc: vi.fn((col: unknown) => ['desc', col])
+}));
+
+const { generateCodeString, generateCode, createTickets, fulfillPurchase, cancelPurchase, cancelTicket, checkIn, getTicketsSold, getTicketsRemaining, getTicketsByPurchase, getEventTickets, getUserTickets } =
 	await import('./ticket-service');
 
 // ---------------------------------------------------------------------------
@@ -275,6 +284,12 @@ describe('getTicketsRemaining', () => {
 		expect(remaining).toBeNull();
 	});
 
+	it('returns null when event not found', async () => {
+		selectResultQueue = [[]];
+		const remaining = await getTicketsRemaining('event-nonexistent');
+		expect(remaining).toBeNull();
+	});
+
 	it('returns remaining count for limited capacity', async () => {
 		// First select: event query, second select: sold count
 		selectResultQueue = [[{ ticketQuantity: 50 }], [{ count: 12 }]];
@@ -292,5 +307,95 @@ describe('getTicketsRemaining', () => {
 		selectResultQueue = [[{ ticketQuantity: 10 }], [{ count: 12 }]];
 		const remaining = await getTicketsRemaining('event-1');
 		expect(remaining).toBe(0);
+	});
+});
+
+describe('cancelTicket', () => {
+	it('throws when ticket not found', async () => {
+		selectResult = [];
+		await expect(cancelTicket('nonexistent')).rejects.toThrow('Ticket not found');
+	});
+
+	it('throws when ticket is already cancelled', async () => {
+		selectResult = [{ status: 'cancelled' }];
+		await expect(cancelTicket('ticket-1')).rejects.toThrow('Cannot cancel ticket with status "cancelled"');
+	});
+
+	it('throws when ticket is already checked in', async () => {
+		selectResult = [{ status: 'checked_in' }];
+		await expect(cancelTicket('ticket-1')).rejects.toThrow('Cannot cancel ticket with status "checked_in"');
+	});
+
+	it('cancels a pending ticket', async () => {
+		selectResult = [{ status: 'pending' }];
+		await cancelTicket('ticket-1');
+		expect(mockDb.update).toHaveBeenCalled();
+	});
+
+	it('cancels a valid ticket', async () => {
+		selectResult = [{ status: 'valid' }];
+		await cancelTicket('ticket-1');
+		expect(mockDb.update).toHaveBeenCalled();
+	});
+});
+
+describe('getTicketsByPurchase', () => {
+	it('queries tickets by purchase id', async () => {
+		selectResult = [mockTicket];
+		const result = await getTicketsByPurchase('purchase-1');
+		expect(result).toEqual([mockTicket]);
+		expect(mockDb.select).toHaveBeenCalled();
+	});
+
+	it('returns empty array when no tickets found', async () => {
+		selectResult = [];
+		const result = await getTicketsByPurchase('purchase-nonexistent');
+		expect(result).toEqual([]);
+	});
+});
+
+describe('getEventTickets', () => {
+	it('queries tickets for an event without status filter', async () => {
+		selectResult = [mockTicket];
+		const result = await getEventTickets('event-1');
+		expect(result).toEqual([mockTicket]);
+		expect(mockDb.select).toHaveBeenCalled();
+	});
+
+	it('queries tickets for an event with status filter', async () => {
+		selectResult = [mockTicket];
+		const result = await getEventTickets('event-1', ['valid', 'checked_in']);
+		expect(result).toEqual([mockTicket]);
+		expect(mockDb.select).toHaveBeenCalled();
+	});
+
+	it('queries tickets with empty status filter array', async () => {
+		selectResult = [mockTicket];
+		const result = await getEventTickets('event-1', []);
+		expect(result).toEqual([mockTicket]);
+	});
+});
+
+describe('getUserTickets', () => {
+	it('queries tickets for a user', async () => {
+		const userTicket = { ...mockTicket, eventTitle: 'Concert', eventStartsAt: new Date(), eventEndsAt: new Date() };
+		selectResult = [userTicket];
+		const result = await getUserTickets('user-1');
+		expect(result).toEqual([userTicket]);
+		expect(mockDb.select).toHaveBeenCalled();
+	});
+
+	it('returns empty array when user has no tickets', async () => {
+		selectResult = [];
+		const result = await getUserTickets('user-nonexistent');
+		expect(result).toEqual([]);
+	});
+});
+
+describe('generateCode collision handling', () => {
+	it('throws after 10 failed attempts', async () => {
+		// Every select returns an existing ticket (collision)
+		selectResult = [{ id: 'existing-ticket' }];
+		await expect(generateCode()).rejects.toThrow('Failed to generate unique ticket code after 10 attempts');
 	});
 });

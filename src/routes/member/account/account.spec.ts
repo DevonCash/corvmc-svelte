@@ -88,8 +88,15 @@ vi.mock('$app/server', () => ({
 		return fn;
 	},
 	query: (_schema: unknown, handler: Function) => {
-		const fn = handler;
+		const fn = (...args: unknown[]) => {
+			const result = handler(...args);
+			if (result && typeof result.then === 'function') {
+				return Object.assign(result, { refresh: vi.fn() });
+			}
+			return Object.assign(Promise.resolve(result), { refresh: vi.fn() });
+		};
 		(fn as any).__ = { type: 'query' };
+		(fn as any).refresh = vi.fn();
 		return fn;
 	},
 	command: (_schema: unknown, handler: Function) => {
@@ -100,9 +107,19 @@ vi.mock('$app/server', () => ({
 }));
 
 import { auth } from '$lib/server/auth';
+import { hasAnyRole } from '$lib/server/authorization';
+import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import {
+	getSubscriptionsForUser,
+	getOptInAudiencesForUser,
+	addSubscriber,
+	unsubscribe as unsubscribeService
+} from '$lib/server/marketing/audience-service';
+import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
 const { GET: accountGET } = await import('../../api/me/account/+server');
-const { updateProfile, changePassword } = await import('./data.remote') as any;
+const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribeToList, unsubscribeFromList, deleteAccount } = await import('./data.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -205,5 +222,99 @@ describe('changePassword', () => {
 				}
 			})
 		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Email subscriptions
+// ---------------------------------------------------------------------------
+
+describe('getMySubscriptions', () => {
+	it('returns subscriptions for the current user', async () => {
+		const mockSubs = [{ id: 'sub-1', audienceId: 'aud-1' }];
+		vi.mocked(getSubscriptionsForUser).mockResolvedValueOnce(mockSubs as any);
+
+		const result = await getMySubscriptions();
+
+		expect(getSubscriptionsForUser).toHaveBeenCalledWith('user-1');
+		expect(result).toEqual(mockSubs);
+	});
+});
+
+describe('getAvailableLists', () => {
+	it('returns opt-in audiences for the current user', async () => {
+		const mockAudiences = [{ id: 'aud-1', name: 'Newsletter' }];
+		vi.mocked(getOptInAudiencesForUser).mockResolvedValueOnce(mockAudiences as any);
+
+		const result = await getAvailableLists();
+
+		expect(getOptInAudiencesForUser).toHaveBeenCalledWith('user-1');
+		expect(result).toEqual(mockAudiences);
+	});
+});
+
+describe('subscribeToList', () => {
+	it('finds or creates subscriber then adds to audience', async () => {
+		await subscribeToList({ audienceId: 'aud-99' });
+
+		expect(findOrCreateForUser).toHaveBeenCalledWith('user-1', mockLocals.user.email, mockLocals.user.name);
+		expect(addSubscriber).toHaveBeenCalledWith('aud-99', 'sub-1');
+	});
+});
+
+describe('unsubscribeFromList', () => {
+	it('finds subscriber and unsubscribes from audience', async () => {
+		await unsubscribeFromList({ audienceId: 'aud-99' });
+
+		expect(findByUserId).toHaveBeenCalledWith('user-1');
+		expect(unsubscribeService).toHaveBeenCalledWith('sub-1', 'aud-99');
+	});
+
+	it('does nothing if subscriber not found', async () => {
+		vi.mocked(findByUserId).mockResolvedValueOnce(null);
+
+		await unsubscribeFromList({ audienceId: 'aud-99' });
+
+		expect(unsubscribeService).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Delete account
+// ---------------------------------------------------------------------------
+
+describe('deleteAccount', () => {
+	it('cancels future reservations, cancels subscription, soft-deletes, and signs out', async () => {
+		mockLocals.user = mockUser({ id: 'user-1', name: 'Test User', stripeId: 'cus_123' }) as any;
+		queryResults = [[{ id: 'res-1' }, { id: 'res-2' }]];
+
+		await deleteAccount({ password: 'correct-pass' });
+
+		expect(auth.api.signInEmail).toHaveBeenCalled();
+		expect(cancelReservation).toHaveBeenCalledTimes(2);
+		expect(cancelSubscription).toHaveBeenCalledWith('cus_123');
+		expect(lastUpdate!.set).toHaveProperty('deletedAt');
+		expect(auth.api.signOut).toHaveBeenCalled();
+	});
+
+	it('rejects deletion for staff/admin accounts', async () => {
+		vi.mocked(hasAnyRole).mockResolvedValueOnce(true);
+
+		await expect(deleteAccount({ password: 'any' })).rejects.toThrow();
+	});
+
+	it('rejects incorrect password', async () => {
+		vi.mocked(auth.api.signInEmail).mockRejectedValueOnce(new Error('bad creds'));
+
+		await expect(deleteAccount({ password: 'wrong' })).rejects.toThrow();
+	});
+
+	it('skips subscription cancellation when no stripeId', async () => {
+		mockLocals.user = mockUser({ id: 'user-1', name: 'Test User' }) as any;
+		queryResults = [[]];
+
+		await deleteAccount({ password: 'correct-pass' });
+
+		expect(cancelSubscription).not.toHaveBeenCalled();
 	});
 });

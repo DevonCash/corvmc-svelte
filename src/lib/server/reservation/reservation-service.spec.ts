@@ -32,7 +32,16 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 	refund: vi.fn()
 }));
 
-import { create, cancel } from './reservation-service';
+import {
+	create,
+	cancel,
+	staffCreate,
+	confirm,
+	markComplete,
+	markNoShow,
+	recordCashAndComplete,
+	autoCompleteExpired
+} from './reservation-service';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { db } from '$lib/server/db';
@@ -169,6 +178,233 @@ describe('ReservationService', () => {
 			});
 
 			await expect(cancel('res-1', 'user-1')).rejects.toThrow('Cannot cancel');
+		});
+
+		it('throws when reservation not found', async () => {
+			const limit = vi.fn().mockResolvedValue([]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await expect(cancel('res-999', 'user-1')).rejects.toThrow('Reservation not found');
+		});
+
+		it('throws when status changed concurrently', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null
+			});
+			setupUpdateMock(0);
+
+			await expect(cancel('res-1', 'user-1')).rejects.toThrow(
+				'Reservation status changed concurrently'
+			);
+		});
+
+		it('allows staff override even if not owner', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null
+			});
+			setupUpdateMock(1);
+
+			await cancel('res-1', 'staff-1', 'Staff cancelled', { staffOverride: true });
+
+			expect(refund).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('staffCreate', () => {
+		function setupInsertMock(row: Record<string, unknown>) {
+			const returning = vi.fn().mockResolvedValue([row]);
+			const values = vi.fn().mockReturnValue({ returning });
+			vi.mocked(db.insert).mockReturnValue({ values } as any);
+		}
+
+		it('creates a reservation without validation or conflict check', async () => {
+			const mockRow = { id: 'res-1', status: 'confirmed' };
+			setupInsertMock(mockRow);
+
+			const result = await staffCreate({
+				userId: 'staff-1',
+				bookerType: 'user',
+				bookerId: 'user-1',
+				startsAt: new Date('2025-07-15T17:00:00Z'),
+				endsAt: new Date('2025-07-15T19:00:00Z')
+			});
+
+			expect(result).toEqual(mockRow);
+			expect(validateBooking).not.toHaveBeenCalled();
+		});
+
+		it('uses provided status', async () => {
+			const mockRow = { id: 'res-2', status: 'scheduled' };
+			setupInsertMock(mockRow);
+
+			const result = await staffCreate({
+				userId: 'staff-1',
+				bookerType: 'user',
+				bookerId: 'user-1',
+				startsAt: new Date('2025-07-15T17:00:00Z'),
+				endsAt: new Date('2025-07-15T19:00:00Z'),
+				status: 'scheduled'
+			});
+
+			expect(result.status).toBe('scheduled');
+		});
+	});
+
+	describe('confirm', () => {
+		function setupUpdateMock(rowCount: number, selectRow?: Record<string, unknown>) {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+
+			if (selectRow !== undefined) {
+				const limit = vi.fn().mockResolvedValue([selectRow]);
+				const where = vi.fn().mockReturnValue({ limit });
+				const from = vi.fn().mockReturnValue({ where });
+				vi.mocked(db.select).mockReturnValue({ from } as any);
+			}
+		}
+
+		it('confirms a scheduled reservation', async () => {
+			setupUpdateMock(1);
+			await confirm('res-1');
+			expect(db.update).toHaveBeenCalled();
+		});
+
+		it('throws when reservation not found', async () => {
+			setupUpdateMock(0, undefined);
+			const limit = vi.fn().mockResolvedValue([]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await expect(confirm('res-999')).rejects.toThrow('Reservation not found');
+		});
+
+		it('throws when status is not scheduled', async () => {
+			setupUpdateMock(0, { status: 'completed' });
+
+			await expect(confirm('res-1')).rejects.toThrow(
+				'Cannot transition from "completed" to "confirmed"'
+			);
+		});
+	});
+
+	describe('markComplete', () => {
+		function setupUpdateMock(rowCount: number, selectRow?: Record<string, unknown>) {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+
+			if (selectRow !== undefined) {
+				const limit = vi.fn().mockResolvedValue([selectRow]);
+				const where = vi.fn().mockReturnValue({ limit });
+				const from = vi.fn().mockReturnValue({ where });
+				vi.mocked(db.select).mockReturnValue({ from } as any);
+			}
+		}
+
+		it('completes a confirmed reservation', async () => {
+			setupUpdateMock(1);
+			await markComplete('res-1');
+			expect(db.update).toHaveBeenCalled();
+		});
+
+		it('throws when reservation has wrong status', async () => {
+			setupUpdateMock(0, { status: 'scheduled' });
+
+			await expect(markComplete('res-1')).rejects.toThrow(
+				'Cannot transition from "scheduled" to "completed"'
+			);
+		});
+	});
+
+	describe('markNoShow', () => {
+		function setupUpdateMock(rowCount: number) {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+		}
+
+		it('marks a confirmed reservation as no_show', async () => {
+			setupUpdateMock(1);
+			await markNoShow('res-1');
+			expect(db.update).toHaveBeenCalled();
+		});
+
+		it('throws when reservation not found', async () => {
+			setupUpdateMock(0);
+			const limit = vi.fn().mockResolvedValue([]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await expect(markNoShow('res-999')).rejects.toThrow('Reservation not found');
+		});
+	});
+
+	describe('recordCashAndComplete', () => {
+		function setupUpdateMock(rowCount: number) {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+		}
+
+		it('transitions scheduled → completed with payment record', async () => {
+			setupUpdateMock(1);
+			await recordCashAndComplete('res-1', 'pr_abc');
+			expect(db.update).toHaveBeenCalled();
+		});
+
+		it('throws when reservation not found', async () => {
+			setupUpdateMock(0);
+			const limit = vi.fn().mockResolvedValue([]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await expect(recordCashAndComplete('res-999', 'pr_abc')).rejects.toThrow(
+				'Reservation not found'
+			);
+		});
+
+		it('throws when reservation is not scheduled', async () => {
+			setupUpdateMock(0);
+			const limit = vi.fn().mockResolvedValue([{ status: 'confirmed' }]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(
+				'Expected status "scheduled", got "confirmed"'
+			);
+		});
+	});
+
+	describe('autoCompleteExpired', () => {
+		it('returns the number of rows updated', async () => {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount: 3 });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+
+			const count = await autoCompleteExpired();
+			expect(count).toBe(3);
+		});
+
+		it('returns 0 when no expired reservations', async () => {
+			const updateWhere = vi.fn().mockResolvedValue({ rowCount: 0 });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+
+			const count = await autoCompleteExpired();
+			expect(count).toBe(0);
 		});
 	});
 });

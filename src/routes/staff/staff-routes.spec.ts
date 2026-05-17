@@ -34,12 +34,33 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$lib/server/authorization', () => ({
 	hasRole: vi.fn().mockResolvedValue(true),
 	hasAnyRole: vi.fn().mockResolvedValue(true),
-	getUserRoles: vi.fn().mockResolvedValue(['admin'])
+	getUserRoles: vi.fn().mockResolvedValue(['admin']),
+	requireStaff: vi.fn().mockResolvedValue(undefined)
+}));
+
+// Mock finance services
+const mockListByUser = vi.fn().mockResolvedValue([]);
+const mockGetAllBalances = vi.fn().mockResolvedValue([]);
+const mockAddCredits = vi.fn().mockResolvedValue(undefined);
+const mockDeductCredits = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('$lib/server/finance/payment-cache-service', () => ({
+	listByUser: (...args: unknown[]) => mockListByUser(...args)
+}));
+
+vi.mock('$lib/server/finance/credit-service', () => ({
+	getAllBalances: (...args: unknown[]) => mockGetAllBalances(...args),
+	addCredits: (...args: unknown[]) => mockAddCredits(...args),
+	deductCredits: (...args: unknown[]) => mockDeductCredits(...args)
 }));
 
 beforeEach(() => {
 	queryResults = [];
 	queryIndex = 0;
+	mockListByUser.mockClear();
+	mockGetAllBalances.mockClear();
+	mockAddCredits.mockClear();
+	mockDeductCredits.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -132,6 +153,8 @@ describe('/staff/users list load', () => {
 // User detail load (tests data.remote.ts query functions)
 // ---------------------------------------------------------------------------
 
+let _insideHandler = false;
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: { id: 'staff-1' } },
@@ -140,23 +163,55 @@ vi.mock('$app/server', () => ({
 	}),
 	query: (...args: unknown[]) => {
 		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as Function;
-		(fn as any).__ = { type: 'query' };
-		(fn as any).refresh = () => {};
-		return fn;
+		const wrapped = (...callArgs: unknown[]) => {
+			// When called from inside another handler (fire-and-forget refresh pattern),
+			// return a resolved promise to avoid unhandled rejections
+			if (_insideHandler) {
+				const p = Promise.resolve(undefined);
+				(p as any).refresh = () => Promise.resolve();
+				return p;
+			}
+			const result = (handler as Function)(...callArgs);
+			if (result && typeof result.then === 'function') {
+				const p = result.then((v: unknown) => v);
+				(p as any).refresh = () => Promise.resolve();
+				return p;
+			}
+			(result as any).refresh = () => Promise.resolve();
+			return result;
+		};
+		(wrapped as any).__ = { type: 'query' };
+		(wrapped as any).refresh = () => Promise.resolve();
+		return wrapped;
 	},
 	form: (_schema: unknown, handler: Function) => {
-		(handler as any).__ = { type: 'form' };
-		(handler as any).for = () => handler;
-		return handler;
+		const wrapped = async (...args: unknown[]) => {
+			_insideHandler = true;
+			try {
+				return await (handler as Function)(...args);
+			} finally {
+				_insideHandler = false;
+			}
+		};
+		(wrapped as any).__ = { type: 'form' };
+		(wrapped as any).for = () => wrapped;
+		return wrapped;
 	},
 	command: (_schema: unknown, handler: Function) => {
-		(handler as any).__ = { type: 'command' };
-		return handler;
+		const wrapped = async (...args: unknown[]) => {
+			_insideHandler = true;
+			try {
+				return await (handler as Function)(...args);
+			} finally {
+				_insideHandler = false;
+			}
+		};
+		(wrapped as any).__ = { type: 'command' };
+		return wrapped;
 	}
 }));
 
-const { getUser, getAllRoles } = await import('./users/[id]/data.remote');
+const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser, adjustCredits } = await import('./users/[id]/data.remote');
 
 describe('/staff/users/[id] detail load', () => {
 	it('returns user with roles and all available roles', async () => {
@@ -183,5 +238,146 @@ describe('/staff/users/[id] detail load', () => {
 		queryIndex = 0;
 
 		await expect((getUser as Function)('nonexistent')).rejects.toThrow();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// User payments query
+// ---------------------------------------------------------------------------
+describe('/staff/users/[id] getUserPayments', () => {
+	it('delegates to payment cache service', async () => {
+		const payments = [{ id: 'pay-1', amount: 5000 }];
+		mockListByUser.mockResolvedValueOnce(payments);
+
+		const result = await (getUserPayments as Function)('user-1');
+		expect(result).toEqual(payments);
+		expect(mockListByUser).toHaveBeenCalledWith('user-1');
+	});
+
+	it('returns empty array when user has no payments', async () => {
+		mockListByUser.mockResolvedValueOnce([]);
+
+		const result = await (getUserPayments as Function)('user-1');
+		expect(result).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// User credits query
+// ---------------------------------------------------------------------------
+describe('/staff/users/[id] getUserCredits', () => {
+	it('delegates to credit service getAllBalances', async () => {
+		const balances = [
+			{ type: 'free_hours', balance: 3 },
+			{ type: 'equipment_credits', balance: 5 }
+		];
+		mockGetAllBalances.mockResolvedValueOnce(balances);
+
+		const result = await (getUserCredits as Function)('user-1');
+		expect(result).toEqual(balances);
+		expect(mockGetAllBalances).toHaveBeenCalledWith('user-1');
+	});
+
+	it('returns empty array when user has no credits', async () => {
+		mockGetAllBalances.mockResolvedValueOnce([]);
+
+		const result = await (getUserCredits as Function)('user-1');
+		expect(result).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Update user form
+// ---------------------------------------------------------------------------
+describe('/staff/users/[id] updateUser', () => {
+	it('updates user fields and syncs roles', async () => {
+		const { db } = await import('$lib/server/db');
+		const originalTransaction = (db as any).transaction;
+		(db as any).transaction = async (cb: Function) => cb({
+			update: () => chainable(),
+			delete: () => chainable(),
+			insert: () => chainable()
+		});
+
+		// Provide result for the internal getUser(id) refresh call
+		queryResults = [[mockUser({ id: 'user-1', name: 'Updated Name' })]];
+		queryIndex = 0;
+
+		const result = await (updateUser as Function)({
+			name: 'Updated Name',
+			pronouns: 'they/them',
+			phone: '555-1234',
+			roles: ['1', '2']
+		});
+
+		expect(result).toEqual({ success: true });
+
+		(db as any).transaction = originalTransaction;
+	});
+
+	it('handles empty roles array', async () => {
+		const { db } = await import('$lib/server/db');
+		const originalTransaction = (db as any).transaction;
+		const insertSpy = vi.fn(() => chainable());
+		(db as any).transaction = async (cb: Function) => cb({
+			update: () => chainable(),
+			delete: () => chainable(),
+			insert: insertSpy
+		});
+
+		// Provide result for the internal getUser(id) refresh call
+		queryResults = [[mockUser({ id: 'user-1', name: 'No Roles User' })]];
+		queryIndex = 0;
+
+		const result = await (updateUser as Function)({
+			name: 'No Roles User',
+			pronouns: '',
+			phone: '',
+			roles: []
+		});
+
+		expect(result).toEqual({ success: true });
+		expect(insertSpy).not.toHaveBeenCalled();
+
+		(db as any).transaction = originalTransaction;
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Adjust credits command
+// ---------------------------------------------------------------------------
+describe('/staff/users/[id] adjustCredits', () => {
+	it('adds credits when amount is positive', async () => {
+		mockAddCredits.mockResolvedValueOnce(undefined);
+
+		const result = await (adjustCredits as Function)({
+			userId: 'user-1',
+			creditType: 'free_hours',
+			amount: 5,
+			description: 'Bonus hours'
+		});
+
+		expect(result).toEqual({ success: true });
+		expect(mockAddCredits).toHaveBeenCalledWith(
+			'user-1', 'free_hours', 5, 'admin_adjustment', undefined, 'Bonus hours'
+		);
+		expect(mockDeductCredits).not.toHaveBeenCalled();
+	});
+
+	it('deducts credits when amount is negative', async () => {
+		mockDeductCredits.mockResolvedValueOnce(undefined);
+
+		const result = await (adjustCredits as Function)({
+			userId: 'user-1',
+			creditType: 'equipment_credits',
+			amount: -3,
+			description: 'Correction'
+		});
+
+		expect(result).toEqual({ success: true });
+		expect(mockDeductCredits).toHaveBeenCalledWith(
+			'user-1', 'equipment_credits', 3, 'admin_adjustment', undefined, 'Correction'
+		);
+		expect(mockAddCredits).not.toHaveBeenCalled();
 	});
 });
