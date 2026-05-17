@@ -4,13 +4,7 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
 import { DateTime } from 'luxon';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-
-// ---------------------------------------------------------------------------
-// CommunityStats — aggregated subscription metrics for the membership page
-// ---------------------------------------------------------------------------
-// Cached in-memory with a 24-hour TTL. These are approximate vanity stats
-// displayed on the membership marketing page — freshness doesn't matter.
-// ---------------------------------------------------------------------------
+import { getJson, putJson } from '$lib/server/kv';
 
 export interface CommunityStats {
 	sustainingMemberCount: number;
@@ -18,38 +12,21 @@ export interface CommunityStats {
 	participationPercent: number;
 }
 
-const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const STATS_KEY = 'community-stats';
+const TTL_SECONDS = 86400; // 24 hours
 
-let cached: { stats: CommunityStats; expiresAt: number } | null = null;
-
-/**
- * Get community impact stats. Returns cached values if available and fresh;
- * otherwise queries the database and caches the result for 24 hours.
- */
 export async function getCommunityStats(): Promise<CommunityStats> {
-	if (cached && Date.now() < cached.expiresAt) {
-		return cached.stats;
-	}
+	const cached = await getJson<CommunityStats>(STATS_KEY);
+	if (cached) return cached;
 
 	const stats = await queryStats();
-	cached = { stats, expiresAt: Date.now() + TTL_MS };
+	await putJson(STATS_KEY, stats, TTL_SECONDS);
 	return stats;
 }
-
-/** Invalidate the cache. Useful for testing. */
-export function clearStatsCache(): void {
-	cached = null;
-}
-
-// ---------------------------------------------------------------------------
-// Internal query
-// ---------------------------------------------------------------------------
 
 async function queryStats(): Promise<CommunityStats> {
 	const monthStart = getMonthStart();
 
-	// Count distinct users who received a monthly_allocation this month
-	// and sum the total free hours allocated
 	const [allocationStats] = await db
 		.select({
 			memberCount: countDistinct(creditTransaction.userId),
@@ -67,7 +44,6 @@ async function queryStats(): Promise<CommunityStats> {
 	const sustainingMemberCount = allocationStats?.memberCount ?? 0;
 	const totalFreeHoursAllocated = Number(allocationStats?.totalHours ?? 0);
 
-	// Count total active (non-deleted) users
 	const [userStats] = await db
 		.select({ total: count() })
 		.from(user)
@@ -85,7 +61,6 @@ async function queryStats(): Promise<CommunityStats> {
 	};
 }
 
-/** First day of the current month at midnight in the app timezone (America/Los_Angeles). */
 function getMonthStart(): Date {
 	const now = DateTime.now().setZone('America/Los_Angeles');
 	return buildDateInTz(

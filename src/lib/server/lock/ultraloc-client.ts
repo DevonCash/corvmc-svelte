@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { randomUUID } from 'crypto';
+import { getJson, putJson } from '$lib/server/kv';
 
 // ---------------------------------------------------------------------------
 // Ultraloc API client
@@ -17,7 +18,7 @@ import { randomUUID } from 'crypto';
 const API_URL = 'https://api.u-tec.com/action';
 const TOKEN_URL = 'https://oauth.u-tec.com/token';
 
-let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+const TOKEN_KEY = 'ultraloc:token';
 
 function getConfig() {
 	const clientId = env.ULTRALOC_CLIENT_ID;
@@ -33,8 +34,9 @@ function getConfig() {
 }
 
 async function getAccessToken(): Promise<string> {
-	if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
-		return cachedToken.accessToken;
+	const cached = await getJson<{ accessToken: string; expiresAt: number }>(TOKEN_KEY);
+	if (cached && Date.now() < cached.expiresAt - 60_000) {
+		return cached.accessToken;
 	}
 
 	const { clientId, clientSecret, refreshToken } = getConfig();
@@ -48,12 +50,12 @@ async function getAccessToken(): Promise<string> {
 	}
 
 	const data: { access_token: string; expires_in: number } = await res.json();
-	cachedToken = {
-		accessToken: data.access_token,
-		expiresAt: Date.now() + data.expires_in * 1000
-	};
+	const expiresAt = Date.now() + data.expires_in * 1000;
+	const ttlSeconds = Math.max(Math.floor(data.expires_in - 60), 60);
 
-	return cachedToken.accessToken;
+	await putJson(TOKEN_KEY, { accessToken: data.access_token, expiresAt }, ttlSeconds);
+
+	return data.access_token;
 }
 
 async function apiCall(namespace: string, name: string, payload: Record<string, unknown>): Promise<any> {

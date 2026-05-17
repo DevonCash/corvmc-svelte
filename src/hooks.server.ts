@@ -5,6 +5,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/events/register-listeners';
 import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
+import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 
 // Register domain event listeners once at startup
@@ -20,6 +21,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	if (event.platform?.env?.R2_BUCKET) {
 		initStorage(event.platform.env.R2_BUCKET);
+	}
+	if (event.platform?.env?.KV) {
+		initKv(event.platform.env.KV);
 	}
 
 	const session = await auth.api.getSession({ headers: event.request.headers });

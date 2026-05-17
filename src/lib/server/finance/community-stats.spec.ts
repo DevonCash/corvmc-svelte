@@ -1,17 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
+// Mock KV
+// ---------------------------------------------------------------------------
+let kvStore: Record<string, string> = {};
+
+vi.mock('$lib/server/kv', () => ({
+	getJson: vi.fn(async (key: string) => {
+		const val = kvStore[key];
+		return val ? JSON.parse(val) : null;
+	}),
+	putJson: vi.fn(async (key: string, value: unknown) => {
+		kvStore[key] = JSON.stringify(value);
+	})
+}));
+
+// ---------------------------------------------------------------------------
 // Mock database
 // ---------------------------------------------------------------------------
 const mockSelect = vi.fn();
-const mockFrom = vi.fn();
-const mockWhere = vi.fn();
-
-function makeChain(result: unknown[]) {
-	mockWhere.mockResolvedValue(result);
-	mockFrom.mockReturnValue({ where: mockWhere });
-	mockSelect.mockReturnValue({ from: mockFrom });
-}
 
 vi.mock('$lib/server/db', () => ({
 	db: {
@@ -33,7 +40,6 @@ vi.mock('$lib/server/db/schema/finance', () => ({
 	}
 }));
 
-// Mock drizzle operators to pass through
 vi.mock('drizzle-orm', () => ({
 	sql: {},
 	eq: vi.fn(),
@@ -45,7 +51,7 @@ vi.mock('drizzle-orm', () => ({
 	sum: vi.fn()
 }));
 
-const { getCommunityStats, clearStatsCache } = await import('./community-stats');
+const { getCommunityStats } = await import('./community-stats');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -53,7 +59,7 @@ const { getCommunityStats, clearStatsCache } = await import('./community-stats')
 describe('getCommunityStats', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		clearStatsCache();
+		kvStore = {};
 	});
 
 	it('returns aggregated stats from the database', async () => {
@@ -61,14 +67,12 @@ describe('getCommunityStats', () => {
 		mockSelect.mockImplementation(() => {
 			callCount++;
 			if (callCount === 1) {
-				// Allocation query
 				return {
 					from: () => ({
 						where: () => Promise.resolve([{ memberCount: 12, totalHours: '47' }])
 					})
 				};
 			}
-			// User count query
 			return {
 				from: () => ({
 					where: () => Promise.resolve([{ total: 80 }])
@@ -97,57 +101,42 @@ describe('getCommunityStats', () => {
 		expect(stats.participationPercent).toBe(0);
 	});
 
-	it('caches results and does not re-query within TTL', async () => {
+	it('returns cached results from KV without re-querying', async () => {
+		kvStore['community-stats'] = JSON.stringify({
+			sustainingMemberCount: 5,
+			totalFreeHoursAllocated: 20,
+			participationPercent: 10
+		});
+
+		const stats = await getCommunityStats();
+
+		expect(stats.sustainingMemberCount).toBe(5);
+		expect(mockSelect).not.toHaveBeenCalled();
+	});
+
+	it('stores result in KV after querying', async () => {
 		let callCount = 0;
 		mockSelect.mockImplementation(() => {
 			callCount++;
-			if (callCount <= 2) {
-				// First call: allocation + user queries
+			if (callCount === 1) {
 				return {
 					from: () => ({
-						where: () => {
-							if (callCount === 1) return Promise.resolve([{ memberCount: 5, totalHours: '20' }]);
-							return Promise.resolve([{ total: 50 }]);
-						}
+						where: () => Promise.resolve([{ memberCount: 8, totalHours: '30' }])
 					})
 				};
 			}
-			// Should not reach here on second getCommunityStats call
 			return {
 				from: () => ({
-					where: () => Promise.resolve([{ memberCount: 99, totalHours: '999', total: 100 }])
+					where: () => Promise.resolve([{ total: 40 }])
 				})
 			};
 		});
 
-		const first = await getCommunityStats();
-		const second = await getCommunityStats();
+		await getCommunityStats();
 
-		// Same result, no additional DB calls
-		expect(second).toEqual(first);
-		expect(callCount).toBe(2); // Only the initial 2 queries
-	});
-
-	it('re-queries after cache is cleared', async () => {
-		let callCount = 0;
-		mockSelect.mockImplementation(() => {
-			callCount++;
-			return {
-				from: () => ({
-					where: () => {
-						if (callCount % 2 === 1) return Promise.resolve([{ memberCount: callCount, totalHours: '10' }]);
-						return Promise.resolve([{ total: 100 }]);
-					}
-				})
-			};
-		});
-
-		const first = await getCommunityStats();
-		clearStatsCache();
-		const second = await getCommunityStats();
-
-		expect(first.sustainingMemberCount).toBe(1);
-		expect(second.sustainingMemberCount).toBe(3);
-		expect(callCount).toBe(4); // 2 queries per call
+		const cached = JSON.parse(kvStore['community-stats']);
+		expect(cached.sustainingMemberCount).toBe(8);
+		expect(cached.totalFreeHoursAllocated).toBe(30);
+		expect(cached.participationPercent).toBe(20);
 	});
 });
