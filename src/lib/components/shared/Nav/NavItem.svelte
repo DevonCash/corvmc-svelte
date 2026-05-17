@@ -25,6 +25,6 @@
 	}
 
 	a.active {
-		background: oklch(from var(--color-primary) l c h / 50%);
+		background: oklch(from var(--color-primary) l c h / 30%);
 	}
 </style>
