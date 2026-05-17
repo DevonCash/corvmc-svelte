@@ -208,7 +208,7 @@ async function deleteAll() {
 		'campaign_audience', 'campaign', 'audience_member', 'audience', 'subscriber',
 		'notification_preference', 'notification',
 		'ticket', 'band_genre', 'band_member', 'band',
-		'payment_record', 'credit_transaction',
+		'payment_cache', 'credit_transaction',
 		'recurring_series', 'event', 'closure', 'reservation',
 		'model_has_roles', 'model_has_permissions', 'role_has_permissions',
 		'roles', 'permissions', 'product_config',
@@ -746,7 +746,7 @@ async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservati
 		const amountCents = hours * 1500;
 		const method = Math.random() > 0.3 ? 'Cash' : 'Credits';
 
-		const [p] = await db.insert(paymentCache).values({
+		const [p] = await db.insert(paymentRecord).values({
 			id: `pr_seed_${randomUUID().slice(0, 8)}`,
 			userId: r.createdByUserId,
 			reservationId: r.id,
