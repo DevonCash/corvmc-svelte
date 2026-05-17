@@ -13,6 +13,7 @@ import { getNotificationType } from './notification-types';
 export interface ChannelPreference {
 	email: boolean;
 	inApp: boolean;
+	sms: boolean;
 }
 
 /**
@@ -33,7 +34,8 @@ export async function getPreference(
 	const [row] = await db
 		.select({
 			emailEnabled: notificationPreference.emailEnabled,
-			inAppEnabled: notificationPreference.inAppEnabled
+			inAppEnabled: notificationPreference.inAppEnabled,
+			smsEnabled: notificationPreference.smsEnabled
 		})
 		.from(notificationPreference)
 		.where(
@@ -45,10 +47,10 @@ export async function getPreference(
 		.limit(1);
 
 	if (row) {
-		return { email: row.emailEnabled, inApp: row.inAppEnabled };
+		return { email: row.emailEnabled, inApp: row.inAppEnabled, sms: row.smsEnabled };
 	}
 
-	return typeDef?.defaults ?? { email: true, inApp: true };
+	return typeDef?.defaults ?? { email: true, inApp: true, sms: false };
 }
 
 /**
@@ -66,7 +68,8 @@ export async function getAllPreferences(
 	for (const row of rows) {
 		prefs[row.notificationType] = {
 			email: row.emailEnabled,
-			inApp: row.inAppEnabled
+			inApp: row.inAppEnabled,
+			sms: row.smsEnabled
 		};
 	}
 	return prefs;
@@ -86,13 +89,15 @@ export async function setPreference(
 			userId,
 			notificationType,
 			emailEnabled: channels.email,
-			inAppEnabled: channels.inApp
+			inAppEnabled: channels.inApp,
+			smsEnabled: channels.sms
 		})
 		.onConflictDoUpdate({
 			target: [notificationPreference.userId, notificationPreference.notificationType],
 			set: {
 				emailEnabled: channels.email,
 				inAppEnabled: channels.inApp,
+				smsEnabled: channels.sms,
 				updatedAt: new Date()
 			}
 		});

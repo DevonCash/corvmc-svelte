@@ -46,9 +46,9 @@ export const getUserCredits = query(z.string(), async (userId) => {
 });
 
 const updateUserSchema = z.object({
-	name: z.string().trim().min(1),
-	pronouns: z.string().trim(),
-	phone: z.string().trim(),
+	name: z.string().trim().min(1).max(255),
+	pronouns: z.string().trim().max(50),
+	phone: z.string().trim().max(30),
 	roles: z.string().transform((s) => JSON.parse(s) as string[]).pipe(
 		z.array(z.string().regex(/^\d+$/, 'Invalid role ID'))
 	).default([])

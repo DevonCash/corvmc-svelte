@@ -43,6 +43,7 @@ export const notificationPreference = sqliteTable(
 		notificationType: text('notification_type').notNull(),
 		emailEnabled: integer('email_enabled', { mode: 'boolean' }).notNull().default(true),
 		inAppEnabled: integer('in_app_enabled', { mode: 'boolean' }).notNull().default(true),
+		smsEnabled: integer('sms_enabled', { mode: 'boolean' }).notNull().default(false),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
 		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},

@@ -18,7 +18,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 		label: t.label,
 		description: t.description,
 		email: prefs[t.key]?.email ?? t.defaults.email,
-		inApp: prefs[t.key]?.inApp ?? t.defaults.inApp
+		inApp: prefs[t.key]?.inApp ?? t.defaults.inApp,
+		sms: prefs[t.key]?.sms ?? t.defaults.sms
 	}));
 
 	return json(result);
@@ -32,8 +33,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	const user = locals.user;
 	if (!user) error(401, 'Not authenticated');
 
-	const body = await request.json() as { notificationType: unknown; email: unknown; inApp: unknown };
-	const { notificationType, email, inApp } = body;
+	const body = await request.json() as { notificationType: unknown; email: unknown; inApp: unknown; sms: unknown };
+	const { notificationType, email, inApp, sms } = body;
 
 	if (typeof notificationType !== 'string') {
 		error(400, 'notificationType is required');
@@ -49,7 +50,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 	await setPreference(user.id, notificationType, {
 		email: Boolean(email),
-		inApp: Boolean(inApp)
+		inApp: Boolean(inApp),
+		sms: Boolean(sms)
 	});
 
 	return json({ ok: true });

@@ -28,6 +28,8 @@ function validateContact(contact: unknown): DirectoryContact | null {
 	if (c.email) result.email = String(c.email).slice(0, 255);
 	if (c.phone) result.phone = String(c.phone).slice(0, 30);
 	if (c.social) result.social = String(c.social).slice(0, 255);
+	if (c.address) result.address = String(c.address).slice(0, 500);
+	if (c.visibility) result.visibility = String(c.visibility);
 	return Object.keys(result).length > 0 ? result : null;
 }
 

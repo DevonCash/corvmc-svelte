@@ -111,7 +111,7 @@ describe('preference-service', () => {
 
 			const result = await getPreference('user-1', 'unknown_type');
 
-			expect(result).toEqual({ email: true, inApp: true });
+			expect(result).toEqual({ email: true, inApp: true, sms: false });
 		});
 	});
 
@@ -153,7 +153,7 @@ describe('preference-service', () => {
 			const values = vi.fn(() => ({ onConflictDoUpdate }));
 			insertMock.mockReturnValue({ values });
 
-			await setPreference('user-1', 'band_invitation', { email: true, inApp: false });
+			await setPreference('user-1', 'band_invitation', { email: true, inApp: false, sms: false });
 
 			expect(insertMock).toHaveBeenCalled();
 			expect(values).toHaveBeenCalledWith(

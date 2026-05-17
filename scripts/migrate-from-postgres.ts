@@ -35,7 +35,7 @@ import { event } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { creditTransaction } from '../src/lib/server/db/schema/finance';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
-import { notification } from '../src/lib/server/db/schema/notification';
+import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import {
 	permission,
 	role,
@@ -187,6 +187,18 @@ async function migrateUsers() {
 		const contactData = u.contact ? (typeof u.contact === 'string' ? JSON.parse(u.contact) : u.contact) : null;
 		const linksData = u.links ? (typeof u.links === 'string' ? JSON.parse(u.links) : u.links) : null;
 
+		// Normalize: Laravel uses "name", Svelte uses "label"
+		const normalizedLinks = Array.isArray(linksData)
+			? linksData.map((l: Record<string, unknown>) => ({
+					label: String(l.label ?? l.name ?? ''),
+					url: String(l.url ?? '')
+				}))
+			: null;
+
+		// Strip sms_ok from contact (migrated separately as notification preference)
+		const hasSmsOk = contactData?.sms_ok;
+		if (contactData) delete contactData.sms_ok;
+
 		await db.insert(user).values({
 			id,
 			name: u.name,
@@ -210,8 +222,18 @@ async function migrateUsers() {
 			lookingForBand: false,
 			directoryVisibility: u.visibility === 'public' ? 'public' : 'members',
 			directoryContact: jsonStr(contactData),
-			links: jsonStr(linksData)
+			links: jsonStr(normalizedLinks)
 		});
+
+		if (hasSmsOk) {
+			await db.insert(notificationPreference).values({
+				userId: id,
+				notificationType: 'reservation_reminder',
+				emailEnabled: true,
+				inAppEnabled: true,
+				smsEnabled: true
+			});
+		}
 
 		// Create account record for better-auth (credential provider)
 		await db.insert(account).values({
@@ -338,6 +360,17 @@ async function migrateBands() {
 		const contactData = b.contact ? (typeof b.contact === 'string' ? JSON.parse(b.contact) : b.contact) : null;
 		const linksData = b.links ? (typeof b.links === 'string' ? JSON.parse(b.links) : b.links) : null;
 
+		// Normalize: Laravel uses "name", Svelte uses "label"
+		const normalizedLinks = Array.isArray(linksData)
+			? linksData.map((l: Record<string, unknown>) => ({
+					label: String(l.label ?? l.name ?? ''),
+					url: String(l.url ?? '')
+				}))
+			: null;
+
+		// Strip sms_ok from contact (not relevant for bands)
+		if (contactData) delete contactData.sms_ok;
+
 		await db.insert(band).values({
 			id,
 			name: b.name,
@@ -352,7 +385,7 @@ async function migrateBands() {
 			lookingForMembers: false,
 			directoryVisibility: b.visibility === 'public' ? 'public' : 'members',
 			directoryContact: jsonStr(contactData),
-			links: jsonStr(linksData)
+			links: jsonStr(normalizedLinks)
 		});
 	}
 

@@ -103,7 +103,7 @@ export async function update(bandId: string, data: UpdateBandData) {
 	}
 
 	if (data.bio !== undefined) {
-		updates.bio = data.bio || null;
+		updates.bio = data.bio?.slice(0, 2000) || null;
 	}
 
 	const [updated] = await db.update(band).set(updates).where(eq(band.id, bandId)).returning();
