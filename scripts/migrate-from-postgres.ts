@@ -152,7 +152,7 @@ async function migrateUsers() {
 		SELECT t.name, t.type, taggable_id as user_id
 		FROM taggables
 		JOIN tags t ON t.id = taggables.tag_id
-		WHERE taggable_type = 'CorvMC\\Membership\\Models\\MemberProfile'
+		WHERE taggable_type = 'member_profile'
 	`;
 	const tagsByProfile: Record<string, { instruments: string[]; genres: string[] }> = {};
 
@@ -167,8 +167,10 @@ async function migrateUsers() {
 		const userId = profileToUser[String(tag.user_id)];
 		if (!userId) continue;
 		if (!tagsByProfile[userId]) tagsByProfile[userId] = { instruments: [], genres: [] };
-		if (tag.type === 'skill') tagsByProfile[userId].instruments.push(tag.name);
-		if (tag.type === 'genre') tagsByProfile[userId].genres.push(tag.name);
+		const name = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		if (!name) continue;
+		if (tag.type === 'skill') tagsByProfile[userId].instruments.push(name);
+		if (tag.type === 'genre') tagsByProfile[userId].genres.push(name);
 	}
 
 	if (!COMMIT) {
@@ -343,7 +345,7 @@ async function migrateBands() {
 		SELECT t.name, taggable_id as band_id
 		FROM taggables
 		JOIN tags t ON t.id = taggables.tag_id
-		WHERE taggable_type = 'CorvMC\\Bands\\Models\\Band' AND t.type = 'genre'
+		WHERE taggable_type = 'band' AND t.type = 'genre'
 	`;
 
 	console.log(`  Source: ${bands.length} bands, ${members.length} members`);
@@ -396,7 +398,9 @@ async function migrateBands() {
 	for (const tag of bandTags) {
 		const bandId = lookupId('band_profiles', tag.band_id);
 		if (!bandId) continue;
-		await db.insert(bandGenre).values({ bandId, genre: tag.name }).onConflictDoNothing();
+		const genre = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		if (!genre) continue;
+		await db.insert(bandGenre).values({ bandId, genre }).onConflictDoNothing();
 	}
 
 	// Band members
