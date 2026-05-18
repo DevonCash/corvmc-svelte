@@ -17,7 +17,7 @@
 </script>
 
 <div
-	class="sticky top-0 z-10 -mx-6 flex items-center justify-between border-b border-base-300 bg-base-100 px-6 py-4"
+	class="sticky top-0 z-10 -mx-6 flex items-center justify-between border-b border-base-300 bg-base-100 px-6 py-4 mb-6"
 >
 	<div class="flex items-center gap-4">
 		{#if backHref}

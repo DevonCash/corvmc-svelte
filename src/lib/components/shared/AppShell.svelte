@@ -42,7 +42,7 @@
 		<AppTopbar {drawerId} {user} {panels} {activePanel} />
 		<div class="tri-stripe"></div>
 
-		<main class="flex-1 overflow-auto px-6 py-2">
+		<main class="flex-1 overflow-auto p-6 pt-0">
 			{@render children()}
 		</main>
 	</div>
