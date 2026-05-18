@@ -224,7 +224,7 @@ async function migrateUsers() {
 			bio: u.bio,
 			tagline: null,
 			lookingForBand: false,
-			directoryVisibility: u.visibility === 'public' ? 'public' : 'members',
+			directoryVisibility: u.visibility === 'public' ? 'public' : u.visibility === 'private' ? 'hidden' : 'members',
 			directoryContact: contactData ?? null,
 			links: normalizedLinks ?? null
 		}).onConflictDoNothing();
@@ -391,7 +391,7 @@ async function migrateBands() {
 			deletedAt: null,
 			tagline: null,
 			lookingForMembers: false,
-			directoryVisibility: b.visibility === 'public' ? 'public' : 'members',
+			directoryVisibility: b.visibility === 'public' ? 'public' : b.visibility === 'private' ? 'hidden' : 'members',
 			directoryContact: contactData ?? null,
 			links: normalizedLinks ?? null
 		}).onConflictDoNothing();
