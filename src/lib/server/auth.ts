@@ -10,7 +10,7 @@ import { account } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
 
 export const auth = betterAuth({
-	baseURL: env.ORIGIN,
+	baseURL: env.ORIGIN || undefined,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 	emailAndPassword: {
