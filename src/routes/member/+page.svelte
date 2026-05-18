@@ -37,7 +37,7 @@
 				<span class="font-medium">Book a Session</span>
 			</div>
 		</a>
-		<a href="/events" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
+		<a href="/member/events" class="card bg-base-100 shadow transition-shadow hover:shadow-md">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
@@ -125,7 +125,7 @@
 		{:else}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a href="/events" class="card bg-base-200 transition-shadow hover:shadow-md">
+					<a href="/member/events/{evt.id}" class="card bg-base-200 transition-shadow hover:shadow-md">
 						{#if evt.posterUrl}
 							<figure>
 								<img src={evt.posterUrl} alt={evt.title} class="h-32 w-full object-cover" />

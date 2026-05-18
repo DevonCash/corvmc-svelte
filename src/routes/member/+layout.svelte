@@ -3,7 +3,7 @@
 		IconLayoutDashboard,
 		IconStar,
 		IconCalendar,
-		IconTicket,
+		IconCalendarEvent,
 		IconAddressBook,
 		IconTool,
 		IconPlus,
@@ -44,8 +44,8 @@
 		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconCalendar />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/tickets" label="My Tickets">
-			{#snippet icon()}<IconTicket />{/snippet}
+		<Nav.Item href="/member/events" label="Events">
+			{#snippet icon()}<IconCalendarEvent />{/snippet}
 		</Nav.Item>
 		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
