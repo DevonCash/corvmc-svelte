@@ -73,7 +73,7 @@
 					</div>
 				{/if}
 
-				<Form action={handleSubmit} errorToast="" class="flex flex-col gap-3">
+				<Form action={handleSubmit} class="flex flex-col gap-3">
 					{#if mode === 'register'}
 						<Field name="name" type="text" label="Name" />
 					{/if}

@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -50,7 +51,7 @@
 							<div class="mt-1 flex gap-2">
 								<StatusBadge status={loan.status} />
 								{#if loan.isOverdue}
-									<span class="badge badge-sm badge-error">Overdue</span>
+									<Badge variant="error">Overdue</Badge>
 								{/if}
 							</div>
 						</div>

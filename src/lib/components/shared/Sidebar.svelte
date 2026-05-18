@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let {
 		title = 'CorvMC',
@@ -22,7 +23,7 @@
 		{:else}
 			<div class="flex items-center gap-2 px-6 py-5">
 				<span class="truncate text-xl font-bold">{title}</span>
-				<span class="badge badge-sm badge-primary">{badge}</span>
+				<Badge variant="primary">{badge}</Badge>
 			</div>
 		{/if}
 

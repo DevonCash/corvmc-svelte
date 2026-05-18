@@ -11,6 +11,7 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import type { MembershipResponse } from '$lib/types/api';
+	import { createSubscription, updateAmount, resumeSubscription } from './data.remote';
 
 	let { data }: { data: MembershipResponse } = $props();
 
@@ -33,7 +34,7 @@
 			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the amount — keeps the spaces open, the gear available, and the music going.
 		</p>
 		<div class="mx-auto max-w-md">
-			<SubscriptionForm mode="create" formAction="?/createSubscription" />
+			<SubscriptionForm mode="create" remote={createSubscription} />
 		</div>
 		<p class="mt-4 text-sm opacity-60">Cancel anytime. Seriously.</p>
 	</div>
@@ -44,7 +45,7 @@
 	{#if isActive && subscription}
 		<MembershipHero variant="dashboard" />
 
-		<ContributionCard {subscription} {billingPortalUrl} />
+		<ContributionCard {subscription} {billingPortalUrl} updateRemote={updateAmount} />
 
 		<CreditBalanceCard
 			{credits}
@@ -60,7 +61,7 @@
 
 	<!-- Cancelled-but-active view -->
 	{#if isCancelled && subscription}
-		<CancelledBanner {subscription} {billingPortalUrl} />
+		<CancelledBanner {subscription} {billingPortalUrl} resumeAction={resumeSubscription} />
 
 		<MembershipHero variant="cancelled" />
 

@@ -11,6 +11,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import { searchUsers, createBand } from './data.remote';
+	import { toast } from 'svelte-sonner';
 	import type { StaffBandsResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffBandsResponse } = $props();
@@ -45,10 +46,10 @@
 			modalTitle="New Band"
 			submitLabel="Create Band"
 			canSubmit={!!name.trim() && !!selectedOwner}
-			successToast="Band created"
 			class="btn-primary btn-sm"
 			maxWidth="max-w-md"
 			onsuccess={async (result) => {
+				toast.success('Band created');
 				const r = result as { bandId?: string };
 				await invalidateAll();
 				if (r?.bandId) goto(`/staff/bands/${r.bandId}`);

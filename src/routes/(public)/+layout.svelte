@@ -1,23 +1,19 @@
 <script lang="ts">
+	import { Toaster } from 'svelte-sonner';
 	import SiteHeader from '$lib/components/public/SiteHeader.svelte';
 	import SiteFooter from '$lib/components/public/SiteFooter.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 
 	let { data, children } = $props();
 </script>
 
+<Toaster position="bottom-right" richColors closeButton />
 <div class="flex min-h-screen flex-col">
 	<SiteHeader user={data.user} />
 	<main class="flex-1">
-		<svelte:boundary>
+		<ErrorToastBoundary>
 			{@render children()}
-
-			{#snippet failed(error, reset)}
-				<div class="container mx-auto px-4 py-12">
-					<Alert type="error" {reset}>Something went wrong: {String(error)}</Alert>
-				</div>
-			{/snippet}
-		</svelte:boundary>
+		</ErrorToastBoundary>
 	</main>
 	<SiteFooter />
 </div>

@@ -6,6 +6,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { purchaseTickets } from './data.remote';
 
 	let { data }: { data: any } = $props();
@@ -76,7 +77,7 @@
 				{#if data.isSustainingMember}
 					<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
 					<span class="text-sm line-through opacity-50">{formatCents(unitPrice)}</span>
-					<span class="badge badge-success badge-sm">Member 50% off</span>
+					<Badge variant="success">Member 50% off</Badge>
 				{:else}
 					<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
 				{/if}

@@ -5,6 +5,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { updateBand } from './data.remote';
 	import type { BandLayoutResponse } from '$lib/types/api';
 
@@ -121,9 +122,8 @@
 	<!-- Band details form -->
 	<Form
 		remote={updateBand}
-		successToast="Profile updated"
-		errorToast="Failed to update"
 		onsuccess={() => {
+			toast.success('Profile updated');
 			const newSlug = updateBand.result?.slug;
 			if (newSlug && newSlug !== band.slug) {
 				goto(`/band/${newSlug}/edit`);
@@ -131,6 +131,7 @@
 				invalidateAll();
 			}
 		}}
+		onfailure={() => toast.error('Failed to update')}
 	>
 		<div class="space-y-4">
 			<FormField label="Band Name" id="band-name">

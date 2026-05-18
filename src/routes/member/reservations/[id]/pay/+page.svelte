@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { ReservationPayResponse } from '$lib/types/api';
+	import { pay } from './data.remote';
 
 	let { data }: { data: ReservationPayResponse } = $props();
 
@@ -13,7 +15,6 @@
 	const durationHours = $derived(data.durationHours);
 
 	let coverFees = $state(false);
-	let submitting = $state(false);
 
 	const creditsApplicable = $derived(Math.min(freeHoursBalance, durationHours));
 	const creditDiscountCents = $derived(creditsApplicable * (totalCents / durationHours));
@@ -40,7 +41,6 @@
 		return (amount / 100).toFixed(2);
 	}
 
-	// Fee calculation mirrors SubscriptionForm and server-side fees.ts
 	function calcFeeCents(baseCents: number): number {
 		if (baseCents <= 0) return 0;
 		return Math.ceil((baseCents + 30) / (1 - 0.029)) - baseCents;
@@ -99,17 +99,7 @@
 		</div>
 	</div>
 
-	<form
-		method="POST"
-		action="?/pay"
-		use:enhance={() => {
-			submitting = true;
-			return async ({ update }) => {
-				submitting = false;
-				await update();
-			};
-		}}
-	>
+	<Form remote={pay}>
 		{#if remainingCents > 0}
 			<div class="form-control">
 				<label class="label cursor-pointer justify-start gap-3">
@@ -126,17 +116,14 @@
 			</div>
 		{/if}
 
-		<button type="submit" class="btn btn-primary w-full mt-4" disabled={submitting}>
-			{#if submitting}
-				<span class="loading loading-spinner loading-sm"></span>
-			{/if}
+		<SubmitButton class="btn-primary w-full mt-4">
 			{#if remainingCents <= 0}
 				Confirm (Free Hours)
 			{:else}
 				Pay ${cents(chargeTotal)}
 			{/if}
-		</button>
-	</form>
+		</SubmitButton>
+	</Form>
 
 	<a href="/member/reservations" class="btn btn-ghost w-full">Back to Reservations</a>
 </PageContent>

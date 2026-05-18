@@ -16,6 +16,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatDateTime, formatCents } from '$lib/utils/format';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
@@ -34,7 +35,7 @@
 	<Form remote={updateUser} successToast="Changes saved">
 		<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
 			{#if member.deletedAt}
-				<span class="badge badge-error">Deleted</span>
+				<Badge variant="error" size="md">Deleted</Badge>
 			{/if}
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}
@@ -189,7 +190,7 @@
 					</Column>
 					<Column key="paymentMethod" header="Method" shrink>
 						{#snippet cell(_, p)}
-							<span class="badge badge-outline badge-sm">{p.paymentMethod}</span>
+							<Badge variant="outline">{p.paymentMethod}</Badge>
 						{/snippet}
 					</Column>
 					<Column key="status" header="Status" shrink>

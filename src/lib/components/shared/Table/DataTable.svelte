@@ -17,6 +17,7 @@
 		shrink: boolean;
 		stopClick: boolean;
 		cell?: Snippet<[value: any, row: any]>;
+		headerCell?: Snippet;
 	}
 
 	/** Context shape that Column children use to register themselves. */
@@ -52,6 +53,7 @@
 		shrink: boolean;
 		stopClick: boolean;
 		cell?: Snippet<[any, any]>;
+		headerCell?: Snippet;
 		legacyCell?: (value: unknown, row: any) => string;
 	}
 </script>
@@ -59,6 +61,7 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { setContext, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatDateTime, formatCents } from '$lib/utils/format';
 
 	let {
@@ -306,14 +309,14 @@
 						{#if col.sortable}
 							<th class="cursor-pointer" onclick={() => toggleSort(col.key)}>
 								<div class="flex items-center gap-1">
-									{col.header}
+									{#if col.headerCell}{@render col.headerCell()}{:else}{col.header}{/if}
 									{#if sortKey === col.key}
 										<span class="text-xs">{sortDir === 'asc' ? '▲' : '▼'}</span>
 									{/if}
 								</div>
 							</th>
 						{:else}
-							<th>{col.header}</th>
+							<th>{#if col.headerCell}{@render col.headerCell()}{:else}{col.header}{/if}</th>
 						{/if}
 					{/each}
 				</tr>
@@ -353,9 +356,7 @@
 									{#if col.cell}
 										{@render col.cell(item[col.key], item)}
 									{:else if col.type === 'badge'}
-										<span class="badge badge-outline badge-sm"
-											>{item[col.key] ?? ''}</span
-										>
+										<Badge variant="outline">{item[col.key] ?? ''}</Badge>
 									{:else if col.legacyCell}
 										{col.legacyCell(item[col.key], item)}
 									{:else}

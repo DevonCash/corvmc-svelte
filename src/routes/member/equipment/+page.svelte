@@ -8,7 +8,9 @@
 	import { submitRequest } from './data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import type { MemberEquipmentResponse } from '$lib/types/api';
 	import { estimateLoanCost, type PricingTier } from '$lib/types/equipment';
@@ -61,7 +63,7 @@
 <PageHeader title="Equipment Catalog">
 		<div class="flex items-center gap-3">
 			{#if data.creditBalance > 0}
-				<span class="badge badge-info">{data.creditBalance} credits</span>
+				<Badge variant="info" size="md">{data.creditBalance} credits</Badge>
 			{/if}
 			<a href="/member/equipment/loans" class="btn btn-sm btn-ghost">My Loans</a>
 		</div>
@@ -96,7 +98,7 @@
 								<IconAlertTriangle size={14} class="text-error" />
 							{/if}
 						</span>
-						<span class="badge badge-ghost badge-xs">{priceLabel(eq.pricingTier)}</span>
+						<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
 						<span class="badge badge-xs" class:badge-error={eq.availableQuantity <= 0}>
 							{eq.availableQuantity} available
 						</span>
@@ -126,8 +128,8 @@
 <Modal bind:open={showRequestModal} title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`} maxWidth="max-w-md">
 	<Form
 		remote={submitRequest}
-		successToast="Request submitted! Staff will confirm your pickup."
 		onsuccess={() => {
+			toast.success('Request submitted! Staff will confirm your pickup.');
 			showRequestModal = false;
 			goto('/member/equipment/loans');
 		}}

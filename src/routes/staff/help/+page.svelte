@@ -12,6 +12,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let articles = $derived(await getArticles());
 	let categories = $derived(await getCategories());
@@ -48,7 +49,7 @@
 						<div>
 							<span class="font-medium text-sm">{cat.name}</span>
 							<span class="text-xs opacity-50 ml-2">/{cat.slug}</span>
-							<span class="badge badge-xs badge-ghost ml-1">{cat.minRole}</span>
+							<Badge variant="ghost" size="xs" class="ml-1">{cat.minRole}</Badge>
 						</div>
 						<Action
 							action={() => handleDeleteCategory(cat.id)}

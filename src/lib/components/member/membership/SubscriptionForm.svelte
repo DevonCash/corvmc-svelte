@@ -1,29 +1,30 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 
-	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 minimum
+	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2;
 
 	let {
 		mode,
 		currentAmount,
 		currentCoverFees = false,
-		formAction
+		remote,
+		onsuccess
 	}: {
 		mode: 'create' | 'modify';
 		currentAmount?: number;
 		currentCoverFees?: boolean;
-		formAction: string;
+		remote: RemoteForm<any, any>;
+		onsuccess?: () => void;
 	} = $props();
 
 	let amount = $state(untrack(() => currentAmount ?? MIN_AMOUNT));
 	let coverFees = $state(untrack(() => currentCoverFees));
-	let submitting = $state(false);
 
-	// Fee calculation: solve for total where total - (total * 0.029 + 0.30) = base
-	// This mirrors the server-side calculateTotalWithFeeCoverage() in fees.ts.
-	// If Stripe's rate changes, update both places.
 	function calcFeeCents(baseCents: number): number {
 		if (baseCents <= 0) return 0;
 		const totalCents = Math.ceil((baseCents + 30) / (1 - 0.029));
@@ -36,18 +37,7 @@
 	const totalDisplay = $derived(coverFees ? ((amount * 100 + feeCents) / 100).toFixed(2) : amount.toFixed(2));
 </script>
 
-<form
-	method="POST"
-	action={formAction}
-	use:enhance={() => {
-		submitting = true;
-		return async ({ update }) => {
-			submitting = false;
-			await update();
-		};
-	}}
-	class="card bg-base-100 shadow-sm"
->
+<Form {remote} {onsuccess} class="card bg-base-100 shadow-sm">
 	<div class="card-body">
 		<h3 class="card-title">
 			{mode === 'create' ? 'Start Contributing' : 'Update Your Contribution'}
@@ -98,16 +88,9 @@
 		</div>
 
 		<div class="card-actions mt-6">
-			<button
-				type="submit"
-				class="btn btn-primary"
-				disabled={submitting || amount < MIN_AMOUNT}
-			>
-				{#if submitting}
-					<span class="loading loading-spinner loading-sm"></span>
-				{/if}
+			<SubmitButton class="btn-primary">
 				{mode === 'create' ? 'Become a Sustaining Member' : 'Update Amount'}
-			</button>
+			</SubmitButton>
 		</div>
 	</div>
-</form>
+</Form>

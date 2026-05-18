@@ -1,16 +1,21 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { DOLLARS_PER_UNIT, type SubscriptionInfo } from '$lib/finance/types';
 	import SubscriptionForm from './SubscriptionForm.svelte';
+	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 
 	let {
 		subscription,
 		billingPortalUrl,
+		updateRemote,
 		showModifyForm = false
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
+		updateRemote: RemoteForm<any, any>;
 		showModifyForm?: boolean;
 	} = $props();
 
@@ -41,7 +46,7 @@
 				<div class="flex items-center gap-2">
 					<span class="text-3xl font-bold">${amountPerMonth}/month</span>
 					{#if subscription.coveringFees}
-						<span class="badge badge-sm badge-secondary">+ fees covered</span>
+						<Badge variant="secondary">+ fees covered</Badge>
 					{/if}
 				</div>
 				<p class="mt-1 text-sm opacity-60">Next bill {nextBilling}</p>
@@ -65,7 +70,8 @@
 					mode="modify"
 					currentAmount={amountPerMonth}
 					currentCoverFees={subscription.coveringFees}
-					formAction="?/updateAmount"
+					remote={updateRemote}
+					onsuccess={() => { editing = false; toast.success('Contribution updated'); }}
 				/>
 			</div>
 		{/if}

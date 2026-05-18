@@ -5,26 +5,28 @@
 
 	let {
 		key,
-		header,
+		header = '',
 		sortable = false,
 		type = 'text' as ColumnType,
 		class: className = '',
 		shrink = false,
 		stopClick = false,
-		cell
+		cell,
+		headerCell
 	}: {
 		key: string;
-		header: string;
+		header?: string;
 		sortable?: boolean;
 		type?: ColumnType;
 		class?: string;
 		shrink?: boolean;
 		stopClick?: boolean;
 		cell?: Snippet<[value: any, row: any]>;
+		headerCell?: Snippet;
 	} = $props();
 
 	const ctx = getContext<DataTableContext>('datatable');
-	if (!ctx) throw new Error('Column must be used inside DataTable');
+	if (!ctx) throw new Error('Column must be used inside DataTable or SimpleTable');
 	const colId = Symbol();
 
 	untrack(() => {
@@ -36,7 +38,8 @@
 			class: className,
 			shrink,
 			stopClick,
-			cell
+			cell,
+			headerCell
 		});
 	});
 

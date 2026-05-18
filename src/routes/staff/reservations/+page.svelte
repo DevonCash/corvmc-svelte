@@ -16,6 +16,8 @@
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import { confirmReservation, completeReservation } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { StaffReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffReservationsResponse } = $props();
@@ -76,7 +78,7 @@
 			>
 				Resolve
 				{#if data.counts.unresolved > 0}
-					<span class="badge badge-sm">{data.counts.unresolved}</span>
+					<Badge>{data.counts.unresolved}</Badge>
 				{/if}
 			</button>
 			<CreateReservation />
@@ -152,9 +154,8 @@
 							<Action
 								action={() => confirmReservation({ reservationId: r.id })}
 								label="Confirm"
-								successToast="Confirmed"
 								class="btn-ghost btn-xs btn-square"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => { toast.success('Confirmed'); invalidateAll(); }}
 							>
 								{#snippet icon()}<IconCheck size={16} />{/snippet}
 							</Action>
@@ -163,9 +164,8 @@
 							<Action
 								action={() => completeReservation({ reservationId: r.id })}
 								label="Complete"
-								successToast="Completed"
 								class="btn-ghost btn-xs btn-square"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => { toast.success('Completed'); invalidateAll(); }}
 							>
 								{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 							</Action>

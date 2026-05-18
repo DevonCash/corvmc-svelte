@@ -5,6 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { deleteBandForm } from './data.remote';
 	import type { BandLayoutResponse } from '$lib/types/api';
 
@@ -39,9 +40,8 @@
 <Modal title="Delete Band" bind:open={showDeleteModal}>
 	<Form
 		remote={deleteBandForm}
-		successToast="Band deleted"
-		errorToast="Failed to delete band"
-		onsuccess={() => goto('/member/bands')}
+		onsuccess={() => { toast.success('Band deleted'); goto('/member/bands'); }}
+		onfailure={() => toast.error('Failed to delete band')}
 	>
 		<div class="space-y-4">
 			<div class="alert alert-error">

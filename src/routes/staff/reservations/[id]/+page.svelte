@@ -28,6 +28,7 @@
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 	import type { StaffReservationDetailResponse } from '$lib/types/api';
 	import { visibleActions } from '$lib/utils/reservation-actions';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: StaffReservationDetailResponse } = $props();
 
@@ -85,18 +86,16 @@
 						<Action
 							action={() => confirmReservation({ reservationId: r.id })}
 							label="Confirm"
-							successToast="Confirmed"
 							class="btn-sm btn-success"
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => { toast.success('Confirmed'); invalidateAll(); }}
 						/>
 					{/if}
 					{#if actions.has('complete')}
 						<Action
 							action={() => completeReservation({ reservationId: r.id })}
 							label="Complete"
-							successToast="Completed"
 							class="btn-sm btn-success"
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => { toast.success('Completed'); invalidateAll(); }}
 						/>
 					{/if}
 					{#if actions.has('noShow')}
@@ -104,9 +103,8 @@
 							action={() => noShowReservation({ reservationId: r.id })}
 							label="No-Show"
 							confirm="Mark this reservation as a no-show?"
-							successToast="Marked as no-show"
 							class="btn-outline btn-sm btn-warning"
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => { toast.success('Marked as no-show'); invalidateAll(); }}
 						/>
 					{/if}
 					{#if actions.has('cancel')}
@@ -115,8 +113,7 @@
 							label="Cancel"
 							modalTitle="Cancel Reservation"
 							class="btn-outline btn-sm btn-error"
-							successToast="Cancelled"
-							onsuccess={() => { cancelReason = ''; invalidateAll(); }}
+							onsuccess={() => { toast.success('Cancelled'); cancelReason = ''; invalidateAll(); }}
 						>
 							{#snippet form({ close })}
 								<p class="text-sm mb-3">Cancel this reservation?</p>
@@ -206,9 +203,8 @@
 										endsAt: r.endsAt
 									})}
 								label="Cash Received"
-								successToast="Marked as paid"
 								class="btn-outline btn-sm btn-success flex-1"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => { toast.success('Marked as paid'); invalidateAll(); }}
 							/>
 						{/if}
 						{#if actions.has('comp')}
@@ -216,9 +212,8 @@
 								action={() => compReservation({ reservationId: r.id })}
 								label="Comp"
 								confirm="Waive payment for this reservation?"
-								successToast="Reservation comped"
 								class="btn-outline btn-sm btn-info flex-1"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => { toast.success('Reservation comped'); invalidateAll(); }}
 							/>
 						{/if}
 						{#if actions.has('refund')}
@@ -230,9 +225,8 @@
 								})}
 								label="Refund"
 								confirm="Refund the payment for this reservation? This does not cancel the reservation."
-								successToast="Payment refunded"
 								class="btn-outline btn-sm btn-error flex-1"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => { toast.success('Payment refunded'); invalidateAll(); }}
 							/>
 						{/if}
 					</div>

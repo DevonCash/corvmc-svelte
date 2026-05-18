@@ -7,6 +7,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { getSeries, getSeriesHistory, cancelSeries, editSeries } from './data.remote';
 
 	let id = $derived(page.params.id!);
@@ -158,7 +159,7 @@
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />
 						{:else if h.supersededBy}
-							<span class="badge badge-ghost badge-sm">superseded</span>
+							<Badge variant="ghost">superseded</Badge>
 						{:else}
 							<StatusBadge status="active" />
 						{/if}

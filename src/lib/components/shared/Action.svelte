@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { toast } from 'svelte-sonner';
+	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';
 	import Form from './Form/Form.svelte';
@@ -33,9 +34,8 @@
 		trigger,
 		submitLabel,
 		canSubmit = true,
-		maxWidth = 'max-w-lg',
 		successToast,
-		errorToast = 'Something went wrong',
+		maxWidth = 'max-w-lg',
 		flashDuration = 1500,
 		class: className = 'btn-primary',
 		disabled = false,
@@ -58,7 +58,6 @@
 		canSubmit?: boolean;
 		maxWidth?: string;
 		successToast?: string;
-		errorToast?: string;
 		flashDuration?: number;
 		class?: string;
 		disabled?: boolean;
@@ -66,6 +65,8 @@
 		onfailure?: (error?: unknown) => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const errorBoundary = getErrorBoundary();
 
 	// ---------------------------------------------------------------------------
 	// Mode detection
@@ -105,9 +106,8 @@
 		} catch (err) {
 			console.error('[Action] action failed:', err);
 			await minDelay;
-			onfailure?.(err);
-			const message = err instanceof Error ? err.message : errorToast;
-			if (message) toast.error(message);
+			if (onfailure) onfailure(err);
+			else errorBoundary?.reportError(err);
 			status = 'error';
 		}
 
@@ -198,7 +198,6 @@
 		<Form
 			remote={action as RemoteForm<any, any>}
 			{successToast}
-			{errorToast}
 			onsuccess={(result) => {
 				dialogOpen = false;
 				onsuccess?.(result);
@@ -223,7 +222,6 @@
 		<Form
 			remote={action as RemoteForm<any, any>}
 			{successToast}
-			{errorToast}
 			onsuccess={(result) => {
 				dialogOpen = false;
 				onsuccess?.(result);

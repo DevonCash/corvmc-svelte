@@ -6,6 +6,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { Field } from '$lib/components/shared/Form';
 
 	let audiences = $derived(await getAudiences());
@@ -90,9 +91,9 @@
 		<Column key="allowOptIn" header="Opt-in" shrink>
 			{#snippet cell(_, a)}
 				{#if a.allowOptIn}
-					<span class="badge badge-success badge-sm">Public</span>
+					<Badge variant="success">Public</Badge>
 				{:else}
-					<span class="badge badge-ghost badge-sm">Staff only</span>
+					<Badge variant="ghost">Staff only</Badge>
 				{/if}
 			{/snippet}
 		</Column>

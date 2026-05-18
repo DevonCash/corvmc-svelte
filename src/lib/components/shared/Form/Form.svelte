@@ -32,6 +32,7 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
 	let {
@@ -39,7 +40,6 @@
 		action,
 		flashDuration = 1500,
 		successToast,
-		errorToast = 'Something went wrong',
 		onsuccess,
 		onfailure,
 		children,
@@ -50,13 +50,14 @@
 		action?: (data: FormData) => Promise<TOutput | void>;
 		flashDuration?: number;
 		successToast?: string;
-		errorToast?: string;
 		onsuccess?: (result?: TOutput) => void;
 		onfailure?: (issues: RemoteFormIssue[] | null) => void;
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
+
+	const errorBoundary = getErrorBoundary();
 
 	let formEl: HTMLFormElement | undefined = $state();
 	let changeCount = $state(0);
@@ -116,9 +117,8 @@
 			} catch (err) {
 				await delay(150 - (performance.now() - start));
 				console.error('[Form] submission error:', err);
-				onfailure?.(ctx.issues);
-				const message = err instanceof Error ? err.message : errorToast;
-				if (message) toast.error(message);
+				if (onfailure) onfailure(ctx.issues);
+				else errorBoundary?.reportError(err);
 				status = 'error';
 			}
 
@@ -146,8 +146,7 @@
 			await delay(150 - (performance.now() - start));
 			console.error('[Form] submission error:', err);
 			onfailure?.(null);
-			const message = err instanceof Error ? err.message : errorToast;
-			if (message) toast.error(message);
+			errorBoundary?.reportError(err);
 			status = 'error';
 		}
 
