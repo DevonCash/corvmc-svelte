@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, like, notInArray, inArray, isNull, isNotNull, count } from 'drizzle-orm';
+import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull } from 'drizzle-orm';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -224,38 +224,22 @@ export async function getMembers(bandId: string) {
 }
 
 export async function searchMembers(query: string, bandId: string) {
-	// Get IDs of users already in this band (any status)
-	const existing = await db
-		.select({ userId: bandMember.userId })
-		.from(bandMember)
-		.where(eq(bandMember.bandId, bandId));
-
-	const existingIds = existing.map((r) => r.userId);
-
 	const pattern = `%${query}%`;
-	let baseQuery = db
+	return db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(
-			and(or(like(user.name, pattern), like(user.email, pattern)), sql`${user.deletedAt} is null`)
+			and(
+				or(like(user.name, pattern), like(user.email, pattern)),
+				isNull(user.deletedAt),
+				sql`NOT EXISTS (
+					SELECT 1 FROM ${bandMember}
+					WHERE ${bandMember.bandId} = ${bandId}
+					AND ${bandMember.userId} = ${user.id}
+				)`
+			)
 		)
 		.limit(10);
-
-	if (existingIds.length > 0) {
-		baseQuery = db
-			.select({ id: user.id, name: user.name, email: user.email })
-			.from(user)
-			.where(
-				and(
-					or(like(user.name, pattern), like(user.email, pattern)),
-					sql`${user.deletedAt} is null`,
-					notInArray(user.id, existingIds)
-				)
-			)
-			.limit(10);
-	}
-
-	return baseQuery;
 }
 
 // ---------------------------------------------------------------------------
@@ -335,10 +319,11 @@ export async function acceptInvitation(memberId: string, userId: string) {
 			const [bandRow] = await db.select({ name: band.name }).from(band).where(eq(band.id, row.bandId)).limit(1);
 			const [acceptedUser] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
 
-			// Get band admins/owners to notify
-			const admins = await db
-				.select({ userId: bandMember.userId })
+			// Get band admins/owners to notify (single join query)
+			const adminUsers = await db
+				.select({ id: user.id, name: user.name, email: user.email })
 				.from(bandMember)
+				.innerJoin(user, eq(user.id, bandMember.userId))
 				.where(
 					and(
 						eq(bandMember.bandId, row.bandId),
@@ -347,13 +332,6 @@ export async function acceptInvitation(memberId: string, userId: string) {
 						ne(bandMember.userId, userId)
 					)
 				);
-
-			const adminUsers = admins.length > 0
-				? await db
-						.select({ id: user.id, name: user.name, email: user.email })
-						.from(user)
-						.where(inArray(user.id, admins.map((a) => a.userId)))
-				: [];
 
 			if (bandRow && acceptedUser) {
 				await domainEvents.emit('band.invitation_accepted', {

@@ -60,12 +60,7 @@ function memberWhereConditions(
 	return conditions;
 }
 
-function mapMemberRow(row: {
-	id: string;
-	instruments: { instrument: string }[];
-	genres: { genre: string }[];
-	[key: string]: unknown;
-}) {
+function mapMemberRow<T extends { instruments: { instrument: string }[]; genres: { genre: string }[] }>(row: T) {
 	const { instruments, genres, ...rest } = row;
 	return {
 		...rest,
@@ -186,12 +181,7 @@ function bandWhereConditions(
 	return conditions;
 }
 
-function mapBandRow(row: {
-	id: string;
-	genres: { genre: string }[];
-	members: { status: string }[];
-	[key: string]: unknown;
-}) {
+function mapBandRow<T extends { genres: { genre: string }[]; members: { status: string }[] }>(row: T) {
 	const { genres, members, ...rest } = row;
 	return {
 		...rest,

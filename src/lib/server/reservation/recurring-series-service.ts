@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { buildRRule, describeFrequency } from './rrule-helpers';
 import type { RecurringFrequency } from './config';
@@ -187,23 +187,6 @@ export async function cancel(seriesId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function cancelAllForUser(userId: string): Promise<number> {
-	// Find active series where the prototype reservation belongs to this user
-	const activeSeries = await db
-		.select({ seriesId: recurringSeries.id })
-		.from(recurringSeries)
-		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
-		.where(
-			and(
-				eq(recurringSeries.prototypeType, 'reservation'),
-				eq(reservation.createdByUserId, userId),
-				isNull(recurringSeries.cancelledAt),
-				isNull(recurringSeries.supersededBy)
-			)
-		);
-
-	if (activeSeries.length === 0) return 0;
-
-	const seriesIds = activeSeries.map((s) => s.seriesId);
 	const now = new Date();
 
 	const result = await db
@@ -211,8 +194,13 @@ export async function cancelAllForUser(userId: string): Promise<number> {
 		.set({ cancelledAt: now })
 		.where(
 			and(
-				inArray(recurringSeries.id, seriesIds),
-				isNull(recurringSeries.cancelledAt)
+				eq(recurringSeries.prototypeType, 'reservation'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy),
+				sql`${recurringSeries.prototypeId} IN (
+					SELECT ${reservation.id} FROM ${reservation}
+					WHERE ${reservation.createdByUserId} = ${userId}
+				)`
 			)
 		);
 

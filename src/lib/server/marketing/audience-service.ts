@@ -5,7 +5,7 @@ import {
 	subscriber
 } from '$lib/server/db/schema/marketing';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, sql, isNull, isNotNull, notInArray } from 'drizzle-orm';
+import { eq, and, sql, isNull, isNotNull } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 
 // ---------------------------------------------------------------------------
@@ -277,34 +277,6 @@ export async function getSubscriptionsForUser(userId: string) {
  * Get opt-in audiences the user is NOT currently subscribed to.
  */
 export async function getOptInAudiencesForUser(userId: string) {
-	// Get subscriber record for this user
-	const [sub] = await db
-		.select({ id: subscriber.id })
-		.from(subscriber)
-		.where(eq(subscriber.userId, userId))
-		.limit(1);
-
-	// Get IDs of audiences the user is already actively subscribed to
-	const subscribedIds = sub
-		? (
-				await db
-					.select({ audienceId: audienceMember.audienceId })
-					.from(audienceMember)
-					.where(
-						and(
-							eq(audienceMember.subscriberId, sub.id),
-							isNull(audienceMember.unsubscribedAt)
-						)
-					)
-			).map((r) => r.audienceId)
-		: [];
-
-	// Return opt-in audiences not in the subscribed set
-	const conditions = [eq(audience.allowOptIn, true)];
-	if (subscribedIds.length > 0) {
-		conditions.push(notInArray(audience.id, subscribedIds));
-	}
-
 	return db
 		.select({
 			id: audience.id,
@@ -313,7 +285,18 @@ export async function getOptInAudiencesForUser(userId: string) {
 			description: audience.description
 		})
 		.from(audience)
-		.where(and(...conditions))
+		.where(
+			and(
+				eq(audience.allowOptIn, true),
+				sql`NOT EXISTS (
+					SELECT 1 FROM ${audienceMember}
+					INNER JOIN ${subscriber} ON ${subscriber.id} = ${audienceMember.subscriberId}
+					WHERE ${audienceMember.audienceId} = ${audience.id}
+					AND ${subscriber.userId} = ${userId}
+					AND ${audienceMember.unsubscribedAt} IS NULL
+				)`
+			)
+		)
 		.orderBy(audience.name);
 }
 

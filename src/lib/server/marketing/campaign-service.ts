@@ -132,70 +132,48 @@ async function getCampaignRaw(id: string) {
 }
 
 export async function getCampaign(id: string) {
-	const [row] = await db
-		.select()
-		.from(campaign)
-		.where(eq(campaign.id, id))
-		.limit(1);
+	const row = await db.query.campaign.findFirst({
+		where: eq(campaign.id, id),
+		with: {
+			audiences: {
+				with: { audience: { columns: { id: true, name: true } } }
+			}
+		}
+	});
 
 	if (!row) return null;
-
-	const audiences = await db
-		.select({
-			id: audience.id,
-			name: audience.name
-		})
-		.from(campaignAudience)
-		.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
-		.where(eq(campaignAudience.campaignId, id));
 
 	return {
 		...row,
 		status: deriveCampaignStatus(row.scheduledFor, row.sentAt),
-		audiences
+		audiences: row.audiences.map((ca) => ca.audience)
 	};
 }
 
 export async function listCampaigns(statusFilter?: CampaignStatus) {
-	const rows = await db
-		.select({
-			id: campaign.id,
-			subject: campaign.subject,
-			scheduledFor: campaign.scheduledFor,
-			sentAt: campaign.sentAt,
-			sentById: campaign.sentById,
-			recipientCount: campaign.recipientCount,
-			createdAt: campaign.createdAt,
-			updatedAt: campaign.updatedAt
-		})
-		.from(campaign)
-		.orderBy(sql`coalesce(${campaign.sentAt}, ${campaign.scheduledFor}, ${campaign.createdAt}) desc`);
-
-	// Join audience names per campaign
-	const campaignIds = rows.map((r) => r.id);
-	const audienceRows =
-		campaignIds.length > 0
-			? await db
-					.select({
-						campaignId: campaignAudience.campaignId,
-						audienceName: audience.name
-					})
-					.from(campaignAudience)
-					.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
-					.where(inArray(campaignAudience.campaignId, campaignIds))
-			: [];
-
-	const audienceMap = new Map<string, string[]>();
-	for (const ar of audienceRows) {
-		const list = audienceMap.get(ar.campaignId) ?? [];
-		list.push(ar.audienceName);
-		audienceMap.set(ar.campaignId, list);
-	}
+	const rows = await db.query.campaign.findMany({
+		with: {
+			audiences: {
+				with: { audience: { columns: { name: true } } }
+			}
+		},
+		columns: {
+			id: true,
+			subject: true,
+			scheduledFor: true,
+			sentAt: true,
+			sentById: true,
+			recipientCount: true,
+			createdAt: true,
+			updatedAt: true
+		},
+		orderBy: (c, { desc }) => [desc(sql`coalesce(${c.sentAt}, ${c.scheduledFor}, ${c.createdAt})`)]
+	});
 
 	const result = rows.map((r) => ({
 		...r,
 		status: deriveCampaignStatus(r.scheduledFor, r.sentAt),
-		audienceNames: audienceMap.get(r.id) ?? []
+		audienceNames: r.audiences.map((ca) => ca.audience.name)
 	}));
 
 	if (statusFilter) {
