@@ -167,10 +167,13 @@ async function migrateUsers() {
 		const userId = profileToUser[String(tag.user_id)];
 		if (!userId) continue;
 		if (!tagsByProfile[userId]) tagsByProfile[userId] = { instruments: [], genres: [] };
-		const name = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
-		if (!name) continue;
-		if (tag.type === 'skill') tagsByProfile[userId].instruments.push(name);
-		if (tag.type === 'genre') tagsByProfile[userId].genres.push(name);
+		const raw = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		if (!raw) continue;
+		const names = raw.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+		for (const name of names) {
+			if (tag.type === 'skill') tagsByProfile[userId].instruments.push(name);
+			if (tag.type === 'genre') tagsByProfile[userId].genres.push(name);
+		}
 	}
 
 	if (!COMMIT) {
@@ -398,9 +401,12 @@ async function migrateBands() {
 	for (const tag of bandTags) {
 		const bandId = lookupId('band_profiles', tag.band_id);
 		if (!bandId) continue;
-		const genre = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
-		if (!genre) continue;
-		await db.insert(bandGenre).values({ bandId, genre }).onConflictDoNothing();
+		const raw = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		if (!raw) continue;
+		const genres = raw.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+		for (const genre of genres) {
+			await db.insert(bandGenre).values({ bandId, genre }).onConflictDoNothing();
+		}
 	}
 
 	// Band members
