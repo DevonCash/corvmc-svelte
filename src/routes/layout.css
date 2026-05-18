@@ -316,8 +316,57 @@ p {
 }
 
 /* ---------------------------------------------------------------------------
-   Retro buttons — hard-bordered with brown outline + drop shadow.
-   Pair with DaisyUI's btn as an override: `btn retro-btn`
+   Retro buttons — default form factor for all DaisyUI buttons.
+   Hard brown border + offset drop shadow with press animation.
+   --------------------------------------------------------------------------- */
+.btn {
+  border: 2.5px solid var(--cmc-brown) !important;
+  box-shadow: 4px 4px 0 var(--cmc-brown) !important;
+  transition: transform 80ms ease, box-shadow 80ms ease !important;
+}
+.btn:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 5px 5px 0 var(--cmc-brown) !important;
+}
+.btn:active {
+  transform: translate(4px, 4px) !important;
+  box-shadow: 0 0 0 var(--cmc-brown) !important;
+}
+
+/* Ghost → outline retro: transparent fill, visible brown border */
+.btn-ghost {
+  background: transparent !important;
+  border-color: var(--cmc-brown) !important;
+}
+
+/* Scaled-down retro for xs buttons */
+.btn-xs {
+  border-width: 2px !important;
+  box-shadow: 2px 2px 0 var(--cmc-brown) !important;
+}
+.btn-xs:hover {
+  box-shadow: 3px 3px 0 var(--cmc-brown) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Retro tabs — half-pressed active state for DaisyUI tab elements.
+   --------------------------------------------------------------------------- */
+.tab {
+  border-bottom: 2.5px solid transparent !important;
+  transition: transform 80ms ease, box-shadow 80ms ease, border-color 80ms ease !important;
+}
+.tab:hover {
+  border-bottom-color: color-mix(in oklch, var(--cmc-brown) 50%, transparent) !important;
+}
+.tab-active,
+.tab.tab-active {
+  border-bottom: 2.5px solid var(--cmc-brown) !important;
+  box-shadow: 2px 2px 0 var(--cmc-brown) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Retro-btn alias — for non-btn elements (cards, links) that want the look.
    --------------------------------------------------------------------------- */
 .retro-btn {
   border: 2.5px solid var(--cmc-brown);
