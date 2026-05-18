@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import type { SubscriptionInfo } from '$lib/finance/types';
+	import Action from '$lib/components/shared/Action.svelte';
 
 	let {
 		subscription,
-		billingPortalUrl
+		billingPortalUrl,
+		resumeAction
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
+		resumeAction: () => Promise<unknown>;
 	} = $props();
-
-	let resuming = $state(false);
 
 	const endDate = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {
 		month: 'long',
@@ -30,20 +30,12 @@
 		</p>
 
 		<div class="mt-3 flex flex-wrap gap-2">
-			<form method="POST" action="?/resumeSubscription" use:enhance={() => {
-				resuming = true;
-				return async ({ update }) => {
-					resuming = false;
-					await update();
-				};
-			}}>
-				<button type="submit" class="btn btn-sm btn-primary" disabled={resuming}>
-					{#if resuming}
-						<span class="loading loading-spinner loading-sm"></span>
-					{/if}
-					Resume Membership
-				</button>
-			</form>
+			<Action
+				action={resumeAction}
+				label="Resume Membership"
+				class="btn-sm btn-primary"
+				successToast="Membership resumed"
+			/>
 
 			{#if billingPortalUrl}
 				<a href={billingPortalUrl} class="btn btn-sm btn-outline">Manage Billing</a>

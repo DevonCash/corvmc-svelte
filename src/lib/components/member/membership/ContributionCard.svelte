@@ -4,14 +4,17 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { DOLLARS_PER_UNIT, type SubscriptionInfo } from '$lib/finance/types';
 	import SubscriptionForm from './SubscriptionForm.svelte';
+	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 
 	let {
 		subscription,
 		billingPortalUrl,
+		updateRemote,
 		showModifyForm = false
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
+		updateRemote: RemoteForm<any, any>;
 		showModifyForm?: boolean;
 	} = $props();
 
@@ -66,7 +69,9 @@
 					mode="modify"
 					currentAmount={amountPerMonth}
 					currentCoverFees={subscription.coveringFees}
-					formAction="?/updateAmount"
+					remote={updateRemote}
+					successToast="Contribution updated"
+					onsuccess={() => editing = false}
 				/>
 			</div>
 		{/if}
