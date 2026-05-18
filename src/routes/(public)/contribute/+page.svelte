@@ -48,7 +48,7 @@
 					<p class="text-sm leading-relaxed mb-6" style={tier.featured ? 'opacity: 0.9' : 'color: var(--fg-2)'}>{tier.body}</p>
 					<a
 						href="/login?redirect=/member"
-						class="btn btn-sm btn-wide retro-btn mt-auto"
+						class="btn btn-sm btn-wide mt-auto"
 						style={tier.featured
 							? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'
 							: ''}

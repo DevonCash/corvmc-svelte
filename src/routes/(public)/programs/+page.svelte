@@ -79,8 +79,8 @@
 					From intimate acoustic sets to full band productions, we create spaces where musicians can grow, collaborate, and celebrate the power of live music.
 				</p>
 				<div class="flex flex-wrap gap-3">
-					<a href="/events" class="program-block__cta btn btn-primary retro-btn">View Upcoming Shows</a>
-					<a href="/contact" class="btn btn-outline retro-btn" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Apply to Perform</a>
+					<a href="/events" class="program-block__cta btn btn-primary">View Upcoming Shows</a>
+					<a href="/contact" class="btn btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Apply to Perform</a>
 				</div>
 			</div>
 			<div class="flex flex-col items-center justify-center">
@@ -168,8 +168,8 @@
 			{/each}
 		</div>
 		<div class="flex justify-center gap-4 mt-10">
-			<a href="/login?redirect=/member" class="btn btn-primary btn-lg retro-btn">Become a Member</a>
-			<a href="/contact" class="btn btn-outline retro-btn" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Ask Questions</a>
+			<a href="/login?redirect=/member" class="btn btn-primary btn-lg">Become a Member</a>
+			<a href="/contact" class="btn btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Ask Questions</a>
 		</div>
 	</div>
 </section>

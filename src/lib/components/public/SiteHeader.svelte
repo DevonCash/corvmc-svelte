@@ -34,9 +34,9 @@
 			<!-- Actions -->
 			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
-					<a href="/member" class="btn btn-sm btn-primary retro-btn">My Account</a>
+					<a href="/member" class="btn btn-sm btn-primary">My Account</a>
 				{:else}
-					<a href="/login" class="btn btn-sm btn-primary retro-btn">Sign In</a>
+					<a href="/login" class="btn btn-sm btn-primary">Sign In</a>
 				{/if}
 				<button
 					class="btn btn-sm btn-ghost lg:hidden"
@@ -65,7 +65,7 @@
 				{/each}
 				<a
 					href="/contribute"
-					class="btn btn-sm btn-outline retro-btn ml-3"
+					class="btn btn-sm btn-outline ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
 					Contribute

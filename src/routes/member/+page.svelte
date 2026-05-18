@@ -112,7 +112,7 @@
 					<p class="text-sm opacity-70">
 						Become a sustaining member to get free practice hours each month.
 					</p>
-					<a href="/member/membership" class="btn btn-sm btn-primary retro-btn">Learn More</a>
+					<a href="/member/membership" class="btn btn-sm btn-primary">Learn More</a>
 				</div>
 			{/if}
 		</InfoCard>
