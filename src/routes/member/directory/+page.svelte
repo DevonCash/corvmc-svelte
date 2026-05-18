@@ -3,10 +3,10 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import { IconSearch, IconUserPlus } from '@tabler/icons-svelte';
-	import type { ProfileLink } from '$lib/types/profile';
+	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
+	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 
 	let activeTab = $state<'members' | 'bands'>('members');
 	let search = $state('');
@@ -27,156 +27,179 @@
 	let bands = $derived(await getBands(filters));
 	let instrumentSuggestions = $derived(await getInstrumentSuggestions());
 	let genreSuggestions = $derived(await getGenreSuggestions());
+
+	const bandColors = ['#e5771e', '#003b5c', '#00859b', '#f84d13', '#ffb500', '#5a3d2b'];
+
+	function initials(name: string): string {
+		return name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+	}
 </script>
 
-	<PageHeader title="Directory" subtitle="Community" />
-	<PageContent>
-		<!-- Search & Filters -->
-		<div class="flex flex-wrap gap-3 items-end">
-			<input
-				type="text"
-				placeholder="Search by name..."
-				class="input input-bordered w-full max-w-xs"
-				bind:value={search}
-			/>
-			{#if activeTab === 'members'}
-				<label class="label cursor-pointer gap-2">
-					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
-					<span class="text-sm">Looking for band</span>
-				</label>
-			{:else}
-				<label class="label cursor-pointer gap-2">
-					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
-					<span class="text-sm">Looking for members</span>
-				</label>
-			{/if}
-		</div>
+<PageHeader title="Directory" subtitle="Community" />
+<PageContent>
+	<!-- Search & Filters -->
+	<div class="flex flex-wrap gap-3 items-end">
+		<input
+			type="text"
+			placeholder="Search by name..."
+			class="input input-bordered w-full max-w-xs"
+			bind:value={search}
+		/>
+		{#if activeTab === 'members'}
+			<label class="label cursor-pointer gap-2">
+				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
+				<span class="text-sm">Looking for band</span>
+			</label>
+		{:else}
+			<label class="label cursor-pointer gap-2">
+				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
+				<span class="text-sm">Looking for members</span>
+			</label>
+		{/if}
+	</div>
 
-		<div class="grid gap-3 sm:grid-cols-2 max-w-xl">
-			{#if activeTab === 'members'}
-				<div>
-					<p class="text-xs font-medium mb-1 opacity-60">Instruments</p>
-					<FreeformTagInput
-						bind:value={filterInstruments}
-						suggestions={instrumentSuggestions}
-						placeholder="Filter by instrument..."
-					/>
-				</div>
-			{/if}
+	<div class="grid gap-3 sm:grid-cols-2 max-w-xl">
+		{#if activeTab === 'members'}
 			<div>
-				<p class="text-xs font-medium mb-1 opacity-60">Genres</p>
+				<p class="text-xs font-medium mb-1 opacity-60">Instruments</p>
 				<FreeformTagInput
-					bind:value={filterGenres}
-					suggestions={genreSuggestions}
-					placeholder="Filter by genre..."
+					bind:value={filterInstruments}
+					suggestions={instrumentSuggestions}
+					placeholder="Filter by instrument..."
 				/>
 			</div>
+		{/if}
+		<div>
+			<p class="text-xs font-medium mb-1 opacity-60">Genres</p>
+			<FreeformTagInput
+				bind:value={filterGenres}
+				suggestions={genreSuggestions}
+				placeholder="Filter by genre..."
+			/>
 		</div>
+	</div>
 
-		<TabBar
-			tabs={[
-				{ key: 'members', label: `Members (${members.length})` },
-				{ key: 'bands', label: `Bands (${bands.length})` }
-			]}
-			active={activeTab}
-			onchange={(key) => (activeTab = key as 'members' | 'bands')}
-		/>
+	<TabBar
+		tabs={[
+			{ key: 'members', label: `Members (${members.length})` },
+			{ key: 'bands', label: `Bands (${bands.length})` }
+		]}
+		active={activeTab}
+		onchange={(key) => (activeTab = key as 'members' | 'bands')}
+	/>
 
-		{#if activeTab === 'members'}
-			<DataTable data={members} gridClass="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" empty="No members match your filters.">
-				{#snippet card(member)}
-					<a
-						href="/member/directory/members/{member.id}"
-						class="card bg-base-100 shadow-sm transition-shadow hover:shadow-md"
-					>
-						<div class="card-body py-4">
-							<div class="flex items-center gap-3">
-								<div class="avatar placeholder">
-									<div class="w-12 rounded-full bg-neutral text-neutral-content">
-										{#if member.image}
-											<img src={member.image} alt={member.name} class="rounded-full" />
-										{:else}
-											<span class="text-lg">{member.name.charAt(0).toUpperCase()}</span>
-										{/if}
-									</div>
-								</div>
-								<div class="min-w-0 flex-1">
-									<p class="font-medium truncate">{member.name}</p>
-									{#if member.tagline}
-										<p class="text-sm opacity-60 truncate">{member.tagline}</p>
-									{/if}
-								</div>
-								{#if member.lookingForBand}
-									<span class="badge badge-primary badge-sm whitespace-nowrap gap-1">
-										<IconSearch size={12} />
-										Looking for band
-									</span>
+	{#if activeTab === 'members'}
+		{#if members.length === 0}
+			<EmptyState message="No members match your filters." />
+		{:else}
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+				{#each members as member (member.id)}
+					<a href="/member/directory/members/{member.id}" class="id-card">
+						<div class="id-card__header">
+							<div class="id-card__brand">
+								<img src={speakerLogo} alt="" class="id-card__logo" />
+								<span>Corvallis Music<br/>Collective</span>
+							</div>
+							<div class="id-card__tag">MEMBER</div>
+						</div>
+						<div class="id-card__body">
+							<div class="id-card__photo">
+								{#if member.image}
+									<img src={member.image} alt={member.name} class="w-full h-full object-cover rounded" />
+								{:else}
+									{initials(member.name)}
 								{/if}
 							</div>
-							{#if member.instruments?.length || member.genres?.length}
-								<div class="flex flex-wrap gap-1 mt-2">
-									{#each (member.instruments ?? []).slice(0, 3) as inst}
-										<span class="badge badge-outline badge-xs">{inst}</span>
-									{/each}
-									{#if (member.instruments?.length ?? 0) > 3}
-										<span class="badge badge-ghost badge-xs">+{(member.instruments?.length ?? 0) - 3}</span>
+							<div class="id-card__info">
+								<div class="id-card__name">
+									{member.name}
+									{#if member.pronouns}
+										<span class="id-card__pronouns">{member.pronouns}</span>
 									{/if}
-									{#each (member.genres ?? []).slice(0, 3) as genre}
-										<span class="badge badge-ghost badge-xs">{genre}</span>
-									{/each}
 								</div>
-							{/if}
+								{#if member.tagline}
+									<div class="id-card__role">{member.tagline}</div>
+								{/if}
+								{#if member.instruments?.length || member.genres?.length}
+									<div class="id-card__badges">
+										{#each member.instruments ?? [] as inst}
+											<span class="id-tag id-tag--teal">{inst}</span>
+										{/each}
+										{#each member.genres ?? [] as genre}
+											<span class="id-tag">{genre}</span>
+										{/each}
+									</div>
+								{/if}
+								{#if member.bands?.length}
+									<div class="id-card__bands">
+										{#each member.bands as b}
+											<span class="id-tag id-tag--band">{b.name}</span>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						</div>
+						{#if member.lookingForBand}
+							<div class="id-card__gaff">seeking a band</div>
+						{/if}
+						<div class="id-card__footer">
+							<div class="id-card__since">Member since {new Date(member.createdAt).getFullYear()}</div>
+							<div class="id-card__barcode" aria-hidden="true"></div>
 						</div>
 					</a>
-				{/snippet}
-			</DataTable>
+				{/each}
+			</div>
 		{/if}
+	{/if}
 
-		{#if activeTab === 'bands'}
-			<DataTable data={bands} gridClass="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" empty="No bands match your filters.">
-				{#snippet card(b)}
-					<a
-						href="/member/directory/bands/{b.slug}"
-						class="card bg-base-100 shadow-sm transition-shadow hover:shadow-md"
-					>
-						<div class="card-body py-4">
-							<div class="flex items-center gap-3">
-								<div class="avatar placeholder">
-									<div class="w-10 rounded-full bg-neutral text-neutral-content">
-										{#if b.avatarUrl}
-											<img src={b.avatarUrl} alt={b.name} class="rounded-full" />
-										{:else}
-											<span>{b.name.charAt(0).toUpperCase()}</span>
-										{/if}
-									</div>
+	{#if activeTab === 'bands'}
+		{#if bands.length === 0}
+			<EmptyState message="No bands match your filters." />
+		{:else}
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+				{#each bands as b, i (b.id)}
+					<a href="/member/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
+						<div class="vinyl-card__sleeve-wrap">
+							<div class="vinyl-card__disc">
+								<div class="vinyl-card__label">
+									<svg class="vinyl-card__arc" viewBox="0 0 100 100">
+										<defs>
+											<path id="arc-top-{b.id}" d="M 15,50 a 35,35 0 1,1 70,0" fill="none" />
+											<path id="arc-bot-{b.id}" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
+										</defs>
+										<text>
+											<textPath href="#arc-top-{b.id}" startOffset="50%" text-anchor="middle">{b.name}</textPath>
+										</text>
+										<text>
+											<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
+										</text>
+									</svg>
+									<img class="vinyl-card__logo" src={logoMono} alt="" />
 								</div>
-								<div class="min-w-0 flex-1">
-									<p class="font-medium">{b.name}</p>
-									{#if b.tagline}
-										<p class="text-sm opacity-60 truncate">{b.tagline}</p>
+							</div>
+							<div class="vinyl-card__sleeve">
+								<div class="vinyl-card__sleeve-art">
+									{#if b.avatarUrl}
+										<img src={b.avatarUrl} alt={b.name} class="w-full h-full object-cover" />
 									{:else}
-										<p class="text-xs opacity-60">
-											{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
-										</p>
+										{initials(b.name)}
 									{/if}
 								</div>
-								{#if b.lookingForMembers}
-									<span class="badge badge-primary badge-sm whitespace-nowrap gap-1">
-										<IconUserPlus size={12} />
-										Recruiting
-									</span>
+							</div>
+						</div>
+						<div class="vinyl-card__caption">
+							<div class="vinyl-card__band">{b.name}</div>
+							<div class="vinyl-card__meta">
+								{#if b.tagline}
+									{b.tagline}
+								{:else}
+									{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
 								{/if}
 							</div>
-							{#if b.genres?.length}
-								<div class="flex flex-wrap gap-1 mt-2">
-									{#each (b.genres ?? []).slice(0, 4) as genre}
-										<span class="badge badge-ghost badge-xs">{genre}</span>
-									{/each}
-								</div>
-							{/if}
 						</div>
 					</a>
-				{/snippet}
-			</DataTable>
+				{/each}
+			</div>
 		{/if}
-	</PageContent>
+	{/if}
+</PageContent>

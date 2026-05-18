@@ -60,12 +60,19 @@ function memberWhereConditions(
 	return conditions;
 }
 
-function mapMemberRow<T extends { instruments: { instrument: string }[]; genres: { genre: string }[] }>(row: T) {
-	const { instruments, genres, ...rest } = row;
+function mapMemberRow<T extends {
+	instruments: { instrument: string }[];
+	genres: { genre: string }[];
+	bandMembers?: { status: string; band: { name: string; slug: string } | null }[];
+}>(row: T) {
+	const { instruments, genres, bandMembers, ...rest } = row;
 	return {
 		...rest,
 		instruments: instruments.map(r => r.instrument),
 		genres: genres.map(r => r.genre),
+		bands: (bandMembers ?? [])
+			.filter(m => m.status === 'active' && m.band)
+			.map(m => ({ name: m.band!.name, slug: m.band!.slug })),
 	};
 }
 
@@ -73,7 +80,14 @@ function mapMemberRow<T extends { instruments: { instrument: string }[]; genres:
 export async function listMembers(filters?: MemberFilters) {
 	const rows = await db.query.user.findMany({
 		where: and(...memberWhereConditions('members', filters)),
-		with: { instruments: true, genres: true },
+		with: {
+			instruments: true,
+			genres: true,
+			bandMembers: {
+				columns: { status: true },
+				with: { band: { columns: { name: true, slug: true } } },
+			},
+		},
 		orderBy: asc(user.name),
 		columns: {
 			id: true,
@@ -95,7 +109,14 @@ export async function listMembers(filters?: MemberFilters) {
 export async function listPublicMembers(filters?: MemberFilters) {
 	const rows = await db.query.user.findMany({
 		where: and(...memberWhereConditions('public', filters)),
-		with: { instruments: true, genres: true },
+		with: {
+			instruments: true,
+			genres: true,
+			bandMembers: {
+				columns: { status: true },
+				with: { band: { columns: { name: true, slug: true } } },
+			},
+		},
 		orderBy: asc(user.name),
 		columns: {
 			id: true,

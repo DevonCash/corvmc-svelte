@@ -3,6 +3,7 @@ import { relations, sql } from 'drizzle-orm';
 import { timestamp, zodJson } from './columns';
 import { z } from 'zod';
 import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
+import { bandMember } from './band';
 
 // ---------------------------------------------------------------------------
 // better-auth core tables
@@ -114,6 +115,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	genres: many(userGenre),
 	sessions: many(session),
 	accounts: many(account),
+	bandMembers: many(bandMember),
 }));
 
 export const userInstrumentRelations = relations(userInstrument, ({ one }) => ({
