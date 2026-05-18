@@ -22,6 +22,7 @@ function serializeLoan(l: Awaited<ReturnType<typeof listUserLoans>>[number]) {
 	return {
 		...l,
 		requestedPickupDate: l.requestedPickupDate.toISOString(),
+		estimatedReturnDate: l.estimatedReturnDate?.toISOString() ?? null,
 		scheduledPickupDate: l.scheduledPickupDate?.toISOString() ?? null,
 		dueDate: l.dueDate?.toISOString() ?? null,
 		checkedOutAt: l.checkedOutAt?.toISOString() ?? null,

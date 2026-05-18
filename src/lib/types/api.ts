@@ -187,6 +187,7 @@ export interface MemberEquipmentResponse {
 	}[];
 	categories: { id: string; name: string; pricingTier: string }[];
 	creditBalance: number;
+	isSustainingMember: boolean;
 	filters: { search: string; categoryId: string };
 }
 
@@ -196,6 +197,8 @@ export interface EquipmentLoan {
 	equipmentName: string | null;
 	quantity: number;
 	requestedPickupDate: string;
+	estimatedReturnDate: string | null;
+	estimatedCostCents: number | null;
 	scheduledPickupDate: string | null;
 	dueDate: string | null;
 	checkedOutAt: string | null;

@@ -70,8 +70,26 @@ export const requestLoanSchema = z.object({
 	equipmentId: z.string().uuid().optional(),
 	quantity: z.coerce.number().int().min(1).default(1),
 	requestedPickupDate: z.coerce.date(),
+	estimatedReturnDate: z.coerce.date(),
 	memberNotes: z.string().max(1000).optional()
 });
+
+// ---------------------------------------------------------------------------
+// Cost estimation (shared client/server)
+// ---------------------------------------------------------------------------
+
+export function estimateLoanCost(
+	pickupDate: Date,
+	returnDate: Date,
+	pricingTier: PricingTier,
+	isSustainingMember: boolean
+): number {
+	if (pricingTier === 'accessory' && isSustainingMember) return 0;
+	const dailyRate = pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
+	const ms = returnDate.getTime() - pickupDate.getTime();
+	const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+	return dailyRate * days;
+}
 
 export const scheduleLoanSchema = z.object({
 	equipmentId: z.string().uuid(),

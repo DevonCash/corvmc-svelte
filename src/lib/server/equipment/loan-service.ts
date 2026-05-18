@@ -9,7 +9,7 @@ import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './equipment-service';
-import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, type PricingTier, type LoanStatus } from './types';
+import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, type PricingTier, type LoanStatus, estimateLoanCost } from './types';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -122,16 +122,41 @@ export interface RequestLoanData {
 	equipmentId?: string;
 	quantity?: number;
 	requestedPickupDate: Date;
+	estimatedReturnDate: Date;
 	memberNotes?: string;
 }
 
 export async function requestLoan(userId: string, data: RequestLoanData) {
 	const qty = data.quantity ?? 1;
 
+	if (data.estimatedReturnDate <= data.requestedPickupDate) {
+		throw new Error('Estimated return date must be after the pickup date');
+	}
+
 	if (data.equipmentId) {
 		const available = await getAvailableQuantity(data.equipmentId);
 		if (available < qty) {
 			throw new InsufficientQuantityError(available, qty);
+		}
+	}
+
+	let estimatedCostCents: number | null = null;
+	if (data.equipmentId) {
+		const [item] = await db
+			.select({ pricingTier: equipmentCategory.pricingTier })
+			.from(equipment)
+			.innerJoin(equipmentCategory, eq(equipment.categoryId, equipmentCategory.id))
+			.where(eq(equipment.id, data.equipmentId))
+			.limit(1);
+
+		if (item) {
+			const sustaining = await isSustainingMember(userId);
+			estimatedCostCents = estimateLoanCost(
+				data.requestedPickupDate,
+				data.estimatedReturnDate,
+				item.pricingTier as PricingTier,
+				sustaining
+			);
 		}
 	}
 
@@ -142,6 +167,8 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 			userId,
 			quantity: qty,
 			requestedPickupDate: data.requestedPickupDate,
+			estimatedReturnDate: data.estimatedReturnDate,
+			estimatedCostCents,
 			memberNotes: data.memberNotes ?? null,
 			status: 'requested'
 		})

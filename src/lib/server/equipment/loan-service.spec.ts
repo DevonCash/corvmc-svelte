@@ -163,7 +163,8 @@ describe('LoanService lifecycle', () => {
 
 			const result = await requestLoan('user-1', {
 				equipmentId: 'eq-1',
-				requestedPickupDate: new Date('2025-07-15')
+				requestedPickupDate: new Date('2025-07-15'),
+				estimatedReturnDate: new Date('2025-07-20')
 			});
 			expect(result).toEqual(loan);
 		});
@@ -175,7 +176,8 @@ describe('LoanService lifecycle', () => {
 				requestLoan('user-1', {
 					equipmentId: 'eq-1',
 					quantity: 2,
-					requestedPickupDate: new Date('2025-07-15')
+					requestedPickupDate: new Date('2025-07-15'),
+					estimatedReturnDate: new Date('2025-07-20')
 				})
 			).rejects.toThrow(InsufficientQuantityError);
 		});
@@ -187,6 +189,7 @@ describe('LoanService lifecycle', () => {
 
 			const result = await requestLoan('user-1', {
 				requestedPickupDate: new Date('2025-07-15'),
+				estimatedReturnDate: new Date('2025-07-20'),
 				memberNotes: 'Need a bass amp 300W+'
 			});
 			expect(result.equipmentId).toBeNull();

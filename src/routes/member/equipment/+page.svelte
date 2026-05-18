@@ -11,18 +11,36 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import type { MemberEquipmentResponse } from '$lib/types/api';
+	import { estimateLoanCost, type PricingTier } from '$lib/types/equipment';
+	import { formatCents } from '$lib/utils/format';
 
 	let { data }: { data: MemberEquipmentResponse } = $props();
 
 	let showRequestModal = $state(false);
 	let selectedEquipmentId = $state<string | undefined>(undefined);
 	let selectedEquipmentName = $state('');
+	let selectedPricingTier = $state<PricingTier>('major');
 	let isFreeForm = $state(false);
 
+	let pickupDateValue = $state('');
+	let returnDateValue = $state('');
+
+	let costEstimate = $derived.by(() => {
+		if (isFreeForm || !pickupDateValue || !returnDateValue) return null;
+		const pickup = new Date(pickupDateValue);
+		const returnDate = new Date(returnDateValue);
+		if (returnDate <= pickup) return null;
+		return estimateLoanCost(pickup, returnDate, selectedPricingTier, data.isSustainingMember);
+	});
+
 	function openRequest(equipmentId: string, name: string) {
+		const eq = data.equipment.find((e) => e.id === equipmentId);
 		selectedEquipmentId = equipmentId;
 		selectedEquipmentName = name;
+		selectedPricingTier = (eq?.pricingTier as PricingTier) ?? 'major';
 		isFreeForm = false;
+		pickupDateValue = '';
+		returnDateValue = '';
 		showRequestModal = true;
 	}
 
@@ -30,6 +48,8 @@
 		selectedEquipmentId = undefined;
 		selectedEquipmentName = '';
 		isFreeForm = true;
+		pickupDateValue = '';
+		returnDateValue = '';
 		showRequestModal = true;
 	}
 
@@ -115,9 +135,29 @@
 		{#if !isFreeForm}
 			<input type="hidden" name="equipmentId" value={selectedEquipmentId} />
 		{/if}
-		<Field name="requestedPickupDate" type="date" label="Preferred Pickup Date" required />
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div oninput={(e: Event) => { pickupDateValue = (e.target as HTMLInputElement).value; }}>
+			<Field name="requestedPickupDate" type="date" label="Preferred Pickup Date" required />
+		</div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div oninput={(e: Event) => { returnDateValue = (e.target as HTMLInputElement).value; }}>
+			<Field name="estimatedReturnDate" type="date" label="Estimated Return Date" required />
+		</div>
 		{#if !isFreeForm}
 			<Field name="quantity" type="number" value={1} label="Quantity" />
+		{/if}
+		{#if costEstimate != null}
+			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
+				{#if costEstimate === 0}
+					<span class="font-medium">Free for sustaining members</span>
+				{:else}
+					Estimated cost: <span class="font-semibold">{formatCents(costEstimate)}</span>
+				{/if}
+			</div>
+		{:else if isFreeForm && pickupDateValue && returnDateValue}
+			<div class="rounded-lg bg-base-200 px-4 py-3 text-sm opacity-70">
+				Cost will be determined when equipment is assigned
+			</div>
 		{/if}
 		<Field name="memberNotes" type="textarea" label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'} required={isFreeForm} />
 		<div class="modal-action">

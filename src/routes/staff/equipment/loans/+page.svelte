@@ -21,6 +21,7 @@
 	let loanEquipmentId = $state('');
 	let loanQuantity = $state(1);
 	let loanPickupDate = $state('');
+	let loanEstimatedReturnDate = $state('');
 	let loanNotes = $state('');
 	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
 	let equipmentOptions = $state<{ id: string; name: string }[]>([]);
@@ -56,6 +57,7 @@
 				equipmentId: loanEquipmentId || undefined,
 				quantity: loanQuantity,
 				requestedPickupDate: new Date(loanPickupDate),
+				estimatedReturnDate: new Date(loanEstimatedReturnDate),
 				memberNotes: loanNotes || undefined
 			});
 			loanUserId = '';
@@ -63,6 +65,7 @@
 			loanEquipmentId = '';
 			loanQuantity = 1;
 			loanPickupDate = '';
+			loanEstimatedReturnDate = '';
 			loanNotes = '';
 			return result;
 		}}
@@ -70,7 +73,7 @@
 		modalTitle="Create Loan Request"
 		successToast="Loan request created"
 		class="btn-sm btn-primary"
-		canSubmit={!!loanUserId && !!loanPickupDate}
+		canSubmit={!!loanUserId && !!loanPickupDate && !!loanEstimatedReturnDate}
 		onsuccess={() => invalidateAll()}
 	>
 		{#snippet form({ close })}
@@ -118,6 +121,10 @@
 				<label class="form-control w-full">
 					<div class="label"><span class="label-text">Requested pickup date</span></div>
 					<input type="date" class="input input-bordered w-full" bind:value={loanPickupDate} />
+				</label>
+				<label class="form-control w-full">
+					<div class="label"><span class="label-text">Estimated return date</span></div>
+					<input type="date" class="input input-bordered w-full" bind:value={loanEstimatedReturnDate} />
 				</label>
 				<label class="form-control w-full">
 					<div class="label"><span class="label-text">Notes (optional)</span></div>

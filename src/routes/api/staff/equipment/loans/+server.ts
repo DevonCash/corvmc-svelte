@@ -21,6 +21,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		loans: loans.map((l) => ({
 			...l,
 			requestedPickupDate: l.requestedPickupDate.toISOString(),
+			estimatedReturnDate: l.estimatedReturnDate?.toISOString() ?? null,
 			scheduledPickupDate: l.scheduledPickupDate?.toISOString() ?? null,
 			dueDate: l.dueDate?.toISOString() ?? null,
 			checkedOutAt: l.checkedOutAt?.toISOString() ?? null,

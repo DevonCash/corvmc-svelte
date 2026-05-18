@@ -83,6 +83,18 @@
 							<IconCalendar size={14} /><span class="hidden sm:inline">Pickup</span>
 						</dt>
 						<dd>{formatDate(loan.requestedPickupDate)}</dd>
+						{#if loan.estimatedReturnDate}
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Estimated return">
+								<IconCalendar size={14} /><span class="hidden sm:inline">Est. Return</span>
+							</dt>
+							<dd>{formatDate(loan.estimatedReturnDate)}</dd>
+						{/if}
+						{#if loan.estimatedCostCents != null}
+							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Estimated cost">
+								<IconCoin size={14} /><span class="hidden sm:inline">Est. Cost</span>
+							</dt>
+							<dd>{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}</dd>
+						{/if}
 						{#if loan.scheduledPickupDate}
 							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Confirmed pickup">
 								<IconCalendarCheck size={14} /><span class="hidden sm:inline">Confirmed</span>

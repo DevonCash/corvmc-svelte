@@ -30,6 +30,7 @@ export const createLoanForMember = command(
 		equipmentId: z.string().optional(),
 		quantity: z.number().int().min(1).max(20).default(1),
 		requestedPickupDate: z.coerce.date(),
+		estimatedReturnDate: z.coerce.date(),
 		memberNotes: z.string().max(1000).optional()
 	}),
 	async (data) => {
@@ -38,6 +39,7 @@ export const createLoanForMember = command(
 			equipmentId: data.equipmentId,
 			quantity: data.quantity,
 			requestedPickupDate: data.requestedPickupDate,
+			estimatedReturnDate: data.estimatedReturnDate,
 			memberNotes: data.memberNotes
 		});
 		return { success: true };

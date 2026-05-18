@@ -19,5 +19,6 @@ export {
 	updateEquipmentSchema,
 	requestLoanSchema,
 	scheduleLoanSchema,
-	checkoutLoanSchema
+	checkoutLoanSchema,
+	estimateLoanCost
 } from '$lib/types/equipment';

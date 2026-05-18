@@ -13,6 +13,7 @@ const submitRequestSchema = z.object({
 	equipmentId: z.string().uuid().optional(),
 	quantity: z.string().default('1'),
 	requestedPickupDate: z.string().min(1),
+	estimatedReturnDate: z.string().min(1),
 	memberNotes: z.string().max(1000).optional()
 });
 
@@ -24,6 +25,7 @@ export const submitRequest = form(submitRequestSchema, async (raw) => {
 		equipmentId: data.equipmentId,
 		quantity: parseInt(data.quantity, 10) || 1,
 		requestedPickupDate: new Date(data.requestedPickupDate),
+		estimatedReturnDate: new Date(data.estimatedReturnDate),
 		memberNotes: data.memberNotes
 	});
 

@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listEquipment, listCategories } from '$lib/server/equipment/equipment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
+import { getSubscription } from '$lib/server/finance/subscription-service';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -14,6 +15,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		listCategories(),
 		getBalance(locals.user.id, 'equipment_credits')
 	]);
+
+	let isSustainingMember = false;
+	if (locals.user.stripeId) {
+		const sub = await getSubscription(locals.user.stripeId);
+		isSustainingMember = sub !== null;
+	}
 
 	return json({
 		equipment: equipmentList.map((e) => ({
@@ -33,6 +40,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			pricingTier: c.pricingTier
 		})),
 		creditBalance,
+		isSustainingMember,
 		filters: { search, categoryId: categoryId ?? '' }
 	});
 };
