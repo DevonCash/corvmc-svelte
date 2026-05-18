@@ -6,6 +6,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, inArray, like, or, desc, asc, count } from 'drizzle-orm';
 import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
+import { paginate, parsePagination } from '$lib/server/db/paginate';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -38,14 +39,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		conditions.push(lt(reservation.startsAt, new Date(dateTo + 'T23:59:59')));
 	}
 
-	// Search by member name or email in SQL
 	if (search) {
 		const pattern = `%${search}%`;
 		conditions.push(or(like(user.name, pattern), like(user.email, pattern)));
 	}
 
-	// Main query
-	const reservations = await db
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const dataQ = db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
@@ -63,9 +64,17 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
+		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
-		.limit(200);
+		.$dynamic();
+
+	const countQ = db
+		.select({ count: count() })
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(where);
+
+	const { rows: reservations, pagination } = await paginate(dataQ, countQ, parsePagination(url));
 
 	// Unresolved count + data for resolve modal
 	const unresolved = await db
@@ -112,6 +121,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			startsAt: r.startsAt.toISOString(),
 			endsAt: r.endsAt.toISOString()
 		})),
+		pagination,
 		tab,
 		search,
 		statusFilter,

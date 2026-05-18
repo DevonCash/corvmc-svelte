@@ -15,6 +15,14 @@
 
 	let { data }: { data: StaffBandsResponse } = $props();
 
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.filters.search) params.set('q', data.filters.search);
+		if (data.filters.status) params.set('status', data.filters.status);
+		params.set('page', String(page));
+		return `/staff/bands?${params.toString()}`;
+	}
+
 	let name = $state('');
 	let bio = $state('');
 	let selectedOwner = $state<{ id: string; name: string; email: string } | null>(null);
@@ -61,7 +69,8 @@
 		</Action>
 	</PageHeader>
 <PageContent>
-	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} clearHref="/staff/bands" empty="No bands found">
+	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} clearHref="/staff/bands" empty="No bands found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
 			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"

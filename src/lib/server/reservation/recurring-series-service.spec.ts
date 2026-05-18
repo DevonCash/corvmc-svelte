@@ -406,19 +406,28 @@ describe('recurring-series-service', () => {
 
 	describe('listAll()', () => {
 		function setupListAllSelect(rows: unknown[]) {
-			const where = vi.fn().mockResolvedValue(rows);
+			const offset = vi.fn().mockResolvedValue(rows);
+			const limit = vi.fn().mockReturnValue({ offset });
+			const $dynamic = vi.fn().mockReturnValue({ limit });
+			const where = vi.fn().mockReturnValue({ $dynamic });
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
+			// First call: data query, second call: count query
+			const countWhere = vi.fn().mockResolvedValue([{ count: rows.length }]);
+			const countInnerJoin = vi.fn().mockReturnValue({ where: countWhere });
+			const countFrom = vi.fn().mockReturnValue({ innerJoin: countInnerJoin });
+			vi.mocked(db.select)
+				.mockReturnValueOnce({ from } as unknown as ReturnType<typeof db.select>)
+				.mockReturnValueOnce({ from: countFrom } as unknown as ReturnType<typeof db.select>);
 		}
 
-		it('returns an empty array when there are no series', async () => {
+		it('returns empty rows when there are no series', async () => {
 			setupListAllSelect([]);
 
 			const result = await svc.listAll();
 
-			expect(result).toEqual([]);
+			expect(result.rows).toEqual([]);
 		});
 
 		it('includes cancelled series in the results', async () => {
@@ -439,8 +448,8 @@ describe('recurring-series-service', () => {
 
 			const result = await svc.listAll();
 
-			expect(result).toHaveLength(1);
-			expect(result[0]).toMatchObject({
+			expect(result.rows).toHaveLength(1);
+			expect(result.rows[0]).toMatchObject({
 				id: 'series-cancelled',
 				cancelledAt: cancelledRow.cancelledAt,
 				frequencyLabel: 'Weekly'

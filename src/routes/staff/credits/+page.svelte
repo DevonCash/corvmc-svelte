@@ -5,7 +5,6 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import type { StaffCreditsResponse } from '$lib/types/api';
 
@@ -35,7 +34,8 @@
 
 <PageHeader title="Credit Transactions" />
 <PageContent>
-	<DataTable data={data.transactions} clearHref="/staff/credits" empty="No credit transactions found">
+	<DataTable data={data.transactions} clearHref="/staff/credits" empty="No credit transactions found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search name or email..." />
 			<Filter.Select name="creditType" value={data.filters.creditType} placeholder="All types"
@@ -73,6 +73,4 @@
 		</Column>
 		<Column key="description" header="Description" />
 	</DataTable>
-
-	<Pagination page={data.page} totalPages={data.totalPages} buildHref={buildPageHref} />
 </PageContent>

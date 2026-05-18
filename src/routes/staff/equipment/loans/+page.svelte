@@ -15,6 +15,14 @@
 	let { data }: { data: StaffEquipmentLoansResponse } = $props();
 
 	// New loan state
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.filters.search) params.set('q', data.filters.search);
+		if (data.filters.status) params.set('status', data.filters.status);
+		params.set('page', String(page));
+		return `/staff/equipment/loans?${params.toString()}`;
+	}
+
 	let loanQuery = $state('');
 	let loanUserId = $state('');
 	let loanUserName = $state('');
@@ -136,7 +144,8 @@
 </PageHeader>
 <PageContent>
 
-	<DataTable data={data.loans} rowHref={(l) => `/staff/equipment/loans/${l.id}`} clearHref="/staff/equipment/loans" empty="No loans found">
+	<DataTable data={data.loans} rowHref={(l) => `/staff/equipment/loans/${l.id}`} clearHref="/staff/equipment/loans" empty="No loans found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search by member..." />
 			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"

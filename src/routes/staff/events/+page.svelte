@@ -10,6 +10,12 @@
 	let { data }: { data: StaffEventsResponse } = $props();
 	let showCreateModal = $state(false);
 
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		params.set('page', String(page));
+		return `/staff/events?${params.toString()}`;
+	}
+
 	type Event = (typeof data.events)[number];
 
 	function parseTags(tags: string | null): string[] {
@@ -41,7 +47,8 @@
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
-	<DataTable data={data.events} {columns} groupBy={dayLabel} empty="No events yet">
+	<DataTable data={data.events} {columns} groupBy={dayLabel} empty="No events yet"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet row(e)}
 			<tr
 				class="hover cursor-pointer"

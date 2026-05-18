@@ -20,6 +20,15 @@
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
 
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.filters.search) params.set('q', data.filters.search);
+		if (data.filters.categoryId) params.set('category', data.filters.categoryId);
+		if (data.filters.status) params.set('status', data.filters.status);
+		params.set('page', String(page));
+		return `/staff/equipment?${params.toString()}`;
+	}
+
 	let showCategoryModal = $state(false);
 
 	let editingCategory = $state<null | {
@@ -67,7 +76,8 @@
 		</div>
 	</PageHeader>
 <PageContent>
-	<DataTable data={data.equipment} rowHref={(e) => `/staff/equipment/${e.id}`} clearHref="/staff/equipment" empty="No equipment found">
+	<DataTable data={data.equipment} rowHref={(e) => `/staff/equipment/${e.id}`} clearHref="/staff/equipment" empty="No equipment found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search name, serial, resource ID..." class="w-64" />
 			<Filter.Select name="category" value={data.filters.categoryId} placeholder="All categories"

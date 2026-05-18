@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const categoryId = url.searchParams.get('category') || undefined;
 	const search = url.searchParams.get('q')?.trim() ?? '';
 
-	const [equipmentList, categories, creditBalance] = await Promise.all([
+	const [{ rows: equipmentList }, categories, creditBalance] = await Promise.all([
 		listEquipment({ search: search || undefined, categoryId, status: 'available' }),
 		listCategories(),
 		getBalance(locals.user.id, 'equipment_credits')

@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { equipment, equipmentCategory, equipmentLoan } from '$lib/server/db/schema/equipment';
-import { eq, and, sql, like, isNull, or, inArray } from 'drizzle-orm';
+import { eq, and, sql, like, isNull, or, inArray, count } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import type { PricingTier, EquipmentCondition, EquipmentStatus } from './types';
 
 // ---------------------------------------------------------------------------
@@ -230,7 +231,7 @@ export interface ListEquipmentOptions {
 	includeDeleted?: boolean;
 }
 
-export async function listEquipment(opts: ListEquipmentOptions = {}) {
+export async function listEquipment(opts: ListEquipmentOptions = {}, pagination: PaginationInput = {}) {
 	const conditions = [];
 
 	if (!opts.includeDeleted) {
@@ -252,7 +253,9 @@ export async function listEquipment(opts: ListEquipmentOptions = {}) {
 		);
 	}
 
-	const rows = await db
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const dataQ = db
 		.select({
 			equipment: equipment,
 			category: equipmentCategory,
@@ -261,16 +264,26 @@ export async function listEquipment(opts: ListEquipmentOptions = {}) {
 		.from(equipment)
 		.innerJoin(equipmentCategory, eq(equipment.categoryId, equipmentCategory.id))
 		.leftJoin(activeLoansSubquery, eq(equipment.id, activeLoansSubquery.equipmentId))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(equipmentCategory.displayOrder, equipment.name);
+		.where(where)
+		.orderBy(equipmentCategory.displayOrder, equipment.name)
+		.$dynamic();
 
-	return rows.map((row) => ({
-		...row.equipment,
-		category: row.category,
-		loanedQuantity: Number(row.loanedQty),
-		availableQuantity:
-			row.equipment.totalQuantity - row.equipment.outOfOrderQuantity - Number(row.loanedQty)
-	}));
+	const countQ = db
+		.select({ count: count() })
+		.from(equipment)
+		.where(where);
+
+	const result = await paginate(dataQ, countQ, pagination);
+	return {
+		...result,
+		rows: result.rows.map((row) => ({
+			...row.equipment,
+			category: row.category,
+			loanedQuantity: Number(row.loanedQty),
+			availableQuantity:
+				row.equipment.totalQuantity - row.equipment.outOfOrderQuantity - Number(row.loanedQty)
+		}))
+	};
 }
 
 export async function getAvailableQuantity(equipmentId: string): Promise<number> {

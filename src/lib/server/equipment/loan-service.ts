@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/schema/equipment';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, sql, like, inArray, or, desc } from 'drizzle-orm';
+import { eq, and, sql, like, inArray, or, desc, count } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
@@ -459,7 +460,7 @@ export interface ListLoansOptions {
 	search?: string;
 }
 
-export async function listLoans(opts: ListLoansOptions = {}) {
+export async function listLoans(opts: ListLoansOptions = {}, pagination: PaginationInput = {}) {
 	const conditions = [];
 
 	if (opts.status) conditions.push(eq(equipmentLoan.status, opts.status));
@@ -471,7 +472,9 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 		);
 	}
 
-	const rows = await db
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const dataQ = db
 		.select({
 			loan: equipmentLoan,
 			equipmentName: equipment.name,
@@ -483,27 +486,40 @@ export async function listLoans(opts: ListLoansOptions = {}) {
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
 		.leftJoin(equipment, eq(equipmentLoan.equipmentId, equipment.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(equipmentLoan.createdAt));
+		.where(where)
+		.orderBy(desc(equipmentLoan.createdAt))
+		.$dynamic();
 
-	return rows.map((row) => ({
-		...row.loan,
-		equipmentName: row.equipmentName,
-		userName: row.userName,
-		userEmail: row.userEmail,
-		userPronouns: row.userPronouns,
-		userRole: row.userRole,
-		isOverdue:
-			row.loan.status === 'checked_out' &&
-			row.loan.dueDate != null &&
-			row.loan.dueDate < new Date()
-	}));
+	const countQ = db
+		.select({ count: count() })
+		.from(equipmentLoan)
+		.innerJoin(user, eq(equipmentLoan.userId, user.id))
+		.where(where);
+
+	const result = await paginate(dataQ, countQ, pagination);
+	return {
+		...result,
+		rows: result.rows.map((row) => ({
+			...row.loan,
+			equipmentName: row.equipmentName,
+			userName: row.userName,
+			userEmail: row.userEmail,
+			userPronouns: row.userPronouns,
+			userRole: row.userRole,
+			isOverdue:
+				row.loan.status === 'checked_out' &&
+				row.loan.dueDate != null &&
+				row.loan.dueDate < new Date()
+		}))
+	};
 }
 
 export async function listUserLoans(userId: string) {
-	return listLoans({ userId });
+	const { rows } = await listLoans({ userId });
+	return rows;
 }
 
 export async function getLoanHistory(equipmentId: string) {
-	return listLoans({ equipmentId });
+	const { rows } = await listLoans({ equipmentId });
+	return rows;
 }

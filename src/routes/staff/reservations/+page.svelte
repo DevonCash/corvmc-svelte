@@ -24,6 +24,17 @@
 
 	let resolveOpen = $state(false);
 
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.tab) params.set('tab', data.tab);
+		if (data.search) params.set('q', data.search);
+		if (data.dateFrom) params.set('from', data.dateFrom);
+		if (data.dateTo) params.set('to', data.dateTo);
+		for (const s of data.statusFilter) params.append('status', s);
+		params.set('page', String(page));
+		return `/staff/reservations?${params.toString()}`;
+	}
+
 	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
 		if (r.status === 'no_show') return { label: 'No-show', color: 'text-error', icon: IconUserX };
 		if (r.status === 'cancelled') {
@@ -85,7 +96,8 @@
 		active={data.tab}
 	/>
 
-	<DataTable data={data.reservations} {columns} groupBy={dayLabel} clearHref="/staff/reservations?tab={data.tab}" empty="No reservations found">
+	<DataTable data={data.reservations} {columns} groupBy={dayLabel} clearHref="/staff/reservations?tab={data.tab}" empty="No reservations found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<input type="hidden" name="tab" value={data.tab} />
 			<Filter.Search name="q" value={data.search} placeholder="Search name or email..." />

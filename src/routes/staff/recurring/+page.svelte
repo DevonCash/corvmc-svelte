@@ -13,6 +13,13 @@
 	import type { StaffRecurringResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffRecurringResponse } = $props();
+
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.filter) params.set('filter', data.filter);
+		params.set('page', String(page));
+		return `/staff/recurring?${params.toString()}`;
+	}
 </script>
 
 <PageHeader title="Recurring Reservations" />
@@ -45,7 +52,8 @@
 		</a>
 	</div>
 
-	<DataTable data={data.series} rowHref={(s) => `/staff/recurring/${s.id}`} empty="No recurring series found">
+	<DataTable data={data.series} rowHref={(s) => `/staff/recurring/${s.id}`} empty="No recurring series found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		<Column key="userName" header="Member" stopClick>
 			{#snippet cell(_, s)}
 				<MemberLink name={s.userName} pronouns={s.userPronouns} role={s.userRole} userId={undefined} />

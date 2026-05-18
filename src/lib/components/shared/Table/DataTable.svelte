@@ -72,6 +72,8 @@
 		rowHref,
 		clearHref,
 		pageSize = 20,
+		pagination,
+		buildPageHref,
 		empty = 'No items found',
 		gridClass = 'grid grid-cols-1 gap-3',
 		class: className = ''
@@ -95,6 +97,10 @@
 		clearHref?: string;
 		/** Rows per page. Default 20. */
 		pageSize?: number;
+		/** Server-side pagination metadata. When provided, skips client-side slicing. */
+		pagination?: { page: number; totalPages: number };
+		/** Generates the href for a given page number. Required when pagination is set. */
+		buildPageHref?: (page: number) => string;
 		/** Message shown when data is empty. */
 		empty?: string;
 		/** CSS classes for the card grid container. Default: 'grid grid-cols-1 gap-3'. */
@@ -180,6 +186,7 @@
 	let pageIndex = $state(0);
 	const pageCount = $derived(Math.max(1, Math.ceil(sorted.length / pageSize)));
 	const paged = $derived(sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize));
+	const displayRows = $derived(pagination ? sorted : paged);
 
 	// Reset page when data changes (identity or length)
 	let prevData = untrack(() => data);
@@ -273,10 +280,10 @@
 	<!-- Card mode: grid -->
 	{#if paged.length > 0}
 		<div class={gridClass}>
-			{#each paged as item, idx (idx)}
+			{#each displayRows as item, idx (idx)}
 				{#if groupBy}
 					{@const label = groupBy(item)}
-					{@const prevLabel = idx > 0 ? groupBy(paged[idx - 1]) : null}
+					{@const prevLabel = idx > 0 ? groupBy(displayRows[idx - 1]) : null}
 					{#if label !== prevLabel}
 						<div class="col-span-full py-2 text-xs font-semibold tracking-wide uppercase opacity-60">
 							{label}
@@ -312,10 +319,10 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each paged as item, idx (idx)}
+				{#each displayRows as item, idx (idx)}
 					{#if groupBy}
 						{@const label = groupBy(item)}
-						{@const prevLabel = idx > 0 ? groupBy(paged[idx - 1]) : null}
+						{@const prevLabel = idx > 0 ? groupBy(displayRows[idx - 1]) : null}
 						{#if label !== prevLabel}
 							<tr>
 								<td
@@ -368,7 +375,29 @@
 	</div>
 {/if}
 
-{#if pageCount > 1}
+{#if pagination && buildPageHref}
+	{#if pagination.totalPages > 1}
+		<div class="flex justify-center py-3">
+			<div class="join">
+				{#if pagination.page > 1}
+					<a href={buildPageHref(pagination.page - 1)} class="join-item btn btn-sm">«</a>
+				{/if}
+				{#each Array.from({ length: pagination.totalPages }, (_, i) => i + 1) as p (p)}
+					<a
+						href={buildPageHref(p)}
+						class="join-item btn btn-sm"
+						class:btn-active={p === pagination.page}
+					>
+						{p}
+					</a>
+				{/each}
+				{#if pagination.page < pagination.totalPages}
+					<a href={buildPageHref(pagination.page + 1)} class="join-item btn btn-sm">»</a>
+				{/if}
+			</div>
+		</div>
+	{/if}
+{:else if pageCount > 1}
 	<div class="flex items-center justify-between px-4 py-3">
 		<span class="text-sm opacity-60">
 			Page {pageIndex + 1} of {pageCount}

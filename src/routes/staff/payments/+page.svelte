@@ -5,7 +5,6 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
@@ -30,7 +29,8 @@
 <PageHeader title="Payments" />
 <PageContent>
 
-	<DataTable data={data.payments} clearHref="/staff/payments" empty="No payment records found">
+	<DataTable data={data.payments} clearHref="/staff/payments" empty="No payment records found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.filters.search} placeholder="Search name or email..." />
 			<Filter.Select name="method" value={data.filters.method} placeholder="All methods"
@@ -66,6 +66,4 @@
 			{/snippet}
 		</Column>
 	</DataTable>
-
-	<Pagination page={data.page} totalPages={data.totalPages} buildHref={buildPageHref} />
 </PageContent>

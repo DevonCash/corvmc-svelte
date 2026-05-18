@@ -11,6 +11,13 @@
 
 	type User = (typeof data.users)[number];
 
+	function buildPageHref(page: number): string {
+		const params = new URLSearchParams();
+		if (data.search) params.set('q', data.search);
+		params.set('page', String(page));
+		return `/staff/users?${params.toString()}`;
+	}
+
 	function getTier(user: User): 'admin' | 'staff' | 'sustaining' | null {
 		if (user.roles.includes('admin')) return 'admin';
 		if (user.roles.includes('staff')) return 'staff';
@@ -33,7 +40,8 @@
 		<span class="text-sm opacity-60">{data.pagination.total} total</span>
 	</PageHeader>
 <PageContent>
-	<DataTable data={data.users} rowHref={(u) => `/staff/users/${u.id}`} clearHref="/staff/users" empty="No users found">
+	<DataTable data={data.users} rowHref={(u) => `/staff/users/${u.id}`} clearHref="/staff/users" empty="No users found"
+		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		{#snippet toolbar()}
 			<Filter.Search name="q" value={data.search} placeholder="Search by name or email..." class="w-full max-w-sm" />
 		{/snippet}

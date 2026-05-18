@@ -2,8 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listTransactions } from '$lib/server/finance/credit-service';
-
-const PAGE_SIZE = 50;
+import { parsePagination } from '$lib/server/db/paginate';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -15,9 +14,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const source = url.searchParams.get('source') ?? '';
 	const from = url.searchParams.get('from') ?? '';
 	const to = url.searchParams.get('to') ?? '';
-	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
-	const { rows, total } = await listTransactions(
+	const { rows, pagination } = await listTransactions(
 		{
 			search: search || undefined,
 			creditType: creditType || undefined,
@@ -25,15 +23,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			from: from || undefined,
 			to: to || undefined
 		},
-		PAGE_SIZE,
-		(page - 1) * PAGE_SIZE
+		parsePagination(url)
 	);
 
 	return json({
 		transactions: rows,
-		total,
-		page,
-		totalPages: Math.ceil(total / PAGE_SIZE),
+		pagination,
 		filters: { search, creditType, source, from, to }
 	});
 };

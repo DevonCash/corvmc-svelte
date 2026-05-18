@@ -20,8 +20,8 @@ export const searchMembers = query(z.string(), async (q) => {
 
 export const getEquipmentOptions = query(z.void(), async () => {
 	await requireStaff();
-	const items = await listEquipment({ status: 'available' });
-	return items.map((e) => ({ id: e.id, name: e.name }));
+	const { rows } = await listEquipment({ status: 'available' });
+	return rows.map((e) => ({ id: e.id, name: e.name }));
 });
 
 export const createLoanForMember = command(

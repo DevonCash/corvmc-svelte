@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, sql, gte, lte, desc, like, or, type SQL } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
+import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	isCreditType,
@@ -309,32 +310,31 @@ const transactionSelect = {
 
 export async function listTransactions(
 	filters: CreditTransactionFilters = {},
-	limit = 50,
-	offset = 0
-): Promise<{ rows: CreditTransactionRow[]; total: number }> {
+	pagination: PaginationInput = {}
+): Promise<PaginatedResult<CreditTransactionRow>> {
 	const conditions = buildTransactionFilters(filters);
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-	const rows = await db
+	const dataQ = db
 		.select(transactionSelect)
 		.from(creditTransaction)
 		.innerJoin(user, eq(user.id, creditTransaction.userId))
 		.where(where)
 		.orderBy(desc(creditTransaction.createdAt))
-		.limit(limit)
-		.offset(offset);
+		.$dynamic();
 
-	const [countRow] = await db
-		.select({ count: sql<number>`cast(count(*) as int)` })
+	const countQ = db
+		.select({ count: count() })
 		.from(creditTransaction)
 		.innerJoin(user, eq(user.id, creditTransaction.userId))
 		.where(where);
 
+	const result = await paginate(dataQ, countQ, pagination);
 	return {
-		rows: rows.map((row) => ({
+		...result,
+		rows: result.rows.map((row) => ({
 			...row,
 			createdAt: row.createdAt.toISOString()
-		})),
-		total: countRow?.count ?? 0
+		}))
 	};
 }

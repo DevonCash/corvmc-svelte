@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listEquipment, listCategories } from '$lib/server/equipment/equipment-service';
+import { parsePagination } from '$lib/server/db/paginate';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -12,8 +13,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const categoryId = url.searchParams.get('category') || undefined;
 	const status = url.searchParams.get('status') || undefined;
 
-	const [equipmentList, categories] = await Promise.all([
-		listEquipment({ search: search || undefined, categoryId, status }),
+	const [{ rows: equipmentList, pagination }, categories] = await Promise.all([
+		listEquipment({ search: search || undefined, categoryId, status }, parsePagination(url)),
 		listCategories()
 	]);
 
@@ -34,6 +35,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			createdAt: c.createdAt.toISOString(),
 			updatedAt: c.updatedAt.toISOString()
 		})),
+		pagination,
 		filters: { search, categoryId: categoryId ?? '', status: status ?? '' }
 	});
 };

@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, desc, and, gte, lte, like, or, sql, type SQL } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, like, or, sql, count, type SQL } from 'drizzle-orm';
+import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 
 const TZ = 'America/Los_Angeles';
@@ -105,31 +106,27 @@ function serialize(row: {
 /** Paginated list of all payment records with optional filters. */
 export async function list(
 	filters: PaymentCacheFilters = {},
-	limit = 50,
-	offset = 0
-): Promise<{ rows: PaymentCacheRow[]; total: number }> {
+	pagination: PaginationInput = {}
+): Promise<PaginatedResult<PaymentCacheRow>> {
 	const conditions = buildFilters(filters);
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-	const rows = await db
+	const dataQ = db
 		.select(baseSelect)
 		.from(paymentCache)
 		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(where)
 		.orderBy(desc(paymentCache.paidAt))
-		.limit(limit)
-		.offset(offset);
+		.$dynamic();
 
-	const [countRow] = await db
-		.select({ count: sql<number>`cast(count(*) as int)` })
+	const countQ = db
+		.select({ count: count() })
 		.from(paymentCache)
 		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(where);
 
-	return {
-		rows: rows.map(serialize),
-		total: countRow?.count ?? 0
-	};
+	const result = await paginate(dataQ, countQ, pagination);
+	return { ...result, rows: result.rows.map(serialize) };
 }
 
 /** All payment records for a specific user, ordered by most recent. */

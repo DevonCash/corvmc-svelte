@@ -327,10 +327,12 @@ export interface StaffBandsResponse {
 		deletedAt: string | null;
 		[key: string]: unknown;
 	}[];
+	pagination: Pagination;
 	filters: { search: string; status: string };
 }
 
 export interface StaffEventsResponse {
+	pagination: Pagination;
 	events: {
 		id: string;
 		title: string;
@@ -439,6 +441,7 @@ export interface StaffReservationsResponse {
 		memberPronouns: string | null;
 		memberRole: string | null;
 	}[];
+	pagination: Pagination;
 	tab: string;
 	search: string;
 	statusFilter: string[];
@@ -494,6 +497,7 @@ export interface StaffEquipmentResponse {
 		[key: string]: unknown;
 	}[];
 	categories: { id: string; name: string; pricingTier: string; displayOrder: number; createdAt: string; updatedAt: string }[];
+	pagination: Pagination;
 	filters: { search: string; categoryId: string; status: string };
 }
 
@@ -510,6 +514,7 @@ export interface StaffEquipmentLoansResponse {
 		updatedAt: string;
 		[key: string]: unknown;
 	}[];
+	pagination: Pagination;
 	filters: { search: string; status: string };
 }
 
@@ -534,9 +539,7 @@ export interface StaffPaymentsResponse {
 		createdAt: string;
 		[key: string]: unknown;
 	}[];
-	total: number;
-	page: number;
-	totalPages: number;
+	pagination: Pagination;
 	filters: { search: string; method: string; status: string; from: string; to: string };
 }
 
@@ -554,9 +557,7 @@ export interface StaffCreditsResponse {
 		description: string;
 		createdAt: string;
 	}[];
-	total: number;
-	page: number;
-	totalPages: number;
+	pagination: Pagination;
 	filters: { search: string; creditType: string; source: string; from: string; to: string };
 }
 
@@ -573,6 +574,7 @@ export interface StaffRecurringResponse {
 		createdAt: string;
 		cancelledAt: string | null;
 	}[];
+	pagination: Pagination;
 	filter: string;
 }
 

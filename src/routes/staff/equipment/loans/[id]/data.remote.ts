@@ -21,7 +21,8 @@ export const getLoan = query(z.string(), async (id) => {
 
 export const getAvailableEquipment = query(z.void(), async () => {
 	await requireStaff();
-	return listEquipment({ status: 'available' });
+	const { rows } = await listEquipment({ status: 'available' });
+	return rows;
 });
 
 export const schedule = form('unchecked', async (data, issue) => {

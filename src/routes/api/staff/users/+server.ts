@@ -5,47 +5,40 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { count, desc, like, eq, isNull, or } from 'drizzle-orm';
-
-const PAGE_SIZE = 20;
+import { paginate, parsePagination } from '$lib/server/db/paginate';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
 	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
 	if (!allowed) return error(403, 'Staff access required');
 
-	const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
 	const search = url.searchParams.get('q')?.trim() ?? '';
-	const offset = (page - 1) * PAGE_SIZE;
 
-	// Build where clause
 	const searchCondition = search
 		? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`))
 		: undefined;
 
-	// Exclude soft-deleted users
 	const activeCondition = isNull(user.deletedAt);
 	const where = searchCondition
 		? (searchCondition && activeCondition)
 		: activeCondition;
 
-	const [totalResult, users] = await Promise.all([
-		db.select({ value: count() }).from(user).where(where),
-		db
-			.select({
-				id: user.id,
-				name: user.name,
-				email: user.email,
-				pronouns: user.pronouns,
-				createdAt: user.createdAt
-			})
-			.from(user)
-			.where(where)
-			.orderBy(desc(user.createdAt))
-			.limit(PAGE_SIZE)
-			.offset(offset)
-	]);
+	const dataQ = db
+		.select({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			pronouns: user.pronouns,
+			createdAt: user.createdAt
+		})
+		.from(user)
+		.where(where)
+		.orderBy(desc(user.createdAt))
+		.$dynamic();
 
-	const total = totalResult[0].value;
+	const countQ = db.select({ count: count() }).from(user).where(where);
+
+	const { rows: users, pagination } = await paginate(dataQ, countQ, parsePagination(url, 20));
 
 	// Fetch roles for all users on this page
 	const userIds = users.map((u) => u.id);
@@ -74,12 +67,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			...u,
 			roles: roleMap[u.id] ?? []
 		})),
-		pagination: {
-			page,
-			pageSize: PAGE_SIZE,
-			total,
-			totalPages: Math.ceil(total / PAGE_SIZE)
-		},
+		pagination,
 		search
 	});
 };

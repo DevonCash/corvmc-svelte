@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, count } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { buildRRule, describeFrequency } from './rrule-helpers';
 import type { RecurringFrequency } from './config';
@@ -301,8 +302,24 @@ export async function listActive(): Promise<SeriesListItem[]> {
 // listAll() — all series including cancelled (staff view with filters)
 // ---------------------------------------------------------------------------
 
-export async function listAll(): Promise<SeriesListItem[]> {
-	const rows = await db
+export async function listAll(
+	opts?: { filter?: string },
+	pagination: PaginationInput = {}
+) {
+	const conditions = [
+		eq(recurringSeries.prototypeType, 'reservation'),
+		isNull(recurringSeries.supersededBy)
+	];
+
+	if (opts?.filter === 'active') {
+		conditions.push(isNull(recurringSeries.cancelledAt));
+	} else if (opts?.filter === 'cancelled') {
+		conditions.push(sql`${recurringSeries.cancelledAt} is not null`);
+	}
+
+	const where = and(...conditions);
+
+	const dataQ = db
 		.select({
 			id: recurringSeries.id,
 			rrule: recurringSeries.rrule,
@@ -319,17 +336,23 @@ export async function listAll(): Promise<SeriesListItem[]> {
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				eq(recurringSeries.prototypeType, 'reservation'),
-				isNull(recurringSeries.supersededBy)
-			)
-		);
+		.where(where)
+		.$dynamic();
 
-	return rows.map((r) => ({
-		...r,
-		frequencyLabel: describeFrequency(r.rrule)
-	}));
+	const countQ = db
+		.select({ count: count() })
+		.from(recurringSeries)
+		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
+		.where(where);
+
+	const result = await paginate(dataQ, countQ, pagination);
+	return {
+		...result,
+		rows: result.rows.map((r) => ({
+			...r,
+			frequencyLabel: describeFrequency(r.rrule)
+		}))
+	};
 }
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,8 @@ import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
-import { eq, and, gt, ne, asc, desc, inArray } from 'drizzle-orm';
+import { eq, and, gt, ne, asc, desc, inArray, count } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
@@ -466,11 +467,10 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 }
 
 /** All events for staff, newest first. */
-export async function listAll(): Promise<EventRow[]> {
-	return db
-		.select()
-		.from(event)
-		.orderBy(desc(event.startsAt));
+export async function listAll(pagination: PaginationInput = {}) {
+	const dataQ = db.select().from(event).orderBy(desc(event.startsAt)).$dynamic();
+	const countQ = db.select({ count: count() }).from(event);
+	return paginate(dataQ, countQ, pagination);
 }
 
 // ---------------------------------------------------------------------------

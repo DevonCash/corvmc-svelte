@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -446,7 +447,10 @@ export async function leaveBand(bandId: string, userId: string) {
 // Staff queries
 // ---------------------------------------------------------------------------
 
-export async function listAll(opts?: { search?: string; status?: 'active' | 'deactivated' }) {
+export async function listAll(
+	opts?: { search?: string; status?: 'active' | 'deactivated' },
+	pagination: PaginationInput = {}
+) {
 	const conditions = [];
 
 	if (opts?.search) {
@@ -460,7 +464,7 @@ export async function listAll(opts?: { search?: string; status?: 'active' | 'dea
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-	return db
+	const dataQ = db
 		.select({
 			id: band.id,
 			name: band.name,
@@ -477,7 +481,16 @@ export async function listAll(opts?: { search?: string; status?: 'active' | 'dea
 		.from(band)
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(where)
-		.orderBy(band.name);
+		.orderBy(band.name)
+		.$dynamic();
+
+	const countQ = db
+		.select({ count: count() })
+		.from(band)
+		.innerJoin(user, eq(user.id, band.ownerId))
+		.where(where);
+
+	return paginate(dataQ, countQ, pagination);
 }
 
 export async function getByIdWithDetails(bandId: string) {
