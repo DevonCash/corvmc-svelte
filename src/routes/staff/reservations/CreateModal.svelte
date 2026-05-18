@@ -13,35 +13,34 @@
 	let endTime = $state('');
 	let notes = $state('');
 
-	const slotData = $derived(await getSlots(date));
-
-	const startOptions = $derived.by(() => {
-		if (!slotData) return [];
-		return slotData.slots.map((s) => ({
+	const startOptions = $derived.by(async () => {
+		const data = await getSlots(date);
+		return data.slots.map((s) => ({
 			value: s.startTime,
 			label: formatSlotTime(s.startTime),
 			available: s.available
 		}));
 	});
 
-	const endOptions = $derived.by(() => {
-		if (!startTime || !slotData) return [];
+	const endOptions = $derived.by(async () => {
+		if (!startTime) return [];
+		const data = await getSlots(date);
 
 		const opts: Array<{ value: string; label: string; available: boolean }> = [];
-		const startIdx = slotData.slots.findIndex((s) => s.startTime === startTime);
+		const startIdx = data.slots.findIndex((s) => s.startTime === startTime);
 		if (startIdx < 0) return [];
 
-		const slotsPerHour = 60 / slotData.config.slotMinutes;
-		const minSlots = slotData.config.minDurationHours * slotsPerHour;
-		const maxSlots = slotData.config.maxDurationHours * slotsPerHour;
+		const slotsPerHour = 60 / data.config.slotMinutes;
+		const minSlots = data.config.minDurationHours * slotsPerHour;
+		const maxSlots = data.config.maxDurationHours * slotsPerHour;
 
 		for (let i = minSlots; i <= maxSlots; i++) {
 			const slotIdx = startIdx + i;
-			if (slotIdx > slotData.slots.length) break;
+			if (slotIdx > data.slots.length) break;
 
-			const endSlot = slotIdx < slotData.slots.length ? slotData.slots[slotIdx] : null;
-			const time = endSlot?.startTime ?? addMinutes(startTime, i * slotData.config.slotMinutes);
-			const rangeAvailable = slotData.slots.slice(startIdx, slotIdx).every((s) => s.available);
+			const endSlot = slotIdx < data.slots.length ? data.slots[slotIdx] : null;
+			const time = endSlot?.startTime ?? addMinutes(startTime, i * data.config.slotMinutes);
+			const rangeAvailable = data.slots.slice(startIdx, slotIdx).every((s) => s.available);
 
 			opts.push({
 				value: time,
@@ -113,10 +112,10 @@
 				<select
 					bind:value={startTime}
 					class="select-bordered select w-full"
-					disabled={!slotData}
+					disabled={!(await startOptions)?.length}
 				>
 					<option value="">Select start time</option>
-					{#each startOptions as opt (opt.value)}
+					{#each await startOptions as opt (opt.value)}
 						<option value={opt.value}>
 							{opt.label}{opt.available ? '' : ' ⚠ conflict'}
 						</option>
@@ -132,7 +131,7 @@
 					disabled={!startTime}
 				>
 					<option value="">Select end time</option>
-					{#each endOptions as opt (opt.value)}
+					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>
 							{opt.label}{opt.available ? '' : ' (unavailable)'}
 						</option>
