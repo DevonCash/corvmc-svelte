@@ -7,6 +7,7 @@
 	import { confirmReservation, cancelReservation, cancelSeries, editSeries } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { MemberReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: MemberReservationsResponse } = $props();
@@ -77,7 +78,7 @@
 						</div>
 						<div class="flex items-center gap-2">
 							{#if res.recurringSeriesId}
-								<span class="badge badge-outline badge-sm">recurring</span>
+								<Badge variant="outline">recurring</Badge>
 							{/if}
 							<span class="badge {statusBadge[res.status] ?? ''}">{res.status}</span>
 							{#if res.status === 'scheduled'}
@@ -125,7 +126,7 @@
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
-								<span class="badge badge-success">active</span>
+								<Badge variant="success" size="md">active</Badge>
 								<button class="btn btn-ghost btn-sm" onclick={() => startEditSeries(series)}>Edit</button>
 								<Action
 									action={() => cancelSeries({ seriesId: series.id })}

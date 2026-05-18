@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ToggleGroup } from 'bits-ui';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { goto } from '$app/navigation';
 
 	type Tab = {
@@ -35,7 +36,7 @@
 		<ToggleGroup.Item value={tab.key} class="tab {active === tab.key ? 'tab-active' : ''}">
 			{tab.label}
 			{#if tab.badge != null}
-				<span class="badge badge-sm ml-1">{tab.badge}</span>
+				<Badge class="ml-1">{tab.badge}</Badge>
 			{/if}
 		</ToggleGroup.Item>
 	{/each}

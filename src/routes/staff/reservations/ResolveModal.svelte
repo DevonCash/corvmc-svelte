@@ -5,6 +5,7 @@
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
 
 	let {
@@ -49,7 +50,7 @@
 		<h3 class="text-lg font-bold">
 			Resolve
 			{#if visible.length > 0}
-				<span class="badge badge-warning badge-sm ml-1">{visible.length}</span>
+				<Badge variant="warning" class="ml-1">{visible.length}</Badge>
 			{/if}
 		</h3>
 	{/snippet}

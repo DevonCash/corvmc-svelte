@@ -5,6 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -145,7 +146,7 @@
 			{#snippet cell(_, l)}
 				<StatusBadge status={l.status} />
 				{#if l.isOverdue}
-					<span class="badge badge-error badge-xs ml-1">Overdue</span>
+					<Badge variant="error" size="xs" class="ml-1">Overdue</Badge>
 				{/if}
 			{/snippet}
 		</Column>

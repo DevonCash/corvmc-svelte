@@ -17,6 +17,7 @@
 		deleteAudienceCommand,
 		updateAudienceCommand
 	} from './data.remote';
+	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let id = $derived(page.params.id!);
 	let audienceData = $derived(await getAudienceDetail(id));
@@ -153,9 +154,9 @@
 				<Column key="status" header="Status" shrink>
 					{#snippet cell(_, s)}
 						{#if s.unsubscribedAt}
-							<span class="badge badge-ghost badge-xs">Unsubscribed</span>
+							<Badge variant="ghost" size="xs">Unsubscribed</Badge>
 						{:else}
-							<span class="badge badge-success badge-xs">Active</span>
+							<Badge variant="success" size="xs">Active</Badge>
 						{/if}
 					{/snippet}
 				</Column>

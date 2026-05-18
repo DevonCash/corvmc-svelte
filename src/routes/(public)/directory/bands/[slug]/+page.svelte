@@ -2,6 +2,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { DirectoryBandResponse } from '$lib/types/api';
 
 	let { data }: { data: DirectoryBandResponse } = $props();
@@ -36,7 +37,7 @@
 				</p>
 			{/if}
 			{#if band.lookingForMembers}
-				<span class="badge badge-primary badge-sm mt-1">Looking for members</span>
+				<Badge variant="primary" class="mt-1">Looking for members</Badge>
 			{/if}
 		</div>
 	</div>
@@ -50,7 +51,7 @@
 			<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
 			<div class="flex flex-wrap gap-1">
 				{#each band.genres as genre}
-					<span class="badge badge-ghost badge-sm">{genre}</span>
+					<Badge variant="ghost">{genre}</Badge>
 				{/each}
 			</div>
 		</div>

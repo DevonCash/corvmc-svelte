@@ -7,6 +7,7 @@
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let id = $derived(page.params.id!);
 	let member = $derived(await getMember(id));
@@ -36,7 +37,7 @@
 						<p class="opacity-60">{member.tagline}</p>
 					{/if}
 					{#if member.lookingForBand}
-						<span class="badge badge-primary badge-sm mt-1">Looking for a band</span>
+						<Badge variant="primary" class="mt-1">Looking for a band</Badge>
 					{/if}
 				</div>
 			</div>
@@ -54,7 +55,7 @@
 							<p class="text-xs font-medium opacity-60 mb-1">Instruments</p>
 							<div class="flex flex-wrap gap-1">
 								{#each member.instruments as inst}
-									<span class="badge badge-outline badge-sm">{inst}</span>
+									<Badge variant="outline">{inst}</Badge>
 								{/each}
 							</div>
 						</div>
@@ -64,7 +65,7 @@
 							<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
 							<div class="flex flex-wrap gap-1">
 								{#each member.genres as genre}
-									<span class="badge badge-ghost badge-sm">{genre}</span>
+									<Badge variant="ghost">{genre}</Badge>
 								{/each}
 							</div>
 						</div>

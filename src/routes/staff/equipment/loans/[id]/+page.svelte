@@ -12,6 +12,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
@@ -39,7 +40,7 @@
 	>
 		<StatusBadge status={loan.status} />
 		{#if loan.isOverdue}
-			<span class="badge badge-error">Overdue</span>
+			<Badge variant="error" size="md">Overdue</Badge>
 		{/if}
 	</PageHeader>
 <PageContent width="3xl">
@@ -58,7 +59,7 @@
 					{#if loan.equipmentName}
 						<a href="/staff/equipment/{loan.equipmentId}" class="link">{loan.equipmentName}</a>
 						{#if loan.categoryName}
-							<span class="badge badge-outline badge-xs ml-1">{loan.categoryName}</span>
+							<Badge variant="outline" size="xs" class="ml-1">{loan.categoryName}</Badge>
 						{/if}
 					{:else}
 						<span class="italic opacity-60">Not yet assigned</span>

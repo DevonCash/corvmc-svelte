@@ -16,6 +16,7 @@
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import { confirmReservation, completeReservation } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { StaffReservationsResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffReservationsResponse } = $props();
@@ -65,7 +66,7 @@
 			>
 				Resolve
 				{#if data.counts.unresolved > 0}
-					<span class="badge badge-sm">{data.counts.unresolved}</span>
+					<Badge>{data.counts.unresolved}</Badge>
 				{/if}
 			</button>
 			<CreateReservation />

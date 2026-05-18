@@ -5,6 +5,7 @@
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import {
@@ -194,7 +195,7 @@
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
-								<span class="badge badge-warning badge-sm">awaiting signup</span>
+								<Badge variant="warning">awaiting signup</Badge>
 								<Form
 									remote={revokePlatformInviteRemote}
 									successToast="Invite revoked"

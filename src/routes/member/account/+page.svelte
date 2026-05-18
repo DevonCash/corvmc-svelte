@@ -5,6 +5,8 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import SimpleTable from '$lib/components/shared/Table/SimpleTable.svelte';
+	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -138,45 +140,42 @@
 				<span class="loading loading-spinner loading-sm"></span>
 			</div>
 		{:else}
-			<div class="overflow-x-auto">
-				<table class="table table-sm">
-					<thead>
-						<tr>
-							<th>Notification</th>
-							<th class="text-center w-20"><span class="tooltip" data-tip="Email"><IconMail size={16} /></span></th>
-							<th class="text-center w-20"><span class="tooltip" data-tip="In-app"><IconBell size={16} /></span></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each notifPrefs as pref (pref.key)}
-							<tr>
-								<td>
-									<div>
-										<p class="font-medium text-sm">{pref.label}</p>
-										<p class="text-xs opacity-60">{pref.description}</p>
-									</div>
-								</td>
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-sm toggle-primary"
-										checked={pref.email}
-										onchange={() => togglePref(pref.key, 'email')}
-									/>
-								</td>
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-sm toggle-primary"
-										checked={pref.inApp}
-										onchange={() => togglePref(pref.key, 'inApp')}
-									/>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<SimpleTable data={notifPrefs}>
+				<Column key="label" header="Notification">
+					{#snippet cell(_, pref)}
+						<div>
+							<p class="font-medium text-sm">{pref.label}</p>
+							<p class="text-xs opacity-60">{pref.description}</p>
+						</div>
+					{/snippet}
+				</Column>
+				<Column key="email" class="text-center w-20">
+					{#snippet headerCell()}
+						<span class="tooltip" data-tip="Email"><IconMail size={16} /></span>
+					{/snippet}
+					{#snippet cell(_, pref)}
+						<input
+							type="checkbox"
+							class="toggle toggle-sm toggle-primary"
+							checked={pref.email}
+							onchange={() => togglePref(pref.key, 'email')}
+						/>
+					{/snippet}
+				</Column>
+				<Column key="inApp" class="text-center w-20">
+					{#snippet headerCell()}
+						<span class="tooltip" data-tip="In-app"><IconBell size={16} /></span>
+					{/snippet}
+					{#snippet cell(_, pref)}
+						<input
+							type="checkbox"
+							class="toggle toggle-sm toggle-primary"
+							checked={pref.inApp}
+							onchange={() => togglePref(pref.key, 'inApp')}
+						/>
+					{/snippet}
+				</Column>
+			</SimpleTable>
 		{/if}
 	</InfoCard>
 

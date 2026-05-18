@@ -8,6 +8,7 @@
 		IconUser
 	} from '@tabler/icons-svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import type { BandLayoutResponse } from '$lib/types/api';
@@ -40,7 +41,7 @@
 	{#snippet brand()}
 		<div class="flex items-center gap-2 px-6 py-5">
 			<span class="truncate text-xl font-bold">{data.band.name}</span>
-			<span class="badge badge-sm badge-primary">Band</span>
+			<Badge variant="primary">Band</Badge>
 		</div>
 	{/snippet}
 	{#snippet navigation()}

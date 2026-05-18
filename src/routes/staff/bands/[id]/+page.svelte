@@ -26,6 +26,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -75,7 +76,7 @@
 	<Form remote={updateBand} successToast="Band updated">
 		<PageHeader subtitle="Band" title={band.name} backHref="/staff/bands">
 			{#if isDeactivated}
-				<span class="badge badge-error">Deactivated</span>
+				<Badge variant="error" size="md">Deactivated</Badge>
 			{/if}
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}
@@ -259,7 +260,7 @@
 							<option value="admin">Admin</option>
 						</select>
 					{:else}
-						<span class="badge badge-outline badge-sm">{m.role}</span>
+						<Badge variant="outline">{m.role}</Badge>
 					{/if}
 				{/snippet}
 			</Column>
@@ -318,7 +319,7 @@
 				<Column key="email" header="Email" />
 				<Column key="role" header="Role" shrink>
 					{#snippet cell(_, inv)}
-						<span class="badge badge-outline badge-sm">{inv.role}</span>
+						<Badge variant="outline">{inv.role}</Badge>
 					{/snippet}
 				</Column>
 				<Column key="position" header="Position">

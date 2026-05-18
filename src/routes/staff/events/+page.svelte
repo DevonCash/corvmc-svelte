@@ -5,6 +5,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { StaffEventsResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffEventsResponse } = $props();
@@ -60,12 +61,12 @@
 
 				<td>
 					{#each parseTags(e.tags) as tag (tag)}
-						<span class="mr-1 badge badge-outline badge-sm">{tag}</span>
+						<Badge variant="outline" class="mr-1">{tag}</Badge>
 					{/each}
 				</td>
 				<td>
 					{#if e.reservationId}
-						<span class="badge badge-sm badge-info">Reserved</span>
+						<Badge variant="info">Reserved</Badge>
 					{:else}
 						<span class="text-sm opacity-40">—</span>
 					{/if}

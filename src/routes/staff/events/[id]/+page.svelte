@@ -12,6 +12,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { StaffEventDetailResponse } from '$lib/types/api';
 
 	let { data }: { data: StaffEventDetailResponse } = $props();
@@ -402,7 +403,7 @@
 		{#if parseTags(evt.tags).length > 0}
 			<div class="mt-4 pt-4 border-t border-base-200 flex gap-1 flex-wrap">
 				{#each parseTags(evt.tags) as tag (tag)}
-					<span class="badge badge-outline badge-sm">{tag}</span>
+					<Badge variant="outline">{tag}</Badge>
 				{/each}
 			</div>
 		{/if}

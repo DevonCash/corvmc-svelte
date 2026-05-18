@@ -2,10 +2,12 @@
 	import { invalidateAll } from '$app/navigation';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
+	import SimpleTable from '$lib/components/shared/Table/SimpleTable.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
@@ -88,7 +90,7 @@
 		</Column>
 		<Column key="condition" header="Condition" shrink>
 			{#snippet cell(_, e)}
-				<span class="badge badge-outline badge-sm">{e.condition}</span>
+				<Badge variant="outline">{e.condition}</Badge>
 			{/snippet}
 		</Column>
 		<Column key="availableQuantity" header="Available" shrink sortable>
@@ -111,49 +113,35 @@
 </PageContent>
 
 <Modal bind:open={showCategoryModal} title="Manage Categories" maxWidth="max-w-lg">
-	<div class="mb-4 overflow-x-auto">
-		<table class="table table-sm">
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Pricing Tier</th>
-					<th>Order</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.categories as cat (cat.id)}
-					<tr>
-						<td>{cat.name}</td>
-						<td><span class="badge badge-outline badge-sm">{cat.pricingTier}</span></td>
-						<td>{cat.displayOrder}</td>
-						<td class="text-right">
-							<button
-								class="btn btn-ghost btn-xs"
-								onclick={() =>
-									(editingCategory = {
-										id: cat.id,
-										name: cat.name,
-										displayOrder: cat.displayOrder,
-										pricingTier: cat.pricingTier as PricingTier
-									})}>Edit</button
-							>
-							<Action
-								action={async () => {
-									await removeCategory({ id: cat.id });
-									await invalidateAll();
-								}}
-								confirm='Delete "{cat.name}"? Category must have no equipment.'
-								label="Delete"
-								class="text-error btn-ghost btn-xs"
-							/>
-						</td>
-					</tr>
-				{:else}
-					<tr><td colspan="4" class="text-center opacity-60">No categories</td></tr>
-				{/each}
-			</tbody>
-		</table>
+	<div class="mb-4">
+		<SimpleTable data={data.categories} empty="No categories">
+			<Column key="name" header="Name" />
+			<Column key="pricingTier" header="Pricing Tier" type="badge" />
+			<Column key="displayOrder" header="Order" />
+			<Column key="id" header="" shrink class="text-right">
+				{#snippet cell(_, cat)}
+					<button
+						class="btn btn-ghost btn-xs"
+						onclick={() =>
+							(editingCategory = {
+								id: cat.id,
+								name: cat.name,
+								displayOrder: cat.displayOrder,
+								pricingTier: cat.pricingTier as PricingTier
+							})}>Edit</button
+					>
+					<Action
+						action={async () => {
+							await removeCategory({ id: cat.id });
+							await invalidateAll();
+						}}
+						confirm='Delete "{cat.name}"? Category must have no equipment.'
+						label="Delete"
+						class="text-error btn-ghost btn-xs"
+					/>
+				{/snippet}
+			</Column>
+		</SimpleTable>
 	</div>
 
 	<form

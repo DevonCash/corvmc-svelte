@@ -16,6 +16,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -34,7 +35,7 @@
 	<Form remote={editEquipment} successToast="Equipment updated">
 		<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
 			{#if isDeactivated}
-				<span class="badge badge-error">Deactivated</span>
+				<Badge variant="error" size="md">Deactivated</Badge>
 			{/if}
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}
@@ -75,7 +76,7 @@
 					<dd class="font-mono text-xs">{item.id}</dd>
 
 					<dt class="opacity-60">Category</dt>
-					<dd>{item.category.name} <span class="badge badge-outline badge-xs ml-1">{item.category.pricingTier}</span></dd>
+					<dd>{item.category.name} <Badge variant="outline" size="xs" class="ml-1">{item.category.pricingTier}</Badge></dd>
 
 					<dt class="opacity-60">Available</dt>
 					<dd class:text-error={item.availableQuantity <= 0}>
@@ -135,7 +136,7 @@
 				{#snippet cell(_, loan)}
 					<StatusBadge status={loan.status} />
 					{#if loan.isOverdue}
-						<span class="badge badge-error badge-xs ml-1">Overdue</span>
+						<Badge variant="error" size="xs" class="ml-1">Overdue</Badge>
 					{/if}
 				{/snippet}
 			</Column>
