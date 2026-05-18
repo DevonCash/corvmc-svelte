@@ -16,6 +16,7 @@
 		IconMail,
 		IconMailbox,
 		IconTool,
+		IconPackage,
 		IconBook,
 
 		IconDashboard,
@@ -77,9 +78,18 @@
 			<Nav.Item href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic />{/snippet}
 			</Nav.Item>
-			<Nav.Item href="/staff/equipment" label="Equipment">
+			<Nav.Collapsible
+				href="/staff/equipment/loans"
+				label="Equipment"
+				childHrefs={['/staff/equipment/loans', '/staff/equipment']}
+			>
 				{#snippet icon()}<IconTool />{/snippet}
-			</Nav.Item>
+				{#snippet children()}
+					<Nav.Item href="/staff/equipment" label="Inventory">
+						{#snippet icon()}<IconPackage />{/snippet}
+					</Nav.Item>
+				{/snippet}
+			</Nav.Collapsible>
 		</Nav.Group>
 
 		<Nav.Group title="Marketing">
