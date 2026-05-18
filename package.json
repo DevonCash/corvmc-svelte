@@ -87,6 +87,7 @@
 		"@types/luxon": "^3.7.1",
 		"bcryptjs": "^3.0.2",
 		"bits-ui": "^2.18.1",
+		"clsx": "^2.1.1",
 		"daisyui": "^5.5.19",
 		"emittery": "^1.2.1",
 		"luxon": "^3.7.2",

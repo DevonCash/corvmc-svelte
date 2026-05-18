@@ -1,24 +1,19 @@
 import { z } from 'zod';
 import { redirect, error } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
+import { requireMember } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq } from 'drizzle-orm';
 import { checkout } from '$lib/server/finance/payment-service';
 import { getProductConfig, buildLineItem } from '$lib/server/finance/product-config-service';
 
-function requireUser() {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw error(401, 'Not authenticated');
-	return locals.user;
-}
-
 export const pay = form(
 	z.object({
 		coverFees: z.literal('on').optional()
 	}),
 	async (data) => {
-		const user = requireUser();
+		const user = await requireMember();
 		const { params, url } = getRequestEvent();
 
 		const [row] = await db

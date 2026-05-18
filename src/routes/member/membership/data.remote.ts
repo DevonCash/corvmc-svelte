@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { redirect, error } from '@sveltejs/kit';
 import { form, command, getRequestEvent } from '$app/server';
+import { requireMember } from '$lib/server/authorization';
 import {
 	createCheckoutSession,
 	updateQuantity,
@@ -9,12 +10,6 @@ import {
 import { DOLLARS_PER_UNIT } from '$lib/finance/types';
 
 const MIN_QUANTITY = 2;
-
-function requireUser() {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw error(401, 'Not authenticated');
-	return locals.user;
-}
 
 function requireStripeId(user: { stripeId: string | null }) {
 	if (!user.stripeId) throw error(400, 'No billing account found. Please contact support.');
@@ -35,7 +30,7 @@ const amountSchema = z
 	});
 
 export const createSubscription = form(amountSchema, async (data) => {
-	const user = requireUser();
+	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 	const { url } = getRequestEvent();
 
@@ -52,7 +47,7 @@ export const createSubscription = form(amountSchema, async (data) => {
 });
 
 export const updateAmount = form(amountSchema, async (data) => {
-	const user = requireUser();
+	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 
 	await updateQuantity(stripeId, data.amount / DOLLARS_PER_UNIT, data.coverFees === 'on');
@@ -60,7 +55,7 @@ export const updateAmount = form(amountSchema, async (data) => {
 });
 
 export const resumeSubscription = command(z.void(), async () => {
-	const user = requireUser();
+	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 
 	await resume(stripeId);

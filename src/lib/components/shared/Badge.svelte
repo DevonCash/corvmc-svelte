@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import clsx from 'clsx';
 
 	let {
 		variant,
@@ -12,8 +13,15 @@
 		class?: string;
 		children: Snippet;
 	} = $props();
+
+	const classes = $derived(clsx(
+		'badge',
+		variant && `badge-${variant}`,
+		size !== 'md' && `badge-${size}`,
+		className
+	));
 </script>
 
-<span class="badge {variant ? `badge-${variant}` : ''} {size !== 'md' ? `badge-${size}` : ''} {className}">
+<span class={classes}>
 	{@render children()}
 </span>
