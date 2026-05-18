@@ -5,6 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatDollars } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 
 	let products = $derived(await getProducts());
 </script>
@@ -23,7 +24,7 @@
 			{@const instance = updateProduct.for(product.key)}
 			<Form
 				remote={instance}
-				successToast="{product.name} updated"
+				onsuccess={() => toast.success(`${product.name} updated`)}
 			>
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">

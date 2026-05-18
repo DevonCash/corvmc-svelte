@@ -32,6 +32,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
@@ -73,7 +74,7 @@
 	}
 </script>
 
-	<Form remote={updateBand} successToast="Band updated">
+	<Form remote={updateBand} onsuccess={() => toast.success('Band updated')}>
 		<PageHeader subtitle="Band" title={band.name} backHref="/staff/bands">
 			{#if isDeactivated}
 				<Badge variant="error" size="md">Deactivated</Badge>
@@ -121,16 +122,16 @@
 						<Action
 							action={() => reactivateBand({})}
 							label="Reactivate"
-							successToast="Band reactivated"
 							class="btn-success btn-sm"
+							onsuccess={() => toast.success('Band reactivated')}
 						/>
 					{:else}
 						<Action
 							action={() => deactivateBand({})}
 							label="Deactivate"
 							confirm="Deactivate this band? All future reservations will be cancelled."
-							successToast="Band deactivated"
 							class="btn-error btn-sm"
+							onsuccess={() => toast.success('Band deactivated')}
 						/>
 					{/if}
 				</div>
@@ -155,9 +156,9 @@
 					}}
 					label="Invite by Email"
 					modalTitle="Invite by Email"
-					successToast="Email invitation sent"
 					class="btn-sm btn-outline btn-primary"
 					canSubmit={!!emailInviteAddress && emailInviteAddress.includes('@')}
+					onsuccess={() => toast.success('Email invitation sent')}
 				>
 					{#snippet form({ close })}
 						<div class="space-y-3">
@@ -191,10 +192,9 @@
 					}}
 					label="Add Member"
 					modalTitle="Invite Member"
-					successToast="Invitation sent"
 					class="btn-sm btn-primary"
 					canSubmit={!!inviteUserId}
-					onsuccess={() => invalidateAll()}
+					onsuccess={() => { toast.success('Invitation sent'); invalidateAll(); }}
 				>
 					{#snippet form({ close })}
 						<div class="space-y-3">
@@ -284,9 +284,8 @@
 									action={() => revokeInvite({ memberId: m.id })}
 									label="Revoke"
 									confirm={`Revoke invitation for ${m.userName}?`}
-									successToast="Invitation revoked"
 									class="btn-ghost btn-xs text-warning"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Invitation revoked'); invalidateAll(); }}
 								/>
 							{/if}
 							{#if m.status === 'active'}
@@ -294,16 +293,16 @@
 									action={() => transferBandOwnership({ newOwnerId: m.userId })}
 									label="Make owner"
 									confirm={`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`}
-									successToast="Ownership transferred"
 									class="btn-ghost btn-xs"
+									onsuccess={() => toast.success('Ownership transferred')}
 								/>
 							{/if}
 							<Action
 								action={() => removeBandMember({ memberId: m.id })}
 								label="Remove"
 								confirm={`Remove ${m.userName} from this band?`}
-								successToast="Member removed"
 								class="btn-ghost btn-xs text-error"
+								onsuccess={() => toast.success('Member removed')}
 							/>
 						</div>
 					{/if}
@@ -334,8 +333,8 @@
 							action={() => revokePlatformInvite({ inviteId: inv.id })}
 							label="Revoke"
 							confirm={`Revoke invite for ${inv.email}?`}
-							successToast="Invite revoked"
 							class="btn-ghost btn-xs text-warning"
+							onsuccess={() => toast.success('Invite revoked')}
 						/>
 					{/snippet}
 				</Column>

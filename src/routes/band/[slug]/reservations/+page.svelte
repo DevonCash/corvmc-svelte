@@ -7,6 +7,7 @@
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation } from './data.remote';
 	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/types/api';
@@ -67,9 +68,8 @@
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
 									<Form
 										remote={cancel}
-										successToast="Reservation cancelled"
-										errorToast="Failed to cancel"
-										onsuccess={() => invalidateAll()}
+										onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
+										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input type="hidden" name="reservationId" value={res.id} />
 										<SubmitButton label="Cancel" class="btn-ghost btn-xs" />

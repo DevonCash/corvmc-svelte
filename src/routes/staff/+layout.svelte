@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -110,17 +110,7 @@
 			</Nav.Item>
 		</Nav.Group>
 	{/snippet}
-	<svelte:boundary>
+	<ErrorToastBoundary>
 		{@render children()}
-
-		{#snippet pending()}
-			<div class="flex items-center justify-center p-12">
-				<span class="loading loading-spinner loading-lg"></span>
-			</div>
-		{/snippet}
-
-		{#snippet failed(error, reset)}
-			<Alert type="error" {reset}>Failed to load: {String(error)}</Alert>
-		{/snippet}
-	</svelte:boundary>
+	</ErrorToastBoundary>
 </AppShell>

@@ -10,6 +10,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import type { MemberEquipmentResponse } from '$lib/types/api';
 
@@ -107,8 +108,8 @@
 <Modal bind:open={showRequestModal} title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`} maxWidth="max-w-md">
 	<Form
 		remote={submitRequest}
-		successToast="Request submitted! Staff will confirm your pickup."
 		onsuccess={() => {
+			toast.success('Request submitted! Staff will confirm your pickup.');
 			showRequestModal = false;
 			goto('/member/equipment/loans');
 		}}

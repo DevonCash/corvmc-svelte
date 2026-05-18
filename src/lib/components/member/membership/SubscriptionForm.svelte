@@ -13,14 +13,12 @@
 		currentAmount,
 		currentCoverFees = false,
 		remote,
-		successToast,
 		onsuccess
 	}: {
 		mode: 'create' | 'modify';
 		currentAmount?: number;
 		currentCoverFees?: boolean;
 		remote: RemoteForm<any, any>;
-		successToast?: string;
 		onsuccess?: () => void;
 	} = $props();
 
@@ -39,7 +37,7 @@
 	const totalDisplay = $derived(coverFees ? ((amount * 100 + feeCents) / 100).toFixed(2) : amount.toFixed(2));
 </script>
 
-<Form {remote} {successToast} {onsuccess} class="card bg-base-100 shadow-sm">
+<Form {remote} {onsuccess} class="card bg-base-100 shadow-sm">
 	<div class="card-body">
 		<h3 class="card-title">
 			{mode === 'create' ? 'Start Contributing' : 'Update Your Contribution'}

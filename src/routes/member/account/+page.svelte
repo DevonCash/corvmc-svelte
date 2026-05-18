@@ -76,8 +76,8 @@
 	<InfoCard title="Contact Information">
 		<Form
 			remote={updateProfile}
-			successToast="Contact info updated"
-			errorToast="Update failed"
+			onsuccess={() => toast.success('Contact info updated')}
+			onfailure={() => toast.error('Update failed')}
 		>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
@@ -255,8 +255,8 @@
 					action={changePassword}
 					label="Change Password"
 					modalTitle="Change Password"
-					successToast="Password changed"
-					errorToast="Password change failed"
+					onsuccess={() => toast.success('Password changed')}
+					onfailure={() => toast.error('Password change failed')}
 					class="btn-outline btn-sm"
 				>
 					{#snippet form({ close })}
@@ -306,10 +306,9 @@
 						label="Delete Account"
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
-						successToast="Account deleted"
-						errorToast="Deletion failed"
+						onfailure={() => toast.error('Deletion failed')}
 						class="btn-error btn-sm"
-						onsuccess={() => goto('/login')}
+						onsuccess={() => { toast.success('Account deleted'); goto('/login'); }}
 					>
 						{#snippet form({ close })}
 							<div class="alert alert-error">

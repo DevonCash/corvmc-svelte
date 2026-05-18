@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { DOLLARS_PER_UNIT, type SubscriptionInfo } from '$lib/finance/types';
@@ -70,8 +71,7 @@
 					currentAmount={amountPerMonth}
 					currentCoverFees={subscription.coveringFees}
 					remote={updateRemote}
-					successToast="Contribution updated"
-					onsuccess={() => editing = false}
+					onsuccess={() => { editing = false; toast.success('Contribution updated'); }}
 				/>
 			</div>
 		{/if}

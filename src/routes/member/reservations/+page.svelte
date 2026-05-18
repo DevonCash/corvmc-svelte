@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -88,8 +89,7 @@
 								<Action
 									action={() => confirmReservation({ reservationId: res.id })}
 									label="Confirm"
-									successToast="Reservation confirmed"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Reservation confirmed'); invalidateAll(); }}
 									class="btn-success btn-outline btn-sm"
 								/>
 							{/if}
@@ -98,8 +98,7 @@
 									action={() => cancelReservation({ reservationId: res.id })}
 									label="Cancel"
 									confirm="Cancel this reservation?"
-									successToast="Reservation cancelled"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
 									class="btn-ghost btn-sm"
 								/>
 							{/if}
@@ -132,8 +131,7 @@
 									action={() => cancelSeries({ seriesId: series.id })}
 									label="Cancel"
 									confirm="Cancel this recurring series? Future reservations will not be created."
-									successToast="Series cancelled"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Series cancelled'); invalidateAll(); }}
 									class="btn-ghost btn-sm"
 								/>
 							</div>
@@ -179,8 +177,7 @@
 											return result;
 										}}
 										label="Update Schedule"
-										successToast="Series schedule updated"
-										onsuccess={() => invalidateAll()}
+										onsuccess={() => { toast.success('Series schedule updated'); invalidateAll(); }}
 										class="btn-primary btn-sm"
 									/>
 								</div>

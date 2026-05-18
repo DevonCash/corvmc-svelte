@@ -8,6 +8,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import {
 		searchUsers,
 		inviteMember,
@@ -114,9 +115,8 @@
 								{@const remove = removeMember.for(member.id)}
 								<Form
 									remote={remove}
-									successToast="Member removed"
-									errorToast="Failed to remove"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Member removed'); invalidateAll(); }}
+									onfailure={() => toast.error('Failed to remove')}
 								>
 									<input type="hidden" name="memberId" value={member.id} />
 									<SubmitButton label="Remove" class="btn-ghost btn-xs" />
@@ -161,9 +161,8 @@
 								{@const revoke = revokeInvitation.for(invite.id)}
 								<Form
 									remote={revoke}
-									successToast="Invitation revoked"
-									errorToast="Failed to revoke"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => { toast.success('Invitation revoked'); invalidateAll(); }}
+									onfailure={() => toast.error('Failed to revoke')}
 								>
 									<input type="hidden" name="memberId" value={invite.id} />
 									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
@@ -198,11 +197,11 @@
 								<Badge variant="warning">awaiting signup</Badge>
 								<Form
 									remote={revokePlatformInviteRemote}
-									successToast="Invite revoked"
-									errorToast="Failed to revoke"
 									onsuccess={() => {
+										toast.success('Invite revoked');
 										getPlatformInvites().then((r) => (platformInvites = r));
 									}}
+									onfailure={() => toast.error('Failed to revoke')}
 								>
 									<input type="hidden" name="inviteId" value={invite.id} />
 									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
@@ -248,14 +247,14 @@
 	{#if inviteMode === 'search'}
 		<Form
 			remote={inviteMember}
-			successToast="Invitation sent"
-			errorToast="Failed to send invitation"
 			onsuccess={() => {
+				toast.success('Invitation sent');
 				showInviteModal = false;
 				selectedUser = null;
 				searchQuery = '';
 				invalidateAll();
 			}}
+			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
 				<Field
@@ -322,14 +321,14 @@
 	{:else}
 		<Form
 			remote={inviteByEmail}
-			successToast="Invitation sent"
-			errorToast="Failed to send invitation"
 			onsuccess={() => {
+				toast.success('Invitation sent');
 				showInviteModal = false;
 				searchQuery = '';
 				invalidateAll();
 				getPlatformInvites().then((r) => (platformInvites = r));
 			}}
+			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
 				<p class="text-sm opacity-70">
@@ -356,12 +355,12 @@
 	{#if transferTarget}
 		<Form
 			remote={transferOwner}
-			successToast="Ownership transferred"
-			errorToast="Failed to transfer"
 			onsuccess={() => {
+				toast.success('Ownership transferred');
 				showTransferModal = false;
 				invalidateAll();
 			}}
+			onfailure={() => toast.error('Failed to transfer')}
 		>
 			<div class="space-y-4">
 				<div class="alert alert-warning">
@@ -384,9 +383,8 @@
 <Modal title="Leave Band" bind:open={showLeaveModal}>
 	<Form
 		remote={leave}
-		successToast="You have left the band"
-		errorToast="Failed to leave"
-		onsuccess={() => goto('/member/bands')}
+		onsuccess={() => { toast.success('You have left the band'); goto('/member/bands'); }}
+		onfailure={() => toast.error('Failed to leave')}
 	>
 		<div class="space-y-4">
 			<p>

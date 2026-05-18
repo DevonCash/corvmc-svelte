@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
+	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/finance/types';
 	import Action from '$lib/components/shared/Action.svelte';
 
@@ -34,7 +35,7 @@
 				action={resumeAction}
 				label="Resume Membership"
 				class="btn-sm btn-primary"
-				successToast="Membership resumed"
+				onsuccess={() => toast.success('Membership resumed')}
 			/>
 
 			{#if billingPortalUrl}

@@ -13,6 +13,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
+	import { toast } from 'svelte-sonner';
 	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
 
 	let profile = $derived(await getProfile());
@@ -52,7 +53,7 @@
 	}
 </script>
 
-	<Form remote={saveProfile} successToast="Profile saved">
+	<Form remote={saveProfile} onsuccess={() => toast.success('Profile saved')}>
 		<PageHeader subtitle="Profile" title="My Profile">
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}

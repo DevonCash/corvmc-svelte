@@ -7,6 +7,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 
 	// Resolve date from URL, default to today
 	let dateParam = $derived(
@@ -112,7 +113,7 @@
 		<Form
 			remote={bookReservation}
 			{initial}
-			errorToast="Booking failed"
+			onfailure={() => toast.error('Booking failed')}
 			onsuccess={() => {
 				const id = bookReservation.result?.reservationId;
 				if (id) goto(`/member/reservations/${id}/pay`);

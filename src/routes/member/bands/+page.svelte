@@ -8,6 +8,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { createBand, acceptInvite, declineInvite } from './data.remote';
 	import type { MemberBandsResponse } from '$lib/types/api';
 
@@ -45,18 +46,16 @@
 								<div class="flex gap-2">
 									<Form
 										remote={accept}
-										successToast="Invitation accepted"
-										errorToast="Failed to accept"
-										onsuccess={() => invalidateAll()}
+										onfailure={() => toast.error('Failed to accept')}
+										onsuccess={() => { toast.success('Invitation accepted'); invalidateAll(); }}
 									>
 										<input type="hidden" name="memberId" value={invite.id} />
 										<SubmitButton label="Accept" successLabel="Accepted" class="btn-primary btn-sm" />
 									</Form>
 									<Form
 										remote={decline}
-										successToast="Invitation declined"
-										errorToast="Failed to decline"
-										onsuccess={() => invalidateAll()}
+										onfailure={() => toast.error('Failed to decline')}
+										onsuccess={() => { toast.success('Invitation declined'); invalidateAll(); }}
 									>
 										<input type="hidden" name="memberId" value={invite.id} />
 										<SubmitButton label="Decline" successLabel="Declined" class="btn-ghost btn-sm" />
@@ -100,9 +99,9 @@
 <Modal title="Create Band" bind:open={showCreateModal}>
 	<Form
 		remote={createBand}
-		successToast="Band created"
-		errorToast="Failed to create band"
+		onfailure={() => toast.error('Failed to create band')}
 		onsuccess={(result) => {
+			toast.success('Band created');
 			showCreateModal = false;
 			if (result?.slug) goto(`/band/${result.slug}`);
 		}}

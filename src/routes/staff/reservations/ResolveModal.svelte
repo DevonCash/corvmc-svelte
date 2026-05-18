@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { resolveComplete, resolveNoShow } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
@@ -85,16 +86,14 @@
 										endsAt: r.endsAt
 									})}
 								label="Cash received"
-								successToast="Marked as paid"
 								class="btn-success btn-outline btn-sm"
-								onsuccess={() => markResolved(r.id)}
+								onsuccess={() => { toast.success('Marked as paid'); markResolved(r.id); }}
 							/>
 							<Action
 								action={() => resolveNoShow({ reservationId: r.id })}
 								label="No-show"
-								successToast="Marked as no-show"
 								class="btn-error btn-outline btn-sm"
-								onsuccess={() => markResolved(r.id)}
+								onsuccess={() => { toast.success('Marked as no-show'); markResolved(r.id); }}
 							/>
 						</div>
 					</div>

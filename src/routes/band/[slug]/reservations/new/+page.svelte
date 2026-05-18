@@ -7,6 +7,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 	import type { BandLayoutResponse } from '$lib/types/api';
 
 	let { data }: { data: BandLayoutResponse } = $props();
@@ -106,10 +107,10 @@
 		<Form
 			remote={bookReservation}
 			{initial}
-			errorToast="Booking failed"
 			onsuccess={() => {
 				goto(`reservations`);
 			}}
+			onfailure={() => toast.error('Booking failed')}
 		>
 			<input type="hidden" name="date" value={currentDate} />
 

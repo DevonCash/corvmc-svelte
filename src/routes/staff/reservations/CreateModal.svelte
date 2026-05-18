@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { searchMembers, getSlots, checkConflicts, createReservation } from './data.remote';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
@@ -86,10 +87,10 @@
 	modalTitle="New Reservation"
 	submitLabel="Create Reservation"
 	canSubmit={!!selectedMember && !!date && !!startTime && !!endTime}
-	successToast="Reservation created"
 	class="btn-primary btn-sm"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
+		toast.success('Reservation created');
 		const r = result as { reservationId?: string };
 		await invalidateAll();
 		if (r?.reservationId) goto(`/staff/reservations/${r.reservationId}`);
