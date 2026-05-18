@@ -56,7 +56,7 @@ describe('ReservationService', () => {
 		};
 
 		it('creates a reservation when validation passes and no conflict', async () => {
-			vi.mocked(validateBooking).mockReturnValue({ valid: true });
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
 
 			// tx.select for conflict check — no conflicts
 			const txWhere = vi.fn().mockResolvedValue([]);
@@ -76,13 +76,13 @@ describe('ReservationService', () => {
 		});
 
 		it('throws ReservationValidationError when time is invalid', async () => {
-			vi.mocked(validateBooking).mockReturnValue({ valid: false, error: 'Too short' });
+			vi.mocked(validateBooking).mockResolvedValue({ valid: false, error: 'Too short' });
 
 			await expect(create(params)).rejects.toThrow('Too short');
 		});
 
 		it('throws ReservationConflictError when slot is taken', async () => {
-			vi.mocked(validateBooking).mockReturnValue({ valid: true });
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
 
 			// tx.select returns a conflicting row
 			const txWhere = vi.fn().mockResolvedValue([{ id: 'existing-res' }]);

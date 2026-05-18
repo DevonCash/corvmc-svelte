@@ -5,12 +5,7 @@ import { getAvailableSlots } from '$lib/server/reservation/conflict-service';
 import { create } from '$lib/server/reservation/reservation-service';
 import { createReservationSchema } from '$lib/server/reservation/types';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import {
-	TIME_SLOT_MINUTES,
-	MIN_DURATION_HOURS,
-	MAX_DURATION_HOURS,
-	RECURRING_FREQUENCIES
-} from '$lib/server/reservation/config';
+import { getReservationConfig, RECURRING_FREQUENCIES } from '$lib/server/reservation/config';
 import type { RecurringFrequency } from '$lib/server/reservation/config';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
@@ -22,8 +17,11 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 
 export const getSlots = query(z.string(), async (dateParam) => {
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
-	const slots = await getAvailableSlots(date);
-	const rehearsalConfig = await getProductConfig('rehearsal');
+	const [slots, rehearsalConfig, reservationConfig] = await Promise.all([
+		getAvailableSlots(date),
+		getProductConfig('rehearsal'),
+		getReservationConfig()
+	]);
 
 	return {
 		date: date.toISOString().split('T')[0],
@@ -31,9 +29,9 @@ export const getSlots = query(z.string(), async (dateParam) => {
 		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {
 			hourlyRateCents: rehearsalConfig.unitAmountCents,
-			slotMinutes: TIME_SLOT_MINUTES,
-			minDurationHours: MIN_DURATION_HOURS,
-			maxDurationHours: MAX_DURATION_HOURS
+			slotMinutes: reservationConfig.timeSlotMinutes,
+			minDurationHours: reservationConfig.minDurationHours,
+			maxDurationHours: reservationConfig.maxDurationHours
 		}
 	};
 });

@@ -39,6 +39,19 @@ vi.mock('drizzle-orm', async (importOriginal) => {
 	};
 });
 
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	getConfigsByPrefix: vi.fn(async () => ({
+		operatingHoursStart: '09:00',
+		operatingHoursEnd: '22:00',
+		minDurationHours: 1,
+		maxDurationHours: 8,
+		timeSlotMinutes: 30,
+		bufferMinutes: 0,
+		maxAdvanceDaysOneoff: 14,
+		maxAdvanceDaysRecurring: 17.5
+	}))
+}));
+
 import {
 	hasConflict,
 	getAvailableSlots,
@@ -63,83 +76,82 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// validateBooking — pure function, no DB dependency
+// validateBooking — now async, reads config from DB
 // ---------------------------------------------------------------------------
 
 describe('validateBooking', () => {
-	it('accepts a valid 1-hour booking within operating hours', () => {
-		const result = validateBooking(makeDate(date, '10:00'), makeDate(date, '11:00'));
+	it('accepts a valid 1-hour booking within operating hours', async () => {
+		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(result).toEqual({ valid: true });
 	});
 
-	it('accepts a valid 8-hour booking', () => {
-		const result = validateBooking(makeDate(date, '09:00'), makeDate(date, '17:00'));
+	it('accepts a valid 8-hour booking', async () => {
+		const result = await validateBooking(makeDate(date, '09:00'), makeDate(date, '17:00'));
 		expect(result).toEqual({ valid: true });
 	});
 
-	it('accepts a booking ending exactly at operating hours end', () => {
-		const result = validateBooking(makeDate(date, '21:00'), makeDate(date, '22:00'));
+	it('accepts a booking ending exactly at operating hours end', async () => {
+		const result = await validateBooking(makeDate(date, '21:00'), makeDate(date, '22:00'));
 		expect(result).toEqual({ valid: true });
 	});
 
-	it('rejects end time before start time', () => {
-		const result = validateBooking(makeDate(date, '11:00'), makeDate(date, '10:00'));
+	it('rejects end time before start time', async () => {
+		const result = await validateBooking(makeDate(date, '11:00'), makeDate(date, '10:00'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('after start time');
 	});
 
-	it('rejects duration shorter than minimum', () => {
-		const result = validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'));
+	it('rejects duration shorter than minimum', async () => {
+		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('Minimum duration');
 	});
 
-	it('rejects duration longer than maximum', () => {
-		const result = validateBooking(makeDate(date, '09:00'), makeDate(date, '18:00'));
+	it('rejects duration longer than maximum', async () => {
+		const result = await validateBooking(makeDate(date, '09:00'), makeDate(date, '18:00'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('Maximum duration');
 	});
 
-	it('rejects start time not on 30-minute boundary', () => {
-		const result = validateBooking(makeDate(date, '10:15'), makeDate(date, '11:15'));
+	it('rejects start time not on 30-minute boundary', async () => {
+		const result = await validateBooking(makeDate(date, '10:15'), makeDate(date, '11:15'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('30-minute boundaries');
 	});
 
-	it('rejects start time before operating hours', () => {
-		const result = validateBooking(makeDate(date, '08:00'), makeDate(date, '09:00'));
+	it('rejects start time before operating hours', async () => {
+		const result = await validateBooking(makeDate(date, '08:00'), makeDate(date, '09:00'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('Cannot start before');
 	});
 
-	it('rejects end time after operating hours', () => {
-		const result = validateBooking(makeDate(date, '21:00'), makeDate(date, '23:00'));
+	it('rejects end time after operating hours', async () => {
+		const result = await validateBooking(makeDate(date, '21:00'), makeDate(date, '23:00'));
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('Cannot end after');
 	});
 
-	it('accepts half-hour boundaries', () => {
-		const result = validateBooking(makeDate(date, '10:30'), makeDate(date, '12:00'));
+	it('accepts half-hour boundaries', async () => {
+		const result = await validateBooking(makeDate(date, '10:30'), makeDate(date, '12:00'));
 		expect(result).toEqual({ valid: true });
 	});
 
-	it('rejects booking too far in advance (one-off)', () => {
+	it('rejects booking too far in advance (one-off)', async () => {
 		const farFuture = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000); // 15 days ahead
-		// Align to 10:00 Pacific time on that date
 		const dateStr = farFuture.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const start = makeDate(dateStr, '10:00');
 		const end = makeDate(dateStr, '11:00');
-		const result = validateBooking(start, end);
+		const result = await validateBooking(start, end);
 		expect(result.valid).toBe(false);
 		expect(result.error).toContain('14 days in advance');
 	});
 
-	it('accepts booking within recurring advance window', () => {
+	it('accepts booking within recurring advance window', async () => {
 		const future = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000); // 16 days ahead
 		const dateStr = future.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const start = makeDate(dateStr, '10:00');
 		const end = makeDate(dateStr, '11:00');
-		const result = validateBooking(start, end, { isRecurring: true });
+		const result = await validateBooking(start, end, { isRecurring: true });
 		expect(result).toEqual({ valid: true });
 	});
 });
@@ -294,77 +306,77 @@ describe('getConflictDetails', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getValidationWarnings — pure function, no DB dependency
+// getValidationWarnings — now async, reads config from DB
 // ---------------------------------------------------------------------------
 
 describe('getValidationWarnings', () => {
-	it('returns empty array for valid booking', () => {
-		const warnings = getValidationWarnings(makeDate(date, '10:00'), makeDate(date, '11:00'));
+	it('returns empty array for valid booking', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(warnings).toEqual([]);
 	});
 
-	it('returns early if end time is before start time', () => {
-		const warnings = getValidationWarnings(makeDate(date, '11:00'), makeDate(date, '10:00'));
+	it('returns early if end time is before start time', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '11:00'), makeDate(date, '10:00'));
 		expect(warnings).toEqual(['End time must be after start time']);
 	});
 
-	it('warns about duration below minimum', () => {
-		const warnings = getValidationWarnings(makeDate(date, '10:00'), makeDate(date, '10:30'));
+	it('warns about duration below minimum', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '10:00'), makeDate(date, '10:30'));
 		expect(warnings).toContainEqual(expect.stringContaining('1-hour minimum'));
 	});
 
-	it('warns about duration above maximum', () => {
-		const warnings = getValidationWarnings(makeDate(date, '09:00'), makeDate(date, '18:00'));
+	it('warns about duration above maximum', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '09:00'), makeDate(date, '18:00'));
 		expect(warnings).toContainEqual(expect.stringContaining('8-hour maximum'));
 	});
 
-	it('warns about non-30-minute boundaries', () => {
-		const warnings = getValidationWarnings(makeDate(date, '10:15'), makeDate(date, '11:15'));
+	it('warns about non-30-minute boundaries', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '10:15'), makeDate(date, '11:15'));
 		expect(warnings).toContainEqual(expect.stringContaining('30-minute boundaries'));
 	});
 
-	it('warns about outside operating hours (start too early)', () => {
-		const warnings = getValidationWarnings(makeDate(date, '08:00'), makeDate(date, '09:00'));
+	it('warns about outside operating hours (start too early)', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '08:00'), makeDate(date, '09:00'));
 		expect(warnings).toContainEqual(expect.stringContaining('operating hours'));
 	});
 
-	it('warns about outside operating hours (end too late)', () => {
-		const warnings = getValidationWarnings(makeDate(date, '21:00'), makeDate(date, '23:00'));
+	it('warns about outside operating hours (end too late)', async () => {
+		const warnings = await getValidationWarnings(makeDate(date, '21:00'), makeDate(date, '23:00'));
 		expect(warnings).toContainEqual(expect.stringContaining('operating hours'));
 	});
 
-	it('warns about too far in advance (one-off)', () => {
+	it('warns about too far in advance (one-off)', async () => {
 		const farFuture = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 		const dateStr = farFuture.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const start = makeDate(dateStr, '10:00');
 		const end = makeDate(dateStr, '11:00');
-		const warnings = getValidationWarnings(start, end);
+		const warnings = await getValidationWarnings(start, end);
 		expect(warnings).toContainEqual(expect.stringContaining('14 days in advance'));
 	});
 
-	it('uses recurring window when isRecurring is true', () => {
+	it('uses recurring window when isRecurring is true', async () => {
 		const future = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000);
 		const dateStr = future.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const start = makeDate(dateStr, '10:00');
 		const end = makeDate(dateStr, '11:00');
-		const warnings = getValidationWarnings(start, end, { isRecurring: true });
+		const warnings = await getValidationWarnings(start, end, { isRecurring: true });
 		// 16 days is within recurring window of 17.5 days
 		const advanceWarning = warnings.find((w) => w.includes('days in advance'));
 		expect(advanceWarning).toBeUndefined();
 	});
 
-	it('warns about recurring too far in advance', () => {
+	it('warns about recurring too far in advance', async () => {
 		const farFuture = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
 		const dateStr = farFuture.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const start = makeDate(dateStr, '10:00');
 		const end = makeDate(dateStr, '11:00');
-		const warnings = getValidationWarnings(start, end, { isRecurring: true });
+		const warnings = await getValidationWarnings(start, end, { isRecurring: true });
 		expect(warnings).toContainEqual(expect.stringContaining('17.5 days in advance'));
 	});
 
-	it('can accumulate multiple warnings', () => {
+	it('can accumulate multiple warnings', async () => {
 		// Too short + not on boundary + outside operating hours
-		const warnings = getValidationWarnings(makeDate(date, '08:15'), makeDate(date, '08:45'));
+		const warnings = await getValidationWarnings(makeDate(date, '08:15'), makeDate(date, '08:45'));
 		expect(warnings.length).toBeGreaterThanOrEqual(2);
 	});
 });

@@ -57,9 +57,16 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 }));
 
 vi.mock('$lib/server/reservation/config', () => ({
-	TIME_SLOT_MINUTES: 30,
-	MIN_DURATION_HOURS: 1,
-	MAX_DURATION_HOURS: 8,
+	getReservationConfig: vi.fn(async () => ({
+		timeSlotMinutes: 30,
+		minDurationHours: 1,
+		maxDurationHours: 8,
+		operatingHoursStart: '09:00',
+		operatingHoursEnd: '22:00',
+		bufferMinutes: 0,
+		maxAdvanceDaysOneoff: 14,
+		maxAdvanceDaysRecurring: 17.5
+	})),
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
 }));
 

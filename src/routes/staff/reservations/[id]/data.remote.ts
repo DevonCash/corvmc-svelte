@@ -13,7 +13,7 @@ import {
 	recordCashAndComplete
 } from '$lib/server/reservation/reservation-service';
 import { recordCashPayment, refund } from '$lib/server/finance/payment-service';
-import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
+import { getProductConfig } from '$lib/server/finance/product-config-service';
 
 const idSchema = z.object({ reservationId: z.string().min(1) });
 
@@ -75,7 +75,8 @@ export const cashReceived = command(
 		await requireStaff();
 		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
-		const amountCents = Math.round(durationHours * HOURLY_RATE_CENTS);
+		const rehearsal = await getProductConfig('rehearsal');
+		const amountCents = Math.round(durationHours * rehearsal.unitAmountCents);
 
 		const [member] = await db
 			.select({ stripeId: user.stripeId })

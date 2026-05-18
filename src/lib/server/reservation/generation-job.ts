@@ -107,7 +107,7 @@ async function processSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	const windowEnd = generationWindowEnd(now);
+	const windowEnd = await generationWindowEnd(now);
 	const occurrences = getOccurrences(series.rrule, now, windowEnd);
 
 	// Batch-fetch all existing instances for this series in the window
