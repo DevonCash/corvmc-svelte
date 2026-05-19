@@ -17,7 +17,7 @@ export const checkConflicts = query(
 		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
-		const validationWarnings = getValidationWarnings(startsAt, endsAt);
+		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
 
 		return { conflicts, validationWarnings };
 	}

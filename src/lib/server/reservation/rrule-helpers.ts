@@ -3,7 +3,7 @@ import type { Frequency as FrequencyType, RRule as RRuleType } from 'rrule';
 const { RRule, Frequency } = pkg;
 import { DateTime } from 'luxon';
 import type { RecurringFrequency } from './config';
-import { MAX_ADVANCE_DAYS_RECURRING } from './config';
+import { getReservationConfig } from './config';
 
 // ---------------------------------------------------------------------------
 // RRULE helpers — build, parse, and generate occurrence dates
@@ -99,8 +99,9 @@ export function getOccurrences(
  * Compute the generation window end from a reference time.
  * Returns a Date that is MAX_ADVANCE_DAYS_RECURRING days in the future.
  */
-export function generationWindowEnd(from: Date = new Date()): Date {
-	return new Date(from.getTime() + MAX_ADVANCE_DAYS_RECURRING * 24 * 60 * 60 * 1000);
+export async function generationWindowEnd(from: Date = new Date()): Promise<Date> {
+	const config = await getReservationConfig();
+	return new Date(from.getTime() + config.maxAdvanceDaysRecurring * 24 * 60 * 60 * 1000);
 }
 
 /**

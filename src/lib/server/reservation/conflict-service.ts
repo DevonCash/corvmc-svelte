@@ -2,16 +2,7 @@ import { db } from '$lib/server/db';
 import { reservation, closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { and, ne, eq, lt, gt } from 'drizzle-orm';
-import {
-	BUFFER_MINUTES,
-	OPERATING_HOURS_START,
-	OPERATING_HOURS_END,
-	TIME_SLOT_MINUTES,
-	MIN_DURATION_HOURS,
-	MAX_DURATION_HOURS,
-	MAX_ADVANCE_DAYS_ONEOFF,
-	MAX_ADVANCE_DAYS_RECURRING
-} from './config';
+import { getReservationConfig } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from './types';
 
@@ -28,7 +19,8 @@ export async function hasConflict(
 	endsAt: Date,
 	excludeReservationId?: string
 ): Promise<boolean> {
-	const bufferMs = BUFFER_MINUTES * 60 * 1000;
+	const { bufferMinutes } = await getReservationConfig();
+	const bufferMs = bufferMinutes * 60 * 1000;
 	const bufferedStart = new Date(startsAt.getTime() - bufferMs);
 	const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
 
@@ -64,16 +56,17 @@ export async function hasConflict(
 }
 
 /**
- * Generate all 30-minute slots for a given date and mark availability.
+ * Generate all time slots for a given date and mark availability.
  * Returns slots within operating hours with their booked/blocked status.
  */
 export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 	const tz = 'America/Los_Angeles';
+	const config = await getReservationConfig();
 
 	// Build day boundaries in local time
 	const dateStr = date.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
-	const dayStart = buildDateInTz(dateStr, OPERATING_HOURS_START, tz);
-	const dayEnd = buildDateInTz(dateStr, OPERATING_HOURS_END, tz);
+	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
+	const dayEnd = buildDateInTz(dateStr, config.operatingHoursEnd, tz);
 
 	// Fetch all non-cancelled reservations for this day
 	const dayReservations = await db
@@ -100,8 +93,8 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 
 	// Generate slots
 	const slots: TimeSlot[] = [];
-	const slotMs = TIME_SLOT_MINUTES * 60 * 1000;
-	const bufferMs = BUFFER_MINUTES * 60 * 1000;
+	const slotMs = config.timeSlotMinutes * 60 * 1000;
+	const bufferMs = config.bufferMinutes * 60 * 1000;
 
 	for (let time = dayStart.getTime(); time < dayEnd.getTime(); time += slotMs) {
 		const slotStart = new Date(time);
@@ -133,7 +126,7 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Validation (synchronous, no DB)
+// Validation
 // ---------------------------------------------------------------------------
 
 export interface ValidationResult {
@@ -150,12 +143,13 @@ export interface ValidateBookingOptions {
  * Validate that a proposed booking time is within operating constraints.
  * Does not check conflicts — that's a separate DB query.
  */
-export function validateBooking(
+export async function validateBooking(
 	startsAt: Date,
 	endsAt: Date,
 	options?: ValidateBookingOptions
-): ValidationResult {
+): Promise<ValidationResult> {
 	const tz = 'America/Los_Angeles';
+	const config = await getReservationConfig();
 
 	if (endsAt <= startsAt) {
 		return { valid: false, error: 'End time must be after start time' };
@@ -164,35 +158,35 @@ export function validateBooking(
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 
-	if (durationHours < MIN_DURATION_HOURS) {
-		return { valid: false, error: `Minimum duration is ${MIN_DURATION_HOURS} hour` };
+	if (durationHours < config.minDurationHours) {
+		return { valid: false, error: `Minimum duration is ${config.minDurationHours} hour` };
 	}
 
-	if (durationHours > MAX_DURATION_HOURS) {
-		return { valid: false, error: `Maximum duration is ${MAX_DURATION_HOURS} hours` };
+	if (durationHours > config.maxDurationHours) {
+		return { valid: false, error: `Maximum duration is ${config.maxDurationHours} hours` };
 	}
 
-	// Check 30-minute boundaries
+	// Check slot boundaries
 	const startMinutes = startsAt.getMinutes();
 	const endMinutes = endsAt.getMinutes();
-	if (startMinutes % TIME_SLOT_MINUTES !== 0 || endMinutes % TIME_SLOT_MINUTES !== 0) {
-		return { valid: false, error: `Times must be on ${TIME_SLOT_MINUTES}-minute boundaries` };
+	if (startMinutes % config.timeSlotMinutes !== 0 || endMinutes % config.timeSlotMinutes !== 0) {
+		return { valid: false, error: `Times must be on ${config.timeSlotMinutes}-minute boundaries` };
 	}
 
 	// Check operating hours
 	const startTime = formatTimeInTz(startsAt, tz);
 	const endTime = formatTimeInTz(endsAt, tz);
 
-	if (startTime < OPERATING_HOURS_START) {
-		return { valid: false, error: `Cannot start before ${OPERATING_HOURS_START}` };
+	if (startTime < config.operatingHoursStart) {
+		return { valid: false, error: `Cannot start before ${config.operatingHoursStart}` };
 	}
 
-	if (endTime > OPERATING_HOURS_END) {
-		return { valid: false, error: `Cannot end after ${OPERATING_HOURS_END}` };
+	if (endTime > config.operatingHoursEnd) {
+		return { valid: false, error: `Cannot end after ${config.operatingHoursEnd}` };
 	}
 
 	// Check advance booking window
-	const maxDays = options?.isRecurring ? MAX_ADVANCE_DAYS_RECURRING : MAX_ADVANCE_DAYS_ONEOFF;
+	const maxDays = options?.isRecurring ? config.maxAdvanceDaysRecurring : config.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		return {
@@ -219,7 +213,8 @@ export async function getConflictDetails(
 	startsAt: Date,
 	endsAt: Date
 ): Promise<ConflictDetail[]> {
-	const bufferMs = BUFFER_MINUTES * 60 * 1000;
+	const { bufferMinutes } = await getReservationConfig();
+	const bufferMs = bufferMinutes * 60 * 1000;
 	const bufferedStart = new Date(startsAt.getTime() - bufferMs);
 	const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
 
@@ -280,12 +275,13 @@ export async function getConflictDetails(
 // getValidationWarnings() — human-readable warnings without throwing
 // ---------------------------------------------------------------------------
 
-export function getValidationWarnings(
+export async function getValidationWarnings(
 	startsAt: Date,
 	endsAt: Date,
 	options?: ValidateBookingOptions
-): string[] {
+): Promise<string[]> {
 	const tz = 'America/Los_Angeles';
+	const config = await getReservationConfig();
 	const warnings: string[] = [];
 
 	if (endsAt <= startsAt) {
@@ -296,28 +292,28 @@ export function getValidationWarnings(
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 
-	if (durationHours < MIN_DURATION_HOURS) {
-		warnings.push(`Duration is less than the ${MIN_DURATION_HOURS}-hour minimum`);
+	if (durationHours < config.minDurationHours) {
+		warnings.push(`Duration is less than the ${config.minDurationHours}-hour minimum`);
 	}
 
-	if (durationHours > MAX_DURATION_HOURS) {
-		warnings.push(`Duration exceeds the ${MAX_DURATION_HOURS}-hour maximum`);
+	if (durationHours > config.maxDurationHours) {
+		warnings.push(`Duration exceeds the ${config.maxDurationHours}-hour maximum`);
 	}
 
 	const startMinutes = startsAt.getMinutes();
 	const endMinutes = endsAt.getMinutes();
-	if (startMinutes % TIME_SLOT_MINUTES !== 0 || endMinutes % TIME_SLOT_MINUTES !== 0) {
-		warnings.push(`Times must be on ${TIME_SLOT_MINUTES}-minute boundaries`);
+	if (startMinutes % config.timeSlotMinutes !== 0 || endMinutes % config.timeSlotMinutes !== 0) {
+		warnings.push(`Times must be on ${config.timeSlotMinutes}-minute boundaries`);
 	}
 
 	const startTime = formatTimeInTz(startsAt, tz);
 	const endTime = formatTimeInTz(endsAt, tz);
 
-	if (startTime < OPERATING_HOURS_START || endTime > OPERATING_HOURS_END) {
-		warnings.push(`Outside operating hours (${OPERATING_HOURS_START} – ${OPERATING_HOURS_END})`);
+	if (startTime < config.operatingHoursStart || endTime > config.operatingHoursEnd) {
+		warnings.push(`Outside operating hours (${config.operatingHoursStart} – ${config.operatingHoursEnd})`);
 	}
 
-	const maxDays = options?.isRecurring ? MAX_ADVANCE_DAYS_RECURRING : MAX_ADVANCE_DAYS_ONEOFF;
+	const maxDays = options?.isRecurring ? config.maxAdvanceDaysRecurring : config.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		warnings.push(`More than ${maxDays} days in advance`);
@@ -325,4 +321,3 @@ export function getValidationWarnings(
 
 	return warnings;
 }
-

@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { randomUUID } from 'crypto';
 import { getJson, putJson } from '$lib/server/kv';
+import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
 
 // ---------------------------------------------------------------------------
 // Ultraloc API client
@@ -8,11 +9,7 @@ import { getJson, putJson } from '$lib/server/kv';
 // Wraps the U-tec OpenAPI for managing temporary lock users.
 // Uses OAuth2 client credentials flow with token caching.
 //
-// Required env vars:
-//   ULTRALOC_CLIENT_ID
-//   ULTRALOC_CLIENT_SECRET
-//   ULTRALOC_DEVICE_ID
-//   ULTRALOC_REDIRECT_URI  (used during initial OAuth setup)
+// Credentials are read from site_config (admin UI), falling back to env vars.
 // ---------------------------------------------------------------------------
 
 const API_URL = 'https://api.u-tec.com/action';
@@ -20,14 +17,16 @@ const TOKEN_URL = 'https://oauth.u-tec.com/token';
 
 const TOKEN_KEY = 'ultraloc:token';
 
-function getConfig() {
-	const clientId = env.ULTRALOC_CLIENT_ID;
-	const clientSecret = env.ULTRALOC_CLIENT_SECRET;
-	const deviceId = env.ULTRALOC_DEVICE_ID;
-	const refreshToken = env.ULTRALOC_REFRESH_TOKEN;
+async function getConfig() {
+	const dbConfig = await getConfigsByPrefix('integration.utec');
+
+	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
+	const clientSecret = (dbConfig.clientSecret as string) || env.ULTRALOC_CLIENT_SECRET;
+	const deviceId = (dbConfig.deviceId as string) || env.ULTRALOC_DEVICE_ID;
+	const refreshToken = (dbConfig.refreshToken as string) || env.ULTRALOC_REFRESH_TOKEN;
 
 	if (!clientId || !clientSecret || !deviceId || !refreshToken) {
-		throw new Error('Ultraloc environment variables not configured');
+		throw new Error('Ultraloc credentials not configured — set them in Staff Settings > Integrations or via environment variables');
 	}
 
 	return { clientId, clientSecret, deviceId, refreshToken };
@@ -39,7 +38,7 @@ async function getAccessToken(): Promise<string> {
 		return cached.accessToken;
 	}
 
-	const { clientId, clientSecret, refreshToken } = getConfig();
+	const { clientId, clientSecret, refreshToken } = await getConfig();
 
 	const res = await fetch(
 		`${TOKEN_URL}?grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`
@@ -101,14 +100,9 @@ export interface TempUserParams {
 	endTime: Date;
 }
 
-/**
- * Create a temporary user on the lock with time-scoped access.
- * Returns the temporary user ID for later cleanup.
- */
 export async function createTemporaryUser(params: TempUserParams): Promise<string> {
-	const { deviceId } = getConfig();
+	const { deviceId } = await getConfig();
 
-	// Format times as Unix timestamps (seconds)
 	const startTimestamp = Math.floor(params.startTime.getTime() / 1000);
 	const endTimestamp = Math.floor(params.endTime.getTime() / 1000);
 
@@ -125,14 +119,39 @@ export async function createTemporaryUser(params: TempUserParams): Promise<strin
 	return result.user?.id ?? result.userId ?? randomUUID();
 }
 
-/**
- * Remove a temporary user from the lock.
- */
 export async function removeTemporaryUser(tempUserId: string): Promise<void> {
-	const { deviceId } = getConfig();
+	const { deviceId } = await getConfig();
 
 	await apiCall('Uhome.Device', 'RemoveUser', {
 		deviceId,
 		userId: tempUserId
 	});
+}
+
+// ---------------------------------------------------------------------------
+// Connection test — used by the settings page
+// ---------------------------------------------------------------------------
+
+export async function testConnection(): Promise<{ ok: boolean; error?: string }> {
+	try {
+		const { clientId, clientSecret, refreshToken } = await getConfig();
+
+		const res = await fetch(
+			`${TOKEN_URL}?grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`
+		);
+
+		if (!res.ok) {
+			const text = await res.text();
+			return { ok: false, error: `Token refresh failed (${res.status}): ${text}` };
+		}
+
+		const data: { access_token: string } = await res.json();
+		if (!data.access_token) {
+			return { ok: false, error: 'No access token in response' };
+		}
+
+		return { ok: true };
+	} catch (err) {
+		return { ok: false, error: (err as Error).message };
+	}
 }

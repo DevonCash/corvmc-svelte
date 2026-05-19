@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, asc, desc, count } from 'drizzle-orm';
-import { HOURLY_RATE_CENTS } from '$lib/server/reservation/config';
+import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
@@ -112,6 +112,6 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
 		isFirstReservation: completedCount.count === 0,
-		hourlyRateCents: HOURLY_RATE_CENTS
+		hourlyRateCents: (await getProductConfig('rehearsal')).unitAmountCents
 	});
 };

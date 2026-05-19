@@ -56,7 +56,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
 
 	// Validate time constraints
-	const validation = validateBooking(startsAt, endsAt);
+	const validation = await validateBooking(startsAt, endsAt);
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}

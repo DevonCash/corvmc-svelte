@@ -11,7 +11,8 @@ import { staffCreate, confirm } from '$lib/server/reservation/reservation-servic
 import { markComplete, markNoShow, recordCashAndComplete } from '$lib/server/reservation/reservation-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { HOURLY_RATE_CENTS, TIME_SLOT_MINUTES, MIN_DURATION_HOURS, MAX_DURATION_HOURS } from '$lib/server/reservation/config';
+import { getReservationConfig } from '$lib/server/reservation/config';
+import { getProductConfig } from '$lib/server/finance/product-config-service';
 
 // ---------------------------------------------------------------------------
 // Queries — create modal
@@ -34,16 +35,20 @@ export const searchMembers = query(z.string(), async (q) => {
 export const getSlots = query(z.string(), async (dateParam) => {
 	await requireStaff();
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
-	const slots = await getAvailableSlots(date);
+	const [slots, rehearsalConfig, reservationConfig] = await Promise.all([
+		getAvailableSlots(date),
+		getProductConfig('rehearsal'),
+		getReservationConfig()
+	]);
 
 	return {
 		date: date.toISOString().split('T')[0],
 		slots,
 		config: {
-			hourlyRateCents: HOURLY_RATE_CENTS,
-			slotMinutes: TIME_SLOT_MINUTES,
-			minDurationHours: MIN_DURATION_HOURS,
-			maxDurationHours: MAX_DURATION_HOURS
+			hourlyRateCents: rehearsalConfig.unitAmountCents,
+			slotMinutes: reservationConfig.timeSlotMinutes,
+			minDurationHours: reservationConfig.minDurationHours,
+			maxDurationHours: reservationConfig.maxDurationHours
 		}
 	};
 });
@@ -56,7 +61,7 @@ export const checkConflicts = query(
 		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
-		const validationWarnings = getValidationWarnings(startsAt, endsAt);
+		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
 
 		return { conflicts, validationWarnings };
 	}
@@ -107,7 +112,8 @@ export const resolveComplete = command(
 		await requireStaff();
 		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
-		const amountCents = Math.round(durationHours * HOURLY_RATE_CENTS);
+		const rehearsal = await getProductConfig('rehearsal');
+		const amountCents = Math.round(durationHours * rehearsal.unitAmountCents);
 
 		const [member] = await db
 			.select({ stripeId: user.stripeId })

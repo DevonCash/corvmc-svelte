@@ -1,4 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	getConfigsByPrefix: vi.fn(async () => ({
+		operatingHoursStart: '09:00',
+		operatingHoursEnd: '22:00',
+		minDurationHours: 1,
+		maxDurationHours: 8,
+		timeSlotMinutes: 30,
+		bufferMinutes: 0,
+		maxAdvanceDaysOneoff: 14,
+		maxAdvanceDaysRecurring: 17.5
+	}))
+}));
 import {
 	buildRRule,
 	parseRRule,
@@ -170,17 +183,17 @@ describe('getOccurrences', () => {
 });
 
 describe('generationWindowEnd', () => {
-	it('returns a date MAX_ADVANCE_DAYS_RECURRING days in the future', () => {
+	it('returns a date MAX_ADVANCE_DAYS_RECURRING days in the future', async () => {
 		const from = new Date('2026-05-12T00:00:00.000Z');
-		const result = generationWindowEnd(from);
+		const result = await generationWindowEnd(from);
 
 		const expectedMs = from.getTime() + 17.5 * 24 * 60 * 60 * 1000;
 		expect(result.getTime()).toBe(expectedMs);
 	});
 
-	it('defaults to current time when no argument is given', () => {
+	it('defaults to current time when no argument is given', async () => {
 		const before = new Date();
-		const result = generationWindowEnd();
+		const result = await generationWindowEnd();
 		const after = new Date();
 
 		const minExpected = before.getTime() + 17.5 * 24 * 60 * 60 * 1000;
