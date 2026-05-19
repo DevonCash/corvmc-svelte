@@ -54,7 +54,7 @@
 		"better-sqlite3": "^12.10.0",
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "^0.31.10",
-		"drizzle-orm": "^0.45.2",
+		"drizzle-orm": "1.0.0-rc.3",
 		"eslint": "^10.4.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-storybook": "^10.4.0",

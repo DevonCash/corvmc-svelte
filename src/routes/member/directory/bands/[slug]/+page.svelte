@@ -77,7 +77,7 @@
 		</div>
 	{/if}
 
-	{#if band.links.length > 0}
+	{#if band.links && band.links.length > 0}
 		<div>
 			<h2 class="text-sm font-semibold mb-2">Links</h2>
 			<ProfileLinks links={band.links} />

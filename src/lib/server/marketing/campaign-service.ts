@@ -133,7 +133,7 @@ async function getCampaignRaw(id: string) {
 
 export async function getCampaign(id: string) {
 	const row = await db.query.campaign.findFirst({
-		where: eq(campaign.id, id),
+		where: { id },
 		with: {
 			audiences: {
 				with: { audience: { columns: { id: true, name: true } } }
@@ -146,7 +146,7 @@ export async function getCampaign(id: string) {
 	return {
 		...row,
 		status: deriveCampaignStatus(row.scheduledFor, row.sentAt),
-		audiences: row.audiences.map((ca) => ca.audience)
+		audiences: row.audiences.filter((ca) => ca.audience).map((ca) => ca.audience!)
 	};
 }
 
@@ -173,7 +173,7 @@ export async function listCampaigns(statusFilter?: CampaignStatus) {
 	const result = rows.map((r) => ({
 		...r,
 		status: deriveCampaignStatus(r.scheduledFor, r.sentAt),
-		audienceNames: r.audiences.map((ca) => ca.audience.name)
+		audienceNames: r.audiences.filter((ca) => ca.audience).map((ca) => ca.audience!.name)
 	}));
 
 	if (statusFilter) {

@@ -1,5 +1,5 @@
 import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
@@ -36,15 +36,6 @@ export const reservation = sqliteTable(
 		check('reservation_time_order', sql`ends_at > starts_at`)
 	]
 );
-
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const reservationRelations = relations(reservation, ({ one }) => ({
-	createdBy: one(user, { fields: [reservation.createdByUserId], references: [user.id] }),
-	recurringSeries: one(recurringSeries, { fields: [reservation.recurringSeriesId], references: [recurringSeries.id] }),
-}));
 
 export const closure = sqliteTable(
 	'closure',

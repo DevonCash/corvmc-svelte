@@ -1,5 +1,5 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { event } from './event';
@@ -31,13 +31,3 @@ export const ticket = sqliteTable(
 		index('idx_ticket_event_status').on(t.eventId, t.status)
 	]
 );
-
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const ticketRelations = relations(ticket, ({ one }) => ({
-	event: one(event, { fields: [ticket.eventId], references: [event.id] }),
-	user: one(user, { fields: [ticket.userId], references: [user.id], relationName: 'ticketUser' }),
-	checkedInBy: one(user, { fields: [ticket.checkedInByUserId], references: [user.id], relationName: 'ticketCheckedInBy' }),
-}));

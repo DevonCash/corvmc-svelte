@@ -1,5 +1,5 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 
 export const recurringSeries = sqliteTable(

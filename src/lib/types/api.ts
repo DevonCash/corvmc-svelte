@@ -1,5 +1,20 @@
-import type { DirectoryContact, ProfileLink } from './profile';
 import type { SubscriptionInfo, Credits, CommunityStats } from '$lib/finance/types';
+import type {
+	User,
+	Band,
+	BandMember,
+	Reservation,
+	Event,
+	Equipment,
+	EquipmentCategory,
+	EquipmentLoan,
+	Ticket,
+	RecurringSeries,
+	Closure,
+	Payment,
+	CreditTransaction,
+	Audience
+} from '$lib/server/db/schema';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -17,41 +32,28 @@ export interface Pagination {
 // ---------------------------------------------------------------------------
 
 export interface AuthMeResponse {
-	user: {
-		id: string;
-		name: string;
-		email: string;
-		image: string | null;
-		[key: string]: unknown;
-	} | null;
+	user: Pick<User, 'id' | 'name' | 'email' | 'image'> | null;
 }
 
 export interface MemberLayoutResponse {
-	user: { id: string; name: string; email: string; [key: string]: unknown };
-	userBands: { id: string; name: string; slug: string; role: string; [key: string]: unknown }[];
+	user: Pick<User, 'id' | 'name' | 'email'>;
+	userBands: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> & { role: string })[];
 	isStaff: boolean;
 }
 
 export interface StaffLayoutResponse {
-	user: { id: string; name: string; email: string; [key: string]: unknown };
-	userBands: { id: string; name: string; slug: string; [key: string]: unknown }[];
+	user: Pick<User, 'id' | 'name' | 'email'>;
+	userBands: Pick<Band, 'id' | 'name' | 'slug'>[];
 }
 
 export interface BandLayoutResponse {
-	band: {
-		id: string;
-		name: string;
-		slug: string;
-		bio: string | null;
-		ownerId: string;
-		avatarKey: string | null;
+	band: Pick<Band, 'id' | 'name' | 'slug' | 'bio' | 'ownerId' | 'avatarKey' | 'createdAt'> & {
 		memberCount: number;
-		createdAt: string;
 	};
 	userRole: string;
 	isStaff: boolean;
-	userBands: { id: string; name: string; slug: string; [key: string]: unknown }[];
-	user: { id: string; name: string; email: string; [key: string]: unknown } | null;
+	userBands: Pick<Band, 'id' | 'name' | 'slug'>[];
+	user: Pick<User, 'id' | 'name' | 'email'> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,24 +61,15 @@ export interface BandLayoutResponse {
 // ---------------------------------------------------------------------------
 
 export interface DashboardResponse {
-	weekReservations: {
-		id: string;
-		bookerType: string;
-		bookerId: string;
+	weekReservations: (Pick<
+		Reservation,
+		'id' | 'bookerType' | 'bookerId' | 'status' | 'startsAt' | 'endsAt' | 'notes'
+	> & {
 		bandName: string | null;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
-	}[];
-	upcomingEvents: {
-		id: string;
-		title: string;
-		startsAt: string;
-		endsAt: string;
-		doorsAt: string | null;
+	})[];
+	upcomingEvents: (Pick<Event, 'id' | 'title' | 'startsAt' | 'endsAt' | 'doorsAt'> & {
 		posterUrl: string | null;
-	}[];
+	})[];
 	credits: Credits;
 	subscription: SubscriptionInfo | null;
 	allocatedThisMonth: number;
@@ -85,58 +78,40 @@ export interface DashboardResponse {
 }
 
 export interface AccountResponse {
-	user: {
-		id: string;
-		name: string;
-		email: string;
-		pronouns?: string;
-		phone?: string;
-	};
+	user: Pick<User, 'id' | 'name' | 'email' | 'pronouns' | 'phone'>;
 	isStaff: boolean;
 }
 
 export interface MemberBandsResponse {
-	pending: {
-		id: string;
-		name: string;
-		slug: string;
-		avatarKey: string | null;
-		role: string;
-		status: string;
-		memberCount: number;
-	}[];
-	active: {
-		id: string;
-		name: string;
-		slug: string;
-		avatarKey: string | null;
-		role: string;
-		status: string;
-		memberCount: number;
-	}[];
+	pending: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> &
+		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
+	active: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> &
+		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
 }
 
 export interface MemberReservationsResponse {
-	upcoming: {
-		id: string;
-		bookerType: string;
-		bookerId: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
-		recurringSeriesId: string | null;
-	}[];
-	past: {
-		id: string;
-		bookerType: string;
-		bookerId: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
-		recurringSeriesId: string | null;
-	}[];
+	upcoming: Pick<
+		Reservation,
+		| 'id'
+		| 'bookerType'
+		| 'bookerId'
+		| 'status'
+		| 'startsAt'
+		| 'endsAt'
+		| 'notes'
+		| 'recurringSeriesId'
+	>[];
+	past: Pick<
+		Reservation,
+		| 'id'
+		| 'bookerType'
+		| 'bookerId'
+		| 'status'
+		| 'startsAt'
+		| 'endsAt'
+		| 'notes'
+		| 'recurringSeriesId'
+	>[];
 	recurringSeries: {
 		id: string;
 		frequencyLabel: string;
@@ -148,12 +123,7 @@ export interface MemberReservationsResponse {
 }
 
 export interface ReservationPayResponse {
-	reservation: {
-		id: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
-	};
+	reservation: Pick<Reservation, 'id' | 'startsAt' | 'endsAt' | 'notes'>;
 	durationHours: number;
 	totalCents: number;
 	hourlyRateCents: number;
@@ -161,61 +131,29 @@ export interface ReservationPayResponse {
 }
 
 export interface MemberTicketsResponse {
-	tickets: {
-		id: string;
-		eventId: string;
-		code: string;
-		status: string;
-		attendeeName: string;
-		checkedInAt: string | null;
-		createdAt: string;
-		event: { title: string; startsAt: string; endsAt: string } | null;
-	}[];
+	tickets: (Pick<
+		Ticket,
+		'id' | 'eventId' | 'code' | 'status' | 'attendeeName' | 'checkedInAt' | 'createdAt'
+	> & {
+		event: Pick<Event, 'title' | 'startsAt' | 'endsAt'> | null;
+	})[];
 }
 
 export interface MemberEquipmentResponse {
-	equipment: {
-		id: string;
-		name: string;
-		description: string;
-		categoryId: string;
+	equipment: (Pick<Equipment, 'id' | 'name' | 'description' | 'categoryId' | 'condition' | 'totalQuantity'> & {
 		categoryName: string;
 		pricingTier: string;
-		condition: string;
-		totalQuantity: number;
 		availableQuantity: number;
-	}[];
-	categories: { id: string; name: string; pricingTier: string }[];
+	})[];
+	categories: Pick<EquipmentCategory, 'id' | 'name' | 'pricingTier'>[];
 	creditBalance: number;
 	isSustainingMember: boolean;
 	filters: { search: string; categoryId: string };
 }
 
-export interface EquipmentLoan {
-	id: string;
-	status: string;
-	equipmentName: string | null;
-	quantity: number;
-	requestedPickupDate: string;
-	estimatedReturnDate: string | null;
-	estimatedCostCents: number | null;
-	scheduledPickupDate: string | null;
-	dueDate: string | null;
-	checkedOutAt: string | null;
-	returnedAt: string | null;
-	isOverdue: boolean;
-	dailyRateCents: number | null;
-	totalChargeCents: number | null;
-	creditsCents: number | null;
-	memberNotes: string | null;
-	createdAt: string;
-	updatedAt: string;
-	[key: string]: unknown;
-}
-
 export interface MemberEquipmentLoansResponse {
-	active: EquipmentLoan[];
-	past: EquipmentLoan[];
+	active: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
+	past: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
 }
 
 export interface MembershipResponse {
@@ -234,55 +172,29 @@ export interface MembershipResponse {
 // ---------------------------------------------------------------------------
 
 export interface BandUpcomingResponse {
-	upcoming: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
+	upcoming: (Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt' | 'notes'> & {
 		bookedByName: string | null;
-	}[];
+	})[];
 }
 
 export interface BandMembersResponse {
-	active: {
-		id: string;
-		userId: string;
-		role: string;
-		position: string;
+	active: (Pick<BandMember, 'id' | 'userId' | 'role' | 'position' | 'createdAt'> & {
 		userName: string;
 		userEmail: string;
-		createdAt: string;
-	}[];
-	pending: {
-		id: string;
-		userId: string;
-		role: string;
-		position: string;
+	})[];
+	pending: (Pick<BandMember, 'id' | 'userId' | 'role' | 'position' | 'invitedById' | 'createdAt'> & {
 		userName: string;
 		userEmail: string;
-		invitedById: string;
-		createdAt: string;
-	}[];
+	})[];
 }
 
 export interface BandReservationsResponse {
-	upcoming: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
+	upcoming: (Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt' | 'notes'> & {
 		bookedByName: string | null;
-	}[];
-	past: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		notes: string | null;
+	})[];
+	past: (Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt' | 'notes'> & {
 		bookedByName: string | null;
-	}[];
+	})[];
 }
 
 // ---------------------------------------------------------------------------
@@ -296,151 +208,121 @@ export interface StaffDashboardResponse {
 		totalPermissions: number;
 		newUsersThisMonth: number;
 	};
-	recentUsers: {
-		id: string;
-		name: string;
-		email: string;
-		createdAt: string;
-	}[];
+	recentUsers: Pick<User, 'id' | 'name' | 'email' | 'createdAt'>[];
 }
 
 export interface StaffUsersResponse {
-	users: {
-		id: string;
-		name: string;
-		email: string;
-		pronouns: string | null;
-		createdAt: string;
+	users: (Pick<User, 'id' | 'name' | 'email' | 'pronouns' | 'createdAt'> & {
 		roles: string[];
-	}[];
+	})[];
 	pagination: Pagination;
 	search: string;
 }
 
 export interface StaffBandsResponse {
-	bands: {
-		id: string;
-		name: string;
-		slug: string;
+	bands: (Pick<Band, 'id' | 'name' | 'slug' | 'createdAt' | 'deletedAt'> & {
 		status: string;
-		createdAt: string;
-		deletedAt: string | null;
-		[key: string]: unknown;
-	}[];
+	})[];
 	pagination: Pagination;
 	filters: { search: string; status: string };
 }
 
 export interface StaffEventsResponse {
 	pagination: Pagination;
-	events: {
-		id: string;
-		title: string;
-		description: string;
-		startsAt: string;
-		endsAt: string;
-		doorsAt: string | null;
-		publishedAt: string | null;
-		createdAt: string;
-		updatedAt: string;
-		status: string;
-		tags: string;
-		reservationId: string | null;
-		ticketingEnabled: boolean;
-		ticketPrice: number | null;
-		ticketQuantity: number | null;
-		posterKey: string | null;
-		[key: string]: unknown;
-	}[];
+	events: Pick<
+		Event,
+		| 'id'
+		| 'title'
+		| 'description'
+		| 'startsAt'
+		| 'endsAt'
+		| 'doorsAt'
+		| 'publishedAt'
+		| 'createdAt'
+		| 'updatedAt'
+		| 'status'
+		| 'tags'
+		| 'reservationId'
+		| 'ticketingEnabled'
+		| 'ticketPrice'
+		| 'ticketQuantity'
+		| 'posterKey'
+	>[];
 }
 
 export interface StaffEventDetailResponse {
-	event: {
-		id: string;
-		title: string;
-		description: string;
-		startsAt: string;
-		endsAt: string;
-		doorsAt: string | null;
-		publishedAt: string | null;
-		createdAt: string;
-		updatedAt: string;
-		status: string;
-		tags: string;
-		reservationId: string | null;
-		ticketingEnabled: boolean;
-		ticketPrice: number | null;
-		ticketQuantity: number | null;
-		posterKey: string | null;
-		[key: string]: unknown;
-	};
+	event: Pick<
+		Event,
+		| 'id'
+		| 'title'
+		| 'description'
+		| 'startsAt'
+		| 'endsAt'
+		| 'doorsAt'
+		| 'publishedAt'
+		| 'createdAt'
+		| 'updatedAt'
+		| 'status'
+		| 'tags'
+		| 'reservationId'
+		| 'ticketingEnabled'
+		| 'ticketPrice'
+		| 'ticketQuantity'
+		| 'posterKey'
+	>;
 	posterUrl: string | null;
 	creator: { name: string; email: string };
-	linkedReservation: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-	} | null;
+	linkedReservation: Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt'> | null;
 	ticketStats: { sold: number; remaining: number | null } | null;
-	tickets: {
-		id: string;
-		purchaseId: string;
-		attendeeName: string;
-		attendeeEmail: string;
-		code: string;
-		status: string;
-		checkedInAt: string | null;
-		createdAt: string;
-	}[];
+	tickets: Pick<
+		Ticket,
+		| 'id'
+		| 'purchaseId'
+		| 'attendeeName'
+		| 'attendeeEmail'
+		| 'code'
+		| 'status'
+		| 'checkedInAt'
+		| 'createdAt'
+	>[];
 }
 
 export interface StaffCheckInResponse {
-	event: {
-		id: string;
-		title: string;
-		startsAt: string;
-		ticketQuantity: number;
-	};
-	tickets: {
-		id: string;
-		attendeeName: string;
-		attendeeEmail: string;
-		code: string;
-		status: string;
-		checkedInAt: string | null;
-	}[];
+	event: Pick<Event, 'id' | 'title' | 'startsAt' | 'ticketQuantity'>;
+	tickets: Pick<
+		Ticket,
+		'id' | 'attendeeName' | 'attendeeEmail' | 'code' | 'status' | 'checkedInAt'
+	>[];
 	stats: { sold: number; checkedIn: number };
 }
 
 export interface StaffReservationsResponse {
-	reservations: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		bookerType: string;
-		notes: string | null;
-		stripePaymentRecordId: string | null;
-		createdByUserId: string;
-		recurringSeriesId: string | null;
+	reservations: (Pick<
+		Reservation,
+		| 'id'
+		| 'status'
+		| 'startsAt'
+		| 'endsAt'
+		| 'bookerType'
+		| 'notes'
+		| 'stripePaymentRecordId'
+		| 'createdByUserId'
+		| 'recurringSeriesId'
+	> & {
 		memberName: string;
 		memberEmail: string;
 		memberPronouns: string | null;
 		memberRole: string | null;
-	}[];
-	unresolved: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		createdByUserId: string;
-		notes: string | null;
+	})[];
+	unresolved: (Pick<
+		Reservation,
+		'id' | 'status' | 'startsAt' | 'endsAt' | 'createdByUserId' | 'notes'
+	> & {
 		memberName: string;
 		memberEmail: string;
 		memberPronouns: string | null;
 		memberRole: string | null;
-	}[];
+	})[];
 	pagination: Pagination;
 	tab: string;
 	search: string;
@@ -452,31 +334,29 @@ export interface StaffReservationsResponse {
 }
 
 export interface StaffReservationDetailResponse {
-	reservation: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-		bookerType: string;
-		bookerId: string;
-		notes: string | null;
-		cancellationReason: string | null;
-		stripePaymentRecordId: string | null;
-		createdByUserId: string;
-		createdAt: string;
+	reservation: Pick<
+		Reservation,
+		| 'id'
+		| 'status'
+		| 'startsAt'
+		| 'endsAt'
+		| 'bookerType'
+		| 'bookerId'
+		| 'notes'
+		| 'cancellationReason'
+		| 'stripePaymentRecordId'
+		| 'createdByUserId'
+		| 'createdAt'
+	> & {
 		memberName: string;
 		memberEmail: string;
 		memberPhone: string | null;
 		memberPronouns: string | null;
 		memberImage: string | null;
 	};
-	sameDayReservations: {
-		id: string;
+	sameDayReservations: (Pick<Reservation, 'id' | 'bookerType' | 'startsAt' | 'endsAt'> & {
 		memberName: string;
-		bookerType: string;
-		startsAt: string;
-		endsAt: string;
-	}[];
+	})[];
 	isLastOfDay: boolean;
 	prevId: string | null;
 	nextId: string | null;
@@ -485,85 +365,64 @@ export interface StaffReservationDetailResponse {
 }
 
 export interface StaffEquipmentResponse {
-	equipment: {
-		id: string;
-		name: string;
-		description: string;
-		categoryId: string;
-		createdAt: string;
-		updatedAt: string;
-		deletedAt: string | null;
-		category: { id: string; name: string; pricingTier: string; createdAt: string; updatedAt: string };
-		[key: string]: unknown;
-	}[];
-	categories: { id: string; name: string; pricingTier: string; displayOrder: number; createdAt: string; updatedAt: string }[];
+	equipment: (Pick<
+		Equipment,
+		'id' | 'name' | 'description' | 'categoryId' | 'createdAt' | 'updatedAt' | 'deletedAt'
+	> & {
+		category: Pick<
+			EquipmentCategory,
+			'id' | 'name' | 'pricingTier' | 'createdAt' | 'updatedAt'
+		>;
+	})[];
+	categories: Pick<
+		EquipmentCategory,
+		'id' | 'name' | 'pricingTier' | 'displayOrder' | 'createdAt' | 'updatedAt'
+	>[];
 	pagination: Pagination;
 	filters: { search: string; categoryId: string; status: string };
 }
 
 export interface StaffEquipmentLoansResponse {
-	loans: {
-		id: string;
-		status: string;
-		requestedPickupDate: string;
-		scheduledPickupDate: string | null;
-		dueDate: string | null;
-		checkedOutAt: string | null;
-		returnedAt: string | null;
-		createdAt: string;
-		updatedAt: string;
-		[key: string]: unknown;
-	}[];
+	loans: Pick<
+		EquipmentLoan,
+		| 'id'
+		| 'status'
+		| 'requestedPickupDate'
+		| 'scheduledPickupDate'
+		| 'dueDate'
+		| 'checkedOutAt'
+		| 'returnedAt'
+		| 'createdAt'
+		| 'updatedAt'
+	>[];
 	pagination: Pagination;
 	filters: { search: string; status: string };
 }
 
 export interface StaffClosuresResponse {
-	closures: {
-		id: string;
-		reason: string;
-		startsAt: string;
-		endsAt: string;
-	}[];
+	closures: Pick<Closure, 'id' | 'reason' | 'startsAt' | 'endsAt'>[];
 }
 
 export interface StaffPaymentsResponse {
-	payments: {
-		id: string;
-		userId: string;
+	payments: (Pick<Payment, 'id' | 'userId' | 'amountCents' | 'paymentMethod' | 'status' | 'reservationId' | 'createdAt'> & {
 		userName: string;
 		userEmail: string;
-		amountCents: number;
-		paymentMethod: string;
-		status: string;
-		createdAt: string;
-		[key: string]: unknown;
-	}[];
+	})[];
 	pagination: Pagination;
 	filters: { search: string; method: string; status: string; from: string; to: string };
 }
 
 export interface StaffCreditsResponse {
-	transactions: {
-		id: number;
-		userId: string;
+	transactions: (Pick<CreditTransaction, 'id' | 'userId' | 'creditType' | 'amount' | 'balanceAfter' | 'source' | 'sourceId' | 'description' | 'createdAt'> & {
 		userName: string | null;
 		userEmail: string;
-		creditType: string;
-		amount: number;
-		balanceAfter: number;
-		source: string;
-		sourceId: string | null;
-		description: string;
-		createdAt: string;
-	}[];
+	})[];
 	pagination: Pagination;
 	filters: { search: string; creditType: string; source: string; from: string; to: string };
 }
 
 export interface StaffRecurringResponse {
-	series: {
-		id: string;
+	series: (Pick<RecurringSeries, 'id' | 'createdAt' | 'cancelledAt'> & {
 		userName: string;
 		userPronouns: string | null;
 		userRole: string | null;
@@ -571,9 +430,7 @@ export interface StaffRecurringResponse {
 		bookerType: string;
 		startsAt: string;
 		endsAt: string;
-		createdAt: string;
-		cancelledAt: string | null;
-	}[];
+	})[];
 	pagination: Pagination;
 	filter: string;
 }
@@ -583,68 +440,41 @@ export interface StaffRecurringResponse {
 // ---------------------------------------------------------------------------
 
 export interface DirectoryResponse {
-	members: {
-		id: string;
-		name: string;
-		pronouns: string | null;
-		image: string | null;
-		tagline: string | null;
+	members: (Pick<User, 'id' | 'name' | 'pronouns' | 'image' | 'tagline' | 'lookingForBand'> & {
 		instruments: string[];
 		genres: string[];
-		lookingForBand: boolean;
 		memberSince: string;
-		bands: { name: string; slug: string }[];
-	}[];
-	bands: {
-		id: string;
-		name: string;
-		slug: string;
-		bio: string | null;
-		tagline: string | null;
+		bands: Pick<Band, 'name' | 'slug'>[];
+	})[];
+	bands: (Pick<Band, 'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'lookingForMembers'> & {
 		avatarUrl: string | null;
 		memberCount: number;
 		genres: string[];
-		lookingForMembers: boolean;
-	}[];
+	})[];
 }
 
 export interface DirectoryBandResponse {
-	band: {
-		id: string;
-		name: string;
-		slug: string;
-		bio: string | null;
-		tagline: string | null;
+	band: Pick<
+		Band,
+		'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'createdAt' | 'lookingForMembers' | 'directoryContact' | 'links'
+	> & {
 		avatarUrl: string | null;
 		memberCount: number;
-		createdAt: string;
 		genres: string[];
-		lookingForMembers: boolean;
-		directoryContact: DirectoryContact | null;
-		links: ProfileLink[];
 	};
-	members: {
-		id: string;
-		role: string;
-		position: string;
+	members: (Pick<BandMember, 'id' | 'role' | 'position'> & {
 		userName: string;
 		userImage: string | null;
-	}[];
+	})[];
 }
 
 export interface DirectoryMemberResponse {
-	member: {
-		id: string;
-		name: string;
-		pronouns: string | null;
-		image: string | null;
-		bio: string | null;
-		tagline: string | null;
+	member: Pick<
+		User,
+		'id' | 'name' | 'pronouns' | 'image' | 'bio' | 'tagline' | 'lookingForBand' | 'directoryContact' | 'links'
+	> & {
 		instruments: string[];
 		genres: string[];
-		lookingForBand: boolean;
-		directoryContact: DirectoryContact | null;
-		links: ProfileLink[];
 	};
 }
 
@@ -653,18 +483,12 @@ export interface DirectoryMemberResponse {
 // ---------------------------------------------------------------------------
 
 export interface EventsResponse {
-	events: {
-		id: string;
-		title: string;
-		description: string;
-		startsAt: string;
-		endsAt: string;
-		doorsAt: string | null;
-		tags: string | null;
+	events: (Pick<
+		Event,
+		'id' | 'title' | 'description' | 'startsAt' | 'endsAt' | 'doorsAt' | 'tags' | 'ticketingEnabled' | 'ticketPrice'
+	> & {
 		posterUrl: string | null;
-		ticketingEnabled: boolean;
-		ticketPrice: number | null;
-	}[];
+	})[];
 }
 
 // ---------------------------------------------------------------------------
@@ -672,24 +496,13 @@ export interface EventsResponse {
 // ---------------------------------------------------------------------------
 
 export interface AudiencesResponse {
-	audiences: {
-		id: string;
-		name: string;
-		slug: string;
-		description: string | null;
+	audiences: (Pick<Audience, 'id' | 'name' | 'slug' | 'description'> & {
 		optIn: boolean;
-		[key: string]: unknown;
-	}[];
+	})[];
 }
 
 export interface AudienceDetailResponse {
-	audience: {
-		id: string;
-		name: string;
-		slug: string;
-		description: string | null;
-		[key: string]: unknown;
-	};
+	audience: Pick<Audience, 'id' | 'name' | 'slug' | 'description'>;
 	isSubscribed: boolean;
 }
 

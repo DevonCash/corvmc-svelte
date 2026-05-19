@@ -1,5 +1,5 @@
 import { sqliteTable, text, index, unique } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 import { user } from './auth';
 import { band } from './band';
@@ -28,12 +28,3 @@ export const platformInvite = sqliteTable(
 		index('idx_platform_invite_band').on(t.bandId)
 	]
 );
-
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const platformInviteRelations = relations(platformInvite, ({ one }) => ({
-	band: one(band, { fields: [platformInvite.bandId], references: [band.id] }),
-	invitedBy: one(user, { fields: [platformInvite.invitedById], references: [user.id] }),
-}));

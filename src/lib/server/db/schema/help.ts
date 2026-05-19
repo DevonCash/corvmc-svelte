@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid } from './columns';
 import { user } from './auth';
 
@@ -46,16 +46,3 @@ export const helpArticle = sqliteTable(
 		index('idx_help_articles_published').on(t.published, t.minRole)
 	]
 );
-
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const helpCategoryRelations = relations(helpCategory, ({ many }) => ({
-	articles: many(helpArticle),
-}));
-
-export const helpArticleRelations = relations(helpArticle, ({ one }) => ({
-	category: one(helpCategory, { fields: [helpArticle.categoryId], references: [helpCategory.id] }),
-	createdBy: one(user, { fields: [helpArticle.createdByUserId], references: [user.id] }),
-}));
