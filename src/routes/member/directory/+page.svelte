@@ -140,7 +140,7 @@
 							</div>
 						</div>
 						{#if member.lookingForBand}
-							<div class="id-card__gaff">seeking a band</div>
+							<div class="id-card__gaff bg-primary text-primary-contrast">seeking a band</div>
 						{/if}
 						<div class="id-card__footer">
 							<div class="id-card__since">Member since {new Date(member.createdAt).getFullYear()}</div>

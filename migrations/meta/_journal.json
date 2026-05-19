@@ -15,6 +15,13 @@
       "when": 1779048013351,
       "tag": "0001_thin_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779208213799,
+      "tag": "0002_round_manta",
+      "breakpoints": true
     }
   ]
 }

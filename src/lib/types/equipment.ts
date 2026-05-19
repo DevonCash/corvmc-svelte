@@ -54,7 +54,7 @@ export const updateCategorySchema = createCategorySchema.partial();
 export const createEquipmentSchema = z.object({
 	name: z.string().min(1).max(255),
 	description: z.string().max(2000).optional(),
-	categoryId: z.string().uuid(),
+	categoryId: z.uuid(),
 	totalQuantity: z.coerce.number().int().min(1).default(1),
 	outOfOrderQuantity: z.coerce.number().int().min(0).default(0),
 	serialNumber: z.string().max(100).optional(),
@@ -67,7 +67,7 @@ export const createEquipmentSchema = z.object({
 export const updateEquipmentSchema = createEquipmentSchema.partial();
 
 export const requestLoanSchema = z.object({
-	equipmentId: z.string().uuid().optional(),
+	equipmentId: z.uuid().optional(),
 	quantity: z.coerce.number().int().min(1).default(1),
 	requestedPickupDate: z.coerce.date(),
 	estimatedReturnDate: z.coerce.date(),
@@ -92,7 +92,7 @@ export function estimateLoanCost(
 }
 
 export const scheduleLoanSchema = z.object({
-	equipmentId: z.string().uuid(),
+	equipmentId: z.uuid(),
 	scheduledPickupDate: z.coerce.date()
 });
 

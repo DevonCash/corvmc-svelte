@@ -16,25 +16,31 @@
 	const roleIcons = {
 		admin: IconUserCog,
 		staff: IconUserShield,
-		sustaining: IconUserHeart
+		sustaining: IconUserHeart,
+		member: IconUser
 	} as const;
 
-	const roleIcon = $derived(member.role && member.role in roleIcons ? roleIcons[member.role as keyof typeof roleIcons] : IconUser);
+	const RoleIcon = $derived(
+		member.role && member.role in roleIcons ? roleIcons[member.role as keyof typeof roleIcons] : IconUser
+	);
 </script>
 
 <a
 	href={member.userId ? `/staff/users/${member.userId}` : '#'}
-	class="btn btn-ghost inline-flex items-center justify-start gap-3! text-left  {extraClass}"
+	class="flat btn inline-flex items-center justify-start gap-3 text-left btn-ghost {extraClass}"
 >
-	{#if !hideAvatar}
-		<Avatar class='size-8' src={member.avatarUrl ?? ''} name={member.name} />
+	{#if member.avatarUrl && !hideAvatar}
+		<Avatar class="size-8" src={member.avatarUrl} name={member.name} />
 	{/if}
 	<div class="min-w-0">
-		<p class="font-medium flex items-center gap-1">
-			<span class="tooltip tooltip-right" data-tip={member.role ?? 'member'}>
-				<roleIcon size={14} class="opacity-60"></roleIcon>
-			</span>
-			{member.name}{#if member.pronouns} <span class="text-xs font-normal opacity-60">{member.pronouns}</span>{/if}
+		<p class="flex items-center gap-1 font-medium">
+			{#if member.role}
+				<span class="tooltip tooltip-right" data-tip={member.role ?? 'member'}>
+					<RoleIcon size={14}></RoleIcon>
+				</span>
+			{/if}
+			{member.name}{#if member.pronouns}
+				<span class="text-xs font-normal opacity-60">{member.pronouns}</span>{/if}
 		</p>
 		{#if member.email}<span class="link text-sm opacity-60">{member.email}</span>{/if}
 	</div>
