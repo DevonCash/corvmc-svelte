@@ -1,6 +1,6 @@
 import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
 
@@ -37,15 +37,6 @@ export const reservation = sqliteTable(
 	]
 );
 
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const reservationRelations = relations(reservation, ({ one }) => ({
-	createdBy: one(user, { fields: [reservation.createdByUserId], references: [user.id] }),
-	recurringSeries: one(recurringSeries, { fields: [reservation.recurringSeriesId], references: [recurringSeries.id] }),
-}));
-
 export const closure = sqliteTable(
 	'closure',
 	{
@@ -60,3 +51,10 @@ export const closure = sqliteTable(
 		check('closure_time_order', sql`ends_at > starts_at`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Reservation = Serialized<typeof reservation.$inferSelect>;
+export type Closure = Serialized<typeof closure.$inferSelect>;

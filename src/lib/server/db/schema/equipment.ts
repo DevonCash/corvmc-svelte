@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 
 export const equipmentCategory = sqliteTable('equipment_category', {
@@ -82,19 +82,9 @@ export const equipmentLoan = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const equipmentCategoryRelations = relations(equipmentCategory, ({ many }) => ({
-	equipment: many(equipment),
-}));
-
-export const equipmentRelations = relations(equipment, ({ one, many }) => ({
-	category: one(equipmentCategory, { fields: [equipment.categoryId], references: [equipmentCategory.id] }),
-	loans: many(equipmentLoan),
-}));
-
-export const equipmentLoanRelations = relations(equipmentLoan, ({ one }) => ({
-	equipment: one(equipment, { fields: [equipmentLoan.equipmentId], references: [equipment.id] }),
-	user: one(user, { fields: [equipmentLoan.userId], references: [user.id] }),
-}));
+export type Equipment = Serialized<typeof equipment.$inferSelect>;
+export type EquipmentCategory = Serialized<typeof equipmentCategory.$inferSelect>;
+export type EquipmentLoan = Serialized<typeof equipmentLoan.$inferSelect>;

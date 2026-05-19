@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid, zodJson } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, zodJson, type Serialized } from './columns';
 import { user } from './auth';
 import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
 
@@ -68,19 +68,8 @@ export const bandMember = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const bandRelations = relations(band, ({ many }) => ({
-	genres: many(bandGenre),
-	members: many(bandMember),
-}));
-
-export const bandGenreRelations = relations(bandGenre, ({ one }) => ({
-	band: one(band, { fields: [bandGenre.bandId], references: [band.id] }),
-}));
-
-export const bandMemberRelations = relations(bandMember, ({ one }) => ({
-	band: one(band, { fields: [bandMember.bandId], references: [band.id] }),
-	user: one(user, { fields: [bandMember.userId], references: [user.id] }),
-}));
+export type Band = Serialized<typeof band.$inferSelect>;
+export type BandMember = Serialized<typeof bandMember.$inferSelect>;

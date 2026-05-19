@@ -1,6 +1,6 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { event } from './event';
 
@@ -33,11 +33,7 @@ export const ticket = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const ticketRelations = relations(ticket, ({ one }) => ({
-	event: one(event, { fields: [ticket.eventId], references: [event.id] }),
-	user: one(user, { fields: [ticket.userId], references: [user.id], relationName: 'ticketUser' }),
-	checkedInBy: one(user, { fields: [ticket.checkedInByUserId], references: [user.id], relationName: 'ticketCheckedInBy' }),
-}));
+export type Ticket = Serialized<typeof ticket.$inferSelect>;

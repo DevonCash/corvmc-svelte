@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { timestamp, uuid, zodJson } from './columns';
 import { z } from 'zod';
 import { user } from './auth';
@@ -52,15 +52,3 @@ export const notificationPreference = sqliteTable(
 		index('idx_notification_pref_user').on(t.userId)
 	]
 );
-
-// ---------------------------------------------------------------------------
-// Relations
-// ---------------------------------------------------------------------------
-
-export const notificationRelations = relations(notification, ({ one }) => ({
-	user: one(user, { fields: [notification.userId], references: [user.id] }),
-}));
-
-export const notificationPreferenceRelations = relations(notificationPreference, ({ one }) => ({
-	user: one(user, { fields: [notificationPreference.userId], references: [user.id] }),
-}));

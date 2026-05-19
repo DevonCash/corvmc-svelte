@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { reservation } from './reservation';
 
@@ -35,10 +35,7 @@ export const event = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const eventRelations = relations(event, ({ one }) => ({
-	reservation: one(reservation, { fields: [event.reservationId], references: [reservation.id] }),
-	createdBy: one(user, { fields: [event.createdByUserId], references: [user.id] }),
-}));
+export type Event = Serialized<typeof event.$inferSelect>;

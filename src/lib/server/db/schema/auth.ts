@@ -1,10 +1,8 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, zodJson } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
 import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
-import { bandMember } from './band';
-
 // ---------------------------------------------------------------------------
 // better-auth core tables
 // ---------------------------------------------------------------------------
@@ -107,29 +105,7 @@ export const verification = sqliteTable('verification', {
 });
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const userRelations = relations(user, ({ many }) => ({
-	instruments: many(userInstrument),
-	genres: many(userGenre),
-	sessions: many(session),
-	accounts: many(account),
-	bandMembers: many(bandMember),
-}));
-
-export const userInstrumentRelations = relations(userInstrument, ({ one }) => ({
-	user: one(user, { fields: [userInstrument.userId], references: [user.id] }),
-}));
-
-export const userGenreRelations = relations(userGenre, ({ one }) => ({
-	user: one(user, { fields: [userGenre.userId], references: [user.id] }),
-}));
-
-export const sessionRelations = relations(session, ({ one }) => ({
-	user: one(user, { fields: [session.userId], references: [user.id] }),
-}));
-
-export const accountRelations = relations(account, ({ one }) => ({
-	user: one(user, { fields: [account.userId], references: [user.id] }),
-}));
+export type User = Serialized<typeof user.$inferSelect>;

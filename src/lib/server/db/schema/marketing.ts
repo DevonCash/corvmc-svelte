@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { sql } from 'drizzle-orm';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
@@ -99,30 +99,7 @@ export const campaignAudience = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Relations
+// Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export const subscriberRelations = relations(subscriber, ({ one, many }) => ({
-	user: one(user, { fields: [subscriber.userId], references: [user.id] }),
-	audienceMembers: many(audienceMember),
-}));
-
-export const audienceRelations = relations(audience, ({ many }) => ({
-	members: many(audienceMember),
-	campaigns: many(campaignAudience),
-}));
-
-export const audienceMemberRelations = relations(audienceMember, ({ one }) => ({
-	subscriber: one(subscriber, { fields: [audienceMember.subscriberId], references: [subscriber.id] }),
-	audience: one(audience, { fields: [audienceMember.audienceId], references: [audience.id] }),
-}));
-
-export const campaignRelations = relations(campaign, ({ one, many }) => ({
-	sentBy: one(user, { fields: [campaign.sentById], references: [user.id] }),
-	audiences: many(campaignAudience),
-}));
-
-export const campaignAudienceRelations = relations(campaignAudience, ({ one }) => ({
-	campaign: one(campaign, { fields: [campaignAudience.campaignId], references: [campaign.id] }),
-	audience: one(audience, { fields: [campaignAudience.audienceId], references: [audience.id] }),
-}));
+export type Audience = Serialized<typeof audience.$inferSelect>;

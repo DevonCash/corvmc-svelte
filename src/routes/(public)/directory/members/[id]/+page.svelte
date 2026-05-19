@@ -87,7 +87,7 @@
 		</div>
 	{/if}
 
-	{#if member.links.length > 0}
+	{#if member.links && member.links.length > 0}
 		<div>
 			<h2 class="text-sm font-semibold mb-2">Links</h2>
 			<ProfileLinks links={member.links} />

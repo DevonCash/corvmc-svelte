@@ -1,12 +1,13 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from './schema';
+import { relations } from './schema/relations';
 
-export type Database = ReturnType<typeof drizzle<typeof schema>>;
+export type Database = ReturnType<typeof drizzle<typeof schema, typeof relations>>;
 
 let _db: Database;
 
 export function initDb(d1: D1Database) {
-	_db = drizzle(d1, { schema });
+	_db = drizzle(d1, { schema, relations });
 }
 
 export const db = new Proxy({} as Database, {
