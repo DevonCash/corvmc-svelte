@@ -1,7 +1,14 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { Field } from '$lib/components/shared/Form';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import { purchaseTickets } from './data.remote';
 
 	let { data }: { data: {
 		event: {
@@ -23,17 +30,45 @@
 
 	const evt = $derived(data.event);
 	const soldOut = $derived(data.remaining === 0);
-
-	function parseTags(tags: string | null): string[] {
-		if (!tags) return [];
-		return tags.split(',').map((t) => t.trim()).filter(Boolean);
-	}
+	const maxQuantity = $derived(
+		data.remaining !== null ? Math.min(data.remaining, 10) : 10
+	);
 
 	const discountedPrice = $derived(
 		evt.ticketPrice && data.isSustainingMember
 			? Math.round(evt.ticketPrice / 2)
 			: evt.ticketPrice
 	);
+
+	let quantity = $state(1);
+	let attendeeName = $state((page.data as any).user?.name ?? '');
+	let attendeeEmail = $state((page.data as any).user?.email ?? '');
+	let coverFees = $state(false);
+
+	const subtotal = $derived((discountedPrice ?? 0) * quantity);
+
+	function parseTags(tags: string | null): string[] {
+		if (!tags) return [];
+		return tags.split(',').map((t) => t.trim()).filter(Boolean);
+	}
+
+	async function handlePurchase() {
+		const result = await purchaseTickets({
+			eventId: evt.id,
+			quantity,
+			attendeeName: attendeeName.trim(),
+			attendeeEmail: attendeeEmail.trim(),
+			coverFees
+		});
+
+		if (result?.redirectUrl) {
+			if (result.redirectUrl.startsWith('http')) {
+				window.location.href = result.redirectUrl;
+			} else {
+				await goto(result.redirectUrl);
+			}
+		}
+	}
 </script>
 
 <PageHeader title={evt.title} backHref="/member/events" />
@@ -77,7 +112,7 @@
 					{#if data.isSustainingMember && discountedPrice}
 						<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
 						<span class="text-sm line-through opacity-50">{formatCents(evt.ticketPrice)}</span>
-						<span class="badge badge-success badge-sm">Member 50% off</span>
+						<Badge variant="success">Member 50% off</Badge>
 					{:else}
 						<span class="text-lg font-bold">{formatCents(evt.ticketPrice)}</span>
 					{/if}
@@ -93,7 +128,57 @@
 				{/if}
 				{#if !soldOut}
 					<div class="card-actions mt-3">
-						<a href="/events/{evt.id}/tickets" class="btn btn-primary">Get Tickets</a>
+						<Action
+							action={handlePurchase}
+							label="Get Tickets"
+							modalTitle="Get Tickets"
+							submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
+							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
+							class="btn-primary"
+							onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
+						>
+							{#snippet form({ close })}
+								<div class="flex items-baseline gap-2">
+									{#if data.isSustainingMember && discountedPrice}
+										<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
+										<span class="text-sm line-through opacity-50">{formatCents(evt.ticketPrice!)}</span>
+										<Badge variant="success">Member 50% off</Badge>
+									{:else}
+										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
+									{/if}
+									<span class="text-sm opacity-50">per ticket</span>
+								</div>
+
+								<Field label="Number of tickets" name="quantity">
+									<select
+										name="quantity"
+										bind:value={quantity}
+										class="select select-bordered w-full"
+									>
+										{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+											<option value={n}>{n}</option>
+										{/each}
+									</select>
+								</Field>
+
+								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+
+								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+
+								<Field name="coverFees" type="checkbox" bind:value={coverFees}
+									checkboxLabel="Cover processing fees so the collective receives the full amount" />
+
+								<div class="border-t border-base-200 pt-4">
+									<div class="flex justify-between text-lg font-medium">
+										<span>Total</span>
+										<span>{formatCents(subtotal)}</span>
+									</div>
+									{#if data.isSustainingMember}
+										<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+									{/if}
+								</div>
+							{/snippet}
+						</Action>
 					</div>
 				{/if}
 			</div>
