@@ -1,6 +1,6 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { event } from './event';
 
@@ -31,3 +31,9 @@ export const ticket = sqliteTable(
 		index('idx_ticket_event_status').on(t.eventId, t.status)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Ticket = Serialized<typeof ticket.$inferSelect>;

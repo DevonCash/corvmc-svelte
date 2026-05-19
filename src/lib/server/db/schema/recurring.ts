@@ -1,6 +1,6 @@
 import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 
 export const recurringSeries = sqliteTable(
 	'recurring_series',
@@ -20,3 +20,9 @@ export const recurringSeries = sqliteTable(
 		index('idx_recurring_series_prototype').on(t.prototypeType, t.prototypeId)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type RecurringSeries = Serialized<typeof recurringSeries.$inferSelect>;

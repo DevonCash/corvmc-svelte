@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 
 export const equipmentCategory = sqliteTable('equipment_category', {
@@ -80,3 +80,11 @@ export const equipmentLoan = sqliteTable(
 		check('loan_qty_positive', sql`quantity > 0`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Equipment = Serialized<typeof equipment.$inferSelect>;
+export type EquipmentCategory = Serialized<typeof equipmentCategory.$inferSelect>;
+export type EquipmentLoan = Serialized<typeof equipmentLoan.$inferSelect>;

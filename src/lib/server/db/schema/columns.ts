@@ -1,6 +1,14 @@
 import { customType } from 'drizzle-orm/sqlite-core';
 import type { z } from 'zod';
 
+export type Serialized<T> = {
+	[K in keyof T]: T[K] extends Date
+		? string
+		: T[K] extends Date | null
+			? string | null
+			: T[K];
+};
+
 export const timestamp = customType<{
 	data: Date;
 	driverData: string;

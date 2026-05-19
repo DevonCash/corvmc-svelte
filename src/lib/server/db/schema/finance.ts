@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, zodJson } from './columns';
+import { timestamp, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
 import { user } from './auth';
 import { reservation } from './reservation';
@@ -60,3 +60,10 @@ export const creditTransaction = sqliteTable(
 		index('credit_transaction_user_type_idx').on(t.userId, t.creditType)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Payment = Serialized<typeof paymentCache.$inferSelect>;
+export type CreditTransaction = Serialized<typeof creditTransaction.$inferSelect>;

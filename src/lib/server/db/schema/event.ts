@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { reservation } from './reservation';
 
@@ -33,3 +33,9 @@ export const event = sqliteTable(
 		check('event_time_order', sql`ends_at > starts_at`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Event = Serialized<typeof event.$inferSelect>;

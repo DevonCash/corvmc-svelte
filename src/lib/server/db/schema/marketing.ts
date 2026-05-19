@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 
 // ---------------------------------------------------------------------------
@@ -97,3 +97,9 @@ export const campaignAudience = sqliteTable(
 	},
 	(t) => [primaryKey({ columns: [t.campaignId, t.audienceId] })]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Audience = Serialized<typeof audience.$inferSelect>;

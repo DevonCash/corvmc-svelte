@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, zodJson } from './columns';
+import { timestamp, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
 import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
 // ---------------------------------------------------------------------------
@@ -103,3 +103,9 @@ export const verification = sqliteTable('verification', {
 	createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
 	updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
 });
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type User = Serialized<typeof user.$inferSelect>;

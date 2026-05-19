@@ -1,6 +1,6 @@
 import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
 
@@ -51,3 +51,10 @@ export const closure = sqliteTable(
 		check('closure_time_order', sql`ends_at > starts_at`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Reservation = Serialized<typeof reservation.$inferSelect>;
+export type Closure = Serialized<typeof closure.$inferSelect>;

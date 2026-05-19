@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, zodJson } from './columns';
+import { timestamp, uuid, zodJson, type Serialized } from './columns';
 import { user } from './auth';
 import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
 
@@ -66,3 +66,10 @@ export const bandMember = sqliteTable(
 		index('idx_band_member_status').on(t.status)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Client-safe serialized types
+// ---------------------------------------------------------------------------
+
+export type Band = Serialized<typeof band.$inferSelect>;
+export type BandMember = Serialized<typeof bandMember.$inferSelect>;
