@@ -1,9 +1,9 @@
-import { db } from '$lib/server/db';
-import { siteConfig } from '$lib/server/db/schema/site-config';
-import { eq, like } from 'drizzle-orm';
+import { getJson, putJson, listKeys } from '$lib/server/kv';
+
+const KV_PREFIX = 'site-config:';
 
 // ---------------------------------------------------------------------------
-// Defaults — used when no DB row exists for a key
+// Defaults — used when no KV entry exists for a key
 // ---------------------------------------------------------------------------
 
 const DEFAULTS: Record<string, string | number> = {
@@ -36,13 +36,8 @@ export type SiteConfigKey = keyof typeof DEFAULTS;
 export async function getSiteConfig<T extends string | number = string>(
 	key: string
 ): Promise<T> {
-	const [row] = await db
-		.select({ value: siteConfig.value })
-		.from(siteConfig)
-		.where(eq(siteConfig.key, key))
-		.limit(1);
-
-	if (row) return JSON.parse(row.value) as T;
+	const value = await getJson<T>(`${KV_PREFIX}${key}`);
+	if (value !== null) return value;
 
 	const fallback = DEFAULTS[key];
 	if (fallback !== undefined) return fallback as T;
@@ -53,14 +48,8 @@ export async function getSiteConfig<T extends string | number = string>(
 export async function getConfigsByPrefix(
 	prefix: string
 ): Promise<Record<string, string | number>> {
-	const rows = await db
-		.select({ key: siteConfig.key, value: siteConfig.value })
-		.from(siteConfig)
-		.where(like(siteConfig.key, `${prefix}.%`));
-
 	const result: Record<string, string | number> = {};
 
-	// Start with defaults for this prefix
 	for (const [key, value] of Object.entries(DEFAULTS)) {
 		if (key.startsWith(`${prefix}.`)) {
 			const shortKey = key.slice(prefix.length + 1);
@@ -68,10 +57,12 @@ export async function getConfigsByPrefix(
 		}
 	}
 
-	// Override with DB values
-	for (const row of rows) {
-		const shortKey = row.key.slice(prefix.length + 1);
-		result[shortKey] = JSON.parse(row.value);
+	const kvKeys = await listKeys(`${KV_PREFIX}${prefix}.`);
+	for (const kvKey of kvKeys) {
+		const configKey = kvKey.slice(KV_PREFIX.length);
+		const shortKey = configKey.slice(prefix.length + 1);
+		const value = await getJson<string | number>(kvKey);
+		if (value !== null) result[shortKey] = value;
 	}
 
 	return result;
@@ -85,15 +76,7 @@ export async function updateSiteConfig(
 	key: string,
 	value: string | number
 ): Promise<void> {
-	const jsonValue = JSON.stringify(value);
-
-	await db
-		.insert(siteConfig)
-		.values({ key, value: jsonValue })
-		.onConflictDoUpdate({
-			target: siteConfig.key,
-			set: { value: jsonValue, updatedAt: new Date() }
-		});
+	await putJson(`${KV_PREFIX}${key}`, value);
 }
 
 export async function updateSiteConfigs(

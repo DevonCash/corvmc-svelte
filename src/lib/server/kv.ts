@@ -13,6 +13,17 @@ export async function getJson<T>(key: string): Promise<T | null> {
 	return getKv().get(key, 'json');
 }
 
-export async function putJson<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-	await getKv().put(key, JSON.stringify(value), { expirationTtl: ttlSeconds });
+export async function putJson<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+	const opts: KVNamespacePutOptions = {};
+	if (ttlSeconds) opts.expirationTtl = ttlSeconds;
+	await getKv().put(key, JSON.stringify(value), opts);
+}
+
+export async function listKeys(prefix: string): Promise<string[]> {
+	const result = await getKv().list({ prefix });
+	return result.keys.map((k) => k.name);
+}
+
+export async function deleteKey(key: string): Promise<void> {
+	await getKv().delete(key);
 }

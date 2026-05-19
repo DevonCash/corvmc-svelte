@@ -12,4 +12,3 @@ export * from './equipment';
 export * from './band';
 export * from './platform-invite';
 export * from './help';
-export * from './site-config';
