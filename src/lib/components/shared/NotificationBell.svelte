@@ -1,24 +1,8 @@
 <script lang="ts">
+	import type { Notification } from '$lib/server/db/schema';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-
-	// ---------------------------------------------------------------------------
-	// Notification bell with dropdown
-	// ---------------------------------------------------------------------------
-	// Connects to SSE for real-time updates. Shows unread count badge.
-	// Dropdown lists recent notifications with mark-as-read.
-	// ---------------------------------------------------------------------------
-
-	interface Notification {
-		id: string;
-		type: string;
-		title: string;
-		body?: string | null;
-		href?: string | null;
-		readAt?: string | null;
-		createdAt: string;
-	}
 
 	let unreadCount = $state(0);
 	let notifications = $state<Notification[]>([]);

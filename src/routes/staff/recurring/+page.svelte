@@ -56,7 +56,7 @@
 		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
 		<Column key="userName" header="Member" stopClick>
 			{#snippet cell(_, s)}
-				<MemberLink name={s.userName} pronouns={s.userPronouns} role={s.userRole} userId={undefined} />
+				<MemberLink member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }} />
 			{/snippet}
 		</Column>
 		<Column key="frequencyLabel" header="Schedule">

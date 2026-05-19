@@ -132,7 +132,7 @@
 								<BookerTypeIcon type={r.bookerType} size={16} />
 							</span>
 						{/if}
-						<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} role={r.memberRole} userId={r.createdByUserId} class='p-7 px-4'/>
+						<MemberLink member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole, userId: r.createdByUserId }} class='p-7 px-4'/>
 					</div>
 				</td>
 				<td>

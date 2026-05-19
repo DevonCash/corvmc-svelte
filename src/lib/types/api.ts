@@ -28,6 +28,19 @@ export interface Pagination {
 }
 
 // ---------------------------------------------------------------------------
+// Shared display types
+// ---------------------------------------------------------------------------
+
+export interface MemberSummary {
+	name: string;
+	email?: string;
+	pronouns?: string | null;
+	role?: string | null;
+	userId?: string;
+	avatarUrl?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Auth & Layout
 // ---------------------------------------------------------------------------
 

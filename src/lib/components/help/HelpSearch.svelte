@@ -8,7 +8,9 @@
 	} = $props();
 
 	let query = $state('');
-	let results = $state<{ id: string; title: string; slug: string; summary: string | null }[]>([]);
+	import type { HelpArticle } from '$lib/server/db/schema';
+
+	let results = $state<Pick<HelpArticle, 'id' | 'title' | 'slug' | 'summary'>[]>([]);
 	let open = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>;
 

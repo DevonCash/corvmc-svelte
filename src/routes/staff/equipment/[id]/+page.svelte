@@ -129,7 +129,7 @@
 		<DataTable data={loanHistory} rowHref={(loan) => `/staff/equipment/loans/${loan.id}`} empty="No loan history">
 			<Column key="userName" header="Member" stopClick>
 				{#snippet cell(_, loan)}
-					<MemberLink name={loan.userName} email={loan.userEmail} pronouns={loan.userPronouns} role={loan.userRole} userId={loan.userId} />
+					<MemberLink member={{ name: loan.userName, email: loan.userEmail, pronouns: loan.userPronouns, role: loan.userRole, userId: loan.userId }} />
 				{/snippet}
 			</Column>
 			<Column key="status" header="Status" shrink>

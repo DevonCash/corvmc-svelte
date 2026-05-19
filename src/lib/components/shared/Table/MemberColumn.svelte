@@ -22,9 +22,11 @@
 <Column key={nameKey} {header} {sortable} stopClick class="px-0">
 	{#snippet cell(_, row: any)}
 		<MemberLink
-			name={row[nameKey] ?? 'Unknown'}
-			email={emailKey ? row[emailKey] : undefined}
-			userId={userIdKey ? row[userIdKey] : undefined}
+			member={{
+				name: row[nameKey] ?? 'Unknown',
+				email: emailKey ? row[emailKey] : undefined,
+				userId: userIdKey ? row[userIdKey] : undefined
+			}}
 			hideAvatar={!avatar}
 			class="p-7 px-4"
 		/>

@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, zodJson } from './columns';
+import { timestamp, uuid, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
 import { user } from './auth';
 
@@ -52,3 +52,5 @@ export const notificationPreference = sqliteTable(
 		index('idx_notification_pref_user').on(t.userId)
 	]
 );
+
+export type Notification = Serialized<typeof notification.$inferSelect>;

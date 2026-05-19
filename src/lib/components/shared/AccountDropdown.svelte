@@ -3,7 +3,9 @@
 	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from './Avatar.svelte';
 
-	let { user }: { user: { name: string; email: string } } = $props();
+	import type { User } from '$lib/server/db/schema';
+
+	let { user }: { user: Pick<User, 'name' | 'email'> } = $props();
 	let open = $state(false);
 
 	function handleClickOutside(e: MouseEvent) {

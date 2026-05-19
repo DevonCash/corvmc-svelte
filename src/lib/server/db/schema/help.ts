@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 
 export const helpCategory = sqliteTable(
@@ -46,3 +46,6 @@ export const helpArticle = sqliteTable(
 		index('idx_help_articles_published').on(t.published, t.minRole)
 	]
 );
+
+export type HelpCategory = Serialized<typeof helpCategory.$inferSelect>;
+export type HelpArticle = Serialized<typeof helpArticle.$inferSelect>;

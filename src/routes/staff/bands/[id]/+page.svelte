@@ -103,7 +103,7 @@
 					<dd class="font-mono text-xs">{band.slug}</dd>
 
 					<dt class="opacity-60">Owner</dt>
-					<dd><MemberLink name={band.ownerName} email={band.ownerEmail} pronouns={band.ownerPronouns} role={band.ownerRole} userId={band.ownerId} /></dd>
+					<dd><MemberLink member={{ name: band.ownerName, email: band.ownerEmail, pronouns: band.ownerPronouns, role: band.ownerRole, userId: band.ownerId }} /></dd>
 
 					<dt class="opacity-60">Members</dt>
 					<dd>{band.memberCount} active</dd>
@@ -245,7 +245,7 @@
 		<DataTable data={members} empty="No members">
 			<Column key="userName" header="Member" stopClick>
 				{#snippet cell(_, m)}
-					<MemberLink name={m.userName} email={m.userEmail} pronouns={m.userPronouns} role={m.userRole} userId={m.userId} />
+					<MemberLink member={{ name: m.userName, email: m.userEmail, pronouns: m.userPronouns, role: m.userRole, userId: m.userId }} />
 				{/snippet}
 			</Column>
 			<Column key="role" header="Role" shrink stopClick>

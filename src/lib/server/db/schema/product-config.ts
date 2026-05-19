@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
+import { timestamp, type Serialized } from './columns';
 
 export const productConfig = sqliteTable('product_config', {
 	key: text('key').primaryKey(),
@@ -12,3 +12,5 @@ export const productConfig = sqliteTable('product_config', {
 	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
 	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 });
+
+export type ProductConfig = Serialized<typeof productConfig.$inferSelect>;

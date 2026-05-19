@@ -68,7 +68,7 @@
 					<div class="card-body p-4">
 						<div class="flex justify-between mb-2">
 							<div>
-								<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} role={r.memberRole} />
+								<MemberLink member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole }} />
 							</div>
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>

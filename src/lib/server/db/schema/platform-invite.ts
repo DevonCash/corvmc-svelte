@@ -1,6 +1,6 @@
 import { sqliteTable, text, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid } from './columns';
+import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { band } from './band';
 
@@ -28,3 +28,5 @@ export const platformInvite = sqliteTable(
 		index('idx_platform_invite_band').on(t.bandId)
 	]
 );
+
+export type PlatformInvite = Serialized<typeof platformInvite.$inferSelect>;
