@@ -53,7 +53,7 @@
 			{#snippet brand()}
 				<span class="block flex items-center justify-between h-[48px] px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
-					<Button class='btn-ghost  btn-square' title='To Public Site' href='/'>
+					<Button class='btn-ghost  btn-square btn-sm latched' title='To Public Site' href='/'>
 						<IconWorld class='text-primary size-5' />
 					</Button>
 				</span>

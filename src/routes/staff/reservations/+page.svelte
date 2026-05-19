@@ -66,7 +66,8 @@
 		{ key: 'status', header: '' },
 		{ key: 'startsAt', header: 'Time', sortable: true },
 		{ key: 'memberName', header: 'Reserved for', sortable: true },
-		{ key: 'stripePaymentRecordId', header: 'Payment' }
+		{ key: 'stripePaymentRecordId', header: 'Payment', align: 'center' },
+		{ key: 'actions', header: ''}
 	];
 </script>
 
@@ -114,7 +115,7 @@
 				<td class="w-px">
 					<StatusBadge status={r.status} class='size-6'/>
 				</td>
-				<td>
+				<td class='w-min'>
 					<div class="flex items-center gap-1">
 						{formatTimeRange(r.startsAt, r.endsAt)}
 						{#if r.recurringSeriesId}
@@ -125,14 +126,14 @@
 					</div>
 					<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
 				</td>
-				<td class="w-px" onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
+				<td onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
 					<div class="flex items-center gap-1">
 						{#if r.bookerType !== 'user'}
 							<span class="tooltip" data-tip={r.bookerType}>
 								<BookerTypeIcon type={r.bookerType} size={16} />
 							</span>
 						{/if}
-						<MemberLink name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} role={r.memberRole} userId={r.createdByUserId} class='p-7 px-4'/>
+						<MemberLink hideAvatar name={r.memberName} email={r.memberEmail} pronouns={r.memberPronouns} role={r.memberRole} userId={r.createdByUserId} class='p-7 px-4 w-full'/>
 					</div>
 				</td>
 				<td>
@@ -140,7 +141,7 @@
 						<span class="text-sm opacity-40">—</span>
 					{:else}
 						{@const ps = paymentStatus(r)}
-						<div class="flex items-center gap-1">
+						<div class="flex items-center justify-center gap-1">
 							{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}
 							<span class="tooltip" data-tip={ps.label}>
 								<ps.icon size={16} class={ps.color} />
@@ -148,13 +149,13 @@
 						</div>
 					{/if}
 				</td>
-				<td class="w-px" onclick={(e) => e.stopPropagation()}>
+				<td onclick={(e) => e.stopPropagation()}>
 					<div class="flex items-center gap-1">
 						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
 							<Action
 								action={() => confirmReservation({ reservationId: r.id })}
 								label="Confirm"
-								class="btn-ghost btn-xs btn-square"
+								class="btn-ghost btn-sm latched"
 								onsuccess={() => { toast.success('Confirmed'); invalidateAll(); }}
 							>
 								{#snippet icon()}<IconCheck size={16} />{/snippet}

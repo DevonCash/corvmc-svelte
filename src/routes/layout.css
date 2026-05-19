@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
-@plugin "daisyui" {
-  themes: corvmc --default, corvmc-dark;
+@plugin 'daisyui' {
+	themes:
+		corvmc --default,
+		corvmc-dark;
 }
 
 /* ---------------------------------------------------------------------------
@@ -10,226 +12,238 @@
    Derived from the CMC design system. oklch values mirror the daisyUI `corvmc`
    theme from the Laravel codebase's app.css.
    --------------------------------------------------------------------------- */
-@plugin "daisyui/theme" {
-  name: "corvmc";
-  default: true;
-  prefersdark: false;
-  color-scheme: "light";
+@plugin 'daisyui/theme' {
+	name: 'corvmc';
+	default: true;
+	prefersdark: false;
+	color-scheme: 'light';
 
-  --color-primary:           oklch(67% 0.18 43);
-  --color-primary-content:   oklch(20% 0.03 270);
-  --color-secondary:         oklch(25% 0.09 250);
-  --color-secondary-content: oklch(90% 0.02 270);
-  --color-accent:            oklch(85% 0.05 200);
-  --color-accent-content:    oklch(20% 0.03 270);
-  --color-neutral:           oklch(24% 0.03 270);
-  --color-neutral-content:   oklch(90% 0.02 270);
+	--color-primary: oklch(67% 0.18 43);
+	--color-primary-content: oklch(from white 1 100% none);
 
-  --color-base-100:          oklch(99% 0.015 65);
-  --color-base-200:          oklch(96% 0.02 60);
-  --color-base-300:          oklch(92% 0.025 55);
-  --color-base-content:      oklch(20% 0.03 270);
+	--color-secondary: oklch(25% 0.09 250);
+	--color-secondary-content: oklch(90% 0.02 270);
+	--color-accent: oklch(85% 0.05 200);
+	--color-accent-content: oklch(20% 0.03 270);
+	--color-neutral: oklch(24% 0.03 270);
+	--color-neutral-content: oklch(90% 0.02 270);
 
-  --color-info:              oklch(85% 0.05 200);
-  --color-info-content:      oklch(20% 0.03 270);
-  --color-success:           oklch(70% 0.14 160);
-  --color-success-content:   oklch(20% 0.03 270);
-  --color-warning:           oklch(90% 0.08 85);
-  --color-warning-content:   oklch(20% 0.03 270);
-  --color-error:             oklch(70% 0.18 15);
-  --color-error-content:     oklch(20% 0.03 270);
+	--color-base-100: oklch(99% 0.015 65);
+	--color-base-200: oklch(96% 0.02 60);
+	--color-base-300: oklch(92% 0.025 55);
+	--color-base-content: oklch(20% 0.03 270);
 
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.5rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 1;
-  --noise: 0;
+	--color-info: oklch(85% 0.05 200);
+	--color-info-content: oklch(20% 0.03 270);
+	--color-success: oklch(70% 0.14 160);
+	--color-success-content: oklch(20% 0.03 270);
+	--color-warning: oklch(90% 0.08 85);
+	--color-warning-content: oklch(20% 0.03 270);
+	--color-error: oklch(70% 0.18 15);
+	--color-error-content: oklch(20% 0.03 270);
+
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.5rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+
+	--shadow-color: var(--cmc-brown);
 }
 
 /* ---------------------------------------------------------------------------
    corvmc-dark — dark theme
    Cool blue-gray bases with warm off-white text and lifted brand accents.
    --------------------------------------------------------------------------- */
-@plugin "daisyui/theme" {
-  name: "corvmc-dark";
-  default: false;
-  prefersdark: true;
-  color-scheme: "dark";
+@plugin 'daisyui/theme' {
+	name: 'corvmc-dark';
+	default: false;
+	prefersdark: true;
+	color-scheme: 'dark';
 
-  --color-primary:           oklch(72% 0.16 50);
-  --color-primary-content:   oklch(15% 0.02 240);
-  --color-secondary:         oklch(68% 0.10 230);
-  --color-secondary-content: oklch(15% 0.02 240);
-  --color-accent:            oklch(78% 0.06 200);
-  --color-accent-content:    oklch(15% 0.02 240);
-  --color-neutral:           oklch(85% 0.02 240);
-  --color-neutral-content:   oklch(15% 0.02 240);
+	--color-primary: oklch(72% 0.16 50);
+	--color-primary-content: oklch(from white 1 100% none);
+	--color-secondary: oklch(68% 0.1 230);
+	--color-secondary-content: oklch(15% 0.02 240);
+	--color-accent: oklch(78% 0.06 200);
+	--color-accent-content: oklch(15% 0.02 240);
+	--color-neutral: oklch(85% 0.02 240);
+	--color-neutral-content: oklch(15% 0.02 240);
 
-  --color-base-100:          oklch(22% 0.02 250);
-  --color-base-200:          oklch(24% 0.02 248);
-  --color-base-300:          oklch(27% 0.02 245);
-  --color-base-content:      oklch(90% 0.02 60);
+	--color-base-100: oklch(22% 0.02 250);
+	--color-base-200: oklch(24% 0.02 248);
+	--color-base-300: oklch(27% 0.02 245);
+	--color-base-content: oklch(90% 0.02 60);
 
-  --color-info:              oklch(75% 0.10 220);
-  --color-info-content:      oklch(15% 0.02 240);
-  --color-success:           oklch(72% 0.13 160);
-  --color-success-content:   oklch(15% 0.02 240);
-  --color-warning:           oklch(80% 0.10 85);
-  --color-warning-content:   oklch(15% 0.02 240);
-  --color-error:             oklch(72% 0.18 15);
-  --color-error-content:     oklch(15% 0.02 240);
+	--color-info: oklch(75% 0.1 220);
+	--color-info-content: oklch(15% 0.02 240);
+	--color-success: oklch(72% 0.13 160);
+	--color-success-content: oklch(15% 0.02 240);
+	--color-warning: oklch(80% 0.1 85);
+	--color-warning-content: oklch(15% 0.02 240);
+	--color-error: oklch(72% 0.18 15);
+	--color-error-content: oklch(15% 0.02 240);
 
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.5rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 1;
-  --noise: 0;
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.5rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+
+	--shadow-color: var(--color-primary);
 }
 
 /* ---------------------------------------------------------------------------
    Brand palette — available in both themes via :root
    --------------------------------------------------------------------------- */
 :root {
-  --default-font-family: 'Lexend', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+	--default-font-family:
+		'Lexend', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+		'Noto Color Emoji';
 
-  /* Handwriting / chalk fonts (loaded in app.html) */
-  --font-chalk:  "Permanent Marker", "Lexend", system-ui, sans-serif;
-  --font-script: "Caveat", "Permanent Marker", cursive;
+	/* Handwriting / chalk fonts (loaded in app.html) */
+	--font-chalk: 'Permanent Marker', 'Lexend', system-ui, sans-serif;
+	--font-script: 'Caveat', 'Permanent Marker', cursive;
 
-  /* Brand palette (hex) */
-  --cmc-orange:      #e5771e;
-  --cmc-orange-soft: #ff8c42;
-  --cmc-yellow:      #ffe28a;
-  --cmc-goldenrod:   #ffb500;
-  --cmc-red-orange:  #f84d13;
-  --cmc-navy:        #003b5c;
-  --cmc-teal:        #00859b;
-  --cmc-light-blue:  #b8dde1;
-  --cmc-brown:       #5a3d2b;
-  --cmc-cream:       #fffbf6;
-  --cmc-parchment:   #ffe2cd;
-  --cmc-aged-paper:  #ecdfc4;
+	/* Brand palette (hex) */
+	--cmc-orange: #e5771e;
+	--cmc-orange-soft: #ff8c42;
+	--cmc-yellow: #ffe28a;
+	--cmc-goldenrod: #ffb500;
+	--cmc-red-orange: #f84d13;
+	--cmc-navy: #003b5c;
+	--cmc-teal: #00859b;
+	--cmc-light-blue: #b8dde1;
+	--cmc-brown: #5a3d2b;
+	--cmc-cream: #fffbf6;
+	--cmc-parchment: #ffe2cd;
+	--cmc-aged-paper: #ecdfc4;
 
-  /* Foreground tiers */
-  --fg-1: var(--color-base-content);
-  --fg-2: color-mix(in oklch, var(--color-base-content) 70%, transparent);
-  --fg-3: color-mix(in oklch, var(--color-base-content) 45%, transparent);
+	/* Foreground tiers */
+	--fg-1: var(--color-base-content);
+	--fg-2: color-mix(in oklch, var(--color-base-content) 70%, transparent);
+	--fg-3: color-mix(in oklch, var(--color-base-content) 45%, transparent);
 
-  /* Background tokens */
-  --bg-page:    var(--color-base-100);
-  --bg-section: var(--color-base-200);
-  --bg-card:    var(--color-base-100);
-  --bg-soft:    var(--color-base-300);
+	/* Background tokens */
+	--bg-page: var(--color-base-100);
+	--bg-section: var(--color-base-200);
+	--bg-card: var(--color-base-100);
+	--bg-soft: var(--color-base-300);
 
-  /* Surface (elevated cards / sidebars) */
-  --surface:        #ffffff;
-  --surface-border: color-mix(in oklch, var(--cmc-orange) 14%, transparent);
+	/* Surface (elevated cards / sidebars) */
+	--surface: #ffffff;
+	--surface-border: color-mix(in oklch, var(--cmc-orange) 14%, transparent);
 
-  /* Logo-specific tokens */
-  --speaker-case:  var(--cmc-orange);
-  --speaker-fill:  var(--cmc-yellow);
-  --speaker-front: var(--cmc-light-blue);
-  --sound-lines:   var(--cmc-teal);
+	/* Logo-specific tokens */
+	--speaker-case: var(--cmc-orange);
+	--speaker-fill: var(--cmc-yellow);
+	--speaker-front: var(--cmc-light-blue);
+	--sound-lines: var(--cmc-teal);
 
-  /* Lexend OpenType features
+	/* Lexend OpenType features
      cv05 = single-story g (retro tell)
      cv11 = single-story a (rounder, friendlier)
      ss01 = roman-style i/j (display only) */
-  --font-features-body:    "cv05", "cv11";
-  --font-features-display: "cv05", "cv11", "ss01";
+	--font-features-body: 'cv05', 'cv11';
+	--font-features-display: 'cv05', 'cv11', 'ss01';
 }
 
 /* Dark-theme overrides for brand palette & surface tokens */
-[data-theme="corvmc-dark"] {
-  --cmc-orange:     #ff8c42;
-  --cmc-teal:       #3eb5ca;
-  --cmc-navy:       #6da5cc;
-  --cmc-yellow:     #f4d27a;
-  --cmc-light-blue: #b8dde1;
-  --cmc-cream:      #e6dcd0;
-  --cmc-parchment:  #2a2722;
-  --cmc-brown:      #d3b59a;
+[data-theme='corvmc-dark'] {
+	--cmc-orange: #ff8c42;
+	--cmc-teal: #3eb5ca;
+	--cmc-navy: #6da5cc;
+	--cmc-yellow: #f4d27a;
+	--cmc-light-blue: #b8dde1;
+	--cmc-cream: #e6dcd0;
+	--cmc-parchment: #2a2722;
+	--cmc-brown: #d3b59a;
 
-  --bg-card: var(--color-base-300);
-  --bg-soft: var(--color-base-300);
+	--bg-card: var(--color-base-300);
+	--bg-soft: var(--color-base-300);
 
-  --surface:        var(--color-base-300);
-  --surface-border: rgba(255, 255, 255, 0.06);
+	--surface: var(--color-base-300);
+	--surface-border: rgba(255, 255, 255, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="corvmc"]) {
-    --cmc-orange:     #ff8c42;
-    --cmc-teal:       #3eb5ca;
-    --cmc-navy:       #6da5cc;
-    --cmc-yellow:     #f4d27a;
-    --cmc-light-blue: #b8dde1;
-    --cmc-cream:      #e6dcd0;
-    --cmc-parchment:  #2a2722;
-    --cmc-brown:      #d3b59a;
+	:root:not([data-theme='corvmc']) {
+		--cmc-orange: #ff8c42;
+		--cmc-teal: #3eb5ca;
+		--cmc-navy: #6da5cc;
+		--cmc-yellow: #f4d27a;
+		--cmc-light-blue: #b8dde1;
+		--cmc-cream: #e6dcd0;
+		--cmc-parchment: #2a2722;
+		--cmc-brown: #d3b59a;
 
-    --bg-card: var(--color-base-300);
-    --bg-soft: var(--color-base-300);
+		--bg-card: var(--color-base-300);
+		--bg-soft: var(--color-base-300);
 
-    --surface:        var(--color-base-300);
-    --surface-border: rgba(255, 255, 255, 0.06);
-  }
+		--surface: var(--color-base-300);
+		--surface-border: rgba(255, 255, 255, 0.06);
+	}
 }
 
 /* ---------------------------------------------------------------------------
    Typography foundations
    --------------------------------------------------------------------------- */
 html {
-  font-feature-settings: var(--font-features-body);
+	font-feature-settings: var(--font-features-body);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-feature-settings: var(--font-features-display);
-  text-wrap: balance;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-feature-settings: var(--font-features-display);
+	text-wrap: balance;
 }
 
 p {
-  text-wrap: pretty;
+	text-wrap: pretty;
 }
 
 /* Eyebrow — uppercase label above a heading */
 .eyebrow {
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-primary);
+	font-size: 0.875rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--color-primary);
 }
 
 /* Display headline — chunky retro look for hero / poster moments */
 .display {
-  font-weight: 700;
-  font-size: 3.75rem;
-  line-height: 0.95;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-  font-feature-settings: var(--font-features-display);
+	font-weight: 700;
+	font-size: 3.75rem;
+	line-height: 0.95;
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+	font-feature-settings: var(--font-features-display);
 }
 
 /* Retro rainbow stack text-shadow (wordmark / hero only) */
 .retro-rainbow-shadow {
-  color: #fff;
-  text-shadow:
-     2px  2px 0 var(--cmc-goldenrod),
-     4px  4px 0 var(--cmc-red-orange),
-     6px  6px 0 var(--cmc-teal),
-     8px  8px 0 var(--cmc-navy);
+	color: #fff;
+	text-shadow:
+		2px 2px 0 var(--cmc-goldenrod),
+		4px 4px 0 var(--cmc-red-orange),
+		6px 6px 0 var(--cmc-teal),
+		8px 8px 0 var(--cmc-navy);
 }
 
 /* Tabular figures — tables, stat cards, anywhere numbers should align */
 .tnums {
-  font-variant-numeric: tabular-nums lining-nums;
+	font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* ---------------------------------------------------------------------------
@@ -238,81 +252,108 @@ p {
    Admin/navy variant: navy / goldenrod / red-orange
    --------------------------------------------------------------------------- */
 .tri-stripe {
-  height: 10px;
-  background: linear-gradient(
-    to bottom,
-    var(--cmc-teal)       0%,   var(--cmc-teal)       33.333%,
-    var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
-    var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
-  );
+	height: 10px;
+	background: linear-gradient(
+		to bottom,
+		var(--cmc-teal) 0%,
+		var(--cmc-teal) 33.333%,
+		var(--cmc-goldenrod) 33.333%,
+		var(--cmc-goldenrod) 66.666%,
+		var(--cmc-red-orange) 66.666%,
+		var(--cmc-red-orange) 100%
+	);
 }
 
 .tri-stripe--navy {
-  background: linear-gradient(
-    to bottom,
-    var(--cmc-navy)       0%,   var(--cmc-navy)       33.333%,
-    var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
-    var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
-  );
+	background: linear-gradient(
+		to bottom,
+		var(--cmc-navy) 0%,
+		var(--cmc-navy) 33.333%,
+		var(--cmc-goldenrod) 33.333%,
+		var(--cmc-goldenrod) 66.666%,
+		var(--cmc-red-orange) 66.666%,
+		var(--cmc-red-orange) 100%
+	);
 }
 
 /* Dark mode: swap to the navy (mid-blue) top band for better contrast */
-[data-theme="corvmc-dark"] .tri-stripe {
-  background: linear-gradient(
-    to bottom,
-    var(--cmc-navy)       0%,   var(--cmc-navy)       33.333%,
-    var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
-    var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
-  );
+[data-theme='corvmc-dark'] .tri-stripe {
+	background: linear-gradient(
+		to bottom,
+		var(--cmc-navy) 0%,
+		var(--cmc-navy) 33.333%,
+		var(--cmc-goldenrod) 33.333%,
+		var(--cmc-goldenrod) 66.666%,
+		var(--cmc-red-orange) 66.666%,
+		var(--cmc-red-orange) 100%
+	);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="corvmc"]) .tri-stripe {
-    background: linear-gradient(
-      to bottom,
-      var(--cmc-navy)       0%,   var(--cmc-navy)       33.333%,
-      var(--cmc-goldenrod)  33.333%, var(--cmc-goldenrod) 66.666%,
-      var(--cmc-red-orange) 66.666%, var(--cmc-red-orange) 100%
-    );
-  }
+	:root:not([data-theme='corvmc']) .tri-stripe {
+		background: linear-gradient(
+			to bottom,
+			var(--cmc-navy) 0%,
+			var(--cmc-navy) 33.333%,
+			var(--cmc-goldenrod) 33.333%,
+			var(--cmc-goldenrod) 66.666%,
+			var(--cmc-red-orange) 66.666%,
+			var(--cmc-red-orange) 100%
+		);
+	}
 }
 
 /* ---------------------------------------------------------------------------
    Section tints — alternating tinted backgrounds from the design system.
    Use `color-mix` with brand accents to tint against the page background.
    --------------------------------------------------------------------------- */
-.section-tint-primary   { background: color-mix(in oklch, var(--cmc-orange) 18%, var(--bg-page)); }
-.section-tint-success   { background: color-mix(in oklch, #2ea076 12%, var(--bg-page)); }
-.section-tint-warning   { background: color-mix(in oklch, var(--cmc-yellow) 35%, var(--bg-page)); }
-.section-tint-info      { background: color-mix(in oklch, var(--cmc-light-blue) 32%, var(--bg-page)); }
-.section-tint-secondary { background: color-mix(in oklch, var(--cmc-navy) 8%, var(--bg-page)); }
+.section-tint-primary {
+	background: color-mix(in oklch, var(--cmc-orange) 18%, var(--bg-page));
+}
+.section-tint-success {
+	background: color-mix(in oklch, #2ea076 12%, var(--bg-page));
+}
+.section-tint-warning {
+	background: color-mix(in oklch, var(--cmc-yellow) 35%, var(--bg-page));
+}
+.section-tint-info {
+	background: color-mix(in oklch, var(--cmc-light-blue) 32%, var(--bg-page));
+}
+.section-tint-secondary {
+	background: color-mix(in oklch, var(--cmc-navy) 8%, var(--bg-page));
+}
 
 /* ---------------------------------------------------------------------------
    Sunburst — radiating goldenrod rays from the upper-right.
    Apply to a positioned container; renders behind content via ::after.
    --------------------------------------------------------------------------- */
 .sunburst {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
 }
 .sunburst::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.18;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      from -90deg at 100% 0%,
-      var(--cmc-goldenrod) 0 6deg, transparent 6deg 18deg,
-      var(--cmc-goldenrod) 18deg 24deg, transparent 24deg 36deg,
-      var(--cmc-goldenrod) 36deg 42deg, transparent 42deg 54deg,
-      var(--cmc-goldenrod) 54deg 60deg, transparent 60deg 72deg,
-      var(--cmc-goldenrod) 72deg 78deg, transparent 78deg 90deg,
-      var(--cmc-goldenrod) 90deg 96deg, transparent 96deg 360deg
-    );
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	opacity: 0.18;
+	pointer-events: none;
+	background: conic-gradient(
+		from -90deg at 100% 0%,
+		var(--cmc-goldenrod) 0 6deg,
+		transparent 6deg 18deg,
+		var(--cmc-goldenrod) 18deg 24deg,
+		transparent 24deg 36deg,
+		var(--cmc-goldenrod) 36deg 42deg,
+		transparent 42deg 54deg,
+		var(--cmc-goldenrod) 54deg 60deg,
+		transparent 60deg 72deg,
+		var(--cmc-goldenrod) 72deg 78deg,
+		transparent 78deg 90deg,
+		var(--cmc-goldenrod) 90deg 96deg,
+		transparent 96deg 360deg
+	);
 }
 
 /* ---------------------------------------------------------------------------
@@ -320,737 +361,864 @@ p {
    Hard brown border + offset drop shadow with press animation.
    --------------------------------------------------------------------------- */
 .btn {
-  border: 2.5px solid var(--cmc-brown) !important;
-  box-shadow: 4px 4px 0 var(--cmc-brown) !important;
-  transition: transform 80ms ease, box-shadow 80ms ease !important;
+	--shadow: 5px;
+	--shadow-size: var(--shadow);
+	position: relative;
+	border: 2.5px solid var(--shadow-color);
+	box-shadow: calc(-1 * var(--shadow-size)) var(--shadow-size) 0 var(--shadow-color);
+	transform: translate(var(--shadow-size), calc(-1 * var(--shadow-size)));
+	transition:
+		transform 80ms ease,
+		box-shadow 80ms ease;
 }
+
+.btn:disabled {
+	--shadow: 2px;
+}
+
+.btn.flat {
+	--shadow: 0;
+
+	&:hover {
+		filter: brightness(.8);
+	}
+}
+
+.btn:focus {
+	outline: none;
+	border-color: var(--color-accent);
+	--shadow-color: var(--color-accent);
+}
+
+.btn::before {
+	content: '';
+	box-sizing: border-box;
+	width: calc(100% + var(--shadow-size));
+	height: calc(100% + var(--shadow-size));
+	position: absolute;
+	top: 0;
+	right: 0;
+	transition:
+		width 80ms ease,
+		height 80ms ease;
+}
+
+.btn.latched {
+	--shadow-size: calc(var(--shadow) / 2);
+
+	&:hover {
+		--shadow-size: calc(2 * var(--shadow) / 3);
+	}
+}
+
 .btn:hover {
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 5px 5px 0 var(--cmc-brown) !important;
+	z-index: 10;
+	--shadow-size: calc(var(--shadow) * 1.5);
 }
 .btn:active {
-  transform: translate(4px, 4px) !important;
-  box-shadow: 0 0 0 var(--cmc-brown) !important;
+	--shadow-size: 0;
+}
+
+.btn-sm {
+	--shadow: 4px;
+}
+
+.btn-xs {
+	--shadow: 2px;
 }
 
 /* Ghost → outline retro: transparent fill, visible brown border */
 .btn-ghost {
-  background: transparent !important;
-  border-color: var(--cmc-brown) !important;
-}
-
-/* Scaled-down retro for xs buttons */
-.btn-xs {
-  border-width: 2px !important;
-  box-shadow: 2px 2px 0 var(--cmc-brown) !important;
-}
-.btn-xs:hover {
-  box-shadow: 3px 3px 0 var(--cmc-brown) !important;
+	background: var(--color-base-100);
+	border-color: var(--shadow-color);
 }
 
 /* ---------------------------------------------------------------------------
    Retro tabs — half-pressed active state for DaisyUI tab elements.
    --------------------------------------------------------------------------- */
 .tab {
-  border-bottom: 2.5px solid transparent !important;
-  transition: transform 80ms ease, box-shadow 80ms ease, border-color 80ms ease !important;
+	border-bottom: 2.5px solid transparent;
+	transition:
+		transform 80ms ease,
+		box-shadow 80ms ease,
+		border-color 80ms ease;
 }
 .tab:hover {
-  border-bottom-color: color-mix(in oklch, var(--cmc-brown) 50%, transparent) !important;
+	border-bottom-color: color-mix(in oklch, var(--cmc-brown) 50%, transparent);
 }
 .tab-active,
 .tab.tab-active {
-  border-bottom: 2.5px solid var(--cmc-brown) !important;
-  box-shadow: 2px 2px 0 var(--cmc-brown) !important;
-  transform: translate(-1px, -1px) !important;
+	border-bottom: 2.5px solid var(--cmc-brown);
+	box-shadow: 2px 2px 0 var(--cmc-brown);
+	transform: translate(-1px, -1px);
 }
 
 /* ---------------------------------------------------------------------------
    Retro-btn alias — for non-btn elements (cards, links) that want the look.
    --------------------------------------------------------------------------- */
-.retro-btn {
-  border: 2.5px solid var(--cmc-brown);
-  box-shadow: 4px 4px 0 var(--cmc-brown);
-  transition: transform 80ms ease, box-shadow 80ms ease;
-}
-.retro-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--cmc-brown);
-}
-.retro-btn:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 0 var(--cmc-brown);
-}
 
 /* ---------------------------------------------------------------------------
    Washi-tape badges — semi-transparent stripe texture + slight rotation.
    --------------------------------------------------------------------------- */
 .washi-badge {
-  display: inline-block;
-  padding: 5px 11px;
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1.4;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-radius: 2px;
-  color: var(--cmc-brown);
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, transparent 14%, transparent 86%, rgba(0,0,0,0.06) 100%),
-    repeating-linear-gradient(90deg, transparent 0 6px, rgba(255,255,255,0.18) 6px 7px),
-    var(--badge-color, rgba(255, 181, 0, 0.92));
-  box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.06),
-    0 1px 1px rgba(40, 25, 10, 0.08);
-  transform: rotate(var(--badge-tilt, -1deg));
+	display: inline-block;
+	padding: 5px 11px;
+	font-weight: 700;
+	font-size: 11px;
+	line-height: 1.4;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	border-radius: 2px;
+	color: var(--cmc-brown);
+	background:
+		linear-gradient(
+			180deg,
+			rgba(0, 0, 0, 0.06) 0%,
+			transparent 14%,
+			transparent 86%,
+			rgba(0, 0, 0, 0.06) 100%
+		),
+		repeating-linear-gradient(90deg, transparent 0 6px, rgba(255, 255, 255, 0.18) 6px 7px),
+		var(--badge-color, rgba(255, 181, 0, 0.92));
+	box-shadow:
+		0 0.5px 0 rgba(0, 0, 0, 0.06),
+		0 1px 1px rgba(40, 25, 10, 0.08);
+	transform: rotate(var(--badge-tilt, -1deg));
 }
 
 /* ---------------------------------------------------------------------------
    Corkboard — warm peg-board texture for skeuo backdrops.
    --------------------------------------------------------------------------- */
 .corkboard {
-  background-color: #c89866;
-  background-image:
-    radial-gradient(circle at 30% 20%, rgba(120, 70, 30, 0.18) 0 2px, transparent 3px),
-    radial-gradient(circle at 70% 60%, rgba(120, 70, 30, 0.22) 0 1.5px, transparent 2.5px),
-    radial-gradient(circle at 12% 78%, rgba(120, 70, 30, 0.16) 0 1.5px, transparent 2.5px),
-    radial-gradient(circle at 88% 12%, rgba(120, 70, 30, 0.20) 0 1.8px, transparent 2.5px),
-    radial-gradient(circle at 50% 90%, rgba(120, 70, 30, 0.14) 0 2px, transparent 3px),
-    radial-gradient(ellipse at center, #d09e6e 0%, #b2814f 70%, #9c6c3b 100%);
-  background-size: 26px 26px, 22px 22px, 30px 30px, 18px 18px, 24px 24px, 100% 100%;
-  box-shadow: inset 0 0 80px rgba(70, 40, 15, 0.25);
+	background-color: #c89866;
+	background-image:
+		radial-gradient(circle at 30% 20%, rgba(120, 70, 30, 0.18) 0 2px, transparent 3px),
+		radial-gradient(circle at 70% 60%, rgba(120, 70, 30, 0.22) 0 1.5px, transparent 2.5px),
+		radial-gradient(circle at 12% 78%, rgba(120, 70, 30, 0.16) 0 1.5px, transparent 2.5px),
+		radial-gradient(circle at 88% 12%, rgba(120, 70, 30, 0.2) 0 1.8px, transparent 2.5px),
+		radial-gradient(circle at 50% 90%, rgba(120, 70, 30, 0.14) 0 2px, transparent 3px),
+		radial-gradient(ellipse at center, #d09e6e 0%, #b2814f 70%, #9c6c3b 100%);
+	background-size:
+		26px 26px,
+		22px 22px,
+		30px 30px,
+		18px 18px,
+		24px 24px,
+		100% 100%;
+	box-shadow: inset 0 0 80px rgba(70, 40, 15, 0.25);
 }
 
 /* ---------------------------------------------------------------------------
    Poster Card — event poster tacked to a wall with parchment border
    --------------------------------------------------------------------------- */
 .poster-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  max-width: 380px;
-  border: 5px solid var(--cmc-parchment);
-  background: var(--cmc-parchment);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.08),
-    0 8px 18px -8px rgba(40, 25, 10, 0.35);
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transform: rotate(var(--tilt, 0deg));
-  transform-origin: top center;
-  transition: transform 300ms cubic-bezier(.34, 1.25, .64, 1), box-shadow 300ms ease;
-  will-change: transform;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	max-width: 380px;
+	border: 5px solid var(--cmc-parchment);
+	background: var(--cmc-parchment);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.08),
+		0 8px 18px -8px rgba(40, 25, 10, 0.35);
+	text-decoration: none;
+	color: inherit;
+	cursor: pointer;
+	transform: rotate(var(--tilt, 0deg));
+	transform-origin: top center;
+	transition:
+		transform 300ms cubic-bezier(0.34, 1.25, 0.64, 1),
+		box-shadow 300ms ease;
+	will-change: transform;
 }
 .poster-card:hover {
-  transform: rotate(calc(var(--tilt, 0deg) * -3));
-  z-index: 10;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.08),
-    0 14px 26px -8px rgba(40, 25, 10, 0.45);
+	transform: rotate(calc(var(--tilt, 0deg) * -3));
+	z-index: 10;
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.08),
+		0 14px 26px -8px rgba(40, 25, 10, 0.45);
 }
-.poster-card:nth-child(3n + 1) { --tilt: -1deg; }
-.poster-card:nth-child(3n + 2) { --tilt:  1.4deg; }
-.poster-card:nth-child(3n + 3) { --tilt: -0.6deg; }
-.poster-card:nth-child(5n)     { --tilt:  1deg; }
-.poster-card:nth-child(7n)     { --tilt: -1.5deg; }
+.poster-card:nth-child(3n + 1) {
+	--tilt: -1deg;
+}
+.poster-card:nth-child(3n + 2) {
+	--tilt: 1.4deg;
+}
+.poster-card:nth-child(3n + 3) {
+	--tilt: -0.6deg;
+}
+.poster-card:nth-child(5n) {
+	--tilt: 1deg;
+}
+.poster-card:nth-child(7n) {
+	--tilt: -1.5deg;
+}
 
 .poster-card__figure {
-  aspect-ratio: 8.5 / 11;
-  background: color-mix(in oklch, var(--cmc-light-blue) 60%, transparent);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+	aspect-ratio: 8.5 / 11;
+	background: color-mix(in oklch, var(--cmc-light-blue) 60%, transparent);
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
 }
 .poster-card__figure img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
 }
 
 .poster-card__caption {
-  background: var(--cmc-parchment);
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+	background: var(--cmc-parchment);
+	padding: 12px 14px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
 }
 .poster-card__logo {
-  height: 36px;
-  width: auto;
-  flex-shrink: 0;
+	height: 36px;
+	width: auto;
+	flex-shrink: 0;
 }
-.poster-card__caption-text { min-width: 0; flex: 1; }
+.poster-card__caption-text {
+	min-width: 0;
+	flex: 1;
+}
 .poster-card__title {
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1.25;
-  color: var(--cmc-brown);
-  margin-bottom: 3px;
+	font-weight: 700;
+	font-size: 14px;
+	line-height: 1.25;
+	color: var(--cmc-brown);
+	margin-bottom: 3px;
 }
 .poster-card__date {
-  font-size: 11px;
-  color: var(--cmc-brown);
-  opacity: 0.7;
+	font-size: 11px;
+	color: var(--cmc-brown);
+	opacity: 0.7;
 }
 
 /* ---------------------------------------------------------------------------
    Vinyl Card — band as a 12" record + sleeve
    --------------------------------------------------------------------------- */
 .vinyl-card {
-  position: relative;
-  display: block;
-  width: 100%;
-  max-width: 220px;
-  cursor: pointer;
-  --vinyl-label: var(--cmc-orange);
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: 220px;
+	cursor: pointer;
+	--vinyl-label: var(--cmc-orange);
 }
-.vinyl-card:hover { z-index: 10; }
+.vinyl-card:hover {
+	z-index: 10;
+}
 
 .vinyl-card__disc {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 95%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #1a1a1a 0 1.5%, transparent 1.6%),
-    radial-gradient(circle, var(--vinyl-label) 0 30%, transparent 30.1%),
-    repeating-radial-gradient(circle, #181818 0 1px, #0e0e0e 1px 2px),
-    radial-gradient(circle, transparent 0 92%, rgba(255, 255, 255, 0.06) 93%, transparent 100%),
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12) 0 8%, transparent 30%),
-    #0a0a0a;
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
-  z-index: 1;
-  pointer-events: none;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 95%;
+	aspect-ratio: 1;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background:
+		radial-gradient(circle, #1a1a1a 0 1.5%, transparent 1.6%),
+		radial-gradient(circle, var(--vinyl-label) 0 30%, transparent 30.1%),
+		repeating-radial-gradient(circle, #181818 0 1px, #0e0e0e 1px 2px),
+		radial-gradient(circle, transparent 0 92%, rgba(255, 255, 255, 0.06) 93%, transparent 100%),
+		radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12) 0 8%, transparent 30%), #0a0a0a;
+	box-shadow:
+		0 4px 10px rgba(0, 0, 0, 0.4),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+	transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
+	z-index: 1;
+	pointer-events: none;
 }
 .vinyl-card:hover .vinyl-card__disc {
-  transform: translate(10%, -50%) rotate(60deg);
+	transform: translate(10%, -50%) rotate(60deg);
 }
 
 .vinyl-card__label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 56%;
-  height: 56%;
-  border-radius: 50%;
-  background: var(--vinyl-label);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 56%;
+	height: 56%;
+	border-radius: 50%;
+	background: var(--vinyl-label);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 .vinyl-card__arc {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
 }
 .vinyl-card__arc text {
-  fill: #fff;
-  font-weight: 700;
-  font-size: 6.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+	fill: #fff;
+	font-weight: 700;
+	font-size: 6.5px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
 }
 .vinyl-card__arc text:last-child {
-  font-size: 4.2px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  fill: rgba(255, 255, 255, 0.8);
+	font-size: 4.2px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	fill: rgba(255, 255, 255, 0.8);
 }
 .vinyl-card__logo {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 70%;
-  height: 70%;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
-  opacity: 0.92;
-  pointer-events: none;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 70%;
+	height: 70%;
+	object-fit: contain;
+	filter: brightness(0) invert(1);
+	opacity: 0.92;
+	pointer-events: none;
 }
 
 .vinyl-card__sleeve {
-  position: relative;
-  width: 100%;
-  background: var(--cmc-cream);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  z-index: 2;
-  overflow: hidden;
-  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
+	position: relative;
+	width: 100%;
+	background: var(--cmc-cream);
+	box-shadow:
+		0 4px 12px rgba(0, 0, 0, 0.25),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+	z-index: 2;
+	overflow: hidden;
+	transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 .vinyl-card__sleeve-wrap {
-  position: relative;
-  transition: transform 500ms cubic-bezier(.34, 1.2, .64, 1);
+	position: relative;
+	transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 .vinyl-card:hover .vinyl-card__sleeve-wrap {
-  transform: rotate(-3deg);
+	transform: rotate(-3deg);
 }
 .vinyl-card:hover .vinyl-card__sleeve {
-  transform: translateX(-8%);
+	transform: translateX(-8%);
 }
-.vinyl-card__sleeve::after { display: none; }
+.vinyl-card__sleeve::after {
+	display: none;
+}
 .vinyl-card__sleeve-art {
-  aspect-ratio: 1;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--vinyl-label);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.5rem;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
-  background-image:
-    radial-gradient(circle at center, rgba(0, 0, 0, 0.18) 1px, transparent 1.5px),
-    linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%);
-  background-size: 6px 6px, 100% 100%;
+	aspect-ratio: 1;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--vinyl-label);
+	color: #fff;
+	font-weight: 700;
+	font-size: 1.5rem;
+	line-height: 1;
+	letter-spacing: -0.01em;
+	text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+	background-image:
+		radial-gradient(circle at center, rgba(0, 0, 0, 0.18) 1px, transparent 1.5px),
+		linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%);
+	background-size:
+		6px 6px,
+		100% 100%;
 }
 .vinyl-card__caption {
-  padding: 8px 2px 0;
+	padding: 8px 2px 0;
 }
 .vinyl-card__band {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--cmc-navy);
-  line-height: 1.2;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: var(--cmc-navy);
+	line-height: 1.2;
 }
 .vinyl-card__meta {
-  font-size: 0.7rem;
-  color: var(--fg-2);
-  margin-top: 2px;
+	font-size: 0.7rem;
+	color: var(--fg-2);
+	margin-top: 2px;
 }
 
 /* ---------------------------------------------------------------------------
    ID Card — laminated CMC membership card with lanyard clip
    --------------------------------------------------------------------------- */
 .id-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: #ffe8d6;
-  width: 100%;
-  max-width: 320px;
-  border-radius: 10px;
-  box-shadow:
-    0 14px 26px -10px rgba(20, 20, 25, 0.4),
-    0 4px 10px -4px rgba(20, 20, 25, 0.2),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-  overflow: visible;
-  transform: rotate(var(--tilt, -1deg));
-  transition: transform 220ms cubic-bezier(.34, 1.4, .64, 1), box-shadow 220ms ease;
-  cursor: pointer;
-  padding: 0;
-  aspect-ratio: 5 / 3;
-  container-type: inline-size;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	background: #ffe8d6;
+	width: 100%;
+	max-width: 320px;
+	border-radius: 10px;
+	box-shadow:
+		0 14px 26px -10px rgba(20, 20, 25, 0.4),
+		0 4px 10px -4px rgba(20, 20, 25, 0.2),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+	overflow: visible;
+	transform: rotate(var(--tilt, -1deg));
+	transition:
+		transform 220ms cubic-bezier(0.34, 1.4, 0.64, 1),
+		box-shadow 220ms ease;
+	cursor: pointer;
+	padding: 0;
+	aspect-ratio: 5 / 3;
+	container-type: inline-size;
 }
 .id-card:hover {
-  transform: rotate(0deg) translateY(-3px);
-  box-shadow:
-    0 20px 34px -10px rgba(20, 20, 25, 0.45),
-    0 6px 14px -4px rgba(20, 20, 25, 0.25),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+	transform: rotate(0deg) translateY(-3px);
+	box-shadow:
+		0 20px 34px -10px rgba(20, 20, 25, 0.45),
+		0 6px 14px -4px rgba(20, 20, 25, 0.25),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
-.id-card:nth-child(3n + 1) { --tilt: -1.2deg; }
-.id-card:nth-child(3n + 2) { --tilt:  0.8deg; }
-.id-card:nth-child(3n + 3) { --tilt: -0.3deg; }
-.id-card:nth-child(5n)     { --tilt:  1.6deg; }
-.id-card:nth-child(7n)     { --tilt: -1.8deg; }
+.id-card:nth-child(3n + 1) {
+	--tilt: -1.2deg;
+}
+.id-card:nth-child(3n + 2) {
+	--tilt: 0.8deg;
+}
+.id-card:nth-child(3n + 3) {
+	--tilt: -0.3deg;
+}
+.id-card:nth-child(5n) {
+	--tilt: 1.6deg;
+}
+.id-card:nth-child(7n) {
+	--tilt: -1.8deg;
+}
 
 .id-card__header {
-  padding: 4cqi 5cqi 2.5cqi;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 3cqi;
-  position: relative;
+	padding: 4cqi 5cqi 2.5cqi;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 3cqi;
+	position: relative;
 }
 .id-card__brand {
-  display: flex;
-  align-items: center;
-  gap: 1.5cqi;
-  font-weight: 700;
-  font-size: 3.3cqi;
-  letter-spacing: 0.02em;
-  color: var(--cmc-teal);
-  line-height: 1.1;
-  max-width: 65%;
+	display: flex;
+	align-items: center;
+	gap: 1.5cqi;
+	font-weight: 700;
+	font-size: 3.3cqi;
+	letter-spacing: 0.02em;
+	color: var(--cmc-teal);
+	line-height: 1.1;
+	max-width: 65%;
 }
 .id-card__logo {
-  height: 8cqi;
-  width: auto;
-  object-fit: contain;
-  flex-shrink: 0;
+	height: 8cqi;
+	width: auto;
+	object-fit: contain;
+	flex-shrink: 0;
 }
 .id-card__tag {
-  font-weight: 700;
-  font-size: 2.8cqi;
-  letter-spacing: 0.16em;
-  color: var(--cmc-teal);
-  line-height: 1;
-  padding: 1cqi 2.5cqi;
-  border: 1.5px solid var(--cmc-teal);
-  border-radius: 3px;
-  flex-shrink: 0;
+	font-weight: 700;
+	font-size: 2.8cqi;
+	letter-spacing: 0.16em;
+	color: var(--cmc-teal);
+	line-height: 1;
+	padding: 1cqi 2.5cqi;
+	border: 1.5px solid var(--cmc-teal);
+	border-radius: 3px;
+	flex-shrink: 0;
 }
 .id-card__header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1cqi;
-  height: 1cqi;
-  background: linear-gradient(
-    to bottom,
-    var(--cmc-teal) 0 33.333%,
-    var(--cmc-goldenrod) 33.333% 66.666%,
-    var(--cmc-red-orange) 66.666% 100%
-  );
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -1cqi;
+	height: 1cqi;
+	background: linear-gradient(
+		to bottom,
+		var(--cmc-teal) 0 33.333%,
+		var(--cmc-goldenrod) 33.333% 66.666%,
+		var(--cmc-red-orange) 66.666% 100%
+	);
 }
 .id-card__body {
-  flex: 1;
-  display: flex;
-  gap: 3.5cqi;
-  padding: 5cqi 5cqi 4cqi;
-  align-items: stretch;
+	flex: 1;
+	display: flex;
+	gap: 3.5cqi;
+	padding: 5cqi 5cqi 4cqi;
+	align-items: stretch;
 }
 .id-card__photo {
-  width: 17.5cqi;
-  align-self: stretch;
-  border-radius: 4px;
-  background: var(--photo-bg, var(--cmc-light-blue));
-  color: var(--cmc-navy);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 6cqi;
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+	width: 17.5cqi;
+	align-self: stretch;
+	border-radius: 4px;
+	background: var(--photo-bg, var(--cmc-light-blue));
+	color: var(--cmc-navy);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 6cqi;
+	letter-spacing: 0.02em;
+	flex-shrink: 0;
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
-.id-card__info { display: flex; flex-direction: column; gap: 0.5cqi; min-width: 0; flex: 1; }
+.id-card__info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5cqi;
+	min-width: 0;
+	flex: 1;
+}
 .id-card__name {
-  font-weight: 700;
-  font-size: 5.8cqi;
-  line-height: 1.15;
-  color: var(--cmc-navy);
+	font-weight: 700;
+	font-size: 5.8cqi;
+	line-height: 1.15;
+	color: var(--cmc-navy);
 }
 .id-card__pronouns {
-  font-weight: 400;
-  font-size: 3.2cqi;
-  color: var(--fg-3);
-  margin-left: 0.5cqi;
+	font-weight: 400;
+	font-size: 3.2cqi;
+	color: var(--fg-3);
+	margin-left: 0.5cqi;
 }
 .id-card__role {
-  font-size: 3.8cqi;
-  color: var(--fg-2);
+	font-size: 3.8cqi;
+	color: var(--fg-2);
 }
 .id-card__badges {
-  display: flex;
-  gap: 1.2cqi;
-  flex-wrap: wrap;
-  margin-top: 1cqi;
+	display: flex;
+	gap: 1.2cqi;
+	flex-wrap: wrap;
+	margin-top: 1cqi;
 }
 .id-card__gaff {
-  position: absolute;
-  bottom: 11cqi;
-  right: -2cqi;
-  padding: 0.8cqi 3cqi;
-  background: #1a1a1a;
-  color: #e5e5e5;
-  font-weight: 700;
-  font-size: 2.6cqi;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transform: rotate(-2deg);
-  /* Torn-edge texture on left/right */
-  clip-path: polygon(
-    0% 8%, 1% 0%, 3% 12%, 5% 2%, 7% 6%, 99% 4%, 100% 10%, 99.5% 92%, 100% 98%,
-    97% 88%, 95% 100%, 93% 90%, 7% 96%, 5% 100%, 3% 92%, 1% 98%, 0% 90%
-  );
-  z-index: 2;
+	position: absolute;
+	bottom: 11cqi;
+	right: -2cqi;
+	padding: 0.8cqi 3cqi;
+	background: var(--color-primary);
+	color: var(--color-primary-content);
+	font-weight: 700;
+	font-size: 2.6cqi;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	transform: rotate(-2deg);
+	/* Torn-edge texture on left/right */
+	clip-path: polygon(
+		0% 8%,
+		1% 0%,
+		3% 12%,
+		5% 2%,
+		7% 6%,
+		99% 4%,
+		100% 10%,
+		99.5% 92%,
+		100% 98%,
+		97% 88%,
+		95% 100%,
+		93% 90%,
+		7% 96%,
+		5% 100%,
+		3% 92%,
+		1% 98%,
+		0% 90%
+	);
+	z-index: 2;
 }
 
 /* --- ID Tag — embossed text --- */
 .id-tag {
-  display: inline-block;
-  font-weight: 700;
-  font-size: 2.9cqi;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(90, 61, 43, 0.55);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+	display: inline-block;
+	font-weight: 700;
+	font-size: 2.9cqi;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	color: rgba(90, 61, 43, 0.55);
+	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 .id-tag--teal {
-  color: rgba(0, 133, 155, 0.5);
+	color: rgba(0, 133, 155, 0.5);
 }
 .id-tag--band {
-  color: rgba(0, 59, 92, 0.5);
+	color: rgba(0, 59, 92, 0.5);
 }
 .id-card__bands {
-  display: flex;
-  gap: 1.2cqi;
-  flex-wrap: wrap;
+	display: flex;
+	gap: 1.2cqi;
+	flex-wrap: wrap;
 }
 .id-card__bands::before {
-  content: "▸";
-  font-size: 2.6cqi;
-  color: rgba(90, 61, 43, 0.35);
-  margin-right: -0.5cqi;
+	content: '▸';
+	font-size: 2.6cqi;
+	color: rgba(90, 61, 43, 0.35);
+	margin-right: -0.5cqi;
 }
 .id-card__footer {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 0 5cqi 3cqi;
-  gap: 3cqi;
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	padding: 0 5cqi 3cqi;
+	gap: 3cqi;
 }
 .id-card__since {
-  font-size: 2.6cqi;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(90, 61, 43, 0.4);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
+	font-size: 2.6cqi;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: rgba(90, 61, 43, 0.4);
+	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+	white-space: nowrap;
 }
 .id-card__barcode {
-  flex: 1;
-  max-width: 28cqi;
-  height: 5cqi;
-  background: repeating-linear-gradient(
-    to right,
-    rgba(90, 61, 43, 0.35) 0 0.5cqi,
-    transparent 0.5cqi 1cqi,
-    rgba(90, 61, 43, 0.35) 1cqi 1.3cqi,
-    transparent 1.3cqi 2cqi,
-    rgba(90, 61, 43, 0.35) 2cqi 2.3cqi,
-    transparent 2.3cqi 3.2cqi,
-    rgba(90, 61, 43, 0.35) 3.2cqi 3.5cqi,
-    transparent 3.5cqi 4cqi,
-    rgba(90, 61, 43, 0.35) 4cqi 5cqi,
-    transparent 5cqi 5.4cqi,
-    rgba(90, 61, 43, 0.35) 5.4cqi 5.7cqi,
-    transparent 5.7cqi 6.5cqi
-  );
+	flex: 1;
+	max-width: 28cqi;
+	height: 5cqi;
+	background: repeating-linear-gradient(
+		to right,
+		rgba(90, 61, 43, 0.35) 0 0.5cqi,
+		transparent 0.5cqi 1cqi,
+		rgba(90, 61, 43, 0.35) 1cqi 1.3cqi,
+		transparent 1.3cqi 2cqi,
+		rgba(90, 61, 43, 0.35) 2cqi 2.3cqi,
+		transparent 2.3cqi 3.2cqi,
+		rgba(90, 61, 43, 0.35) 3.2cqi 3.5cqi,
+		transparent 3.5cqi 4cqi,
+		rgba(90, 61, 43, 0.35) 4cqi 5cqi,
+		transparent 5cqi 5.4cqi,
+		rgba(90, 61, 43, 0.35) 5.4cqi 5.7cqi,
+		transparent 5.7cqi 6.5cqi
+	);
 }
 
 /* ---------------------------------------------------------------------------
    Sticker Badge — rectangular allcaps label with rotation + shadow
    --------------------------------------------------------------------------- */
 .sticker-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  background: var(--cmc-goldenrod);
-  color: var(--cmc-brown);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border-radius: 3px;
-  transform: rotate(-1.5deg);
-  box-shadow: 1.5px 1.5px 0 var(--cmc-brown);
-  white-space: nowrap;
+	display: inline-block;
+	padding: 6px 12px;
+	background: var(--cmc-goldenrod);
+	color: var(--cmc-brown);
+	font-weight: 700;
+	font-size: 12px;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	border-radius: 3px;
+	transform: rotate(-1.5deg);
+	box-shadow: 1.5px 1.5px 0 var(--cmc-brown);
+	white-space: nowrap;
 }
-.sticker-badge--orange { background: var(--cmc-orange); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
-.sticker-badge--teal   { background: var(--cmc-teal); color: #fff; box-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.35); }
-.sticker-badge--sm { padding: 3px 8px; font-size: 10px; }
+.sticker-badge--orange {
+	background: var(--cmc-orange);
+	color: #fff;
+	box-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
+}
+.sticker-badge--teal {
+	background: var(--cmc-teal);
+	color: #fff;
+	box-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
+}
+.sticker-badge--sm {
+	padding: 3px 8px;
+	font-size: 10px;
+}
 
 /* ---------------------------------------------------------------------------
    Paper Tape — washi-tape strip across a corner of a card
    --------------------------------------------------------------------------- */
 .paper-tape {
-  position: relative;
-  --tape-color: rgba(255, 181, 0, 0.78);
-  --tape-w: 110px;
-  --tape-h: 22px;
-  --tape-x: 18%;
-  --tape-y: -10px;
-  --tape-rotate: -3deg;
+	position: relative;
+	--tape-color: rgba(255, 181, 0, 0.78);
+	--tape-w: 110px;
+	--tape-h: 22px;
+	--tape-x: 18%;
+	--tape-y: -10px;
+	--tape-rotate: -3deg;
 }
 .paper-tape::before {
-  content: "";
-  position: absolute;
-  left: var(--tape-x);
-  top: var(--tape-y);
-  width: var(--tape-w);
-  height: var(--tape-h);
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, transparent 12%, transparent 88%, rgba(0,0,0,0.06) 100%),
-    repeating-linear-gradient(90deg, transparent 0 8px, rgba(255,255,255,0.16) 8px 9px),
-    var(--tape-color);
-  transform: rotate(var(--tape-rotate));
-  transform-origin: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.10);
-  z-index: 2;
+	content: '';
+	position: absolute;
+	left: var(--tape-x);
+	top: var(--tape-y);
+	width: var(--tape-w);
+	height: var(--tape-h);
+	background:
+		linear-gradient(
+			180deg,
+			rgba(0, 0, 0, 0.06) 0%,
+			transparent 12%,
+			transparent 88%,
+			rgba(0, 0, 0, 0.06) 100%
+		),
+		repeating-linear-gradient(90deg, transparent 0 8px, rgba(255, 255, 255, 0.16) 8px 9px),
+		var(--tape-color);
+	transform: rotate(var(--tape-rotate));
+	transform-origin: center;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	z-index: 2;
 }
 
 /* ---------------------------------------------------------------------------
    Amp Cabinet — tweed grille cloth card for gear/equipment features
    --------------------------------------------------------------------------- */
 .amp {
-  position: relative;
-  width: 220px;
-  padding: 14px 12px 16px;
-  border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px),
-    #0a0805;
+	position: relative;
+	width: 220px;
+	padding: 14px 12px 16px;
+	border-radius: 4px;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px), #0a0805;
 }
-.amp::before, .amp::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #c08a1a;
+.amp::before,
+.amp::after {
+	content: '';
+	position: absolute;
+	top: 5px;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: #c08a1a;
 }
-.amp::before { left: 5px; }
-.amp::after { right: 5px; }
+.amp::before {
+	left: 5px;
+}
+.amp::after {
+	right: 5px;
+}
 .amp__grille {
-  position: relative;
-  min-height: 152px;
-  border-radius: 2px;
-  background:
-    radial-gradient(circle, rgba(0,0,0,0.2) 0.6px, transparent 1.1px) 0 0,
-    radial-gradient(circle, rgba(255,255,255,0.25) 0.5px, transparent 0.9px) 1.5px 1.5px,
-    #b8a47a;
-  background-size: 3.2px 3.2px, 3.2px 3.2px, 100% 100%;
-  box-shadow:
-    inset 0 1px 2px rgba(0,0,0,0.55),
-    inset 0 -1px 0 rgba(0,0,0,0.45);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 16px 14px 14px;
+	position: relative;
+	min-height: 152px;
+	border-radius: 2px;
+	background:
+		radial-gradient(circle, rgba(0, 0, 0, 0.2) 0.6px, transparent 1.1px) 0 0,
+		radial-gradient(circle, rgba(255, 255, 255, 0.25) 0.5px, transparent 0.9px) 1.5px 1.5px,
+		#b8a47a;
+	background-size:
+		3.2px 3.2px,
+		3.2px 3.2px,
+		100% 100%;
+	box-shadow:
+		inset 0 1px 2px rgba(0, 0, 0, 0.55),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: flex-end;
+	padding: 16px 14px 14px;
 }
 .amp__title {
-  font-weight: 700;
-  font-size: 15px;
-  line-height: 1.15;
-  color: var(--cmc-cream);
-  margin: 0 0 4px;
-  text-shadow: 0 1px 0 rgba(0,0,0,0.85), 0 2px 4px rgba(0,0,0,0.55);
+	font-weight: 700;
+	font-size: 15px;
+	line-height: 1.15;
+	color: var(--cmc-cream);
+	margin: 0 0 4px;
+	text-shadow:
+		0 1px 0 rgba(0, 0, 0, 0.85),
+		0 2px 4px rgba(0, 0, 0, 0.55);
 }
 .amp__copy {
-  font-size: 11px;
-  color: rgba(255,255,255,0.92);
-  line-height: 1.5;
-  margin: 0;
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.92);
+	line-height: 1.5;
+	margin: 0;
 }
-
 
 /* ---------------------------------------------------------------------------
    Cassette Tape — retro demo tape with rainbow stripes
    --------------------------------------------------------------------------- */
 .cassette {
-  position: relative;
-  width: 220px;
-  height: 138px;
-  padding: 7px;
-  border-radius: 4px;
-  background: #3a4150;
-  transform: rotate(-3deg);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+	position: relative;
+	width: 220px;
+	height: 138px;
+	padding: 7px;
+	border-radius: 4px;
+	background: #3a4150;
+	transform: rotate(-3deg);
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
 }
 .cassette__label {
-  flex: 1;
-  position: relative;
-  padding: 8px 12px 26px;
-  background:
-    linear-gradient(180deg,
-      transparent 0 70%,
-      #f84d13 70% 76%, #e5771e 76% 82%,
-      #ffb500 82% 88%, #00859b 88% 94%, #003b5c 94% 100%),
-    repeating-linear-gradient(180deg, transparent 0 12px, rgba(0,0,90,0.06) 12px 13px),
-    #f4ead8;
-  border-radius: 2px;
+	flex: 1;
+	position: relative;
+	padding: 8px 12px 26px;
+	background:
+		linear-gradient(
+			180deg,
+			transparent 0 70%,
+			#f84d13 70% 76%,
+			#e5771e 76% 82%,
+			#ffb500 82% 88%,
+			#00859b 88% 94%,
+			#003b5c 94% 100%
+		),
+		repeating-linear-gradient(180deg, transparent 0 12px, rgba(0, 0, 90, 0.06) 12px 13px), #f4ead8;
+	border-radius: 2px;
 }
 .cassette__side {
-  position: absolute;
-  top: 3px;
-  right: 7px;
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: rgba(26,20,16,0.55);
+	position: absolute;
+	top: 3px;
+	right: 7px;
+	font-family: ui-monospace, Menlo, monospace;
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	color: rgba(26, 20, 16, 0.55);
 }
 .cassette__band {
-  font-family: var(--font-script);
-  font-size: 19px;
-  font-weight: 700;
-  color: #1a1410;
-  line-height: 1;
-  margin: 4px 0 0;
-  transform: rotate(-0.8deg);
+	font-family: var(--font-script);
+	font-size: 19px;
+	font-weight: 700;
+	color: #1a1410;
+	line-height: 1;
+	margin: 4px 0 0;
+	transform: rotate(-0.8deg);
 }
 .cassette__title {
-  font-family: var(--font-script);
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(26,20,16,0.72);
-  line-height: 1.1;
-  margin: 2px 0 0;
+	font-family: var(--font-script);
+	font-size: 12px;
+	font-weight: 600;
+	color: rgba(26, 20, 16, 0.72);
+	line-height: 1.1;
+	margin: 2px 0 0;
 }
 .cassette__stamp {
-  position: absolute;
-  bottom: 32px;
-  right: 8px;
-  font-family: var(--font-chalk);
-  font-size: 10px;
-  color: #c63015;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transform: rotate(-5deg);
-  border: 1.5px solid #c63015;
-  padding: 1px 4px;
-  border-radius: 2px;
-  background: rgba(244, 234, 216, 0.92);
-  z-index: 2;
+	position: absolute;
+	bottom: 32px;
+	right: 8px;
+	font-family: var(--font-chalk);
+	font-size: 10px;
+	color: #c63015;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	transform: rotate(-5deg);
+	border: 1.5px solid #c63015;
+	padding: 1px 4px;
+	border-radius: 2px;
+	background: rgba(244, 234, 216, 0.92);
+	z-index: 2;
 }
 .cassette__deck {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 26px;
-  padding: 0 26px;
-  position: relative;
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+	height: 26px;
+	padding: 0 26px;
+	position: relative;
 }
 .cassette__spool {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #1a1d24;
-  border: 1.5px solid #5a6273;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: #1a1d24;
+	border: 1.5px solid #5a6273;
 }
 .cassette__deck::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 32%;
-  right: 32%;
-  height: 3px;
-  transform: translateY(-50%);
-  background: #1a1d24;
-  border-radius: 1px;
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 32%;
+	right: 32%;
+	height: 3px;
+	transform: translateY(-50%);
+	background: #1a1d24;
+	border-radius: 1px;
 }

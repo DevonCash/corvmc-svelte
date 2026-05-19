@@ -18,6 +18,7 @@
 		stopClick: boolean;
 		cell?: Snippet<[value: any, row: any]>;
 		headerCell?: Snippet;
+		align: 'left' | 'right' | 'center';
 	}
 
 	/** Context shape that Column children use to register themselves. */

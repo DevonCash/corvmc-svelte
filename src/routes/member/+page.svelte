@@ -30,20 +30,20 @@
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 		<a
 			href="/member/reservations/new"
-			class="card bg-base-100 retro-btn"
+			class="card bg-base-100 btn h-auto"
 		>
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
 			</div>
 		</a>
-		<a href="/member/events" class="card bg-base-100 retro-btn">
+		<a href="/member/events" class="card bg-base-100 btn h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
 			</div>
 		</a>
-		<a href="/member/membership" class="card bg-base-100 retro-btn">
+		<a href="/member/membership" class="card bg-base-100 btn h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>
