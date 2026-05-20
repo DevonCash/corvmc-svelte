@@ -737,25 +737,6 @@ p {
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	transform: rotate(3deg);
-	clip-path: polygon(
-		0% 8%,
-		1% 0%,
-		3% 12%,
-		5% 2%,
-		7% 6%,
-		99% 4%,
-		100% 10%,
-		99.5% 92%,
-		100% 98%,
-		97% 88%,
-		95% 100%,
-		93% 90%,
-		7% 96%,
-		5% 100%,
-		3% 92%,
-		1% 98%,
-		0% 90%
-	);
 	z-index: 10;
 }
 .vinyl-card__caption {
