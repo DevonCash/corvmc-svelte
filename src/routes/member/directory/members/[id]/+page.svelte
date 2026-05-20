@@ -5,7 +5,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
-	import type { DirectoryContact, ProfileLink } from '$lib/types/profile';
+	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 

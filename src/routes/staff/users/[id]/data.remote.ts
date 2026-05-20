@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { getUserRoles, requireStaff } from '$lib/server/authorization';
 import { listByUser } from '$lib/server/finance/payment-cache-service';
 import { getAllBalances, addCredits, deductCredits } from '$lib/server/finance/credit-service';
-import type { CreditType } from '$lib/server/finance/types';
+import type { CreditType } from '$lib/server/db/schema/finance';
 
 export const getUser = query(z.string(), async (id) => {
 	const [found] = await db

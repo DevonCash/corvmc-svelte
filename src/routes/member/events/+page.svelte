@@ -4,7 +4,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import type { EventsResponse, MemberTicketsResponse } from '$lib/types/api';
+	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: { events: EventsResponse['events']; tickets: MemberTicketsResponse['tickets'] } } = $props();
 

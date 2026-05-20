@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommunityStats } from '$lib/finance/types';
+	import type { CommunityStats } from '$lib/server/db/schema/finance';
 
 	let { stats }: { stats: CommunityStats } = $props();
 </script>

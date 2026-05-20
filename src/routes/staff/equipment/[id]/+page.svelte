@@ -22,7 +22,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { equipmentConditions, equipmentStatuses } from '$lib/types/equipment';
+	import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
 	let id = $derived(page.params.id!);
 	let item = $derived(await getEquipment(id));

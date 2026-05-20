@@ -9,7 +9,7 @@ import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq } from 'drizzle-orm';
-import type { RecurringFrequency } from '$lib/server/reservation/config';
+import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
 export const confirmReservation = command(
 	z.object({ reservationId: z.string() }),

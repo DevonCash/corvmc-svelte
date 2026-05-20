@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatCents } from '$lib/utils/format';
 	import speakerLogo from '$lib/assets/cmc-speaker.png';
-	import type { EventsResponse } from '$lib/types/api';
+	import type { EventsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: EventsResponse } = $props();
 

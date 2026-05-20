@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { notificationPreference } from '$lib/server/db/schema/notification';
 import { eq, and } from 'drizzle-orm';
-import { getNotificationType } from './notification-types';
+import { getNotificationType } from '$lib/server/db/schema/notification';
 
 // ---------------------------------------------------------------------------
 // Notification preference service

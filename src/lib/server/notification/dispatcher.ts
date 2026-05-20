@@ -14,7 +14,7 @@ import { pushToUser } from './sse';
 // ---------------------------------------------------------------------------
 
 export interface DispatchParams {
-	/** The notification type key (from notification-types.ts) */
+	/** The notification type key (from schema/notification.ts) */
 	type: string;
 	/** Target user */
 	userId: string;

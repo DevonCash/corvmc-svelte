@@ -1,20 +1,13 @@
-import type { SubscriptionInfo, Credits, CommunityStats } from '$lib/finance/types';
-import type {
-	User,
-	Band,
-	BandMember,
-	Reservation,
-	Event,
-	Equipment,
-	EquipmentCategory,
-	EquipmentLoan,
-	Ticket,
-	RecurringSeries,
-	Closure,
-	Payment,
-	CreditTransaction,
-	Audience
-} from '$lib/server/db/schema';
+import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
+import type { User } from './auth';
+import type { Band, BandMember } from './band';
+import type { Reservation, Closure } from './reservation';
+import type { Event } from './event';
+import type { Equipment, EquipmentCategory, EquipmentLoan } from './equipment';
+import type { Ticket } from './ticket';
+import type { RecurringSeries } from './recurring';
+import type { Payment, CreditTransaction } from './finance';
+import type { Audience } from './marketing';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -26,10 +19,6 @@ export interface Pagination {
 	total: number;
 	totalPages: number;
 }
-
-// ---------------------------------------------------------------------------
-// Shared display types
-// ---------------------------------------------------------------------------
 
 export interface MemberSummary {
 	name: string;

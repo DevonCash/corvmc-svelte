@@ -10,7 +10,8 @@ import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './equipment-service';
-import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, type PricingTier, type LoanStatus, estimateLoanCost } from './types';
+import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, estimateLoanCost } from '$lib/config';
+import type { PricingTier, LoanStatus } from '$lib/server/db/schema/equipment';
 
 // ---------------------------------------------------------------------------
 // Errors

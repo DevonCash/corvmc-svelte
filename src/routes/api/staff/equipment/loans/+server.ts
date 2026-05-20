@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listLoans } from '$lib/server/equipment/loan-service';
 import { parsePagination } from '$lib/server/db/paginate';
-import type { LoanStatus } from '$lib/server/equipment/types';
+import type { LoanStatus } from '$lib/server/db/schema/equipment';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');

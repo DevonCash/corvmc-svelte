@@ -11,7 +11,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
-	import type { BandLayoutResponse } from '$lib/types/api';
+	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data, children }: { data: BandLayoutResponse; children: import('svelte').Snippet } = $props();
 

@@ -8,7 +8,7 @@ import {
 	updateCategory,
 	deleteCategory
 } from '$lib/server/equipment/equipment-service';
-import { createEquipmentSchema, createCategorySchema, updateCategorySchema } from '$lib/server/equipment/types';
+import { createEquipmentSchema, createCategorySchema, updateCategorySchema } from '$lib/server/db/schema/equipment';
 
 export const addEquipment = form('unchecked', async (data, issue) => {
 	await requireStaff();

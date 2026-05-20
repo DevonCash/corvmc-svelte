@@ -3,7 +3,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
-	import type { DirectoryResponse } from '$lib/types/api';
+	import type { DirectoryResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: DirectoryResponse } = $props();
 

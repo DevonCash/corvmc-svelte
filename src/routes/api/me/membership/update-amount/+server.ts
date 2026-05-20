@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { updateQuantity } from '$lib/server/finance/subscription-service';
-import { DOLLARS_PER_UNIT } from '$lib/finance/types';
+import { DOLLARS_PER_UNIT } from '$lib/config';
 
 const MIN_QUANTITY = 2;
 

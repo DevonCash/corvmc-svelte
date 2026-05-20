@@ -6,6 +6,62 @@ import { user } from './auth';
 import { reservation } from './reservation';
 
 // ---------------------------------------------------------------------------
+// Finance domain types
+// ---------------------------------------------------------------------------
+
+export const creditTypes = ['free_hours', 'equipment_credits'] as const;
+export type CreditType = (typeof creditTypes)[number];
+
+export function isCreditType(value: string): value is CreditType {
+	return creditTypes.includes(value as CreditType);
+}
+
+export const creditsSchema = z
+	.object({
+		free_hours: z.number().int().min(0).optional(),
+		equipment_credits: z.number().int().min(0).optional()
+	})
+	.strict();
+
+export type Credits = z.infer<typeof creditsSchema>;
+
+export function parseCredits(raw: unknown): Credits {
+	if (raw == null || (typeof raw === 'object' && Object.keys(raw as object).length === 0)) {
+		return {};
+	}
+	return creditsSchema.parse(raw);
+}
+
+export function getBalance(credits: Credits, type: CreditType): number {
+	return credits[type] ?? 0;
+}
+
+export const transactionSources = [
+	'monthly_allocation',
+	'checkout',
+	'refund',
+	'cancelled',
+	'admin_adjustment'
+] as const;
+
+export type TransactionSource = (typeof transactionSources)[number];
+
+export interface SubscriptionInfo {
+	id: string;
+	status: string;
+	quantity: number;
+	coveringFees: boolean;
+	currentPeriodEnd: Date;
+	cancelAtPeriodEnd: boolean;
+}
+
+export interface CommunityStats {
+	sustainingMemberCount: number;
+	totalFreeHoursAllocated: number;
+	participationPercent: number;
+}
+
+// ---------------------------------------------------------------------------
 // Payment record cache — mirrors Stripe Payment Records created by our app
 // ---------------------------------------------------------------------------
 

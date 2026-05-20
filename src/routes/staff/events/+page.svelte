@@ -6,7 +6,7 @@
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { StaffEventsResponse } from '$lib/types/api';
+	import type { StaffEventsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEventsResponse } = $props();
 	let showCreateModal = $state(false);

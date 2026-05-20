@@ -2,7 +2,7 @@ import pkg from 'rrule';
 import type { Frequency as FrequencyType, RRule as RRuleType } from 'rrule';
 const { RRule, Frequency } = pkg;
 import { DateTime } from 'luxon';
-import type { RecurringFrequency } from './config';
+import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { getReservationConfig } from './config';
 
 // ---------------------------------------------------------------------------

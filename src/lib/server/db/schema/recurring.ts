@@ -2,6 +2,17 @@ import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { timestamp, uuid, type Serialized } from './columns';
 
+// ---------------------------------------------------------------------------
+// Recurring domain types
+// ---------------------------------------------------------------------------
+
+export const RECURRING_FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const;
+export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
+
+// ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
+
 export const recurringSeries = sqliteTable(
 	'recurring_series',
 	{

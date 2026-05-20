@@ -44,7 +44,7 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn((...args) => ({ and: args }))
 }));
 
-vi.mock('./notification-types', () => ({
+vi.mock('$lib/server/db/schema/notification', () => ({
 	getNotificationType: getNotificationTypeMock
 }));
 

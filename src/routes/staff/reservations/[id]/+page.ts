@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import type { StaffReservationDetailResponse } from '$lib/types/api';
+import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ fetch, params }) => {
 	const res = await fetch(`/api/staff/reservations/${params.id}`);

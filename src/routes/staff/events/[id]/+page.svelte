@@ -13,7 +13,7 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { StaffEventDetailResponse } from '$lib/types/api';
+	import type { StaffEventDetailResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEventDetailResponse } = $props();
 

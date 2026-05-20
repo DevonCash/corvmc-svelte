@@ -1,5 +1,5 @@
 import type { LayoutLoad } from './$types';
-import type { AuthMeResponse } from '$lib/types/api';
+import type { AuthMeResponse } from '$lib/server/db/schema/api';
 
 export const load: LayoutLoad = async ({ fetch }) => {
 	try {

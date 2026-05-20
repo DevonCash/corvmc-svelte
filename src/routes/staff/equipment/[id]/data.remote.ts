@@ -10,7 +10,7 @@ import {
 	listCategories
 } from '$lib/server/equipment/equipment-service';
 import { getLoanHistory } from '$lib/server/equipment/loan-service';
-import { equipmentConditions, equipmentStatuses } from '$lib/server/equipment/types';
+import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
 const editEquipmentSchema = z.object({
 	name: z.string().min(1).max(255).optional(),

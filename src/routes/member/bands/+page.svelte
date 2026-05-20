@@ -10,7 +10,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { createBand, acceptInvite, declineInvite } from './data.remote';
-	import type { MemberBandsResponse } from '$lib/types/api';
+	import type { MemberBandsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberBandsResponse } = $props();
 

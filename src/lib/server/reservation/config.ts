@@ -13,10 +13,6 @@ export const DEFAULT_BUFFER_MINUTES = 0;
 export const DEFAULT_MAX_ADVANCE_DAYS_ONEOFF = 14;
 export const DEFAULT_MAX_ADVANCE_DAYS_RECURRING = 17.5;
 
-/** Allowed recurrence frequencies */
-export const RECURRING_FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const;
-export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
-
 // ---------------------------------------------------------------------------
 // Async config — reads from site_config table with defaults fallback
 // ---------------------------------------------------------------------------

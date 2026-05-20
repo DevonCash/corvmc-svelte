@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { UnsubscribeResponse } from '$lib/types/api';
+	import type { UnsubscribeResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: UnsubscribeResponse } = $props();
 </script>

@@ -3,7 +3,8 @@
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { DOLLARS_PER_UNIT, type SubscriptionInfo } from '$lib/finance/types';
+	import { DOLLARS_PER_UNIT } from '$lib/config';
+	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 

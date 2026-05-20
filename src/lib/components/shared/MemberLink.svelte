@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MemberSummary } from '$lib/types/api';
+	import type { MemberSummary } from '$lib/server/db/schema/api';
 	import Avatar from './Avatar.svelte';
 	import { IconUser, IconUserCog, IconUserShield, IconUserHeart } from '@tabler/icons-svelte';
 

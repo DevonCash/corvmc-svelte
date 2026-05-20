@@ -4,7 +4,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import type { StaffDashboardResponse } from '$lib/types/api';
+	import type { StaffDashboardResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffDashboardResponse } = $props();
 

@@ -12,7 +12,7 @@
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import { searchUsers, createBand } from './data.remote';
 	import { toast } from 'svelte-sonner';
-	import type { StaffBandsResponse } from '$lib/types/api';
+	import type { StaffBandsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffBandsResponse } = $props();
 

@@ -1,8 +1,21 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { timestamp, uuid, zodJson, type Serialized } from './columns';
-import { user } from './auth';
-import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
+import { user, directoryContactSchema, profileLinksSchema } from './auth';
+
+// ---------------------------------------------------------------------------
+// Band domain types
+// ---------------------------------------------------------------------------
+
+export const bandRoles = ['owner', 'admin', 'member'] as const;
+export type BandRole = (typeof bandRoles)[number];
+
+export const bandMemberStatuses = ['pending', 'active'] as const;
+export type BandMemberStatus = (typeof bandMemberStatuses)[number];
+
+// ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
 
 export const band = sqliteTable(
 	'band',

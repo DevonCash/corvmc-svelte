@@ -10,7 +10,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { createClosure, updateClosure, deleteClosure } from './data.remote';
-	import type { StaffClosuresResponse } from '$lib/types/api';
+	import type { StaffClosuresResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffClosuresResponse } = $props();
 

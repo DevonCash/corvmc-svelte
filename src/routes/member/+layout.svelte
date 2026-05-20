@@ -13,7 +13,7 @@
 	import Nav from '$lib/components/shared/Nav';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import type { MemberLayoutResponse } from '$lib/types/api';
+	import type { MemberLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data, children }: { data: MemberLayoutResponse; children: import('svelte').Snippet } = $props();
 

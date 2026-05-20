@@ -7,7 +7,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { updateBand } from './data.remote';
-	import type { BandLayoutResponse } from '$lib/types/api';
+	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse } = $props();
 

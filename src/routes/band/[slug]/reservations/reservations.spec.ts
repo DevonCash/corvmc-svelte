@@ -66,7 +66,10 @@ vi.mock('$lib/server/reservation/config', () => ({
 		bufferMinutes: 0,
 		maxAdvanceDaysOneoff: 14,
 		maxAdvanceDaysRecurring: 17.5
-	})),
+	}))
+}));
+
+vi.mock('$lib/server/db/schema/recurring', () => ({
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
 }));
 

@@ -18,7 +18,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { StaffReservationsResponse } from '$lib/types/api';
+	import type { StaffReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffReservationsResponse } = $props();
 

@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
-import { type CreditType, creditTypes } from './types';
+import { type CreditType, creditTypes } from '$lib/server/db/schema/finance';
 import { calculateTotalWithFeeCoverage } from './fees';
 import { getStripeProductId } from './product-config-service';
 

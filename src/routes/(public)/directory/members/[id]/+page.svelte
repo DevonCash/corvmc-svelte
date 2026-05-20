@@ -2,7 +2,7 @@
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { DirectoryMemberResponse } from '$lib/types/api';
+	import type { DirectoryMemberResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: DirectoryMemberResponse } = $props();
 	const member = $derived(data.member);

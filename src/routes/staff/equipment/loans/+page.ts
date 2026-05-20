@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import type { StaffEquipmentLoansResponse } from '$lib/types/api';
+import type { StaffEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const res = await fetch('/api/staff/equipment/loans' + url.search);

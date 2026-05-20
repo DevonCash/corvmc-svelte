@@ -10,7 +10,7 @@
 	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
 	import { cancelSeries } from './data.remote';
-	import type { StaffRecurringResponse } from '$lib/types/api';
+	import type { StaffRecurringResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffRecurringResponse } = $props();
 
