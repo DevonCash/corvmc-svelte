@@ -140,10 +140,10 @@
 										{/if}
 									</div>
 								</div>
+								{#if b.lookingForMembers}
+									<div class="vinyl-card__gaff">seeking members</div>
+								{/if}
 							</div>
-							{#if b.lookingForMembers}
-								<div class="vinyl-card__gaff">seeking members</div>
-							{/if}
 							<div class="vinyl-card__caption">
 								<div class="vinyl-card__band">{b.name}</div>
 								<div class="vinyl-card__meta">
