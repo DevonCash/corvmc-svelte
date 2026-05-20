@@ -10,8 +10,8 @@
 		uploadImage?: (file: File) => Promise<string>;
 	} = $props();
 
-	let textarea: HTMLTextAreaElement;
-	let fileInput: HTMLInputElement;
+	let textarea = $state<HTMLTextAreaElement>(undefined!);
+	let fileInput = $state<HTMLInputElement>(undefined!);
 	let activeTab = $state<'write' | 'preview'>('write');
 
 	async function handleImageUpload() {

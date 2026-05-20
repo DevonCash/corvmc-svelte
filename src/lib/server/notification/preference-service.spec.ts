@@ -35,17 +35,15 @@ vi.mock('$lib/server/db/schema/notification', () => ({
 		userId: 'userId',
 		notificationType: 'notificationType',
 		emailEnabled: 'emailEnabled',
-		inAppEnabled: 'inAppEnabled'
-	}
+		inAppEnabled: 'inAppEnabled',
+		smsEnabled: 'smsEnabled'
+	},
+	getNotificationType: getNotificationTypeMock
 }));
 
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((col, val) => ({ col, val })),
 	and: vi.fn((...args) => ({ and: args }))
-}));
-
-vi.mock('$lib/server/db/schema/notification', () => ({
-	getNotificationType: getNotificationTypeMock
 }));
 
 import { getPreference, getAllPreferences, setPreference } from './preference-service';

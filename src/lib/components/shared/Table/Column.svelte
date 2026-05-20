@@ -11,6 +11,7 @@
 		class: className = '',
 		shrink = false,
 		stopClick = false,
+		align = 'left' as const,
 		cell,
 		headerCell
 	}: {
@@ -21,6 +22,7 @@
 		class?: string;
 		shrink?: boolean;
 		stopClick?: boolean;
+		align?: 'left' | 'right' | 'center';
 		cell?: Snippet<[value: any, row: any]>;
 		headerCell?: Snippet;
 	} = $props();
@@ -38,6 +40,7 @@
 			class: className,
 			shrink,
 			stopClick,
+			align,
 			cell,
 			headerCell
 		});

@@ -33,7 +33,9 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((col, val) => ({ eq: [col, val] })),
 	and: vi.fn((...args) => ({ and: args })),
 	isNull: vi.fn((col) => ({ isNull: col })),
-	inArray: vi.fn((col, vals) => ({ inArray: [col, vals] }))
+	inArray: vi.fn((col, vals) => ({ inArray: [col, vals] })),
+	sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ sql: true, strings, values }),
+	count: vi.fn(() => 'count()')
 }));
 
 vi.mock('$lib/server/authorization', () => ({
@@ -266,12 +268,11 @@ describe('recurring-series-service', () => {
 		}
 
 		it('returns 0 when there are no active series for the user', async () => {
-			setupSelectForUser([]);
+			setupUpdateForCancel(0);
 
 			const count = await svc.cancelAllForUser('user-1');
 
 			expect(count).toBe(0);
-			expect(db.update).not.toHaveBeenCalled();
 		});
 
 		it('cancels all found series and returns the cancelled count', async () => {

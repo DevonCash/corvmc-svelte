@@ -79,7 +79,8 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/finance', () => ({
-	paymentCache: { id: 'id' }
+	paymentCache: { id: 'id' },
+	creditTypes: ['free_hours', 'equipment_credits'] as const
 }));
 
 vi.mock('drizzle-orm', () => ({

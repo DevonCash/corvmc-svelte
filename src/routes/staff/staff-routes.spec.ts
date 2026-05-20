@@ -110,8 +110,8 @@ describe('/staff/users list load', () => {
 		];
 
 		queryResults = [
-			[{ value: 2 }],
 			users,
+			[{ count: 2 }],
 			[
 				{ userId: 'u1', roleName: 'admin' },
 				{ userId: 'u2', roleName: 'member' }
@@ -133,8 +133,8 @@ describe('/staff/users list load', () => {
 
 	it('passes search query through', async () => {
 		queryResults = [
-			[{ value: 0 }],
 			[],
+			[{ count: 0 }],
 			[]
 		];
 

@@ -18,7 +18,7 @@
 		stopClick: boolean;
 		cell?: Snippet<[value: any, row: any]>;
 		headerCell?: Snippet;
-		align: 'left' | 'right' | 'center';
+		align?: 'left' | 'right' | 'center';
 	}
 
 	/** Context shape that Column children use to register themselves. */
@@ -32,8 +32,8 @@
 	 * @deprecated Use `<Column>` child components instead.
 	 */
 	export type Column<T> = {
-		/** Property key on the data object. */
-		key: string & keyof T;
+		/** Property key on the data object, or a virtual key for custom row snippets. */
+		key: (string & keyof T) | (string & {});
 		/** Header label text. */
 		header: string;
 		/** Enable sorting on this column. Default: false. */
@@ -42,6 +42,8 @@
 		cell?: (value: unknown, row: T) => string;
 		/** Extra CSS classes on the <td>. */
 		class?: string;
+		/** Text alignment. Default: 'left'. */
+		align?: 'left' | 'right' | 'center';
 	};
 
 	/** Resolved column used internally — unifies both APIs. */

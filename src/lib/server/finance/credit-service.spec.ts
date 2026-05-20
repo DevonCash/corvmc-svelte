@@ -76,7 +76,9 @@ vi.mock('$lib/server/db/schema/auth', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/finance', () => ({
-	creditTransaction: { id: 'id' }
+	creditTransaction: { id: 'id' },
+	isCreditType: (v: string) => ['free_hours', 'equipment_credits'].includes(v),
+	creditTypes: ['free_hours', 'equipment_credits'] as const
 }));
 
 vi.mock('drizzle-orm', () => ({
