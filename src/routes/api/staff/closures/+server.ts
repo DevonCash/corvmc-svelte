@@ -3,25 +3,32 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
 import { hasAnyRole } from '$lib/server/authorization';
-import { desc } from 'drizzle-orm';
+import { desc, count } from 'drizzle-orm';
+import { paginate, parsePagination } from '$lib/server/db/paginate';
 
-export const GET: RequestHandler = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
 	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
 	if (!allowed) return error(403, 'Staff access required');
 
-	const closures = await db
+	const dataQ = db
 		.select()
 		.from(closure)
-		.orderBy(desc(closure.startsAt));
+		.orderBy(desc(closure.startsAt))
+		.$dynamic();
+
+	const countQ = db.select({ count: count() }).from(closure);
+
+	const { rows, pagination } = await paginate(dataQ, countQ, parsePagination(url));
 
 	return json({
-		closures: closures.map((c) => ({
+		closures: rows.map((c) => ({
 			id: c.id,
 			reason: c.reason,
 			startsAt: c.startsAt.toISOString(),
 			endsAt: c.endsAt.toISOString()
-		}))
+		})),
+		pagination
 	});
 };
 

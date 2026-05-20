@@ -1,4 +1,4 @@
-import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { timestamp, uuid, type Serialized } from './columns';
@@ -64,9 +64,9 @@ export const reservation = sqliteTable(
 		index('idx_reservation_conflict').on(t.startsAt, t.endsAt),
 		index('idx_reservation_user').on(t.createdByUserId, t.status),
 		index('idx_reservation_booker').on(t.bookerType, t.bookerId),
-		index('idx_reservation_recurring')
+		uniqueIndex('uq_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
-			.where(sql`recurring_series_id IS NOT NULL`),
+			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),
 		check('reservation_time_order', sql`ends_at > starts_at`)
 	]
 );

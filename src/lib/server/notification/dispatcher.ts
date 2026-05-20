@@ -2,6 +2,7 @@ import { sendEmail } from './email/postmark-client';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
+import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------
 // Notification dispatcher
@@ -61,7 +62,7 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 				createdAt: row.createdAt.toISOString()
 			});
 		} catch (err) {
-			console.error('[notification] in-app dispatch failed:', err);
+			captureException(err, { channel: 'in-app', type: params.type, userId: params.userId });
 		}
 	}
 
@@ -75,7 +76,7 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 				tag: params.type
 			});
 		} catch (err) {
-			console.error('[notification] email dispatch failed:', err);
+			captureException(err, { channel: 'email', type: params.type, to: params.userEmail });
 		}
 	}
 }
@@ -98,6 +99,6 @@ export async function dispatchEmailOnly(params: {
 			tag: params.type
 		});
 	} catch (err) {
-		console.error('[notification] email-only dispatch failed:', err);
+		captureException(err, { channel: 'email-only', type: params.type, to: params.toEmail });
 	}
 }

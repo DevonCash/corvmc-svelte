@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { subscriber } from '$lib/server/db/schema/marketing';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Subscriber service
@@ -19,32 +19,15 @@ export async function findOrCreateByEmail(
 ): Promise<{ id: string; email: string; name: string | null; userId: string | null }> {
 	const normalized = email.toLowerCase().trim();
 
-	const [existing] = await db
-		.select({
-			id: subscriber.id,
-			email: subscriber.email,
-			name: subscriber.name,
-			userId: subscriber.userId
-		})
-		.from(subscriber)
-		.where(eq(subscriber.email, normalized))
-		.limit(1);
-
-	if (existing) {
-		// Update name if provided and different
-		if (name && name !== existing.name) {
-			await db
-				.update(subscriber)
-				.set({ name })
-				.where(eq(subscriber.id, existing.id));
-			return { ...existing, name };
-		}
-		return existing;
-	}
-
-	const [created] = await db
+	const [row] = await db
 		.insert(subscriber)
 		.values({ email: normalized, name: name || null })
+		.onConflictDoUpdate({
+			target: subscriber.email,
+			set: name
+				? { name: sql`coalesce(${name}, ${subscriber.name})` }
+				: { email: sql`${subscriber.email}` }
+		})
 		.returning({
 			id: subscriber.id,
 			email: subscriber.email,
@@ -52,7 +35,7 @@ export async function findOrCreateByEmail(
 			userId: subscriber.userId
 		});
 
-	return created;
+	return row;
 }
 
 /**

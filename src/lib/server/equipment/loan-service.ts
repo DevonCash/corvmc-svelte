@@ -11,6 +11,7 @@ import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './equipment-service';
 import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, estimateLoanCost } from '$lib/config';
+import { captureException } from '$lib/server/sentry';
 import type { PricingTier, LoanStatus } from '$lib/server/db/schema/equipment';
 
 // ---------------------------------------------------------------------------
@@ -205,7 +206,7 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 				requestedPickupDate: data.requestedPickupDate.toISOString()
 			});
 		} catch (err) {
-			console.error('[events] equipment.loan_requested emission failed:', err);
+			captureException(err, { event: 'equipment.loan_requested', loanId: loan.id });
 		}
 	});
 
@@ -235,8 +236,21 @@ export async function scheduleLoan(loanId: string, data: ScheduleLoanData) {
 			status: 'scheduled',
 			updatedAt: new Date()
 		})
-		.where(eq(equipmentLoan.id, loanId))
+		.where(
+			and(
+				eq(equipmentLoan.id, loanId),
+				sql`(
+					SELECT e.total_quantity - e.out_of_order_quantity - COALESCE(
+						(SELECT SUM(el.quantity) FROM equipment_loan el
+						 WHERE el.equipment_id = ${data.equipmentId}
+						 AND el.status IN ('scheduled', 'checked_out')), 0)
+					FROM equipment e WHERE e.id = ${data.equipmentId}
+				) >= ${loan.quantity}`
+			)
+		)
 		.returning();
+
+	if (!updated) throw new InsufficientQuantityError(0, loan.quantity);
 
 	const [member] = await db
 		.select({ name: user.name, email: user.email })
@@ -261,7 +275,7 @@ export async function scheduleLoan(loanId: string, data: ScheduleLoanData) {
 				scheduledPickupDate: data.scheduledPickupDate.toISOString()
 			});
 		} catch (err) {
-			console.error('[events] equipment.loan_scheduled emission failed:', err);
+			captureException(err, { event: 'equipment.loan_scheduled', loanId });
 		}
 	});
 
@@ -311,7 +325,7 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 				equipmentName: item?.name ?? 'Unknown'
 			});
 		} catch (err) {
-			console.error('[events] equipment.checked_out emission failed:', err);
+			captureException(err, { event: 'equipment.checked_out', loanId });
 		}
 	});
 
@@ -381,7 +395,7 @@ export async function returnLoan(loanId: string, staffNotes?: string) {
 				daysBorrowed
 			});
 		} catch (err) {
-			console.error('[events] equipment.returned emission failed:', err);
+			captureException(err, { event: 'equipment.returned', loanId });
 		}
 	});
 

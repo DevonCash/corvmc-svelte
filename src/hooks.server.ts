@@ -7,6 +7,7 @@ import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
+import { captureException } from '$lib/server/sentry';
 
 // Register domain event listeners once at startup
 if (!building) {
@@ -25,7 +26,6 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (event.platform?.env?.KV) {
 		initKv(event.platform.env.KV);
 	}
-
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	if (session) {
@@ -34,7 +34,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 		if (!resolvedSessions.has(session.session.id)) {
 			resolvedSessions.add(session.session.id);
-			resolvePendingInvites(session.user.id, session.user.email).catch(console.error);
+			resolvePendingInvites(session.user.id, session.user.email).catch(captureException);
 		}
 	}
 

@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq, and, sql, type SQL } from 'drizzle-orm';
+import { eq, and, sql, inArray, type SQL } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/auth';
 
 /**
@@ -44,10 +44,13 @@ export async function hasRole(userId: string, roleName: string): Promise<boolean
  * Check whether a user has any of the given roles.
  */
 export async function hasAnyRole(userId: string, roleNames: string[]): Promise<boolean> {
-	for (const name of roleNames) {
-		if (await hasRole(userId, name)) return true;
-	}
-	return false;
+	const result = await db
+		.select({ roleId: role.id })
+		.from(role)
+		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
+		.where(and(inArray(role.name, roleNames), eq(modelHasRole.userId, userId)))
+		.limit(1);
+	return result.length > 0;
 }
 
 /**

@@ -8,6 +8,7 @@ import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
+import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
 import type { BandRole } from '$lib/server/db/schema/band';
 
@@ -283,7 +284,7 @@ export async function invite(
 					});
 				}
 			} catch (err) {
-				console.error('[events] band.invitation_sent emission failed:', err);
+				captureException(err, { event: 'band.invitation_sent', bandId });
 			}
 		});
 
@@ -346,7 +347,7 @@ export async function acceptInvitation(memberId: string, userId: string) {
 				});
 			}
 		} catch (err) {
-			console.error('[events] band.invitation_accepted emission failed:', err);
+			captureException(err, { event: 'band.invitation_accepted' });
 		}
 	});
 
@@ -404,6 +405,16 @@ export async function updateMember(memberId: string, data: UpdateMemberData) {
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {
+	const [target] = await db
+		.select({ status: bandMember.status })
+		.from(bandMember)
+		.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, newOwnerId)))
+		.limit(1);
+
+	if (!target || target.status !== 'active') {
+		throw new Error('New owner must be an active band member');
+	}
+
 	await db.batch([
 		db
 			.update(bandMember)
@@ -418,7 +429,13 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 		db
 			.update(bandMember)
 			.set({ role: 'owner' })
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, newOwnerId))),
+			.where(
+				and(
+					eq(bandMember.bandId, bandId),
+					eq(bandMember.userId, newOwnerId),
+					eq(bandMember.status, 'active')
+				)
+			),
 		db
 			.update(band)
 			.set({ ownerId: newOwnerId, updatedAt: new Date() })

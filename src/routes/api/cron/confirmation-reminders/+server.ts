@@ -48,7 +48,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, in24h)
 			)
-		);
+		)
+		.limit(500);
 
 	let emitted = 0;
 	for (const row of rows) {

@@ -351,10 +351,25 @@ describe('BandService', () => {
 
 	describe('transferOwnership', () => {
 		it('demotes old owner and promotes new one via batch', async () => {
+			selectResult = [{ status: 'active' }];
 			const { db } = await import('$lib/server/db');
 			await transferOwnership('band-1', 'user-2', 'user-owner');
 
 			expect(db.batch).toHaveBeenCalled();
+		});
+
+		it('throws when new owner is not an active member', async () => {
+			selectResult = [{ status: 'pending' }];
+			await expect(
+				transferOwnership('band-1', 'user-2', 'user-owner')
+			).rejects.toThrow('New owner must be an active band member');
+		});
+
+		it('throws when new owner is not a band member', async () => {
+			selectResult = [];
+			await expect(
+				transferOwnership('band-1', 'user-2', 'user-owner')
+			).rejects.toThrow('New owner must be an active band member');
 		});
 	});
 

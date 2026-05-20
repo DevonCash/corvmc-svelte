@@ -98,7 +98,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 				lt(reservation.endsAt, now)
 			)
 		)
-		.orderBy(asc(reservation.endsAt));
+		.orderBy(asc(reservation.endsAt))
+		.limit(100);
 
 	// Tab counts
 	const [upcomingCount] = await db

@@ -8,6 +8,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
+import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -80,6 +81,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		reservation: reservationParams,
 		posterFile
 	} = params;
+
+	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
 
 	// Validate ticketing fields
 	if (ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
@@ -405,7 +409,8 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 						eq(ticket.eventId, eventId),
 						inArray(ticket.status, ['valid', 'pending'])
 					)
-				);
+				)
+				.limit(5000);
 
 			// Deduplicate by email (one notification per buyer)
 			const seen = new Set<string>();
@@ -430,7 +435,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 				});
 			}
 		} catch (err) {
-			console.error('[events] event.cancelled emission failed:', err);
+			captureException(err, { event: 'event.cancelled', eventId });
 		}
 	});
 }

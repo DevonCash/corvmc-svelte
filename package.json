@@ -83,6 +83,7 @@
 	},
 	"dependencies": {
 		"@humanspeak/svelte-headless-table": "^6.0.6",
+		"@sentry/cloudflare": "^10.53.1",
 		"@tabler/icons-svelte": "^3.44.0",
 		"@types/luxon": "^3.7.1",
 		"bcryptjs": "^3.0.2",

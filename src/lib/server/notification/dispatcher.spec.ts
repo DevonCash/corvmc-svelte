@@ -120,7 +120,6 @@ describe('dispatch', () => {
 		).resolves.toBeUndefined();
 
 		expect(consoleSpy).toHaveBeenCalledWith(
-			'[notification] in-app dispatch failed:',
 			expect.any(Error)
 		);
 		consoleSpy.mockRestore();
@@ -134,7 +133,6 @@ describe('dispatch', () => {
 		await expect(dispatch(BASE_PARAMS)).resolves.toBeUndefined();
 
 		expect(consoleSpy).toHaveBeenCalledWith(
-			'[notification] email dispatch failed:',
 			expect.any(Error)
 		);
 		consoleSpy.mockRestore();
@@ -184,7 +182,6 @@ describe('dispatchEmailOnly', () => {
 		).resolves.toBeUndefined();
 
 		expect(consoleSpy).toHaveBeenCalledWith(
-			'[notification] email-only dispatch failed:',
 			expect.any(Error)
 		);
 		consoleSpy.mockRestore();

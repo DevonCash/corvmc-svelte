@@ -104,6 +104,8 @@ export interface StaffCreateReservationParams extends CreateReservationParams {
 export async function staffCreate(params: StaffCreateReservationParams): Promise<ReservationRow> {
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes, status = 'confirmed' } = params;
 
+	if (startsAt >= endsAt) throw new ReservationValidationError('Reservation must end after it starts');
+
 	const [row] = await db
 		.insert(reservation)
 		.values({

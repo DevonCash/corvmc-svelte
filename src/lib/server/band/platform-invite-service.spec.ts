@@ -260,8 +260,6 @@ describe('resolvePendingInvites', () => {
 
 		expect(result).toBe(1); // only the second succeeded
 		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.stringContaining('resolve failed'),
-			'inv-fail',
 			expect.any(Error)
 		);
 

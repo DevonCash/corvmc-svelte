@@ -5,6 +5,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { invite } from './band-service';
 import { domainEvents } from '$lib/server/events/event-bus';
+import { captureException } from '$lib/server/sentry';
 
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -88,7 +89,7 @@ export async function createInvite(
 				});
 			}
 		} catch (err) {
-			console.error('[platform-invite] event emission failed:', err);
+			captureException(err, { event: 'platform_invite.created', bandId });
 		}
 	});
 
@@ -149,7 +150,7 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 					.where(eq(platformInvite.id, inv.id));
 				resolved++;
 			} else {
-				console.error('[platform-invite] resolve failed for invite', inv.id, err);
+				captureException(err, { event: 'platform_invite.resolve', inviteId: inv.id });
 			}
 		}
 	}
