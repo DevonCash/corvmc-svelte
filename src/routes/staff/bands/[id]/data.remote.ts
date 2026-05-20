@@ -10,20 +10,9 @@ import {
 	getByIdWithDetails,
 	getMembers,
 	update,
-	removeMember,
-	transferOwnership,
-	deactivate,
-	reactivate,
-	invite,
-	updateMember,
-	revokeInvitation,
-	searchMembers
+	updateMember
 } from '$lib/server/band/band-service';
-import {
-	createInvite as createPlatformInvite,
-	listForBand,
-	revoke as revokePlatformInviteService
-} from '$lib/server/band/platform-invite-service';
+import { listForBand } from '$lib/server/band/platform-invite-service';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -65,6 +54,11 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 		.limit(10);
 });
 
+export const getPlatformInvites = query(z.string(), async (bandId) => {
+	await requireStaff();
+	return listForBand(bandId);
+});
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -83,74 +77,6 @@ export const updateBand = form(updateBandSchema, async (data) => {
 	return { success: true };
 });
 
-const memberIdSchema = z.object({ memberId: z.string().min(1) });
-
-export const removeBandMember = command(memberIdSchema, async (data) => {
-	await requireStaff();
-	await removeMember(data.memberId);
-	const { params } = getRequestEvent();
-	void getBandMembers(params.id!).refresh();
-	return { success: true };
-});
-
-const transferSchema = z.object({ newOwnerId: z.string().min(1) });
-
-export const transferBandOwnership = command(transferSchema, async (data) => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	const id = params.id!;
-	// Staff acts as current owner for the transfer
-	const band = await getByIdWithDetails(id);
-	if (!band) error(404, 'Band not found');
-	await transferOwnership(id, data.newOwnerId, band.ownerId);
-	void getBand(id).refresh();
-	void getBandMembers(id).refresh();
-	return { success: true };
-});
-
-export const deactivateBand = command(z.object({}), async () => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	await deactivate(params.id!);
-	void getBand(params.id!).refresh();
-	return { success: true };
-});
-
-export const reactivateBand = command(z.object({}), async () => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	await reactivate(params.id!);
-	void getBand(params.id!).refresh();
-	return { success: true };
-});
-
-// ---------------------------------------------------------------------------
-// Member management
-// ---------------------------------------------------------------------------
-
-export const searchUsers = query(z.string(), async (q) => {
-	await requireStaff();
-	if (!q || q.length < 2) return [];
-	const { params } = getRequestEvent();
-	return searchMembers(q, params.id!);
-});
-
-export const inviteMember = command(
-	z.object({
-		userId: z.string().min(1),
-		role: z.enum(['admin', 'member']),
-		position: z.string().optional()
-	}),
-	async (data) => {
-		const staff = await requireStaff();
-		const { params } = getRequestEvent();
-		await invite(params.id!, data.userId, data.role, data.position ?? null, staff.id);
-		void getBandMembers(params.id!).refresh();
-		void getBand(params.id!).refresh();
-		return { success: true };
-	}
-);
-
 export const updateMemberRole = command(
 	z.object({
 		memberId: z.string().min(1),
@@ -165,56 +91,6 @@ export const updateMemberRole = command(
 		});
 		const { params } = getRequestEvent();
 		void getBandMembers(params.id!).refresh();
-		return { success: true };
-	}
-);
-
-export const revokeInvite = command(memberIdSchema, async (data) => {
-	await requireStaff();
-	await revokeInvitation(data.memberId);
-	const { params } = getRequestEvent();
-	void getBandMembers(params.id!).refresh();
-	void getBand(params.id!).refresh();
-	return { success: true };
-});
-
-// ---------------------------------------------------------------------------
-// Platform invites (invite by email)
-// ---------------------------------------------------------------------------
-
-export const getPlatformInvites = query(z.string(), async (bandId) => {
-	await requireStaff();
-	return listForBand(bandId);
-});
-
-export const inviteByEmail = command(
-	z.object({
-		email: z.string().email(),
-		role: z.enum(['admin', 'member']),
-		position: z.string().optional()
-	}),
-	async (data) => {
-		const staff = await requireStaff();
-		const { params } = getRequestEvent();
-		const result = await createPlatformInvite(
-			data.email,
-			params.id!,
-			data.role,
-			data.position ?? null,
-			staff.id
-		);
-		void getPlatformInvites(params.id!).refresh();
-		return { success: true, ...result };
-	}
-);
-
-export const revokePlatformInvite = command(
-	z.object({ inviteId: z.string().min(1) }),
-	async (data) => {
-		await requireStaff();
-		await revokePlatformInviteService(data.inviteId);
-		const { params } = getRequestEvent();
-		void getPlatformInvites(params.id!).refresh();
 		return { success: true };
 	}
 );

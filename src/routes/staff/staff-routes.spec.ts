@@ -211,7 +211,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser, adjustCredits } = await import('./users/[id]/data.remote');
+const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } = await import('./users/[id]/data.remote');
 
 describe('/staff/users/[id] detail load', () => {
 	it('returns user with roles and all available roles', async () => {
@@ -343,41 +343,3 @@ describe('/staff/users/[id] updateUser', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Adjust credits command
-// ---------------------------------------------------------------------------
-describe('/staff/users/[id] adjustCredits', () => {
-	it('adds credits when amount is positive', async () => {
-		mockAddCredits.mockResolvedValueOnce(undefined);
-
-		const result = await (adjustCredits as Function)({
-			userId: 'user-1',
-			creditType: 'free_hours',
-			amount: 5,
-			description: 'Bonus hours'
-		});
-
-		expect(result).toEqual({ success: true });
-		expect(mockAddCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 5, 'admin_adjustment', undefined, 'Bonus hours'
-		);
-		expect(mockDeductCredits).not.toHaveBeenCalled();
-	});
-
-	it('deducts credits when amount is negative', async () => {
-		mockDeductCredits.mockResolvedValueOnce(undefined);
-
-		const result = await (adjustCredits as Function)({
-			userId: 'user-1',
-			creditType: 'equipment_credits',
-			amount: -3,
-			description: 'Correction'
-		});
-
-		expect(result).toEqual({ success: true });
-		expect(mockDeductCredits).toHaveBeenCalledWith(
-			'user-1', 'equipment_credits', 3, 'admin_adjustment', undefined, 'Correction'
-		);
-		expect(mockAddCredits).not.toHaveBeenCalled();
-	});
-});

@@ -1,12 +1,10 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, command, getRequestEvent } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	getEquipmentById,
 	updateEquipment,
-	softDeleteEquipment,
-	restoreEquipment,
 	listCategories
 } from '$lib/server/equipment/equipment-service';
 import { getLoanHistory } from '$lib/server/equipment/loan-service';
@@ -53,21 +51,5 @@ export const editEquipment = form(editEquipmentSchema, async (raw) => {
 		outOfOrderQuantity: data.outOfOrderQuantity ? parseInt(data.outOfOrderQuantity, 10) : undefined
 	});
 	void getEquipment(id).refresh();
-	return { success: true };
-});
-
-export const deactivateEquipment = command(z.object({}), async () => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	await softDeleteEquipment(params.id!);
-	void getEquipment(params.id!).refresh();
-	return { success: true };
-});
-
-export const reactivateEquipment = command(z.object({}), async () => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	await restoreEquipment(params.id!);
-	void getEquipment(params.id!).refresh();
 	return { success: true };
 });

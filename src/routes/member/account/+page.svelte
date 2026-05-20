@@ -10,15 +10,14 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { SubscribeAction, UnsubscribeAction } from '$lib/components/shared/actions';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
 	import {
 		updateProfile,
 		changePassword,
 		deleteAccount,
 		getMySubscriptions,
-		getAvailableLists,
-		subscribeToList,
-		unsubscribeFromList
+		getAvailableLists
 	} from './data.remote';
 	import type { AccountResponse } from '$lib/server/db/schema/api';
 
@@ -203,14 +202,7 @@
 											<p class="text-xs opacity-60">{sub.audienceDescription}</p>
 										{/if}
 									</div>
-									<Action
-										action={async () => {
-											await unsubscribeFromList({ audienceId: sub.audienceId });
-											toast.success(`Unsubscribed from ${sub.audienceName}`);
-										}}
-										label="Unsubscribe"
-										class="btn-ghost btn-xs"
-									/>
+									<UnsubscribeAction audienceId={sub.audienceId} name={sub.audienceName} />
 								</div>
 							{/each}
 						</div>
@@ -227,14 +219,7 @@
 											<p class="text-xs opacity-60">{a.description}</p>
 										{/if}
 									</div>
-									<Action
-										action={async () => {
-											await subscribeToList({ audienceId: a.id });
-											toast.success(`Subscribed to ${a.name}`);
-										}}
-										label="Subscribe"
-										class="btn-primary btn-xs"
-									/>
+									<SubscribeAction audienceId={a.id} name={a.name} />
 								</div>
 							{/each}
 						</div>

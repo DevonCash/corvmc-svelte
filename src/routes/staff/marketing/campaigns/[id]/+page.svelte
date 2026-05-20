@@ -5,8 +5,8 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { getCampaignDetail, unscheduleCommand } from './data.remote';
+	import { UnscheduleCampaignAction } from '$lib/components/shared/actions';
+	import { getCampaignDetail } from './data.remote';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 
 	let id = $derived(page.params.id!);
@@ -20,13 +20,7 @@
 				<a href="/staff/marketing/campaigns/{id}/edit" class="btn btn-sm btn-primary">Edit</a>
 			{/if}
 			{#if campaign.status === 'scheduled'}
-				<Action
-					action={() => unscheduleCommand({})}
-					label="Cancel Schedule"
-					successToast="Campaign unscheduled — returned to draft"
-					class="btn-warning btn-sm"
-					onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)}
-				/>
+				<UnscheduleCampaignAction campaignId={id} onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)} />
 			{/if}
 		</PageHeader>
 		<PageContent width="3xl">

@@ -11,11 +11,8 @@ import { cancel as cancelReservation } from '$lib/server/reservation/reservation
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 import {
 	getSubscriptionsForUser,
-	getOptInAudiencesForUser,
-	addSubscriber,
-	unsubscribe
+	getOptInAudiencesForUser
 } from '$lib/server/marketing/audience-service';
-import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,32 +93,6 @@ export const getAvailableLists = query(z.void(), async () => {
 	const currentUser = requireUser();
 	return getOptInAudiencesForUser(currentUser.id);
 });
-
-export const subscribeToList = command(
-	z.object({ audienceId: z.string().min(1) }),
-	async (data) => {
-		const currentUser = requireUser();
-		const sub = await findOrCreateForUser(currentUser.id, currentUser.email, currentUser.name);
-		await addSubscriber(data.audienceId, sub.id);
-		void getMySubscriptions().refresh();
-		void getAvailableLists().refresh();
-		return { success: true };
-	}
-);
-
-export const unsubscribeFromList = command(
-	z.object({ audienceId: z.string().min(1) }),
-	async (data) => {
-		const currentUser = requireUser();
-		const sub = await findByUserId(currentUser.id);
-		if (sub) {
-			await unsubscribe(sub.id, data.audienceId);
-		}
-		void getMySubscriptions().refresh();
-		void getAvailableLists().refresh();
-		return { success: true };
-	}
-);
 
 export const deleteAccount = form(
 	z.object({

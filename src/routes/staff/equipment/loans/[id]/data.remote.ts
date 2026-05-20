@@ -1,13 +1,11 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, command, form, getRequestEvent } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	getLoanById,
 	scheduleLoan,
-	checkoutLoan,
-	returnLoan,
-	cancelLoan
+	checkoutLoan
 } from '$lib/server/equipment/loan-service';
 import { listEquipment } from '$lib/server/equipment/equipment-service';
 import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/equipment';
@@ -56,25 +54,6 @@ export const checkout = form('unchecked', async (data, issue) => {
 	}
 	const { params } = getRequestEvent();
 	await checkoutLoan(params.id!, { dueDate: result.data!.dueDate });
-	void getLoan(params.id!).refresh();
-	return { success: true };
-});
-
-export const markReturned = command(
-	z.object({ staffNotes: z.string().max(1000).optional() }),
-	async (data) => {
-		await requireStaff();
-		const { params } = getRequestEvent();
-		await returnLoan(params.id!, data.staffNotes);
-		void getLoan(params.id!).refresh();
-		return { success: true };
-	}
-);
-
-export const cancel = command(z.object({}), async () => {
-	await requireStaff();
-	const { params } = getRequestEvent();
-	await cancelLoan(params.id!);
 	void getLoan(params.id!).refresh();
 	return { success: true };
 });

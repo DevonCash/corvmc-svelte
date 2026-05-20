@@ -1,15 +1,11 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
 import { query, command } from '$app/server';
 import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { eq, like, or } from 'drizzle-orm';
+import { like, or } from 'drizzle-orm';
 import { requireStaff } from '$lib/server/authorization';
 import { getAvailableSlots, getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
-import { staffCreate, confirm } from '$lib/server/reservation/reservation-service';
-import { markComplete, markNoShow, recordCashAndComplete } from '$lib/server/reservation/reservation-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
@@ -98,66 +94,4 @@ export const createReservation = command(staffCreateSchema, async (raw) => {
 	return { reservationId: res.id };
 });
 
-// ---------------------------------------------------------------------------
-// Forms — resolve modal
-// ---------------------------------------------------------------------------
-
-const resolveSchema = z.object({
-	reservationId: z.string().min(1)
-});
-
-export const resolveComplete = command(
-	resolveSchema.extend({ userId: z.string().min(1), startsAt: z.string(), endsAt: z.string() }),
-	async (data) => {
-		await requireStaff();
-		const durationMs = new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime();
-		const durationHours = durationMs / (1000 * 60 * 60);
-		const rehearsal = await getProductConfig('rehearsal');
-		const amountCents = Math.round(durationHours * rehearsal.unitAmountCents);
-
-		const [member] = await db
-			.select({ stripeId: user.stripeId })
-			.from(user)
-			.where(eq(user.id, data.userId))
-			.limit(1);
-
-		if (!member?.stripeId) {
-			throw error(400, 'Member has no Stripe customer ID');
-		}
-
-		const { paymentRecordId } = await recordCashPayment({
-			userId: data.userId,
-			stripeCustomerId: member.stripeId,
-			amountCents,
-			metadata: { reservation_id: data.reservationId }
-		});
-
-		await recordCashAndComplete(data.reservationId, paymentRecordId);
-		return { success: true };
-	}
-);
-
-export const resolveNoShow = command(resolveSchema, async (data) => {
-	await requireStaff();
-	await markNoShow(data.reservationId);
-	return { success: true };
-});
-
-// ---------------------------------------------------------------------------
-// Forms — inline table actions
-// ---------------------------------------------------------------------------
-
-const idSchema = z.object({ reservationId: z.string().min(1) });
-
-export const confirmReservation = command(idSchema, async (data) => {
-	await requireStaff();
-	await confirm(data.reservationId);
-	return { success: true };
-});
-
-export const completeReservation = command(idSchema, async (data) => {
-	await requireStaff();
-	await markComplete(data.reservationId);
-	return { success: true };
-});
 

@@ -6,7 +6,10 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import {
+		ConfirmReservationAction,
+		CompleteReservationAction
+	} from '$lib/components/shared/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
@@ -14,9 +17,6 @@
 	import { IconCheck, IconCircleCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import { visibleActions } from '$lib/utils/reservation-actions';
-	import { confirmReservation, completeReservation } from './data.remote';
-	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { StaffReservationsResponse } from '$lib/server/db/schema/api';
 
@@ -152,24 +152,14 @@
 				<td onclick={(e) => e.stopPropagation()}>
 					<div class="flex items-center gap-1">
 						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
-							<Action
-								action={() => confirmReservation({ reservationId: r.id })}
-								label="Confirm"
-								class="btn-ghost btn-sm latched"
-								onsuccess={() => { toast.success('Confirmed'); invalidateAll(); }}
-							>
+							<ConfirmReservationAction reservationId={r.id} class="btn-ghost btn-sm latched">
 								{#snippet icon()}<IconCheck size={16} />{/snippet}
-							</Action>
+							</ConfirmReservationAction>
 						{/if}
 						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
-							<Action
-								action={() => completeReservation({ reservationId: r.id })}
-								label="Complete"
-								class="btn-ghost btn-xs btn-square"
-								onsuccess={() => { toast.success('Completed'); invalidateAll(); }}
-							>
+							<CompleteReservationAction reservationId={r.id} class="btn-ghost btn-xs btn-square">
 								{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
-							</Action>
+							</CompleteReservationAction>
 						{/if}
 					</div>
 				</td>

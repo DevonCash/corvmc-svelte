@@ -3,9 +3,8 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { cancelMyLoan } from './data.remote';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import Action from '$lib/components/shared/Action.svelte';
+	import { CancelLoanAction } from '$lib/components/shared/actions';
 	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
 	import type { MemberEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
@@ -56,20 +55,7 @@
 							</div>
 						</div>
 						{#if loan.status === 'requested' || loan.status === 'scheduled'}
-							<Action
-								confirm="Cancel this loan request?"
-								action={() =>
-									cancelMyLoan({ loanId: loan.id }).then(() => window.location.reload())}
-							/>
-							<!-- <AsyncButton
-								action={async () => {
-									if (!window.confirm('Cancel this loan request?')) return;
-									await cancelMyLoan({ loanId: loan.id });
-									window.location.reload();
-								}}
-								label="Cancel"
-								class="text-error btn-ghost btn-sm"
-							/> -->
+							<CancelLoanAction loanId={loan.id} label="Cancel" confirm="Cancel this loan request?" />
 						{/if}
 					</div>
 

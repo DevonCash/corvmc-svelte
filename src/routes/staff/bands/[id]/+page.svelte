@@ -6,19 +6,9 @@
 		getBandMembers,
 		getBandReservations,
 		updateBand,
-		removeBandMember,
-		transferBandOwnership,
-		deactivateBand,
-		reactivateBand,
-		searchUsers,
-		inviteMember,
 		updateMemberRole,
-		revokeInvite,
-		getPlatformInvites,
-		inviteByEmail,
-		revokePlatformInvite
+		getPlatformInvites
 	} from './data.remote';
-	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -27,12 +17,20 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
+	import {
+		ActivateToggleAction,
+		InviteByEmailAction,
+		InviteMemberAction,
+		RevokeInviteAction,
+		TransferOwnershipAction,
+		RemoveBandMemberAction,
+		RevokePlatformInviteAction
+	} from '$lib/components/shared/actions';
 
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
@@ -41,37 +39,6 @@
 	let platformInvites = $derived(await getPlatformInvites(id));
 
 	let isDeactivated = $derived(!!band.deletedAt);
-
-	// Invite state
-	let inviteQuery = $state('');
-	let inviteRole = $state<'admin' | 'member'>('member');
-	let invitePosition = $state('');
-	let inviteUserId = $state('');
-	let inviteUserName = $state('');
-	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
-	let searching = $state(false);
-
-	// Email invite state
-	let emailInviteAddress = $state('');
-	let emailInviteRole = $state<'admin' | 'member'>('member');
-	let emailInvitePosition = $state('');
-
-	async function handleSearch() {
-		if (inviteQuery.length < 2) { searchResults = []; return; }
-		searching = true;
-		try {
-			searchResults = await searchUsers(inviteQuery);
-		} finally {
-			searching = false;
-		}
-	}
-
-	function selectUser(u: { id: string; name: string }) {
-		inviteUserId = u.id;
-		inviteUserName = u.name;
-		searchResults = [];
-		inviteQuery = '';
-	}
 </script>
 
 	<Form remote={updateBand} onsuccess={() => toast.success('Band updated')}>
@@ -118,22 +85,13 @@
 				</dl>
 
 				<div class="mt-4 flex gap-2">
-					{#if isDeactivated}
-						<Action
-							action={() => reactivateBand({})}
-							label="Reactivate"
-							class="btn-success btn-sm"
-							onsuccess={() => toast.success('Band reactivated')}
-						/>
-					{:else}
-						<Action
-							action={() => deactivateBand({})}
-							label="Deactivate"
-							confirm="Deactivate this band? All future reservations will be cancelled."
-							class="btn-error btn-sm"
-							onsuccess={() => toast.success('Band deactivated')}
-						/>
-					{/if}
+					<ActivateToggleAction
+						entityType="bands"
+						entityId={id}
+						{isDeactivated}
+						entityLabel="Band"
+						deactivateWarning="Deactivate this band? All future reservations will be cancelled."
+					/>
 				</div>
 			</InfoCard>
 		</div>
@@ -146,99 +104,8 @@
 			<header class="flex justify-between items-center">
 				<span class="card-title">{title}</span>
 				<div class="flex gap-2">
-				<Action
-					action={() => {
-						const result = inviteByEmail({ email: emailInviteAddress, role: emailInviteRole, position: emailInvitePosition || undefined });
-						emailInviteAddress = '';
-						emailInviteRole = 'member';
-						emailInvitePosition = '';
-						return result;
-					}}
-					label="Invite by Email"
-					modalTitle="Invite by Email"
-					class="btn-sm btn-outline btn-primary"
-					canSubmit={!!emailInviteAddress && emailInviteAddress.includes('@')}
-					onsuccess={() => toast.success('Email invitation sent')}
-				>
-					{#snippet form({ close })}
-						<div class="space-y-3">
-							<p class="text-sm opacity-70">Invite someone who doesn't have a CorvMC account. They'll get a signup link and be auto-added to this band.</p>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Email</span></div>
-								<input type="email" class="input input-bordered w-full" bind:value={emailInviteAddress} placeholder="musician@example.com" />
-							</label>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Role</span></div>
-								<select class="select select-bordered w-full" bind:value={emailInviteRole}>
-									<option value="member">Member</option>
-									<option value="admin">Admin</option>
-								</select>
-							</label>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Position (optional)</span></div>
-								<input type="text" class="input input-bordered w-full" bind:value={emailInvitePosition} placeholder="e.g. Bassist" />
-							</label>
-						</div>
-					{/snippet}
-				</Action>
-				<Action
-					action={() => {
-						const result = inviteMember({ userId: inviteUserId, role: inviteRole, position: invitePosition || undefined });
-						inviteUserId = '';
-						inviteUserName = '';
-						inviteRole = 'member';
-						invitePosition = '';
-						return result;
-					}}
-					label="Add Member"
-					modalTitle="Invite Member"
-					class="btn-sm btn-primary"
-					canSubmit={!!inviteUserId}
-					onsuccess={() => { toast.success('Invitation sent'); invalidateAll(); }}
-				>
-					{#snippet form({ close })}
-						<div class="space-y-3">
-							{#if inviteUserId}
-								<div class="flex items-center justify-between bg-base-200 rounded p-2">
-									<span class="font-medium">{inviteUserName}</span>
-									<button type="button" class="btn btn-ghost btn-xs" onclick={() => { inviteUserId = ''; inviteUserName = ''; }}>Change</button>
-								</div>
-							{:else}
-								<label class="form-control w-full">
-									<div class="label"><span class="label-text">Search members</span></div>
-									<input
-										type="text"
-										class="input input-bordered w-full"
-										bind:value={inviteQuery}
-										oninput={handleSearch}
-										placeholder="Name or email..."
-									/>
-								</label>
-								{#if searchResults.length > 0}
-									<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
-										{#each searchResults as u}
-											<button type="button" class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm" onclick={() => selectUser(u)}>
-												<span class="font-medium">{u.name}</span>
-												<span class="opacity-60 ml-1">{u.email}</span>
-											</button>
-										{/each}
-									</div>
-								{/if}
-							{/if}
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Role</span></div>
-								<select class="select select-bordered w-full" bind:value={inviteRole}>
-									<option value="member">Member</option>
-									<option value="admin">Admin</option>
-								</select>
-							</label>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Position (optional)</span></div>
-								<input type="text" class="input input-bordered w-full" bind:value={invitePosition} placeholder="e.g. Guitarist" />
-							</label>
-						</div>
-					{/snippet}
-				</Action>
+					<InviteByEmailAction bandId={id} />
+					<InviteMemberAction bandId={id} />
 				</div>
 			</header>
 		{/snippet}
@@ -280,30 +147,12 @@
 					{#if m.role !== 'owner'}
 						<div class="flex gap-1 justify-end">
 							{#if m.status === 'pending'}
-								<Action
-									action={() => revokeInvite({ memberId: m.id })}
-									label="Revoke"
-									confirm={`Revoke invitation for ${m.userName}?`}
-									class="btn-ghost btn-xs text-warning"
-									onsuccess={() => { toast.success('Invitation revoked'); invalidateAll(); }}
-								/>
+								<RevokeInviteAction bandId={id} memberId={m.id} name={m.userName} />
 							{/if}
 							{#if m.status === 'active'}
-								<Action
-									action={() => transferBandOwnership({ newOwnerId: m.userId })}
-									label="Make owner"
-									confirm={`Transfer ownership to ${m.userName}? The current owner will be demoted to admin.`}
-									class="btn-ghost btn-xs"
-									onsuccess={() => toast.success('Ownership transferred')}
-								/>
+								<TransferOwnershipAction bandId={id} newOwnerId={m.userId} name={m.userName} />
 							{/if}
-							<Action
-								action={() => removeBandMember({ memberId: m.id })}
-								label="Remove"
-								confirm={`Remove ${m.userName} from this band?`}
-								class="btn-ghost btn-xs text-error"
-								onsuccess={() => toast.success('Member removed')}
-							/>
+							<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.userName} />
 						</div>
 					{/if}
 				{/snippet}
@@ -329,20 +178,12 @@
 				<Column key="invitedByName" header="Invited by" />
 				<Column key="actions" header="" shrink stopClick>
 					{#snippet cell(_, inv)}
-						<Action
-							action={() => revokePlatformInvite({ inviteId: inv.id })}
-							label="Revoke"
-							confirm={`Revoke invite for ${inv.email}?`}
-							class="btn-ghost btn-xs text-warning"
-							onsuccess={() => toast.success('Invite revoked')}
-						/>
+						<RevokePlatformInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
 					{/snippet}
 				</Column>
 			</DataTable>
 		</InfoCard>
 	{/if}
-
-	<!-- Email invite action (embedded in Members header) -->
 
 	<InfoCard title="Recent Reservations">
 		<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`} empty="No reservations">

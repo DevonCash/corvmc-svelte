@@ -4,16 +4,14 @@
 		getLoan,
 		getAvailableEquipment,
 		schedule,
-		checkout,
-		markReturned,
-		cancel
+		checkout
 	} from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -21,8 +19,6 @@
 	let id = $derived(page.params.id!);
 	let loan = $derived(await getLoan(id));
 	let availableEquipment = $derived(await getAvailableEquipment());
-
-	let returnNotes = $state('');
 
 	let chargePreview = $derived.by(() => {
 		if (loan.status !== 'checked_out' || !loan.dailyRateCents || !loan.checkedOutAt) return null;
@@ -150,12 +146,7 @@
 					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
 						<SubmitButton label="Schedule" class="btn-primary btn-sm" />
-						<Action
-							action={() => cancel({})}
-							confirm="Cancel this loan request?"
-							label="Cancel Request"
-							class="btn-ghost btn-sm text-error"
-						/>
+						<CancelLoanAction loanId={id} label="Cancel Request" confirm="Cancel this loan request?" />
 					</div>
 				</Form>
 
@@ -165,12 +156,7 @@
 					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
 						<SubmitButton label="Check Out" class="btn-primary btn-sm" />
-						<Action
-							action={() => cancel({})}
-							confirm="Cancel this loan?"
-							label="Cancel"
-							class="btn-ghost btn-sm text-error"
-						/>
+						<CancelLoanAction loanId={id} />
 					</div>
 				</Form>
 
@@ -183,20 +169,12 @@
 					</div>
 				{/if}
 
-				<Action
-					action={() => markReturned({ staffNotes: returnNotes || undefined })}
-					confirm={chargePreview
-						? `Mark as returned? This will charge ${formatCents(chargePreview.total)}.`
-						: 'Mark as returned?'}
-					label="Mark Returned"
-					modalTitle="Confirm Return"
-					class="btn-primary btn-sm"
-					successToast="Marked as returned"
-				>
-					{#snippet form({ close })}
-						<Field name="staffNotes" type="textarea" label="Staff Notes (optional)" bind:value={returnNotes} />
-					{/snippet}
-				</Action>
+				<MarkReturnedAction
+					loanId={id}
+					chargeMessage={chargePreview
+						? `Charge preview: ${chargePreview.days} day${chargePreview.days !== 1 ? 's' : ''} × ${formatCents(loan.dailyRateCents ?? 0)}/day = ${formatCents(chargePreview.total)}`
+						: undefined}
+				/>
 
 			{:else}
 				<p class="text-sm opacity-60">

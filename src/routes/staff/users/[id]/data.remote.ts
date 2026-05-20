@@ -1,14 +1,13 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, command, getRequestEvent } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq } from 'drizzle-orm';
-import { getUserRoles, requireStaff } from '$lib/server/authorization';
+import { getUserRoles } from '$lib/server/authorization';
 import { listByUser } from '$lib/server/finance/payment-cache-service';
-import { getAllBalances, addCredits, deductCredits } from '$lib/server/finance/credit-service';
-import type { CreditType } from '$lib/server/db/schema/finance';
+import { getAllBalances } from '$lib/server/finance/credit-service';
 
 export const getUser = query(z.string(), async (id) => {
 	const [found] = await db
@@ -89,23 +88,3 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	return { success: true };
 });
 
-const adjustCreditsSchema = z.object({
-	userId: z.string().min(1),
-	creditType: z.enum(['free_hours', 'equipment_credits']),
-	amount: z.number().int().refine((n) => n !== 0, 'Amount cannot be zero'),
-	description: z.string().trim().min(1, 'Reason is required')
-});
-
-export const adjustCredits = command(adjustCreditsSchema, async (data) => {
-	await requireStaff();
-	const type = data.creditType as CreditType;
-
-	if (data.amount > 0) {
-		await addCredits(data.userId, type, data.amount, 'admin_adjustment', undefined, data.description);
-	} else {
-		await deductCredits(data.userId, type, Math.abs(data.amount), 'admin_adjustment', undefined, data.description);
-	}
-
-	void getUserCredits(data.userId).refresh();
-	return { success: true };
-});

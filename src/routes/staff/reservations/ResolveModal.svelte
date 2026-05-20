@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { IconCheck } from '@tabler/icons-svelte';
-	import Action from '$lib/components/shared/Action.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { resolveComplete, resolveNoShow } from './data.remote';
+	import {
+		CashReceivedAction,
+		NoShowReservationAction
+	} from '$lib/components/shared/actions';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
@@ -77,23 +78,14 @@
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">
-							<Action
-								action={() =>
-									resolveComplete({
-										reservationId: r.id,
-										userId: r.createdByUserId,
-										startsAt: r.startsAt,
-										endsAt: r.endsAt
-									})}
-								label="Cash received"
-								class="btn-success btn-outline btn-sm"
-								onsuccess={() => { toast.success('Marked as paid'); markResolved(r.id); }}
+							<CashReceivedAction
+								reservationId={r.id}
+								onsuccess={() => markResolved(r.id)}
 							/>
-							<Action
-								action={() => resolveNoShow({ reservationId: r.id })}
-								label="No-show"
+							<NoShowReservationAction
+								reservationId={r.id}
 								class="btn-error btn-outline btn-sm"
-								onsuccess={() => { toast.success('Marked as no-show'); markResolved(r.id); }}
+								onsuccess={() => markResolved(r.id)}
 							/>
 						</div>
 					</div>

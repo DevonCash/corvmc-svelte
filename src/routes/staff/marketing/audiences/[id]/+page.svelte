@@ -5,16 +5,17 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import {
+		DeleteAudienceAction,
+		BulkAddMembersAction,
+		AddSubscriberAction,
+		RemoveSubscriberAction
+	} from '$lib/components/shared/actions';
+	import {
 		getAudienceDetail,
 		getAudienceSubscribers,
-		addSubscriberCommand,
-		removeSubscriberCommand,
-		bulkAddMembersCommand,
-		deleteAudienceCommand,
 		updateAudienceCommand
 	} from './data.remote';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -22,21 +23,11 @@
 	let id = $derived(page.params.id!);
 	let audienceData = $derived(await getAudienceDetail(id));
 	let subscribers = $derived(await getAudienceSubscribers(id));
-
-	let newEmail = $state('');
-	let newName = $state('');
 </script>
 
 	{#if audienceData}
 		<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
-			<Action
-				action={() => deleteAudienceCommand({})}
-				label="Delete"
-				confirm="Delete this audience? All subscribers will be removed."
-				successToast="Audience deleted"
-				class="btn-error btn-sm"
-				onsuccess={() => goto('/staff/marketing/audiences')}
-			/>
+			<DeleteAudienceAction audienceId={id} onsuccess={() => goto('/staff/marketing/audiences')} />
 		</PageHeader>
 		<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
@@ -69,14 +60,10 @@
 
 			<InfoCard title="Actions">
 				<div class="space-y-3">
-					<Action
-						action={async () => {
-							const result = await bulkAddMembersCommand({});
-							toast.success(`Added ${result?.added ?? 0} members`);
-						}}
-						label="Add all active members"
-						class="btn-outline btn-sm"
-					/>
+					<BulkAddMembersAction audienceId={id} onsuccess={(result) => {
+						const r = result as { added?: number };
+						toast.success(`Added ${r?.added ?? 0} members`);
+					}} />
 
 					<label class="label cursor-pointer justify-start gap-3">
 						<input
@@ -97,45 +84,7 @@
 
 		<!-- Add Subscriber -->
 		<InfoCard title="Add Subscriber" class="mb-6">
-			<Action
-				action={async () => {
-					await addSubscriberCommand({
-						email: newEmail.trim(),
-						name: newName.trim() || undefined
-					});
-					newEmail = '';
-					newName = '';
-				}}
-				label="Add Subscriber"
-				modalTitle="Add Subscriber"
-				canSubmit={!!newEmail.trim()}
-				successToast="Subscriber added"
-				class="btn-primary btn-sm"
-			>
-				{#snippet form({ close })}
-					<div>
-						<label for="sub-email" class="text-xs opacity-60">Email</label>
-						<input
-							id="sub-email"
-							type="email"
-							bind:value={newEmail}
-							placeholder="email@example.com"
-							class="input-bordered input w-full"
-							required
-						/>
-					</div>
-					<div>
-						<label for="sub-name" class="text-xs opacity-60">Name (optional)</label>
-						<input
-							id="sub-name"
-							type="text"
-							bind:value={newName}
-							placeholder="Name"
-							class="input-bordered input w-full"
-						/>
-					</div>
-				{/snippet}
-			</Action>
+			<AddSubscriberAction audienceId={id} />
 		</InfoCard>
 
 		<!-- Subscriber List -->
@@ -163,13 +112,7 @@
 				<Column key="createdAt" header="Joined" type="date" shrink />
 				<Column key="actions" header="" shrink stopClick>
 					{#snippet cell(_, s)}
-						<Action
-							action={() => removeSubscriberCommand({ subscriberId: s.subscriberId })}
-							label="Remove"
-							confirm={`Remove ${s.email} from this audience?`}
-							successToast="Subscriber removed"
-							class="btn-ghost btn-xs text-error"
-						/>
+						<RemoveSubscriberAction audienceId={id} subscriberId={s.subscriberId} email={s.email} />
 					{/snippet}
 				</Column>
 			</DataTable>

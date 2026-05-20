@@ -5,9 +5,7 @@
 		getEquipment,
 		getCategories,
 		getEquipmentLoanHistory,
-		editEquipment,
-		deactivateEquipment,
-		reactivateEquipment
+		editEquipment
 	} from './data.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -17,7 +15,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import { ActivateToggleAction } from '$lib/components/shared/actions';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
@@ -100,24 +98,12 @@
 				</div>
 
 				<div class="mt-4 flex gap-2">
-					{#if isDeactivated}
-						<Action
-							action={() => reactivateEquipment({})}
-							label="Reactivate"
-							successToast="Equipment reactivated"
-							class="btn-success btn-sm"
-						/>
-					{:else}
-						<Action
-							action={async () => {
-								if (!window.confirm('Deactivate this equipment?')) return;
-								await deactivateEquipment({});
-							}}
-							label="Deactivate"
-							successToast="Equipment deactivated"
-							class="btn-error btn-sm"
-						/>
-					{/if}
+					<ActivateToggleAction
+						entityType="equipment"
+						entityId={id}
+						{isDeactivated}
+						entityLabel="Equipment"
+					/>
 				</div>
 			</InfoCard>
 		</div>

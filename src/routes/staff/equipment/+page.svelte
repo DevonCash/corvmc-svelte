@@ -10,10 +10,10 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
-	import { equipmentConditions, equipmentStatuses, pricingTiers } from '$lib/config';
+	import { addCategory, editCategory } from './data.remote';
+	import { equipmentStatuses, pricingTiers } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
-	import Action from '$lib/components/shared/Action.svelte';
+	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
 	import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
@@ -42,35 +42,7 @@
 			<button class="btn btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
 				Categories
 			</button>
-			<Action
-				action={addEquipment}
-				label="Add Equipment"
-				modalTitle="Add Equipment"
-				class="btn-primary btn-sm"
-				successToast="Equipment added"
-				onsuccess={() => invalidateAll()}
-			>
-				{#snippet form({ close })}
-					<Field name="name" type="text" label="Name" />
-					<Field name="description" type="textarea" label="Description" />
-					<div class="grid grid-cols-2 gap-3">
-						<Field name="categoryId" type="select" label="Category"
-							options={data.categories.map((c) => ({ value: c.id, label: c.name }))} />
-						<Field name="condition" type="select" label="Condition"
-							value="good"
-							options={equipmentConditions.map((c) => ({ value: c, label: c }))} />
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<Field name="totalQuantity" type="number" label="Total Quantity" value={1} />
-						<Field name="outOfOrderQuantity" type="number" label="Out of Order" value={0} />
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<Field name="serialNumber" type="text" label="Serial Number" />
-						<Field name="resourceId" type="text" label="Resource ID" />
-					</div>
-					<Field name="notes" type="textarea" label="Notes" />
-				{/snippet}
-			</Action>
+			<AddEquipmentAction categories={data.categories} />
 		</div>
 	</PageHeader>
 <PageContent>
@@ -136,15 +108,7 @@
 								pricingTier: cat.pricingTier as PricingTier
 							})}>Edit</button
 					>
-					<Action
-						action={async () => {
-							await removeCategory({ id: cat.id });
-							await invalidateAll();
-						}}
-						confirm='Delete "{cat.name}"? Category must have no equipment.'
-						label="Delete"
-						class="text-error btn-ghost btn-xs"
-					/>
+					<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 				{/snippet}
 			</Column>
 		</SimpleTable>

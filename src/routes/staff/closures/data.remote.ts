@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { command, form } from '$app/server';
+import { form } from '$app/server';
 import { invalid } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { eq } from 'drizzle-orm';
 
 const createClosureSchema = z.object({
 	reason: z.string().min(1).max(255),
@@ -32,50 +31,3 @@ export const createClosure = form('unchecked', async (data, issue) => {
 	await db.insert(closure).values({ reason, startsAt, endsAt });
 	return { success: true };
 });
-
-export const updateClosure = command(
-	z.object({
-		closureId: z.string(),
-		reason: z.string().min(1).max(255),
-		startsAt: z.coerce.date(),
-		endsAt: z.coerce.date()
-	}),
-	async (data) => {
-		await requireStaff();
-
-		const [row] = await db
-			.select({ startsAt: closure.startsAt })
-			.from(closure)
-			.where(eq(closure.id, data.closureId))
-			.limit(1);
-
-		if (!row) throw new Error('Closure not found');
-		if (row.startsAt <= new Date()) throw new Error('Cannot edit a past or active closure');
-		if (data.endsAt <= data.startsAt) throw new Error('End time must be after start time');
-
-		await db
-			.update(closure)
-			.set({ reason: data.reason, startsAt: data.startsAt, endsAt: data.endsAt })
-			.where(eq(closure.id, data.closureId));
-		return { success: true };
-	}
-);
-
-export const deleteClosure = command(
-	z.object({ closureId: z.string() }),
-	async ({ closureId }) => {
-		await requireStaff();
-
-		const [row] = await db
-			.select({ startsAt: closure.startsAt })
-			.from(closure)
-			.where(eq(closure.id, closureId))
-			.limit(1);
-
-		if (!row) throw new Error('Closure not found');
-		if (row.startsAt <= new Date()) throw new Error('Cannot delete a past or active closure');
-
-		await db.delete(closure).where(eq(closure.id, closureId));
-		return { success: true };
-	}
-);

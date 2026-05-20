@@ -8,8 +8,8 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { createClosure, updateClosure, deleteClosure } from './data.remote';
+	import { UpdateClosureAction, DeleteClosureAction } from '$lib/components/shared/actions';
+	import { createClosure } from './data.remote';
 	import type { StaffClosuresResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffClosuresResponse } = $props();
@@ -72,22 +72,7 @@
 								</div>
 								<div class="flex justify-end gap-2">
 									<button class="btn btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</button>
-									<Action
-										action={() => {
-											const result = updateClosure({
-												closureId: c.id,
-												reason: editReason,
-												startsAt: editStartsAt,
-												endsAt: editEndsAt
-											});
-											editId = null;
-											return result;
-										}}
-										label="Save"
-										successToast="Closure updated"
-										class="btn-primary btn-sm"
-										onsuccess={() => invalidateAll()}
-									/>
+									<UpdateClosureAction closureId={c.id} reason={editReason} startsAt={editStartsAt} endsAt={editEndsAt} onsuccess={() => { editId = null; invalidateAll(); }} />
 								</div>
 							</div>
 						{:else}
@@ -101,14 +86,7 @@
 								{#if isFuture(c.startsAt)}
 									<div class="flex gap-1">
 										<button class="btn btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</button>
-										<Action
-											action={() => deleteClosure({ closureId: c.id })}
-											label="Delete"
-											confirm="Delete this closure?"
-											successToast="Closure deleted"
-											onsuccess={() => invalidateAll()}
-											class="btn-ghost btn-sm text-error"
-										/>
+										<DeleteClosureAction closureId={c.id} />
 									</div>
 								{/if}
 							</div>

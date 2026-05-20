@@ -5,7 +5,12 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { confirmReservation, cancelReservation, cancelSeries, editSeries } from './data.remote';
+	import {
+		ConfirmReservationAction,
+		CancelReservationAction,
+		CancelSeriesAction
+	} from '$lib/components/shared/actions';
+	import { editSeries } from './data.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -86,21 +91,10 @@
 								<a href="/member/reservations/{res.id}/pay" class="btn btn-primary btn-sm">
 									Pay Now
 								</a>
-								<Action
-									action={() => confirmReservation({ reservationId: res.id })}
-									label="Confirm"
-									onsuccess={() => { toast.success('Reservation confirmed'); invalidateAll(); }}
-									class="btn-success btn-outline btn-sm"
-								/>
+								<ConfirmReservationAction reservationId={res.id} class="btn-success btn-outline btn-sm" />
 							{/if}
 							{#if res.status === 'scheduled' || res.status === 'confirmed'}
-								<Action
-									action={() => cancelReservation({ reservationId: res.id })}
-									label="Cancel"
-									confirm="Cancel this reservation?"
-									onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
-									class="btn-ghost btn-sm"
-								/>
+								<CancelReservationAction reservationId={res.id} class="btn-ghost btn-sm" />
 							{/if}
 						</div>
 					</div>
@@ -127,13 +121,7 @@
 							<div class="flex items-center gap-2">
 								<Badge variant="success" size="md">active</Badge>
 								<button class="btn btn-ghost btn-sm" onclick={() => startEditSeries(series)}>Edit</button>
-								<Action
-									action={() => cancelSeries({ seriesId: series.id })}
-									label="Cancel"
-									confirm="Cancel this recurring series? Future reservations will not be created."
-									onsuccess={() => { toast.success('Series cancelled'); invalidateAll(); }}
-									class="btn-ghost btn-sm"
-								/>
+								<CancelSeriesAction seriesId={series.id} class="btn-ghost btn-sm" />
 							</div>
 						</div>
 

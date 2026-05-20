@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser, adjustCredits } from './data.remote';
+	import { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } from './data.remote';
 	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import { AdjustCreditsAction } from '$lib/components/shared/actions';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -20,10 +20,6 @@
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
-
-	let adjustType = $state<'free_hours' | 'equipment_credits'>('free_hours');
-	let adjustAmount = $state(0);
-	let adjustReason = $state('');
 
 	let roleOptions = $derived((allRoles ?? []).map((r) => ({ id: String(r.id), label: r.name })));
 
@@ -97,55 +93,7 @@
 						<p class="text-sm opacity-60">Equipment Credits</p>
 					</div>
 				</div>
-				<Action
-					action={() => {
-						const result = adjustCredits({
-							userId: id,
-							creditType: adjustType,
-							amount: adjustAmount,
-							description: adjustReason
-						});
-						adjustAmount = 0;
-						adjustReason = '';
-						return result;
-					}}
-					label="Adjust"
-					modalTitle="Adjust Credits"
-					successToast="Credits adjusted"
-					class="btn-outline btn-sm"
-					canSubmit={adjustAmount !== 0 && adjustReason.trim().length > 0}
-					onsuccess={() => invalidateAll()}
-				>
-					{#snippet form({ close })}
-						<div class="space-y-3">
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Credit Type</span></div>
-								<select class="select select-bordered w-full" bind:value={adjustType}>
-									<option value="free_hours">Free Hours</option>
-									<option value="equipment_credits">Equipment Credits</option>
-								</select>
-							</label>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Amount</span></div>
-								<input
-									type="number"
-									class="input input-bordered w-full"
-									bind:value={adjustAmount}
-									placeholder="Positive to add, negative to deduct"
-								/>
-							</label>
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Reason</span></div>
-								<input
-									type="text"
-									class="input input-bordered w-full"
-									bind:value={adjustReason}
-									placeholder="Why is this adjustment being made?"
-								/>
-							</label>
-						</div>
-					{/snippet}
-				</Action>
+				<AdjustCreditsAction userId={id} />
 			</InfoCard>
 		{/await}
 

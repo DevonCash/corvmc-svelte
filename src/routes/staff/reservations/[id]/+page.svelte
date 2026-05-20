@@ -2,17 +2,15 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { invalidateAll } from '$app/navigation';
 	import {
-		confirmReservation,
-		completeReservation,
-		noShowReservation,
-		cancelReservation,
-		cashReceived,
-		compReservation,
-		refundReservation
-	} from './data.remote';
+		ConfirmReservationAction,
+		CompleteReservationAction,
+		NoShowReservationAction,
+		CancelReservationAction,
+		CashReceivedAction,
+		CompReservationAction,
+		RefundReservationAction
+	} from '$lib/components/shared/actions';
 	import DayTimeline from '$lib/components/shared/DayTimeline.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
@@ -28,15 +26,12 @@
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 	import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 	import { visibleActions } from '$lib/utils/reservation-actions';
-	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: StaffReservationDetailResponse } = $props();
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
 	const actions = $derived(visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId));
-
-	let cancelReason = $state('');
 
 	// Derived formatting
 	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
@@ -83,48 +78,16 @@
 			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
 				<div class="flex flex-wrap items-center gap-2 border-t border-base-200 pt-3">
 					{#if actions.has('confirm')}
-						<Action
-							action={() => confirmReservation({ reservationId: r.id })}
-							label="Confirm"
-							class="btn-sm btn-success"
-							onsuccess={() => { toast.success('Confirmed'); invalidateAll(); }}
-						/>
+						<ConfirmReservationAction reservationId={r.id} />
 					{/if}
 					{#if actions.has('complete')}
-						<Action
-							action={() => completeReservation({ reservationId: r.id })}
-							label="Complete"
-							class="btn-sm btn-success"
-							onsuccess={() => { toast.success('Completed'); invalidateAll(); }}
-						/>
+						<CompleteReservationAction reservationId={r.id} />
 					{/if}
 					{#if actions.has('noShow')}
-						<Action
-							action={() => noShowReservation({ reservationId: r.id })}
-							label="No-Show"
-							confirm="Mark this reservation as a no-show?"
-							class="btn-outline btn-sm btn-warning"
-							onsuccess={() => { toast.success('Marked as no-show'); invalidateAll(); }}
-						/>
+						<NoShowReservationAction reservationId={r.id} />
 					{/if}
 					{#if actions.has('cancel')}
-						<Action
-							action={() => cancelReservation({ reservationId: r.id, reason: cancelReason || undefined })}
-							label="Cancel"
-							modalTitle="Cancel Reservation"
-							class="btn-outline btn-sm btn-error"
-							onsuccess={() => { toast.success('Cancelled'); cancelReason = ''; invalidateAll(); }}
-						>
-							{#snippet form({ close })}
-								<p class="text-sm mb-3">Cancel this reservation?</p>
-								<input
-									type="text"
-									bind:value={cancelReason}
-									placeholder="Reason (optional)"
-									class="input-bordered input input-sm w-full"
-								/>
-							{/snippet}
-						</Action>
+						<CancelReservationAction reservationId={r.id} showReasonInput />
 					{/if}
 				</div>
 			{/if}
@@ -194,40 +157,13 @@
 				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
 					<div class="mt-3 flex flex-wrap gap-2 border-t border-base-200 pt-3">
 						{#if actions.has('cashReceived')}
-							<Action
-								action={() =>
-									cashReceived({
-										reservationId: r.id,
-										userId: r.createdByUserId,
-										startsAt: r.startsAt,
-										endsAt: r.endsAt
-									})}
-								label="Cash Received"
-								class="btn-outline btn-sm btn-success flex-1"
-								onsuccess={() => { toast.success('Marked as paid'); invalidateAll(); }}
-							/>
+							<CashReceivedAction reservationId={r.id} class="btn-outline btn-sm btn-success flex-1" />
 						{/if}
 						{#if actions.has('comp')}
-							<Action
-								action={() => compReservation({ reservationId: r.id })}
-								label="Comp"
-								confirm="Waive payment for this reservation?"
-								class="btn-outline btn-sm btn-info flex-1"
-								onsuccess={() => { toast.success('Reservation comped'); invalidateAll(); }}
-							/>
+							<CompReservationAction reservationId={r.id} class="btn-outline btn-sm btn-info flex-1" />
 						{/if}
 						{#if actions.has('refund')}
-							<Action
-								action={() => refundReservation({
-									reservationId: r.id,
-									userId: r.createdByUserId,
-									stripePaymentRecordId: r.stripePaymentRecordId!
-								})}
-								label="Refund"
-								confirm="Refund the payment for this reservation? This does not cancel the reservation."
-								class="btn-outline btn-sm btn-error flex-1"
-								onsuccess={() => { toast.success('Payment refunded'); invalidateAll(); }}
-							/>
+							<RefundReservationAction reservationId={r.id} class="btn-outline btn-sm btn-error flex-1" />
 						{/if}
 					</div>
 				{/if}

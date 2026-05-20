@@ -4,8 +4,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { checkInTicket, cancelTicket } from './data.remote';
+	import { CancelTicketAction } from '$lib/components/shared/actions';
+	import { checkInTicket } from './data.remote';
 	import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffCheckInResponse } = $props();
@@ -89,14 +89,7 @@
 								{/if}
 								Check In
 							</button>
-							<Action
-								action={() => cancelTicket({ ticketId: ticket.id })}
-								label="Cancel"
-								confirm={`Cancel ticket for ${ticket.attendeeName}?`}
-								successToast="Ticket cancelled"
-								class="btn-ghost btn-sm text-error"
-								onsuccess={() => invalidateAll()}
-							/>
+							<CancelTicketAction eventId={data.event.id} ticketId={ticket.id} attendeeName={ticket.attendeeName} />
 						{/if}
 					</div>
 				</div>
