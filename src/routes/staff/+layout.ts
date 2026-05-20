@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
-import type { StaffLayoutResponse } from '$lib/types/api';
+import type { StaffLayoutResponse } from '$lib/server/db/schema/api';
 
 export const load: LayoutLoad = async ({ fetch }) => {
 	const res = await fetch('/api/staff/layout');

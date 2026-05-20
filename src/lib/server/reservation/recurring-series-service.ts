@@ -6,7 +6,7 @@ import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { buildRRule, describeFrequency } from './rrule-helpers';
-import type { RecurringFrequency } from './config';
+import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
 // ---------------------------------------------------------------------------
 // RecurringSeriesService — create, edit, cancel, and query recurring series

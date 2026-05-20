@@ -3,7 +3,7 @@
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { DirectoryBandResponse } from '$lib/types/api';
+	import type { DirectoryBandResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: DirectoryBandResponse } = $props();
 

@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
-import type { BandLayoutResponse } from '$lib/types/api';
+import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 export const load: LayoutLoad = async ({ fetch, params }) => {
 	const res = await fetch(`/api/bands/${params.slug}/layout`);

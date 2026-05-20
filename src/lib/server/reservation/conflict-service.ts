@@ -4,7 +4,7 @@ import { user } from '$lib/server/db/schema/auth';
 import { and, ne, eq, lt, gt } from 'drizzle-orm';
 import { getReservationConfig } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
-import type { TimeSlot } from './types';
+import type { TimeSlot } from '$lib/server/db/schema/reservation';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation

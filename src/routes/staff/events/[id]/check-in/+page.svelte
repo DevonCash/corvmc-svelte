@@ -6,7 +6,7 @@
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { checkInTicket, cancelTicket } from './data.remote';
-	import type { StaffCheckInResponse } from '$lib/types/api';
+	import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffCheckInResponse } = $props();
 

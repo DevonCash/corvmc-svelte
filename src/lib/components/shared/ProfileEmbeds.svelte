@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getEmbedUrl } from '$lib/utils/link-platform';
-	import type { ProfileLink } from '$lib/types/profile';
+	import type { ProfileLink } from '$lib/server/db/schema/auth';
 
 	let { links }: { links: ProfileLink[] } = $props();
 

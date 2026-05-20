@@ -12,8 +12,9 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
-	import type { MemberEquipmentResponse } from '$lib/types/api';
-	import { estimateLoanCost, type PricingTier } from '$lib/types/equipment';
+	import type { MemberEquipmentResponse } from '$lib/server/db/schema/api';
+	import { estimateLoanCost } from '$lib/config';
+	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { formatCents } from '$lib/utils/format';
 
 	let { data }: { data: MemberEquipmentResponse } = $props();

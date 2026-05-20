@@ -9,15 +9,8 @@ import { reservation } from './reservation';
 // Finance domain types
 // ---------------------------------------------------------------------------
 
-export const DOLLARS_PER_UNIT = 5;
-
 export const creditTypes = ['free_hours', 'equipment_credits'] as const;
 export type CreditType = (typeof creditTypes)[number];
-
-export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }> = {
-	free_hours: { maxBalance: null },
-	equipment_credits: { maxBalance: 250 }
-};
 
 export function isCreditType(value: string): value is CreditType {
 	return creditTypes.includes(value as CreditType);

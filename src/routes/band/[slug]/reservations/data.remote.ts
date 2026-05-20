@@ -5,10 +5,10 @@ import { getBySlug, getUserRole, getMembers } from '$lib/server/band/band-servic
 import { getAvailableSlots } from '$lib/server/reservation/conflict-service';
 import { create, cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
-import { createReservationSchema } from '$lib/server/reservation/types';
+import { createReservationSchema } from '$lib/server/db/schema/reservation';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getReservationConfig, RECURRING_FREQUENCIES } from '$lib/server/reservation/config';
-import type { RecurringFrequency } from '$lib/server/reservation/config';
+import { getReservationConfig } from '$lib/server/reservation/config';
+import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { db } from '$lib/server/db';

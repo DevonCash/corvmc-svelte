@@ -5,7 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { IconUserCog, IconUserShield, IconUserHeart, IconDots, IconEye, IconCopy, IconUserUp } from '@tabler/icons-svelte';
-	import type { StaffUsersResponse } from '$lib/types/api';
+	import type { StaffUsersResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffUsersResponse } = $props();
 

@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { BandReservationsResponse } from '$lib/types/api';
+import type { BandReservationsResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ fetch, params }) => {
 	const res = await fetch(`/api/bands/${params.slug}/reservations`);

@@ -5,7 +5,7 @@ import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
-import type { ProfileLink, DirectoryContact } from '$lib/types/profile';
+import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/auth';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const r2Available = isConfigured();

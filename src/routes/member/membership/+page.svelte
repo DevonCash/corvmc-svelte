@@ -10,7 +10,7 @@
 		CreditBalanceCard,
 		CancelledBanner
 	} from '$lib/components/member/membership';
-	import type { MembershipResponse } from '$lib/types/api';
+	import type { MembershipResponse } from '$lib/server/db/schema/api';
 	import { createSubscription, updateAmount, resumeSubscription } from './data.remote';
 
 	let { data }: { data: MembershipResponse } = $props();

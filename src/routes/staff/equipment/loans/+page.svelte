@@ -9,9 +9,9 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { loanStatuses } from '$lib/types/equipment';
+	import { loanStatuses } from '$lib/config';
 	import { searchMembers, getEquipmentOptions, createLoanForMember } from './data.remote';
-	import type { StaffEquipmentLoansResponse } from '$lib/types/api';
+	import type { StaffEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEquipmentLoansResponse } = $props();
 

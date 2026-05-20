@@ -8,7 +8,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
-	import type { BandLayoutResponse } from '$lib/types/api';
+	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse } = $props();
 

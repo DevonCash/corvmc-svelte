@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import type { AudienceDetailResponse } from '$lib/types/api';
+	import type { AudienceDetailResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: AudienceDetailResponse } = $props();
 

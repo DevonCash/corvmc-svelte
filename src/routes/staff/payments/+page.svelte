@@ -8,7 +8,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import type { StaffPaymentsResponse } from '$lib/types/api';
+	import type { StaffPaymentsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffPaymentsResponse } = $props();
 

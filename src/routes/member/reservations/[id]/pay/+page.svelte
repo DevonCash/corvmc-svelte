@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { DOLLARS_PER_UNIT } from '$lib/finance/types';
+	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import type { ReservationPayResponse } from '$lib/types/api';
+	import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 	import { pay } from './data.remote';
 
 	let { data }: { data: ReservationPayResponse } = $props();

@@ -3,21 +3,20 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
+import {
+	equipmentConditions,
+	equipmentStatuses,
+	pricingTiers,
+	loanStatuses
+} from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Equipment domain types
 // ---------------------------------------------------------------------------
 
-export const equipmentConditions = ['excellent', 'good', 'fair', 'poor'] as const;
 export type EquipmentCondition = (typeof equipmentConditions)[number];
-
-export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export type EquipmentStatus = (typeof equipmentStatuses)[number];
-
-export const pricingTiers = ['major', 'accessory'] as const;
 export type PricingTier = (typeof pricingTiers)[number];
-
-export const loanStatuses = ['requested', 'scheduled', 'checked_out', 'returned', 'cancelled'] as const;
 export type LoanStatus = (typeof loanStatuses)[number];
 
 export function isEquipmentCondition(value: string): value is EquipmentCondition {
@@ -34,26 +33,6 @@ export function isPricingTier(value: string): value is PricingTier {
 
 export function isLoanStatus(value: string): value is LoanStatus {
 	return loanStatuses.includes(value as LoanStatus);
-}
-
-// ---------------------------------------------------------------------------
-// Pricing
-// ---------------------------------------------------------------------------
-
-export const DAILY_RATE_MAJOR = 500;
-export const DAILY_RATE_ACCESSORY = 100;
-
-export function estimateLoanCost(
-	pickupDate: Date,
-	returnDate: Date,
-	pricingTier: PricingTier,
-	isSustainingMember: boolean
-): number {
-	if (pricingTier === 'accessory' && isSustainingMember) return 0;
-	const dailyRate = pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
-	const ms = returnDate.getTime() - pickupDate.getTime();
-	const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-	return dailyRate * days;
 }
 
 // ---------------------------------------------------------------------------

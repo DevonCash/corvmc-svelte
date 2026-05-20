@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { ReservationPayResponse } from '$lib/types/api';
+import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	const res = await fetch(`/api/me/reservations/${params.id}/pay`);

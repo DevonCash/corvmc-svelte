@@ -10,7 +10,7 @@ import {
 	cancelLoan
 } from '$lib/server/equipment/loan-service';
 import { listEquipment } from '$lib/server/equipment/equipment-service';
-import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/equipment/types';
+import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/equipment';
 
 export const getLoan = query(z.string(), async (id) => {
 	await requireStaff();

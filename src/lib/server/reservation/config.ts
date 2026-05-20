@@ -1,5 +1,4 @@
 import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
-export { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 
 // ---------------------------------------------------------------------------
 // Defaults — kept as named exports for tests and static references

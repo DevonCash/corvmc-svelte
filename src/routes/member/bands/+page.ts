@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { MemberBandsResponse } from '$lib/types/api';
+import type { MemberBandsResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ fetch }) => {
 	const res = await fetch('/api/me/bands');

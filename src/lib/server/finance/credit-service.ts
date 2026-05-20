@@ -4,12 +4,12 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, sql, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { creditTypeConfig } from '$lib/config';
 import {
 	isCreditType,
-	creditTypeConfig,
 	type CreditType,
 	type Credits
-} from './types';
+} from '$lib/server/db/schema/finance';
 
 // ---------------------------------------------------------------------------
 // Column mapping — maps credit type names to user table columns

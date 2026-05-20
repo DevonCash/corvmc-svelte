@@ -10,7 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation } from './data.remote';
-	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/types/api';
+	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse & BandReservationsResponse } = $props();
 

@@ -7,7 +7,7 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
-	import type { MemberEquipmentLoansResponse } from '$lib/types/api';
+	import type { MemberEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberEquipmentLoansResponse } = $props();
 

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { EventsResponse, MemberTicketsResponse } from '$lib/types/api';
+import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 export const load: PageLoad = async ({ fetch }) => {
 	const [eventsRes, ticketsRes] = await Promise.all([

@@ -20,7 +20,7 @@
 		subscribeToList,
 		unsubscribeFromList
 	} from './data.remote';
-	import type { AccountResponse } from '$lib/types/api';
+	import type { AccountResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: AccountResponse } = $props();
 

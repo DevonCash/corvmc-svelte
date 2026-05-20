@@ -11,14 +11,10 @@
 	import { Field } from '$lib/components/shared/Form';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { addEquipment, addCategory, editCategory, removeCategory } from './data.remote';
-	import {
-		equipmentConditions,
-		equipmentStatuses,
-		pricingTiers,
-		type PricingTier
-	} from '$lib/types/equipment';
+	import { equipmentConditions, equipmentStatuses, pricingTiers } from '$lib/config';
+	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import Action from '$lib/components/shared/Action.svelte';
-	import type { StaffEquipmentResponse } from '$lib/types/api';
+	import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
 

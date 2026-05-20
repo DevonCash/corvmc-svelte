@@ -26,7 +26,7 @@
 	} from '$lib/utils/format';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
-	import type { StaffReservationDetailResponse } from '$lib/types/api';
+	import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import { toast } from 'svelte-sonner';
 

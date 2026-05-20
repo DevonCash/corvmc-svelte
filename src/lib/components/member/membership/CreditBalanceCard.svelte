@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
-	import type { SubscriptionInfo, Credits } from '$lib/finance/types';
+	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
 
 	let {
 		credits,

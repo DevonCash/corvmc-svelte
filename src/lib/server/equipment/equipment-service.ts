@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { equipment, equipmentCategory, equipmentLoan } from '$lib/server/db/schema/equipment';
 import { eq, and, sql, like, isNull, or, inArray, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import type { PricingTier, EquipmentCondition, EquipmentStatus } from './types';
+import type { PricingTier, EquipmentCondition, EquipmentStatus } from '$lib/server/db/schema/equipment';
 
 // ---------------------------------------------------------------------------
 // Errors

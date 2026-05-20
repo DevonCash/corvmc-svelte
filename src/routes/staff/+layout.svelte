@@ -26,7 +26,7 @@
 
 
 	} from '@tabler/icons-svelte';
-	import type { StaffLayoutResponse } from '$lib/types/api';
+	import type { StaffLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data, children }: { data: StaffLayoutResponse; children: import('svelte').Snippet } = $props();
 

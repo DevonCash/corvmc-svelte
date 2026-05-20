@@ -3,7 +3,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, lt, ne, gt, isNotNull, inArray, sql } from 'drizzle-orm';
 import { hasConflict, validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
-import type { BookerType, ReservationStatus } from './types';
+import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations

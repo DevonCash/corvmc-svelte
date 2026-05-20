@@ -4,7 +4,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/types/api';
+	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse & BandUpcomingResponse } = $props();
 
