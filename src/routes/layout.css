@@ -726,6 +726,39 @@ p {
 		6px 6px,
 		100% 100%;
 }
+.vinyl-card__gaff {
+	position: absolute;
+	top: 8%;
+	right: -6px;
+	padding: 3px 10px;
+	background: var(--color-primary);
+	color: var(--color-primary-content);
+	font-weight: 700;
+	font-size: 0.55rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	transform: rotate(3deg);
+	clip-path: polygon(
+		0% 8%,
+		1% 0%,
+		3% 12%,
+		5% 2%,
+		7% 6%,
+		99% 4%,
+		100% 10%,
+		99.5% 92%,
+		100% 98%,
+		97% 88%,
+		95% 100%,
+		93% 90%,
+		7% 96%,
+		5% 100%,
+		3% 92%,
+		1% 98%,
+		0% 90%
+	);
+	z-index: 10;
+}
 .vinyl-card__caption {
 	padding: 8px 2px 0;
 }
@@ -1221,4 +1254,51 @@ p {
 	transform: translateY(-50%);
 	background: #1a1d24;
 	border-radius: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   Directory Filters — contained search & filter bar
+   --------------------------------------------------------------------------- */
+.directory-filters {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px 20px;
+	background: var(--cmc-cream, #f9f3eb);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 10px;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.directory-filters__row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+.directory-filters__row .input {
+	min-width: 200px;
+	max-width: 320px;
+}
+.directory-filters__toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	color: var(--fg-2);
+	white-space: nowrap;
+	user-select: none;
+}
+.directory-filters__tags {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+}
+.directory-filters__label {
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fg-3);
+	margin-bottom: 4px;
 }

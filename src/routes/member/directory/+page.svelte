@@ -38,44 +38,45 @@
 <PageHeader title="Directory" subtitle="Community" />
 <PageContent>
 	<!-- Search & Filters -->
-	<div class="flex flex-wrap gap-3 items-end">
-		<input
-			type="text"
-			placeholder="Search by name..."
-			class="input input-bordered w-full max-w-xs"
-			bind:value={search}
-		/>
-		{#if activeTab === 'members'}
-			<label class="label cursor-pointer gap-2">
-				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
-				<span class="text-sm">Looking for band</span>
-			</label>
-		{:else}
-			<label class="label cursor-pointer gap-2">
-				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
-				<span class="text-sm">Looking for members</span>
-			</label>
-		{/if}
-	</div>
-
-	<div class="grid gap-3 sm:grid-cols-2 max-w-xl">
-		{#if activeTab === 'members'}
-			<div>
-				<p class="text-xs font-medium mb-1 opacity-60">Instruments</p>
+	<div class="directory-filters">
+		<div class="directory-filters__row">
+			<input
+				type="text"
+				placeholder="Search by name..."
+				class="input input-bordered flex-1"
+				bind:value={search}
+			/>
+			{#if activeTab === 'members'}
+				<label class="directory-filters__toggle">
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
+					<span>Looking for band</span>
+				</label>
+			{:else}
+				<label class="directory-filters__toggle">
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
+					<span>Looking for members</span>
+				</label>
+			{/if}
+		</div>
+		<div class="directory-filters__tags">
+			{#if activeTab === 'members'}
+				<div class="directory-filters__tag-field">
+					<p class="directory-filters__label">Instruments</p>
+					<FreeformTagInput
+						bind:value={filterInstruments}
+						suggestions={instrumentSuggestions}
+						placeholder="Filter by instrument..."
+					/>
+				</div>
+			{/if}
+			<div class="directory-filters__tag-field">
+				<p class="directory-filters__label">Genres</p>
 				<FreeformTagInput
-					bind:value={filterInstruments}
-					suggestions={instrumentSuggestions}
-					placeholder="Filter by instrument..."
+					bind:value={filterGenres}
+					suggestions={genreSuggestions}
+					placeholder="Filter by genre..."
 				/>
 			</div>
-		{/if}
-		<div>
-			<p class="text-xs font-medium mb-1 opacity-60">Genres</p>
-			<FreeformTagInput
-				bind:value={filterGenres}
-				suggestions={genreSuggestions}
-				placeholder="Filter by genre..."
-			/>
 		</div>
 	</div>
 
@@ -187,6 +188,9 @@
 								</div>
 							</div>
 						</div>
+						{#if b.lookingForMembers}
+							<div class="vinyl-card__gaff">seeking members</div>
+						{/if}
 						<div class="vinyl-card__caption">
 							<div class="vinyl-card__band">{b.name}</div>
 							<div class="vinyl-card__meta">
