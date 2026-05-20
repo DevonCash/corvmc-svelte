@@ -726,17 +726,8 @@ p {
 		100% 100%;
 }
 .vinyl-card__gaff {
-	position: absolute;
 	top: 8%;
 	right: -6px;
-	padding: 3px 10px;
-	background: var(--color-primary);
-	color: var(--color-primary-content);
-	font-weight: 700;
-	font-size: 0.55rem;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	transform: rotate(3deg);
 	z-index: 10;
 }
 .vinyl-card__caption {
@@ -903,39 +894,22 @@ p {
 	flex-wrap: wrap;
 	margin-top: 1cqi;
 }
-.id-card__gaff {
+.id-card__gaff,
+.vinyl-card__gaff {
 	position: absolute;
-	bottom: 11cqi;
-	right: -2cqi;
-	padding: 0.8cqi 3cqi;
+	padding: 3px 10px;
 	background: var(--color-primary);
 	color: var(--color-primary-content);
 	font-weight: 700;
-	font-size: 2.6cqi;
+	font-size: 0.55rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	transform: rotate(-2deg);
-	/* Torn-edge texture on left/right */
-	clip-path: polygon(
-		0% 8%,
-		1% 0%,
-		3% 12%,
-		5% 2%,
-		7% 6%,
-		99% 4%,
-		100% 10%,
-		99.5% 92%,
-		100% 98%,
-		97% 88%,
-		95% 100%,
-		93% 90%,
-		7% 96%,
-		5% 100%,
-		3% 92%,
-		1% 98%,
-		0% 90%
-	);
 	z-index: 2;
+}
+.id-card__gaff {
+	bottom: 11cqi;
+	right: -2cqi;
 }
 
 /* --- ID Tag — embossed text --- */
