@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { userInstrument, userGenre } from '$lib/server/db/schema/auth';
 import { bandGenre } from '$lib/server/db/schema/band';
-import { asc, sql } from 'drizzle-orm';
+import { asc, like, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -282,22 +282,26 @@ export async function suggestInstruments(prefix: string) {
 	const rows = await db
 		.selectDistinct({ tag: userInstrument.instrument })
 		.from(userInstrument)
-		.orderBy(asc(userInstrument.instrument));
+		.where(like(userInstrument.instrument, `${prefix}%`))
+		.orderBy(asc(userInstrument.instrument))
+		.limit(10);
 
-	const lower = prefix.toLowerCase();
-	return rows.map(r => r.tag).filter(t => t.toLowerCase().startsWith(lower));
+	return rows.map(r => r.tag);
 }
 
 export async function suggestGenres(prefix: string) {
-	const userRows = await db
-		.selectDistinct({ tag: userGenre.genre })
-		.from(userGenre);
+	const [userRows, bandRows] = await Promise.all([
+		db
+			.selectDistinct({ tag: userGenre.genre })
+			.from(userGenre)
+			.where(like(userGenre.genre, `${prefix}%`))
+			.limit(10),
+		db
+			.selectDistinct({ tag: bandGenre.genre })
+			.from(bandGenre)
+			.where(like(bandGenre.genre, `${prefix}%`))
+			.limit(10)
+	]);
 
-	const bandRows = await db
-		.selectDistinct({ tag: bandGenre.genre })
-		.from(bandGenre);
-
-	const allGenres = [...new Set([...userRows, ...bandRows].map(r => r.tag))].sort();
-	const lower = prefix.toLowerCase();
-	return allGenres.filter(t => t.toLowerCase().startsWith(lower));
+	return [...new Set([...userRows, ...bandRows].map(r => r.tag))].sort().slice(0, 10);
 }

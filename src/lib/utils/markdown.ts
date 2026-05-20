@@ -1,4 +1,5 @@
 import { Marked } from 'marked';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface Heading {
 	id: string;
@@ -30,8 +31,12 @@ const renderer = {
 
 const marked = new Marked({ renderer });
 
+export function sanitizeHtml(html: string): string {
+	return DOMPurify.sanitize(html);
+}
+
 export function renderMarkdown(content: string): string {
-	return marked.parse(content) as string;
+	return sanitizeHtml(marked.parse(content) as string);
 }
 
 export function extractHeadings(content: string): Heading[] {

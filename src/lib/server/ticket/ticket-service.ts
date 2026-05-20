@@ -36,19 +36,23 @@ export function generateCodeString(): string {
 	return chars.join('');
 }
 
-/** Generate a unique code that doesn't exist in the database. */
-export async function generateCode(): Promise<string> {
-	for (let attempt = 0; attempt < 10; attempt++) {
-		const code = generateCodeString();
-		const [existing] = await db
-			.select({ id: ticket.id })
-			.from(ticket)
-			.where(eq(ticket.code, code))
-			.limit(1);
+/** Generate `count` unique codes that don't collide with existing tickets. */
+async function generateUniqueCodes(count: number): Promise<string[]> {
+	for (let attempt = 0; attempt < 3; attempt++) {
+		const candidates = Array.from({ length: count }, () => generateCodeString());
 
-		if (!existing) return code;
+		const existing = await db
+			.select({ code: ticket.code })
+			.from(ticket)
+			.where(inArray(ticket.code, candidates));
+
+		const taken = new Set(existing.map((r) => r.code));
+		const unique = candidates.filter((c) => !taken.has(c));
+
+		if (unique.length >= count) return unique.slice(0, count);
+		count -= unique.length;
 	}
-	throw new Error('Failed to generate unique ticket code after 10 attempts');
+	throw new Error('Failed to generate unique ticket codes after 3 attempts');
 }
 
 // ---------------------------------------------------------------------------
@@ -58,10 +62,7 @@ export async function generateCode(): Promise<string> {
 export async function createTickets(options: CreateTicketsOptions) {
 	const { eventId, purchaseId, quantity, userId, attendeeName, attendeeEmail, status = 'pending' } = options;
 
-	const codes: string[] = [];
-	for (let i = 0; i < quantity; i++) {
-		codes.push(await generateCode());
-	}
+	const codes = await generateUniqueCodes(quantity);
 
 	const rows = codes.map((code) => ({
 		eventId,

@@ -106,7 +106,7 @@ vi.mock('drizzle-orm', () => ({
 	desc: vi.fn((col: unknown) => ['desc', col])
 }));
 
-const { generateCodeString, generateCode, createTickets, fulfillPurchase, cancelPurchase, cancelTicket, checkIn, getTicketsSold, getTicketsRemaining, getTicketsByPurchase, getEventTickets, getUserTickets } =
+const { generateCodeString, createTickets, fulfillPurchase, cancelPurchase, cancelTicket, checkIn, getTicketsSold, getTicketsRemaining, getTicketsByPurchase, getEventTickets, getUserTickets } =
 	await import('./ticket-service');
 
 // ---------------------------------------------------------------------------
@@ -143,14 +143,6 @@ describe('generateCodeString', () => {
 			const code = generateCodeString();
 			expect(code).toMatch(/^[A-Z2-9]+$/);
 		}
-	});
-});
-
-describe('generateCode', () => {
-	it('returns a code when no collision', async () => {
-		selectResult = []; // no existing ticket with this code
-		const code = await generateCode();
-		expect(code).toHaveLength(8);
 	});
 });
 
@@ -392,10 +384,3 @@ describe('getUserTickets', () => {
 	});
 });
 
-describe('generateCode collision handling', () => {
-	it('throws after 10 failed attempts', async () => {
-		// Every select returns an existing ticket (collision)
-		selectResult = [{ id: 'existing-ticket' }];
-		await expect(generateCode()).rejects.toThrow('Failed to generate unique ticket code after 10 attempts');
-	});
-});

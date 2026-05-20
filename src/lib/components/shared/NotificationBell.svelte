@@ -9,11 +9,48 @@
 	let open = $state(false);
 	let loading = $state(false);
 	let eventSource: EventSource | null = null;
-	let connectTimeout: ReturnType<typeof setTimeout> | null = null;
+	let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+	let retryCount = 0;
+	let destroyed = false;
+	const MAX_RETRIES = 5;
 
 	function closeEventSource() {
 		eventSource?.close();
 		eventSource = null;
+	}
+
+	function clearPendingTimeout() {
+		if (pendingTimeout) {
+			clearTimeout(pendingTimeout);
+			pendingTimeout = null;
+		}
+	}
+
+	function connect() {
+		if (destroyed) return;
+		closeEventSource();
+
+		eventSource = new EventSource('/api/notifications/stream');
+
+		eventSource.addEventListener('init', (e) => {
+			retryCount = 0;
+			const data = JSON.parse(e.data);
+			unreadCount = data.unreadCount;
+		});
+
+		eventSource.addEventListener('message', (e) => {
+			const notification: Notification = JSON.parse(e.data);
+			notifications = [notification, ...notifications];
+			unreadCount++;
+		});
+
+		eventSource.onerror = () => {
+			closeEventSource();
+			if (destroyed || retryCount >= MAX_RETRIES) return;
+			const delay = 1000 * Math.pow(2, retryCount);
+			retryCount++;
+			pendingTimeout = setTimeout(connect, delay);
+		};
 	}
 
 	function handleBeforeUnload() {
@@ -22,30 +59,13 @@
 
 	onMount(() => {
 		if (!browser) return;
-
-		// Defer connection so it doesn't race with initial page load
-		connectTimeout = setTimeout(() => {
-			eventSource = new EventSource('/api/notifications/stream');
-
-			eventSource.addEventListener('init', (e) => {
-				const data = JSON.parse(e.data);
-				unreadCount = data.unreadCount;
-			});
-
-			eventSource.addEventListener('message', (e) => {
-				const notification: Notification = JSON.parse(e.data);
-				notifications = [notification, ...notifications];
-				unreadCount++;
-			});
-
-			eventSource.onerror = () => {};
-		}, 100);
-
+		pendingTimeout = setTimeout(connect, 100);
 		window.addEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	onDestroy(() => {
-		if (connectTimeout) clearTimeout(connectTimeout);
+		destroyed = true;
+		clearPendingTimeout();
 		closeEventSource();
 		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
 	});

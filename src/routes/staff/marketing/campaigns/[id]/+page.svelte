@@ -7,6 +7,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { getCampaignDetail, unscheduleCommand } from './data.remote';
+	import { sanitizeHtml } from '$lib/utils/markdown';
 
 	let id = $derived(page.params.id!);
 	let campaign = $derived(await getCampaignDetail(id));
@@ -65,7 +66,7 @@
 
 		<InfoCard title="Rendered Preview">
 			<div class="border rounded-lg bg-white overflow-hidden">
-				{@html campaign.htmlBody}
+				{@html sanitizeHtml(campaign.htmlBody)}
 			</div>
 		</InfoCard>
 		</PageContent>
