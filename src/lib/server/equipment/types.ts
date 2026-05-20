@@ -21,4 +21,4 @@ export {
 	scheduleLoanSchema,
 	checkoutLoanSchema,
 	estimateLoanCost
-} from '$lib/types/equipment';
+} from '$lib/server/db/schema/equipment';

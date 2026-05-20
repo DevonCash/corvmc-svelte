@@ -9,13 +9,12 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
 import { domainEvents } from '$lib/server/events/event-bus';
+import type { BandRole, BandMemberStatus } from '$lib/server/db/schema/band';
+export type { BandRole, BandMemberStatus };
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export type BandRole = 'owner' | 'admin' | 'member';
-export type BandMemberStatus = 'pending' | 'active';
 
 export interface CreateBandData {
 	name: string;

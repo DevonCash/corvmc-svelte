@@ -1,8 +1,42 @@
 import { sqliteTable, text, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { recurringSeries } from './recurring';
+
+// ---------------------------------------------------------------------------
+// Reservation domain types
+// ---------------------------------------------------------------------------
+
+export const bookerTypes = ['user', 'band', 'event', 'lesson'] as const;
+export type BookerType = (typeof bookerTypes)[number];
+
+export function isBookerType(value: string): value is BookerType {
+	return bookerTypes.includes(value as BookerType);
+}
+
+export const reservationStatuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled'] as const;
+export type ReservationStatus = (typeof reservationStatuses)[number];
+
+export interface TimeSlot {
+	startTime: string;
+	endTime: string;
+	available: boolean;
+}
+
+export const createReservationSchema = z.object({
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+	notes: z.string().optional()
+});
+
+export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+
+// ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
 
 export const reservation = sqliteTable(
 	'reservation',

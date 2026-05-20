@@ -2,7 +2,31 @@ import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { timestamp, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
-import { directoryContactSchema, profileLinksSchema } from '$lib/types/profile';
+// ---------------------------------------------------------------------------
+// Profile types (shared with band.ts)
+// ---------------------------------------------------------------------------
+
+export type DirectoryVisibility = 'hidden' | 'members' | 'public';
+
+export const directoryContactSchema = z.object({
+	email: z.string().optional(),
+	phone: z.string().optional(),
+	social: z.string().optional(),
+	address: z.string().optional(),
+	visibility: z.string().optional(),
+}).nullable().default(null);
+
+export type DirectoryContact = z.infer<typeof directoryContactSchema>;
+
+export const profileLinkSchema = z.object({
+	label: z.string(),
+	url: z.string()
+});
+
+export const profileLinksSchema = z.array(profileLinkSchema).nullable().default(null);
+
+export type ProfileLink = z.infer<typeof profileLinkSchema>;
+
 // ---------------------------------------------------------------------------
 // better-auth core tables
 // ---------------------------------------------------------------------------
