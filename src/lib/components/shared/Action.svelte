@@ -34,6 +34,7 @@
 		trigger,
 		submitLabel,
 		canSubmit = true,
+		noFooter = false,
 		successToast,
 		maxWidth = 'max-w-lg',
 		flashDuration = 1500,
@@ -56,6 +57,7 @@
 		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
 		canSubmit?: boolean;
+		noFooter?: boolean;
 		maxWidth?: string;
 		successToast?: string;
 		flashDuration?: number;
@@ -155,7 +157,7 @@
 	<Modal bind:open={dialogOpen} title="Confirm" maxWidth="max-w-sm">
 		<p class="py-4">{confirm}</p>
 		<div class="modal-action">
-			<button type="button" class="btn btn-ghost" onclick={close}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={close}>Dismiss</button>
 			<button type="button" class="btn {className}" onclick={handleConfirm}>
 				{label}
 			</button>
@@ -208,9 +210,11 @@
 		>
 			<div class="space-y-4">
 				{@render formSnippet({ close })}
-				<div class="flex justify-end pt-2">
-					<SubmitButton label={submitLabel ?? label} class={className} />
-				</div>
+				{#if !noFooter}
+					<div class="flex justify-end pt-2">
+						<SubmitButton label={submitLabel ?? label} class={className} />
+					</div>
+				{/if}
 			</div>
 		</Form>
 	</Modal>

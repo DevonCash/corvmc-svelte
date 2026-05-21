@@ -87,9 +87,9 @@
 	{:else if type === 'tags'}
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
 	{:else if type === 'checkbox'}
-		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="checkbox" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
-			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
+		<label class="label cursor-pointer gap-2 items-center">
+			<input type="checkbox" class="checkbox shrink-0" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
+			{#if rest.checkboxLabel}<span class="text-wrap">{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
@@ -99,33 +99,33 @@
 	{:else if type === 'file' && upload}
 		<FileUpload name={_name} {upload} {accept} {value} {src} disabled={pending || readonly} />
 	{:else if type === 'select' && rest.multiple}
-		{@const selectedValues = Array.isArray(value) ? value : []}
-		<input type="hidden" name={_name} value={JSON.stringify(selectedValues)} />
+		<input type="hidden" name={_name} value={JSON.stringify(Array.isArray(value) ? value : [])} />
 		<select
 			class="select-bordered select w-full"
 			class:ghost={readonly}
 			multiple
-			disabled={pending}
+			disabled={pending || readonly}
 			id={_id}
 			onchange={(e) => {
 				const sel = e.currentTarget;
-				const vals = Array.from(sel.selectedOptions, (o) => o.value);
+				value = Array.from(sel.selectedOptions, (o) => o.value);
 				const hidden = sel.previousElementSibling as HTMLInputElement;
-				hidden.value = JSON.stringify(vals);
+				hidden.value = JSON.stringify(value);
 			}}
 		>
 			{#each rest.options as option}
-				<option value={option.value} selected={selectedValues.includes(option.value)}>
+				<option value={option.value} selected={Array.isArray(value) && value.includes(option.value)}>
 					{option.label}
 				</option>
 			{/each}
 		</select>
 	{:else if type === 'select'}
-		<select class="select-bordered select w-full" class:ghost={readonly} {...rest} {...inputProps}>
+		<select class="select-bordered select w-full" class:ghost={readonly} {...inputProps} bind:value>
+			{#if rest.placeholder}
+				<option value="">{rest.placeholder}</option>
+			{/if}
 			{#each rest.options as option}
-				<option value={option.value} selected={option.value === value}>
-					{option.label}
-				</option>
+				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>
 	{:else}

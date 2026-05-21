@@ -12,6 +12,14 @@
 		submit(): void;
 		reset(): void;
 		changed(): void;
+		readonly currentStep: number;
+		readonly totalSteps: number;
+		readonly hasSteps: boolean;
+		readonly currentStepValid: boolean;
+		registerStep(): number;
+		setStepValid(index: number, valid: boolean): void;
+		next(): void;
+		back(): void;
 	}
 
 	const FORM_KEY = Symbol('form');
@@ -62,6 +70,9 @@
 	let formEl: HTMLFormElement | undefined = $state();
 	let changeCount = $state(0);
 	let actionIssues = $state<RemoteFormIssue[] | null>(null);
+	let currentStep = $state(0);
+	let totalSteps = $state(0);
+	let stepValidity = $state<boolean[]>([]);
 
 	$effect(() => {
 		if (status === 'idle' && changeCount > 0) status = 'dirty';
@@ -89,9 +100,38 @@
 			changeCount = 0;
 			actionIssues = null;
 			status = 'idle';
+			currentStep = 0;
 		},
 		changed() {
 			changeCount++;
+		},
+		get currentStep() {
+			return currentStep;
+		},
+		get totalSteps() {
+			return totalSteps;
+		},
+		get hasSteps() {
+			return totalSteps > 0;
+		},
+		get currentStepValid() {
+			return stepValidity[currentStep] ?? true;
+		},
+		registerStep() {
+			stepValidity.push(true);
+			return totalSteps++;
+		},
+		setStepValid(index: number, valid: boolean) {
+			stepValidity[index] = valid;
+		},
+		next() {
+			if (currentStep < totalSteps - 1) {
+				currentStep++;
+				changeCount++;
+			}
+		},
+		back() {
+			if (currentStep > 0) currentStep--;
 		}
 	};
 	setFormContext(ctx);

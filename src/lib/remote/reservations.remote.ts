@@ -30,6 +30,7 @@ import {
 	recordCashPayment,
 	refund as refundPayment
 } from '$lib/server/finance/payment-service';
+import { getBalance } from '$lib/server/finance/credit-service';
 import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
@@ -140,9 +141,10 @@ export const checkConflicts = query(
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
-	if (!locals.user?.stripeId) return { isSustainingMember: false };
+	const freeHoursBalance = locals.user ? await getBalance(locals.user.id, 'free_hours') : 0;
+	if (!locals.user?.stripeId) return { isSustainingMember: false, freeHoursBalance };
 	const sub = await getSubscription(locals.user.stripeId);
-	return { isSustainingMember: sub !== null };
+	return { isSustainingMember: sub !== null, freeHoursBalance };
 });
 
 /** Band: check if any active band member has a sustaining membership. */
@@ -244,6 +246,84 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 	}
 
 	return { reservationId: res.id };
+});
+
+/** Member: book a reservation and immediately initiate payment. */
+const bookAndPaySchema = createReservationSchema.extend({
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	coverFees: z.enum(['', 'on']).optional()
+});
+
+export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
+	const { locals, url } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const recurringFrequency = data.recurring || undefined;
+	const isRecurring = recurringFrequency != null;
+
+	if (isRecurring) {
+		if (!locals.user.stripeId) {
+			throw error(403, 'Recurring reservations require a sustaining membership');
+		}
+		const sub = await getSubscription(locals.user.stripeId);
+		if (!sub) {
+			throw error(403, 'Recurring reservations require a sustaining membership');
+		}
+	}
+
+	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
+	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+
+	const res = await create({
+		userId: locals.user.id,
+		bookerType: 'user',
+		bookerId: locals.user.id,
+		startsAt,
+		endsAt,
+		notes: data.notes
+	});
+
+	if (isRecurring && recurringFrequency) {
+		await createSeries({
+			prototypeReservationId: res.id,
+			frequency: recurringFrequency as RecurringFrequency,
+			prototypeStartsAt: startsAt
+		});
+	}
+
+	const rehearsalConfig = await getProductConfig('rehearsal');
+	const hourlyRateCents = rehearsalConfig.unitAmountCents;
+	const durationMs = endsAt.getTime() - startsAt.getTime();
+	const durationHours = durationMs / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+	const lineItem = await buildLineItem('rehearsal', totalCents, 1);
+
+	const result = await checkout({
+		stripeCustomerId: locals.user.stripeId ?? undefined,
+		userId: locals.user.id,
+		mode: 'payment',
+		lineItems: [lineItem],
+		eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+		coverFees: data.coverFees === 'on',
+		metadata: { reservation_id: res.id },
+		successUrl: `${url.origin}/member/reservations`,
+		cancelUrl: `${url.origin}/member/reservations`
+	});
+
+	if (result.paid) {
+		await db
+			.update(reservation)
+			.set({
+				status: 'confirmed',
+				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+				updatedAt: new Date()
+			})
+			.where(eq(reservation.id, res.id));
+
+		return { reservationId: res.id, paid: true as const };
+	}
+
+	return { reservationId: res.id, paid: false as const, redirectUrl: result.checkoutUrl! };
 });
 
 /** Band: book a reservation (optionally recurring). */

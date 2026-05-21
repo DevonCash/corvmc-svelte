@@ -29,7 +29,7 @@
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 		<a
-			href="/member/reservations/new"
+			href="/member/reservations"
 			class="card bg-base-100 btn h-auto"
 		>
 			<div class="card-body flex-row items-center gap-3 py-4">
@@ -60,7 +60,7 @@
 					<EmptyState
 						message="No sessions booked this week."
 						actionLabel="Book a session"
-						actionHref="/member/reservations/new"
+						actionHref="/member/reservations"
 					/>
 				{:else}
 					<div class="space-y-2">
