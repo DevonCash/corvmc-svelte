@@ -163,7 +163,7 @@
 				/>
 
 				{#if date && startTimeOptions.length === 0}
-					<p class="text-sm text-error">No available times on this date. Please select another day.</p>
+					<p class="mt-2 text-sm text-error">No available times on this date. Please select another day.</p>
 				{/if}
 
 				<div class="grid grid-cols-2 gap-2">
