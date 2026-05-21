@@ -18,7 +18,11 @@
 	let availableDates = $derived(await getAvailableDates());
 	const availableSet = $derived(new Set(availableDates));
 
+	const minDate = $derived(today(tz));
+	const maxDate = $derived(today(tz).add({ days: 14 }));
+
 	function isDateUnavailable(d: DateValue): boolean {
+		if (d.compare(minDate) < 0 || d.compare(maxDate) > 0) return false;
 		return !availableSet.has(d.toString());
 	}
 
@@ -154,8 +158,8 @@
 					type="calendar"
 					bind:value={date}
 					isDateUnavailable={isDateUnavailable}
-					minValue={today(tz)}
-					maxValue={today(tz).add({ days: 14 })}
+					minValue={minDate}
+					maxValue={maxDate}
 				/>
 
 				<div class="grid grid-cols-2 gap-2">
