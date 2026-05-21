@@ -237,6 +237,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		success_url: string;
 		cancel_url: string;
 		metadata: Record<string, string>;
+		payment_intent_data?: { metadata: Record<string, string> };
 		customer?: string;
 		customer_email?: string;
 		discounts?: Array<{ coupon: string }>;
@@ -245,7 +246,8 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		line_items: finalLineItems,
 		success_url: successUrl,
 		cancel_url: cancelUrl,
-		metadata: sessionMetadata
+		metadata: sessionMetadata,
+		...(mode === 'payment' && { payment_intent_data: { metadata: sessionMetadata } })
 	};
 
 	if (stripeCustomerId) {
@@ -365,13 +367,47 @@ export interface RefundOptions {
 export async function refund(options: RefundOptions): Promise<void> {
 	const { userId, stripePaymentRecordId } = options;
 
-	const stripeRecord = await stripe.paymentRecords.retrieve(stripePaymentRecordId);
+	if (stripePaymentRecordId.startsWith('pi_')) {
+		await refundPaymentIntent(stripePaymentRecordId, userId);
+	} else {
+		await refundPaymentRecord(stripePaymentRecordId, userId);
+	}
+
+	await db
+		.update(paymentCache)
+		.set({ status: 'refunded', refundedAt: new Date() })
+		.where(eq(paymentCache.id, stripePaymentRecordId));
+}
+
+async function refundPaymentIntent(paymentIntentId: string, userId?: string): Promise<void> {
+	const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+	if (pi.amount > 0 && pi.status === 'succeeded') {
+		await stripe.refunds.create({ payment_intent: paymentIntentId });
+	}
+
+	if (userId) {
+		const deductions = parseBreakdown(pi.metadata);
+		if (deductions.length === 0) {
+			const sessions = await stripe.checkout.sessions.list({ payment_intent: paymentIntentId, limit: 1 });
+			const session = sessions.data[0];
+			if (session) {
+				const sessionDeductions = parseBreakdown(session.metadata);
+				await reverseDeductions(userId, sessionDeductions, paymentIntentId, 'refund');
+			}
+		} else {
+			await reverseDeductions(userId, deductions, paymentIntentId, 'refund');
+		}
+	}
+}
+
+async function refundPaymentRecord(paymentRecordId: string, userId?: string): Promise<void> {
+	const stripeRecord = await stripe.paymentRecords.retrieve(paymentRecordId);
 	const paymentAmount = stripeRecord.amount?.value ?? 0;
 
-	// Refund the card payment if there was one
 	if (paymentAmount > 0) {
 		const now = Math.floor(Date.now() / 1000);
-		await stripe.paymentRecords.reportRefund(stripePaymentRecordId, {
+		await stripe.paymentRecords.reportRefund(paymentRecordId, {
 			amount: { value: paymentAmount, currency: 'usd' },
 			initiated_at: now,
 			outcome: 'refunded',
@@ -380,16 +416,9 @@ export async function refund(options: RefundOptions): Promise<void> {
 		});
 	}
 
-	// Update local cache
-	await db
-		.update(paymentCache)
-		.set({ status: 'refunded', refundedAt: new Date() })
-		.where(eq(paymentCache.id, stripePaymentRecordId));
-
-	// Reverse credit deductions if a user was involved
 	if (userId) {
 		const deductions = parseBreakdown(stripeRecord.metadata);
-		await reverseDeductions(userId, deductions, stripePaymentRecordId, 'refund');
+		await reverseDeductions(userId, deductions, paymentRecordId, 'refund');
 	}
 }
 

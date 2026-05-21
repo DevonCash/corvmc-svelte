@@ -36,8 +36,15 @@ const mockStripe = {
 	checkout: {
 		sessions: {
 			create: vi.fn(),
-			retrieve: vi.fn()
+			retrieve: vi.fn(),
+			list: vi.fn()
 		}
+	},
+	paymentIntents: {
+		retrieve: vi.fn()
+	},
+	refunds: {
+		create: vi.fn()
 	},
 	paymentRecords: {
 		reportPayment: vi.fn(),
@@ -485,6 +492,73 @@ describe('refund', () => {
 
 		expect(mockStripe.paymentRecords.reportRefund).not.toHaveBeenCalled();
 		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+
+	it('refunds a payment intent via Stripe Refunds API', async () => {
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			amount: 5000,
+			status: 'succeeded',
+			metadata: {
+				credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 1, cents: 1000 }])
+			}
+		});
+		mockStripe.refunds.create.mockResolvedValue({});
+		mockCreditService.addCredits.mockResolvedValue(1);
+
+		await refund({
+			userId: 'user-1',
+			stripePaymentRecordId: 'pi_abc123'
+		});
+
+		expect(mockStripe.refunds.create).toHaveBeenCalledWith({ payment_intent: 'pi_abc123' });
+		expect(mockStripe.paymentRecords.retrieve).not.toHaveBeenCalled();
+		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
+			'user-1', 'free_hours', 1, 'refund', 'pi_abc123', expect.any(String)
+		);
+	});
+
+	it('falls back to checkout session metadata for payment intent credits', async () => {
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			amount: 3000,
+			status: 'succeeded',
+			metadata: {}
+		});
+		mockStripe.refunds.create.mockResolvedValue({});
+		mockStripe.checkout.sessions.list.mockResolvedValue({
+			data: [{
+				metadata: {
+					credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 2, cents: 2000 }])
+				}
+			}]
+		});
+		mockCreditService.addCredits.mockResolvedValue(2);
+
+		await refund({
+			userId: 'user-1',
+			stripePaymentRecordId: 'pi_no_meta'
+		});
+
+		expect(mockStripe.checkout.sessions.list).toHaveBeenCalledWith({
+			payment_intent: 'pi_no_meta',
+			limit: 1
+		});
+		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
+			'user-1', 'free_hours', 2, 'refund', 'pi_no_meta', expect.any(String)
+		);
+	});
+
+	it('skips refund for non-succeeded payment intent', async () => {
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			amount: 5000,
+			status: 'canceled',
+			metadata: {}
+		});
+
+		await refund({
+			stripePaymentRecordId: 'pi_canceled'
+		});
+
+		expect(mockStripe.refunds.create).not.toHaveBeenCalled();
 	});
 });
 
