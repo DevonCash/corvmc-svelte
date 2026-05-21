@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { bulkAddMembers } from '$lib/remote/marketing';
+	import { bulkAddMembers } from '$lib/remote/marketing.remote';
 
 	let {
 		audienceId,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getStaffArticle, getStaffCategories, updateArticle, deleteArticle } from '$lib/remote/help';
+	import { getStaffArticle, getStaffCategories, updateArticle, deleteArticle } from '$lib/remote/help.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';

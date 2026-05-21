@@ -5,7 +5,7 @@
 		getAvailableEquipment,
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
-	} from '$lib/remote/equipment';
+	} from '$lib/remote/equipment.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';

@@ -5,7 +5,7 @@
 		getInstrumentSuggestions,
 		getGenreSuggestions,
 		saveMemberProfile
-	} from '$lib/remote/directory';
+	} from '$lib/remote/directory.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';

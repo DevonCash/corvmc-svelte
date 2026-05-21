@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import { createAudience } from '$lib/remote/marketing';
+	import { createAudience } from '$lib/remote/marketing.remote';
 	import { Field } from '../Form';
 
 	let {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getMemberCategories } from '$lib/remote/help';
+	import { getMemberCategories } from '$lib/remote/help.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';

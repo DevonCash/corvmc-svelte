@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { compReservation } from '$lib/remote/reservations';
+	import { compReservation } from '$lib/remote/reservations.remote';
 
 	let {
 		reservationId,

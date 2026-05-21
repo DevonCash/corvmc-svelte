@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { cancelTicket } from '$lib/remote/events';
+	import { cancelTicket } from '$lib/remote/events.remote';
 
 	let {
 		eventId,

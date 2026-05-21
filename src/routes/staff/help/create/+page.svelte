@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getStaffCategories, createArticle } from '$lib/remote/help';
+	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';

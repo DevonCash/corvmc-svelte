@@ -9,7 +9,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { createBand, acceptInvite, declineInvite } from '$lib/remote/bands';
+	import { createBand, acceptInvite, declineInvite } from '$lib/remote/bands.remote';
 	import type { MemberBandsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberBandsResponse } = $props();

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { noShowReservation } from '$lib/remote/reservations';
+	import { noShowReservation } from '$lib/remote/reservations.remote';
 
 	let {
 		reservationId,

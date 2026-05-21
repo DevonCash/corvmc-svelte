@@ -5,7 +5,7 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { submitLoanRequest as submitRequest } from '$lib/remote/equipment';
+	import { submitLoanRequest as submitRequest } from '$lib/remote/equipment.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';

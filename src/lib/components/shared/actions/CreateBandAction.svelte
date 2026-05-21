@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { createBandApi } from '$lib/remote/bands';
+	import { createBandApi } from '$lib/remote/bands.remote';
 	import { Field } from '../Form';
 	import SearchSelect from '../Form/SearchSelect.svelte';
 

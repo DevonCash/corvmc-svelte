@@ -33,7 +33,7 @@ import {
 	requireBandBySlug,
 	requireBandAdmin,
 	requireBandOwner
-} from './_band-context';
+} from '$lib/server/band/band-context';
 
 // ===========================================================================
 // Queries — Staff

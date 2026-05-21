@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { getStaffArticles, getStaffCategories, createCategory, deleteCategory } from '$lib/remote/help';
+	import { getStaffArticles, getStaffCategories, createCategory, deleteCategory } from '$lib/remote/help.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';

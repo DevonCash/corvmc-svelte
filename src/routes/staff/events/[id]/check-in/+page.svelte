@@ -6,7 +6,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { CancelTicketAction } from '$lib/components/shared/actions';
-	import { checkInTicket } from '$lib/remote/events';
+	import { checkInTicket } from '$lib/remote/events.remote';
 	import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffCheckInResponse } = $props();

@@ -9,7 +9,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
-	import { cancelStaffSeries } from '$lib/remote/recurring';
+	import { cancelStaffSeries } from '$lib/remote/recurring.remote';
 	import type { StaffRecurringResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffRecurringResponse } = $props();

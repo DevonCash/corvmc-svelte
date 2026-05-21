@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getDirectoryMember } from '$lib/remote/directory';
+	import { getDirectoryMember } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';

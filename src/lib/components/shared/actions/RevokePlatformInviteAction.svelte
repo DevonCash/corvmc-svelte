@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { revokePlatformInvite } from '$lib/remote/bands';
+	import { revokePlatformInvite } from '$lib/remote/bands.remote';
 
 	let {
 		bandId,

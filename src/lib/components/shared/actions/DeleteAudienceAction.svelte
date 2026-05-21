@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import { deleteAudience } from '$lib/remote/marketing';
+	import { deleteAudience } from '$lib/remote/marketing.remote';
 
 	let {
 		audienceId,

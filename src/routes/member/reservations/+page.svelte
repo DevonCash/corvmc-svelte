@@ -10,7 +10,7 @@
 		CancelReservationAction,
 		CancelSeriesAction
 	} from '$lib/components/shared/actions';
-	import { editMemberSeries } from '$lib/remote/recurring';
+	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';

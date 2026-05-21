@@ -9,7 +9,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { UpdateClosureAction, DeleteClosureAction } from '$lib/components/shared/actions';
-	import { getClosures, createClosure } from '$lib/remote/closures';
+	import { getClosures, createClosure } from '$lib/remote/closures.remote';
 
 	let closures = $derived(await getClosures());
 

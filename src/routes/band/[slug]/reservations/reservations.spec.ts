@@ -137,7 +137,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getBandSlots: getSlots, bookBandReservation: bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('$lib/remote/reservations') as any;
+const { getBandSlots: getSlots, bookBandReservation: bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('$lib/remote/reservations.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

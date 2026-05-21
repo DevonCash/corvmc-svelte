@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getMemberArticle, getMemberCategories } from '$lib/remote/help';
+	import { getMemberArticle, getMemberCategories } from '$lib/remote/help.remote';
 	import { extractHeadings } from '$lib/utils/markdown';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';

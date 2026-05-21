@@ -10,7 +10,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring';
+	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring.remote';
 
 	let id = $derived(page.params.id!);
 	let series = $derived(await getSeries(id));

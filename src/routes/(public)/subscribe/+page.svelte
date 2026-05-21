@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import { getPublicAudiences } from '$lib/remote/marketing';
+	import { getPublicAudiences } from '$lib/remote/marketing.remote';
 
 	let audiences = $derived(await getPublicAudiences());
 

@@ -8,7 +8,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { purchaseTickets } from '$lib/remote/events';
+	import { purchaseTickets } from '$lib/remote/events.remote';
 
 	let { data }: { data: any } = $props();
 

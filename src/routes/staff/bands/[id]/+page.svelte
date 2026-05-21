@@ -10,7 +10,7 @@
 		getStaffPlatformInvites as getPlatformInvites,
 		deactivateBand,
 		reactivateBand
-	} from '$lib/remote/bands';
+	} from '$lib/remote/bands.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createEquipment } from '$lib/remote/equipment';
+	import { createEquipment } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
 	import { equipmentConditions } from '$lib/config';
 

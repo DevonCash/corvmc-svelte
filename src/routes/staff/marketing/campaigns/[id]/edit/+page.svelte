@@ -12,7 +12,7 @@
 		sendCampaignNow,
 		scheduleCampaign,
 		deleteCampaign
-	} from '$lib/remote/marketing';
+	} from '$lib/remote/marketing.remote';
 
 	let id = $derived(page.params.id!);
 	let campaignData = $derived(await getCampaignDetail(id));

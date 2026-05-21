@@ -16,7 +16,7 @@
 		getAudienceDetail,
 		getAudienceSubscribers,
 		updateAudience
-	} from '$lib/remote/marketing';
+	} from '$lib/remote/marketing.remote';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 

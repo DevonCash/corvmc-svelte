@@ -120,7 +120,7 @@ import {
 import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
 const { GET: accountGET } = await import('../../api/me/account/+server');
-const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribe, unsubscribe: unsubscribeFromList, deleteAccount } = await import('$lib/remote/account') as any;
+const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribe, unsubscribe: unsubscribeFromList, deleteAccount } = await import('$lib/remote/account.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

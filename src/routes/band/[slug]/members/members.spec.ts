@@ -92,7 +92,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchBandUsers: searchUsers } = await import('$lib/remote/bands') as any;
+const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchBandUsers: searchUsers } = await import('$lib/remote/bands.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

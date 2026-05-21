@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { cancelLoan } from '$lib/remote/equipment';
+	import { cancelLoan } from '$lib/remote/equipment.remote';
 
 	let {
 		loanId,

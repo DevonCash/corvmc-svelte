@@ -71,7 +71,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { GET: bandsGET } = await import('../../api/me/bands/+server');
-const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands') as any;
+const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

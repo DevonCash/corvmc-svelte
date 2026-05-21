@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import { unscheduleCampaign } from '$lib/remote/marketing';
+	import { unscheduleCampaign } from '$lib/remote/marketing.remote';
 
 	let {
 		campaignId,

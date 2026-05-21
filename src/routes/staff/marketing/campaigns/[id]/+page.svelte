@@ -6,7 +6,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { UnscheduleCampaignAction } from '$lib/components/shared/actions';
-	import { getCampaignDetail } from '$lib/remote/marketing';
+	import { getCampaignDetail } from '$lib/remote/marketing.remote';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 
 	let id = $derived(page.params.id!);

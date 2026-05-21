@@ -19,7 +19,7 @@
 		getBandPlatformInvites as getPlatformInvites,
 		inviteByEmail,
 		revokePlatformInviteRemote
-	} from '$lib/remote/bands';
+	} from '$lib/remote/bands.remote';
 	import type { BandLayoutResponse, BandMembersResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse & BandMembersResponse } = $props();

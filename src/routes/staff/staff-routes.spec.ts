@@ -211,7 +211,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } = await import('$lib/remote/users');
+const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } = await import('$lib/remote/users.remote');
 
 describe('/staff/users/[id] detail load', () => {
 	it('returns user with roles and all available roles', async () => {

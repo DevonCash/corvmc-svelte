@@ -8,7 +8,7 @@
 		editEquipment,
 		deactivateEquipment,
 		reactivateEquipment
-	} from '$lib/remote/equipment';
+	} from '$lib/remote/equipment.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { searchMembers, getStaffSlots, checkConflicts, createReservation } from '$lib/remote/reservations';
+	import { searchMembers, getStaffSlots, checkConflicts, createReservation } from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';

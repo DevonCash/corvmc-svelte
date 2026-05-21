@@ -10,7 +10,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import { purchaseTickets } from '$lib/remote/events';
+	import { purchaseTickets } from '$lib/remote/events.remote';
 
 	let { data }: { data: {
 		event: {

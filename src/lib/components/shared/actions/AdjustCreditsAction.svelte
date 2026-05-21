@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { adjustCredits } from '$lib/remote/users';
+	import { adjustCredits } from '$lib/remote/users.remote';
 
 	let {
 		userId,

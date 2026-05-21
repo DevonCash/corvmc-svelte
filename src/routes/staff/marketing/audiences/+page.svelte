@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getAudiences } from '$lib/remote/marketing';
+	import { getAudiences } from '$lib/remote/marketing.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';

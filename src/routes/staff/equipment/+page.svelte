@@ -12,7 +12,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { addCategory, editCategory } from '$lib/remote/equipment';
+	import { addCategory, editCategory } from '$lib/remote/equipment.remote';
 	import { equipmentStatuses, pricingTiers } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';

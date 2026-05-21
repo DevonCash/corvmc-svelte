@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import { getAudienceOptions, getPreview, createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing';
+	import { getAudienceOptions, getPreview, createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');

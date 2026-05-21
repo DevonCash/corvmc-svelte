@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { inviteByEmailApi } from '$lib/remote/bands';
+	import { inviteByEmailApi } from '$lib/remote/bands.remote';
 
 	let {
 		bandId,

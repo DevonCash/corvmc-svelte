@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getBandSlots, getBandMembershipStatus, bookBandReservation } from '$lib/remote/reservations';
+	import { getBandSlots, getBandMembershipStatus, bookBandReservation } from '$lib/remote/reservations.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { addSubscriber } from '$lib/remote/marketing';
+	import { addSubscriber } from '$lib/remote/marketing.remote';
 
 	let {
 		audienceId,

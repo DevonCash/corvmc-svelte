@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe('deleteBand', () => {
 	it('deletes the band', async () => {
-		const { deleteBand } = await import('$lib/remote/bands') as any;
+		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
 
 		const result = await deleteBand({});
 
@@ -72,14 +72,14 @@ describe('deleteBand', () => {
 
 	it('rejects non-owner users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { deleteBand } = await import('$lib/remote/bands') as any;
+		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { deleteBand } = await import('$lib/remote/bands') as any;
+		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});

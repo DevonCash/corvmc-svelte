@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
-import { requireBandAdmin } from '$lib/remote/_band-context';
+import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
 	listBands,

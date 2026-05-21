@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { updateClosure } from '$lib/remote/closures';
+	import { updateClosure } from '$lib/remote/closures.remote';
 
 	let {
 		closureId,

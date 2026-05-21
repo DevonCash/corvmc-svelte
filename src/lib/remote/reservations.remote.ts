@@ -33,7 +33,7 @@ import {
 import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
-import { requireBandMember } from '$lib/remote/_band-context';
+import { requireBandMember } from '$lib/server/band/band-context';
 
 // ===========================================================================
 // Queries

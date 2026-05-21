@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconDeviceFloppy, IconPlus, IconTrash } from '@tabler/icons-svelte';
-	import { getBandProfile, getGenreSuggestions, saveBandProfile } from '$lib/remote/directory';
+	import { getBandProfile, getGenreSuggestions, saveBandProfile } from '$lib/remote/directory.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';

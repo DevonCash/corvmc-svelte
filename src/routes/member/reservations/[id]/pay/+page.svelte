@@ -5,7 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { ReservationPayResponse } from '$lib/server/db/schema/api';
-	import { payReservation } from '$lib/remote/reservations';
+	import { payReservation } from '$lib/remote/reservations.remote';
 
 	let { data }: { data: ReservationPayResponse } = $props();
 

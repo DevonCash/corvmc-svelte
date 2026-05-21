@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { removeBandMember } from '$lib/remote/bands';
+	import { removeBandMember } from '$lib/remote/bands.remote';
 
 	let {
 		bandId,
