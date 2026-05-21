@@ -154,7 +154,7 @@
 			<Form.Step valid={step1Valid}>
 				<Form.Field
 					name="date"
-					label="Date"
+					label=""
 					type="calendar"
 					bind:value={date}
 					isDateUnavailable={isDateUnavailable}
