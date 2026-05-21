@@ -5,15 +5,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/server/db', () => ({
+	getRowCount: (result: unknown) => {
+		const r = result as { meta?: { changes?: number } };
+		return r?.meta?.changes ?? 0;
+	},
 	db: {
-		select: vi.fn(),
-		insert: vi.fn(),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => Promise.resolve({ rowCount: 1 }))
-			}))
-		})),
-		batch: vi.fn()
+			select: vi.fn(),
+			insert: vi.fn(),
+			update: vi.fn(() => ({
+				set: vi.fn(() => ({
+					where: vi.fn(() => Promise.resolve({ meta: { changes: 1 } }))
+				}))
+			})),
+			batch: vi.fn()
 	}
 }));
 
@@ -91,7 +95,7 @@ function setupBatchMock({
 
 	vi.mocked(db.update).mockReturnValue({
 		set: vi.fn().mockReturnValue({
-			where: vi.fn().mockResolvedValue({ rowCount: 1 })
+			where: vi.fn().mockResolvedValue({ meta: { changes: 1 } })
 		})
 	} as any);
 
@@ -226,7 +230,7 @@ describe('recurring-series-service', () => {
 
 	describe('cancel()', () => {
 		function setupCancelUpdate(rowCount: number) {
-			const where = vi.fn().mockResolvedValue({ rowCount });
+			const where = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
 			return { set };
@@ -261,7 +265,7 @@ describe('recurring-series-service', () => {
 		}
 
 		function setupUpdateForCancel(rowCount: number) {
-			const where = vi.fn().mockResolvedValue({ rowCount });
+			const where = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
 			return { set };

@@ -39,7 +39,7 @@ function chainable(result?: unknown[]) {
 					return resolve(selectResult);
 				};
 			}
-			if (prop === 'rowCount') return updateRowCount;
+			if (prop === 'meta') return { changes: updateRowCount };
 			return () => proxy;
 		}
 	});
@@ -62,35 +62,39 @@ const txMock = {
 		set: vi.fn((vals: Record<string, unknown>) => {
 			lastUpdateSet = vals;
 			return {
-				where: vi.fn(() => Promise.resolve({ rowCount: updateRowCount }))
+				where: vi.fn(() => Promise.resolve({ meta: { changes: updateRowCount } }))
 			};
 		})
 	})),
 	select: vi.fn(() => chainable())
 };
 
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chainable(),
-		insert: vi.fn(() => ({
-			values: vi.fn(() => ({
-				returning: vi.fn(() => Promise.resolve([{ ...mockEventRow }]))
-			}))
-		})),
-		update: vi.fn(() => ({
-			set: vi.fn((vals: Record<string, unknown>) => {
-				lastUpdateSet = vals;
-				return {
-					where: vi.fn(() => ({
-						returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }])),
-						then: (resolve: any) => resolve({ rowCount: updateRowCount })
-					}))
-				};
-			})
-		})),
-		transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
-	}
-}));
+vi.mock('$lib/server/db', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/db')>();
+	return {
+		...actual,
+		db: {
+			select: () => chainable(),
+			insert: vi.fn(() => ({
+				values: vi.fn(() => ({
+					returning: vi.fn(() => Promise.resolve([{ ...mockEventRow }]))
+				}))
+			})),
+			update: vi.fn(() => ({
+				set: vi.fn((vals: Record<string, unknown>) => {
+					lastUpdateSet = vals;
+					return {
+						where: vi.fn(() => ({
+							returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }])),
+							then: (resolve: any) => resolve({ meta: { changes: updateRowCount } })
+						}))
+					};
+				})
+			})),
+			transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
+		}
+	};
+});
 
 vi.mock('$lib/server/reservation/reservation-service', () => ({
 	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),

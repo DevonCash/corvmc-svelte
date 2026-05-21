@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db, getRowCount } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
@@ -177,8 +177,7 @@ export async function cancel(seriesId: string): Promise<void> {
 			)
 		);
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-	if (rowCount === 0) {
+	if (getRowCount(result) === 0) {
 		throw new RecurringSeriesError('Series not found or already cancelled');
 	}
 }
@@ -205,7 +204,7 @@ export async function cancelAllForUser(userId: string): Promise<number> {
 			)
 		);
 
-	return (result as unknown as { rowCount: number }).rowCount ?? 0;
+	return getRowCount(result);
 }
 
 // ---------------------------------------------------------------------------

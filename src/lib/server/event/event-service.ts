@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db, getRowCount } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -325,8 +325,7 @@ export async function publish(eventId: string): Promise<void> {
 		.set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() })
 		.where(and(eq(event.id, eventId), eq(event.status, 'draft')));
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-	if (rowCount === 0) {
+	if (getRowCount(result) === 0) {
 		const existing = await getById(eventId);
 		if (!existing) throw new Error('Event not found');
 		throw new Error(`Cannot publish an event with status "${existing.status}"`);
@@ -375,8 +374,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 			)
 		);
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-	if (rowCount === 0) throw new Error('Event status changed concurrently');
+	if (getRowCount(result) === 0) throw new Error('Event status changed concurrently');
 
 	// Cancel linked reservation if present
 	if (existing.reservationId) {

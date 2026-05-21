@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, lt, ne, gt, isNotNull, inArray, sql } from 'drizzle-orm';
 import { hasConflict, validateBooking } from './conflict-service';
@@ -177,8 +177,7 @@ export async function cancel(
 			)
 		);
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-	if (rowCount === 0) {
+	if (getRowCount(result) === 0) {
 		throw new Error('Reservation status changed concurrently');
 	}
 
@@ -217,6 +216,7 @@ export async function recordCashAndComplete(
 		.set({
 			status: 'completed',
 			stripePaymentRecordId,
+			paidAt: new Date(),
 			updatedAt: new Date()
 		})
 		.where(
@@ -226,8 +226,7 @@ export async function recordCashAndComplete(
 			)
 		);
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-	if (rowCount === 0) {
+	if (getRowCount(result) === 0) {
 		const [row] = await db
 			.select({ status: reservation.status })
 			.from(reservation)
@@ -255,7 +254,7 @@ export async function autoCompleteExpired(): Promise<number> {
 				lt(reservation.endsAt, now)
 			)
 		);
-	return (result as unknown as { rowCount: number }).rowCount ?? 0;
+	return getRowCount(result);
 }
 
 // ---------------------------------------------------------------------------
@@ -278,9 +277,7 @@ async function updateStatus(
 			)
 		);
 
-	const rowCount = (result as unknown as { rowCount: number }).rowCount ?? 0;
-
-	if (rowCount === 0) {
+	if (getRowCount(result) === 0) {
 		// Determine whether it's "not found" or "wrong status"
 		const [row] = await db
 			.select({ status: reservation.status })

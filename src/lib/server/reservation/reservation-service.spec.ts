@@ -9,13 +9,17 @@ const { txSelect, txInsert } = vi.hoisted(() => ({
 	txInsert: vi.fn()
 }));
 
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: txSelect,
-		insert: txInsert,
-		update: vi.fn()
-	}
-}));
+vi.mock('$lib/server/db', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/db')>();
+	return {
+		...actual,
+		db: {
+			select: txSelect,
+			insert: txInsert,
+			update: vi.fn()
+		}
+	};
+});
 
 vi.mock('./conflict-service', () => ({
 	validateBooking: vi.fn(),
@@ -102,7 +106,7 @@ describe('ReservationService', () => {
 		}
 
 		function setupUpdateMock(rowCount: number) {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 			return set;
@@ -244,7 +248,7 @@ describe('ReservationService', () => {
 
 	describe('confirm', () => {
 		function setupUpdateMock(rowCount: number, selectRow?: Record<string, unknown>) {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 
@@ -283,7 +287,7 @@ describe('ReservationService', () => {
 
 	describe('markComplete', () => {
 		function setupUpdateMock(rowCount: number, selectRow?: Record<string, unknown>) {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 
@@ -312,7 +316,7 @@ describe('ReservationService', () => {
 
 	describe('markNoShow', () => {
 		function setupUpdateMock(rowCount: number) {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 		}
@@ -336,7 +340,7 @@ describe('ReservationService', () => {
 
 	describe('recordCashAndComplete', () => {
 		function setupUpdateMock(rowCount: number) {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 		}
@@ -374,7 +378,7 @@ describe('ReservationService', () => {
 
 	describe('autoCompleteExpired', () => {
 		it('returns the number of rows updated', async () => {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount: 3 });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: 3 } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 
@@ -383,7 +387,7 @@ describe('ReservationService', () => {
 		});
 
 		it('returns 0 when no expired reservations', async () => {
-			const updateWhere = vi.fn().mockResolvedValue({ rowCount: 0 });
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: 0 } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 
