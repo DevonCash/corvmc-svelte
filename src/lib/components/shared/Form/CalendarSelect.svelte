@@ -68,7 +68,13 @@
 							{#each week as date (date.toString())}
 								<Calendar.Cell {date} month={month.value} class="flex-1 p-0.5">
 									<Calendar.Day
-										class="flex h-8 w-full items-center justify-center rounded-lg text-sm transition-colors hover:bg-base-200 data-[selected]:bg-primary data-[selected]:text-primary-content data-[disabled]:opacity-30 data-[unavailable]:text-error data-[unavailable]:line-through data-[unavailable]:opacity-50 data-[outside-month]:opacity-0"
+										class="flex h-8 w-full items-center justify-center rounded-lg text-sm transition-colors
+											border border-base-300 hover:bg-base-200
+											data-[today]:border-primary data-[today]:font-semibold
+											data-[selected]:bg-primary data-[selected]:text-primary-content data-[selected]:border-primary
+											data-[disabled]:opacity-30 data-[disabled]:border-transparent
+											data-[unavailable]:text-error data-[unavailable]:line-through data-[unavailable]:opacity-40 data-[unavailable]:border-transparent
+											data-[outside-month]:opacity-0"
 									/>
 								</Calendar.Cell>
 							{/each}
