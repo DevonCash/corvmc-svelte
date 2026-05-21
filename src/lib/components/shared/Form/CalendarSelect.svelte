@@ -70,11 +70,11 @@
 		const base =
 			'flex aspect-square w-full items-center justify-center rounded-md text-xs transition-colors';
 
-		if (selected) return `${base} bg-primary text-primary-content border border-primary`;
+		if (selected) return `${base} cursor-pointer bg-primary text-primary-content border border-primary`;
 		if (outOfRange) return `${base} opacity-30`;
 		if (unavailable) return `${base} text-error line-through opacity-40`;
-		if (isToday) return `${base} border-2 border-primary font-semibold hover:bg-base-200`;
-		return `${base} border border-base-300 hover:bg-base-200`;
+		if (isToday) return `${base} cursor-pointer border-2 border-primary font-semibold hover:bg-base-200`;
+		return `${base} cursor-pointer border border-base-300 hover:bg-base-200`;
 	}
 </script>
 
