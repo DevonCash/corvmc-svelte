@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { base } from '$app/paths';
 	import {
+		getAvailableDates,
 		getMemberSlots,
 		getMembershipStatus,
 		bookAndPayReservation
@@ -9,8 +11,18 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
+	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
-	let date = $state(new Date().toISOString().split('T')[0]);
+	const tz = getLocalTimeZone();
+
+	let availableDates = $derived(await getAvailableDates());
+	const availableSet = $derived(new Set(availableDates));
+
+	function isDateUnavailable(d: DateValue): boolean {
+		return !availableSet.has(d.toString());
+	}
+
+	let date = $state(today(tz).toString());
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
@@ -106,7 +118,7 @@
 	});
 
 	function resetForm() {
-		date = new Date().toISOString().split('T')[0];
+		date = today(tz).toString();
 		startTime = '';
 		endTime = '';
 		notes = '';
@@ -136,7 +148,15 @@
 	{#snippet form({ close })}
 		<svelte:boundary>
 			<Form.Step valid={step1Valid}>
-				<Form.Field name="date" label="Date" type="date" bind:value={date} required />
+				<Form.Field
+					name="date"
+					label="Date"
+					type="calendar"
+					bind:value={date}
+					isDateUnavailable={isDateUnavailable}
+					minValue={today(tz)}
+					maxValue={today(tz).add({ days: 14 })}
+				/>
 
 				<div class="grid grid-cols-2 gap-2">
 					<Form.Field
@@ -235,7 +255,7 @@
 				{#if !isSustainingMember}
 					<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
 						Sustaining members get free rehearsal hours every month.
-						<a href="/member/membership" target="_blank" class="link link-primary">Learn more</a>
+						<a href="{base}/member/membership" target="_blank" class="link link-primary">Learn more</a>
 					</div>
 				{/if}
 			</Form.Step>

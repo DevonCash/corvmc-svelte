@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
 	import TagInput from './TagInput.svelte';
+	import CalendarSelect from './CalendarSelect.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import { getFormContext } from './Form.svelte';
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
-	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file';
+	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file' | 'calendar';
 
 	let {
 		label,
@@ -66,7 +67,7 @@
 		{_label}
 	</legend>
 	{#if issues}
-		{#each issues as issue}
+		{#each issues as issue (issue.message)}
 			<p class="text-sm text-error">{issue.message}</p>
 		{/each}
 	{:else if description}
@@ -86,6 +87,8 @@
 		></textarea>
 	{:else if type === 'tags'}
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
+	{:else if type === 'calendar'}
+		<CalendarSelect {...rest} name={_name} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2 items-center">
 			<input type="checkbox" class="checkbox shrink-0" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
@@ -113,7 +116,7 @@
 				hidden.value = JSON.stringify(value);
 			}}
 		>
-			{#each rest.options as option}
+			{#each rest.options as option (option.value)}
 				<option value={option.value} selected={Array.isArray(value) && value.includes(option.value)}>
 					{option.label}
 				</option>
@@ -124,7 +127,7 @@
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}
-			{#each rest.options as option}
+			{#each rest.options as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>

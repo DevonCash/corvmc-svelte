@@ -77,6 +77,37 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 	};
 });
 
+/** Member: dates with bookable availability in the next N days. */
+export const getAvailableDates = query(async () => {
+	const config = await getReservationConfig();
+	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
+	const days = Math.ceil(config.maxAdvanceDaysOneoff);
+	const today = new Date();
+	const tz = 'America/Los_Angeles';
+	const todayStr = today.toLocaleDateString('en-CA', { timeZone: tz });
+
+	const results: string[] = [];
+	for (let i = 0; i <= days; i++) {
+		const d = new Date(todayStr + 'T00:00:00');
+		d.setDate(d.getDate() + i);
+		const dateStr = d.toISOString().split('T')[0];
+		const slots = await getAvailableSlots(d);
+
+		let maxRun = 0;
+		let run = 0;
+		for (const s of slots) {
+			if (s.available) {
+				run++;
+				if (run > maxRun) maxRun = run;
+			} else {
+				run = 0;
+			}
+		}
+		if (maxRun >= minSlots) results.push(dateStr);
+	}
+	return results;
+});
+
 /** Member: available slots + config + recurring frequencies for a given date. */
 export const getMemberSlots = query(z.string(), async (dateParam) => {
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
