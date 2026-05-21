@@ -68,7 +68,7 @@
 							{#each week as date (date.toString())}
 								<Calendar.Cell {date} month={month.value} class="flex-1 p-0.5">
 									<Calendar.Day
-										class="flex h-8 w-full items-center justify-center rounded-lg text-sm transition-colors
+										class="flex aspect-square w-full items-center justify-center rounded-lg text-sm transition-colors
 											border border-base-300 hover:bg-base-200
 											data-[today]:border-primary data-[today]:font-semibold
 											data-[selected]:bg-primary data-[selected]:text-primary-content data-[selected]:border-primary
