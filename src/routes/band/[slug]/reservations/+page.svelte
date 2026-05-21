@@ -9,7 +9,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import { cancelBandReservation } from './data.remote';
+	import { cancelBandReservation } from '$lib/remote/reservations';
 	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse & BandReservationsResponse } = $props();

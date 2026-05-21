@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { removeBandMember } from '$lib/remote/bands';
 
 	let {
 		bandId,
@@ -21,11 +21,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/bands/${bandId}/members/${memberId}`, { method: 'DELETE' })}
+	action={removeBandMember}
 	label="Remove"
-	confirm={`Remove ${name} from this band?`}
+	modalTitle="Confirm"
 	successToast="Member removed"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="memberId" value={memberId} />
+		<p class="py-4">Remove {name} from this band?</p>
+	{/snippet}
+</Action>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } from './data.remote';
+	import { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } from '$lib/remote/users';
 	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';

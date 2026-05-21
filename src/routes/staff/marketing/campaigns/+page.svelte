@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getCampaigns } from './data.remote';
+	import { getCampaigns } from '$lib/remote/marketing';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';

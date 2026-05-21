@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { createBandApi } from '$lib/remote/bands';
 	import { Field } from '../Form';
 	import SearchSelect from '../Form/SearchSelect.svelte';
 
@@ -15,32 +15,20 @@
 		[key: string]: unknown;
 	} = $props();
 
-	let name = $state('');
-	let bio = $state('');
 	let selectedOwner = $state<{ id: string; name: string; email: string } | null>(null);
 
 	async function searchUsers(q: string): Promise<{ id: string; name: string; email: string }[]> {
 		const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
 		return res.json();
 	}
-
-	async function execute() {
-		const result = await actionFetch('/api/bands', {
-			body: { name: name.trim(), bio: bio.trim() || undefined, ownerId: selectedOwner!.id }
-		});
-		name = '';
-		bio = '';
-		selectedOwner = null;
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={createBandApi}
 	label="New Band"
 	modalTitle="New Band"
 	submitLabel="Create Band"
-	canSubmit={!!name.trim() && !!selectedOwner}
+	canSubmit={!!selectedOwner}
 	maxWidth="max-w-md"
 	successToast="Band created"
 	class={className}
@@ -52,8 +40,11 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<Field name="name" type="text" label="Name" bind:value={name} />
-		<Field name="bio" type="textarea" label="Bio" bind:value={bio} />
+		{#if selectedOwner}
+			<input type="hidden" name="ownerId" value={selectedOwner.id} />
+		{/if}
+		<Field name="name" type="text" label="Name" />
+		<Field name="bio" type="textarea" label="Bio" />
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Owner</legend>
 			<SearchSelect

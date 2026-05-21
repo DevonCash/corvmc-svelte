@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { removeSubscriber } from '$lib/remote/marketing';
 
 	let {
 		audienceId,
@@ -21,11 +21,17 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/marketing/audiences/${audienceId}/subscribers/${subscriberId}`, { method: 'DELETE' })}
+	action={removeSubscriber}
 	label="Remove"
-	confirm={`Remove ${email} from this audience?`}
+	modalTitle="Confirm"
 	successToast="Subscriber removed"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="audienceId" value={audienceId} />
+		<input type="hidden" name="subscriberId" value={subscriberId} />
+		<p class="py-4">Remove {email} from this audience?</p>
+	{/snippet}
+</Action>

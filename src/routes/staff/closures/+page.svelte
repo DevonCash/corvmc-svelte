@@ -9,12 +9,9 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { UpdateClosureAction, DeleteClosureAction } from '$lib/components/shared/actions';
-	import { createClosure } from './data.remote';
-	import type { StaffClosuresResponse } from '$lib/server/db/schema/api';
+	import { getClosures, createClosure } from '$lib/remote/closures';
 
-	let { data }: { data: StaffClosuresResponse } = $props();
-
-	const closures = $derived(data.closures);
+	let closures = $derived(await getClosures());
 
 	let editId = $state<string | null>(null);
 	let editReason = $state('');

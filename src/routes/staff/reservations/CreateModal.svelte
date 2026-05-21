@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { searchMembers, getSlots, checkConflicts, createReservation } from './data.remote';
+	import { searchMembers, getStaffSlots, checkConflicts, createReservation } from '$lib/remote/reservations';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';
@@ -15,7 +15,7 @@
 	let notes = $state('');
 
 	const startOptions = $derived.by(async () => {
-		const data = await getSlots(date);
+		const data = await getStaffSlots(date);
 		return data.slots.map((s) => ({
 			value: s.startTime,
 			label: formatSlotTime(s.startTime),
@@ -25,7 +25,7 @@
 
 	const endOptions = $derived.by(async () => {
 		if (!startTime) return [];
-		const data = await getSlots(date);
+		const data = await getStaffSlots(date);
 
 		const opts: Array<{ value: string; label: string; available: boolean }> = [];
 		const startIdx = data.slots.findIndex((s) => s.startTime === startTime);
@@ -71,25 +71,14 @@
 </script>
 
 <Action
-	action={async () => {
-		const result = await createReservation({
-			memberId: selectedMember!.id,
-			date,
-			startTime,
-			endTime,
-			notes: notes || undefined
-		});
-		resetForm();
-		return result;
-	}}
+	action={createReservation}
 	label="New Reservation"
 	modalTitle="New Reservation"
 	submitLabel="Create Reservation"
-	canSubmit={!!selectedMember && !!date && !!startTime && !!endTime}
 	class="btn-primary btn-sm"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
-		toast.success('Reservation created');
+		resetForm();
 		const r = result as { reservationId?: string };
 		await invalidateAll();
 		if (r?.reservationId) goto(`/staff/reservations/${r.reservationId}`);
@@ -97,6 +86,12 @@
 >
 	{#snippet form({ close })}
 		<svelte:boundary>
+			<input type="hidden" name="memberId" value={selectedMember?.id ?? ''} />
+			<input type="hidden" name="date" value={date} />
+			<input type="hidden" name="startTime" value={startTime} />
+			<input type="hidden" name="endTime" value={endTime} />
+			<input type="hidden" name="notes" value={notes} />
+
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Member</legend>
 				<SearchSelect

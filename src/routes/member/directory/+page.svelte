@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getMembers, getBands, getInstrumentSuggestions, getGenreSuggestions } from './data.remote';
+	import { getDirectoryMembers, getDirectoryBands, getInstrumentSuggestions, getGenreSuggestions } from '$lib/remote/directory';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
@@ -23,8 +23,8 @@
 		lookingForMembers: lookingForMembers ? 'true' : undefined
 	});
 
-	let members = $derived(await getMembers(filters));
-	let bands = $derived(await getBands(filters));
+	let members = $derived(await getDirectoryMembers(filters));
+	let bands = $derived(await getDirectoryBands(filters));
 	let instrumentSuggestions = $derived(await getInstrumentSuggestions());
 	let genreSuggestions = $derived(await getGenreSuggestions());
 

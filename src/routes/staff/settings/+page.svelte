@@ -9,7 +9,7 @@
 		getIntegrationSettings,
 		updateIntegrationSettings,
 		testUtecConnection
-	} from './data.remote';
+	} from '$lib/remote/settings';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';

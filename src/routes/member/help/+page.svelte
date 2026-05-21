@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getCategories, search } from './data.remote';
+	import { getMemberCategories } from '$lib/remote/help';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -16,7 +16,7 @@
 		IconTool
 	} from '@tabler/icons-svelte';
 
-	let categories = $derived(await getCategories());
+	let categories = $derived(await getMemberCategories());
 
 	const iconMap: Record<string, typeof IconBook> = {
 		book: IconBook,

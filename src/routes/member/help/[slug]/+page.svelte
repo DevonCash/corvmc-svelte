@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getArticle, getCategories } from '../data.remote';
+	import { getMemberArticle, getMemberCategories } from '$lib/remote/help';
 	import { extractHeadings } from '$lib/utils/markdown';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -8,8 +8,8 @@
 	import TableOfContents from '$lib/components/help/TableOfContents.svelte';
 
 	let slug = $derived(page.params.slug!);
-	let article = $derived(await getArticle(slug));
-	let categories = $derived(await getCategories());
+	let article = $derived(await getMemberArticle(slug));
+	let categories = $derived(await getMemberCategories());
 
 	let headings = $derived(extractHeadings(article.content));
 	let category = $derived(categories.find((c) => c.id === article.categoryId));

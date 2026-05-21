@@ -150,7 +150,7 @@ describe('/staff/users list load', () => {
 });
 
 // ---------------------------------------------------------------------------
-// User detail load (tests data.remote.ts query functions)
+// User detail load (tests $lib/remote/users query functions)
 // ---------------------------------------------------------------------------
 
 let _insideHandler = false;
@@ -211,7 +211,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } = await import('./users/[id]/data.remote');
+const { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } = await import('$lib/remote/users');
 
 describe('/staff/users/[id] detail load', () => {
 	it('returns user with roles and all available roles', async () => {

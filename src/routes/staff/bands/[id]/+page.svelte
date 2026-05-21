@@ -2,13 +2,15 @@
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
-		getBand,
-		getBandMembers,
+		getStaffBand as getBand,
+		getStaffBandMembers as getBandMembers,
 		getBandReservations,
-		updateBand,
+		updateStaffBand as updateBand,
 		updateMemberRole,
-		getPlatformInvites
-	} from './data.remote';
+		getStaffPlatformInvites as getPlatformInvites,
+		deactivateBand,
+		reactivateBand
+	} from '$lib/remote/bands';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -22,8 +24,8 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
+	import Action from '$lib/components/shared/Action.svelte';
 	import {
-		ActivateToggleAction,
 		InviteByEmailAction,
 		InviteMemberAction,
 		RevokeInviteAction,
@@ -85,13 +87,33 @@
 				</dl>
 
 				<div class="mt-4 flex gap-2">
-					<ActivateToggleAction
-						entityType="bands"
-						entityId={id}
-						{isDeactivated}
-						entityLabel="Band"
-						deactivateWarning="Deactivate this band? All future reservations will be cancelled."
-					/>
+					{#if isDeactivated}
+						<Action
+							action={reactivateBand}
+							label="Reactivate"
+							successToast="Band reactivated"
+							class="btn-success btn-sm"
+							onsuccess={() => { void getBand(id).refresh(); }}
+						>
+							{#snippet form({ close })}
+								<input type="hidden" name="id" value={id} />
+								<p class="py-4">Reactivate this band?</p>
+							{/snippet}
+						</Action>
+					{:else}
+						<Action
+							action={deactivateBand}
+							label="Deactivate"
+							successToast="Band deactivated"
+							class="btn-error btn-sm"
+							onsuccess={() => { void getBand(id).refresh(); }}
+						>
+							{#snippet form({ close })}
+								<input type="hidden" name="id" value={id} />
+								<p class="py-4">Deactivate this band? All future reservations will be cancelled.</p>
+							{/snippet}
+						</Action>
+					{/if}
 				</div>
 			</InfoCard>
 		</div>
@@ -118,14 +140,18 @@
 			<Column key="role" header="Role" shrink stopClick>
 				{#snippet cell(_, m)}
 					{#if m.role !== 'owner' && m.status === 'active'}
-						<select
-							class="select select-bordered select-xs"
-							value={m.role}
-							onchange={(e) => updateMemberRole({ memberId: m.id, role: e.currentTarget.value as 'admin' | 'member' })}
-						>
-							<option value="member">Member</option>
-							<option value="admin">Admin</option>
-						</select>
+						<Form remote={updateMemberRole} onsuccess={() => toast.success('Role updated')} onfailure={() => toast.error('Failed to update role')}>
+							<input type="hidden" name="memberId" value={m.id} />
+							<select
+								class="select select-bordered select-xs"
+								name="role"
+								value={m.role}
+								onchange={(e) => e.currentTarget.form?.requestSubmit()}
+							>
+								<option value="member">Member</option>
+								<option value="admin">Admin</option>
+							</select>
+						</Form>
 					{:else}
 						<Badge variant="outline">{m.role}</Badge>
 					{/if}

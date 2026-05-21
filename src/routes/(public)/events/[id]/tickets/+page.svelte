@@ -2,12 +2,13 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Alert from '$lib/components/shared/Alert.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { purchaseTickets } from './data.remote';
+	import { purchaseTickets } from '$lib/remote/events';
 
 	let { data }: { data: any } = $props();
 
@@ -15,8 +16,6 @@
 	let attendeeName = $state('');
 	let attendeeEmail = $state('');
 	let coverFees = $state(false);
-	let submitting = $state(false);
-	let errorMsg = $state('');
 
 	const evt = $derived(data!.event);
 	const unitPrice = $derived(evt.ticketPrice);
@@ -29,33 +28,13 @@
 		data.remaining !== null ? Math.min(data.remaining, 10) : 10
 	);
 
-	async function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		if (!attendeeName || !attendeeEmail) return;
-		submitting = true;
-		errorMsg = '';
-
-		try {
-			const result = await purchaseTickets({
-				eventId: page.params.id!,
-				quantity,
-				attendeeName: attendeeName.trim(),
-				attendeeEmail: attendeeEmail.trim(),
-				coverFees
-			});
-
-			if (result?.redirectUrl) {
-				if (result.redirectUrl.startsWith('http')) {
-					window.location.href = result.redirectUrl;
-				} else {
-					await goto(result.redirectUrl);
-				}
+	async function handlePurchaseSuccess(result?: { redirectUrl?: string }) {
+		if (result?.redirectUrl) {
+			if (result.redirectUrl.startsWith('http')) {
+				window.location.href = result.redirectUrl;
+			} else {
+				await goto(result.redirectUrl);
 			}
-		} catch (err) {
-			errorMsg = err instanceof Error ? err.message : 'Something went wrong';
-			toast.error(errorMsg);
-		} finally {
-			submitting = false;
 		}
 	}
 </script>
@@ -98,13 +77,14 @@
 	{#if soldOut}
 		<div class="alert alert-warning">This event is sold out.</div>
 	{:else}
-		<form onsubmit={handleSubmit}>
+		<Form
+			remote={purchaseTickets}
+			onsuccess={handlePurchaseSuccess}
+			onfailure={() => toast.error('Something went wrong')}
+		>
+			<input type="hidden" name="eventId" value={page.params.id} />
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
-					{#if errorMsg}
-						<Alert type="error">{errorMsg}</Alert>
-					{/if}
-
 					<Field label="Number of tickets" name="quantity">
 						<select
 							name="quantity"
@@ -134,16 +114,7 @@
 						{/if}
 					</div>
 
-					<button
-						type="submit"
-						class="btn btn-primary w-full"
-						disabled={submitting || !attendeeName || !attendeeEmail}
-					>
-						{#if submitting}
-							<span class="loading loading-spinner loading-sm"></span>
-						{/if}
-						Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}
-					</button>
+					<SubmitButton label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}" class="btn-primary w-full" />
 
 					{#if !data.isAuthenticated}
 						<p class="text-sm text-center opacity-60">
@@ -152,6 +123,6 @@
 					{/if}
 				</div>
 			</div>
-		</form>
+		</Form>
 	{/if}
 </div>

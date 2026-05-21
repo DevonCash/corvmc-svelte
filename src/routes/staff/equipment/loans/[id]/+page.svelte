@@ -3,9 +3,9 @@
 	import {
 		getLoan,
 		getAvailableEquipment,
-		schedule,
-		checkout
-	} from './data.remote';
+		scheduleLoanForm as schedule,
+		checkoutLoanForm as checkout
+	} from '$lib/remote/equipment';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -129,6 +129,7 @@
 			{#if loan.status === 'requested'}
 				<h4 class="text-sm font-semibold mb-3">Schedule Pickup</h4>
 				<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
+					<input type="hidden" name="loanId" value={id} />
 					{#if !loan.equipmentId}
 						<Field name="equipmentId" label="Assign Equipment">
 							<select class="select select-bordered w-full" name="equipmentId" required>
@@ -153,6 +154,7 @@
 			{:else if loan.status === 'scheduled'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Checked Out</h4>
 				<Form remote={checkout} successToast="Checked out" class="space-y-3">
+					<input type="hidden" name="loanId" value={id} />
 					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
 						<SubmitButton label="Check Out" class="btn-primary btn-sm" />

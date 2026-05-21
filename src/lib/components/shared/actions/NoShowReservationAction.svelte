@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { noShowReservation } from '$lib/remote/reservations';
 
 	let {
 		reservationId,
@@ -17,11 +17,15 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/reservations/${reservationId}/no-show`)}
+	action={noShowReservation}
 	label="No-Show"
-	confirm="Mark this reservation as a no-show?"
 	successToast="Marked as no-show"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={reservationId} />
+		<p class="py-4">Mark this reservation as a no-show?</p>
+	{/snippet}
+</Action>

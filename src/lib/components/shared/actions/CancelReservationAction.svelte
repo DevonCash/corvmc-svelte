@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cancelReservation } from '$lib/remote/reservations';
 
 	let {
 		reservationId,
@@ -16,48 +16,29 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
-
-	let reason = $state('');
-
-	function execute() {
-		const body = reason ? { reason } : undefined;
-		return actionFetch(`/api/reservations/${reservationId}/cancel`, { body });
-	}
-
-	function handleSuccess() {
-		reason = '';
-		(onsuccess ?? invalidateAll)();
-	}
 </script>
 
-{#if showReasonInput}
-	<Action
-		action={execute}
-		label="Cancel"
-		modalTitle="Cancel Reservation"
-		successToast="Cancelled"
-		class={className}
-		onsuccess={handleSuccess}
-		{...rest}
-	>
-		{#snippet form({ close })}
+<Action
+	action={cancelReservation}
+	label="Cancel"
+	modalTitle={showReasonInput ? 'Cancel Reservation' : undefined}
+	successToast="Cancelled"
+	class={className}
+	onsuccess={onsuccess ?? (() => invalidateAll())}
+	{...rest}
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={reservationId} />
+		{#if showReasonInput}
 			<p class="text-sm mb-3">Cancel this reservation?</p>
 			<input
 				type="text"
-				bind:value={reason}
+				name="reason"
 				placeholder="Reason (optional)"
 				class="input-bordered input input-sm w-full"
 			/>
-		{/snippet}
-	</Action>
-{:else}
-	<Action
-		action={execute}
-		label="Cancel"
-		confirm="Cancel this reservation?"
-		successToast="Cancelled"
-		class={className}
-		onsuccess={handleSuccess}
-		{...rest}
-	/>
-{/if}
+		{:else}
+			<p class="py-4">Cancel this reservation?</p>
+		{/if}
+	{/snippet}
+</Action>

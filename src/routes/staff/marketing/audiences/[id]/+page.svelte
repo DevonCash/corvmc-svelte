@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -16,9 +15,10 @@
 	import {
 		getAudienceDetail,
 		getAudienceSubscribers,
-		updateAudienceCommand
-	} from './data.remote';
+		updateAudience
+	} from '$lib/remote/marketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 
 	let id = $derived(page.params.id!);
 	let audienceData = $derived(await getAudienceDetail(id));
@@ -60,24 +60,27 @@
 
 			<InfoCard title="Actions">
 				<div class="space-y-3">
-					<BulkAddMembersAction audienceId={id} onsuccess={(result) => {
-						const r = result as { added?: number };
-						toast.success(`Added ${r?.added ?? 0} members`);
-					}} />
+					<BulkAddMembersAction audienceId={id} />
 
-					<label class="label cursor-pointer justify-start gap-3">
-						<input
-							type="checkbox"
-							class="toggle toggle-sm"
-							checked={audienceData.allowOptIn}
-							onchange={async (e) => {
-								const checked = (e.target as HTMLInputElement).checked;
-								await updateAudienceCommand({ allowOptIn: checked });
-								toast.success(checked ? 'Opt-in enabled' : 'Opt-in disabled');
-							}}
-						/>
-						<span class="text-sm">Allow public opt-in</span>
-					</label>
+					<Form
+						remote={updateAudience}
+						successToast="Opt-in setting updated"
+					>
+						<input type="hidden" name="id" value={id} />
+						<label class="label cursor-pointer justify-start gap-3">
+							<input
+								type="checkbox"
+								class="toggle toggle-sm"
+								name="allowOptIn"
+								value="true"
+								checked={audienceData.allowOptIn}
+								onchange={(e) => {
+									(e.target as HTMLInputElement).form?.requestSubmit();
+								}}
+							/>
+							<span class="text-sm">Allow public opt-in</span>
+						</label>
+					</Form>
 				</div>
 			</InfoCard>
 		</div>

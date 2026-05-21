@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getCategories, createArticleForm } from '../data.remote';
+	import { getStaffCategories, createArticle } from '$lib/remote/help';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -8,7 +8,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
 
-	let categories = $derived(await getCategories());
+	let categories = $derived(await getStaffCategories());
 
 	let titleValue = $state('');
 	let contentValue = $state('');
@@ -23,7 +23,7 @@
 <PageHeader title="New Article" subtitle="Help" backHref="/staff/help" />
 <PageContent width="3xl">
 	<Form
-		remote={createArticleForm}
+		remote={createArticle}
 		onsuccess={(result) => goto(`/staff/help/${result?.id}`)}
 	>
 		<div class="space-y-4">

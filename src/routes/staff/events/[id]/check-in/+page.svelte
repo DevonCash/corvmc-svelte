@@ -2,16 +2,16 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { CancelTicketAction } from '$lib/components/shared/actions';
-	import { checkInTicket } from './data.remote';
+	import { checkInTicket } from '$lib/remote/events';
 	import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffCheckInResponse } = $props();
 
 	let search = $state('');
-	let checkingIn = $state<string | null>(null);
 
 	const filteredTickets = $derived(
 		data.tickets.filter((t) => {
@@ -24,19 +24,6 @@
 			);
 		})
 	);
-
-	async function handleCheckIn(ticketId: string) {
-		checkingIn = ticketId;
-		try {
-			await checkInTicket({ ticketId });
-			toast.success('Checked in');
-			await invalidateAll();
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Check-in failed');
-		} finally {
-			checkingIn = null;
-		}
-	}
 </script>
 
 <PageHeader title="Check-in: {data.event.title}" backHref="/staff/events/{data.event.id}" />
@@ -79,16 +66,10 @@
 						{:else if ticket.status === 'cancelled'}
 							<StatusBadge status="cancelled" />
 						{:else}
-							<button
-								class="btn btn-primary btn-sm"
-								disabled={checkingIn === ticket.id}
-								onclick={() => handleCheckIn(ticket.id)}
-							>
-								{#if checkingIn === ticket.id}
-									<span class="loading loading-spinner loading-sm"></span>
-								{/if}
-								Check In
-							</button>
+							<Form remote={checkInTicket.for(ticket.id)} successToast="Checked in" onsuccess={() => invalidateAll()} class="inline">
+								<input type="hidden" name="ticketId" value={ticket.id} />
+								<SubmitButton label="Check In" class="btn-primary btn-sm" />
+							</Form>
 							<CancelTicketAction eventId={data.event.id} ticketId={ticket.id} attendeeName={ticket.attendeeName} />
 						{/if}
 					</div>

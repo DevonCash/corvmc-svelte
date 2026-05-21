@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { deleteClosure } from '$lib/remote/closures';
 
 	let {
 		closureId,
@@ -17,11 +17,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/staff/closures/${closureId}`, { method: 'DELETE' })}
+	action={deleteClosure}
 	label="Delete"
-	confirm="Delete this closure?"
+	modalTitle="Confirm"
 	successToast="Closure deleted"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={closureId} />
+		<p class="py-4">Delete this closure?</p>
+	{/snippet}
+</Action>

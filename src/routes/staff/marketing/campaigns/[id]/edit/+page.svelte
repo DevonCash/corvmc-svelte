@@ -10,9 +10,9 @@
 		getPreview,
 		saveDraft,
 		sendCampaignNow,
-		scheduleCampaignCommand,
-		deleteCampaignCommand
-	} from './data.remote';
+		scheduleCampaign,
+		deleteCampaign
+	} from '$lib/remote/marketing';
 
 	let id = $derived(page.params.id!);
 	let campaignData = $derived(await getCampaignDetail(id));
@@ -113,7 +113,7 @@
 				markdownBody,
 				audienceIds: selectedAudienceIds
 			});
-			await scheduleCampaignCommand({ scheduledFor: scheduleDate });
+			await scheduleCampaign({ scheduledFor: scheduleDate });
 			toast.success('Campaign scheduled');
 			goto(`/staff/marketing/campaigns/${id}`);
 		} catch (err) {
@@ -126,7 +126,7 @@
 	async function handleDelete() {
 		if (!window.confirm('Delete this draft campaign?')) return;
 		try {
-			await deleteCampaignCommand({});
+			await deleteCampaign({});
 			toast.success('Campaign deleted');
 			goto('/staff/marketing/campaigns');
 		} catch (err) {

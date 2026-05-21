@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { subscribe } from '$lib/remote/account';
 
 	let {
 		audienceId,
@@ -19,10 +19,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/me/subscriptions/${audienceId}`)}
+	action={subscribe}
 	label="Subscribe"
+	modalTitle="Subscribe"
 	successToast={`Subscribed to ${name}`}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="audienceId" value={audienceId} />
+		<p class="py-4">Subscribe to {name}?</p>
+	{/snippet}
+</Action>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { bulkAddMembers } from '$lib/remote/marketing';
 
 	let {
 		audienceId,
@@ -17,9 +17,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/marketing/audiences/${audienceId}/bulk-add`)}
+	action={bulkAddMembers}
 	label="Add all active members"
+	modalTitle="Confirm"
+	successToast="Members added"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="audienceId" value={audienceId} />
+		<p class="py-4">Add all active members to this audience?</p>
+	{/snippet}
+</Action>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import { actionFetch } from './api';
+	import { createAudience } from '$lib/remote/marketing';
 	import { Field } from '../Form';
 
 	let {
@@ -28,27 +28,10 @@
 				.replace(/^-|-$/g, '');
 		}
 	});
-
-	function execute() {
-		const result = actionFetch('/api/marketing/audiences', {
-			body: {
-				name: name.trim(),
-				slug: slug.trim() || undefined,
-				description: description.trim() || undefined,
-				allowOptIn
-			}
-		});
-		name = '';
-		slug = '';
-		description = '';
-		allowOptIn = false;
-		slugManuallyEdited = false;
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={createAudience}
 	label="New Audience"
 	modalTitle="New Audience"
 	submitLabel="Create Audience"
@@ -56,7 +39,14 @@
 	successToast="Audience created"
 	class={className}
 	maxWidth="max-w-md"
-	{onsuccess}
+	onsuccess={(result) => {
+		name = '';
+		slug = '';
+		description = '';
+		allowOptIn = false;
+		slugManuallyEdited = false;
+		onsuccess?.(result);
+	}}
 	{...rest}
 >
 	{#snippet form({ close })}
@@ -65,6 +55,7 @@
 			<legend class="fieldset-legend">Slug</legend>
 			<input
 				type="text"
+				name="slug"
 				bind:value={slug}
 				placeholder="newsletter"
 				class="input-bordered input w-full font-mono text-sm"

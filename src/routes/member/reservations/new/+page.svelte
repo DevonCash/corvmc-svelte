@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getSlots, getMembershipStatus, bookReservation } from './data.remote';
+	import { getMemberSlots, getMembershipStatus, bookMemberReservation } from '$lib/remote/reservations';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -14,7 +14,7 @@
 		page.url.searchParams.get('date') ?? new Date().toISOString().split('T')[0]
 	);
 
-	let slotData = $derived(await getSlots(dateParam));
+	let slotData = $derived(await getMemberSlots(dateParam));
 
 	const slots = $derived(slotData.slots);
 	const currentDate = $derived(slotData.date);
@@ -111,11 +111,11 @@
 		</div>
 
 		<Form
-			remote={bookReservation}
+			remote={bookMemberReservation}
 			{initial}
 			onfailure={() => toast.error('Booking failed')}
 			onsuccess={() => {
-				const id = bookReservation.result?.reservationId;
+				const id = bookMemberReservation.result?.reservationId;
 				if (id) goto(`/member/reservations/${id}/pay`);
 			}}
 		>
@@ -126,7 +126,7 @@
 				<label class="label" for="startTime">
 					<span class="label-text">Start time</span>
 				</label>
-				{#each bookReservation.fields.startTime.issues() ?? [] as issue}
+				{#each bookMemberReservation.fields.startTime.issues() ?? [] as issue}
 					<p class="text-error text-sm">{issue.message}</p>
 				{/each}
 				<select
@@ -150,7 +150,7 @@
 				<label class="label" for="endTime">
 					<span class="label-text">End time</span>
 				</label>
-				{#each bookReservation.fields.endTime.issues() ?? [] as issue}
+				{#each bookMemberReservation.fields.endTime.issues() ?? [] as issue}
 					<p class="text-error text-sm">{issue.message}</p>
 				{/each}
 				<select

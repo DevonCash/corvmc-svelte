@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { transferOwnership } from '$lib/remote/bands';
 
 	let {
 		bandId,
@@ -21,11 +21,17 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/bands/${bandId}/transfer-ownership`, { body: { newOwnerId } })}
+	action={transferOwnership}
 	label="Make owner"
-	confirm={`Transfer ownership to ${name}? The current owner will be demoted to admin.`}
+	modalTitle="Confirm"
 	successToast="Ownership transferred"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="bandId" value={bandId} />
+		<input type="hidden" name="newOwnerId" value={newOwnerId} />
+		<p class="py-4">Transfer ownership to {name}? The current owner will be demoted to admin.</p>
+	{/snippet}
+</Action>

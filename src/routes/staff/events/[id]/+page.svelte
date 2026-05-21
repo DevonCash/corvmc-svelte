@@ -3,10 +3,12 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { PublishEventAction, UnpublishEventAction, CancelEventAction, CompTicketsAction } from '$lib/components/shared/actions';
-	import { updateEvent, checkRebook, checkConflicts } from './data.remote';
+	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -33,7 +35,6 @@
 	let editTicketingEnabled = $state(false);
 	let editTicketPriceDollars = $state('');
 	let editTicketQuantity = $state('');
-	let saving = $state(false);
 
 	// Rebook state
 	let rebookNeeded = $state(false);
@@ -42,6 +43,13 @@
 	let overrideConflicts = $state(false);
 
 	let hasConflicts = $state(false);
+
+	// Compute ticket price in cents for hidden field
+	const editTicketPriceCents = $derived(
+		editTicketingEnabled && editTicketPriceDollars
+			? String(Math.round(parseFloat(editTicketPriceDollars) * 100))
+			: ''
+	);
 
 	function startEditing() {
 		editTitle = evt.title;
@@ -109,42 +117,11 @@
 		}
 	}
 
-	async function saveEdits() {
-		if (!editTitle || !editDate || !editStartTime || !editEndTime) return;
-		saving = true;
-
-		try {
-			await updateEvent({
-				eventId: evt.id,
-				title: editTitle,
-				description: editDescription || null,
-				tags: editTags || null,
-				eventDate: editDate,
-				eventStartTime: editStartTime,
-				eventEndTime: editEndTime,
-				doorsTime: editDoorsTime || null,
-				ticketingEnabled: editTicketingEnabled,
-				ticketPrice: editTicketingEnabled && editTicketPriceDollars
-					? Math.round(parseFloat(editTicketPriceDollars) * 100)
-					: null,
-				ticketQuantity: editTicketingEnabled && editTicketQuantity
-					? parseInt(editTicketQuantity, 10)
-					: null,
-				rebookReservation: rebookNeeded && rebookConfirmed,
-				reservationStartTime: editReservationStartTime || undefined,
-				reservationEndTime: editReservationEndTime || undefined,
-				overrideConflicts
-			});
-			toast.success('Updated');
-			editing = false;
-			rebookNeeded = false;
-			rebookConfirmed = false;
-			await invalidateAll();
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update');
-		} finally {
-			saving = false;
-		}
+	async function handleUpdateSuccess() {
+		editing = false;
+		rebookNeeded = false;
+		rebookConfirmed = false;
+		await invalidateAll();
 	}
 
 	async function handlePosterUpload(e: Event) {
@@ -221,130 +198,141 @@
 				<div class="card-body space-y-4">
 					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
 
-					<FormField label="Title" id="editTitle" issues={[]}>
-						<input id="editTitle" type="text" bind:value={editTitle} class="input input-bordered w-full" required />
-					</FormField>
+					<Form remote={updateEvent} successToast="Updated" onsuccess={handleUpdateSuccess}>
+						<input type="hidden" name="eventId" value={evt.id} />
+						<input type="hidden" name="ticketingEnabled" value={editTicketingEnabled ? 'on' : 'off'} />
+						{#if editTicketingEnabled}
+							<input type="hidden" name="ticketPrice" value={editTicketPriceCents} />
+						{/if}
+						{#if rebookNeeded && rebookConfirmed}
+							<input type="hidden" name="rebookReservation" value="on" />
+						{/if}
+						{#if overrideConflicts}
+							<input type="hidden" name="overrideConflicts" value="on" />
+						{/if}
 
-					<FormField label="Description" id="editDesc" issues={[]}>
-						<textarea id="editDesc" bind:value={editDescription} class="textarea textarea-bordered w-full" rows="4"></textarea>
-					</FormField>
+						<div class="space-y-4">
+							<FormField label="Title" id="editTitle" issues={[]}>
+								<input id="editTitle" name="title" type="text" bind:value={editTitle} class="input input-bordered w-full" required />
+							</FormField>
 
-					<FormField label="Date" id="editDate" issues={[]}>
-						<input id="editDate" type="date" bind:value={editDate} class="input input-bordered w-full" required onchange={checkForRebook} />
-					</FormField>
+							<FormField label="Description" id="editDesc" issues={[]}>
+								<textarea id="editDesc" name="description" bind:value={editDescription} class="textarea textarea-bordered w-full" rows="4"></textarea>
+							</FormField>
 
-					<div class="grid grid-cols-2 gap-4">
-						<FormField label="Start time" id="editStartTime" issues={[]}>
-							<input id="editStartTime" type="time" bind:value={editStartTime} class="input input-bordered w-full" required onchange={checkForRebook} />
-						</FormField>
+							<FormField label="Date" id="editDate" issues={[]}>
+								<input id="editDate" name="eventDate" type="date" bind:value={editDate} class="input input-bordered w-full" required onchange={checkForRebook} />
+							</FormField>
 
-						<FormField label="End time" id="editEndTime" issues={[]}>
-							<input id="editEndTime" type="time" bind:value={editEndTime} class="input input-bordered w-full" required onchange={checkForRebook} />
-						</FormField>
-					</div>
-
-					<FormField label="Doors time" id="editDoorsTime" issues={[]}>
-						<input id="editDoorsTime" type="time" bind:value={editDoorsTime} class="input input-bordered w-full" />
-					</FormField>
-
-					<FormField label="Tags" id="editTags" issues={[]}>
-						<input id="editTags" type="text" bind:value={editTags} class="input input-bordered w-full" placeholder="e.g. open mic, workshop" />
-					</FormField>
-
-					<!-- Ticketing -->
-					<div class="form-control">
-						<label class="label cursor-pointer justify-start gap-3">
-							<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-							<span class="label-text">Enable ticketing</span>
-						</label>
-					</div>
-
-					{#if editTicketingEnabled}
-						<div class="card bg-base-200 p-4">
 							<div class="grid grid-cols-2 gap-4">
-								<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
-									<input
-										id="editTicketPrice"
-										type="number"
-										bind:value={editTicketPriceDollars}
-										min="0.01"
-										step="0.01"
-										placeholder="15.00"
-										class="input input-bordered w-full"
-										required
-									/>
+								<FormField label="Start time" id="editStartTime" issues={[]}>
+									<input id="editStartTime" name="eventStartTime" type="time" bind:value={editStartTime} class="input input-bordered w-full" required onchange={checkForRebook} />
 								</FormField>
 
-								<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
-									<input
-										id="editTicketQuantity"
-										type="number"
-										bind:value={editTicketQuantity}
-										min="1"
-										step="1"
-										placeholder="Unlimited"
-										class="input input-bordered w-full"
-									/>
+								<FormField label="End time" id="editEndTime" issues={[]}>
+									<input id="editEndTime" name="eventEndTime" type="time" bind:value={editEndTime} class="input input-bordered w-full" required onchange={checkForRebook} />
 								</FormField>
 							</div>
-							<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
-						</div>
-					{/if}
 
-					<!-- Rebook warning -->
-					{#if rebookNeeded}
-						<div class="alert alert-warning">
-							<div class="w-full space-y-3">
-								<p class="font-medium">Reservation needs rebooking</p>
-								<p class="text-sm">{rebookReason}. The existing reservation will be cancelled and a new one created.</p>
+							<FormField label="Doors time" id="editDoorsTime" issues={[]}>
+								<input id="editDoorsTime" name="doorsTime" type="time" bind:value={editDoorsTime} class="input input-bordered w-full" />
+							</FormField>
 
+							<FormField label="Tags" id="editTags" issues={[]}>
+								<input id="editTags" name="tags" type="text" bind:value={editTags} class="input input-bordered w-full" placeholder="e.g. open mic, workshop" />
+							</FormField>
+
+							<!-- Ticketing -->
+							<div class="form-control">
 								<label class="label cursor-pointer justify-start gap-3">
-									<input type="checkbox" bind:checked={rebookConfirmed} class="checkbox checkbox-sm" />
-									<span class="label-text">Confirm rebook</span>
+									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+									<span class="label-text">Enable ticketing</span>
 								</label>
+							</div>
 
-								{#if rebookConfirmed}
-									<div class="grid grid-cols-2 gap-4 mt-2">
-										<FormField label="Reservation start" id="editResStart" issues={[]}>
-											<input id="editResStart" type="time" bind:value={editReservationStartTime} class="input input-bordered w-full" />
+							{#if editTicketingEnabled}
+								<div class="card bg-base-200 p-4">
+									<div class="grid grid-cols-2 gap-4">
+										<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
+											<input
+												id="editTicketPrice"
+												type="number"
+												bind:value={editTicketPriceDollars}
+												min="0.01"
+												step="0.01"
+												placeholder="15.00"
+												class="input input-bordered w-full"
+												required
+											/>
 										</FormField>
-										<FormField label="Reservation end" id="editResEnd" issues={[]}>
-											<input id="editResEnd" type="time" bind:value={editReservationEndTime} class="input input-bordered w-full" />
+
+										<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+											<input
+												id="editTicketQuantity"
+												name="ticketQuantity"
+												type="number"
+												bind:value={editTicketQuantity}
+												min="1"
+												step="1"
+												placeholder="Unlimited"
+												class="input input-bordered w-full"
+											/>
 										</FormField>
 									</div>
+									<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
+								</div>
+							{/if}
 
-									<ConflictWarnings
-										date={editDate}
-										startTime={editReservationStartTime}
-										endTime={editReservationEndTime}
-										{checkConflicts}
-										excludeReservationId={data.linkedReservation?.id}
-										bind:hasConflicts
-									/>
-									{#if hasConflicts}
+							<!-- Rebook warning -->
+							{#if rebookNeeded}
+								<div class="alert alert-warning">
+									<div class="w-full space-y-3">
+										<p class="font-medium">Reservation needs rebooking</p>
+										<p class="text-sm">{rebookReason}. The existing reservation will be cancelled and a new one created.</p>
+
 										<label class="label cursor-pointer justify-start gap-3">
-											<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
-											<span class="label-text">Override conflicts</span>
+											<input type="checkbox" bind:checked={rebookConfirmed} class="checkbox checkbox-sm" />
+											<span class="label-text">Confirm rebook</span>
 										</label>
-									{/if}
-								{/if}
+
+										{#if rebookConfirmed}
+											<div class="grid grid-cols-2 gap-4 mt-2">
+												<FormField label="Reservation start" id="editResStart" issues={[]}>
+													<input id="editResStart" name="reservationStartTime" type="time" bind:value={editReservationStartTime} class="input input-bordered w-full" />
+												</FormField>
+												<FormField label="Reservation end" id="editResEnd" issues={[]}>
+													<input id="editResEnd" name="reservationEndTime" type="time" bind:value={editReservationEndTime} class="input input-bordered w-full" />
+												</FormField>
+											</div>
+
+											<ConflictWarnings
+												date={editDate}
+												startTime={editReservationStartTime}
+												endTime={editReservationEndTime}
+												{checkConflicts}
+												excludeReservationId={data.linkedReservation?.id}
+												bind:hasConflicts
+											/>
+											{#if hasConflicts}
+												<label class="label cursor-pointer justify-start gap-3">
+													<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
+													<span class="label-text">Override conflicts</span>
+												</label>
+											{/if}
+										{/if}
+									</div>
+								</div>
+							{/if}
+
+							<div class="flex justify-end gap-2 pt-2">
+								<button type="button" class="btn btn-ghost btn-sm" onclick={cancelEditing}>Cancel</button>
+								<SubmitButton
+									label="Save"
+									class="btn-primary btn-sm"
+								/>
 							</div>
 						</div>
-					{/if}
-
-					<div class="flex justify-end gap-2 pt-2">
-						<button class="btn btn-ghost btn-sm" onclick={cancelEditing}>Cancel</button>
-						<button
-							class="btn btn-primary btn-sm"
-							disabled={saving || !editTitle || !editDate || !editStartTime || !editEndTime || (rebookNeeded && !rebookConfirmed) || (hasConflicts && !overrideConflicts)}
-							onclick={saveEdits}
-						>
-							{#if saving}
-								<span class="loading loading-spinner loading-sm"></span>
-							{/if}
-							Save
-						</button>
-					</div>
+					</Form>
 				</div>
 			</div>
 

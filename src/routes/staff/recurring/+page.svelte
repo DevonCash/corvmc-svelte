@@ -9,7 +9,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
-	import { cancelSeries } from './data.remote';
+	import { cancelStaffSeries } from '$lib/remote/recurring';
 	import type { StaffRecurringResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffRecurringResponse } = $props();
@@ -91,13 +91,18 @@
 			{#snippet cell(_, s)}
 				{#if !s.cancelledAt}
 					<Action
-						action={() => cancelSeries({ seriesId: s.id })}
+						action={cancelStaffSeries}
 						label="Cancel"
-						confirm="Cancel this recurring series? Future reservations will not be created."
+						modalTitle="Confirm"
 						successToast="Series cancelled"
 						onsuccess={() => invalidateAll()}
 						class="btn-ghost btn-xs text-error"
-					/>
+					>
+						{#snippet form({ close })}
+							<input type="hidden" name="seriesId" value={s.id} />
+							<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
+						{/snippet}
+					</Action>
 				{/if}
 			{/snippet}
 		</Column>

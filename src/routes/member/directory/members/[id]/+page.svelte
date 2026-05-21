@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getMember } from '../../data.remote';
+	import { getDirectoryMember } from '$lib/remote/directory';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
@@ -10,7 +10,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 
 	let id = $derived(page.params.id!);
-	let member = $derived(await getMember(id));
+	let member = $derived(await getDirectoryMember(id));
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact as DirectoryContact | null) ?? {});

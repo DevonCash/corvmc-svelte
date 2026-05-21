@@ -1,0 +1,363 @@
+import { z } from 'zod';
+import { error } from '@sveltejs/kit';
+import { query, form, getRequestEvent } from '$app/server';
+import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
+import {
+	createEquipment as createEquipmentService,
+	updateEquipment,
+	getEquipmentById,
+	listCategories,
+	listEquipment,
+	createCategory,
+	updateCategory,
+	deleteCategory,
+	softDeleteEquipment,
+	restoreEquipment
+} from '$lib/server/equipment/equipment-service';
+import {
+	getLoanById,
+	getLoanHistory,
+	scheduleLoan,
+	checkoutLoan,
+	requestLoan,
+	cancelLoan as cancelLoanService,
+	returnLoan as returnLoanService
+} from '$lib/server/equipment/loan-service';
+import {
+	createCategorySchema,
+	updateCategorySchema,
+	createEquipmentSchema,
+	scheduleLoanSchema,
+	checkoutLoanSchema
+} from '$lib/server/db/schema/equipment';
+import { equipmentConditions, equipmentStatuses } from '$lib/config';
+
+// ---------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------
+
+export const getEquipment = query(z.string(), async (id) => {
+	await requireStaff();
+	const item = await getEquipmentById(id);
+	if (!item) error(404, 'Equipment not found');
+	return item;
+});
+
+export const getEquipmentCategories = query(z.void(), async () => {
+	await requireStaff();
+	return listCategories();
+});
+
+export const getEquipmentLoanHistory = query(z.string(), async (equipmentId) => {
+	await requireStaff();
+	return getLoanHistory(equipmentId);
+});
+
+export const getLoan = query(z.string(), async (id) => {
+	await requireStaff();
+	const loan = await getLoanById(id);
+	if (!loan) error(404, 'Loan not found');
+	return loan;
+});
+
+export const getAvailableEquipment = query(z.void(), async () => {
+	await requireStaff();
+	const { rows } = await listEquipment({ status: 'available' });
+	return rows;
+});
+
+// ---------------------------------------------------------------------------
+// Forms — Equipment
+// ---------------------------------------------------------------------------
+
+const editEquipmentSchema = z.object({
+	name: z.string().min(1).max(255).optional(),
+	description: z.string().max(2000).optional(),
+	categoryId: z.string().uuid().optional(),
+	totalQuantity: z.string().optional(),
+	outOfOrderQuantity: z.string().optional(),
+	serialNumber: z.string().max(100).optional(),
+	resourceId: z.string().max(100).optional(),
+	condition: z.enum(equipmentConditions).optional(),
+	status: z.enum(equipmentStatuses).optional(),
+	notes: z.string().max(2000).optional()
+});
+
+export const editEquipment = form(
+	editEquipmentSchema.extend({ id: z.string() }),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as z.infer<typeof editEquipmentSchema> & { id: string };
+		const id = data.id;
+		await updateEquipment(id, {
+			...data,
+			totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : undefined,
+			outOfOrderQuantity: data.outOfOrderQuantity
+				? parseInt(data.outOfOrderQuantity, 10)
+				: undefined
+		});
+		void getEquipment(id).refresh();
+		return { success: true };
+	}
+);
+
+export const createEquipment = form(
+	z.object({
+		name: z.string().min(1).max(255),
+		description: z.string().max(2000).optional(),
+		categoryId: z.string(),
+		totalQuantity: z.string().optional(),
+		outOfOrderQuantity: z.string().optional(),
+		serialNumber: z.string().max(100).optional(),
+		resourceId: z.string().max(100).optional(),
+		condition: z.string(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			name: string;
+			description?: string;
+			categoryId: string;
+			totalQuantity?: string;
+			outOfOrderQuantity?: string;
+			serialNumber?: string;
+			resourceId?: string;
+			condition: string;
+			notes?: string;
+		};
+		const item = await createEquipmentService({
+			name: data.name,
+			description: data.description,
+			categoryId: data.categoryId,
+			condition: data.condition as (typeof equipmentConditions)[number],
+			totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : 1,
+			outOfOrderQuantity: data.outOfOrderQuantity
+				? parseInt(data.outOfOrderQuantity, 10)
+				: 0,
+			serialNumber: data.serialNumber,
+			resourceId: data.resourceId,
+			notes: data.notes
+		});
+		return { equipmentId: item.id };
+	}
+);
+
+export const deactivateEquipment = form(
+	z.object({ id: z.string() }),
+	async (data) => {
+		await requireStaff();
+		await softDeleteEquipment(data.id as string);
+		void getEquipment(data.id as string).refresh();
+		return { success: true };
+	}
+);
+
+export const reactivateEquipment = form(
+	z.object({ id: z.string() }),
+	async (data) => {
+		await requireStaff();
+		await restoreEquipment(data.id as string);
+		void getEquipment(data.id as string).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — Categories
+// ---------------------------------------------------------------------------
+
+export const addCategory = form(
+	z.object({
+		name: z.string().min(1).max(100),
+		displayOrder: z.string().optional(),
+		pricingTier: z.string()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { name: string; displayOrder?: string; pricingTier: string };
+		const cat = await createCategory({
+			name: data.name,
+			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+			pricingTier: data.pricingTier as 'major' | 'accessory'
+		});
+		void getEquipmentCategories().refresh();
+		return { categoryId: cat.id };
+	}
+);
+
+export const editCategory = form(
+	z.object({
+		id: z.string(),
+		name: z.string().min(1).max(100).optional(),
+		displayOrder: z.string().optional(),
+		pricingTier: z.string().optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			id: string;
+			name?: string;
+			displayOrder?: string;
+			pricingTier?: string;
+		};
+		const { id, ...rest } = data;
+		await updateCategory(id, {
+			name: rest.name,
+			displayOrder: rest.displayOrder ? parseInt(rest.displayOrder, 10) : undefined,
+			pricingTier: rest.pricingTier as 'major' | 'accessory' | undefined
+		});
+		void getEquipmentCategories().refresh();
+		return { success: true };
+	}
+);
+
+export const removeCategory = form(
+	z.object({ id: z.string() }),
+	async (data) => {
+		await requireStaff();
+		await deleteCategory(data.id as string);
+		void getEquipmentCategories().refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — Loans
+// ---------------------------------------------------------------------------
+
+export const scheduleLoanForm = form('unchecked', async (data, issue) => {
+	await requireStaff();
+	const result = scheduleLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues
+			.map((err: any) => {
+				const key = String(err.path[0] ?? '');
+				return (issue as any)[key]?.(err.message);
+			})
+			.filter(Boolean);
+		(await import('@sveltejs/kit')).invalid(...issues);
+	}
+	const loanId = (data as { loanId: string }).loanId;
+	await scheduleLoan(loanId, {
+		equipmentId: result.data!.equipmentId,
+		scheduledPickupDate: result.data!.scheduledPickupDate
+	});
+	void getLoan(loanId).refresh();
+	return { success: true };
+});
+
+export const checkoutLoanForm = form('unchecked', async (data, issue) => {
+	await requireStaff();
+	const result = checkoutLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues
+			.map((err: any) => {
+				const key = String(err.path[0] ?? '');
+				return (issue as any)[key]?.(err.message);
+			})
+			.filter(Boolean);
+		(await import('@sveltejs/kit')).invalid(...issues);
+	}
+	const loanId = (data as { loanId: string }).loanId;
+	await checkoutLoan(loanId, { dueDate: result.data!.dueDate });
+	void getLoan(loanId).refresh();
+	return { success: true };
+});
+
+export const createLoan = form(
+	z.object({
+		userId: z.string(),
+		equipmentId: z.string().optional(),
+		quantity: z.string().optional(),
+		requestedPickupDate: z.string().min(1),
+		estimatedReturnDate: z.string().min(1),
+		memberNotes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			userId: string;
+			equipmentId?: string;
+			quantity?: string;
+			requestedPickupDate: string;
+			estimatedReturnDate: string;
+			memberNotes?: string;
+		};
+		await requestLoan(data.userId, {
+			equipmentId: data.equipmentId || undefined,
+			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
+			requestedPickupDate: new Date(data.requestedPickupDate),
+			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			memberNotes: data.memberNotes
+		});
+		return { success: true };
+	}
+);
+
+export const submitLoanRequest = form(
+	z.object({
+		equipmentId: z.string().optional(),
+		quantity: z.string().optional(),
+		requestedPickupDate: z.string().min(1),
+		estimatedReturnDate: z.string().min(1),
+		memberNotes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		const data = raw as {
+			equipmentId?: string;
+			quantity?: string;
+			requestedPickupDate: string;
+			estimatedReturnDate: string;
+			memberNotes?: string;
+		};
+		const currentUser = requireUser();
+
+		const loan = await requestLoan(currentUser.id, {
+			equipmentId: data.equipmentId || undefined,
+			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
+			requestedPickupDate: new Date(data.requestedPickupDate),
+			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			memberNotes: data.memberNotes
+		});
+
+		return { success: true, loanId: loan.id };
+	}
+);
+
+export const cancelLoan = form(
+	z.object({ id: z.string() }),
+	async (data) => {
+		const { locals } = getRequestEvent();
+		if (!locals.user) throw error(401, 'Not authenticated');
+
+		const loanId = data.id as string;
+		const loan = await getLoanById(loanId);
+		if (!loan) throw error(404, 'Loan not found');
+
+		const staff = await isStaff(locals.user.id);
+		if (!staff) {
+			if (loan.userId !== locals.user.id) throw error(403, 'Not authorized');
+			if (loan.status !== 'requested' && loan.status !== 'scheduled') {
+				throw error(400, 'Cannot cancel a loan that has been checked out');
+			}
+		}
+
+		await cancelLoanService(loanId);
+		void getLoan(loanId).refresh();
+		return { success: true };
+	}
+);
+
+export const returnLoan = form(
+	z.object({
+		id: z.string(),
+		staffNotes: z.string().max(2000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined);
+		void getLoan(data.id as string).refresh();
+		return { success: true };
+	}
+);

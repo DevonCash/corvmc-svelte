@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { returnLoan } from '$lib/remote/equipment';
 	import { Field } from '../Form';
 
 	let {
@@ -17,20 +17,10 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
-
-	let staffNotes = $state('');
-
-	function execute() {
-		const result = actionFetch(`/api/equipment/loans/${loanId}/return`, {
-			body: staffNotes ? { staffNotes } : undefined
-		});
-		staffNotes = '';
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={returnLoan}
 	label="Mark Returned"
 	modalTitle="Confirm Return"
 	successToast="Marked as returned"
@@ -39,11 +29,12 @@
 	{...rest}
 >
 	{#snippet form({ close })}
+		<input type="hidden" name="id" value={loanId} />
 		{#if chargeMessage}
 			<div class="bg-base-200 rounded p-3 mb-3 text-sm">
 				<p>{chargeMessage}</p>
 			</div>
 		{/if}
-		<Field name="staffNotes" type="textarea" label="Staff Notes (optional)" bind:value={staffNotes} />
+		<Field name="staffNotes" type="textarea" label="Staff Notes (optional)" />
 	{/snippet}
 </Action>

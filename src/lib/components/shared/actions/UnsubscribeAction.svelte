@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { unsubscribe } from '$lib/remote/account';
 
 	let {
 		audienceId,
@@ -19,10 +19,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/me/subscriptions/${audienceId}`, { method: 'DELETE' })}
+	action={unsubscribe}
 	label="Unsubscribe"
+	modalTitle="Unsubscribe"
 	successToast={`Unsubscribed from ${name}`}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="audienceId" value={audienceId} />
+		<p class="py-4">Unsubscribe from {name}?</p>
+	{/snippet}
+</Action>

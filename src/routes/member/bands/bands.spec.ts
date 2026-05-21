@@ -48,6 +48,11 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 // Mock getRequestEvent for remote functions
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 
+vi.mock('$lib/server/authorization', () => ({
+	requireUser: () => mockLocals.user,
+	requireStaff: vi.fn()
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: mockLocals,
@@ -66,7 +71,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { GET: bandsGET } = await import('../../api/me/bands/+server');
-const { createBand, acceptInvite, declineInvite } = await import('./data.remote') as any;
+const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

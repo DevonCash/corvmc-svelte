@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { publishEvent } from '$lib/remote/events';
 
 	let {
 		eventId,
@@ -17,10 +17,15 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/events/${eventId}/publish`)}
+	action={publishEvent}
 	label="Publish"
 	successToast="Published"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={eventId} />
+		<p class="py-2">Publish this event to make it visible to the public?</p>
+	{/snippet}
+</Action>

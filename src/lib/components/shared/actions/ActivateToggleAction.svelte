@@ -1,21 +1,23 @@
 <script lang="ts">
+	import type { RemoteForm } from '@sveltejs/kit';
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
 
 	let {
-		entityType,
 		entityId,
 		isDeactivated,
-		entityLabel = entityType,
+		deactivateAction,
+		reactivateAction,
+		entityLabel = 'item',
 		deactivateWarning,
 		class: className,
 		onsuccess,
 		...rest
 	}: {
-		entityType: string;
 		entityId: string;
 		isDeactivated: boolean;
+		deactivateAction: RemoteForm<any, any>;
+		reactivateAction: RemoteForm<any, any>;
 		entityLabel?: string;
 		deactivateWarning?: string;
 		class?: string;
@@ -24,7 +26,6 @@
 	} = $props();
 
 	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
-	const action = $derived(isDeactivated ? 'reactivate' : 'deactivate');
 	const resolvedClass = $derived(className ?? (isDeactivated ? 'btn-success btn-sm' : 'btn-error btn-sm'));
 	const confirmText = $derived(
 		isDeactivated ? undefined : (deactivateWarning ?? `Deactivate this ${entityLabel}?`)
@@ -33,11 +34,20 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/${entityType}/${entityId}/${action}`)}
+	action={isDeactivated ? reactivateAction : deactivateAction}
 	{label}
-	confirm={confirmText}
+	modalTitle="Confirm"
 	successToast={toast}
 	class={resolvedClass}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={entityId} />
+		{#if confirmText}
+			<p class="py-4">{confirmText}</p>
+		{:else}
+			<p class="py-4">Reactivate this {entityLabel}?</p>
+		{/if}
+	{/snippet}
+</Action>

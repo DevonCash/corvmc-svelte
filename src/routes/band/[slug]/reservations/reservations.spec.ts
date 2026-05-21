@@ -78,6 +78,7 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
+	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
 	hasAnyRole: vi.fn(async () => false)
 }));
 
@@ -136,7 +137,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getSlots, bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('./data.remote') as any;
+const { getBandSlots: getSlots, bookBandReservation: bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('$lib/remote/reservations') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

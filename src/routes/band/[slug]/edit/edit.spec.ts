@@ -31,6 +31,10 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
+vi.mock('$lib/server/authorization', () => ({
+	requireUser: () => testUser
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
@@ -62,7 +66,7 @@ beforeEach(() => {
 
 describe('updateBand', () => {
 	it('updates name and bio', async () => {
-		const { updateBand } = await import('./data.remote') as any;
+		const { updateBand } = await import('$lib/remote/bands') as any;
 
 		const result = await updateBand({ name: 'New Name', bio: 'New bio' });
 
@@ -75,7 +79,7 @@ describe('updateBand', () => {
 	});
 
 	it('sends null bio when empty', async () => {
-		const { updateBand } = await import('./data.remote') as any;
+		const { updateBand } = await import('$lib/remote/bands') as any;
 
 		await updateBand({ name: 'New Name', bio: '' });
 
@@ -87,14 +91,14 @@ describe('updateBand', () => {
 
 	it('rejects non-admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { updateBand } = await import('./data.remote') as any;
+		const { updateBand } = await import('$lib/remote/bands') as any;
 
 		await expect(updateBand({ name: 'X', bio: '' })).rejects.toThrow();
 	});
 
 	it('allows admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { updateBand } = await import('./data.remote') as any;
+		const { updateBand } = await import('$lib/remote/bands') as any;
 
 		const result = await updateBand({ name: 'New Name', bio: '' });
 		expect(result.success).toBe(true);

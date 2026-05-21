@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cancelRecurringSeries } from '$lib/remote/recurring';
 
 	let {
 		seriesId,
@@ -17,11 +17,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/recurring/${seriesId}/cancel`)}
+	action={cancelRecurringSeries}
 	label="Cancel Series"
-	confirm="Cancel this recurring series? Future reservations will not be created."
+	modalTitle="Confirm"
 	successToast="Series cancelled"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={seriesId} />
+		<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
+	{/snippet}
+</Action>

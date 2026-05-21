@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { addBandMember } from '$lib/remote/bands';
 
 	let {
 		bandId,
@@ -16,8 +16,6 @@
 	} = $props();
 
 	let query = $state('');
-	let role = $state<'admin' | 'member'>('member');
-	let position = $state('');
 	let userId = $state('');
 	let userName = $state('');
 	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
@@ -40,21 +38,10 @@
 		searchResults = [];
 		query = '';
 	}
-
-	function execute() {
-		const result = actionFetch(`/api/bands/${bandId}/members`, {
-			body: { userId, role, position: position || undefined }
-		});
-		userId = '';
-		userName = '';
-		role = 'member';
-		position = '';
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={addBandMember}
 	label="Add Member"
 	modalTitle="Invite Member"
 	canSubmit={!!userId}
@@ -64,6 +51,8 @@
 	{...rest}
 >
 	{#snippet form({ close })}
+		<input type="hidden" name="bandId" value={bandId} />
+		<input type="hidden" name="userId" value={userId} />
 		<div class="space-y-3">
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
@@ -94,14 +83,14 @@
 			{/if}
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<select class="select select-bordered w-full" bind:value={role}>
+				<select class="select select-bordered w-full" name="role">
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input type="text" class="input input-bordered w-full" bind:value={position} placeholder="e.g. Guitarist" />
+				<input type="text" name="position" class="input input-bordered w-full" placeholder="e.g. Guitarist" />
 			</label>
 		</div>
 	{/snippet}

@@ -10,7 +10,9 @@
 		CancelReservationAction,
 		CancelSeriesAction
 	} from '$lib/components/shared/actions';
-	import { editSeries } from './data.remote';
+	import { editMemberSeries } from '$lib/remote/recurring';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -126,49 +128,43 @@
 						</div>
 
 						{#if editingSeriesId === series.id}
-							<div class="mt-4 pt-4 border-t border-base-200 space-y-3">
-								<div class="grid grid-cols-3 gap-3">
-									<label class="form-control">
-										<div class="label"><span class="label-text">Day</span></div>
-										<input type="date" class="input input-bordered input-sm" bind:value={editDate} />
-									</label>
-									<label class="form-control">
-										<div class="label"><span class="label-text">Start</span></div>
-										<input type="time" class="input input-bordered input-sm" bind:value={editStartTime} />
-									</label>
-									<label class="form-control">
-										<div class="label"><span class="label-text">End</span></div>
-										<input type="time" class="input input-bordered input-sm" bind:value={editEndTime} />
-									</label>
-								</div>
-								<label class="form-control">
-									<div class="label"><span class="label-text">Frequency</span></div>
-									<select class="select select-bordered select-sm" bind:value={editFrequency}>
-										<option value="weekly">Weekly</option>
-										<option value="biweekly">Every 2 weeks</option>
-										<option value="monthly">Monthly</option>
-									</select>
-								</label>
-								<p class="text-xs opacity-60">This will create a new series with the updated schedule. The current series will end.</p>
-								<div class="flex justify-end gap-2">
-									<button class="btn btn-ghost btn-sm" onclick={() => (editingSeriesId = null)}>Cancel</button>
-									<Action
-										action={() => {
-											const result = editSeries({
-												seriesId: series.id,
-												date: editDate,
-												startTime: editStartTime,
-												endTime: editEndTime,
-												frequency: editFrequency
-											});
-											editingSeriesId = null;
-											return result;
-										}}
-										label="Update Schedule"
-										onsuccess={() => { toast.success('Series schedule updated'); invalidateAll(); }}
-										class="btn-primary btn-sm"
-									/>
-								</div>
+							<div class="mt-4 pt-4 border-t border-base-200">
+								<Form
+									remote={editMemberSeries}
+									successToast="Series schedule updated"
+									onsuccess={() => { editingSeriesId = null; invalidateAll(); }}
+								>
+									<input type="hidden" name="seriesId" value={series.id} />
+									<div class="space-y-3">
+										<div class="grid grid-cols-3 gap-3">
+											<label class="form-control">
+												<div class="label"><span class="label-text">Day</span></div>
+												<input type="date" name="date" class="input input-bordered input-sm" bind:value={editDate} />
+											</label>
+											<label class="form-control">
+												<div class="label"><span class="label-text">Start</span></div>
+												<input type="time" name="startTime" class="input input-bordered input-sm" bind:value={editStartTime} />
+											</label>
+											<label class="form-control">
+												<div class="label"><span class="label-text">End</span></div>
+												<input type="time" name="endTime" class="input input-bordered input-sm" bind:value={editEndTime} />
+											</label>
+										</div>
+										<label class="form-control">
+											<div class="label"><span class="label-text">Frequency</span></div>
+											<select name="frequency" class="select select-bordered select-sm" bind:value={editFrequency}>
+												<option value="weekly">Weekly</option>
+												<option value="biweekly">Every 2 weeks</option>
+												<option value="monthly">Monthly</option>
+											</select>
+										</label>
+										<p class="text-xs opacity-60">This will create a new series with the updated schedule. The current series will end.</p>
+										<div class="flex justify-end gap-2">
+											<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editingSeriesId = null)}>Cancel</button>
+											<SubmitButton label="Update Schedule" class="btn-primary btn-sm" />
+										</div>
+									</div>
+								</Form>
 							</div>
 						{/if}
 					</div>

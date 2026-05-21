@@ -18,7 +18,7 @@
 		deleteAccount,
 		getMySubscriptions,
 		getAvailableLists
-	} from './data.remote';
+	} from '$lib/remote/account';
 	import type { AccountResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: AccountResponse } = $props();

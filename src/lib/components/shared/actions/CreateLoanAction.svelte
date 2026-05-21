@@ -1,7 +1,8 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { createLoan } from '$lib/remote/equipment';
+	import { Field } from '../Form';
 
 	let {
 		class: className = 'btn-sm btn-primary',
@@ -16,13 +17,8 @@
 	let query = $state('');
 	let userId = $state('');
 	let userName = $state('');
-	let equipmentId = $state('');
-	let quantity = $state(1);
-	let pickupDate = $state('');
-	let estimatedReturnDate = $state('');
-	let notes = $state('');
-	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
 	let equipmentOptions = $state<{ id: string; name: string }[]>([]);
+	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
 	let searching = $state(false);
 
 	async function handleMemberSearch() {
@@ -52,36 +48,20 @@
 	}
 
 	$effect(() => { loadEquipmentOptions(); });
-
-	function execute() {
-		const result = actionFetch('/api/equipment/loans', {
-			body: {
-				userId,
-				equipmentId: equipmentId || undefined,
-				quantity,
-				requestedPickupDate: pickupDate,
-				estimatedReturnDate,
-				memberNotes: notes || undefined
-			}
-		});
-		userId = ''; userName = ''; equipmentId = ''; quantity = 1;
-		pickupDate = ''; estimatedReturnDate = ''; notes = '';
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={createLoan}
 	label="New Loan"
 	modalTitle="Create Loan Request"
 	successToast="Loan request created"
-	canSubmit={!!userId && !!pickupDate && !!estimatedReturnDate}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
 	{#snippet form({ close })}
 		<div class="space-y-3">
+			<input type="hidden" name="userId" value={userId} />
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
@@ -109,31 +89,16 @@
 					</div>
 				{/if}
 			{/if}
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Equipment</span></div>
-				<select class="select select-bordered w-full" bind:value={equipmentId}>
-					<option value="">— Select equipment —</option>
-					{#each equipmentOptions as eq}
-						<option value={eq.id}>{eq.name}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Quantity</span></div>
-				<input type="number" class="input input-bordered w-full" bind:value={quantity} min="1" max="20" />
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Requested pickup date</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={pickupDate} />
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Estimated return date</span></div>
-				<input type="date" class="input input-bordered w-full" bind:value={estimatedReturnDate} />
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Notes (optional)</span></div>
-				<textarea class="textarea textarea-bordered w-full" bind:value={notes} rows="2"></textarea>
-			</label>
+			<Field name="equipmentId" type="select" label="Equipment">
+				<option value="">-- Select equipment --</option>
+				{#each equipmentOptions as eq}
+					<option value={eq.id}>{eq.name}</option>
+				{/each}
+			</Field>
+			<Field name="quantity" type="number" label="Quantity" value={1} />
+			<Field name="requestedPickupDate" type="date" label="Requested pickup date" />
+			<Field name="estimatedReturnDate" type="date" label="Estimated return date" />
+			<Field name="memberNotes" type="textarea" label="Notes (optional)" />
 		</div>
 	{/snippet}
 </Action>

@@ -5,10 +5,12 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import { purchaseTickets } from './data.remote';
+	import { purchaseTickets } from '$lib/remote/events';
 
 	let { data }: { data: {
 		event: {
@@ -52,20 +54,13 @@
 		return tags.split(',').map((t) => t.trim()).filter(Boolean);
 	}
 
-	async function handlePurchase() {
-		const result = await purchaseTickets({
-			eventId: evt.id,
-			quantity,
-			attendeeName: attendeeName.trim(),
-			attendeeEmail: attendeeEmail.trim(),
-			coverFees
-		});
-
-		if (result?.redirectUrl) {
-			if (result.redirectUrl.startsWith('http')) {
-				window.location.href = result.redirectUrl;
+	async function handlePurchaseSuccess(result?: unknown) {
+		const data = result as { redirectUrl?: string } | undefined;
+		if (data?.redirectUrl) {
+			if (data.redirectUrl.startsWith('http')) {
+				window.location.href = data.redirectUrl;
 			} else {
-				await goto(result.redirectUrl);
+				await goto(data.redirectUrl);
 			}
 		}
 	}
@@ -129,15 +124,18 @@
 				{#if !soldOut}
 					<div class="card-actions mt-3">
 						<Action
-							action={handlePurchase}
+							action={purchaseTickets}
 							label="Get Tickets"
 							modalTitle="Get Tickets"
 							submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 							class="btn-primary"
+							onsuccess={handlePurchaseSuccess}
 							onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 						>
 							{#snippet form({ close })}
+								<input type="hidden" name="eventId" value={evt.id} />
+
 								<div class="flex items-baseline gap-2">
 									{#if data.isSustainingMember && discountedPrice}
 										<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>

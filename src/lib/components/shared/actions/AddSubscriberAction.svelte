@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { addSubscriber } from '$lib/remote/marketing';
 
 	let {
 		audienceId,
@@ -17,33 +17,30 @@
 
 	let email = $state('');
 	let name = $state('');
-
-	function execute() {
-		const result = actionFetch(`/api/marketing/audiences/${audienceId}/subscribers`, {
-			body: { email: email.trim(), name: name.trim() || undefined }
-		});
-		email = '';
-		name = '';
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={addSubscriber}
 	label="Add Subscriber"
 	modalTitle="Add Subscriber"
 	canSubmit={!!email.trim()}
 	successToast="Subscriber added"
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={() => {
+		email = '';
+		name = '';
+		(onsuccess ?? (() => invalidateAll()))();
+	}}
 	{...rest}
 >
 	{#snippet form({ close })}
+		<input type="hidden" name="audienceId" value={audienceId} />
 		<div>
 			<label for="sub-email" class="text-xs opacity-60">Email</label>
 			<input
 				id="sub-email"
 				type="email"
+				name="email"
 				bind:value={email}
 				placeholder="email@example.com"
 				class="input-bordered input w-full"
@@ -55,6 +52,7 @@
 			<input
 				id="sub-name"
 				type="text"
+				name="name"
 				bind:value={name}
 				placeholder="Name"
 				class="input-bordered input w-full"

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { updateClosure } from '$lib/remote/closures';
 
 	let {
 		closureId,
@@ -23,10 +23,17 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/staff/closures/${closureId}`, { method: 'PUT', body: { reason, startsAt, endsAt } })}
+	action={updateClosure}
 	label="Save"
 	successToast="Closure updated"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={closureId} />
+		<input type="hidden" name="reason" value={reason} />
+		<input type="hidden" name="startsAt" value={startsAt} />
+		<input type="hidden" name="endsAt" value={endsAt} />
+	{/snippet}
+</Action>

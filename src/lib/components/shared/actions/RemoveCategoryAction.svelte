@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { removeCategory } from '$lib/remote/equipment';
 
 	let {
 		categoryId,
@@ -19,11 +19,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/equipment/categories/${categoryId}`, { method: 'DELETE' })}
+	action={removeCategory}
 	label="Delete"
-	confirm='Delete "{name}"? Category must have no equipment.'
+	modalTitle="Confirm"
 	successToast="Category deleted"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={categoryId} />
+		<p class="py-4">Delete "{name}"? Category must have no equipment.</p>
+	{/snippet}
+</Action>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { confirmReservation } from '$lib/remote/reservations';
 
 	let {
 		reservationId,
@@ -17,10 +17,15 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/reservations/${reservationId}/confirm`)}
+	action={confirmReservation}
 	label="Confirm"
 	successToast="Confirmed"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={reservationId} />
+		<p class="py-4">Confirm this reservation?</p>
+	{/snippet}
+</Action>

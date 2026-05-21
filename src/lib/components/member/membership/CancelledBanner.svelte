@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RemoteForm } from '@sveltejs/kit';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
@@ -11,7 +12,7 @@
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
-		resumeAction: () => Promise<unknown>;
+		resumeAction: RemoteForm<any, any>;
 	} = $props();
 
 	const endDate = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {
@@ -34,9 +35,14 @@
 			<Action
 				action={resumeAction}
 				label="Resume Membership"
+				modalTitle="Resume Membership"
 				class="btn-sm btn-primary"
 				onsuccess={() => toast.success('Membership resumed')}
-			/>
+			>
+				{#snippet form({ close })}
+					<p class="py-4">Resume your sustaining membership?</p>
+				{/snippet}
+			</Action>
 
 			{#if billingPortalUrl}
 				<a href={billingPortalUrl} class="btn btn-sm btn-outline">Manage Billing</a>

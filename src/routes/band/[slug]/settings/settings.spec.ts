@@ -27,6 +27,10 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
+vi.mock('$lib/server/authorization', () => ({
+	requireUser: () => testUser
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
@@ -56,11 +60,11 @@ beforeEach(() => {
 // Remote handlers
 // ---------------------------------------------------------------------------
 
-describe('deleteBandForm', () => {
+describe('deleteBand', () => {
 	it('deletes the band', async () => {
-		const { deleteBandForm } = await import('./data.remote') as any;
+		const { deleteBand } = await import('$lib/remote/bands') as any;
 
-		const result = await deleteBandForm({});
+		const result = await deleteBand({});
 
 		expect(bandServiceMock.deleteBand).toHaveBeenCalledWith('band-1');
 		expect(result.success).toBe(true);
@@ -68,15 +72,15 @@ describe('deleteBandForm', () => {
 
 	it('rejects non-owner users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { deleteBandForm } = await import('./data.remote') as any;
+		const { deleteBand } = await import('$lib/remote/bands') as any;
 
-		await expect(deleteBandForm({})).rejects.toThrow();
+		await expect(deleteBand({})).rejects.toThrow();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { deleteBandForm } = await import('./data.remote') as any;
+		const { deleteBand } = await import('$lib/remote/bands') as any;
 
-		await expect(deleteBandForm({})).rejects.toThrow();
+		await expect(deleteBand({})).rejects.toThrow();
 	});
 });

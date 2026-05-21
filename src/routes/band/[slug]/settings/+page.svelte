@@ -6,7 +6,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { deleteBandForm } from './data.remote';
+	import { deleteBand as deleteBandForm } from '$lib/remote/bands';
 	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: BandLayoutResponse } = $props();

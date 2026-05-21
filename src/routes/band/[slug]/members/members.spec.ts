@@ -43,8 +43,11 @@ const bandServiceMock = {
 
 vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 
+const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
+
 vi.mock('$lib/server/authorization', () => ({
-	hasAnyRole: vi.fn(async () => false)
+	hasAnyRole: vi.fn(async () => false),
+	requireUser: () => testUser
 }));
 
 // Mock DB for page load
@@ -68,8 +71,6 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
-
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
@@ -91,7 +92,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchUsers } = await import('./data.remote') as any;
+const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchBandUsers: searchUsers } = await import('$lib/remote/bands') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

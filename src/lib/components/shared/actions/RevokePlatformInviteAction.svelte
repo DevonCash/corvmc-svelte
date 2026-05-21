@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { revokePlatformInvite } from '$lib/remote/bands';
 
 	let {
 		bandId,
@@ -21,11 +21,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/bands/${bandId}/invites/${inviteId}`, { method: 'DELETE' })}
+	action={revokePlatformInvite}
 	label="Revoke"
-	confirm={`Revoke invite for ${email}?`}
+	modalTitle="Confirm"
 	successToast="Invite revoked"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="inviteId" value={inviteId} />
+		<p class="py-4">Revoke invite for {email}?</p>
+	{/snippet}
+</Action>

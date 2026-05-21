@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cancelEvent } from '$lib/remote/events';
 
 	let {
 		eventId,
@@ -17,11 +17,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/events/${eventId}/cancel`)}
+	action={cancelEvent}
 	label="Cancel Event"
-	confirm="Cancel this event? This cannot be undone."
+	modalTitle="Cancel Event"
 	successToast="Cancelled"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={eventId} />
+		<p class="py-2">Cancel this event? This cannot be undone.</p>
+	{/snippet}
+</Action>

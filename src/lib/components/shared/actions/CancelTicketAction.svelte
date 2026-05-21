@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cancelTicket } from '$lib/remote/events';
 
 	let {
 		eventId,
@@ -21,11 +21,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/events/${eventId}/tickets/${ticketId}/cancel`)}
+	action={cancelTicket}
 	label="Cancel"
-	confirm={`Cancel ticket for ${attendeeName}?`}
+	modalTitle="Cancel Ticket"
 	successToast="Ticket cancelled"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="ticketId" value={ticketId} />
+		<p class="py-2">Cancel ticket for {attendeeName}?</p>
+	{/snippet}
+</Action>

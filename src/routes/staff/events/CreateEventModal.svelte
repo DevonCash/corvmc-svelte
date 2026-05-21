@@ -2,9 +2,11 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Modal from '$lib/components/shared/Modal.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
-	import { checkConflicts, createEvent } from './data.remote';
+	import { checkConflicts, createEvent } from '$lib/remote/events';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
@@ -22,8 +24,14 @@
 	let ticketPriceDollars = $state('');
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
-	let submitting = $state(false);
 	let hasConflicts = $state(false);
+
+	// Compute the ticket price in cents for the hidden field
+	const ticketPriceCents = $derived(
+		ticketingEnabled && ticketPriceDollars
+			? String(Math.round(parseFloat(ticketPriceDollars) * 100))
+			: ''
+	);
 
 	$effect(() => {
 		if (reserveSpace && !reservationStartTime && eventStartTime) {
@@ -39,56 +47,25 @@
 		posterFile = input.files?.[0] ?? null;
 	}
 
-	async function handleSubmit() {
-		if (!title || !eventDate || !eventStartTime || !eventEndTime) return;
-		submitting = true;
-
-		try {
-			const result = await createEvent({
-				title,
-				description: description || undefined,
-				eventDate,
-				eventStartTime,
-				eventEndTime,
-				doorsTime: doorsTime || undefined,
-				tags: tags || undefined,
-				ticketingEnabled,
-				ticketPrice: ticketingEnabled && ticketPriceDollars
-					? Math.round(parseFloat(ticketPriceDollars) * 100)
-					: undefined,
-				ticketQuantity: ticketingEnabled && ticketQuantity
-					? parseInt(ticketQuantity, 10)
-					: undefined,
-				reserveSpace,
-				reservationStartTime: reservationStartTime || undefined,
-				reservationEndTime: reservationEndTime || undefined,
-				overrideConflicts: hasConflicts
+	async function handleSuccess(result?: { eventId?: string }) {
+		if (posterFile && result?.eventId) {
+			const formData = new FormData();
+			formData.append('poster', posterFile);
+			const res = await fetch(`/api/events/${result.eventId}/poster`, {
+				method: 'POST',
+				body: formData
 			});
-
-			if (posterFile && result?.eventId) {
-				const formData = new FormData();
-				formData.append('poster', posterFile);
-				const res = await fetch(`/api/events/${result.eventId}/poster`, {
-					method: 'POST',
-					body: formData
-				});
-				if (!res.ok) {
-					toast.warning('Event created but poster upload failed');
-				}
+			if (!res.ok) {
+				toast.warning('Event created but poster upload failed');
 			}
+		}
 
-			toast.success('Event created');
-			open = false;
-			resetForm();
-			await invalidateAll();
+		open = false;
+		resetForm();
+		await invalidateAll();
 
-			if (result?.eventId) {
-				goto(`/staff/events/${result.eventId}`);
-			}
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to create event');
-		} finally {
-			submitting = false;
+		if (result?.eventId) {
+			goto(`/staff/events/${result.eventId}`);
 		}
 	}
 
@@ -112,7 +89,7 @@
 
 <Modal bind:open title="New Event" maxWidth="max-w-md" onclose={resetForm}>
 	<svelte:boundary>
-		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
+		<Form remote={createEvent} successToast="Event created" onsuccess={handleSuccess} class="space-y-4">
 			<Field name="title" type="text" label="Title" bind:value={title} />
 			<Field name="description" type="textarea" label="Description" bind:value={description} />
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
@@ -143,7 +120,8 @@
 			{#if ticketingEnabled}
 				<div class="card bg-base-200 p-4 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
-						<Field name="ticketPrice" type="number" label="Ticket price ($)" bind:value={ticketPriceDollars} />
+						<Field name="ticketPriceDollars" type="number" label="Ticket price ($)" bind:value={ticketPriceDollars} />
+						<input type="hidden" name="ticketPrice" value={ticketPriceCents} />
 						<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					</div>
 					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
@@ -176,20 +154,18 @@
 				</div>
 			{/if}
 
+			{#if hasConflicts}
+				<input type="hidden" name="overrideConflicts" value="on" />
+			{/if}
+
 			<div class="modal-action">
 				<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
-				<button
-					type="submit"
-					class="btn {hasConflicts ? 'btn-warning' : 'btn-primary'}"
-					disabled={!title || !eventDate || !eventStartTime || !eventEndTime || submitting}
-				>
-					{#if submitting}
-						<span class="loading loading-spinner loading-sm"></span>
-					{/if}
-					{hasConflicts ? 'Create with Override' : 'Create Event'}
-				</button>
+				<SubmitButton
+					label={hasConflicts ? 'Create with Override' : 'Create Event'}
+					class={hasConflicts ? 'btn-warning' : 'btn-primary'}
+				/>
 			</div>
-		</form>
+		</Form>
 
 		{#snippet pending()}
 			<div class="flex items-center justify-center p-8">

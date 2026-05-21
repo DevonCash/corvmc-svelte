@@ -9,8 +9,10 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { Field } from '$lib/components/shared/Form';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { addCategory, editCategory } from './data.remote';
+	import { addCategory, editCategory } from '$lib/remote/equipment';
 	import { equipmentStatuses, pricingTiers } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
@@ -114,28 +116,7 @@
 		</SimpleTable>
 	</div>
 
-	<form
-		onsubmit={async (e) => {
-			e.preventDefault();
-			if (editingCategory?.id) {
-				await editCategory({
-					id: editingCategory.id,
-					name: editingCategory.name,
-					displayOrder: editingCategory.displayOrder,
-					pricingTier: editingCategory.pricingTier
-				});
-			} else if (editingCategory) {
-				await addCategory({
-					name: editingCategory.name,
-					displayOrder: editingCategory.displayOrder,
-					pricingTier: editingCategory.pricingTier
-				});
-			}
-			editingCategory = null;
-			await invalidateAll();
-		}}
-		class="space-y-3 border-t pt-4"
-	>
+	<div class="space-y-3 border-t pt-4">
 		<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
 		{#if !editingCategory}
 			<button
@@ -152,23 +133,34 @@
 				+ New Category
 			</button>
 		{:else}
-			<div class="grid grid-cols-3 gap-3">
-				<Field name="name" type="text" label="Name" class="col-span-2" bind:value={editingCategory.name} />
-				<Field name="displayOrder" type="number" label="Order" bind:value={editingCategory.displayOrder} />
-			</div>
-			<Field name="pricingTier" type="select" label="Pricing Tier"
-				bind:value={editingCategory.pricingTier}
-				options={pricingTiers.map((t) => ({ value: t, label: `${t} (${t === 'major' ? '$5/day' : '$1/day'})` }))} />
-			<div class="flex gap-2">
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm"
-					onclick={() => (editingCategory = null)}>Cancel</button
-				>
-				<button type="submit" class="btn btn-sm btn-primary"
-					>{editingCategory.id ? 'Save' : 'Add'}</button
-				>
-			</div>
+			<Form
+				remote={editingCategory.id ? editCategory as any : addCategory}
+				successToast={editingCategory.id ? 'Category updated' : 'Category added'}
+				onsuccess={() => {
+					editingCategory = null;
+					invalidateAll();
+				}}
+				class="space-y-3"
+			>
+				{#if editingCategory.id}
+					<input type="hidden" name="id" value={editingCategory.id} />
+				{/if}
+				<div class="grid grid-cols-3 gap-3">
+					<Field name="name" type="text" label="Name" class="col-span-2" value={editingCategory.name} />
+					<Field name="displayOrder" type="number" label="Order" value={editingCategory.displayOrder} />
+				</div>
+				<Field name="pricingTier" type="select" label="Pricing Tier"
+					value={editingCategory.pricingTier}
+					options={pricingTiers.map((t) => ({ value: t, label: `${t} (${t === 'major' ? '$5/day' : '$1/day'})` }))} />
+				<div class="flex gap-2">
+					<button
+						type="button"
+						class="btn btn-ghost btn-sm"
+						onclick={() => (editingCategory = null)}>Cancel</button
+					>
+					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} class="btn-sm btn-primary" />
+				</div>
+			</Form>
 		{/if}
-	</form>
+	</div>
 </Modal>

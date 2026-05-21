@@ -3,10 +3,12 @@
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getEquipment,
-		getCategories,
+		getEquipmentCategories as getCategories,
 		getEquipmentLoanHistory,
-		editEquipment
-	} from './data.remote';
+		editEquipment,
+		deactivateEquipment,
+		reactivateEquipment
+	} from '$lib/remote/equipment';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
@@ -31,6 +33,7 @@
 </script>
 
 	<Form remote={editEquipment} successToast="Equipment updated">
+		<input type="hidden" name="id" value={id} />
 		<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
 			{#if isDeactivated}
 				<Badge variant="error" size="md">Deactivated</Badge>
@@ -99,9 +102,10 @@
 
 				<div class="mt-4 flex gap-2">
 					<ActivateToggleAction
-						entityType="equipment"
 						entityId={id}
 						{isDeactivated}
+						deactivateAction={deactivateEquipment}
+						reactivateAction={reactivateEquipment}
 						entityLabel="Equipment"
 					/>
 				</div>

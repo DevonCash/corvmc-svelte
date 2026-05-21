@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getArticle, getCategories, updateArticleForm, deleteArticleCommand } from '../data.remote';
+	import { getStaffArticle, getStaffCategories, updateArticle, deleteArticle } from '$lib/remote/help';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -12,8 +12,8 @@
 	import { IconTrash } from '@tabler/icons-svelte';
 
 	let id = $derived(page.params.id!);
-	let article = $derived(await getArticle(id));
-	let categories = $derived(await getCategories());
+	let article = $derived(await getStaffArticle(id));
+	let categories = $derived(await getStaffCategories());
 
 	let contentValue = $state('');
 
@@ -21,26 +21,28 @@
 		if (article) contentValue = article.content;
 	});
 
-	async function handleDelete() {
-		await deleteArticleCommand({ id });
-		goto('/staff/help');
-	}
+
 </script>
 
 <PageHeader title="Edit Article" subtitle="Help" backHref="/staff/help">
 	<Action
-		action={handleDelete}
-		confirm={`Permanently delete "${article?.title}"?`}
+		action={deleteArticle}
+		modalTitle="Confirm"
+		successToast="Article deleted"
+		onsuccess={() => goto('/staff/help')}
+		class="btn-error btn-sm btn-outline"
 	>
-		<button class="btn btn-error btn-sm btn-outline">
-			<IconTrash size={16} /> Delete
-		</button>
+		{#snippet form({ close })}
+			<input type="hidden" name="id" value={id} />
+			<p class="py-4">Permanently delete "{article?.title}"?</p>
+		{/snippet}
+		<IconTrash size={16} /> Delete
 	</Action>
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
 		<Form
-			remote={updateArticleForm}
+			remote={updateArticle}
 			successToast="Article updated"
 		>
 			<input type="hidden" name="id" value={article.id} />

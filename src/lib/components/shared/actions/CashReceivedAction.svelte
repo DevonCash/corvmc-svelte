@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cashReceivedReservation } from '$lib/remote/reservations';
 
 	let {
 		reservationId,
@@ -17,10 +17,15 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/reservations/${reservationId}/cash-received`)}
+	action={cashReceivedReservation}
 	label="Cash received"
 	successToast="Marked as paid"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={reservationId} />
+		<p class="py-4">Record cash payment for this reservation?</p>
+	{/snippet}
+</Action>

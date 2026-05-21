@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconDeviceFloppy, IconPlus, IconTrash } from '@tabler/icons-svelte';
-	import { getProfile, getGenreSuggestions, saveProfile } from './data.remote';
+	import { getBandProfile, getGenreSuggestions, saveBandProfile } from '$lib/remote/directory';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -11,7 +11,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
 
-	let profile = $derived(await getProfile());
+	let profile = $derived(await getBandProfile());
 	let genreSuggestions = $derived(await getGenreSuggestions());
 
 	let genres = $state<string[]>([]);
@@ -43,7 +43,7 @@
 	}
 </script>
 
-	<Form remote={saveProfile} onsuccess={() => toast.success('Band profile saved')}>
+	<Form remote={saveBandProfile} onsuccess={() => toast.success('Band profile saved')}>
 		<PageHeader subtitle="Band Profile" title="Directory Profile">
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}

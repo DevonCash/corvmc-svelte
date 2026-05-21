@@ -48,6 +48,7 @@ vi.mock('$lib/server/auth', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
+	requireUser: vi.fn(() => ({ id: 'user-1', name: 'Test User' })),
 	hasRole: vi.fn().mockResolvedValue(false),
 	hasAnyRole: vi.fn().mockResolvedValue(false),
 	getUserRoles: vi.fn().mockResolvedValue([])
@@ -107,7 +108,7 @@ vi.mock('$app/server', () => ({
 }));
 
 import { auth } from '$lib/server/auth';
-import { hasAnyRole } from '$lib/server/authorization';
+import { requireUser, hasAnyRole } from '$lib/server/authorization';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 import {
@@ -119,13 +120,15 @@ import {
 import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
 const { GET: accountGET } = await import('../../api/me/account/+server');
-const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribeToList, unsubscribeFromList, deleteAccount } = await import('./data.remote') as any;
+const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribe, unsubscribe: unsubscribeFromList, deleteAccount } = await import('$lib/remote/account') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	queryResults = [];
 	queryIndex = 0;
 	lastUpdate = null;
+	mockLocals.user = mockUser({ id: 'user-1', name: 'Test User' }) as any;
+	vi.mocked(requireUser).mockReturnValue(mockLocals.user);
 });
 
 // ---------------------------------------------------------------------------
@@ -253,9 +256,9 @@ describe('getAvailableLists', () => {
 	});
 });
 
-describe('subscribeToList', () => {
+describe('subscribe', () => {
 	it('finds or creates subscriber then adds to audience', async () => {
-		await subscribeToList({ audienceId: 'aud-99' });
+		await subscribe({ audienceId: 'aud-99' });
 
 		expect(findOrCreateForUser).toHaveBeenCalledWith('user-1', mockLocals.user.email, mockLocals.user.name);
 		expect(addSubscriber).toHaveBeenCalledWith('aud-99', 'sub-1');
@@ -286,6 +289,7 @@ describe('unsubscribeFromList', () => {
 describe('deleteAccount', () => {
 	it('cancels future reservations, cancels subscription, soft-deletes, and signs out', async () => {
 		mockLocals.user = mockUser({ id: 'user-1', name: 'Test User', stripeId: 'cus_123' }) as any;
+		vi.mocked(requireUser).mockReturnValue(mockLocals.user);
 		queryResults = [[{ id: 'res-1' }, { id: 'res-2' }]];
 
 		await deleteAccount({ password: 'correct-pass' });

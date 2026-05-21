@@ -6,9 +6,11 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { getSeries, getSeriesHistory, cancelSeries, editSeries } from './data.remote';
+	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring';
 
 	let id = $derived(page.params.id!);
 	let series = $derived(await getSeries(id));
@@ -45,13 +47,18 @@
 		<div class="flex gap-2">
 			<button class="btn btn-sm btn-ghost" onclick={startEditing}>Edit Schedule</button>
 			<Action
-				action={() => cancelSeries({})}
+				action={cancelDetailSeries}
 				label="Cancel Series"
-				confirm="Cancel this recurring series? No new reservations will be generated."
+				modalTitle="Confirm"
 				successToast="Series cancelled"
 				class="btn-error btn-outline btn-sm"
 				onsuccess={() => invalidateAll()}
-			/>
+			>
+				{#snippet form({ close })}
+					<input type="hidden" name="seriesId" value={id} />
+					<p class="py-4">Cancel this recurring series? No new reservations will be generated.</p>
+				{/snippet}
+			</Action>
 		</div>
 	{/if}
 </PageHeader>
@@ -96,54 +103,45 @@
 	{#if editing}
 		<InfoCard title="Edit Schedule">
 			<p class="text-sm opacity-60 mb-4">This will supersede the current series with a new schedule. The old series is preserved in history.</p>
-			<div class="space-y-4">
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Day (first occurrence)</span></div>
-					<input type="date" class="input input-bordered w-full" bind:value={editDate} />
-				</label>
-				<div class="grid grid-cols-2 gap-4">
+			<Form
+				remote={editStaffSeries}
+				successToast="Series schedule updated"
+				onsuccess={() => { editing = false; invalidateAll(); }}
+			>
+				<input type="hidden" name="seriesId" value={id} />
+				<div class="space-y-4">
 					<label class="form-control w-full">
-						<div class="label"><span class="label-text">Start time</span></div>
-						<input type="time" class="input input-bordered w-full" bind:value={editStartTime} />
+						<div class="label"><span class="label-text">Day (first occurrence)</span></div>
+						<input type="date" name="date" class="input input-bordered w-full" bind:value={editDate} />
 					</label>
+					<div class="grid grid-cols-2 gap-4">
+						<label class="form-control w-full">
+							<div class="label"><span class="label-text">Start time</span></div>
+							<input type="time" name="startTime" class="input input-bordered w-full" bind:value={editStartTime} />
+						</label>
+						<label class="form-control w-full">
+							<div class="label"><span class="label-text">End time</span></div>
+							<input type="time" name="endTime" class="input input-bordered w-full" bind:value={editEndTime} />
+						</label>
+					</div>
 					<label class="form-control w-full">
-						<div class="label"><span class="label-text">End time</span></div>
-						<input type="time" class="input input-bordered w-full" bind:value={editEndTime} />
+						<div class="label"><span class="label-text">Frequency</span></div>
+						<select name="frequency" class="select select-bordered w-full" bind:value={editFrequency}>
+							<option value="weekly">Weekly</option>
+							<option value="biweekly">Biweekly</option>
+							<option value="monthly">Monthly</option>
+						</select>
 					</label>
+					<label class="label cursor-pointer justify-start gap-3">
+						<input type="checkbox" name="overrideConflicts" checked={overrideConflicts} class="checkbox checkbox-sm" />
+						<span class="label-text">Override conflicts</span>
+					</label>
+					<div class="flex justify-end gap-2">
+						<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editing = false)}>Cancel</button>
+						<SubmitButton label="Save New Schedule" class="btn-primary btn-sm" />
+					</div>
 				</div>
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Frequency</span></div>
-					<select class="select select-bordered w-full" bind:value={editFrequency}>
-						<option value="weekly">Weekly</option>
-						<option value="biweekly">Biweekly</option>
-						<option value="monthly">Monthly</option>
-					</select>
-				</label>
-				<label class="label cursor-pointer justify-start gap-3">
-					<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
-					<span class="label-text">Override conflicts</span>
-				</label>
-				<div class="flex justify-end gap-2">
-					<button class="btn btn-ghost btn-sm" onclick={() => (editing = false)}>Cancel</button>
-					<Action
-						action={() => {
-							const result = editSeries({
-								date: editDate,
-								startTime: editStartTime,
-								endTime: editEndTime,
-								frequency: editFrequency,
-								overrideConflicts
-							});
-							editing = false;
-							return result;
-						}}
-						label="Save New Schedule"
-						successToast="Series schedule updated"
-						class="btn-primary btn-sm"
-						onsuccess={() => invalidateAll()}
-					/>
-				</div>
-			</div>
+			</Form>
 		</InfoCard>
 	{/if}
 

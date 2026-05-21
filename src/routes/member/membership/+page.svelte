@@ -11,7 +11,7 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import type { MembershipResponse } from '$lib/server/db/schema/api';
-	import { createSubscription, updateAmount, resumeSubscription } from './data.remote';
+	import { createSubscription, updateAmount, resumeSubscription } from '$lib/remote/membership';
 
 	let { data }: { data: MembershipResponse } = $props();
 

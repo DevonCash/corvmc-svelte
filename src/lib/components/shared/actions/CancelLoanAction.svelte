@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { cancelLoan } from '$lib/remote/equipment';
 
 	let {
 		loanId,
@@ -21,11 +21,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/equipment/loans/${loanId}/cancel`)}
+	action={cancelLoan}
 	{label}
-	confirm={confirmText}
+	modalTitle="Confirm"
 	successToast="Loan cancelled"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={loanId} />
+		<p class="py-4">{confirmText}</p>
+	{/snippet}
+</Action>

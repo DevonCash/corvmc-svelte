@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import type { AudiencesResponse } from '$lib/server/db/schema/api';
+	import { getPublicAudiences } from '$lib/remote/marketing';
 
-	let { data }: { data: AudiencesResponse } = $props();
+	let audiences = $derived(await getPublicAudiences());
 
 	let selectedAudienceId = $state('');
 	let success = $state(false);
@@ -13,7 +13,7 @@
 		const name = (formData.get('name') as string)?.trim() || undefined;
 		if (!email || !selectedAudienceId) return;
 
-		const slug = data.audiences.find((a) => a.id === selectedAudienceId)?.slug;
+		const slug = audiences.find((a) => a.id === selectedAudienceId)?.slug;
 		const res = await fetch(`/api/marketing/audiences/${slug}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -46,13 +46,13 @@
 		>
 			Subscribe to another list
 		</button>
-	{:else if data.audiences.length === 0}
+	{:else if audiences.length === 0}
 		<p class="text-center opacity-60">No mailing lists are currently accepting signups.</p>
 	{:else}
 		<Form action={handleSubmit} class="space-y-4">
 			<Field name="audience" label="Choose a list">
 				<div class="space-y-2">
-					{#each data.audiences as a (a.id)}
+					{#each audiences as a (a.id)}
 						<label class="label cursor-pointer gap-3 border rounded-lg px-4 py-3 {selectedAudienceId === a.id ? 'border-primary bg-primary/10' : 'border-base-300'}">
 							<input
 								type="radio"

@@ -5,7 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { ReservationPayResponse } from '$lib/server/db/schema/api';
-	import { pay } from './data.remote';
+	import { payReservation } from '$lib/remote/reservations';
 
 	let { data }: { data: ReservationPayResponse } = $props();
 
@@ -99,7 +99,7 @@
 		</div>
 	</div>
 
-	<Form remote={pay}>
+	<Form remote={payReservation}>
 		{#if remainingCents > 0}
 			<div class="form-control">
 				<label class="label cursor-pointer justify-start gap-3">

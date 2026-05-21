@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { getArticles, getCategories, createCategoryForm, deleteCategoryCommand } from './data.remote';
+	import { getStaffArticles, getStaffCategories, createCategory, deleteCategory } from '$lib/remote/help';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -14,8 +14,8 @@
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 
-	let articles = $derived(await getArticles());
-	let categories = $derived(await getCategories());
+	let articles = $derived(await getStaffArticles());
+	let categories = $derived(await getStaffCategories());
 
 	let categoryMap = $derived(
 		Object.fromEntries(categories.map((c) => [c.id, c.name]))
@@ -25,11 +25,6 @@
 
 	function slugFromName(name: string) {
 		return name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
-	}
-
-	async function handleDeleteCategory(id: string) {
-		await deleteCategoryCommand({ id });
-		invalidateAll();
 	}
 </script>
 
@@ -52,15 +47,22 @@
 							<Badge variant="ghost" size="xs" class="ml-1">{cat.minRole}</Badge>
 						</div>
 						<Action
-							action={() => handleDeleteCategory(cat.id)}
-							confirm={`Delete "${cat.name}" and all its articles?`}
+							action={deleteCategory}
+							modalTitle="Confirm"
+							successToast="Category deleted"
+							onsuccess={() => invalidateAll()}
+							class="btn-ghost btn-xs"
 						>
+							{#snippet form({ close })}
+								<input type="hidden" name="id" value={cat.id} />
+								<p class="py-4">Delete "{cat.name}" and all its articles?</p>
+							{/snippet}
 							<IconTrash size={14} />
 						</Action>
 					</div>
 				{/each}
 			</div>
-			<Form remote={createCategoryForm} successToast="Category created" onsuccess={() => invalidateAll()}>
+			<Form remote={createCategory} successToast="Category created" onsuccess={() => invalidateAll()}>
 				<div class="flex gap-2 mt-4 items-end">
 					<FormField name="name" label="Name">
 						<input name="name" type="text" class="input input-bordered input-sm w-40"

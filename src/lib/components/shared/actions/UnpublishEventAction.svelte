@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { unpublishEvent } from '$lib/remote/events';
 
 	let {
 		eventId,
@@ -17,11 +17,16 @@
 </script>
 
 <Action
-	action={() => actionFetch(`/api/events/${eventId}/unpublish`)}
+	action={unpublishEvent}
 	label="Unpublish"
-	confirm="Revert this event to draft? It will no longer be visible to the public."
+	modalTitle="Unpublish Event"
 	successToast="Reverted to draft"
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
-/>
+>
+	{#snippet form({ close })}
+		<input type="hidden" name="id" value={eventId} />
+		<p class="py-2">Revert this event to draft? It will no longer be visible to the public.</p>
+	{/snippet}
+</Action>

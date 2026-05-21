@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { actionFetch } from './api';
+	import { adjustCredits } from '$lib/remote/users';
 
 	let {
 		userId,
@@ -18,19 +18,10 @@
 	let creditType = $state<'free_hours' | 'equipment_credits'>('free_hours');
 	let amount = $state(0);
 	let description = $state('');
-
-	function execute() {
-		const result = actionFetch(`/api/staff/users/${userId}/credits`, {
-			body: { creditType, amount, description: description.trim() }
-		});
-		amount = 0;
-		description = '';
-		return result;
-	}
 </script>
 
 <Action
-	action={execute}
+	action={adjustCredits}
 	label="Adjust"
 	modalTitle="Adjust Credits"
 	successToast="Credits adjusted"
@@ -40,10 +31,11 @@
 	{...rest}
 >
 	{#snippet form({ close })}
+		<input type="hidden" name="userId" value={userId} />
 		<div class="space-y-3">
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Credit Type</span></div>
-				<select class="select select-bordered w-full" bind:value={creditType}>
+				<select class="select select-bordered w-full" name="creditType" bind:value={creditType}>
 					<option value="free_hours">Free Hours</option>
 					<option value="equipment_credits">Equipment Credits</option>
 				</select>
@@ -53,6 +45,7 @@
 				<input
 					type="number"
 					class="input input-bordered w-full"
+					name="amount"
 					bind:value={amount}
 					placeholder="Positive to add, negative to deduct"
 				/>
@@ -62,6 +55,7 @@
 				<input
 					type="text"
 					class="input input-bordered w-full"
+					name="description"
 					bind:value={description}
 					placeholder="Why is this adjustment being made?"
 				/>
