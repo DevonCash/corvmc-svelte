@@ -40,13 +40,14 @@
 	{maxValue}
 	{disabled}
 	weekStartsOn={0}
+	fixedWeeks
 >
 	{#snippet children({ months, weekdays })}
 		<Calendar.Header class="flex items-center justify-between pb-2">
 			<Calendar.PrevButton class="btn btn-ghost btn-sm btn-square">
 				<IconChevronLeft size={16} />
 			</Calendar.PrevButton>
-			<Calendar.Heading class="text-sm font-medium" />
+			<Calendar.Heading class="text-xs font-medium" />
 			<Calendar.NextButton class="btn btn-ghost btn-sm btn-square">
 				<IconChevronRight size={16} />
 			</Calendar.NextButton>
@@ -74,7 +75,7 @@
 											data-[selected]:bg-primary data-[selected]:text-primary-content data-[selected]:border-primary
 											data-[disabled]:opacity-30 data-[disabled]:border-transparent
 											data-[unavailable]:text-error data-[unavailable]:line-through data-[unavailable]:opacity-40 data-[unavailable]:border-transparent
-											data-[outside-month]:opacity-0"
+											data-[outside-month]:opacity-40 data-[outside-month]:border-transparent"
 									/>
 								</Calendar.Cell>
 							{/each}
