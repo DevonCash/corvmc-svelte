@@ -19,6 +19,7 @@
 
 	const tz = getLocalTimeZone();
 	const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 	const todayValue = today(tz);
 
 	/** Build the rows of DateValues from the Sunday of minValue's week through the Saturday of maxValue's week. */
@@ -41,6 +42,15 @@
 			rows.push(week);
 		}
 		return rows;
+	});
+
+	const heading = $derived.by(() => {
+		if (weeks.length === 0) return '';
+		const first = weeks[0][0];
+		const last = weeks[weeks.length - 1][6];
+		const firstMonth = monthNames[first.month - 1];
+		if (first.month === last.month) return firstMonth;
+		return `${firstMonth} – ${monthNames[last.month - 1]}`;
 	});
 
 	function isOutOfRange(d: DateValue): boolean {
@@ -79,6 +89,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-64">
+	<p class="pb-2 text-center text-xs font-medium">{heading}</p>
 	<div class="grid grid-cols-7 pb-1">
 		{#each weekdays as day, i (i)}
 			<span class="text-center text-xs font-medium opacity-60">{day}</span>
