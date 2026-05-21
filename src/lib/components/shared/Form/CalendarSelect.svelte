@@ -52,7 +52,7 @@
 			</Calendar.NextButton>
 		</Calendar.Header>
 		{#each months as month (month.value.toString())}
-			<Calendar.Grid class="w-full border-collapse">
+			<Calendar.Grid class="mx-auto w-full max-w-64 border-collapse">
 				<Calendar.GridHead>
 					<Calendar.GridRow class="flex">
 						{#each weekdays as day, i (i)}
@@ -68,7 +68,7 @@
 							{#each week as date (date.toString())}
 								<Calendar.Cell {date} month={month.value} class="flex-1 p-0.5">
 									<Calendar.Day
-										class="flex aspect-square w-full items-center justify-center rounded-lg text-sm transition-colors
+										class="flex aspect-square w-full items-center justify-center rounded-md text-xs transition-colors
 											border border-base-300 hover:bg-base-200
 											data-[today]:border-primary data-[today]:font-semibold
 											data-[selected]:bg-primary data-[selected]:text-primary-content data-[selected]:border-primary
