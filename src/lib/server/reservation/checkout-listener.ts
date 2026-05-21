@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 
 export async function handleReservationCheckout(session: Stripe.Checkout.Session): Promise<void> {
 	const reservationId = session.metadata?.reservation_id;
+	console.log('[checkout-listener] reservation_id from metadata:', reservationId);
 	if (!reservationId) return;
 
 	// Only transition if still scheduled (idempotency — payment webhook can fire multiple times)
@@ -21,6 +22,7 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
 
+	console.log('[checkout-listener] reservation lookup:', row ?? 'NOT FOUND');
 	if (!row || row.status !== 'scheduled') return;
 
 	// The payment record ID comes from the session's payment_intent or the session ID itself
@@ -33,6 +35,7 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 		.set({
 			status: 'confirmed',
 			stripePaymentRecordId: paymentRecordId,
+			paidAt: new Date(),
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, reservationId));

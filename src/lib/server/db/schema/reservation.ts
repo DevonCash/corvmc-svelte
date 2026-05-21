@@ -53,6 +53,7 @@ export const reservation = sqliteTable(
 		notes: text('notes'),
 		cancellationReason: text('cancellation_reason'),
 		stripePaymentRecordId: text('stripe_payment_record_id'),
+		paidAt: timestamp('paid_at'),
 		lockAccessId: text('lock_access_id'),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'

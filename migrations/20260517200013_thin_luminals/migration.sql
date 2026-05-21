@@ -1,1 +1,0 @@
-ALTER TABLE `notification_preference` ADD `sms_enabled` integer DEFAULT false NOT NULL;

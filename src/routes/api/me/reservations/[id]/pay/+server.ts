@@ -5,7 +5,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { eq } from 'drizzle-orm';
 import { getBalance } from '$lib/server/finance/credit-service';
 import { checkout } from '$lib/server/finance/payment-service';
-import { getProductConfig, buildLineItem } from '$lib/server/finance/product-config-service';
+import { config } from '$lib/server/site-config/site-config-service';
+import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -20,8 +21,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (row.createdByUserId !== locals.user.id) throw error(403, 'Not your reservation');
 	if (row.status !== 'scheduled') throw error(400, 'This reservation is not awaiting payment');
 
-	const rehearsalConfig = await getProductConfig('rehearsal');
-	const hourlyRateCents = rehearsalConfig.unitAmountCents;
+	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
 
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
@@ -59,14 +59,20 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 	const coverFees = formData.get('coverFees') === 'on';
 	const origin = (formData.get('origin') as string) || '';
 
-	const rehearsalConfig = await getProductConfig('rehearsal');
-	const hourlyRateCents = rehearsalConfig.unitAmountCents;
+	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
 
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	const lineItem = await buildLineItem('rehearsal', totalCents, 1);
+	const lineItem: CheckoutLineItem = {
+		price_data: {
+			currency: 'usd',
+			product_data: { name: 'Practice Room Rental' },
+			unit_amount: totalCents
+		},
+		quantity: 1
+	};
 
 	const result = await checkout({
 		stripeCustomerId: locals.user.stripeId ?? undefined,
@@ -88,6 +94,7 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 			.set({
 				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+				paidAt: new Date(),
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, row.id));

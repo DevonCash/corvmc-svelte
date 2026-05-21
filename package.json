@@ -17,7 +17,7 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply corvmc-db --local",
+		"db:migrate": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
@@ -25,7 +25,8 @@
 		"stripe:sync-webhooks": "tsx scripts/sync-webhooks.ts",
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
-		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate && pnpm db:seed"
+		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
+		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done"
 	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",
