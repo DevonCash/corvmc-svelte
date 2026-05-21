@@ -109,82 +109,28 @@
 		/>
 	</div>
 
-	<!-- Mobile: card layout -->
-	{#if tableData.length === 0}
-		<p class="py-8 text-center opacity-60 sm:hidden">No reservations found. Start by creating your first practice space reservation.</p>
-	{:else}
-		<div class="grid grid-cols-1 gap-3 sm:hidden">
-			{#each tableData as row (row.id)}
-				<div class="card bg-base-100 shadow-sm border-l-4 {statusBorder[row.status] ?? 'border-l-base-300'}">
-					<div class="card-body gap-1 px-4 py-3">
-						<div class="flex items-center justify-between gap-2">
-							<p class="font-medium">{formatDateYear(row.startsAt)}</p>
-							<StatusBadge status={row.status} label />
-						</div>
-						<div class="flex items-baseline justify-between gap-2 text-sm">
-							<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
-							<span>{formatDurationAndAmount(row.startsAt, row.endsAt, 1500)}</span>
-						</div>
-						<div class="flex items-baseline justify-between gap-2 text-xs opacity-40">
-							<span>{relativeDay(row.startsAt)}</span>
-							<span>
-								{#if row.status === 'cancelled'}
-									Cancelled
-								{:else if row.paidAt}
-									Paid {formatDate(row.paidAt)}{#if row.paidWithCredits} · credits{/if}
-								{:else if row.paidWithCredits}
-									Paid with credits
-								{:else if new Date(row.startsAt) < new Date()}
-									Overdue
-								{:else}
-									Due {formatDate(row.startsAt)}
-								{/if}
-							</span>
-						</div>
-						{#if row.status === 'scheduled' || row.status === 'confirmed'}
-							<div class="-mx-4 -mb-3 mt-2 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50">
-								{#if row.status === 'scheduled'}
-									<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary">Pay Now</a>
-									<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
-								{/if}
-								<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
-							</div>
-						{/if}
+	<DataTable
+		data={tableData}
+		empty="No reservations found. Start by creating your first practice space reservation."
+	>
+		{#snippet card(row)}
+			<div class="card bg-base-100 shadow-sm border-l-4 {statusBorder[row.status] ?? 'border-l-base-300'}">
+				<div class="card-body gap-1 px-4 py-3">
+					<div class="flex items-center justify-between gap-2">
+						<p class="font-medium">{formatDateYear(row.startsAt)}</p>
+						<StatusBadge status={row.status} label />
 					</div>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
-	<!-- Desktop: table layout -->
-	<div class="hidden sm:block">
-		<DataTable
-			data={tableData}
-			empty="No reservations found. Start by creating your first practice space reservation."
-		>
-			<Column key="startsAt" header="Date" sortable>
-				{#snippet cell(_value, row)}
-					<div>
-						<span>{formatDateYear(row.startsAt)}</span>
-						<p class="text-xs opacity-50">{relativeDay(row.startsAt)}</p>
-					</div>
-				{/snippet}
-			</Column>
-			<Column key="startsAt" header="Time">
-				{#snippet cell(_value, row)}
-					{formatTimeRange(row.startsAt, row.endsAt)}
-				{/snippet}
-			</Column>
-			<Column key="startsAt" header="Price">
-				{#snippet cell(_value, row)}
-					<div>
+					<div class="flex items-baseline justify-between gap-2 text-sm">
+						<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
 						<span>{formatDurationAndAmount(row.startsAt, row.endsAt, 1500)}</span>
-						<p class="text-xs opacity-50">
+					</div>
+					<div class="flex items-baseline justify-between gap-2 text-xs opacity-40">
+						<span>{relativeDay(row.startsAt)}</span>
+						<span>
 							{#if row.status === 'cancelled'}
 								Cancelled
 							{:else if row.paidAt}
-								Paid {formatDate(row.paidAt)}{#if row.paidWithCredits}
-									· credits{/if}
+								Paid {formatDate(row.paidAt)}{#if row.paidWithCredits} · credits{/if}
 							{:else if row.paidWithCredits}
 								Paid with credits
 							{:else if new Date(row.startsAt) < new Date()}
@@ -192,30 +138,21 @@
 							{:else}
 								Due {formatDate(row.startsAt)}
 							{/if}
-						</p>
+						</span>
 					</div>
-				{/snippet}
-			</Column>
-			<Column key="status" header="Status">
-				{#snippet cell(_value, row)}
-					<StatusBadge status={row.status} label />
-				{/snippet}
-			</Column>
-			<Column key="id" header="" shrink stopClick>
-				{#snippet cell(_value, row)}
-					<div class="flex items-center gap-1">
-						{#if row.status === 'scheduled'}
-							<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary"> Pay Now </a>
-							<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
-						{/if}
-						{#if row.status === 'scheduled' || row.status === 'confirmed'}
+					{#if row.status === 'scheduled' || row.status === 'confirmed'}
+						<div class="-mx-4 -mb-3 mt-2 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50">
+							{#if row.status === 'scheduled'}
+								<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary">Pay Now</a>
+								<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
+							{/if}
 							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
-						{/if}
-					</div>
-				{/snippet}
-			</Column>
-		</DataTable>
-	</div>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/snippet}
+	</DataTable>
 
 	<div class="flex flex-auto"></div>
 
