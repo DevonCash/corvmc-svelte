@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { createCheckoutSession } from '$lib/server/finance/subscription-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
 const MIN_QUANTITY = 2;
@@ -18,9 +19,7 @@ function parseQuantity(amount: number): number {
 export const POST: RequestHandler = async ({ locals, request }) => {
 	if (!locals.user) return json({ error: 'Not authenticated' }, { status: 401 });
 	const user = locals.user;
-	if (!user.stripeId) {
-		return json({ error: 'No billing account found. Please contact support.' }, { status: 400 });
-	}
+	const stripeCustomerId = await ensureStripeCustomer(user.id, user.email, user.name);
 
 	const formData = await request.formData();
 
@@ -37,7 +36,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	try {
 		const checkoutUrl = await createCheckoutSession({
 			userId: user.id,
-			stripeCustomerId: user.stripeId,
+			stripeCustomerId,
 			quantity,
 			coverFees,
 			successUrl: `${origin}/member/membership`,

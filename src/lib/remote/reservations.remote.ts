@@ -32,6 +32,7 @@ import {
 	refund as refundPayment
 } from '$lib/server/finance/payment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
@@ -428,8 +429,10 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		quantity: 1
 	};
 
+	const stripeCustomerId = await ensureStripeCustomer(locals.user.id, locals.user.email, locals.user.name);
+
 	const result = await checkout({
-		stripeCustomerId: locals.user.stripeId ?? undefined,
+		stripeCustomerId,
 		customerEmail: locals.user.email,
 		userId: locals.user.id,
 		mode: 'payment',
@@ -562,8 +565,10 @@ export const payReservation = form(
 			quantity: 1
 		};
 
+		const stripeCustomerId = await ensureStripeCustomer(currentUser.id, currentUser.email, currentUser.name);
+
 		const result = await checkout({
-			stripeCustomerId: currentUser.stripeId ?? undefined,
+			stripeCustomerId,
 			customerEmail: currentUser.email,
 			userId: currentUser.id,
 			mode: 'payment',

@@ -5,13 +5,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockCreateCheckoutSession = vi.fn();
+const mockEnsureStripeCustomer = vi.fn().mockResolvedValue('cus_123');
 
 vi.mock('$lib/server/finance/subscription-service', () => ({
 	createCheckoutSession: (...args: unknown[]) => mockCreateCheckoutSession(...args)
 }));
 
+vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+	ensureStripeCustomer: (...args: unknown[]) => mockEnsureStripeCustomer(...args)
+}));
+
 vi.mock('$lib/config', () => ({
-	DOLLARS_PER_UNIT: 5
+	DOLLARS_PER_UNIT: 5,
+	pricingTiers: ['standard', 'premium']
 }));
 
 beforeEach(() => {
@@ -38,6 +44,7 @@ function req(opts?: {
 			user: opts?.user === null ? null : (opts?.user ?? {
 				id: 'user-1',
 				stripeId: 'cus_123',
+				email: 'test@example.com',
 				name: 'Test User'
 			})
 		},
@@ -60,13 +67,17 @@ describe('POST /api/me/membership/checkout', () => {
 		expect(response.status).toBe(401);
 	});
 
-	it('returns 400 when user has no stripeId', async () => {
-		const { POST } = await import('./+server');
-		const response = await POST(req({ user: { id: 'user-1', stripeId: null } }));
+	it('creates stripe customer when user has no stripeId', async () => {
+		mockCreateCheckoutSession.mockResolvedValue('https://checkout.stripe.com/s');
 
-		expect(response.status).toBe(400);
-		const body = await response.json() as any;
-		expect(body.error).toContain('billing account');
+		const { POST } = await import('./+server');
+		const response = await POST(req({
+			user: { id: 'user-1', stripeId: null, email: 'test@example.com', name: 'Test' },
+			fields: { amount: '10' }
+		}));
+
+		expect(response.status).toBe(200);
+		expect(mockEnsureStripeCustomer).toHaveBeenCalledWith('user-1', 'test@example.com', 'Test');
 	});
 
 	it('returns 400 for amount below minimum', async () => {
