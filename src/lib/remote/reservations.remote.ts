@@ -23,7 +23,8 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getReservationConfig } from '$lib/server/reservation/config';
-import { getProductConfig, buildLineItem } from '$lib/server/finance/product-config-service';
+import { config } from '$lib/server/site-config/site-config-service';
+import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import {
 	checkout,
@@ -32,6 +33,7 @@ import {
 } from '$lib/server/finance/payment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
 import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
+import { formatSlotTime } from '$lib/utils/format';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
@@ -59,9 +61,8 @@ export const searchMembers = query(z.string(), async (q) => {
 export const getStaffSlots = query(z.string(), async (dateParam) => {
 	await requireStaff();
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
-	const [slots, rehearsalConfig, reservationConfig] = await Promise.all([
+	const [slots, reservationConfig] = await Promise.all([
 		getAvailableSlots(date),
-		getProductConfig('rehearsal'),
 		getReservationConfig()
 	]);
 
@@ -69,7 +70,7 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 		date: date.toISOString().split('T')[0],
 		slots,
 		config: {
-			hourlyRateCents: rehearsalConfig.unitAmountCents,
+			hourlyRateCents: reservationConfig.hourlyRateCents,
 			slotMinutes: reservationConfig.timeSlotMinutes,
 			minDurationHours: reservationConfig.minDurationHours,
 			maxDurationHours: reservationConfig.maxDurationHours
@@ -111,9 +112,8 @@ export const getAvailableDates = query(async () => {
 /** Member: available slots + config + recurring frequencies for a given date. */
 export const getMemberSlots = query(z.string(), async (dateParam) => {
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
-	const [slots, rehearsalConfig, reservationConfig] = await Promise.all([
+	const [slots, reservationConfig] = await Promise.all([
 		getAvailableSlots(date),
-		getProductConfig('rehearsal'),
 		getReservationConfig()
 	]);
 
@@ -122,7 +122,7 @@ export const getMemberSlots = query(z.string(), async (dateParam) => {
 		slots,
 		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {
-			hourlyRateCents: rehearsalConfig.unitAmountCents,
+			hourlyRateCents: reservationConfig.hourlyRateCents,
 			slotMinutes: reservationConfig.timeSlotMinutes,
 			minDurationHours: reservationConfig.minDurationHours,
 			maxDurationHours: reservationConfig.maxDurationHours
@@ -130,14 +130,108 @@ export const getMemberSlots = query(z.string(), async (dateParam) => {
 	};
 });
 
+/** Available start times for a given date, with pricing config. */
+export const getReservationStartTimes = query(z.string(), async (dateParam) => {
+	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const [slots, reservationConfig] = await Promise.all([
+		getAvailableSlots(date),
+		getReservationConfig()
+	]);
+
+	const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
+
+	function contiguousFrom(startIdx: number): number {
+		let count = 0;
+		for (let i = startIdx; i < slots.length && slots[i].available; i++) count++;
+		return count;
+	}
+
+	const options = slots
+		.filter((s, i) => s.available && contiguousFrom(i) >= minSlots)
+		.map((s) => ({ value: s.startTime, label: formatSlotTime(s.startTime) }));
+
+	return options;
+});
+
+/** Available end times for a given date and start time. */
+export const getReservationEndTimes = query(
+	z.object({ date: z.string(), startTime: z.string() }),
+	async ({ date: dateParam, startTime }) => {
+		const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+		const [slots, reservationConfig] = await Promise.all([
+			getAvailableSlots(date),
+			getReservationConfig()
+		]);
+
+		const slotMinutes = reservationConfig.timeSlotMinutes;
+		const minSlots = reservationConfig.minDurationHours * (60 / slotMinutes);
+		const maxSlots = reservationConfig.maxDurationHours * (60 / slotMinutes);
+
+		const startIdx = slots.findIndex((s) => s.startTime === startTime);
+		if (startIdx === -1) return [];
+
+		let run = 0;
+		for (let i = startIdx; i < slots.length && slots[i].available; i++) run++;
+		const cap = Math.min(run, maxSlots);
+
+		const options: { value: string; label: string }[] = [];
+		for (let i = 0; i < cap; i++) {
+			if (i + 1 >= minSlots) {
+				const t = slots[startIdx + i].endTime;
+				options.push({ value: t, label: formatSlotTime(t) });
+			}
+		}
+		return options;
+	}
+);
+
+/** Member: full pricing breakdown for a given date/time selection. */
+export const getReservationPricing = query(
+	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
+	async ({ date, startTime, endTime }) => {
+		const { locals } = getRequestEvent();
+		const config = await getReservationConfig();
+
+		const [sh, sm] = startTime.split(':').map(Number);
+		const [eh, em] = endTime.split(':').map(Number);
+		const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+
+		const hourlyRateCents = config.hourlyRateCents;
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+
+		const freeHoursBalance = locals.user ? await getBalance(locals.user.id, 'free_hours') : 0;
+
+		let isSustainingMember = false;
+		if (locals.user?.stripeId) {
+			const sub = await getSubscription(locals.user.stripeId);
+			isSustainingMember = sub !== null;
+		}
+
+		const creditsApplicable = Math.min(freeHoursBalance, durationHours);
+		const creditDiscountCents =
+			durationHours > 0 ? creditsApplicable * (totalCents / durationHours) : 0;
+		const remainingCents = totalCents - creditDiscountCents;
+
+		return {
+			durationHours,
+			hourlyRateCents,
+			totalCents,
+			freeHoursBalance,
+			creditsApplicable,
+			creditDiscountCents,
+			remainingCents,
+			isSustainingMember
+		};
+	}
+);
+
 /** Band: available slots + config + recurring frequencies for a given date. */
 export const getBandSlots = query(z.string(), async (dateParam) => {
 	await requireBandMember();
 
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
-	const [slots, rehearsalConfig, reservationConfig] = await Promise.all([
+	const [slots, reservationConfig] = await Promise.all([
 		getAvailableSlots(date),
-		getProductConfig('rehearsal'),
 		getReservationConfig()
 	]);
 
@@ -146,7 +240,7 @@ export const getBandSlots = query(z.string(), async (dateParam) => {
 		slots,
 		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {
-			hourlyRateCents: rehearsalConfig.unitAmountCents,
+			hourlyRateCents: reservationConfig.hourlyRateCents,
 			slotMinutes: reservationConfig.timeSlotMinutes,
 			minDurationHours: reservationConfig.minDurationHours,
 			maxDurationHours: reservationConfig.maxDurationHours
@@ -182,9 +276,7 @@ export const getMembershipStatus = query(async () => {
 export const getBandMembershipStatus = query(z.void(), async () => {
 	const { band } = await requireBandMember();
 	const members = await getMembers(band.id);
-	const activeUserIds = members
-		.filter((m) => m.status === 'active')
-		.map((m) => m.userId);
+	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 
 	if (activeUserIds.length === 0) return { hasSustainingMember: false };
 
@@ -322,12 +414,19 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		});
 	}
 
-	const rehearsalConfig = await getProductConfig('rehearsal');
-	const hourlyRateCents = rehearsalConfig.unitAmountCents;
+	const reservationConfig = await getReservationConfig();
+	const hourlyRateCents = reservationConfig.hourlyRateCents;
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
-	const lineItem = await buildLineItem('rehearsal', totalCents, 1);
+	const lineItem: CheckoutLineItem = {
+		price_data: {
+			currency: 'usd',
+			product_data: { name: 'Practice Room Rental' },
+			unit_amount: totalCents
+		},
+		quantity: 1
+	};
 
 	const result = await checkout({
 		stripeCustomerId: locals.user.stripeId ?? undefined,
@@ -383,9 +482,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	if (recurringFrequency) {
 		// Verify at least one band member has a sustaining membership
 		const members = await getMembers(band.id);
-		const activeUserIds = members
-			.filter((m) => m.status === 'active')
-			.map((m) => m.userId);
+		const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 		const users = await db
 			.select({ stripeId: user.stripeId })
 			.from(user)
@@ -449,14 +546,21 @@ export const payReservation = form(
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 		if (row.status !== 'scheduled') throw error(400, 'Not awaiting payment');
 
-		const rehearsalConfig = await getProductConfig('rehearsal');
-		const hourlyRateCents = rehearsalConfig.unitAmountCents;
+		const reservationConfig = await getReservationConfig();
+		const hourlyRateCents = reservationConfig.hourlyRateCents;
 
 		const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
-		const lineItem = await buildLineItem('rehearsal', totalCents, 1);
+		const lineItem: CheckoutLineItem = {
+			price_data: {
+				currency: 'usd',
+				product_data: { name: 'Practice Room Rental' },
+				unit_amount: totalCents
+			},
+			quantity: 1
+		};
 
 		const result = await checkout({
 			stripeCustomerId: currentUser.stripeId ?? undefined,
@@ -493,27 +597,24 @@ export const payReservation = form(
 // ===========================================================================
 
 /** Staff/owner: confirm a reservation. */
-export const confirmReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		const currentUser = requireUser();
+export const confirmReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	const currentUser = requireUser();
 
-		const [row] = await db
-			.select({ createdByUserId: reservation.createdByUserId })
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
-		if (!row) throw error(404, 'Reservation not found');
+	const [row] = await db
+		.select({ createdByUserId: reservation.createdByUserId })
+		.from(reservation)
+		.where(eq(reservation.id, data.id))
+		.limit(1);
+	if (!row) throw error(404, 'Reservation not found');
 
-		// Allow if staff or the owner of the reservation
-		const isOwner = currentUser.id === row.createdByUserId;
-		const staff = await isStaff(currentUser.id);
-		if (!isOwner && !staff) throw error(403, 'Not authorized');
+	// Allow if staff or the owner of the reservation
+	const isOwner = currentUser.id === row.createdByUserId;
+	const staff = await isStaff(currentUser.id);
+	if (!isOwner && !staff) throw error(403, 'Not authorized');
 
-		await confirm(data.id);
-		return { success: true };
-	}
-);
+	await confirm(data.id);
+	return { success: true };
+});
 
 /** Cancel a reservation (staff can override). */
 export const cancelReservation = form(
@@ -530,97 +631,82 @@ export const cancelReservation = form(
 );
 
 /** Staff: mark a reservation as completed. */
-export const completeReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		await requireStaff();
-		await markComplete(data.id);
-		return { success: true };
-	}
-);
+export const completeReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	await requireStaff();
+	await markComplete(data.id);
+	return { success: true };
+});
 
 /** Staff: mark a reservation as no-show. */
-export const noShowReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		await requireStaff();
-		await markNoShow(data.id);
-		return { success: true };
-	}
-);
+export const noShowReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	await requireStaff();
+	await markNoShow(data.id);
+	return { success: true };
+});
 
 /** Staff: record cash payment and complete reservation. */
-export const cashReceivedReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		await requireStaff();
+export const cashReceivedReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	await requireStaff();
 
-		const [row] = await db
-			.select({
-				createdByUserId: reservation.createdByUserId,
-				startsAt: reservation.startsAt,
-				endsAt: reservation.endsAt
-			})
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
-		if (!row) throw error(404, 'Reservation not found');
+	const [row] = await db
+		.select({
+			createdByUserId: reservation.createdByUserId,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt
+		})
+		.from(reservation)
+		.where(eq(reservation.id, data.id))
+		.limit(1);
+	if (!row) throw error(404, 'Reservation not found');
 
-		const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-		const durationHours = durationMs / (1000 * 60 * 60);
-		const rehearsal = await getProductConfig('rehearsal');
-		const amountCents = Math.round(durationHours * rehearsal.unitAmountCents);
+	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
+	const durationHours = durationMs / (1000 * 60 * 60);
+	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const amountCents = Math.round(durationHours * hourlyRateCents);
 
-		const [member] = await db
-			.select({ stripeId: user.stripeId })
-			.from(user)
-			.where(eq(user.id, row.createdByUserId))
-			.limit(1);
-		if (!member?.stripeId) throw error(400, 'Member has no Stripe customer ID');
+	const [member] = await db
+		.select({ stripeId: user.stripeId })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+	if (!member?.stripeId) throw error(400, 'Member has no Stripe customer ID');
 
-		const { paymentRecordId } = await recordCashPayment({
-			userId: row.createdByUserId,
-			stripeCustomerId: member.stripeId,
-			amountCents,
-			metadata: { reservation_id: data.id }
-		});
+	const { paymentRecordId } = await recordCashPayment({
+		userId: row.createdByUserId,
+		stripeCustomerId: member.stripeId,
+		amountCents,
+		metadata: { reservation_id: data.id }
+	});
 
-		await recordCashAndComplete(data.id, paymentRecordId);
-		return { success: true };
-	}
-);
+	await recordCashAndComplete(data.id, paymentRecordId);
+	return { success: true };
+});
 
 /** Staff: comp a reservation (waive payment and confirm). */
-export const compReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		await requireStaff();
-		await confirm(data.id);
-		return { success: true };
-	}
-);
+export const compReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	await requireStaff();
+	await confirm(data.id);
+	return { success: true };
+});
 
 /** Staff: refund the payment on a reservation. */
-export const refundReservation = form(
-	z.object({ id: z.string() }),
-	async (data, issue) => {
-		await requireStaff();
+export const refundReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+	await requireStaff();
 
-		const [row] = await db
-			.select({
-				createdByUserId: reservation.createdByUserId,
-				stripePaymentRecordId: reservation.stripePaymentRecordId
-			})
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
-		if (!row) throw error(404, 'Reservation not found');
-		if (!row.stripePaymentRecordId) throw error(400, 'No payment to refund');
+	const [row] = await db
+		.select({
+			createdByUserId: reservation.createdByUserId,
+			stripePaymentRecordId: reservation.stripePaymentRecordId
+		})
+		.from(reservation)
+		.where(eq(reservation.id, data.id))
+		.limit(1);
+	if (!row) throw error(404, 'Reservation not found');
+	if (!row.stripePaymentRecordId) throw error(400, 'No payment to refund');
 
-		await refundPayment({
-			userId: row.createdByUserId,
-			stripePaymentRecordId: row.stripePaymentRecordId
-		});
-		return { success: true };
-	}
-);
+	await refundPayment({
+		userId: row.createdByUserId,
+		stripePaymentRecordId: row.stripePaymentRecordId
+	});
+	return { success: true };
+});
