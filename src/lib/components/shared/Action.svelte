@@ -104,13 +104,13 @@
 			const result = await (action as () => Promise<unknown>)();
 			await minDelay;
 			dialogOpen = false;
-			onsuccess?.(result);
+			if (typeof onsuccess === 'function') onsuccess(result);
 			if (successToast) toast.success(successToast);
 			status = 'success';
 		} catch (err) {
 			console.error('[Action] action failed:', err);
 			await minDelay;
-			if (onfailure) onfailure(err);
+			if (typeof onfailure === 'function') onfailure(err);
 			else errorBoundary?.reportError(err);
 			status = 'error';
 		}
@@ -133,6 +133,15 @@
 	function handleConfirm() {
 		dialogOpen = false;
 		run();
+	}
+
+	function handleFormSuccess(result?: unknown) {
+		dialogOpen = false;
+		if (typeof onsuccess === 'function') onsuccess(result);
+	}
+
+	function handleFormFailure(issues?: unknown) {
+		if (typeof onfailure === 'function') onfailure(issues);
 	}
 </script>
 
