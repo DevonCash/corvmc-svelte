@@ -46,7 +46,7 @@
 	const tableData = $derived(activeTab === 'upcoming' ? upcoming : allReservations);
 
 	let creditData = $derived(await getMembershipStatus());
-	const isSustaining = $derived(creditData.isSustaining);
+	const isSustaining = $derived(creditData.isSustainingMember);
 
 	const statusBorder: Record<string, string> = {
 		scheduled: 'border-l-warning',
@@ -78,7 +78,7 @@
 		<div class="flex flex-col gap-1 rounded-lg border border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class="text-success" />
-				<span class="font-medium">{creditData.freeHoursRemaining}</span>
+				<span class="font-medium">{creditData.freeHoursBalance}</span>
 				<span class="text-sm opacity-60">free hours remaining</span>
 			</div>
 			<span class="text-sm opacity-60">
@@ -145,9 +145,9 @@
 							<div class="-mx-4 -mb-3 mt-2 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50">
 								{#if row.status === 'scheduled'}
 									<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary">Pay Now</a>
-									<ConfirmReservationAction reservationId={row.id} class="btn-outline btn-xs btn-success" />
+									<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
 								{/if}
-								<CancelReservationAction reservationId={row.id} class="btn-ghost btn-xs" />
+								<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 							</div>
 						{/if}
 					</div>
@@ -206,10 +206,10 @@
 					<div class="flex items-center gap-1">
 						{#if row.status === 'scheduled'}
 							<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary"> Pay Now </a>
-							<ConfirmReservationAction reservationId={row.id} class="btn-outline btn-xs btn-success" />
+							<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
 						{/if}
 						{#if row.status === 'scheduled' || row.status === 'confirmed'}
-							<CancelReservationAction reservationId={row.id} class="btn-ghost btn-xs" />
+							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 						{/if}
 					</div>
 				{/snippet}

@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, inArray, like, or, desc, asc, count } from 'drizzle-orm';
-import { getProductConfig } from '$lib/server/finance/product-config-service';
+import { config } from '$lib/server/site-config/site-config-service';
 import { paginate, parsePagination } from '$lib/server/db/paginate';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -133,6 +133,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			all: allCount.count,
 			unresolved: unresolved.length
 		},
-		hourlyRateCents: (await getProductConfig('rehearsal')).unitAmountCents
+		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
 	});
 };

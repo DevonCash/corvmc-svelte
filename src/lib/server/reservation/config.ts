@@ -10,6 +10,7 @@ export const DEFAULT_MAX_DURATION_HOURS = 8;
 export const DEFAULT_OPERATING_HOURS_START = '09:00';
 export const DEFAULT_OPERATING_HOURS_END = '22:00';
 export const DEFAULT_BUFFER_MINUTES = 0;
+export const DEFAULT_MIN_ADVANCE_MINUTES = 60;
 export const DEFAULT_MAX_ADVANCE_DAYS_ONEOFF = 14;
 export const DEFAULT_MAX_ADVANCE_DAYS_RECURRING = 17.5;
 
@@ -24,8 +25,10 @@ export interface ReservationConfig {
 	operatingHoursStart: string;
 	operatingHoursEnd: string;
 	bufferMinutes: number;
+	minAdvanceMinutes: number;
 	maxAdvanceDaysOneoff: number;
 	maxAdvanceDaysRecurring: number;
+	hourlyRateCents: number;
 }
 
 export async function getReservationConfig(): Promise<ReservationConfig> {
@@ -37,7 +40,9 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		operatingHoursStart: String(raw.operatingHoursStart ?? DEFAULT_OPERATING_HOURS_START),
 		operatingHoursEnd: String(raw.operatingHoursEnd ?? DEFAULT_OPERATING_HOURS_END),
 		bufferMinutes: Number(raw.bufferMinutes ?? DEFAULT_BUFFER_MINUTES),
+		minAdvanceMinutes: Number(raw.minAdvanceMinutes ?? DEFAULT_MIN_ADVANCE_MINUTES),
 		maxAdvanceDaysOneoff: Number(raw.maxAdvanceDaysOneoff ?? DEFAULT_MAX_ADVANCE_DAYS_ONEOFF),
-		maxAdvanceDaysRecurring: Number(raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING)
+		maxAdvanceDaysRecurring: Number(raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING),
+		hourlyRateCents: Number(raw.hourlyRateCents ?? 1500)
 	};
 }

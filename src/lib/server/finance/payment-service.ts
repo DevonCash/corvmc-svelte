@@ -17,7 +17,8 @@ export interface CheckoutLineItem {
 	price?: string;
 	price_data?: {
 		currency: string;
-		product: string;
+		product?: string;
+		product_data?: { name: string; description?: string };
 		unit_amount: number;
 		recurring?: { interval: string };
 	};

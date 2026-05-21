@@ -50,9 +50,9 @@ vi.mock('drizzle-orm', () => ({
 	asc: vi.fn(), desc: vi.fn(), count: vi.fn()
 }));
 
-const mockGetProductConfig = vi.fn();
-vi.mock('$lib/server/finance/product-config-service', () => ({
-	getProductConfig: (...args: unknown[]) => mockGetProductConfig(...args)
+const mockConfig = vi.fn();
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	config: (...args: unknown[]) => mockConfig(...args)
 }));
 
 vi.mock('$lib/server/reservation/timezone', () => ({
@@ -65,7 +65,9 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	selectResultQueue.length = 0;
 	mockHasAnyRole.mockResolvedValue(true);
-	mockGetProductConfig.mockResolvedValue({ unitAmountCents: 1500 });
+	mockConfig.mockImplementation(async (key: string) => {
+		if (key === 'reservation.hourlyRateCents') return 1500;
+	});
 });
 
 // ---------------------------------------------------------------------------

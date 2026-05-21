@@ -152,12 +152,12 @@
 				<td onclick={(e) => e.stopPropagation()}>
 					<div class="flex items-center gap-1">
 						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
-							<ConfirmReservationAction reservationId={r.id} class="btn-ghost btn-sm latched">
+							<ConfirmReservationAction reservation={r} class="btn-ghost btn-sm latched">
 								{#snippet icon()}<IconCheck size={16} />{/snippet}
 							</ConfirmReservationAction>
 						{/if}
 						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
-							<CompleteReservationAction reservationId={r.id} class="btn-ghost btn-xs btn-square">
+							<CompleteReservationAction reservation={r} class="btn-ghost btn-xs btn-square">
 								{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 							</CompleteReservationAction>
 						{/if}

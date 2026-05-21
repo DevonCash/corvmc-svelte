@@ -61,8 +61,16 @@
 <div bind:this={el}>
 	<Form.Step>
 		{#if !pricing}
-			<div class="flex justify-center py-4">
-				<span class="loading loading-spinner loading-md"></span>
+			<div class="space-y-2 py-2">
+				<div class="flex justify-between">
+					<div class="skeleton h-5 w-48"></div>
+					<div class="skeleton h-5 w-16"></div>
+				</div>
+				<div class="divider my-1"></div>
+				<div class="flex justify-between">
+					<div class="skeleton h-6 w-16"></div>
+					<div class="skeleton h-6 w-20"></div>
+				</div>
 			</div>
 		{:else}
 			<div class="space-y-2">

@@ -65,16 +65,13 @@ vi.mock('$lib/server/reservation/config', () => ({
 		operatingHoursEnd: '22:00',
 		bufferMinutes: 0,
 		maxAdvanceDaysOneoff: 14,
-		maxAdvanceDaysRecurring: 17.5
+		maxAdvanceDaysRecurring: 17.5,
+		hourlyRateCents: 1500
 	}))
 }));
 
 vi.mock('$lib/server/db/schema/recurring', () => ({
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
-}));
-
-vi.mock('$lib/server/finance/product-config-service', () => ({
-	getProductConfig: vi.fn(async () => ({ unitAmountCents: 1500 }))
 }));
 
 vi.mock('$lib/server/authorization', () => ({

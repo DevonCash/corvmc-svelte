@@ -79,11 +79,11 @@
 						</div>
 						<div class="flex justify-end gap-2">
 							<CashReceivedAction
-								reservationId={r.id}
+								reservation={r}
 								onsuccess={() => markResolved(r.id)}
 							/>
 							<NoShowReservationAction
-								reservationId={r.id}
+								reservation={r}
 								class="btn-error btn-outline btn-sm"
 								onsuccess={() => markResolved(r.id)}
 							/>

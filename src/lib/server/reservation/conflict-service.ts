@@ -95,6 +95,7 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 	const slots: TimeSlot[] = [];
 	const slotMs = config.timeSlotMinutes * 60 * 1000;
 	const bufferMs = config.bufferMinutes * 60 * 1000;
+	const earliestStart = new Date(Date.now() + config.minAdvanceMinutes * 60 * 1000);
 
 	for (let time = dayStart.getTime(); time < dayEnd.getTime(); time += slotMs) {
 		const slotStart = new Date(time);
@@ -118,7 +119,7 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 		slots.push({
 			startTime,
 			endTime,
-			available: !blockedByReservation && !blockedByClosure
+			available: !blockedByReservation && !blockedByClosure && slotStart >= earliestStart
 		});
 	}
 

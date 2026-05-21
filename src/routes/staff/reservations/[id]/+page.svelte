@@ -78,16 +78,16 @@
 			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
 				<div class="flex flex-wrap items-center gap-2 border-t border-base-200 pt-3">
 					{#if actions.has('confirm')}
-						<ConfirmReservationAction reservationId={r.id} />
+						<ConfirmReservationAction reservation={r} />
 					{/if}
 					{#if actions.has('complete')}
-						<CompleteReservationAction reservationId={r.id} />
+						<CompleteReservationAction reservation={r} />
 					{/if}
 					{#if actions.has('noShow')}
-						<NoShowReservationAction reservationId={r.id} />
+						<NoShowReservationAction reservation={r} />
 					{/if}
 					{#if actions.has('cancel')}
-						<CancelReservationAction reservationId={r.id} showReasonInput />
+						<CancelReservationAction reservation={r} showReasonInput />
 					{/if}
 				</div>
 			{/if}
@@ -157,13 +157,13 @@
 				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
 					<div class="mt-3 flex flex-wrap gap-2 border-t border-base-200 pt-3">
 						{#if actions.has('cashReceived')}
-							<CashReceivedAction reservationId={r.id} class="btn-outline btn-sm btn-success flex-1" />
+							<CashReceivedAction reservation={r} class="btn-outline btn-sm btn-success flex-1" />
 						{/if}
 						{#if actions.has('comp')}
-							<CompReservationAction reservationId={r.id} class="btn-outline btn-sm btn-info flex-1" />
+							<CompReservationAction reservation={r} class="btn-outline btn-sm btn-info flex-1" />
 						{/if}
 						{#if actions.has('refund')}
-							<RefundReservationAction reservationId={r.id} class="btn-outline btn-sm btn-error flex-1" />
+							<RefundReservationAction reservation={r} class="btn-outline btn-sm btn-error flex-1" />
 						{/if}
 					</div>
 				{/if}

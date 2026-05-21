@@ -1,3 +1,7 @@
+// @deprecated — The product_config table is deprecated. Pricing config is
+// migrating to KV site config (see site-config-service.ts). The 'rehearsal'
+// product has been fully migrated to reservation.hourlyRateCents in KV.
+// Remaining products (contribution, fee_coverage, ticket) will follow.
 import { db } from '$lib/server/db';
 import { productConfig } from '$lib/server/db/schema/product-config';
 import { stripe } from '$lib/server/stripe';

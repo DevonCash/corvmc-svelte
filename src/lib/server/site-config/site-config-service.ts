@@ -15,6 +15,7 @@ const DEFAULTS: Record<string, string | number> = {
 	'reservation.bufferMinutes': 0,
 	'reservation.maxAdvanceDaysOneoff': 14,
 	'reservation.maxAdvanceDaysRecurring': 17.5,
+	'reservation.hourlyRateCents': 1500,
 
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',
@@ -33,7 +34,7 @@ export type SiteConfigKey = keyof typeof DEFAULTS;
 // Core access
 // ---------------------------------------------------------------------------
 
-export async function getSiteConfig<T extends string | number = string>(
+export async function config<T extends string | number = string | number>(
 	key: string
 ): Promise<T> {
 	const value = await getJson<T>(`${KV_PREFIX}${key}`);
@@ -44,6 +45,9 @@ export async function getSiteConfig<T extends string | number = string>(
 
 	throw new Error(`Unknown site config key: ${key}`);
 }
+
+/** @deprecated Use config() instead */
+export const getSiteConfig = config;
 
 export async function getConfigsByPrefix(
 	prefix: string

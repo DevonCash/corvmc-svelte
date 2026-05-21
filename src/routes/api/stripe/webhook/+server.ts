@@ -27,13 +27,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const handler = webhookHandlerMap[event.type as keyof typeof webhookHandlerMap];
 	if (handler) {
-		try {
+		if (import.meta.env.DEV) {
 			await handler(event.data.object);
-		} catch (err) {
-			// Log but return 200 to prevent Stripe from retrying indefinitely.
-			// Transient failures will be caught by monitoring/alerting rather than
-			// relying on Stripe's retry mechanism which risks duplicate processing.
-			console.error(`Webhook handler failed for ${event.type} (${event.id}):`, err);
+		} else {
+			try {
+				await handler(event.data.object);
+			} catch (err) {
+				console.error(`Webhook handler failed for ${event.type} (${event.id}):`, err);
+			}
 		}
 	}
 

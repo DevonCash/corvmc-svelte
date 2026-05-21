@@ -72,8 +72,13 @@
 
 <Form.Step valid={step1Valid}>
 	{#if initialLoading}
-		<div class="flex justify-center py-8">
-			<span class="loading loading-spinner loading-md"></span>
+		<div class="space-y-4 py-2">
+			<div class="skeleton h-[175px] w-full rounded-lg"></div>
+			<div class="grid grid-cols-2 gap-2">
+				<div class="skeleton h-12 w-full rounded-lg"></div>
+				<div class="skeleton h-12 w-full rounded-lg"></div>
+			</div>
+			<div class="skeleton h-20 w-full rounded-lg"></div>
 		</div>
 	{:else}
 		<Form.Field

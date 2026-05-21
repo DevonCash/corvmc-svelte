@@ -33,6 +33,7 @@
 		body,
 		trigger,
 		submitLabel,
+		submitClass,
 		canSubmit = true,
 		noFooter = false,
 		successToast,
@@ -56,6 +57,7 @@
 		body?: Snippet<[{ close: () => void; run: () => void; status: Status }]>;
 		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
+		submitClass?: string;
 		canSubmit?: boolean;
 		noFooter?: boolean;
 		maxWidth?: string;
@@ -152,89 +154,46 @@
 	/>
 {/if}
 
-<!-- Confirm dialog (callback + confirm string, no form/body) -->
-{#if !isForm && confirm && !formSnippet && !body}
-	<Modal bind:open={dialogOpen} title="Confirm" maxWidth="max-w-sm">
-		<p class="py-4">{confirm}</p>
-		<div class="modal-action">
-			<button type="button" class="btn btn-ghost" onclick={close}>Dismiss</button>
-			<button type="button" class="btn {className}" onclick={handleConfirm}>
-				{label}
-			</button>
-		</div>
-	</Modal>
-{/if}
-
-<!-- Callback + body modal (full control — consumer owns entire content area) -->
-{#if !isForm && body}
-	<Modal bind:open={dialogOpen} {maxWidth}>
-		{@render body({ close, run, status })}
-	</Modal>
-{/if}
-
-<!-- Callback + form modal (default layout with title bar + submit button) -->
-{#if !isForm && formSnippet && !body}
+{#if confirm || formSnippet || body}
 	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
-		<div class="space-y-4">
-			{@render formSnippet({ close })}
-			<div class="flex justify-end pt-2">
-				<button
+		{#if body}
+			{@render body({ close, run, status })}
+		{:else if confirm}
+			<p class="py-4">{confirm}</p>
+			<div class="modal-action">
+				<Button type="button" variant="ghost" onclick={close} label="Close"></Button>
+				<Button
 					type="button"
-					class="btn {className}"
-					disabled={!canSubmit || status === 'pending'}
-					onclick={run}
-				>
-					{#if status === 'pending'}
-						<span class="loading loading-spinner loading-sm"></span>
+					{label}
+					class={submitClass}
+					variant="primary"
+					onclick={() => {
+						run();
+						close();
+					}}
+				/>
+			</div>
+		{:else if formSnippet}
+			<Form
+				remote={action as RemoteForm<any, any>}
+				{successToast}
+				onsuccess={(result) => {
+					dialogOpen = false;
+					onsuccess?.(result);
+				}}
+				onfailure={(issues) => {
+					onfailure?.(issues);
+				}}
+			>
+				<div class="space-y-4">
+					{@render formSnippet?.({ close })}
+					{#if !noFooter}
+						<div class="flex justify-end pt-2">
+							<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
+						</div>
 					{/if}
-					{submitLabel ?? label}
-				</button>
-			</div>
-		</div>
-	</Modal>
-{/if}
-
-<!-- Form modal with RemoteForm + form snippet (default layout) -->
-{#if isForm && formSnippet && !body}
-	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
-		<Form
-			remote={action as RemoteForm<any, any>}
-			{successToast}
-			onsuccess={(result) => {
-				dialogOpen = false;
-				onsuccess?.(result);
-			}}
-			onfailure={(issues) => {
-				onfailure?.(issues);
-			}}
-		>
-			<div class="space-y-4">
-				{@render formSnippet({ close })}
-				{#if !noFooter}
-					<div class="flex justify-end pt-2">
-						<SubmitButton label={submitLabel ?? label} class={className} />
-					</div>
-				{/if}
-			</div>
-		</Form>
-	</Modal>
-{/if}
-
-<!-- Form modal with RemoteForm + body snippet (full control) -->
-{#if isForm && body}
-	<Modal bind:open={dialogOpen} {maxWidth}>
-		<Form
-			remote={action as RemoteForm<any, any>}
-			{successToast}
-			onsuccess={(result) => {
-				dialogOpen = false;
-				onsuccess?.(result);
-			}}
-			onfailure={(issues) => {
-				onfailure?.(issues);
-			}}
-		>
-			{@render body({ close, run: () => {}, status })}
-		</Form>
+				</div>
+			</Form>
+		{/if}
 	</Modal>
 {/if}

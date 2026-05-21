@@ -31,7 +31,7 @@
 	const isLastStep = $derived(!ctx.hasSteps || ctx.currentStep === ctx.totalSteps - 1);
 	const activeLabel = $derived(isLastStep ? label : continueLabel);
 	const isDisabled = $derived(
-		disabled || (isLastStep ? ctx.status !== 'dirty' : !ctx.currentStepValid || ctx.status === 'pending')
+		disabled || !ctx.currentStepValid || ctx.status !== 'idle' && ctx.status !== 'dirty'
 	);
 
 	let keys = useShortcut(() => shortcut, () => {

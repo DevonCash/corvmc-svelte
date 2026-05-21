@@ -138,8 +138,11 @@
 
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
+	let submitting = false;
 	let remoteAttrs = $derived(
 		remote?.enhance(async (...args) => {
+			if (submitting) return;
+			submitting = true;
 			const [{ submit }] = args;
 			status = 'pending';
 			const start = performance.now();
@@ -160,6 +163,8 @@
 				if (onfailure) onfailure(ctx.issues);
 				else errorBoundary?.reportError(err);
 				status = 'error';
+			} finally {
+				submitting = false;
 			}
 
 			setTimeout(() => {

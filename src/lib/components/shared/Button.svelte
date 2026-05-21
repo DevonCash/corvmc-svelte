@@ -52,7 +52,7 @@
 	{#if children}
 		{@render children()}
 	{:else if status === 'pending'}
-		<span class="loading loading-spinner loading-sm"></span>
+		<span class="loading loading-sm loading-spinner"></span>
 		{label}
 	{:else if status === 'success'}
 		<IconCheck size={20} />
@@ -89,19 +89,14 @@
 			<Tooltip.Content
 				side="bottom"
 				sideOffset={4}
-				class="bg-neutral text-neutral-content text-xs px-2 py-1 rounded shadow-lg z-50"
+				class="z-50 rounded bg-neutral px-2 py-1 text-xs text-neutral-content shadow-lg"
 			>
 				{title}
 			</Tooltip.Content>
 		</Tooltip.Portal>
 	</Tooltip.Root>
 {:else}
-	<BitsButton.Root
-		{href}
-		{disabled}
-		class="btn {statusClass || className}"
-		{...rest}
-	>
+	<BitsButton.Root {href} {disabled} class="btn {statusClass || className}" {...rest}>
 		{@render buttonContent()}
 	</BitsButton.Root>
 {/if}

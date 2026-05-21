@@ -48,18 +48,17 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 	checkout: (...args: unknown[]) => mockCheckout(...args)
 }));
 
-const mockGetProductConfig = vi.fn();
-const mockBuildLineItem = vi.fn();
-vi.mock('$lib/server/finance/product-config-service', () => ({
-	getProductConfig: (...args: unknown[]) => mockGetProductConfig(...args),
-	buildLineItem: (...args: unknown[]) => mockBuildLineItem(...args)
+const mockConfig = vi.fn();
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	config: (...args: unknown[]) => mockConfig(...args)
 }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResult = [];
-	mockGetProductConfig.mockResolvedValue({ unitAmountCents: 1500 });
-	mockBuildLineItem.mockResolvedValue({ name: 'Rehearsal', amount: 3000, quantity: 1 });
+	mockConfig.mockImplementation(async (key: string) => {
+		if (key === 'reservation.hourlyRateCents') return 1500;
+	});
 	mockUpdate.mockReturnValue({
 		set: vi.fn().mockReturnValue({
 			where: vi.fn().mockResolvedValue({ rowCount: 1 })

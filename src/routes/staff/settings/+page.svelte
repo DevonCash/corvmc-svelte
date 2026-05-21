@@ -58,7 +58,7 @@
 				to Stripe automatically. Price changes take effect on the next checkout.
 			</p>
 
-			{#each products as product (product.key)}
+			{#each products.filter((p) => p.key !== 'rehearsal') as product (product.key)}
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
 				<Form
@@ -168,13 +168,54 @@
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Operating Hours</h3>
+							<h3 class="card-title text-base">Pricing</h3>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
 								class="btn-sm btn-primary"
 							/>
+						</div>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<div class="form-control">
+								<label class="label" for="hourlyRate">
+									<span class="label-text">Hourly rate</span>
+								</label>
+								<label class="input-bordered input input-sm flex items-center gap-1">
+									<span class="opacity-60">$</span>
+									<input
+										id="hourlyRate"
+										type="number"
+										step="0.01"
+										min="0"
+										value={formatDollars(Number(reservationSettings.hourlyRateCents ?? 1500))}
+										oninput={(e) => {
+											const input = e.target as HTMLInputElement;
+											const dollars = parseFloat(input.value);
+											const hidden = input
+												.closest('form')
+												?.querySelector<HTMLInputElement>('[name="hourlyRateCents"]');
+											if (hidden && !isNaN(dollars))
+												hidden.value = String(Math.round(dollars * 100));
+										}}
+										class="grow bg-transparent outline-none"
+									/>
+								</label>
+								<input
+									type="hidden"
+									name="hourlyRateCents"
+									value={String(reservationSettings.hourlyRateCents ?? 1500)}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<div class="flex items-center justify-between">
+							<h3 class="card-title text-base">Operating Hours</h3>
 						</div>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -217,6 +258,14 @@
 								value={String(reservationSettings.bufferMinutes ?? 0)}
 								min="0"
 								step="5"
+							/>
+							<FormField
+								name="minAdvanceMinutes"
+								label="Min advance booking (minutes)"
+								type="number"
+								value={String(reservationSettings.minAdvanceMinutes ?? 60)}
+								min="0"
+								step="15"
 							/>
 							<FormField
 								name="minDurationHours"

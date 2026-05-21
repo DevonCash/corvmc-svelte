@@ -6,6 +6,7 @@ import {
 	type ProductKey
 } from '$lib/server/finance/product-config-service';
 import {
+	config as getConfig,
 	getConfigsByPrefix,
 	updateSiteConfigs
 } from '$lib/server/site-config/site-config-service';
@@ -14,6 +15,10 @@ import { testConnection } from '$lib/server/lock/ultraloc-client';
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
+
+export const config = query(z.string(), async (key) => {
+	return getConfig(key);
+});
 
 export const getProducts = query(async () => {
 	return getAllProductConfigs();
@@ -77,8 +82,10 @@ const reservationSettingsSchema = z.object({
 	minDurationHours: z.string().regex(/^\d+(\.\d+)?$/).transform(Number),
 	maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
 	bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
+	minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
 	maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
-	maxAdvanceDaysRecurring: z.string().regex(/^\d+(\.\d+)?$/).transform(Number)
+	maxAdvanceDaysRecurring: z.string().regex(/^\d+(\.\d+)?$/).transform(Number),
+	hourlyRateCents: z.string().regex(/^\d+$/).transform(Number)
 });
 
 export const updateReservationSettings = form(reservationSettingsSchema, async (raw) => {
@@ -91,8 +98,10 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		{ key: 'reservation.minDurationHours', value: data.minDurationHours },
 		{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
 		{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
+		{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
 		{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
-		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring }
+		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
+		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
 	]);
 
 	void getReservationSettings().refresh();
