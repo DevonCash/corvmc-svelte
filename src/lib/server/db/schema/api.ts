@@ -91,29 +91,25 @@ export interface MemberBandsResponse {
 		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
 }
 
+type MemberReservation = Pick<
+	Reservation,
+	| 'id'
+	| 'bookerType'
+	| 'bookerId'
+	| 'status'
+	| 'startsAt'
+	| 'endsAt'
+	| 'notes'
+	| 'recurringSeriesId'
+> & {
+	paidAt: string | null;
+	paidAmountCents: number | null;
+	paidWithCredits: boolean;
+};
+
 export interface MemberReservationsResponse {
-	upcoming: Pick<
-		Reservation,
-		| 'id'
-		| 'bookerType'
-		| 'bookerId'
-		| 'status'
-		| 'startsAt'
-		| 'endsAt'
-		| 'notes'
-		| 'recurringSeriesId'
-	>[];
-	past: Pick<
-		Reservation,
-		| 'id'
-		| 'bookerType'
-		| 'bookerId'
-		| 'status'
-		| 'startsAt'
-		| 'endsAt'
-		| 'notes'
-		| 'recurringSeriesId'
-	>[];
+	upcoming: MemberReservation[];
+	past: MemberReservation[];
 	recurringSeries: {
 		id: string;
 		frequencyLabel: string;

@@ -31,7 +31,7 @@
 	</div>
 
 	<!-- Nav links -->
-	<ul class="menu w-full flex-1">
+	<ul class="menu w-full flex-1 gap-1">
 		{@render navigation?.()}
 	</ul>
 

@@ -361,7 +361,7 @@ p {
    Hard brown border + offset drop shadow with press animation.
    --------------------------------------------------------------------------- */
 .btn {
-	--shadow: 5px;
+	--shadow: .4em;
 	--shadow-size: var(--shadow);
 	position: relative;
 	border: 2.5px solid var(--shadow-color);
@@ -373,24 +373,20 @@ p {
 }
 
 .btn:disabled {
-	--shadow: 2px;
+	--shadow: calc(var(--shadow/2));
 }
 
 .btn.flat {
 	--shadow: 0;
 
+	&:focus,
 	&:hover {
-		filter: brightness(.8);
+		filter: brightness(0.8);
 	}
 }
 
-.btn:focus {
-	outline: none;
-	border-color: var(--color-accent);
-	--shadow-color: var(--color-accent);
-}
-
 .btn::before {
+	z-index: -2;
 	content: '';
 	box-sizing: border-box;
 	width: calc(100% + var(--shadow-size));
@@ -404,16 +400,18 @@ p {
 }
 
 .btn.latched {
-	--shadow-size: calc(var(--shadow) / 2);
+	z-index: -1;
+	--shadow-size: calc(var(--shadow) / 3);
 
+	&:focus,
 	&:hover {
-		--shadow-size: calc(2 * var(--shadow) / 3);
+		--shadow-size: calc(var(--shadow) / 4);
 	}
 }
 
+.btn:focus,
 .btn:hover {
-	z-index: 10;
-	--shadow-size: calc(var(--shadow) * 1.5);
+	--shadow-size: calc(var(--shadow) * 0.75);
 }
 .btn:active {
 	--shadow-size: 0;

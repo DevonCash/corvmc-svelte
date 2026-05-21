@@ -2,7 +2,7 @@
 	import { getDirectoryMembers, getDirectoryBands, getInstrumentSuggestions, getGenreSuggestions } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
@@ -35,7 +35,16 @@
 	}
 </script>
 
-<PageHeader title="Directory" subtitle="Community" />
+<PageHeader title="Directory" subtitle="Community">
+	<ButtonGroup
+		tabs={[
+			{ key: 'members', label: `Members (${members.length})` },
+			{ key: 'bands', label: `Bands (${bands.length})` }
+		]}
+		active={activeTab}
+		onchange={(key) => (activeTab = key as 'members' | 'bands')}
+	/>
+</PageHeader>
 <PageContent>
 	<!-- Search & Filters -->
 	<div class="directory-filters">
@@ -79,15 +88,6 @@
 			</div>
 		</div>
 	</div>
-
-	<TabBar
-		tabs={[
-			{ key: 'members', label: `Members (${members.length})` },
-			{ key: 'bands', label: `Bands (${bands.length})` }
-		]}
-		active={activeTab}
-		onchange={(key) => (activeTab = key as 'members' | 'bands')}
-	/>
 
 	{#if activeTab === 'members'}
 		{#if members.length === 0}

@@ -40,7 +40,7 @@
 	</div>
 {/snippet}
 
-<div class="space-y-8">
+<div class="space-y-8 pt-8">
 	<!-- Active sustaining member view -->
 	{#if isActive && subscription}
 		<MembershipHero variant="dashboard" />

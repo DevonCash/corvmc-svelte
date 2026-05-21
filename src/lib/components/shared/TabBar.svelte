@@ -13,11 +13,13 @@
 	let {
 		tabs,
 		active,
-		onchange
+		onchange,
+		class: className = 'tabs-bordered'
 	}: {
 		tabs: Tab[];
 		active: string;
 		onchange?: (key: string) => void;
+		class?: string;
 	} = $props();
 
 	function handleValueChange(value: string) {
@@ -31,7 +33,7 @@
 	}
 </script>
 
-<ToggleGroup.Root type="single" value={active} onValueChange={handleValueChange} class="tabs tabs-bordered">
+<ToggleGroup.Root type="single" value={active} onValueChange={handleValueChange} class="tabs {className}">
 	{#each tabs as tab (tab.key)}
 		<ToggleGroup.Item value={tab.key} class="tab {active === tab.key ? 'tab-active' : ''}">
 			{tab.label}

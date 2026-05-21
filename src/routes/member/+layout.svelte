@@ -7,7 +7,8 @@
 		IconAddressBook,
 		IconTool,
 		IconPlus,
-		IconHelp
+		IconHelp,
+		IconMetronome
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -41,8 +42,8 @@
 		<Nav.Item href="/member" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/reservations" label="Reservations">
-			{#snippet icon()}<IconCalendar />{/snippet}
+		<Nav.Item href="/member/reservations" label="Practice">
+			{#snippet icon()}<IconMetronome />{/snippet}
 		</Nav.Item>
 		<Nav.Item href="/member/events" label="Events">
 			{#snippet icon()}<IconCalendarEvent />{/snippet}
@@ -50,9 +51,9 @@
 		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/equipment" label="Equipment">
+		<!-- <Nav.Item href="/member/equipment" label="Equipment">
 			{#snippet icon()}<IconTool />{/snippet}
-		</Nav.Item>
+		</Nav.Item> -->
 
 		<Nav.Group title="My Bands">
 			{#snippet action()}

@@ -32,7 +32,7 @@
 			</div>
 
 			<!-- Actions -->
-			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
+			<div class="flex items-center gap-2 " style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
 					<a href="/member" class="btn btn-sm btn-primary">My Account</a>
 				{:else}

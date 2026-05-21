@@ -40,7 +40,7 @@
 
 <svelte:window onclick={handleClickOutside} />
 
-<nav class="navbar z-50 h-[48px] min-h-0 border-b border-base-300 bg-base-100 px-3 py-1.5 justify-between">
+<nav class="navbar z-50 h-[48px] min-h-0 border-b border-base-300 bg-base-100 px-3 pb-1 pt-3 justify-between">
 	<!-- Left: hamburger (mobile) + brand + panel tabs (desktop) -->
 	<div class="flex items-center gap-2">
 		<label for={drawerId} class="btn btn-square btn-ghost btn-sm lg:hidden">
@@ -61,7 +61,7 @@
 			{#if bandPanels.length > 0}
 				<div class="bands-dropdown-wrapper relative">
 					<button
-						class="btn gap-1 btn-sm {activeBand ? 'btn-primary' : 'btn-ghost'}"
+						class="btn gap-1 btn-sm {activeBand ? 'btn-primary latched' : 'btn-ghost'}"
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />

@@ -23,7 +23,7 @@
 		<div class="grid gap-6 md:grid-cols-3">
 			<div class="card bg-base-100 shadow-sm">
 				<div class="card-body">
-					<div class="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
+					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
 						<IconMusic size={24} class="text-primary" />
 					</div>
 					<h3 class="card-title">Practice Time</h3>
@@ -33,7 +33,7 @@
 
 			<div class="card bg-base-100 shadow-sm">
 				<div class="card-body">
-					<div class="mb-2 flex size-12 items-center justify-center rounded-full bg-secondary/10">
+					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-secondary/10">
 						<IconTool size={24} class="text-secondary" />
 					</div>
 					<h3 class="card-title">Gear Library</h3>
@@ -43,7 +43,7 @@
 
 			<div class="card bg-base-100 shadow-sm">
 				<div class="card-body">
-					<div class="mb-2 flex size-12 items-center justify-center rounded-full bg-accent/10">
+					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-accent/10">
 						<IconUsers size={24} class="text-accent" />
 					</div>
 					<h3 class="card-title">Shows & Community</h3>

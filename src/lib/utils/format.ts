@@ -19,6 +19,48 @@ export function formatDate(iso: string): string {
 	});
 }
 
+/** Short date with year: "Tue, May 13, 2026" */
+export function formatDateYear(iso: string): string {
+	return new Date(iso).toLocaleDateString('en-US', {
+		timeZone: TZ,
+		weekday: 'short',
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric'
+	});
+}
+
+/** Relative day label: "Today", "Tomorrow", "Next Wednesday", "in 3 weeks", "2 months ago" */
+export function relativeDay(iso: string): string {
+	const now = new Date();
+	const target = new Date(iso);
+	const todayStr = now.toLocaleDateString('en-CA', { timeZone: TZ });
+	const targetStr = target.toLocaleDateString('en-CA', { timeZone: TZ });
+	const today = new Date(todayStr);
+	const targetDay = new Date(targetStr);
+	const diffDays = Math.round((targetDay.getTime() - today.getTime()) / 86_400_000);
+
+	if (diffDays === 0) return 'Today';
+	if (diffDays === 1) return 'Tomorrow';
+	if (diffDays === -1) return 'Yesterday';
+
+	const dayName = target.toLocaleDateString('en-US', { timeZone: TZ, weekday: 'long' });
+	if (diffDays > 1 && diffDays <= 7) return `This ${dayName}`;
+	if (diffDays > 7 && diffDays <= 14) return `Next ${dayName}`;
+	if (diffDays < -1 && diffDays >= -7) return `Last ${dayName}`;
+
+	const absDays = Math.abs(diffDays);
+	const weeks = Math.round(absDays / 7);
+	const months = Math.round(absDays / 30);
+
+	if (absDays < 30) {
+		const label = weeks === 1 ? '1 week' : `${weeks} weeks`;
+		return diffDays > 0 ? `In ${label}` : `${label} ago`;
+	}
+	const label = months === 1 ? '1 month' : `${months} months`;
+	return diffDays > 0 ? `In ${label}` : `${label} ago`;
+}
+
 /** Long date: "Tuesday, May 13, 2026" */
 export function fullDate(iso: string): string {
 	return new Date(iso).toLocaleDateString('en-US', {

@@ -8,7 +8,7 @@ import {
 	equipmentStatuses,
 	pricingTiers,
 	loanStatuses
-} from '$lib/config';
+} from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Equipment domain types
