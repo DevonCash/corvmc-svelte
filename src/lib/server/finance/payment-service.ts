@@ -49,6 +49,8 @@ async function getFeeProductId(): Promise<string> {
 export interface CheckoutOptions {
 	/** Stripe customer ID. Required for subscriptions, optional for one-time. */
 	stripeCustomerId?: string;
+	/** Customer email. Pre-fills the Stripe Checkout email field when no customer ID is set. */
+	customerEmail?: string;
 	/** App user ID. When absent, credit application is skipped (anonymous purchase). */
 	userId?: string;
 	/** Checkout mode — determines one-time vs recurring billing. */
@@ -92,6 +94,7 @@ interface CreditDeduction {
 export async function checkout(options: CheckoutOptions): Promise<CheckoutResult> {
 	const {
 		stripeCustomerId,
+		customerEmail,
 		userId,
 		mode,
 		lineItems,
@@ -234,6 +237,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		cancel_url: string;
 		metadata: Record<string, string>;
 		customer?: string;
+		customer_email?: string;
 		discounts?: Array<{ coupon: string }>;
 	} = {
 		mode,
@@ -245,6 +249,8 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 
 	if (stripeCustomerId) {
 		sessionParams.customer = stripeCustomerId;
+	} else if (customerEmail) {
+		sessionParams.customer_email = customerEmail;
 	}
 
 	// Apply coupon for credit discount (one-time payments only — subscriptions

@@ -335,6 +335,7 @@ export const purchaseTickets = form(
 
 		const result = await checkout({
 			stripeCustomerId: locals.user?.stripeId ?? undefined,
+			customerEmail: locals.user?.email ?? data.attendeeEmail,
 			userId: locals.user?.id ?? undefined,
 			mode: 'payment',
 			lineItems: [lineItem],

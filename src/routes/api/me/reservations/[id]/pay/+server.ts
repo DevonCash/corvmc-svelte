@@ -70,6 +70,7 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 
 	const result = await checkout({
 		stripeCustomerId: locals.user.stripeId ?? undefined,
+		customerEmail: locals.user.email,
 		userId: locals.user.id,
 		mode: 'payment',
 		lineItems: [lineItem],

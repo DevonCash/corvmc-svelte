@@ -300,6 +300,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 
 	const result = await checkout({
 		stripeCustomerId: locals.user.stripeId ?? undefined,
+		customerEmail: locals.user.email,
 		userId: locals.user.id,
 		mode: 'payment',
 		lineItems: [lineItem],
@@ -428,6 +429,7 @@ export const payReservation = form(
 
 		const result = await checkout({
 			stripeCustomerId: currentUser.stripeId ?? undefined,
+			customerEmail: currentUser.email,
 			userId: currentUser.id,
 			mode: 'payment',
 			lineItems: [lineItem],
