@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { Calendar } from 'bits-ui';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
-	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
 
 	let {
 		value = $bindable(''),
 		name,
-		isDateDisabled,
 		isDateUnavailable,
 		minValue,
 		maxValue,
@@ -14,7 +11,6 @@
 	}: {
 		value?: string;
 		name: string;
-		isDateDisabled?: (date: DateValue) => boolean;
 		isDateUnavailable?: (date: DateValue) => boolean;
 		minValue?: DateValue;
 		maxValue?: DateValue;
@@ -22,68 +18,87 @@
 	} = $props();
 
 	const tz = getLocalTimeZone();
+	const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+	const todayValue = today(tz);
 
-	let calendarValue = $derived(value ? parseDate(value) : today(tz));
+	/** Build the rows of DateValues from the Sunday of minValue's week through the Saturday of maxValue's week. */
+	const weeks = $derived.by(() => {
+		const start = minValue ?? todayValue;
+		const end = maxValue ?? start.add({ days: 14 });
 
-	function handleValueChange(d: DateValue | undefined) {
-		if (d) value = d.toString();
+		// Rewind to Sunday
+		let cursor = start.subtract({ days: start.toDate(tz).getDay() });
+		// Advance to Saturday past end
+		const lastDay = end.add({ days: 6 - end.toDate(tz).getDay() });
+
+		const rows: DateValue[][] = [];
+		while (cursor.compare(lastDay) <= 0) {
+			const week: DateValue[] = [];
+			for (let d = 0; d < 7; d++) {
+				week.push(cursor);
+				cursor = cursor.add({ days: 1 });
+			}
+			rows.push(week);
+		}
+		return rows;
+	});
+
+	function isOutOfRange(d: DateValue): boolean {
+		if (minValue && d.compare(minValue) < 0) return true;
+		if (maxValue && d.compare(maxValue) > 0) return true;
+		return false;
+	}
+
+	function isDisabled(d: DateValue): boolean {
+		if (disabled) return true;
+		if (isOutOfRange(d)) return true;
+		if (isDateUnavailable?.(d)) return true;
+		return false;
+	}
+
+	function select(d: DateValue) {
+		if (isDisabled(d)) return;
+		value = d.toString();
+	}
+
+	function cellClass(d: DateValue): string {
+		const str = d.toString();
+		const selected = str === value;
+		const outOfRange = isOutOfRange(d);
+		const unavailable = !outOfRange && isDateUnavailable?.(d);
+		const isToday = d.compare(todayValue) === 0;
+		const base =
+			'flex aspect-square w-full items-center justify-center rounded-md text-xs transition-colors';
+
+		if (selected) return `${base} bg-primary text-primary-content border border-primary`;
+		if (outOfRange) return `${base} opacity-30`;
+		if (unavailable) return `${base} text-error line-through opacity-40`;
+		if (isToday) return `${base} border-2 border-primary font-semibold hover:bg-base-200`;
+		return `${base} border border-base-300 hover:bg-base-200`;
 	}
 </script>
 
-<Calendar.Root
-	type="single"
-	value={calendarValue}
-	onValueChange={handleValueChange}
-	{isDateDisabled}
-	{isDateUnavailable}
-	{minValue}
-	{maxValue}
-	{disabled}
-	weekStartsOn={0}
-	fixedWeeks
->
-	{#snippet children({ months, weekdays })}
-		<Calendar.Header class="flex items-center justify-between pb-2">
-			<Calendar.PrevButton class="btn btn-ghost btn-sm btn-square">
-				<IconChevronLeft size={16} />
-			</Calendar.PrevButton>
-			<Calendar.Heading class="text-xs font-medium" />
-			<Calendar.NextButton class="btn btn-ghost btn-sm btn-square">
-				<IconChevronRight size={16} />
-			</Calendar.NextButton>
-		</Calendar.Header>
-		{#each months as month (month.value.toString())}
-			<Calendar.Grid class="mx-auto w-full max-w-64 border-collapse">
-				<Calendar.GridHead>
-					<Calendar.GridRow class="flex">
-						{#each weekdays as day, i (i)}
-							<Calendar.HeadCell class="flex-1 text-center text-xs font-medium opacity-60 pb-1">
-								{day}
-							</Calendar.HeadCell>
-						{/each}
-					</Calendar.GridRow>
-				</Calendar.GridHead>
-				<Calendar.GridBody>
-					{#each month.weeks as week, weekIndex (weekIndex)}
-						<Calendar.GridRow class="flex">
-							{#each week as date (date.toString())}
-								<Calendar.Cell {date} month={month.value} class="flex-1 p-0.5">
-									<Calendar.Day
-										class="flex aspect-square w-full items-center justify-center rounded-md text-xs transition-colors
-											border border-base-300 hover:bg-base-200
-											data-[today]:border-primary data-[today]:font-semibold
-											data-[selected]:bg-primary data-[selected]:text-primary-content data-[selected]:border-primary
-											data-[disabled]:opacity-30 data-[disabled]:border-transparent
-											data-[unavailable]:text-error data-[unavailable]:line-through data-[unavailable]:opacity-40 data-[unavailable]:border-transparent
-											data-[outside-month]:opacity-40 data-[outside-month]:border-transparent"
-									/>
-								</Calendar.Cell>
-							{/each}
-						</Calendar.GridRow>
-					{/each}
-				</Calendar.GridBody>
-			</Calendar.Grid>
+<div class="mx-auto w-full max-w-64">
+	<div class="grid grid-cols-7 pb-1">
+		{#each weekdays as day, i (i)}
+			<span class="text-center text-xs font-medium opacity-60">{day}</span>
 		{/each}
-	{/snippet}
-</Calendar.Root>
+	</div>
+	{#each weeks as week, wi (wi)}
+		<div class="grid grid-cols-7">
+			{#each week as date (date.toString())}
+				<div class="p-0.5">
+					<button
+						type="button"
+						class={cellClass(date)}
+						disabled={isDisabled(date)}
+						onclick={() => select(date)}
+					>
+						{date.day}
+					</button>
+				</div>
+			{/each}
+		</div>
+	{/each}
+</div>
 <input type="date" {name} value={value} hidden />
