@@ -50,6 +50,7 @@ export const user = sqliteTable('user', {
 	pmLastFour: text('pm_last_four'),
 	creditFreeHours: integer('credit_free_hours').notNull().default(0),
 	creditEquipment: integer('credit_equipment').notNull().default(0),
+	sustainingMemberSince: timestamp('sustaining_member_since'),
 	trialEndsAt: timestamp('trial_ends_at'),
 	deletedAt: timestamp('deleted_at'),
 

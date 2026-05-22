@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, inArray } from 'drizzle-orm';
+import { like, or, eq, inArray, sql } from 'drizzle-orm';
 import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
@@ -25,7 +25,6 @@ import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
-import { getSubscription } from '$lib/server/finance/subscription-service';
 import {
 	checkout,
 	recordCashPayment,
@@ -203,9 +202,13 @@ export const getReservationPricing = query(
 		const freeHoursBalance = locals.user ? await getBalance(locals.user.id, 'free_hours') : 0;
 
 		let isSustainingMember = false;
-		if (locals.user?.stripeId) {
-			const sub = await getSubscription(locals.user.stripeId);
-			isSustainingMember = sub !== null;
+		if (locals.user) {
+			const [row] = await db
+				.select({ sustainingMemberSince: user.sustainingMemberSince })
+				.from(user)
+				.where(eq(user.id, locals.user.id))
+				.limit(1);
+			isSustainingMember = row?.sustainingMemberSince != null;
 		}
 
 		const creditsApplicable = Math.min(freeHoursBalance, durationHours);
@@ -267,10 +270,14 @@ export const checkConflicts = query(
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
-	const freeHoursBalance = locals.user ? await getBalance(locals.user.id, 'free_hours') : 0;
-	if (!locals.user?.stripeId) return { isSustainingMember: false, freeHoursBalance };
-	const sub = await getSubscription(locals.user.stripeId);
-	return { isSustainingMember: sub !== null, freeHoursBalance };
+	if (!locals.user) return { isSustainingMember: false, freeHoursBalance: 0 };
+	const [row] = await db
+		.select({ sustainingMemberSince: user.sustainingMemberSince })
+		.from(user)
+		.where(eq(user.id, locals.user.id))
+		.limit(1);
+	const freeHoursBalance = await getBalance(locals.user.id, 'free_hours');
+	return { isSustainingMember: row?.sustainingMemberSince != null, freeHoursBalance };
 });
 
 /** Band: check if any active band member has a sustaining membership. */
@@ -281,18 +288,14 @@ export const getBandMembershipStatus = query(z.void(), async () => {
 
 	if (activeUserIds.length === 0) return { hasSustainingMember: false };
 
-	const users = await db
-		.select({ stripeId: user.stripeId })
+	const [sustaining] = await db
+		.select({ id: user.id })
 		.from(user)
-		.where(inArray(user.id, activeUserIds));
+		.where(inArray(user.id, activeUserIds))
+		.where(sql`sustaining_member_since is not null`)
+		.limit(1);
 
-	for (const u of users) {
-		if (!u.stripeId) continue;
-		const sub = await getSubscription(u.stripeId);
-		if (sub) return { hasSustainingMember: true };
-	}
-
-	return { hasSustainingMember: false };
+	return { hasSustainingMember: sustaining != null };
 });
 
 // ===========================================================================
@@ -338,13 +341,13 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
 
-	// Verify subscription BEFORE creating reservation to avoid orphans
 	if (isRecurring) {
-		if (!locals.user.stripeId) {
-			throw error(403, 'Recurring reservations require a sustaining membership');
-		}
-		const sub = await getSubscription(locals.user.stripeId);
-		if (!sub) {
+		const [row] = await db
+			.select({ sustainingMemberSince: user.sustainingMemberSince })
+			.from(user)
+			.where(eq(user.id, locals.user.id))
+			.limit(1);
+		if (!row?.sustainingMemberSince) {
 			throw error(403, 'Recurring reservations require a sustaining membership');
 		}
 	}
@@ -387,11 +390,12 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const isRecurring = recurringFrequency != null;
 
 	if (isRecurring) {
-		if (!locals.user.stripeId) {
-			throw error(403, 'Recurring reservations require a sustaining membership');
-		}
-		const sub = await getSubscription(locals.user.stripeId);
-		if (!sub) {
+		const [row] = await db
+			.select({ sustainingMemberSince: user.sustainingMemberSince })
+			.from(user)
+			.where(eq(user.id, locals.user.id))
+			.limit(1);
+		if (!row?.sustainingMemberSince) {
 			throw error(403, 'Recurring reservations require a sustaining membership');
 		}
 	}
@@ -492,24 +496,16 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	});
 
 	if (recurringFrequency) {
-		// Verify at least one band member has a sustaining membership
 		const members = await getMembers(band.id);
 		const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
-		const users = await db
-			.select({ stripeId: user.stripeId })
+		const [sustaining] = await db
+			.select({ id: user.id })
 			.from(user)
-			.where(inArray(user.id, activeUserIds));
+			.where(inArray(user.id, activeUserIds))
+			.where(sql`sustaining_member_since is not null`)
+			.limit(1);
 
-		let hasSustaining = false;
-		for (const u of users) {
-			if (!u.stripeId) continue;
-			const sub = await getSubscription(u.stripeId);
-			if (sub) {
-				hasSustaining = true;
-				break;
-			}
-		}
-		if (!hasSustaining) {
+		if (!sustaining) {
 			throw error(
 				403,
 				'Recurring reservations require at least one band member with a sustaining membership'

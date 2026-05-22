@@ -6,13 +6,14 @@ import bcrypt from 'bcryptjs';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
 import { account } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
 
 export const auth = betterAuth({
 	baseURL: env.ORIGIN || undefined,
 	secret: env.BETTER_AUTH_SECRET,
-	database: drizzleAdapter(db, { provider: 'sqlite' }),
+	database: drizzleAdapter(db, { provider: 'sqlite', schema }),
 	emailAndPassword: {
 		enabled: true,
 		password: {
@@ -42,6 +43,7 @@ export const auth = betterAuth({
 			stripeId: { type: 'string', required: false, fieldName: 'stripe_id' },
 			pmType: { type: 'string', required: false, fieldName: 'pm_type' },
 			pmLastFour: { type: 'string', required: false, fieldName: 'pm_last_four' },
+			sustainingMemberSince: { type: 'string', required: false, fieldName: 'sustaining_member_since' },
 			trialEndsAt: { type: 'string', required: false, fieldName: 'trial_ends_at' },
 			deletedAt: { type: 'string', required: false, fieldName: 'deleted_at' }
 		}

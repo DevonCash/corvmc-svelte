@@ -8,7 +8,6 @@ import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { getSubscription } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './equipment-service';
 import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
@@ -56,14 +55,12 @@ export function calculateLoanCharge(dailyRateCents: number, checkedOutAt: Date, 
 
 async function isSustainingMember(userId: string): Promise<boolean> {
 	const [row] = await db
-		.select({ stripeId: user.stripeId })
+		.select({ sustainingMemberSince: user.sustainingMemberSince })
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
 
-	if (!row?.stripeId) return false;
-	const sub = await getSubscription(row.stripeId);
-	return sub !== null;
+	return row?.sustainingMemberSince != null;
 }
 
 async function settleReturn(

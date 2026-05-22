@@ -6,7 +6,7 @@ import * as creditService from './credit-service';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { assignRole, removeRole } from '$lib/server/authorization';
+import { sql } from 'drizzle-orm';
 
 // Re-export so downstream consumers can import from one place
 export { registeredEvents };
@@ -90,7 +90,9 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	// Equipment credits: 1:1 with contribution level, capped at 250
 	await creditService.allocateEquipmentCredits(member.id, contributionLine.quantity, invoice.id);
 
-	await assignRole(member.id, 'sustaining');
+	await db.update(user)
+		.set({ sustainingMemberSince: sql`coalesce(sustaining_member_since, current_timestamp)` })
+		.where(eq(user.id, member.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +133,9 @@ export async function handleSubscriptionDeleted(
 	// Cancel all active recurring series for this user
 	await cancelAllForUser(member.id);
 
-	await removeRole(member.id, 'sustaining');
+	await db.update(user)
+		.set({ sustainingMemberSince: null })
+		.where(eq(user.id, member.id));
 }
 
 // ---------------------------------------------------------------------------
