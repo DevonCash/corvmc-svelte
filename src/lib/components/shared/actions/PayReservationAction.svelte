@@ -7,10 +7,12 @@
 
 	let {
 		reservation,
+		label = 'Pay Now',
 		class: className = 'btn-primary btn-sm',
 		...rest
 	}: {
 		reservation: { id: string; startsAt: string; endsAt: string };
+		label?: string;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
@@ -18,7 +20,7 @@
 
 <Action
 	action={payForReservation}
-	label="Pay Now"
+	{label}
 	modalTitle="Pay for Your Session"
 	noFooter
 	maxWidth="max-w-md"
@@ -35,6 +37,6 @@
 >
 	{#snippet form({ close })}
 		<ReservationSummary {reservation} />
-		<PaymentStep {reservation} />
+		<PaymentStep {reservation} precedingSteps={0} />
 	{/snippet}
 </Action>

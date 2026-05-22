@@ -23,7 +23,7 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 		.limit(1);
 
 	console.log('[checkout-listener] reservation lookup:', row ?? 'NOT FOUND');
-	if (!row || row.status !== 'scheduled') return;
+	if (!row || (row.status !== 'scheduled' && row.status !== 'confirmed')) return;
 
 	// The payment record ID comes from the session's payment_intent or the session ID itself
 	const paymentRecordId = session.payment_intent

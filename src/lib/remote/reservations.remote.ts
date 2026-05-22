@@ -375,7 +375,8 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	coverFees: z.enum(['', 'on']).optional()
+	coverFees: z.enum(['', 'on']).optional(),
+	skipPayment: z.enum(['', 'on']).optional()
 });
 
 export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
@@ -413,6 +414,14 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt
 		});
+	}
+
+	if (data.skipPayment === 'on') {
+		await db
+			.update(reservation)
+			.set({ status: 'confirmed', updatedAt: new Date() })
+			.where(eq(reservation.id, res.id));
+		return { reservationId: res.id, confirmed: true as const };
 	}
 
 	const reservationConfig = await getReservationConfig();
@@ -534,7 +543,8 @@ export const cancelBandReservation = form(
 export const payForReservation = form(
 	z.object({
 		id: z.string(),
-		coverFees: z.literal('on').optional()
+		coverFees: z.literal('on').optional(),
+		skipPayment: z.enum(['', 'on']).optional()
 	}),
 	async (data, issue) => {
 		const currentUser = requireUser();
@@ -548,7 +558,12 @@ export const payForReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-		if (row.status !== 'scheduled') throw error(400, 'Not awaiting payment');
+		if (row.status !== 'scheduled' && row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+
+		if (data.skipPayment === 'on') {
+			if (row.status === 'scheduled') await confirm(data.id);
+			return { confirmed: true };
+		}
 
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = reservationConfig.hourlyRateCents;
@@ -587,6 +602,7 @@ export const payForReservation = form(
 				.set({
 					status: 'confirmed',
 					stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+					paidAt: new Date(),
 					updatedAt: new Date()
 				})
 				.where(eq(reservation.id, row.id));
@@ -615,7 +631,7 @@ export const payReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-		if (row.status !== 'scheduled') throw error(400, 'Not awaiting payment');
+		if (row.status !== 'scheduled' && row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
 
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = reservationConfig.hourlyRateCents;
@@ -654,6 +670,7 @@ export const payReservation = form(
 				.set({
 					status: 'confirmed',
 					stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+					paidAt: new Date(),
 					updatedAt: new Date()
 				})
 				.where(eq(reservation.id, row.id));

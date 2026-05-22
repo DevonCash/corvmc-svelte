@@ -4,6 +4,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import DateTimeStep from './DateTimeStep.svelte';
+	import ConfirmStep from './ConfirmStep.svelte';
 	import PaymentStep from './PaymentStep.svelte';
 </script>
 
@@ -15,7 +16,7 @@
 	class="btn-primary"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
-		const r = result as { reservationId?: string; paid?: boolean; redirectUrl?: string };
+		const r = result as { reservationId?: string; paid?: boolean; confirmed?: boolean; redirectUrl?: string };
 		if (r?.redirectUrl) {
 			window.location.href = r.redirectUrl;
 		} else {
@@ -26,6 +27,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form({ close })}
 		<DateTimeStep />
+		<ConfirmStep />
 		<PaymentStep />
 	{/snippet}
 </Action>

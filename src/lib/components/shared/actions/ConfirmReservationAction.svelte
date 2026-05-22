@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import ReservationSummary from '../ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { confirmReservation } from '$lib/remote/reservations.remote';
+	import { payForReservation } from '$lib/remote/reservations.remote';
+	import ConfirmStep from '../../../../routes/member/reservations/ConfirmStep.svelte';
+	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
 
 	let {
 		reservation,
@@ -18,18 +19,26 @@
 </script>
 
 <Action
-	action={confirmReservation}
+	action={payForReservation}
 	label="Confirm"
 	modalTitle="Confirm Reservation"
-	submitClass="btn-success"
+	noFooter
+	maxWidth="max-w-md"
 	successToast="Confirmed"
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={async (result) => {
+		const r = result as { paid?: boolean; confirmed?: boolean; redirectUrl?: string };
+		if (r?.redirectUrl) {
+			window.location.href = r.redirectUrl;
+		} else {
+			if (onsuccess) onsuccess();
+			else await invalidateAll();
+		}
+	}}
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
-		<ReservationSummary {reservation} />
-		<p class="text-sm">Confirm this reservation?</p>
+		<ConfirmStep {reservation} />
+		<PaymentStep {reservation} />
 	{/snippet}
 </Action>

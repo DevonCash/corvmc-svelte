@@ -148,16 +148,18 @@
 					</div>
 					{#if row.status === 'scheduled' || row.status === 'confirmed'}
 						<div
-							class="-mx-4 mt-2 mt-auto -mb-3 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50"
+							class="-mx-4 mt-auto -mb-3 flex items-center justify-end gap-1 rounded-b-(--radius-box) bg-base-200/50"
 						>
+							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 							{#if row.status === 'scheduled'}
-								<PayReservationAction reservation={row} class="btn-xs btn-primary" />
-								<ConfirmReservationAction
+								<ConfirmReservationAction reservation={row} class="btn-xs btn-primary" />
+							{:else if row.status === 'confirmed' && !row.paidAt && !row.paidWithCredits}
+								<PayReservationAction
 									reservation={row}
-									class="btn-outline btn-xs btn-success"
+									label="Pay Ahead"
+									class="btn-xs btn-primary"
 								/>
 							{/if}
-							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 						</div>
 					{/if}
 				</div>

@@ -153,7 +153,7 @@
 			/>
 			{#if recurring}
 				<p class="mt-1 text-sm opacity-60">
-					Future instances will be generated automatically. You'll confirm and pay for each one
+					Future instances will be generated automatically. You'll confirm each one
 					individually.
 				</p>
 			{/if}
@@ -161,6 +161,6 @@
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton continueLabel="Continue to Payment" class="btn-primary" />
+		<Form.SubmitButton continueLabel="Continue" class="btn-primary" />
 	</div>
 </Form.Step>

@@ -5,15 +5,16 @@
 	import * as Form from '$lib/components/shared/Form';
 
 	let {
-		reservation
+		reservation,
+		precedingSteps = reservation ? 1 : 2
 	}: {
 		reservation?: { id: string; startsAt: string; endsAt: string };
+		precedingSteps?: number;
 	} = $props();
 
 	const formCtx = getFormContext()!;
 
-	// In the create flow this is step 1 (after DateTimeStep); for pay-existing it's step 0.
-	const activeStep = $derived(reservation ? 0 : 1);
+	const activeStep = $derived(precedingSteps);
 
 	let el: HTMLDivElement;
 	let coverFees = $state(false);
