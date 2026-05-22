@@ -17,27 +17,20 @@ export const GET: RequestHandler = async ({ locals }) => {
 		.where(
 			and(
 				eq(reservation.createdByUserId, locals.user.id),
-				gt(reservation.startsAt, now),
-				ne(reservation.status, 'cancelled')
+				gt(reservation.endsAt, now)
 			)
 		)
 		.orderBy(reservation.startsAt);
 
-	const past = await db
+	const all = await db
 		.select()
 		.from(reservation)
-		.where(
-			and(
-				eq(reservation.createdByUserId, locals.user.id),
-				lte(reservation.startsAt, now)
-			)
-		)
-		.orderBy(desc(reservation.startsAt))
-		.limit(20);
+		.where(eq(reservation.createdByUserId, locals.user.id))
+		.orderBy(desc(reservation.startsAt));
 
 	const recurringSeries = await listForUser(locals.user.id);
 
-	const allIds = [...upcoming, ...past].map((r) => r.id);
+	const allIds = [...upcoming, ...all].map((r) => r.id);
 
 	const credits = allIds.length > 0
 		? await db
@@ -59,7 +52,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 	return json({
 		upcoming: upcoming.map((r) => serializeReservation(r, creditsByRes)),
-		past: past.map((r) => serializeReservation(r, creditsByRes)),
+		all: all.map((r) => serializeReservation(r, creditsByRes)),
 		recurringSeries: recurringSeries.map((s) => ({
 			id: s.id,
 			frequencyLabel: s.frequencyLabel,

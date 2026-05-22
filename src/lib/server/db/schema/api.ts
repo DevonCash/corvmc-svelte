@@ -109,7 +109,7 @@ type MemberReservation = Pick<
 
 export interface MemberReservationsResponse {
 	upcoming: MemberReservation[];
-	past: MemberReservation[];
+	all: MemberReservation[];
 	recurringSeries: {
 		id: string;
 		frequencyLabel: string;

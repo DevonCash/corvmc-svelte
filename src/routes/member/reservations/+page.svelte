@@ -33,17 +33,11 @@
 	let { data }: { data: MemberReservationsResponse } = $props();
 
 	const upcoming = $derived(data.upcoming);
-	const past = $derived(data.past);
+	const all = $derived(data.all);
 	const recurringSeries = $derived(data.recurringSeries);
 
-	const allReservations = $derived(
-		[...upcoming, ...past].sort(
-			(a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()
-		)
-	);
-
 	let activeTab = $state<'upcoming' | 'all'>('upcoming');
-	const tableData = $derived(activeTab === 'upcoming' ? upcoming : allReservations);
+	const tableData = $derived(activeTab === 'upcoming' ? upcoming : all);
 
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
@@ -103,7 +97,7 @@
 		<h2 class="shrink-0 text-2xl font-bold text-nowrap">My Reservations</h2>
 		<ButtonGroup
 			tabs={[
-				{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
+				{ key: 'upcoming', label: `Active (${upcoming.length})` },
 				{ key: 'all', label: 'All' }
 			]}
 			active={activeTab}
