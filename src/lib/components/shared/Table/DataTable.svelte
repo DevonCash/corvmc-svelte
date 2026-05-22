@@ -285,7 +285,7 @@
 
 	<!-- Card mode: grid -->
 	{#if paged.length > 0}
-		<div class={gridClass}>
+		<div class="@container {gridClass}">
 			{#each displayRows as item, idx (idx)}
 				{#if groupBy}
 					{@const label = groupBy(item)}
