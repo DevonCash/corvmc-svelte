@@ -100,7 +100,7 @@
 	<DataTable
 		data={tableData}
 		empty="No reservations found. Start by creating your first practice space reservation."
-		gridClass="grid grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3 gap-3"
+		gridClass="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
 	>
 		{#snippet card(row)}
 			{@const h = durationHours(row.startsAt, row.endsAt)}
