@@ -20,7 +20,7 @@
 		{@const isActive = tab.key === active}
 		{@const hasUnlatchedRight = isActive && i < tabs.length - 1 && tabs[i + 1].key !== active}
 		<button
-			class="btn"
+			class="btn btn-sm"
 			class:btn-primary={isActive}
 			class:latched={isActive}
 			style:z-index={hasUnlatchedRight ? 1 : undefined}

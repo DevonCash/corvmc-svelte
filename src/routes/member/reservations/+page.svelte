@@ -75,7 +75,9 @@
 	</p>
 
 	{#if isSustaining}
-		<div class="flex flex-col gap-1 rounded-lg border border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+		<div
+			class="flex flex-col gap-1 rounded-lg border border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2"
+		>
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class="text-success" />
 				<span class="font-medium">{creditData.freeHoursBalance}</span>
@@ -93,12 +95,12 @@
 				<IconClock size={18} class="shrink-0 opacity-40" />
 				<span>Get free practice hours each month with a sustaining membership.</span>
 			</div>
-			<a href="/member/membership" class="btn btn-sm self-end sm:self-auto">Learn More</a>
+			<a href="/member/membership" class="btn self-end btn-sm sm:self-auto">Learn More</a>
 		</div>
 	{/if}
 
-	<div class="flex w-full gap-2 flex-row flex-wrap items-center justify-between">
-		<h2 class="text-2xl font-bold text-nowrap shrink-0">My Reservations</h2>
+	<div class="flex w-full flex-row flex-wrap items-center justify-between gap-2">
+		<h2 class="shrink-0 text-2xl font-bold text-nowrap">My Reservations</h2>
 		<ButtonGroup
 			tabs={[
 				{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
@@ -114,7 +116,10 @@
 		empty="No reservations found. Start by creating your first practice space reservation."
 	>
 		{#snippet card(row)}
-			<div class="card bg-base-100 shadow-sm border-l-4 {statusBorder[row.status] ?? 'border-l-base-300'}">
+			<div
+				class="card border-l-4 bg-base-100 shadow-sm {statusBorder[row.status] ??
+					'border-l-base-300'}"
+			>
 				<div class="card-body gap-1 px-4 py-3">
 					<div class="flex items-center justify-between gap-2">
 						<p class="font-medium">{formatDateYear(row.startsAt)}</p>
@@ -127,12 +132,17 @@
 					<div class="flex items-baseline justify-between gap-2 text-xs opacity-40">
 						<span>{relativeDay(row.startsAt)}</span>
 						<span>
-							{#if row.status === 'cancelled'}
+							{#if row.refundedAt}
+								Refunded {formatDate(row.refundedAt)}
+							{:else if row.status === 'cancelled'}
 								Cancelled
 							{:else if row.paidAt}
-								Paid {formatDate(row.paidAt)}{#if row.paidWithCredits} · credits{/if}
+								Paid {formatDate(row.paidAt)}{#if row.paidWithCredits}
+									· credits{/if}
 							{:else if row.paidWithCredits}
 								Paid with credits
+							{:else if row.status === 'completed' || row.status === 'no_show'}
+								Unpaid
 							{:else if new Date(row.startsAt) < new Date()}
 								Overdue
 							{:else}
@@ -141,10 +151,17 @@
 						</span>
 					</div>
 					{#if row.status === 'scheduled' || row.status === 'confirmed'}
-						<div class="-mx-4 -mb-3 mt-2 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50">
+						<div
+							class="-mx-4 mt-2 -mb-3 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50"
+						>
 							{#if row.status === 'scheduled'}
-								<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary">Pay Now</a>
-								<ConfirmReservationAction reservation={row} class="btn-outline btn-xs btn-success" />
+								<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary"
+									>Pay Now</a
+								>
+								<ConfirmReservationAction
+									reservation={row}
+									class="btn-outline btn-xs btn-success"
+								/>
 							{/if}
 							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 						</div>
@@ -245,8 +262,10 @@
 			<h2 class="pt-4 text-lg font-semibold">Recurring Reservations</h2>
 
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-				<span>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span>
-				<a href="/member/membership" class="btn btn-sm self-end sm:self-auto">Learn More</a>
+				<span
+					>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span
+				>
+				<a href="/member/membership" class="btn self-end btn-sm sm:self-auto">Learn More</a>
 			</div>
 		</div>
 	{/if}

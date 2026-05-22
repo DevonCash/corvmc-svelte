@@ -103,6 +103,7 @@ type MemberReservation = Pick<
 	| 'recurringSeriesId'
 > & {
 	paidAt: string | null;
+	refundedAt: string | null;
 	paidWithCredits: boolean;
 };
 

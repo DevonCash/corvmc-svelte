@@ -388,7 +388,8 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 				startsAt,
 				endsAt,
 				notes: Math.random() > 0.7 ? 'Band practice' : null,
-				cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null
+				cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null,
+				paidAt: status === 'completed' ? startsAt : null
 			}).returning();
 			rows.push(r);
 		}

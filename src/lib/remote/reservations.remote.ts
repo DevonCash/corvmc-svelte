@@ -713,5 +713,9 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 		userId: row.createdByUserId,
 		stripePaymentRecordId: row.stripePaymentRecordId
 	});
+	await db
+		.update(reservation)
+		.set({ refundedAt: new Date() })
+		.where(eq(reservation.id, data.id));
 	return { success: true };
 });

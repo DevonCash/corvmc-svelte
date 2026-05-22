@@ -83,6 +83,7 @@ function serializeReservation(row: any, credits: Map<string, any>) {
 		notes: row.notes,
 		recurringSeriesId: row.recurringSeriesId ?? null,
 		paidAt: row.paidAt && !isNaN(row.paidAt.getTime()) ? row.paidAt.toISOString() : null,
+		refundedAt: row.refundedAt && !isNaN(row.refundedAt.getTime()) ? row.refundedAt.toISOString() : null,
 		paidWithCredits: credit != null
 	};
 }

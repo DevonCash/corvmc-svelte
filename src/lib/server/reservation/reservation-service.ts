@@ -187,6 +187,10 @@ export async function cancel(
 			userId,
 			stripePaymentRecordId: row.stripePaymentRecordId
 		});
+		await db
+			.update(reservation)
+			.set({ refundedAt: new Date() })
+			.where(eq(reservation.id, reservationId));
 	}
 }
 
