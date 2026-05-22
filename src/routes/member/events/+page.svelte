@@ -2,8 +2,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
+	import { formatDate, formatTime, formatTimeRange, formatCents } from '$lib/utils/format';
 	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: { events: EventsResponse['events']; tickets: MemberTicketsResponse['tickets'] } } = $props();
@@ -28,22 +29,20 @@
 			<div class="flex items-center justify-between mb-3">
 				<h3 class="text-sm font-medium opacity-60 uppercase tracking-wide">My Tickets</h3>
 			</div>
-			<div class="flex gap-3 overflow-x-auto pb-2">
+			<div class="grid grid-cols-1 gap-3 max-w-2xl">
 				{#each activeTickets as ticket (ticket.id)}
-					<div class="card bg-base-100 shadow min-w-[240px] flex-shrink-0">
-						<div class="card-body p-4">
-							<p class="font-medium text-sm">{ticket.event?.title ?? 'Unknown Event'}</p>
-							{#if ticket.event}
-								<p class="text-xs opacity-60">
-									{formatDate(ticket.event.startsAt)} · {formatTime(ticket.event.startsAt)}
-								</p>
-							{/if}
-							<div class="flex items-center justify-between mt-1">
-								<span class="font-mono text-xs opacity-50">{ticket.code}</span>
+					{#if ticket.event}
+						<DateBlockCard date={ticket.event.startsAt}>
+							<div class="flex items-center justify-between gap-2">
+								<span class="font-semibold text-sm">{ticket.event.title}</span>
 								<StatusBadge status={ticket.status} />
 							</div>
-						</div>
-					</div>
+							<p class="text-sm opacity-60">
+								{formatDate(ticket.event.startsAt)} · {formatTime(ticket.event.startsAt)}
+							</p>
+							<span class="font-mono text-xs opacity-40">{ticket.code}</span>
+						</DateBlockCard>
+					{/if}
 				{/each}
 			</div>
 		</section>

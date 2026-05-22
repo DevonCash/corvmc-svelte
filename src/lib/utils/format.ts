@@ -72,6 +72,25 @@ export function fullDate(iso: string): string {
 	});
 }
 
+/** Short uppercase weekday: "SAT" */
+export function formatDayOfWeek(iso: string): string {
+	return new Date(iso)
+		.toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' })
+		.toUpperCase();
+}
+
+/** Day of month number: "23" */
+export function formatDayNumber(iso: string): string {
+	return new Date(iso).toLocaleDateString('en-US', { timeZone: TZ, day: 'numeric' });
+}
+
+/** Short uppercase month: "MAY" */
+export function formatShortMonth(iso: string): string {
+	return new Date(iso)
+		.toLocaleDateString('en-US', { timeZone: TZ, month: 'short' })
+		.toUpperCase();
+}
+
 /** Date + time combined: "Tue, May 13, 2:30 PM" */
 export function formatDateTime(iso: string): string {
 	return new Date(iso).toLocaleString('en-US', {

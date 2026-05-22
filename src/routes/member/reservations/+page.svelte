@@ -2,17 +2,18 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import {
-		formatDateYear,
 		formatDate,
 		relativeDay,
 		formatTimeRange,
-		formatDurationAndAmount,
+		durationHours,
+		formatDurationAmount,
 		formatScheduleLabel
 	} from '$lib/utils/format';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import {
 		ConfirmReservationAction,
@@ -22,8 +23,6 @@
 	} from '$lib/components/shared/actions';
 	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
@@ -42,14 +41,6 @@
 
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
-
-	const statusBorder: Record<string, string> = {
-		scheduled: 'border-l-warning',
-		confirmed: 'border-l-info',
-		completed: 'border-l-success',
-		no_show: 'border-l-error',
-		cancelled: 'border-l-base-300'
-	};
 
 	// Edit series state
 	let editDate = $state('');
@@ -109,61 +100,56 @@
 	<DataTable
 		data={tableData}
 		empty="No reservations found. Start by creating your first practice space reservation."
-		gridClass="grid grid-cols-3 gap-3"
+		gridClass="grid grid-cols-1 gap-3 max-w-2xl"
 	>
 		{#snippet card(row)}
-			<div
-				class="card border-l-4 bg-base-100 shadow-sm {statusBorder[row.status] ??
-					'border-l-base-300'}"
-			>
-				<div class="card-body gap-3 px-4 py-3">
-					<div class="card-title">
-						<StatusBadge status={row.status} />
-						{formatDateYear(row.startsAt)}
-					</div>
-					<div class="flex items-baseline justify-between gap-2 text-sm">
-						<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
-						<span class="text-xs opacity-40">{relativeDay(row.startsAt)}</span>
-					</div>
-					<div class="flex items-baseline justify-between gap-2">
-						<span>{formatDurationAndAmount(row.startsAt, row.endsAt, 1500)}</span>
-						<span class="text-xs opacity-40">
-							{#if row.refundedAt}
-								Refunded {formatDate(row.refundedAt)}
-							{:else if row.status === 'cancelled'}
-								Cancelled
-							{:else if row.paidAt}
-								Paid {formatDate(row.paidAt)}{#if row.paidWithCredits}
-									· credits{/if}
-							{:else if row.paidWithCredits}
-								Paid with credits
-							{:else if row.status === 'completed' || row.status === 'no_show'}
-								Unpaid
-							{:else if new Date(row.startsAt) < new Date()}
-								Overdue
-							{:else}
-								Due {formatDate(row.startsAt)}
-							{/if}
-						</span>
-					</div>
-					{#if row.status === 'scheduled' || row.status === 'confirmed'}
-						<div
-							class="-mx-4 mt-auto -mb-3 flex items-center justify-end gap-1 rounded-b-(--radius-box) bg-base-200/50"
-						>
-							<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
-							{#if row.status === 'scheduled'}
-								<ConfirmReservationAction reservation={row} class="btn-xs btn-primary" />
-							{:else if row.status === 'confirmed' && !row.paidAt && !row.paidWithCredits}
-								<PayReservationAction
-									reservation={row}
-									label="Pay Ahead"
-									class="btn-xs btn-primary"
-								/>
-							{/if}
-						</div>
-					{/if}
+			{@const h = durationHours(row.startsAt, row.endsAt)}
+			{@const durationLabel = h === 1 ? '1 hr' : `${h} hrs`}
+			<DateBlockCard date={row.startsAt}>
+				<div class="flex items-center justify-between gap-2">
+					<span class="font-semibold">{relativeDay(row.startsAt)}</span>
+					<StatusBadge status={row.status} />
 				</div>
-			</div>
+				<div class="flex items-baseline justify-between gap-2 text-sm">
+					<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
+					<span class="text-xs opacity-60">{durationLabel}</span>
+				</div>
+				<div class="flex items-baseline justify-between gap-2 text-sm">
+					<span>{formatDurationAmount(row.startsAt, row.endsAt, 1500)}</span>
+					<span class="text-xs opacity-40">
+						{#if row.refundedAt}
+							Refunded {formatDate(row.refundedAt)}
+						{:else if row.status === 'cancelled'}
+							Cancelled
+						{:else if row.paidAt}
+							Paid {formatDate(row.paidAt)}{#if row.paidWithCredits}
+								· credits{/if}
+						{:else if row.paidWithCredits}
+							Paid with credits
+						{:else if row.status === 'completed' || row.status === 'no_show'}
+							Unpaid
+						{:else if new Date(row.startsAt) < new Date()}
+							Overdue
+						{:else}
+							Due {formatDate(row.startsAt)}
+						{/if}
+					</span>
+				</div>
+				{#snippet actions()}
+					{#if row.status === 'scheduled' || row.status === 'confirmed'}
+						<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
+						{#if row.status === 'scheduled'}
+							<ConfirmReservationAction reservation={row} class="btn-xs btn-primary" />
+						{:else if row.status === 'confirmed' && !row.paidAt && !row.paidWithCredits}
+							<PayReservationAction
+								reservation={row}
+								label="Pay Ahead"
+								class="btn-xs btn-primary"
+							/>
+						{/if}
+					{/if}
+				{/snippet}
+			</DateBlockCard>
 		{/snippet}
 	</DataTable>
 
