@@ -41,10 +41,6 @@
 		}
 	});
 
-	function handleClick() {
-		if (isLastStep) ctx.submit();
-		else ctx.next();
-	}
 </script>
 
 <div class="flex items-center gap-2">
@@ -52,12 +48,12 @@
 		<button type="button" class="btn btn-ghost" onclick={() => ctx.back()}>Back</button>
 	{/if}
 	<button
-		type="button"
+		type={isLastStep ? 'submit' : 'button'}
 		class="btn {className}"
 		class:btn-success={ctx.status === 'success'}
 		class:btn-error={ctx.status === 'error'}
 		disabled={isDisabled}
-		onclick={handleClick}
+		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}
 	>
 		{#if ctx.status === 'pending'}
