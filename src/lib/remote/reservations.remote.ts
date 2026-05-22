@@ -530,7 +530,75 @@ export const cancelBandReservation = form(
 	}
 );
 
-/** Member: pay for a reservation via Stripe checkout. */
+/** Member: pay for an existing reservation via Stripe checkout (from action modal). */
+export const payForReservation = form(
+	z.object({
+		id: z.string(),
+		coverFees: z.literal('on').optional()
+	}),
+	async (data, issue) => {
+		const currentUser = requireUser();
+		const { url } = getRequestEvent();
+
+		const [row] = await db
+			.select()
+			.from(reservation)
+			.where(eq(reservation.id, data.id))
+			.limit(1);
+
+		if (!row) throw error(404, 'Reservation not found');
+		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+		if (row.status !== 'scheduled') throw error(400, 'Not awaiting payment');
+
+		const reservationConfig = await getReservationConfig();
+		const hourlyRateCents = reservationConfig.hourlyRateCents;
+
+		const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
+		const durationHours = durationMs / (1000 * 60 * 60);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+
+		const lineItem: CheckoutLineItem = {
+			price_data: {
+				currency: 'usd',
+				product_data: { name: 'Practice Room Rental' },
+				unit_amount: totalCents
+			},
+			quantity: 1
+		};
+
+		const stripeCustomerId = await ensureStripeCustomer(currentUser.id, currentUser.email, currentUser.name);
+
+		const result = await checkout({
+			stripeCustomerId,
+			customerEmail: currentUser.email,
+			userId: currentUser.id,
+			mode: 'payment',
+			lineItems: [lineItem],
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+			coverFees: data.coverFees === 'on',
+			metadata: { reservation_id: row.id },
+			successUrl: `${url.origin}/member/reservations`,
+			cancelUrl: `${url.origin}/member/reservations`
+		});
+
+		if (result.paid) {
+			await db
+				.update(reservation)
+				.set({
+					status: 'confirmed',
+					stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+					updatedAt: new Date()
+				})
+				.where(eq(reservation.id, row.id));
+
+			return { paid: true };
+		}
+
+		return { redirectUrl: result.checkoutUrl! };
+	}
+);
+
+/** Member: pay for a reservation via Stripe checkout (from pay page). */
 export const payReservation = form(
 	z.object({
 		coverFees: z.literal('on').optional()

@@ -17,7 +17,8 @@
 	import {
 		ConfirmReservationAction,
 		CancelReservationAction,
-		CancelSeriesAction
+		CancelSeriesAction,
+		PayReservationAction
 	} from '$lib/components/shared/actions';
 	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
@@ -108,24 +109,25 @@
 	<DataTable
 		data={tableData}
 		empty="No reservations found. Start by creating your first practice space reservation."
+		gridClass="grid grid-cols-3 gap-3"
 	>
 		{#snippet card(row)}
 			<div
 				class="card border-l-4 bg-base-100 shadow-sm {statusBorder[row.status] ??
 					'border-l-base-300'}"
 			>
-				<div class="card-body gap-1 px-4 py-3">
-					<div class="flex items-center justify-between gap-2">
-						<p class="font-medium">{formatDateYear(row.startsAt)}</p>
-						<StatusBadge status={row.status} label />
+				<div class="card-body gap-3 px-4 py-3">
+					<div class="card-title">
+						<StatusBadge status={row.status} />
+						{formatDateYear(row.startsAt)}
 					</div>
 					<div class="flex items-baseline justify-between gap-2 text-sm">
 						<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
-						<span>{formatDurationAndAmount(row.startsAt, row.endsAt, 1500)}</span>
+						<span class="text-xs opacity-40">{relativeDay(row.startsAt)}</span>
 					</div>
-					<div class="flex items-baseline justify-between gap-2 text-xs opacity-40">
-						<span>{relativeDay(row.startsAt)}</span>
-						<span>
+					<div class="flex items-baseline justify-between gap-2">
+						<span>{formatDurationAndAmount(row.startsAt, row.endsAt, 1500)}</span>
+						<span class="text-xs opacity-40">
 							{#if row.refundedAt}
 								Refunded {formatDate(row.refundedAt)}
 							{:else if row.status === 'cancelled'}
@@ -146,12 +148,10 @@
 					</div>
 					{#if row.status === 'scheduled' || row.status === 'confirmed'}
 						<div
-							class="-mx-4 mt-2 -mb-3 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50"
+							class="-mx-4 mt-2 mt-auto -mb-3 flex items-center justify-end gap-1 rounded-b-[var(--radius-box)] bg-base-200/50"
 						>
 							{#if row.status === 'scheduled'}
-								<a href="/member/reservations/{row.id}/pay" class="btn btn-xs btn-primary"
-									>Pay Now</a
-								>
+								<PayReservationAction reservation={row} class="btn-xs btn-primary" />
 								<ConfirmReservationAction
 									reservation={row}
 									class="btn-outline btn-xs btn-success"

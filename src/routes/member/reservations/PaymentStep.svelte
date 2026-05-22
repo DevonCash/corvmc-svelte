@@ -4,7 +4,16 @@
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
 
+	let {
+		reservation
+	}: {
+		reservation?: { id: string; startsAt: string; endsAt: string };
+	} = $props();
+
 	const formCtx = getFormContext()!;
+
+	// In the create flow this is step 1 (after DateTimeStep); for pay-existing it's step 0.
+	const activeStep = $derived(reservation ? 0 : 1);
 
 	let el: HTMLDivElement;
 	let coverFees = $state(false);
@@ -20,20 +29,45 @@
 		isSustainingMember: boolean;
 	} | null>(null);
 
+	function extractTimeFields(iso: string) {
+		const d = new Date(iso);
+		// Format in Pacific time to match the create flow
+		const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const time = d.toLocaleTimeString('en-GB', {
+			timeZone: 'America/Los_Angeles',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+		return { date, time };
+	}
+
 	$effect(() => {
-		if (formCtx.currentStep === 1 && el) {
-			const form = el.closest('form');
-			if (form) {
-				const fd = new FormData(form);
-				const date = fd.get('date') as string;
-				const startTime = fd.get('startTime') as string;
-				const endTime = fd.get('endTime') as string;
-				if (date && startTime && endTime) {
-					pricing = null;
-					getReservationPricing({ date, startTime, endTime }).then((result) => {
-						pricing = result;
-					});
+		if (formCtx.currentStep === activeStep && el) {
+			let date: string | null = null;
+			let startTime: string | null = null;
+			let endTime: string | null = null;
+
+			if (reservation) {
+				const start = extractTimeFields(reservation.startsAt);
+				const end = extractTimeFields(reservation.endsAt);
+				date = start.date;
+				startTime = start.time;
+				endTime = end.time;
+			} else {
+				const form = el.closest('form');
+				if (form) {
+					const fd = new FormData(form);
+					date = fd.get('date') as string;
+					startTime = fd.get('startTime') as string;
+					endTime = fd.get('endTime') as string;
 				}
+			}
+
+			if (date && startTime && endTime) {
+				pricing = null;
+				getReservationPricing({ date, startTime, endTime }).then((result) => {
+					pricing = result;
+				});
 			}
 		}
 	});
@@ -60,6 +94,10 @@
 
 <div bind:this={el}>
 	<Form.Step>
+		{#if reservation}
+			<input type="hidden" name="id" value={reservation.id} />
+		{/if}
+
 		{#if !pricing}
 			<div class="space-y-2 py-2">
 				<div class="flex justify-between">
