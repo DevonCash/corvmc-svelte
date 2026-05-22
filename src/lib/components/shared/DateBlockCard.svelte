@@ -29,7 +29,7 @@
 			{@render children()}
 		</div>
 		{#if actions}
-			<div class="flex items-center justify-end px-4 pb-3">
+			<div class="flex items-center justify-end p-1 pt-0">
 				<ActionGroup>
 					{@render actions()}
 				</ActionGroup>
