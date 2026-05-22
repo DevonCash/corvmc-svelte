@@ -16,9 +16,9 @@
 	} = $props();
 </script>
 
-<div class="flex overflow-hidden rounded-(--radius-box) border-2 border-(--cmc-brown) bg-base-100 {className}">
+<div class="flex rounded-(--radius-box) border-2 border-(--cmc-brown) bg-base-100 {className}">
 	<div
-		class="flex w-20 shrink-0 flex-col items-center justify-center border-r-2 border-(--cmc-brown) bg-(--cmc-parchment) py-3"
+		class="flex w-20 shrink-0 flex-col items-center justify-center rounded-l-(--radius-box) border-r-2 border-(--cmc-brown) bg-(--cmc-parchment) py-3"
 	>
 		<span class="eyebrow text-xs leading-tight text-(--cmc-brown)">{formatDayOfWeek(date)}</span>
 		<span class="text-3xl font-bold leading-tight text-(--cmc-brown)">{formatDayNumber(date)}</span>
