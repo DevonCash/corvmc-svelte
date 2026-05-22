@@ -33,6 +33,16 @@
 		border-end-end-radius: var(--radius-field);
 	}
 
+	.action-group > :global(.btn) {
+		position: relative;
+	}
+
+	.action-group > :global(.btn:nth-last-child(5)) { z-index: 5; }
+	.action-group > :global(.btn:nth-last-child(4)) { z-index: 4; }
+	.action-group > :global(.btn:nth-last-child(3)) { z-index: 3; }
+	.action-group > :global(.btn:nth-last-child(2)) { z-index: 2; }
+	.action-group > :global(.btn:nth-last-child(1)) { z-index: 1; }
+
 	.action-group > :global(.btn:not(:first-child)) {
 		margin-inline-start: -2.5px;
 	}
