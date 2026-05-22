@@ -69,9 +69,11 @@
 				<span class="font-medium">{creditData.freeHoursBalance}</span>
 				<span class="text-sm opacity-60">free hours remaining</span>
 			</div>
-			<span class="text-sm opacity-60">
-				{creditData.hoursGrantedPerMonth} hours granted per month
-			</span>
+			{#if creditData.creditsResetAt}
+				<span class="text-sm opacity-60">
+					Resets to {creditData.hoursPerReset} on {formatDate(creditData.creditsResetAt)}
+				</span>
+			{/if}
 		</div>
 	{:else}
 		<div

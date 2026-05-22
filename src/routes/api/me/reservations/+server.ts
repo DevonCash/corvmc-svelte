@@ -17,7 +17,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 		.where(
 			and(
 				eq(reservation.createdByUserId, locals.user.id),
-				gt(reservation.endsAt, now)
+				gt(reservation.endsAt, now),
+				inArray(reservation.status, ["scheduled", "confirmed"])
 			)
 		)
 		.orderBy(reservation.startsAt);

@@ -6,7 +6,7 @@ import * as creditService from './credit-service';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { sql } from 'drizzle-orm';
+import type { Subscription } from '$lib/server/db/schema/auth';
 
 // Re-export so downstream consumers can import from one place
 export { registeredEvents };
@@ -90,8 +90,27 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	// Equipment credits: 1:1 with contribution level, capped at 250
 	await creditService.allocateEquipmentCredits(member.id, contributionLine.quantity, invoice.id);
 
+	const [existing] = await db
+		.select({ subscription: user.subscription })
+		.from(user)
+		.where(eq(user.id, member.id))
+		.limit(1);
+
+	const nextReset = contributionLine.period?.end
+		? new Date(contributionLine.period.end * 1000).toISOString()
+		: new Date(Date.now() + 30 * 86400_000).toISOString();
+
+	const subscription: Subscription = {
+		startedAt: existing?.subscription?.startedAt ?? new Date().toISOString(),
+		stripeSubscriptionId: typeof subDetails.subscription === 'string'
+			? subDetails.subscription
+			: subDetails.subscription?.id ?? '',
+		hoursPerReset: freeHours,
+		creditsResetAt: nextReset,
+	};
+
 	await db.update(user)
-		.set({ sustainingMemberSince: sql`coalesce(sustaining_member_since, current_timestamp)` })
+		.set({ subscription })
 		.where(eq(user.id, member.id));
 }
 
@@ -134,7 +153,7 @@ export async function handleSubscriptionDeleted(
 	await cancelAllForUser(member.id);
 
 	await db.update(user)
-		.set({ sustainingMemberSince: null })
+		.set({ subscription: null })
 		.where(eq(user.id, member.id));
 }
 

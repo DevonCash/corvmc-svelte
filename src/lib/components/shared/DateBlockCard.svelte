@@ -16,24 +16,24 @@
 	} = $props();
 </script>
 
-<div class="flex rounded-(--radius-box) border-2 border-(--cmc-brown) bg-base-100 {className}">
+<div class="flex rounded-(--radius-box) border-[2.5px] border-(--cmc-brown) bg-base-100 {className}">
 	<div
 		class="flex w-20 shrink-0 flex-col items-center justify-center rounded-l-(--radius-box) border-r-2 border-(--cmc-brown) bg-(--cmc-parchment) py-3"
 	>
 		<span class="eyebrow text-xs leading-tight text-(--cmc-brown)">{formatDayOfWeek(date)}</span>
-		<span class="text-3xl font-bold leading-tight text-(--cmc-brown)">{formatDayNumber(date)}</span>
+		<span class="text-3xl leading-tight font-bold text-(--cmc-brown)">{formatDayNumber(date)}</span>
 		<span class="eyebrow text-xs leading-tight text-(--cmc-brown)">{formatShortMonth(date)}</span>
 	</div>
 	<div class="flex min-w-0 flex-1 flex-col">
 		<div class="flex flex-1 flex-col gap-1 px-4 py-3">
 			{@render children()}
 		</div>
-		{#if actions}
-			<div class="flex items-center justify-end p-1 pt-0">
-				<ActionGroup>
+		<div class="flex items-center justify-end rounded-br-lg bg-base-200 pt-0 min-h-5">
+			{#if actions}
+				<ActionGroup class="m-[-2.5px]">
 					{@render actions()}
 				</ActionGroup>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </div>

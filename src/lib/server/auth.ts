@@ -43,7 +43,7 @@ export const auth = betterAuth({
 			stripeId: { type: 'string', required: false, fieldName: 'stripe_id' },
 			pmType: { type: 'string', required: false, fieldName: 'pm_type' },
 			pmLastFour: { type: 'string', required: false, fieldName: 'pm_last_four' },
-			sustainingMemberSince: { type: 'string', required: false, fieldName: 'sustaining_member_since' },
+			subscription: { type: 'string', required: false },
 			trialEndsAt: { type: 'string', required: false, fieldName: 'trial_ends_at' },
 			deletedAt: { type: 'string', required: false, fieldName: 'deleted_at' }
 		}

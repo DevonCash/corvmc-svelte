@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, inArray, sql } from 'drizzle-orm';
+import { like, or, eq, and, inArray, sql } from 'drizzle-orm';
 import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
@@ -204,11 +204,11 @@ export const getReservationPricing = query(
 		let isSustainingMember = false;
 		if (locals.user) {
 			const [row] = await db
-				.select({ sustainingMemberSince: user.sustainingMemberSince })
+				.select({ subscription: user.subscription })
 				.from(user)
 				.where(eq(user.id, locals.user.id))
 				.limit(1);
-			isSustainingMember = row?.sustainingMemberSince != null;
+			isSustainingMember = row?.subscription != null;
 		}
 
 		const creditsApplicable = Math.min(freeHoursBalance, durationHours);
@@ -270,14 +270,22 @@ export const checkConflicts = query(
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
-	if (!locals.user) return { isSustainingMember: false, freeHoursBalance: 0 };
+	if (!locals.user) return { isSustainingMember: false, freeHoursBalance: 0, creditsResetAt: null, hoursPerReset: 0 };
+
 	const [row] = await db
-		.select({ sustainingMemberSince: user.sustainingMemberSince })
+		.select({ subscription: user.subscription })
 		.from(user)
 		.where(eq(user.id, locals.user.id))
 		.limit(1);
+
 	const freeHoursBalance = await getBalance(locals.user.id, 'free_hours');
-	return { isSustainingMember: row?.sustainingMemberSince != null, freeHoursBalance };
+
+	return {
+		isSustainingMember: row?.subscription != null,
+		freeHoursBalance,
+		creditsResetAt: row?.subscription?.creditsResetAt ?? null,
+		hoursPerReset: row?.subscription?.hoursPerReset ?? 0,
+	};
 });
 
 /** Band: check if any active band member has a sustaining membership. */
@@ -291,8 +299,7 @@ export const getBandMembershipStatus = query(z.void(), async () => {
 	const [sustaining] = await db
 		.select({ id: user.id })
 		.from(user)
-		.where(inArray(user.id, activeUserIds))
-		.where(sql`sustaining_member_since is not null`)
+		.where(and(inArray(user.id, activeUserIds), sql`subscription is not null`))
 		.limit(1);
 
 	return { hasSustainingMember: sustaining != null };
@@ -343,11 +350,11 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 
 	if (isRecurring) {
 		const [row] = await db
-			.select({ sustainingMemberSince: user.sustainingMemberSince })
+			.select({ subscription: user.subscription })
 			.from(user)
 			.where(eq(user.id, locals.user.id))
 			.limit(1);
-		if (!row?.sustainingMemberSince) {
+		if (!row?.subscription) {
 			throw error(403, 'Recurring reservations require a sustaining membership');
 		}
 	}
@@ -391,11 +398,11 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 
 	if (isRecurring) {
 		const [row] = await db
-			.select({ sustainingMemberSince: user.sustainingMemberSince })
+			.select({ subscription: user.subscription })
 			.from(user)
 			.where(eq(user.id, locals.user.id))
 			.limit(1);
-		if (!row?.sustainingMemberSince) {
+		if (!row?.subscription) {
 			throw error(403, 'Recurring reservations require a sustaining membership');
 		}
 	}
@@ -501,8 +508,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 		const [sustaining] = await db
 			.select({ id: user.id })
 			.from(user)
-			.where(inArray(user.id, activeUserIds))
-			.where(sql`sustaining_member_since is not null`)
+			.where(and(inArray(user.id, activeUserIds), sql`subscription is not null`))
 			.limit(1);
 
 		if (!sustaining) {

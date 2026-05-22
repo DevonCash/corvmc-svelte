@@ -55,12 +55,12 @@ export function calculateLoanCharge(dailyRateCents: number, checkedOutAt: Date, 
 
 async function isSustainingMember(userId: string): Promise<boolean> {
 	const [row] = await db
-		.select({ sustainingMemberSince: user.sustainingMemberSince })
+		.select({ subscription: user.subscription })
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
 
-	return row?.sustainingMemberSince != null;
+	return row?.subscription != null;
 }
 
 async function settleReturn(

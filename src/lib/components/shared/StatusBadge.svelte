@@ -66,7 +66,7 @@
 		error: { icon: IconAlertTriangle, color: 'text-error' }
 	};
 
-	const fallback: Variant = { icon: IconCircleX, color: 'opacity-40' };
+	const fallback: Variant = { icon: IconCircleX, color: '' };
 	const variant = $derived(variants[status] ?? fallback);
 	const label = $derived.by(() => {
 		const s = status.replace(/_/g, ' ');

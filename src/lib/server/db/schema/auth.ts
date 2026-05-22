@@ -8,6 +8,15 @@ import { z } from 'zod';
 
 export type DirectoryVisibility = 'hidden' | 'members' | 'public';
 
+export const subscriptionSchema = z.object({
+	startedAt: z.string(),
+	stripeSubscriptionId: z.string(),
+	hoursPerReset: z.number(),
+	creditsResetAt: z.string(),
+}).nullable().default(null);
+
+export type Subscription = z.infer<typeof subscriptionSchema>;
+
 export const directoryContactSchema = z.object({
 	email: z.string().optional(),
 	phone: z.string().optional(),
@@ -50,7 +59,7 @@ export const user = sqliteTable('user', {
 	pmLastFour: text('pm_last_four'),
 	creditFreeHours: integer('credit_free_hours').notNull().default(0),
 	creditEquipment: integer('credit_equipment').notNull().default(0),
-	sustainingMemberSince: timestamp('sustaining_member_since'),
+	subscription: zodJson(subscriptionSchema)('subscription'),
 	trialEndsAt: timestamp('trial_ends_at'),
 	deletedAt: timestamp('deleted_at'),
 
