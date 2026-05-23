@@ -5,8 +5,6 @@
 		formatDate,
 		relativeDay,
 		formatTimeRange,
-		durationHours,
-		formatDurationAmount,
 		formatScheduleLabel,
 		formatDateYear
 	} from '$lib/utils/format';
@@ -15,18 +13,11 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import {
-		ConfirmReservationAction,
-		ConfirmWaitlistedAction,
-		CancelReservationAction,
-		CancelSeriesAction,
-		PayReservationAction
-	} from '$lib/components/shared/actions';
+	import { CancelSeriesAction } from '$lib/components/shared/actions';
 	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import { getMembershipStatus, confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -34,6 +25,7 @@
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import { IconClock, IconPencil, IconPlayerPause, IconX } from '@tabler/icons-svelte';
 	import CreateModal from './CreateModal.svelte';
+	import ReservationCard from './ReservationCard.svelte';
 	import type { MemberReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberReservationsResponse & { confirmId?: string | null } } = $props();
@@ -130,64 +122,7 @@
 		gridClass="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3"
 	>
 		{#snippet card(row)}
-			{@const h = durationHours(row.startsAt, row.endsAt)}
-			{@const durationLabel = h === 1 ? '1 hr' : `${h} hrs`}
-			<DateBlockCard date={row.startsAt}>
-				<div class="flex items-center justify-between gap-2">
-					<span class="font-semibold">{relativeDay(row.startsAt)}</span>
-					<StatusBadge status={row.status} />
-				</div>
-				<div class="flex items-baseline justify-between gap-2 text-sm">
-					<span>{formatTimeRange(row.startsAt, row.endsAt)}</span>
-					<span class="text-xs opacity-60">{durationLabel}</span>
-				</div>
-				<div class="flex items-baseline justify-between gap-2 text-sm">
-					<span>{formatDurationAmount(row.startsAt, row.endsAt, 1500)}</span>
-					<span class="text-xs opacity-40">
-						{#if row.status === 'waitlisted'}
-							{#if row.waitlistNotifiedAt}
-								Slot available — confirm by {formatDate(row.waitlistExpiresAt ?? '')}
-							{:else}
-								Waiting for slot
-							{/if}
-						{:else if row.refundedAt}
-							Refunded {formatDate(row.refundedAt)}
-						{:else if row.status === 'cancelled'}
-							Cancelled
-						{:else if row.paidAt}
-							Paid {formatDate(row.paidAt)}{#if row.paidWithCredits}
-								· credits{/if}
-						{:else if row.paidWithCredits}
-							Paid with credits
-						{:else if row.status === 'completed' || row.status === 'no_show'}
-							Unpaid
-						{:else if new Date(row.startsAt) < new Date()}
-							Overdue
-						{:else}
-							Due {formatDate(row.startsAt)}
-						{/if}
-					</span>
-				</div>
-				{#snippet actions()}
-					{#if row.status === 'waitlisted'}
-						<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
-						{#if row.waitlistNotifiedAt}
-							<ConfirmWaitlistedAction reservation={row} class="btn-xs btn-success" />
-						{/if}
-					{:else if row.status === 'scheduled' || row.status === 'confirmed'}
-						<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
-						{#if row.status === 'scheduled'}
-							<ConfirmReservationAction reservation={row} class="btn-xs btn-primary" />
-						{:else if row.status === 'confirmed' && !row.paidAt && !row.paidWithCredits}
-							<PayReservationAction
-								reservation={row}
-								label="Pay Ahead"
-								class="btn-xs btn-primary"
-							/>
-						{/if}
-					{/if}
-				{/snippet}
-			</DateBlockCard>
+			<ReservationCard reservation={row} />
 		{/snippet}
 	</DataTable>
 

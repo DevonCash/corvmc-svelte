@@ -1,10 +1,8 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
 	import PosterCard from '$lib/components/shared/PosterCard.svelte';
-	import { formatDate, formatTime } from '$lib/utils/format';
+	import TicketCard from './TicketCard.svelte';
 	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: { events: EventsResponse['events']; tickets: MemberTicketsResponse['tickets'] } } = $props();
@@ -27,18 +25,7 @@
 			</div>
 			<div class="flex overflow-x-auto gap-3 pb-2">
 				{#each activeTickets as ticket (ticket.id)}
-					{#if ticket.event}
-						<DateBlockCard date={ticket.event.startsAt} class="shrink-0 w-80">
-							<div class="flex items-center justify-between gap-2">
-								<span class="font-semibold text-sm">{ticket.event.title}</span>
-								<StatusBadge status={ticket.status} />
-							</div>
-							<p class="text-sm opacity-60">
-								{formatDate(ticket.event.startsAt)} · {formatTime(ticket.event.startsAt)}
-							</p>
-							<span class="font-mono text-xs opacity-40">{ticket.code}</span>
-						</DateBlockCard>
-					{/if}
+					<TicketCard {ticket} class="shrink-0 w-80" />
 				{/each}
 			</div>
 		</section>

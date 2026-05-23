@@ -91,7 +91,7 @@ export interface MemberBandsResponse {
 		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
 }
 
-type MemberReservation = Pick<
+export type MemberReservation = Pick<
 	Reservation,
 	| 'id'
 	| 'bookerType'
