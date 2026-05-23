@@ -72,20 +72,23 @@
 	{/if}
 {/snippet}
 
+{#snippet renderButton(extraProps?: Record<string, unknown>)}
+	{#if href}
+		<BitsButton.Root {href} {disabled} class="btn {statusClass || className}" {...extraProps} {...rest}>
+			{@render buttonContent()}
+		</BitsButton.Root>
+	{:else}
+		<BitsButton.Root {type} {disabled} class="btn {statusClass || className}" {...extraProps} {...rest}>
+			{@render buttonContent()}
+		</BitsButton.Root>
+	{/if}
+{/snippet}
+
 {#if title}
 	<Tooltip.Root>
 		<Tooltip.Trigger>
 			{#snippet child({ props })}
-				<BitsButton.Root
-					{...props}
-					{href}
-					{type}
-					{disabled}
-					class="btn {statusClass || className}"
-					{...rest}
-				>
-					{@render buttonContent()}
-				</BitsButton.Root>
+				{@render renderButton(props)}
 			{/snippet}
 		</Tooltip.Trigger>
 		<Tooltip.Portal>
@@ -99,9 +102,7 @@
 		</Tooltip.Portal>
 	</Tooltip.Root>
 {:else}
-	<BitsButton.Root {href} {type} {disabled} class="btn {statusClass || className}" {...rest}>
-		{@render buttonContent()}
-	</BitsButton.Root>
+	{@render renderButton()}
 {/if}
 
 <style>
