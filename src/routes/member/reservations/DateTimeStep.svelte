@@ -8,12 +8,29 @@
 	import * as Form from '$lib/components/shared/Form';
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
+	let {
+		isSustaining = false
+	}: {
+		isSustaining?: boolean;
+	} = $props();
+
 	const tz = getLocalTimeZone();
 
 	let date = $state(today(tz).toString());
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
+	let frequency = $state('');
+	let seriesEndsAt = $state('');
+
+	const isRecurring = $derived(frequency !== '');
+
+	const minEndsAt = $derived.by(() => {
+		if (!date) return '';
+		const d = new Date(date + 'T00:00:00');
+		d.setDate(d.getDate() + 7);
+		return d.toISOString().split('T')[0];
+	});
 
 	const minDate = today(tz);
 	const maxDate = today(tz).add({ days: 14 });
@@ -133,6 +150,42 @@
 			placeholder="What are you working on?"
 			rows={2}
 		/>
+
+		{#if isSustaining}
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">Frequency</legend>
+				<div class="flex gap-1">
+					{#each [
+						{ value: '', label: 'One Time' },
+						{ value: 'weekly', label: 'Weekly' },
+						{ value: 'biweekly', label: 'Every 2 Weeks' },
+						{ value: 'monthly', label: 'Monthly' }
+					] as opt (opt.value)}
+						<label class="btn btn-sm flex-1" class:btn-primary={frequency === opt.value}>
+							<input
+								type="radio"
+								name="recurring"
+								value={opt.value}
+								bind:group={frequency}
+								class="hidden"
+							/>
+							{opt.label}
+						</label>
+					{/each}
+				</div>
+			</fieldset>
+
+			{#if isRecurring}
+				<Form.Field
+					name="seriesEndsAt"
+					label="End date (optional)"
+					type="date"
+					bind:value={seriesEndsAt}
+					min={minEndsAt}
+					description="Leave empty for ongoing"
+				/>
+			{/if}
+		{/if}
 
 	{/if}
 

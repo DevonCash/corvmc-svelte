@@ -34,7 +34,6 @@
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import { IconClock, IconPencil, IconPlayerPause, IconX } from '@tabler/icons-svelte';
 	import CreateModal from './CreateModal.svelte';
-	import CreateRecurringModal from './CreateRecurringModal.svelte';
 	import type { MemberReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberReservationsResponse & { confirmId?: string | null } } = $props();
@@ -76,7 +75,7 @@
 </script>
 
 <PageHeader title="Reserve Practice Space">
-	<CreateModal />
+	<CreateModal {isSustaining} />
 </PageHeader>
 <PageContent>
 	<p class="text-sm opacity-60">
@@ -197,7 +196,6 @@
 	{#if isSustaining}
 		<div class="flex items-center justify-between pt-4">
 			<h2 class="text-lg font-semibold">My Recurring Reservations</h2>
-			<CreateRecurringModal />
 		</div>
 		<DataTable data={recurringSeries} empty="No active recurring reservations.">
 			<Column key="id" header="" shrink>

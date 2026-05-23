@@ -474,6 +474,7 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	seriesEndsAt: z.string().optional(),
 	coverFees: z.enum(['', 'on']).optional(),
 	skipPayment: z.enum(['', 'on']).optional()
 });
@@ -528,10 +529,14 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	}
 
 	if (isRecurring && recurringFrequency) {
+		const seriesEndsAt = data.seriesEndsAt
+			? buildDateInTz(data.seriesEndsAt, '23:59', 'America/Los_Angeles')
+			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
-			prototypeStartsAt: startsAt
+			prototypeStartsAt: startsAt,
+			endsAt: seriesEndsAt
 		});
 	}
 
