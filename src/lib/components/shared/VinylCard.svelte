@@ -24,7 +24,12 @@
 	}: Props = $props();
 
 	function initials(n: string): string {
-		return n.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+		return n
+			.split(' ')
+			.map((p) => p[0])
+			.slice(0, 2)
+			.join('')
+			.toUpperCase();
 	}
 </script>
 
@@ -41,7 +46,9 @@
 						<textPath href="#arc-top-{id}" startOffset="50%" text-anchor="middle">{name}</textPath>
 					</text>
 					<text>
-						<textPath href="#arc-bot-{id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
+						<textPath href="#arc-bot-{id}" startOffset="50%" text-anchor="middle"
+							>Corvallis Music Collective</textPath
+						>
 					</text>
 				</svg>
 				<img class="vinyl-card__logo" src={logoMono} alt="" />
@@ -50,7 +57,7 @@
 		<div class="vinyl-card__sleeve">
 			<div class="vinyl-card__sleeve-art">
 				{#if avatarUrl}
-					<img src={avatarUrl} alt={name} class="w-full h-full object-cover" />
+					<img src={avatarUrl} alt={name} class="h-full w-full object-cover" />
 				{:else}
 					{initials(name)}
 				{/if}
@@ -72,7 +79,7 @@
 	</div>
 </a>
 
-<style>
+<style lang="postcss">
 	.vinyl-card {
 		position: relative;
 		display: block;
@@ -81,8 +88,20 @@
 		cursor: pointer;
 		--vinyl-label: var(--cmc-orange);
 	}
+	.vinyl-card:focus,
 	.vinyl-card:hover {
 		z-index: 10;
+
+		.vinyl-card__sleeve-wrap {
+			transform: rotate(-3deg);
+		}
+
+		.vinyl-card__sleeve {
+			transform: translateX(-8%);
+		}
+		.vinyl-card__disc {
+			transform: translate(10%, -50%) rotate(60deg);
+		}
 	}
 
 	.vinyl-card__disc {
@@ -99,17 +118,13 @@
 			repeating-radial-gradient(circle, #181818 0 1px, #0e0e0e 1px 2px),
 			radial-gradient(circle, transparent 0 92%, rgba(255, 255, 255, 0.06) 93%, transparent 100%),
 			radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12) 0 8%, transparent 30%), #0a0a0a;
-		box-shadow:
+		/* box-shadow:
 			0 4px 10px rgba(0, 0, 0, 0.4),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+			inset 0 0 0 1px rgba(255, 255, 255, 0.05); */
 		transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
 		z-index: 1;
 		pointer-events: none;
 	}
-	.vinyl-card:hover .vinyl-card__disc {
-		transform: translate(10%, -50%) rotate(60deg);
-	}
-
 	.vinyl-card__label {
 		position: absolute;
 		left: 50%;
@@ -119,7 +134,7 @@
 		height: 56%;
 		border-radius: 50%;
 		background: var(--vinyl-label);
-		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+		/* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); */
 	}
 	.vinyl-card__arc {
 		position: absolute;
@@ -157,9 +172,9 @@
 		position: relative;
 		width: 100%;
 		background: var(--cmc-cream);
-		box-shadow:
+		/* box-shadow:
 			0 4px 12px rgba(0, 0, 0, 0.25),
-			inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+			inset 0 0 0 1px rgba(0, 0, 0, 0.08); */
 		z-index: 2;
 		transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
 	}
@@ -167,12 +182,7 @@
 		position: relative;
 		transition: transform 500ms cubic-bezier(0.34, 1.2, 0.64, 1);
 	}
-	.vinyl-card:hover .vinyl-card__sleeve-wrap {
-		transform: rotate(-3deg);
-	}
-	.vinyl-card:hover .vinyl-card__sleeve {
-		transform: translateX(-8%);
-	}
+
 	.vinyl-card__sleeve::after {
 		display: none;
 	}

@@ -3,8 +3,8 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
-	import Logo from '$lib/components/shared/Logo.svelte';
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
+	import PosterCard from '$lib/components/shared/PosterCard.svelte';
+	import { formatDate, formatTime } from '$lib/utils/format';
 	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: { events: EventsResponse['events']; tickets: MemberTicketsResponse['tickets'] } } = $props();
@@ -15,10 +15,6 @@
 		)
 	);
 
-	function parseTags(tags: string | null): string[] {
-		if (!tags) return [];
-		return tags.split(',').map((t) => t.trim()).filter(Boolean);
-	}
 </script>
 
 <PageHeader title="Events" />
@@ -58,36 +54,16 @@
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
 				{#each data.events as evt (evt.id)}
-					<a href="/member/events/{evt.id}" class="poster-card w-full">
-						<figure class="poster-card__figure">
-							{#if evt.posterUrl}
-								<img src={evt.posterUrl} alt={evt.title} />
-							{:else}
-								<div class="flex flex-col items-center justify-center gap-2 p-6 text-center" style="color: var(--cmc-navy)">
-									<Logo soundLines={false} class="h-16 w-auto opacity-40" />
-									<span class="text-sm font-bold opacity-50">{evt.title}</span>
-								</div>
-							{/if}
-						</figure>
-						<div class="poster-card__caption">
-							<div class="poster-card__caption-text">
-								<div class="poster-card__title">{evt.title}</div>
-								<div class="poster-card__date">
-									{formatDate(evt.startsAt)} · {formatTime(evt.startsAt)}
-									{#if evt.ticketingEnabled && evt.ticketPrice}
-										· {formatCents(evt.ticketPrice)}
-									{/if}
-								</div>
-							</div>
-						</div>
-						{#if parseTags(evt.tags).length > 0}
-							<div class="absolute right-0 top-4 flex flex-col gap-1.5 items-end">
-								{#each parseTags(evt.tags) as tag (tag)}
-									<span class="sticker-badge sticker-badge--sm">{tag}</span>
-								{/each}
-							</div>
-						{/if}
-					</a>
+					<PosterCard
+						href="/member/events/{evt.id}"
+						title={evt.title}
+						posterUrl={evt.posterUrl}
+						startsAt={evt.startsAt}
+						ticketingEnabled={evt.ticketingEnabled}
+						ticketPrice={evt.ticketPrice}
+						tags={evt.tags}
+						class="w-full"
+					/>
 				{/each}
 			</div>
 		{/if}

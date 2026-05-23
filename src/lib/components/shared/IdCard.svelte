@@ -28,7 +28,12 @@
 	}: Props = $props();
 
 	function initials(n: string): string {
-		return n.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+		return n
+			.split(' ')
+			.map((p) => p[0])
+			.slice(0, 2)
+			.join('')
+			.toUpperCase();
 	}
 </script>
 
@@ -36,14 +41,14 @@
 	<div class="id-card__header">
 		<div class="id-card__brand">
 			<img src={speakerLogo} alt="" class="id-card__logo" />
-			<span>Corvallis Music<br/>Collective</span>
+			<span>Corvallis Music<br />Collective</span>
 		</div>
 		<div class="id-card__tag">MEMBER</div>
 	</div>
 	<div class="id-card__body">
 		<div class="id-card__photo">
 			{#if image}
-				<img src={image} alt={name} class="w-full h-full object-cover rounded" />
+				<img src={image} alt={name} class="h-full w-full rounded object-cover" />
 			{:else}
 				{initials(name)}
 			{/if}
@@ -95,10 +100,11 @@
 		width: 100%;
 		max-width: 320px;
 		border-radius: 10px;
-		box-shadow:
+		/* box-shadow:
 			0 14px 26px -10px rgba(20, 20, 25, 0.4),
 			0 4px 10px -4px rgba(20, 20, 25, 0.2),
-			inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+			inset 0 0 0 1px rgba(0, 0, 0, 0.05); */
+		border: 4px solid var(--cmc-brown);
 		overflow: visible;
 		transform: rotate(var(--tilt, -1deg));
 		transition:
@@ -109,12 +115,14 @@
 		aspect-ratio: 5 / 3;
 		container-type: inline-size;
 	}
+	.id-card:focus,
 	.id-card:hover {
 		transform: rotate(0deg) translateY(-3px);
-		box-shadow:
+		box-shadow: -5px -5px -5px 0 var(--cmc-brown);
+		/* box-shadow:
 			0 20px 34px -10px rgba(20, 20, 25, 0.45),
 			0 6px 14px -4px rgba(20, 20, 25, 0.25),
-			inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+			inset 0 0 0 1px rgba(0, 0, 0, 0.05); */
 	}
 	.id-card:nth-child(3n + 1) {
 		--tilt: -1.2deg;
