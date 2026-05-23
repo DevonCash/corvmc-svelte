@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
@@ -55,13 +56,13 @@
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
-			<button class="btn btn-sm btn-outline" onclick={() => editing = !editing}>
+			<Button class="btn-sm btn-outline" onclick={() => editing = !editing}>
 				{editing ? 'Cancel' : 'Modify Amount'}
-			</button>
+			</Button>
 			{#if billingPortalUrl}
-				<a href={billingPortalUrl} class="btn btn-sm btn-outline">
+				<Button href={billingPortalUrl} class="btn-sm btn-outline">
 					Manage Billing
-				</a>
+				</Button>
 			{/if}
 		</div>
 

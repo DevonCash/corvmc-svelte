@@ -17,6 +17,7 @@
 	import { formatDateTime, formatCents } from '$lib/utils/format';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
@@ -151,9 +152,9 @@
 							<div class="flex items-center gap-2">
 								<CopyableId value={p.id} label="Stripe" />
 								{#if p.reservationId}
-									<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
+									<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
 										View
-									</a>
+									</Button>
 								{/if}
 							</div>
 						{/snippet}

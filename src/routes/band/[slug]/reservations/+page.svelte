@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -21,7 +22,7 @@
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-		<a href="reservations/new" class="btn btn-sm btn-primary">Book a Session</a>
+		<Button href="reservations/new" class="btn-sm">Book a Session</Button>
 	</PageHeader>
 <PageContent width="2xl">
 	<TabBar

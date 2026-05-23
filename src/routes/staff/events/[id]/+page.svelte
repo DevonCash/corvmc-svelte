@@ -15,6 +15,7 @@
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { StaffEventDetailResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEventDetailResponse } = $props();
@@ -162,11 +163,11 @@
 <PageHeader title={evt.title} backHref="/staff/events">
 		<div class="flex items-center gap-2">
 			{#if evt.ticketingEnabled}
-				<a href="/staff/events/{evt.id}/check-in" class="btn btn-sm btn-ghost">Check-in</a>
+				<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
 			{/if}
 
 			{#if evt.status !== 'cancelled' && !editing}
-				<button class="btn btn-sm btn-ghost" onclick={startEditing}>Edit</button>
+				<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
 			{/if}
 
 			{#if evt.status === 'draft'}
@@ -325,7 +326,7 @@
 							{/if}
 
 							<div class="flex justify-end gap-2 pt-2">
-								<button type="button" class="btn btn-ghost btn-sm" onclick={cancelEditing}>Cancel</button>
+								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}>Cancel</Button>
 								<SubmitButton
 									label="Save"
 									class="btn-primary btn-sm"

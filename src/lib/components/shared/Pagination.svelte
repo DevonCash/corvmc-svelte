@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
+
 	let {
 		page,
 		totalPages,
@@ -14,21 +16,20 @@
 	<div class="flex justify-center">
 		<div class="join">
 			{#if page > 1}
-				<a href={buildHref(page - 1)} class="join-item btn">«</a>
+				<Button href={buildHref(page - 1)} class="join-item">«</Button>
 			{/if}
 
 			{#each Array.from({ length: totalPages }, (_, i) => i + 1) as p (p)}
-				<a
+				<Button
 					href={buildHref(p)}
-					class="join-item btn"
-					class:btn-active={p === page}
+					class="join-item {p === page ? 'btn-active' : ''}"
 				>
 					{p}
-				</a>
+				</Button>
 			{/each}
 
 			{#if page < totalPages}
-				<a href={buildHref(page + 1)} class="join-item btn">»</a>
+				<Button href={buildHref(page + 1)} class="join-item">»</Button>
 			{/if}
 		</div>
 	</div>

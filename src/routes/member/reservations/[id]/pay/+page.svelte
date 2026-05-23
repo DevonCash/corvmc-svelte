@@ -4,6 +4,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 	import { payReservation } from '$lib/remote/reservations.remote';
 
@@ -125,5 +126,5 @@
 		</SubmitButton>
 	</Form>
 
-	<a href="/member/reservations" class="btn btn-ghost w-full">Back to Reservations</a>
+	<Button href="/member/reservations" class="btn-ghost w-full">Back to Reservations</Button>
 </PageContent>

@@ -13,6 +13,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { toast } from 'svelte-sonner';
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
 
@@ -126,18 +127,18 @@
 									class="input-bordered input input-sm w-full"
 								/>
 							</div>
-							<button
+							<Button
 								type="button"
-								class="btn btn-ghost btn-sm btn-square text-error mt-1"
+								class="btn-ghost btn-sm btn-square text-error mt-1"
 								onclick={() => removeLink(i)}
 							>
 								<IconTrash size={16} />
-							</button>
+							</Button>
 						</div>
 					{/each}
-					<button type="button" class="btn btn-outline btn-sm gap-1" onclick={addLink}>
+					<Button type="button" class="btn-outline btn-sm gap-1" onclick={addLink}>
 						<IconPlus size={16} /> Add link
-					</button>
+					</Button>
 				</div>
 			</InfoCard>
 

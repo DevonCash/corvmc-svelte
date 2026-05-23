@@ -9,6 +9,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { createBand, acceptInvite, declineInvite } from '$lib/remote/bands.remote';
 	import type { MemberBandsResponse } from '$lib/server/db/schema/api';
 
@@ -21,9 +22,9 @@
 </script>
 
 <PageHeader title="My Bands" subtitle="Member">
-		<button class="btn btn-primary btn-sm" onclick={() => (showCreateModal = true)}>
+		<Button class="btn-sm" onclick={() => (showCreateModal = true)}>
 			Create Band
-		</button>
+		</Button>
 	</PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->

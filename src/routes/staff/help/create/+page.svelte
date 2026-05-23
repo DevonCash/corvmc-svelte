@@ -6,6 +6,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
 
 	let categories = $derived(await getStaffCategories());
@@ -63,7 +64,7 @@
 			</FormField>
 
 			<div class="flex justify-end gap-2">
-				<a href="/staff/help" class="btn btn-ghost">Cancel</a>
+				<Button href="/staff/help" class="btn-ghost">Cancel</Button>
 				<SubmitButton label="Create Article" />
 			</div>
 		</div>

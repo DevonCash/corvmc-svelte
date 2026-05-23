@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		options,
@@ -51,10 +52,10 @@
 		{#if selectedOptions.length > 0}
 			<div class="flex flex-wrap gap-1">
 				{#each selectedOptions as opt (opt.id)}
-					<button class="btn btn-xs btn-primary" type="button" onclick={() => remove(opt.id)}>
+					<Button class="btn-xs" type="button" onclick={() => remove(opt.id)}>
 						{opt.label}
 						<IconX class="size-3" />
-					</button>
+					</Button>
 				{/each}
 			</div>
 		{/if}

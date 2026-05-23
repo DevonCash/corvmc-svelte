@@ -4,6 +4,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -97,18 +98,18 @@
 									class="input-bordered input input-sm w-full"
 								/>
 							</div>
-							<button
+							<Button
 								type="button"
-								class="btn btn-ghost btn-sm btn-square text-error mt-1"
+								class="btn-ghost btn-sm btn-square text-error mt-1"
 								onclick={() => removeLink(i)}
 							>
 								<IconTrash size={16} />
-							</button>
+							</Button>
 						</div>
 					{/each}
-					<button type="button" class="btn btn-outline btn-sm gap-1" onclick={addLink}>
+					<Button type="button" class="btn-outline btn-sm gap-1" onclick={addLink}>
 						<IconPlus size={16} /> Add link
-					</button>
+					</Button>
 				</div>
 			</InfoCard>
 		</div>

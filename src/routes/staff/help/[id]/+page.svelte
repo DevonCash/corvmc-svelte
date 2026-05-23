@@ -9,6 +9,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
 
 	let id = $derived(page.params.id!);
@@ -81,7 +82,7 @@
 				{/if}
 
 				<div class="flex justify-end gap-2">
-					<a href="/staff/help" class="btn btn-ghost">Cancel</a>
+					<Button href="/staff/help" class="btn-ghost">Cancel</Button>
 					<SubmitButton label="Save Changes" />
 				</div>
 			</div>

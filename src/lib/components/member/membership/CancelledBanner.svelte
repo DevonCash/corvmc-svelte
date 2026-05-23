@@ -4,6 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		subscription,
@@ -45,7 +46,7 @@
 			</Action>
 
 			{#if billingPortalUrl}
-				<a href={billingPortalUrl} class="btn btn-sm btn-outline">Manage Billing</a>
+				<Button href={billingPortalUrl} class="btn-sm btn-outline">Manage Billing</Button>
 			{/if}
 		</div>
 	</div>

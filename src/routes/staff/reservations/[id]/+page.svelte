@@ -23,6 +23,7 @@
 		formatCents
 	} from '$lib/utils/format';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 	import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 	import { visibleActions } from '$lib/utils/reservation-actions';
@@ -114,7 +115,7 @@
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.createdByUserId}
-						<a href="/staff/users/{r.createdByUserId}" class="btn btn-sm"> View Profile </a>
+						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm"> View Profile </Button>
 					{/if}
 				</header>
 			{/snippet}
@@ -125,15 +126,15 @@
 					<p class="text-xs text-muted">{r.memberPronouns}</p>
 				{/if}
 				<div class="join join-vertical mt-4">
-					<a href="mailto:{r.memberEmail}" class="btn join-item btn-outline">
+					<Button href="mailto:{r.memberEmail}" class="join-item btn-outline">
 						<IconMail class="size-5" />
 						{r.memberEmail}
-					</a>
+					</Button>
 					{#if r.memberPhone}
-						<a href="tel:{r.memberPhone}" class="btn join-item btn-outline">
+						<Button href="tel:{r.memberPhone}" class="join-item btn-outline">
 							<IconPhone class="size-5" />
 							{r.memberPhone}
-						</a>
+						</Button>
 					{/if}
 				</div>
 			</div>

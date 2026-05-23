@@ -9,6 +9,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		searchBandUsers as searchUsers,
 		inviteMember,
@@ -80,9 +81,9 @@
 
 <PageHeader title="Members" subtitle={data.band.name}>
 		{#if isOwner || isAdmin}
-			<button class="btn btn-sm btn-primary" onclick={() => (showInviteModal = true)}>
+			<Button class="btn-sm" onclick={() => (showInviteModal = true)}>
 				Invite Member
-			</button>
+			</Button>
 		{/if}
 	</PageHeader>
 <PageContent width="2xl">
@@ -123,15 +124,15 @@
 								</Form>
 							{/if}
 							{#if isOwner && member.role !== 'owner'}
-								<button
-									class="btn btn-ghost btn-xs"
+								<Button
+									class="btn-ghost btn-xs"
 									onclick={() => {
 										transferTarget = { userId: member.userId, name: member.userName ?? '' };
 										showTransferModal = true;
 									}}
 								>
 									Transfer
-								</button>
+								</Button>
 							{/if}
 						</div>
 					</div>
@@ -217,9 +218,9 @@
 	<!-- Leave band (non-owners) -->
 	{#if !isOwner && data.userRole !== 'staff'}
 		<div class="pt-4">
-			<button class="btn btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
+			<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
 				Leave Band
-			</button>
+			</Button>
 		</div>
 	{/if}
 </PageContent>

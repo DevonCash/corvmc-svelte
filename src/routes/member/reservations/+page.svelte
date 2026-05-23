@@ -23,6 +23,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconClock, IconPencil, IconPlayerPause, IconX } from '@tabler/icons-svelte';
 	import CreateModal from './CreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
@@ -100,7 +101,7 @@
 				<IconClock size={18} class="shrink-0 opacity-40" />
 				<span>Get free practice hours each month with a sustaining membership.</span>
 			</div>
-			<a href="/member/membership" class="btn self-end btn-sm sm:self-auto">Learn More</a>
+			<Button href="/member/membership" class="self-end btn-sm sm:self-auto">Learn More</Button>
 		</div>
 	{/if}
 
@@ -160,9 +161,9 @@
 					<ActionGroup style="--shadow: 4px">
 						<CancelSeriesAction seriesId={row.id} class="btn-ghost btn-square">
 							{#snippet trigger({ onclick, disabled })}
-								<button class="btn btn-ghost btn-square" {disabled} {onclick}>
+								<Button class="btn-ghost btn-square" {disabled} {onclick}>
 									<IconX size={20} />
-								</button>
+								</Button>
 							{/snippet}
 						</CancelSeriesAction>
 						<Action
@@ -174,8 +175,8 @@
 							class="btn-xs btn-primary"
 						>
 							{#snippet trigger({ onclick, disabled })}
-								<button
-									class="btn btn-ghost btn-square"
+								<Button
+									class="btn-ghost btn-square"
 									{disabled}
 									onclick={() => {
 										const start = new Date(row.startsAt);
@@ -191,7 +192,7 @@
 									}}
 								>
 									<IconPencil size={20} />
-								</button>
+								</Button>
 							{/snippet}
 							{#snippet form({ close })}
 								<input type="hidden" name="seriesId" value={row.id} />
@@ -222,9 +223,9 @@
 								</p>
 							{/snippet}
 						</Action>
-						<button class="btn btn-ghost btn-square" title="Pause series">
+						<Button class="btn-ghost btn-square" title="Pause series">
 							<IconPlayerPause size={20} />
-						</button>
+						</Button>
 					</ActionGroup>
 				{/snippet}
 			</Column>
@@ -237,7 +238,7 @@
 				<span
 					>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span
 				>
-				<a href="/member/membership" class="btn self-end btn-sm sm:self-auto">Learn More</a>
+				<Button href="/member/membership" class="self-end btn-sm sm:self-auto">Learn More</Button>
 			</div>
 		</div>
 	{/if}
@@ -268,7 +269,7 @@
 				{/if}
 				<input type="hidden" name="id" value={confirmReservation.id} />
 				<div class="flex justify-end gap-2">
-					<button type="button" class="btn btn-ghost btn-sm" onclick={closeConfirmModal}>Dismiss</button>
+					<Button type="button" class="btn-ghost btn-sm" onclick={closeConfirmModal}>Dismiss</Button>
 					<SubmitButton label="Confirm Reservation" class="btn-success btn-sm" />
 				</div>
 			</div>

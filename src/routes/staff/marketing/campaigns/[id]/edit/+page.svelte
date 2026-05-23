@@ -4,6 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		getCampaignDetail,
 		getAudienceOptions,
@@ -136,7 +137,7 @@
 </script>
 
 	<PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
-		<button class="btn btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</button>
+		<Button class="btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</Button>
 	</PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
@@ -28,9 +29,9 @@
 					This action cannot be undone.
 				</p>
 				<div class="card-actions justify-end mt-2">
-					<button class="btn btn-error btn-sm btn-outline" onclick={() => (showDeleteModal = true)}>
+					<Button class="btn-error btn-sm btn-outline" onclick={() => (showDeleteModal = true)}>
 						Delete Band
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>

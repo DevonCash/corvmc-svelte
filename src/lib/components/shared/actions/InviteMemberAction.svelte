@@ -2,6 +2,7 @@
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { addBandMember } from '$lib/remote/bands.remote';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		bandId,
@@ -57,7 +58,7 @@
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
-					<button type="button" class="btn btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</button>
+					<Button type="button" class="btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</Button>
 				</div>
 			{:else}
 				<label class="form-control w-full">

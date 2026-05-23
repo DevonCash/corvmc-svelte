@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	type AlertType = 'info' | 'warning' | 'error' | 'success';
 
@@ -35,7 +36,7 @@
 	<div class="alert {typeClass[type]} {className}" role="alert">
 		<p>{@render children()}</p>
 		{#if reset}
-			<button class="btn btn-sm" onclick={reset}>Retry</button>
+			<Button class="btn-sm" onclick={reset}>Retry</Button>
 		{:else if action}
 			{@render action()}
 		{/if}

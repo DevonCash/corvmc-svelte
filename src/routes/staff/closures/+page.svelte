@@ -9,6 +9,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { UpdateClosureAction, DeleteClosureAction } from '$lib/components/shared/actions';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getClosures, createClosure } from '$lib/remote/closures.remote';
 
 	let closures = $derived(await getClosures());
@@ -68,7 +69,7 @@
 									<input type="datetime-local" bind:value={editEndsAt} class="input input-bordered input-sm" />
 								</div>
 								<div class="flex justify-end gap-2">
-									<button class="btn btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</button>
+									<Button class="btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</Button>
 									<UpdateClosureAction closureId={c.id} reason={editReason} startsAt={editStartsAt} endsAt={editEndsAt} onsuccess={() => { editId = null; invalidateAll(); }} />
 								</div>
 							</div>
@@ -82,7 +83,7 @@
 								</div>
 								{#if isFuture(c.startsAt)}
 									<div class="flex gap-1">
-										<button class="btn btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</button>
+										<Button class="btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</Button>
 										<DeleteClosureAction closureId={c.id} />
 									</div>
 								{/if}

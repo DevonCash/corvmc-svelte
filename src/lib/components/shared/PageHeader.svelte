@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		title,
@@ -21,7 +22,7 @@
 >
 	<div class="flex items-center gap-4">
 		{#if backHref}
-			<a href={backHref} class="btn btn-square btn-ghost btn-lg">←</a>
+			<Button href={backHref} class="btn-square btn-ghost btn-lg">←</Button>
 		{/if}
 		<hgroup class="flex flex-col">
 			<h1 class="text-2xl font-bold">{title}</h1>

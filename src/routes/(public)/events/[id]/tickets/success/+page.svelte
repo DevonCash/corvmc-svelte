@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTime } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 
@@ -52,6 +53,6 @@
 	</div>
 
 	<div class="text-center">
-		<a href="/events" class="btn btn-ghost">Back to Events</a>
+		<Button href="/events" class="btn-ghost">Back to Events</Button>
 	</div>
 </div>

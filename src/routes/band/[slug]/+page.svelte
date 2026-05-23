@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/server/db/schema/api';
 
@@ -70,13 +71,13 @@
 
 	<!-- Quick links -->
 	<div class="flex gap-3">
-		<a href="/band/{band.slug}/members" class="btn btn-outline btn-sm">
+		<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">
 			Manage Members
-		</a>
+		</Button>
 		{#if isOwnerOrAdmin}
-			<a href="/band/{band.slug}/edit" class="btn btn-outline btn-sm">
+			<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">
 				Edit Band Profile
-			</a>
+			</Button>
 		{/if}
 	</div>
 </PageContent>

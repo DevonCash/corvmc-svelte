@@ -8,6 +8,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { StaffPaymentsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffPaymentsResponse } = $props();
@@ -58,9 +59,9 @@
 				<div class="flex items-center gap-2">
 					<CopyableId value={p.id} label="Stripe" />
 					{#if p.reservationId}
-						<a href="/staff/reservations/{p.reservationId}" class="btn btn-ghost btn-xs">
+						<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
 							View reservation
-						</a>
+						</Button>
 					{/if}
 				</div>
 			{/snippet}

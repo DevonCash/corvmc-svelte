@@ -10,6 +10,7 @@
 		CreditBalanceCard,
 		CancelledBanner
 	} from '$lib/components/member/membership';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { MembershipResponse } from '$lib/server/db/schema/api';
 	import { createSubscription, updateAmount, resumeSubscription } from '$lib/remote/membership.remote';
 
@@ -80,7 +81,7 @@
 	{#if isNonMember}
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
-				<a href="#subscribe" class="btn btn-primary btn-lg">Become a Sustaining Member</a>
+				<Button href="#subscribe" class="btn-lg">Become a Sustaining Member</Button>
 			{/snippet}
 		</MembershipHero>
 

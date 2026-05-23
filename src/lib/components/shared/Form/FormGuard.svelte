@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { getFormContext } from './Form.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let confirmModal: HTMLDialogElement | undefined = $state();
 	let pendingNavigation: (() => void) | null = $state(null);
@@ -41,12 +42,12 @@
 		<h3 class="text-lg font-bold">Unsaved changes</h3>
 		<p class="py-4">You have unsaved changes. Are you sure you want to leave?</p>
 		<div class="modal-action">
-			<button type="button" class="btn" onclick={() => confirmModal?.close()}>
+			<Button type="button" class="" onclick={() => confirmModal?.close()}>
 				Keep editing
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-error"
+				class="btn-error"
 				onclick={() => {
 					confirmModal?.close();
 					pendingNavigation?.();
@@ -54,7 +55,7 @@
 				}}
 			>
 				Discard changes
-			</button>
+			</Button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop">

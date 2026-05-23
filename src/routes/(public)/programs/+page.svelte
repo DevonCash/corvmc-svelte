@@ -3,6 +3,7 @@
 	import Keyfob from '$lib/components/illustrations/Keyfob.svelte';
 	import Ticket from '$lib/components/illustrations/Ticket.svelte';
 	import Setlist from '$lib/components/illustrations/Setlist.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 </script>
 
 <svelte:head>
@@ -79,8 +80,8 @@
 					From intimate acoustic sets to full band productions, we create spaces where musicians can grow, collaborate, and celebrate the power of live music.
 				</p>
 				<div class="flex flex-wrap gap-3">
-					<a href="/events" class="program-block__cta btn btn-primary">View Upcoming Shows</a>
-					<a href="/contact" class="btn btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Apply to Perform</a>
+					<Button href="/events" class="program-block__cta">View Upcoming Shows</Button>
+					<Button href="/contact" class="btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Apply to Perform</Button>
 				</div>
 			</div>
 			<div class="flex flex-col items-center justify-center">
@@ -168,8 +169,8 @@
 			{/each}
 		</div>
 		<div class="flex justify-center gap-4 mt-10">
-			<a href="/login?redirect=/member" class="btn btn-primary btn-lg">Become a Member</a>
-			<a href="/contact" class="btn btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Ask Questions</a>
+			<Button href="/login?redirect=/member" class="btn-lg">Become a Member</Button>
+			<Button href="/contact" class="btn-outline" style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)">Ask Questions</Button>
 		</div>
 	</div>
 </section>

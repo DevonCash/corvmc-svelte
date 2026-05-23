@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		search,
@@ -50,7 +51,7 @@
 	<div class="flex items-center gap-2">
 		<div class="badge gap-2 badge-lg">
 			{value[labelKey]}
-			<button type="button" class="btn btn-circle btn-ghost btn-xs" onclick={clear}>✕</button>
+			<Button type="button" class="btn-circle btn-ghost btn-xs" onclick={clear}>✕</Button>
 		</div>
 		{#if value[descriptionKey]}
 			<span class="text-sm opacity-60">{value[descriptionKey]}</span>

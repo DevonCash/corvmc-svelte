@@ -4,6 +4,7 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconUserCog, IconUserShield, IconUserHeart, IconDots, IconEye, IconCopy, IconUserUp } from '@tabler/icons-svelte';
 	import type { StaffUsersResponse } from '$lib/server/db/schema/api';
 
@@ -76,9 +77,9 @@
 		<Column key="id" header="" shrink stopClick>
 			{#snippet cell(_, row)}
 				<div class="dropdown dropdown-end">
-					<button tabindex="0" class="btn btn-ghost btn-xs btn-square">
+					<Button class="btn-ghost btn-xs btn-square" tabindex="0">
 						<IconDots size={16} />
-					</button>
+					</Button>
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow">
 						<li><a href="/staff/users/{row.id}"><IconEye size={16} />View</a></li>

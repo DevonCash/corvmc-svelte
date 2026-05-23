@@ -65,6 +65,7 @@
 	import { setContext, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDate, formatDateTime, formatCents } from '$lib/utils/format';
 
 	let {
@@ -245,9 +246,9 @@
 {#if toolbar}
 	<form method="get" class="flex flex-wrap items-end gap-2" bind:this={filterFormEl}>
 		{@render toolbar()}
-		<button type="submit" class="btn btn-sm btn-primary">Filter</button>
+		<Button type="submit" class="btn-sm">Filter</Button>
 		{#if clearHref && hasActiveFilters}
-			<a href={clearHref} class="btn btn-ghost btn-sm">Clear</a>
+			<Button href={clearHref} class="btn-ghost btn-sm">Clear</Button>
 		{/if}
 	</form>
 {/if}
@@ -384,19 +385,18 @@
 		<div class="flex justify-center py-3">
 			<div class="join">
 				{#if pagination.page > 1}
-					<a href={buildPageHref(pagination.page - 1)} class="join-item btn btn-sm">«</a>
+					<Button href={buildPageHref(pagination.page - 1)} class="join-item btn-sm">«</Button>
 				{/if}
 				{#each Array.from({ length: pagination.totalPages }, (_, i) => i + 1) as p (p)}
-					<a
+					<Button
 						href={buildPageHref(p)}
-						class="join-item btn btn-sm"
-						class:btn-active={p === pagination.page}
+						class="join-item btn-sm {p === pagination.page ? 'btn-active' : ''}"
 					>
 						{p}
-					</a>
+					</Button>
 				{/each}
 				{#if pagination.page < pagination.totalPages}
-					<a href={buildPageHref(pagination.page + 1)} class="join-item btn btn-sm">»</a>
+					<Button href={buildPageHref(pagination.page + 1)} class="join-item btn-sm">»</Button>
 				{/if}
 			</div>
 		</div>

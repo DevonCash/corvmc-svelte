@@ -3,6 +3,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 
@@ -11,7 +12,7 @@
 </script>
 
 	<PageHeader title="Campaigns" subtitle="Marketing">
-		<a href="/staff/marketing/campaigns/new" class="btn btn-sm btn-primary">New Campaign</a>
+		<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
 	</PageHeader>
 <PageContent>
 	<div class="flex gap-2 mb-4">

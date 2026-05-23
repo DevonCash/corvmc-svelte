@@ -6,6 +6,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { checkConflicts, createEvent } from '$lib/remote/events.remote';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
@@ -159,7 +160,7 @@
 			{/if}
 
 			<div class="modal-action">
-				<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+				<Button type="button" class="btn-ghost" onclick={() => (open = false)}>Cancel</Button>
 				<SubmitButton
 					label={hasConflicts ? 'Create with Override' : 'Create Event'}
 					class={hasConflicts ? 'btn-warning' : 'btn-primary'}

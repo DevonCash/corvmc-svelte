@@ -6,6 +6,7 @@
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { StaffEventsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEventsResponse } = $props();
@@ -41,8 +42,8 @@
 </script>
 
 <PageHeader title="Events">
-		<button class="btn btn-sm btn-primary" onclick={() => (showCreateModal = true)}
-			>New Event</button
+		<Button class="btn-sm" onclick={() => (showCreateModal = true)}
+			>New Event</Button
 		>
 	</PageHeader>
 <PageContent>

@@ -9,6 +9,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
@@ -66,7 +67,7 @@
 			{#if data.creditBalance > 0}
 				<Badge variant="info" size="md">{data.creditBalance} credits</Badge>
 			{/if}
-			<a href="/member/equipment/loans" class="btn btn-sm btn-ghost">My Loans</a>
+			<Button href="/member/equipment/loans" class="btn-sm btn-ghost">My Loans</Button>
 		</div>
 	</PageHeader>
 <PageContent>
@@ -105,13 +106,13 @@
 						</span>
 					</div>
 					<div class="card-actions mt-2">
-						<button
-							class="btn btn-primary btn-xs"
+						<Button
+							class="btn-xs"
 							disabled={eq.availableQuantity <= 0}
 							onclick={() => openRequest(eq.id, eq.name)}
 						>
 							Request
-						</button>
+						</Button>
 					</div>
 				</div>
 			</div>
@@ -120,9 +121,9 @@
 
 	<div class="border-t pt-4">
 		<p class="text-sm opacity-70 mb-2">Can't find what you need?</p>
-		<button class="btn btn-sm btn-outline" onclick={openFreeFormRequest}>
+		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>
 			Describe Your Request
-		</button>
+		</Button>
 	</div>
 </PageContent>
 
@@ -164,7 +165,7 @@
 		{/if}
 		<Field name="memberNotes" type="textarea" label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'} required={isFreeForm} />
 		<div class="modal-action">
-			<button type="button" class="btn btn-ghost" onclick={() => (showRequestModal = false)}>Cancel</button>
+			<Button type="button" class="btn-ghost" onclick={() => (showRequestModal = false)}>Cancel</Button>
 			<SubmitButton label="Submit Request" />
 		</div>
 	</Form>

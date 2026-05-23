@@ -5,6 +5,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { CancelLoanAction } from '$lib/components/shared/actions';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
 	import type { MemberEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
@@ -14,7 +15,7 @@
 </script>
 
 <PageHeader title="My Equipment Loans">
-		<a href="/member/equipment" class="btn btn-ghost btn-sm">Browse Catalog</a>
+		<Button href="/member/equipment" class="btn-ghost btn-sm">Browse Catalog</Button>
 	</PageHeader>
 <PageContent>
 	<!-- Tabs -->

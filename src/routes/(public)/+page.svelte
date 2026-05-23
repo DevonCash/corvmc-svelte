@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	const features = [
 		{ icon: IconMusic, title: 'Practice Space', desc: 'Affordable hourly rehearsal space with professional equipment for bands and musicians.' },
@@ -24,8 +25,8 @@
 			We provide shared music resources, affordable practice space, and a supportive community for local musicians to grow, collaborate, and thrive together.
 		</p>
 		<div class="flex flex-col items-center gap-3 mt-4">
-			<a href="/login?redirect=/member" class="btn btn-primary btn-wide">Join Our Community!</a>
-			<a href="/about" class="btn btn-ghost btn-wide">Learn More About Us</a>
+			<Button href="/login?redirect=/member" class="btn-wide">Join Our Community!</Button>
+			<Button href="/about" class="btn-ghost btn-wide">Learn More About Us</Button>
 		</div>
 	</div>
 </section>
@@ -37,7 +38,7 @@
 			<h2 class="text-4xl font-bold tracking-tight mb-3">Upcoming Events</h2>
 		</div>
 		<div class="text-center mt-8">
-			<a href="/events" class="btn btn-ghost">View All Events &rarr;</a>
+			<Button href="/events" class="btn-ghost">View All Events &rarr;</Button>
 		</div>
 	</div>
 </section>
@@ -63,7 +64,7 @@
 			{/each}
 		</div>
 		<div class="text-center mt-10">
-			<a href="/programs" class="btn btn-ghost">View All Programs &rarr;</a>
+			<Button href="/programs" class="btn-ghost">View All Programs &rarr;</Button>
 		</div>
 	</div>
 </section>
@@ -81,17 +82,17 @@
 			<div class="rounded-lg p-6 text-center flex flex-col items-center gap-3" style="background: var(--cmc-orange); color: #fff">
 				<h3 class="text-xl font-bold">Become a Member</h3>
 				<p class="text-sm leading-relaxed" style="opacity: 0.9">Join our community of musicians and gain access to practice space, events, and networking opportunities.</p>
-				<a href="/login?redirect=/member" class="btn btn-sm mt-2" style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)">Join Now</a>
+				<Button href="/login?redirect=/member" class="btn-sm mt-2" style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)">Join Now</Button>
 			</div>
 			<div class="rounded-lg p-6 text-center flex flex-col items-center gap-3" style="background: var(--cmc-navy); color: #fff">
 				<h3 class="text-xl font-bold">Volunteer</h3>
 				<p class="text-sm leading-relaxed" style="opacity: 0.9">Help us organize events, maintain our space, and support fellow musicians in our community.</p>
-				<a href="/contribute" class="btn btn-sm mt-2" style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)">Learn More</a>
+				<Button href="/contribute" class="btn-sm mt-2" style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)">Learn More</Button>
 			</div>
 			<div class="rounded-lg p-6 text-center flex flex-col items-center gap-3" style="background: var(--cmc-light-blue); color: var(--cmc-navy)">
 				<h3 class="text-xl font-bold">Support Us</h3>
 				<p class="text-sm leading-relaxed" style="opacity: 0.85">Your donation helps us provide affordable space and programs for the local music community.</p>
-				<a href="/contribute" class="btn btn-sm mt-2" style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)">Contribute</a>
+				<Button href="/contribute" class="btn-sm mt-2" style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)">Contribute</Button>
 			</div>
 		</div>
 	</div>

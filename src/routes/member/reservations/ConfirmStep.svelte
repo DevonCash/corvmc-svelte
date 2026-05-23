@@ -2,6 +2,7 @@
 	import { getReservationPricing, previewRecurringInstances } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
 
 	let {
@@ -193,12 +194,12 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
-			<button type="button" class="btn btn-ghost" onclick={confirmWithoutPayment}>
+			<Button type="button" class="btn-ghost" onclick={confirmWithoutPayment}>
 				Confirm
-			</button>
-			<button type="button" class="btn btn-primary" onclick={() => formCtx.next()}>
+			</Button>
+			<Button type="button" onclick={() => formCtx.next()}>
 				Pay Ahead
-			</button>
+			</Button>
 		</div>
 	</Form.Step>
 </div>

@@ -11,6 +11,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 
@@ -29,9 +30,9 @@
 </script>
 
 <PageHeader title="Help Articles">
-	<a href="/staff/help/create" class="btn btn-primary btn-sm">
+	<Button href="/staff/help/create" class="btn-sm">
 		<IconPlus size={16} /> New Article
-	</a>
+	</Button>
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->

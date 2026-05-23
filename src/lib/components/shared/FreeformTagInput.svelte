@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconX } from '@tabler/icons-svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		value = $bindable<string[]>([]),
@@ -59,10 +60,10 @@
 	{#if value.length > 0}
 		<div class="flex flex-wrap gap-1">
 			{#each value as tag}
-				<button class="btn btn-xs btn-primary" type="button" onclick={() => removeTag(tag)}>
+				<Button class="btn-xs" type="button" onclick={() => removeTag(tag)}>
 					{tag}
 					<IconX class="size-3" />
-				</button>
+				</Button>
 			{/each}
 		</div>
 	{/if}

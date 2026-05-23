@@ -4,6 +4,7 @@
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -28,27 +29,27 @@
 
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<a
+		<Button
 			href="/member/reservations"
-			class="card bg-base-100 btn h-auto"
+			class="card bg-base-100 h-auto"
 		>
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
 			</div>
-		</a>
-		<a href="/member/events" class="card bg-base-100 btn h-auto">
+		</Button>
+		<Button href="/member/events" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
 			</div>
-		</a>
-		<a href="/member/membership" class="card bg-base-100 btn h-auto">
+		</Button>
+		<Button href="/member/membership" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>
 			</div>
-		</a>
+		</Button>
 	</div>
 
 	<!-- Reservations + Credits grid -->
@@ -112,7 +113,7 @@
 					<p class="text-sm opacity-70">
 						Become a sustaining member to get free practice hours each month.
 					</p>
-					<a href="/member/membership" class="btn btn-sm btn-primary">Learn More</a>
+					<Button href="/member/membership" class="btn-sm">Learn More</Button>
 				</div>
 			{/if}
 		</InfoCard>

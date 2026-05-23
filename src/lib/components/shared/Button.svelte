@@ -8,6 +8,7 @@
 
 	let {
 		href,
+		type,
 		label,
 		title,
 		icon,
@@ -21,6 +22,7 @@
 		...rest
 	}: {
 		href?: string;
+		type?: 'button' | 'submit' | 'reset';
 		label?: string;
 		title?: string;
 		icon?: Snippet;
@@ -77,6 +79,7 @@
 				<BitsButton.Root
 					{...props}
 					{href}
+					{type}
 					{disabled}
 					class="btn {statusClass || className}"
 					{...rest}
@@ -96,7 +99,82 @@
 		</Tooltip.Portal>
 	</Tooltip.Root>
 {:else}
-	<BitsButton.Root {href} {disabled} class="btn {statusClass || className}" {...rest}>
+	<BitsButton.Root {href} {type} {disabled} class="btn {statusClass || className}" {...rest}>
 		{@render buttonContent()}
 	</BitsButton.Root>
 {/if}
+
+<style>
+	/* ---------------------------------------------------------------------------
+	   Retro buttons — default form factor for all DaisyUI buttons.
+	   Hard brown border + offset drop shadow with press animation.
+	   --------------------------------------------------------------------------- */
+	:global(.btn) {
+		--shadow: 0.4em;
+		--shadow-size: var(--shadow);
+		position: relative;
+		border: 2.5px solid var(--shadow-color);
+		box-shadow: 0 var(--shadow-size) 0 var(--shadow-color);
+		transform: translate(0, calc(-1 * var(--shadow-size)));
+		transition:
+			transform 80ms ease,
+			box-shadow 80ms ease;
+	}
+
+	:global(.btn:disabled) {
+		--shadow: calc(var(--shadow / 2));
+	}
+
+	:global(.btn.flat) {
+		--shadow: 0;
+	}
+	:global(.btn.flat:focus),
+	:global(.btn.flat:hover) {
+		filter: brightness(0.8);
+	}
+
+	:global(.btn::before) {
+		z-index: -2;
+		content: '';
+		box-sizing: border-box;
+		width: calc(100% + var(--shadow-size));
+		height: calc(100% + var(--shadow-size));
+		position: absolute;
+		top: 0;
+		right: 0;
+		transition:
+			width 80ms ease,
+			height 80ms ease;
+	}
+
+	:global(.btn.latched) {
+		z-index: -1;
+		--shadow-size: calc(var(--shadow) / 3);
+	}
+	:global(.btn.latched:focus),
+	:global(.btn.latched:hover) {
+		--shadow-size: calc(var(--shadow) / 4);
+	}
+
+	:global(.btn:focus),
+	:global(.btn:hover) {
+		--shadow-size: calc(var(--shadow) * 0.75);
+	}
+	:global(.btn:active) {
+		--shadow-size: 0;
+	}
+
+	:global(.btn-sm) {
+		--shadow: 4px;
+	}
+
+	:global(.btn-xs) {
+		--shadow: 2px;
+	}
+
+	/* Ghost → outline retro: transparent fill, visible brown border */
+	:global(.btn-ghost) {
+		background: var(--color-base-100);
+		border-color: var(--shadow-color);
+	}
+</style>

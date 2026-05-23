@@ -13,6 +13,7 @@
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import type { MemberLayoutResponse } from '$lib/server/db/schema/api';
 
@@ -57,9 +58,9 @@
 
 		<Nav.Group title="My Bands">
 			{#snippet action()}
-				<a href="/member/bands/create" class="btn btn-ghost btn-xs btn-square" title="Create Band">
+				<Button href="/member/bands/create" class="btn-ghost btn-xs btn-square" title="Create Band">
 					<IconPlus size={14} />
-				</a>
+				</Button>
 			{/snippet}
 			{#each data.userBands as band}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>

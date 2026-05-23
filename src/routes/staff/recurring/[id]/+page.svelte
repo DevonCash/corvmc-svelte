@@ -10,6 +10,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring.remote';
 
 	let id = $derived(page.params.id!);
@@ -45,7 +46,7 @@
 <PageHeader title="Recurring Series" backHref="/staff/recurring">
 	{#if isActive}
 		<div class="flex gap-2">
-			<button class="btn btn-sm btn-ghost" onclick={startEditing}>Edit Schedule</button>
+			<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit Schedule</Button>
 			<Action
 				action={cancelDetailSeries}
 				label="Cancel Series"
@@ -137,7 +138,7 @@
 						<span class="label-text">Override conflicts</span>
 					</label>
 					<div class="flex justify-end gap-2">
-						<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editing = false)}>Cancel</button>
+						<Button type="button" class="btn-ghost btn-sm" onclick={() => (editing = false)}>Cancel</Button>
 						<SubmitButton label="Save New Schedule" class="btn-primary btn-sm" />
 					</div>
 				</div>

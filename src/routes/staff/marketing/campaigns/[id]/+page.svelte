@@ -6,6 +6,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { UnscheduleCampaignAction } from '$lib/components/shared/actions';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getCampaignDetail } from '$lib/remote/marketing.remote';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 
@@ -17,7 +18,7 @@
 		<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
 			<StatusBadge status={campaign.status} />
 			{#if campaign.status === 'draft'}
-				<a href="/staff/marketing/campaigns/{id}/edit" class="btn btn-sm btn-primary">Edit</a>
+				<Button href="/staff/marketing/campaigns/{id}/edit" class="btn-sm">Edit</Button>
 			{/if}
 			{#if campaign.status === 'scheduled'}
 				<UnscheduleCampaignAction campaignId={id} onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)} />

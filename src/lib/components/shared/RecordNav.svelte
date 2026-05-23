@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconArrowLeft, IconArrowRight } from '@tabler/icons-svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		prevHref,
@@ -25,28 +26,28 @@
 
 <div class="flex items-center gap-4">
 	{#if prevHref}
-		<a href={prevHref} class="btn btn-ghost btn-sm" title="Previous (←)">
+		<Button href={prevHref} class="btn-ghost btn-sm" title="Previous (←)">
 			<IconArrowLeft size={16} />
 			Prev
-		</a>
+		</Button>
 	{:else}
-		<span class="btn btn-disabled btn-ghost btn-sm">
+		<Button disabled class="btn-ghost btn-sm">
 			<IconArrowLeft size={16} />
 			Prev
-		</span>
+		</Button>
 	{/if}
 
 	{#if nextHref}
-		<a href={nextHref} class="btn btn-ghost btn-sm" title="Next (→)">
+		<Button href={nextHref} class="btn-ghost btn-sm" title="Next (→)">
 			Next
 			<IconArrowRight size={16} />
-		</a>
+		</Button>
 	{:else if endLabel}
 		<span class="text-xs opacity-50">{endLabel}</span>
 	{:else}
-		<span class="btn btn-disabled btn-ghost btn-sm">
+		<Button disabled class="btn-ghost btn-sm">
 			Next
 			<IconArrowRight size={16} />
-		</span>
+		</Button>
 	{/if}
 </div>

@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { createLoan } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		class: className = 'btn-sm btn-primary',
@@ -65,7 +66,7 @@
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
-					<button type="button" class="btn btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</button>
+					<Button type="button" class="btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</Button>
 				</div>
 			{:else}
 				<label class="form-control w-full">

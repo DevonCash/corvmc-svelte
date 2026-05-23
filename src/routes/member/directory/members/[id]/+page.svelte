@@ -5,6 +5,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -111,7 +112,7 @@
 		<Alert type="warning">
 			Member not found or profile is hidden.
 			{#snippet action()}
-				<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+				<Button href="/member/directory" class="btn-sm">Back to Directory</Button>
 			{/snippet}
 		</Alert>
 	{/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { UnsubscribeResponse } from '$lib/server/db/schema/api';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let { data }: { data: UnsubscribeResponse } = $props();
 </script>
@@ -18,5 +19,5 @@
 		</p>
 	{/if}
 
-	<a href="/" class="btn btn-ghost btn-sm">Back to CorvMC</a>
+	<Button href="/" class="btn-ghost btn-sm">Back to CorvMC</Button>
 </div>

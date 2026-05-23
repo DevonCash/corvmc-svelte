@@ -16,6 +16,7 @@
 	import { equipmentStatuses, pricingTiers } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: StaffEquipmentResponse } = $props();
@@ -41,9 +42,9 @@
 
 <PageHeader title="Equipment">
 		<div class="flex gap-2">
-			<button class="btn btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
+			<Button class="btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
 				Categories
-			</button>
+			</Button>
 			<AddEquipmentAction categories={data.categories} />
 		</div>
 	</PageHeader>

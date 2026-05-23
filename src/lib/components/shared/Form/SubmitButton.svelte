@@ -3,6 +3,7 @@
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getFormContext } from './Form.svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let {
 		shortcut,
@@ -45,7 +46,7 @@
 
 <div class="flex items-center gap-2">
 	{#if ctx.hasSteps && ctx.currentStep > 0}
-		<button type="button" class="btn btn-ghost" onclick={() => ctx.back()}>Back</button>
+		<Button type="button" class="btn-ghost" onclick={() => ctx.back()}>Back</Button>
 	{/if}
 	<button
 		type={isLastStep ? 'submit' : 'button'}

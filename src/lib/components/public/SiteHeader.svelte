@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Logo from '$lib/components/shared/Logo.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 
 	let { user }: { user: { name: string } | null } = $props();
 
@@ -34,19 +35,19 @@
 			<!-- Actions -->
 			<div class="flex items-center gap-2 " style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
-					<a href="/member" class="btn btn-sm btn-primary">My Account</a>
+					<Button href="/member" class="btn-sm">My Account</Button>
 				{:else}
-					<a href="/login" class="btn btn-sm btn-primary">Sign In</a>
+					<Button href="/login" class="btn-sm">Sign In</Button>
 				{/if}
-				<button
-					class="btn btn-sm btn-ghost lg:hidden"
+				<Button
+					class="btn-sm btn-ghost lg:hidden"
 					onclick={() => (menuOpen = !menuOpen)}
 					aria-label="Toggle menu"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 					</svg>
-				</button>
+				</Button>
 			</div>
 
 			<!-- Nav -->
