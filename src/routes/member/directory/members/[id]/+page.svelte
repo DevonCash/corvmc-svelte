@@ -3,8 +3,8 @@
 	import { getDirectoryMember } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
-	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
+	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';

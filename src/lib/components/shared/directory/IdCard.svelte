@@ -69,7 +69,7 @@
 						<span class="id-tag id-tag--teal">{inst}</span>
 					{/each}
 					{#each genres as genre}
-						<span class="id-tag">{genre}</span>
+						<span class="id-tag id-tag--genre">{genre}</span>
 					{/each}
 				</div>
 			{/if}
@@ -181,8 +181,8 @@
 		position: absolute;
 		left: 0;
 		right: 0;
-		bottom: -1cqi;
-		height: 1cqi;
+		bottom: -2cqi;
+		height: 2cqi;
 		background: linear-gradient(
 			to bottom,
 			var(--cmc-teal) 0 33.333%,
@@ -226,6 +226,7 @@
 		color: var(--cmc-navy);
 	}
 	.id-card__pronouns {
+		white-space: nowrap;
 		font-weight: 400;
 		font-size: 3.2cqi;
 		color: var(--fg-3);
@@ -252,7 +253,7 @@
 		text-transform: uppercase;
 		transform: rotate(-2deg);
 		z-index: 2;
-		bottom: 11cqi;
+		bottom: 4cqi;
 		right: -2cqi;
 	}
 
@@ -264,24 +265,31 @@
 		text-transform: uppercase;
 		white-space: nowrap;
 		color: rgba(90, 61, 43, 0.55);
-		text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+		/* text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); */
 	}
 	.id-tag--teal {
 		color: rgba(0, 133, 155, 0.5);
+		&:has(+ .id-tag--teal)::after {
+			content: ', ';
+		}
 	}
 	.id-tag--band {
 		color: rgba(0, 59, 92, 0.5);
+
+		&:has(+ .id-tag--band)::after {
+			content: ', ';
+		}
+	}
+
+	.id-tag--genre {
+		&:has(+ .id-tag--genre)::after {
+			content: ', ';
+		}
 	}
 	.id-card__bands {
 		display: flex;
 		gap: 1.2cqi;
 		flex-wrap: wrap;
-	}
-	.id-card__bands::before {
-		content: '▸';
-		font-size: 2.6cqi;
-		color: rgba(90, 61, 43, 0.35);
-		margin-right: -0.5cqi;
 	}
 	.id-card__footer {
 		display: flex;

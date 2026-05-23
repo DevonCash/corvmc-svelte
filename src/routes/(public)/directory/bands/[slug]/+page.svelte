@@ -1,7 +1,7 @@
 <script lang="ts">
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
-	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
+	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { DirectoryBandResponse } from '$lib/server/db/schema/api';
 

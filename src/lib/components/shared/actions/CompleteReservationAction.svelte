@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import ReservationSummary from '../ReservationSummary.svelte';
+	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { completeReservation } from '$lib/remote/reservations.remote';
 

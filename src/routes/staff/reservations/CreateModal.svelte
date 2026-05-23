@@ -5,7 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
-	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
+	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);

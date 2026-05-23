@@ -5,8 +5,8 @@
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import IdCard from '$lib/components/shared/IdCard.svelte';
-	import VinylCard from '$lib/components/shared/VinylCard.svelte';
+	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
+	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
 
 	let activeTab = $state<'members' | 'bands'>('members');
 	let search = $state('');

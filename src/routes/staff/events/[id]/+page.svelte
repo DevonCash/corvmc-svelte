@@ -9,7 +9,7 @@
 	import { toast } from 'svelte-sonner';
 	import { PublishEventAction, UnpublishEventAction, CancelEventAction, CompTicketsAction } from '$lib/components/shared/actions';
 	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
-	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
+	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';

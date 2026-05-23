@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
-	import ReservationSummary from '../ReservationSummary.svelte';
+	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import { formatDate } from '$lib/utils/format';

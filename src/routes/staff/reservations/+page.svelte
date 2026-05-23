@@ -5,7 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
+	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import {
 		ConfirmReservationAction,
 		CompleteReservationAction

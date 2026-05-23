@@ -11,7 +11,7 @@
 		CompReservationAction,
 		RefundReservationAction
 	} from '$lib/components/shared/actions';
-	import DayTimeline from '$lib/components/shared/DayTimeline.svelte';
+	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';

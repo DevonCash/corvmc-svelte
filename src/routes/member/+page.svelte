@@ -1,7 +1,7 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/BookerTypeIcon.svelte';
+	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';

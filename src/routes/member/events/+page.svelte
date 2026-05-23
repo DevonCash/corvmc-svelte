@@ -1,7 +1,7 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import PosterCard from '$lib/components/shared/PosterCard.svelte';
+	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import TicketCard from './TicketCard.svelte';
 	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
 

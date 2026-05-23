@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PosterCard from '$lib/components/shared/PosterCard.svelte';
+	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import type { EventsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: EventsResponse } = $props();

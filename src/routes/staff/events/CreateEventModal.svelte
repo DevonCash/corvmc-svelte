@@ -5,7 +5,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
-	import ConflictWarnings from '$lib/components/shared/ConflictWarnings.svelte';
+	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import { checkConflicts, createEvent } from '$lib/remote/events.remote';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();

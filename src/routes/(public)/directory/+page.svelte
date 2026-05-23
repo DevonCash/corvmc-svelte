@@ -1,8 +1,8 @@
 <script lang="ts">
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import IdCard from '$lib/components/shared/IdCard.svelte';
-	import VinylCard from '$lib/components/shared/VinylCard.svelte';
+	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
+	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
 	import type { DirectoryResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: DirectoryResponse } = $props();

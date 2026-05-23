@@ -1,6 +1,6 @@
 <script lang="ts">
-	import ProfileLinks from '$lib/components/shared/ProfileLinks.svelte';
-	import ProfileEmbeds from '$lib/components/shared/ProfileEmbeds.svelte';
+	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
+	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import type { DirectoryMemberResponse } from '$lib/server/db/schema/api';
 
