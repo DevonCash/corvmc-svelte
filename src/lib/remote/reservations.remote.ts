@@ -34,6 +34,7 @@ import { getBalance } from '$lib/server/finance/credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
+import { buildRRule, getOccurrences, generationWindowEnd } from '$lib/server/reservation/rrule-helpers';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
@@ -229,6 +230,68 @@ export const getReservationPricing = query(
 	}
 );
 
+/** Recurring: all operating-hour time slots (no per-date availability filtering). */
+export const getRecurringTimeSlots = query(async () => {
+	const cfg = await getReservationConfig();
+	const slotMinutes = cfg.timeSlotMinutes;
+	const [startH, startM] = cfg.operatingHoursStart.split(':').map(Number);
+	const [endH, endM] = cfg.operatingHoursEnd.split(':').map(Number);
+
+	const startSlots: { value: string; label: string }[] = [];
+	const allSlots: string[] = [];
+
+	for (let m = startH * 60 + startM; m < endH * 60 + endM; m += slotMinutes) {
+		const hh = String(Math.floor(m / 60)).padStart(2, '0');
+		const mm = String(m % 60).padStart(2, '0');
+		const time = `${hh}:${mm}`;
+		allSlots.push(time);
+	}
+	// Add the closing time as a valid end time
+	allSlots.push(cfg.operatingHoursEnd);
+
+	const minSlots = cfg.minDurationHours * (60 / slotMinutes);
+	// Start times must leave room for at least minDuration
+	for (let i = 0; i < allSlots.length - minSlots; i++) {
+		startSlots.push({ value: allSlots[i], label: formatSlotTime(allSlots[i]) });
+	}
+
+	return {
+		startSlots,
+		allSlots: allSlots.map((t) => ({ value: t, label: formatSlotTime(t) })),
+		config: {
+			slotMinutes,
+			minDurationHours: cfg.minDurationHours,
+			maxDurationHours: cfg.maxDurationHours
+		}
+	};
+});
+
+/** Recurring: preview upcoming instances for a given schedule. */
+export const previewRecurringInstances = query(
+	z.object({
+		date: z.string(),
+		startTime: z.string(),
+		frequency: z.enum(['weekly', 'biweekly', 'monthly']),
+		endsAt: z.string().optional()
+	}),
+	async ({ date, startTime, frequency, endsAt }) => {
+		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
+		const rruleString = buildRRule(startsAt, frequency as RecurringFrequency);
+		const now = new Date();
+		// Show ~60 days of preview
+		let windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		if (endsAt) {
+			const end = new Date(endsAt + 'T23:59:59');
+			if (end < windowEnd) windowEnd = end;
+		}
+		const occurrences = getOccurrences(rruleString, now, windowEnd);
+		return {
+			dates: occurrences.slice(0, 8).map((d) => d.toISOString()),
+			totalInWindow: occurrences.length
+		};
+	}
+);
+
 /** Band: available slots + config + recurring frequencies for a given date. */
 export const getBandSlots = query(z.string(), async (dateParam) => {
 	await requireBandMember();
@@ -338,7 +401,8 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 
 /** Member: book a reservation (optionally recurring). */
 const memberBookingSchema = createReservationSchema.extend({
-	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional()
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	seriesEndsAt: z.string().optional()
 });
 
 export const bookMemberReservation = form(memberBookingSchema, async (data, issue) => {
@@ -372,10 +436,14 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 	});
 
 	if (isRecurring && recurringFrequency) {
+		const seriesEndsAt = data.seriesEndsAt
+			? buildDateInTz(data.seriesEndsAt, '23:59', 'America/Los_Angeles')
+			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
-			prototypeStartsAt: startsAt
+			prototypeStartsAt: startsAt,
+			endsAt: seriesEndsAt
 		});
 	}
 

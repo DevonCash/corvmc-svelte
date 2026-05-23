@@ -117,6 +117,7 @@ export interface MemberReservationsResponse {
 		startsAt: string;
 		endsAt: string;
 		createdAt: string;
+		seriesEndsAt: string | null;
 	}[];
 }
 
@@ -420,7 +421,7 @@ export interface StaffCreditsResponse {
 }
 
 export interface StaffRecurringResponse {
-	series: (Pick<RecurringSeries, 'id' | 'createdAt' | 'cancelledAt'> & {
+	series: (Pick<RecurringSeries, 'id' | 'createdAt' | 'endsAt' | 'cancelledAt'> & {
 		userName: string;
 		userPronouns: string | null;
 		userRole: string | null;

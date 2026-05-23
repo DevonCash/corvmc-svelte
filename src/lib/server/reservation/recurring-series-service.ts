@@ -30,6 +30,8 @@ export interface CreateSeriesParams {
 	frequency: RecurringFrequency;
 	/** The prototype's startsAt — used to derive RRULE DTSTART and BYDAY */
 	prototypeStartsAt: Date;
+	/** Optional scheduled end date for the series */
+	endsAt?: Date;
 }
 
 export interface SeriesRow {
@@ -39,6 +41,7 @@ export interface SeriesRow {
 	prototypeId: string;
 	rrule: string;
 	createdAt: Date;
+	endsAt: Date | null;
 	cancelledAt: Date | null;
 }
 
@@ -57,6 +60,7 @@ export interface SeriesListItem {
 	rrule: string;
 	frequencyLabel: string;
 	createdAt: Date;
+	seriesEndsAt: Date | null;
 	cancelledAt: Date | null;
 	userName: string;
 	userPronouns: string | null;
@@ -72,7 +76,7 @@ export interface SeriesListItem {
 // ---------------------------------------------------------------------------
 
 export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
-	const { prototypeReservationId, frequency, prototypeStartsAt } = params;
+	const { prototypeReservationId, frequency, prototypeStartsAt, endsAt } = params;
 
 	const rruleString = buildRRule(prototypeStartsAt, frequency);
 
@@ -83,7 +87,8 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 			id: seriesId,
 			prototypeType: 'reservation',
 			prototypeId: prototypeReservationId,
-			rrule: rruleString
+			rrule: rruleString,
+			endsAt: endsAt ?? null
 		}),
 		db
 			.update(reservation)
@@ -220,6 +225,7 @@ export async function get(seriesId: string): Promise<SeriesWithPrototype | null>
 			prototypeId: recurringSeries.prototypeId,
 			rrule: recurringSeries.rrule,
 			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			prototypeName: user.name,
 			prototypeBookerType: reservation.bookerType,
@@ -251,6 +257,7 @@ export async function getByReservation(reservationId: string): Promise<SeriesRow
 			prototypeId: recurringSeries.prototypeId,
 			rrule: recurringSeries.rrule,
 			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt
 		})
 		.from(recurringSeries)
@@ -271,6 +278,7 @@ export async function listActive(): Promise<SeriesListItem[]> {
 			id: recurringSeries.id,
 			rrule: recurringSeries.rrule,
 			createdAt: recurringSeries.createdAt,
+			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,
@@ -323,6 +331,7 @@ export async function listAll(
 			id: recurringSeries.id,
 			rrule: recurringSeries.rrule,
 			createdAt: recurringSeries.createdAt,
+			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,
@@ -364,6 +373,7 @@ export async function listForUser(userId: string): Promise<SeriesListItem[]> {
 			id: recurringSeries.id,
 			rrule: recurringSeries.rrule,
 			createdAt: recurringSeries.createdAt,
+			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
 			userName: user.name,
 			userPronouns: user.pronouns,

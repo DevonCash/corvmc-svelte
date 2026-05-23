@@ -32,7 +32,7 @@ vi.mock('$lib/server/db', () => ({ db: dbMock }));
 
 // Schema refs — just need to be truthy objects used in eq/and calls
 vi.mock('$lib/server/db/schema/recurring', () => ({
-	recurringSeries: { id: 'id', prototypeId: 'prototypeId', rrule: 'rrule', prototypeType: 'prototypeType', cancelledAt: 'cancelledAt', supersededBy: 'supersededBy' }
+	recurringSeries: { id: 'id', prototypeId: 'prototypeId', rrule: 'rrule', prototypeType: 'prototypeType', endsAt: 'endsAt', cancelledAt: 'cancelledAt', supersededBy: 'supersededBy' }
 }));
 
 vi.mock('$lib/server/db/schema/reservation', () => ({
@@ -47,12 +47,14 @@ vi.mock('$lib/server/db/schema/auth', () => ({
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
 	and: vi.fn(),
+	or: vi.fn(),
 	isNull: vi.fn(),
 	lt: vi.fn(),
 	gt: vi.fn(),
 	gte: vi.fn(),
 	lte: vi.fn(),
-	ne: vi.fn()
+	ne: vi.fn(),
+	sql: vi.fn(() => 'sql')
 }));
 
 const mockGetOccurrences = vi.fn();
@@ -92,7 +94,7 @@ const PROTOTYPE = {
 
 const OWNER = { name: 'Alice Smith', email: 'alice@example.com' };
 
-const SERIES = { id: 'series-1', prototypeId: 'proto-1', rrule: 'FREQ=WEEKLY' };
+const SERIES = { id: 'series-1', prototypeId: 'proto-1', rrule: 'FREQ=WEEKLY', endsAt: null };
 
 /** Push results onto the select queue in the order processSeries calls them */
 function queueSelects(...results: unknown[][]) {
@@ -253,7 +255,7 @@ describe('generateRecurringReservations', () => {
 	});
 
 	it('catches per-series errors without stopping other series', async () => {
-		const SERIES_2 = { id: 'series-2', prototypeId: 'proto-2', rrule: 'FREQ=WEEKLY' };
+		const SERIES_2 = { id: 'series-2', prototypeId: 'proto-2', rrule: 'FREQ=WEEKLY', endsAt: null };
 		const OCC2 = new Date('2026-05-21T17:00:00Z');
 		const OCC2_END = new Date('2026-05-21T19:00:00Z');
 

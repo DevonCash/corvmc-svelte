@@ -24,6 +24,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			startsAt: s.startsAt.toISOString(),
 			endsAt: s.endsAt.toISOString(),
 			createdAt: s.createdAt.toISOString(),
+			seriesEndsAt: s.seriesEndsAt?.toISOString() ?? null,
 			cancelledAt: s.cancelledAt?.toISOString() ?? null
 		})),
 		pagination,

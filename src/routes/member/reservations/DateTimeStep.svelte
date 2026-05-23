@@ -3,8 +3,7 @@
 	import {
 		getAvailableDates,
 		getReservationStartTimes,
-		getReservationEndTimes,
-		getMembershipStatus
+		getReservationEndTimes
 	} from '$lib/remote/reservations.remote';
 	import * as Form from '$lib/components/shared/Form';
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
@@ -15,19 +14,16 @@
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
-	let recurring = $state('');
 
 	const minDate = today(tz);
 	const maxDate = today(tz).add({ days: 14 });
 
 	let availableDates = $state<string[]>([]);
-	let membership = $state({ isSustainingMember: false, freeHoursBalance: 0 });
 	let initialLoading = $state(true);
 
 	$effect(() => {
-		Promise.all([getAvailableDates(), getMembershipStatus()]).then(([dates, m]) => {
+		getAvailableDates().then((dates) => {
 			availableDates = dates;
-			membership = m;
 			initialLoading = false;
 		});
 	});
@@ -138,29 +134,13 @@
 			rows={2}
 		/>
 
-		{#if membership.isSustainingMember}
-			<Form.Field
-				name="recurring"
-				label="Repeat this reservation"
-				type="select"
-				bind:value={recurring}
-				options={[
-					{ value: '', label: "Don't repeat (one-time)" },
-					{ value: 'weekly', label: 'Weekly' },
-					{ value: 'biweekly', label: 'Every 2 weeks' },
-					{ value: 'monthly', label: 'Monthly' }
-				]}
-			/>
-			{#if recurring}
-				<p class="mt-1 text-sm opacity-60">
-					Future instances will be generated automatically. You'll confirm each one
-					individually.
-				</p>
-			{/if}
-		{/if}
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton continueLabel="Continue" class="btn-primary" />
+		<Form.SubmitButton
+			label="Save"
+			continueLabel="Continue"
+			class="btn-primary"
+		/>
 	</div>
 </Form.Step>

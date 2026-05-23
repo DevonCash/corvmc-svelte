@@ -18,7 +18,7 @@
 
 <Action
 	action={cancelRecurringSeries}
-	label="Cancel Series"
+	label="Cancel"
 	modalTitle="Confirm"
 	successToast="Series cancelled"
 	class={className}

@@ -60,7 +60,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 			bookerType: s.bookerType,
 			startsAt: s.startsAt.toISOString(),
 			endsAt: s.endsAt.toISOString(),
-			createdAt: s.createdAt.toISOString()
+			createdAt: s.createdAt.toISOString(),
+			seriesEndsAt: s.seriesEndsAt?.toISOString() ?? null
 		}))
 	});
 };

@@ -22,6 +22,7 @@ export const recurringSeries = sqliteTable(
 		prototypeId: text('prototype_id').notNull(),
 		rrule: text('rrule').notNull(),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
+		endsAt: timestamp('ends_at'),
 		cancelledAt: timestamp('cancelled_at')
 	},
 	(t) => [

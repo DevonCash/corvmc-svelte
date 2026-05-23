@@ -3,7 +3,7 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { and, eq, isNull, lt, gt, gte, lte, ne } from 'drizzle-orm';
+import { and, eq, isNull, lt, gt, gte, lte, ne, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -38,14 +38,19 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 		.select({
 			id: recurringSeries.id,
 			prototypeId: recurringSeries.prototypeId,
-			rrule: recurringSeries.rrule
+			rrule: recurringSeries.rrule,
+			endsAt: recurringSeries.endsAt
 		})
 		.from(recurringSeries)
 		.where(
 			and(
 				eq(recurringSeries.prototypeType, 'reservation'),
 				isNull(recurringSeries.cancelledAt),
-				isNull(recurringSeries.supersededBy)
+				isNull(recurringSeries.supersededBy),
+				or(
+					isNull(recurringSeries.endsAt),
+					gt(recurringSeries.endsAt, sql`(current_timestamp)`)
+				)
 			)
 		);
 
@@ -72,6 +77,7 @@ interface SeriesInfo {
 	id: string;
 	prototypeId: string;
 	rrule: string;
+	endsAt: Date | null;
 }
 
 async function processSeries(
@@ -107,7 +113,10 @@ async function processSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	const windowEnd = await generationWindowEnd(now);
+	let windowEnd = await generationWindowEnd(now);
+	if (series.endsAt && series.endsAt < windowEnd) {
+		windowEnd = series.endsAt;
+	}
 	const occurrences = getOccurrences(series.rrule, now, windowEnd);
 
 	// Batch-fetch all existing instances for this series in the window

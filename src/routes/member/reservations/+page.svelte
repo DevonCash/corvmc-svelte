@@ -7,11 +7,13 @@
 		formatTimeRange,
 		durationHours,
 		formatDurationAmount,
-		formatScheduleLabel
+		formatScheduleLabel,
+		formatDateYear
 	} from '$lib/utils/format';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -26,8 +28,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
-	import { IconClock } from '@tabler/icons-svelte';
+	import { IconClock, IconPencil, IconPlayerPause, IconX } from '@tabler/icons-svelte';
 	import CreateModal from './CreateModal.svelte';
+	import CreateRecurringModal from './CreateRecurringModal.svelte';
 	import type { MemberReservationsResponse } from '$lib/server/db/schema/api';
 
 	let { data }: { data: MemberReservationsResponse } = $props();
@@ -158,27 +161,43 @@
 	<div class="flex flex-auto"></div>
 
 	{#if isSustaining}
-		<h2 class="pt-4 text-lg font-semibold">My Recurring Reservations</h2>
+		<div class="flex items-center justify-between pt-4">
+			<h2 class="text-lg font-semibold">My Recurring Reservations</h2>
+			<CreateRecurringModal />
+		</div>
 		<DataTable data={recurringSeries} empty="No active recurring reservations.">
-			<Column key="frequencyLabel" header="Pattern">
+			<Column key="id" header="" shrink>
+				{#snippet cell()}
+					<StatusBadge status="active" />
+				{/snippet}
+			</Column>
+			<Column key="frequencyLabel" header="Schedule">
 				{#snippet cell(_value, row)}
 					{formatScheduleLabel(row.frequencyLabel, row.startsAt)}
+					<br />
+					<span class="text-sm opacity-60">{formatTimeRange(row.startsAt, row.endsAt)}</span>
 				{/snippet}
 			</Column>
-			<Column key="startsAt" header="Time">
-				{#snippet cell(_value, row)}
-					{formatTimeRange(row.startsAt, row.endsAt)}
+			<Column key="createdAt" header="Start Date" sortable>
+				{#snippet cell(value)}
+					{formatDateYear(String(value))}
 				{/snippet}
 			</Column>
-			<Column key="createdAt" header="Start Date" sortable type="date" />
-			<Column key="id" header="Status">
-				{#snippet cell()}
-					<StatusBadge status="active" label />
+			<Column key="seriesEndsAt" header="End Date" sortable>
+				{#snippet cell(value)}
+					{value ? formatDateYear(String(value)) : '—'}
 				{/snippet}
 			</Column>
 			<Column key="id" header="" shrink stopClick>
 				{#snippet cell(_value, row)}
-					<div class="flex items-center gap-1">
+					<ActionGroup style="--shadow: 4px">
+						<CancelSeriesAction seriesId={row.id} class="btn-ghost btn-square">
+							{#snippet trigger({ onclick, disabled })}
+								<button class="btn btn-ghost btn-square" {disabled} {onclick}>
+									<IconX size={20} />
+								</button>
+							{/snippet}
+						</CancelSeriesAction>
 						<Action
 							action={editMemberSeries}
 							label="Edit"
@@ -187,9 +206,9 @@
 							onsuccess={() => invalidateAll()}
 							class="btn-xs btn-primary"
 						>
-							{#snippet trigger({ onclick, disabled, status })}
+							{#snippet trigger({ onclick, disabled })}
 								<button
-									class="btn btn-ghost btn-xs"
+									class="btn btn-ghost btn-square"
 									{disabled}
 									onclick={() => {
 										const start = new Date(row.startsAt);
@@ -204,7 +223,7 @@
 										onclick();
 									}}
 								>
-									Edit
+									<IconPencil size={20} />
 								</button>
 							{/snippet}
 							{#snippet form({ close })}
@@ -236,8 +255,10 @@
 								</p>
 							{/snippet}
 						</Action>
-						<CancelSeriesAction seriesId={row.id} class="btn-ghost btn-xs" />
-					</div>
+						<button class="btn btn-ghost btn-square" title="Pause series">
+							<IconPlayerPause size={20} />
+						</button>
+					</ActionGroup>
 				{/snippet}
 			</Column>
 		</DataTable>
