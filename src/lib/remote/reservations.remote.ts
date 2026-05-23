@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, and, inArray, sql } from 'drizzle-orm';
+import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql } from 'drizzle-orm';
 import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
@@ -15,11 +15,13 @@ import {
 import {
 	staffCreate,
 	create,
+	createWaitlisted,
 	cancel,
 	confirm,
 	markComplete,
 	markNoShow,
-	recordCashAndComplete
+	recordCashAndComplete,
+	ReservationConflictError
 } from '$lib/server/reservation/reservation-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getReservationConfig } from '$lib/server/reservation/config';
@@ -426,14 +428,33 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
 	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
 
-	const res = await create({
-		userId: locals.user.id,
-		bookerType: 'user',
-		bookerId: locals.user.id,
-		startsAt,
-		endsAt,
-		notes: data.notes
-	});
+	let res;
+	let waitlisted = false;
+
+	try {
+		res = await create({
+			userId: locals.user.id,
+			bookerType: 'user',
+			bookerId: locals.user.id,
+			startsAt,
+			endsAt,
+			notes: data.notes
+		});
+	} catch (err) {
+		if (isRecurring && err instanceof ReservationConflictError) {
+			res = await createWaitlisted({
+				userId: locals.user.id,
+				bookerType: 'user',
+				bookerId: locals.user.id,
+				startsAt,
+				endsAt,
+				notes: data.notes
+			});
+			waitlisted = true;
+		} else {
+			throw err;
+		}
+	}
 
 	if (isRecurring && recurringFrequency) {
 		const seriesEndsAt = data.seriesEndsAt
@@ -447,7 +468,7 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 		});
 	}
 
-	return { reservationId: res.id };
+	return { reservationId: res.id, waitlisted };
 });
 
 /** Member: book a reservation and immediately initiate payment. */
@@ -478,14 +499,33 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
 	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
 
-	const res = await create({
-		userId: locals.user.id,
-		bookerType: 'user',
-		bookerId: locals.user.id,
-		startsAt,
-		endsAt,
-		notes: data.notes
-	});
+	let res;
+	let waitlisted = false;
+
+	try {
+		res = await create({
+			userId: locals.user.id,
+			bookerType: 'user',
+			bookerId: locals.user.id,
+			startsAt,
+			endsAt,
+			notes: data.notes
+		});
+	} catch (err) {
+		if (isRecurring && err instanceof ReservationConflictError) {
+			res = await createWaitlisted({
+				userId: locals.user.id,
+				bookerType: 'user',
+				bookerId: locals.user.id,
+				startsAt,
+				endsAt,
+				notes: data.notes
+			});
+			waitlisted = true;
+		} else {
+			throw err;
+		}
+	}
 
 	if (isRecurring && recurringFrequency) {
 		await createSeries({
@@ -493,6 +533,11 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt
 		});
+	}
+
+	// Waitlisted reservations skip payment — collect when slot opens
+	if (waitlisted) {
+		return { reservationId: res.id, waitlisted: true as const };
 	}
 
 	if (data.skipPayment === 'on') {
@@ -558,17 +603,37 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	const currentUser = requireUser();
 
 	const recurringFrequency = data.recurring || undefined;
+	const isRecurring = recurringFrequency != null;
 	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
 	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
 
-	const res = await create({
-		userId: currentUser.id,
-		bookerType: 'band',
-		bookerId: band.id,
-		startsAt,
-		endsAt,
-		notes: data.notes
-	});
+	let res;
+	let waitlisted = false;
+
+	try {
+		res = await create({
+			userId: currentUser.id,
+			bookerType: 'band',
+			bookerId: band.id,
+			startsAt,
+			endsAt,
+			notes: data.notes
+		});
+	} catch (err) {
+		if (isRecurring && err instanceof ReservationConflictError) {
+			res = await createWaitlisted({
+				userId: currentUser.id,
+				bookerType: 'band',
+				bookerId: band.id,
+				startsAt,
+				endsAt,
+				notes: data.notes
+			});
+			waitlisted = true;
+		} else {
+			throw err;
+		}
+	}
 
 	if (recurringFrequency) {
 		const members = await getMembers(band.id);
@@ -593,7 +658,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 		});
 	}
 
-	return { reservationId: res.id };
+	return { reservationId: res.id, waitlisted };
 });
 
 /** Band: cancel a band reservation. */
@@ -872,5 +937,55 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 		.update(reservation)
 		.set({ refundedAt: new Date() })
 		.where(eq(reservation.id, data.id));
+	return { success: true };
+});
+
+/** Member: confirm a waitlisted reservation when the slot opens. */
+export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data, issue) => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const [row] = await db
+		.select()
+		.from(reservation)
+		.where(eq(reservation.id, data.id))
+		.limit(1);
+
+	if (!row) throw error(404, 'Reservation not found');
+	if (row.createdByUserId !== locals.user.id) throw error(403, 'Not your reservation');
+	if (row.status !== 'waitlisted') throw error(400, 'Reservation is not waitlisted');
+	if (!row.waitlistNotifiedAt) throw error(400, 'Slot has not been offered yet');
+	if (row.waitlistExpiresAt && row.waitlistExpiresAt < new Date()) {
+		throw error(400, 'Confirmation window has expired');
+	}
+
+	// Re-check slot is still free
+	const conflicts = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
+				lt(reservation.startsAt, row.endsAt),
+				gt(reservation.endsAt, row.startsAt),
+				ne(reservation.id, data.id)
+			)
+		)
+		.limit(1);
+
+	if (conflicts.length > 0) {
+		throw error(409, 'Slot is no longer available');
+	}
+
+	await db
+		.update(reservation)
+		.set({
+			status: 'scheduled',
+			waitlistNotifiedAt: null,
+			waitlistExpiresAt: null,
+			updatedAt: new Date()
+		})
+		.where(eq(reservation.id, data.id));
+
 	return { success: true };
 });

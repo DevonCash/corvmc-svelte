@@ -1,8 +1,11 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, lt, ne, gt, isNotNull, inArray, sql } from 'drizzle-orm';
+import { eq, and, lt, ne, gt, isNotNull, inArray, notInArray, sql } from 'drizzle-orm';
 import { hasConflict, validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
+import { domainEvents } from '$lib/server/events/event-bus';
+import { user } from '$lib/server/db/schema/auth';
+import { formatDateInTz, formatTimeInTz } from './timezone';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
 
 // ---------------------------------------------------------------------------
@@ -67,7 +70,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		.from(reservation)
 		.where(
 			and(
-				ne(reservation.status, 'cancelled'),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, endsAt),
 				gt(reservation.endsAt, startsAt)
 			)
@@ -84,6 +87,34 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 			bookerId,
 			createdByUserId: userId,
 			status: 'scheduled',
+			startsAt,
+			endsAt,
+			notes: notes ?? null
+		})
+		.returning();
+
+	return row;
+}
+
+// ---------------------------------------------------------------------------
+// createWaitlisted() — create with waitlisted status (skip conflict check)
+// ---------------------------------------------------------------------------
+
+export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
+	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
+
+	const validation = await validateBooking(startsAt, endsAt);
+	if (!validation.valid) {
+		throw new ReservationValidationError(validation.error!);
+	}
+
+	const [row] = await db
+		.insert(reservation)
+		.values({
+			bookerType,
+			bookerId,
+			createdByUserId: userId,
+			status: 'waitlisted',
 			startsAt,
 			endsAt,
 			notes: notes ?? null
@@ -162,7 +193,7 @@ export async function cancel(
 	}
 
 	// Atomic conditional update — only cancels if status hasn't changed since read
-	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed'];
+	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
 	const result = await db
 		.update(reservation)
 		.set({
@@ -192,6 +223,25 @@ export async function cancel(
 			.set({ refundedAt: new Date() })
 			.where(eq(reservation.id, reservationId));
 	}
+
+	// Emit cancellation event (enables waitlist promotion)
+	const TZ = 'America/Los_Angeles';
+	const [cancelledUser] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+
+	await domainEvents.emit('reservation.cancelled', {
+		reservationId,
+		userId: row.createdByUserId,
+		userName: cancelledUser?.name ?? '',
+		userEmail: cancelledUser?.email ?? '',
+		date: formatDateInTz(row.startsAt, TZ),
+		startTime: formatTimeInTz(row.startsAt, TZ),
+		endTime: formatTimeInTz(row.endsAt, TZ),
+		cancelledBy: options?.staffOverride ? 'staff' : 'member'
+	});
 }
 
 // ---------------------------------------------------------------------------

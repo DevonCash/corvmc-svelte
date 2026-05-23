@@ -3,7 +3,7 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { and, eq, isNull, lt, gt, gte, lte, ne, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -17,6 +17,7 @@ const TZ = 'America/Los_Angeles';
 export interface GenerationResult {
 	seriesProcessed: number;
 	instancesCreated: number;
+	instancesWaitlisted: number;
 	instancesSkipped: number;
 	errors: string[];
 }
@@ -29,6 +30,7 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 	const result: GenerationResult = {
 		seriesProcessed: 0,
 		instancesCreated: 0,
+		instancesWaitlisted: 0,
 		instancesSkipped: 0,
 		errors: []
 	};
@@ -58,6 +60,7 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 		try {
 			const counts = await processSeries(series);
 			result.instancesCreated += counts.created;
+			result.instancesWaitlisted += counts.waitlisted;
 			result.instancesSkipped += counts.skipped;
 			result.seriesProcessed++;
 		} catch (err) {
@@ -82,7 +85,7 @@ interface SeriesInfo {
 
 async function processSeries(
 	series: SeriesInfo
-): Promise<{ created: number; skipped: number }> {
+): Promise<{ created: number; waitlisted: number; skipped: number }> {
 	// Load the prototype reservation
 	const [prototype] = await db
 		.select({
@@ -136,6 +139,7 @@ async function processSeries(
 	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
 
 	let created = 0;
+	let waitlisted = 0;
 	let skipped = 0;
 
 	for (const occStart of occurrences) {
@@ -146,13 +150,12 @@ async function processSeries(
 			continue;
 		}
 
-		// Check for conflicts with events and closures only
-		const conflict = await checkEventAndClosureConflict(occStart, occEnd);
+		// Tier 1: Check for conflicts with events and closures — hard skip
+		const eventConflict = await checkEventAndClosureConflict(occStart, occEnd);
 
-		if (conflict) {
+		if (eventConflict) {
 			skipped++;
 
-			// Notify the member
 			if (owner) {
 				await domainEvents.emit('reservation.recurring_skipped', {
 					seriesId: series.id,
@@ -162,14 +165,47 @@ async function processSeries(
 					skippedDate: formatDateInTz(occStart, TZ),
 					startTime: formatTimeInTz(occStart, TZ),
 					endTime: formatTimeInTz(occEnd, TZ),
-					reason: conflict.reason
+					reason: eventConflict.reason
 				});
 			}
 
 			continue;
 		}
 
-		// Create the instance — clone from prototype
+		// Tier 2: Check for conflicts with regular reservations — waitlist
+		const hasRegularConflict = await checkReservationConflict(occStart, occEnd, series.id);
+
+		if (hasRegularConflict) {
+			await db.insert(reservation).values({
+				bookerType: prototype.bookerType,
+				bookerId: prototype.bookerId,
+				createdByUserId: prototype.createdByUserId,
+				status: 'waitlisted',
+				startsAt: occStart,
+				endsAt: occEnd,
+				notes: prototype.notes,
+				recurringSeriesId: series.id
+			});
+
+			waitlisted++;
+
+			if (owner) {
+				await domainEvents.emit('reservation.recurring_waitlisted', {
+					seriesId: series.id,
+					userId: prototype.createdByUserId,
+					userName: owner.name,
+					userEmail: owner.email,
+					date: formatDateInTz(occStart, TZ),
+					startTime: formatTimeInTz(occStart, TZ),
+					endTime: formatTimeInTz(occEnd, TZ),
+					reason: 'Time slot is currently booked'
+				});
+			}
+
+			continue;
+		}
+
+		// No conflict — create as scheduled
 		await db.insert(reservation).values({
 			bookerType: prototype.bookerType,
 			bookerId: prototype.bookerId,
@@ -184,7 +220,7 @@ async function processSeries(
 		created++;
 	}
 
-	return { created, skipped };
+	return { created, waitlisted, skipped };
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +242,7 @@ async function checkEventAndClosureConflict(
 		.where(
 			and(
 				eq(reservation.bookerType, 'event'),
-				ne(reservation.status, 'cancelled'),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, endsAt),
 				gt(reservation.endsAt, startsAt)
 			)
@@ -234,4 +270,32 @@ async function checkEventAndClosureConflict(
 	}
 
 	return null;
+}
+
+/**
+ * Check if any regular (non-event) reservation overlaps the time range,
+ * excluding reservations from the same series to avoid self-conflict.
+ */
+async function checkReservationConflict(
+	startsAt: Date,
+	endsAt: Date,
+	seriesId: string
+): Promise<boolean> {
+	const conflicts = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
+				lt(reservation.startsAt, endsAt),
+				gt(reservation.endsAt, startsAt),
+				or(
+					isNull(reservation.recurringSeriesId),
+					ne(reservation.recurringSeriesId, seriesId)
+				)
+			)
+		)
+		.limit(1);
+
+	return conflicts.length > 0;
 }

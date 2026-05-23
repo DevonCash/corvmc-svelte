@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import {
 		formatDate,
@@ -16,15 +16,19 @@
 	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import DateBlockCard from '$lib/components/shared/DateBlockCard.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Modal from '$lib/components/shared/Modal.svelte';
 	import {
 		ConfirmReservationAction,
+		ConfirmWaitlistedAction,
 		CancelReservationAction,
 		CancelSeriesAction,
 		PayReservationAction
 	} from '$lib/components/shared/actions';
 	import { editMemberSeries } from '$lib/remote/recurring.remote';
-	import { getMembershipStatus } from '$lib/remote/reservations.remote';
+	import { getMembershipStatus, confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
@@ -33,7 +37,7 @@
 	import CreateRecurringModal from './CreateRecurringModal.svelte';
 	import type { MemberReservationsResponse } from '$lib/server/db/schema/api';
 
-	let { data }: { data: MemberReservationsResponse } = $props();
+	let { data }: { data: MemberReservationsResponse & { confirmId?: string | null } } = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const all = $derived(data.all);
@@ -44,6 +48,25 @@
 
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
+
+	// Waitlist confirmation via ?confirm={id}
+	const confirmReservation = $derived(
+		data.confirmId
+			? upcoming.find((r) => r.id === data.confirmId && r.status === 'waitlisted' && r.waitlistNotifiedAt)
+			: null
+	);
+	let confirmModalOpen = $state(false);
+
+	$effect(() => {
+		if (confirmReservation) {
+			confirmModalOpen = true;
+		}
+	});
+
+	function closeConfirmModal() {
+		confirmModalOpen = false;
+		goto('/member/reservations', { replaceState: true });
+	}
 
 	// Edit series state
 	let editDate = $state('');
@@ -122,7 +145,13 @@
 				<div class="flex items-baseline justify-between gap-2 text-sm">
 					<span>{formatDurationAmount(row.startsAt, row.endsAt, 1500)}</span>
 					<span class="text-xs opacity-40">
-						{#if row.refundedAt}
+						{#if row.status === 'waitlisted'}
+							{#if row.waitlistNotifiedAt}
+								Slot available — confirm by {formatDate(row.waitlistExpiresAt ?? '')}
+							{:else}
+								Waiting for slot
+							{/if}
+						{:else if row.refundedAt}
 							Refunded {formatDate(row.refundedAt)}
 						{:else if row.status === 'cancelled'}
 							Cancelled
@@ -141,7 +170,12 @@
 					</span>
 				</div>
 				{#snippet actions()}
-					{#if row.status === 'scheduled' || row.status === 'confirmed'}
+					{#if row.status === 'waitlisted'}
+						<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
+						{#if row.waitlistNotifiedAt}
+							<ConfirmWaitlistedAction reservation={row} class="btn-xs btn-success" />
+						{/if}
+					{:else if row.status === 'scheduled' || row.status === 'confirmed'}
 						<CancelReservationAction reservation={row} class="btn-ghost btn-xs" />
 						{#if row.status === 'scheduled'}
 							<ConfirmReservationAction reservation={row} class="btn-xs btn-primary" />
@@ -275,3 +309,36 @@
 		</div>
 	{/if}
 </PageContent>
+
+{#if confirmReservation}
+	<Modal bind:open={confirmModalOpen} title="Slot Available" maxWidth="max-w-md" onclose={closeConfirmModal}>
+		<Form
+			remote={confirmWaitlisted}
+			successToast="Reservation confirmed"
+			onsuccess={async () => {
+				closeConfirmModal();
+				await invalidateAll();
+			}}
+		>
+			<div class="space-y-4">
+				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
+				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
+					<p class="font-medium">{relativeDay(confirmReservation.startsAt)}</p>
+					<p class="text-sm opacity-70">
+						{formatTimeRange(confirmReservation.startsAt, confirmReservation.endsAt)}
+					</p>
+				</div>
+				{#if confirmReservation.waitlistExpiresAt}
+					<p class="text-xs opacity-60">
+						Confirm by {formatDate(confirmReservation.waitlistExpiresAt)} or the slot will be offered to someone else.
+					</p>
+				{/if}
+				<input type="hidden" name="id" value={confirmReservation.id} />
+				<div class="flex justify-end gap-2">
+					<button type="button" class="btn btn-ghost btn-sm" onclick={closeConfirmModal}>Dismiss</button>
+					<SubmitButton label="Confirm Reservation" class="btn-success btn-sm" />
+				</div>
+			</div>
+		</Form>
+	</Modal>
+{/if}

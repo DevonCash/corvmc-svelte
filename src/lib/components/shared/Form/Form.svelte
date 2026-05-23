@@ -142,6 +142,11 @@
 	let remoteAttrs = $derived(
 		remote?.enhance(async (...args) => {
 			if (submitting) return;
+			// Guard: multi-step forms shouldn't submit until the last step
+			if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
+				if (ctx.currentStepValid) ctx.next();
+				return;
+			}
 			submitting = true;
 			const [{ submit }] = args;
 			status = 'pending';
@@ -176,6 +181,11 @@
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!action || !formEl) return;
+		// Guard: multi-step forms shouldn't submit until the last step
+		if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
+			if (ctx.currentStepValid) ctx.next();
+			return;
+		}
 		status = 'pending';
 		actionIssues = null;
 		const start = performance.now();

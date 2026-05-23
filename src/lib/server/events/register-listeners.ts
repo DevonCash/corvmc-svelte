@@ -22,6 +22,9 @@ export function registerListeners(): void {
 
 	// --- Notification dispatch ---
 	registerNotificationListeners();
+
+	// --- Waitlist promotion on cancellation ---
+	registerWaitlistListeners();
 }
 
 // ---------------------------------------------------------------------------
@@ -58,4 +61,36 @@ async function registerNotificationListeners(): Promise<void> {
 		'$lib/server/notification/notification-listeners'
 	);
 	registerAllNotificationListeners();
+}
+
+// ---------------------------------------------------------------------------
+// Waitlist listeners
+// ---------------------------------------------------------------------------
+// When a reservation is cancelled, check if any waitlisted reservations
+// can be promoted to fill the freed slot.
+// ---------------------------------------------------------------------------
+
+async function registerWaitlistListeners(): Promise<void> {
+	const { promoteNextWaitlisted } = await import(
+		'$lib/server/reservation/waitlist-service'
+	);
+
+	domainEvents.on('reservation.cancelled', async (event) => {
+		// Parse the original reservation's time range to find waitlisted candidates
+		// We need the raw Date objects — reconstruct from the formatted strings
+		// by looking up the cancelled reservation directly
+		const { db } = await import('$lib/server/db');
+		const { reservation } = await import('$lib/server/db/schema/reservation');
+		const { eq } = await import('drizzle-orm');
+
+		const [row] = await db
+			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+			.from(reservation)
+			.where(eq(reservation.id, event.reservationId))
+			.limit(1);
+
+		if (row) {
+			await promoteNextWaitlisted(row.startsAt, row.endsAt);
+		}
+	});
 }

@@ -173,6 +173,39 @@ export interface PlatformInviteCreatedEvent {
 	invitedByName: string;
 }
 
+export interface RecurringWaitlistedEvent {
+	seriesId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	reason: string;
+}
+
+export interface WaitlistSlotAvailableEvent {
+	reservationId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	expiresAt: string;
+	confirmUrl: string;
+}
+
+export interface WaitlistExpiredEvent {
+	reservationId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -189,6 +222,9 @@ export type DomainEvents = {
 	'band.invitation_accepted': BandInvitationAcceptedEvent;
 	'contact.form_submitted': ContactFormSubmittedEvent;
 	'reservation.recurring_skipped': RecurringSkippedEvent;
+	'reservation.recurring_waitlisted': RecurringWaitlistedEvent;
+	'reservation.waitlist_slot_available': WaitlistSlotAvailableEvent;
+	'reservation.waitlist_expired': WaitlistExpiredEvent;
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;

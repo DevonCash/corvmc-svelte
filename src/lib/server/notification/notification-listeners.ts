@@ -255,6 +255,74 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Recurring reservation waitlisted ---
+	domainEvents.on('reservation.recurring_waitlisted', async (event) => {
+		const html = templates.recurringWaitlisted({
+			userName: event.userName,
+			date: event.date,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			reason: event.reason,
+			siteUrl
+		});
+
+		await dispatch({
+			type: 'recurring_waitlisted',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Recurring reservation waitlisted',
+			body: `${event.date} ${event.startTime}–${event.endTime}: waiting for slot`,
+			href: '/member/reservations',
+			emailSubject: `Recurring reservation waitlisted: ${event.date}`,
+			emailHtml: html
+		});
+	});
+
+	// --- Waitlist slot available ---
+	domainEvents.on('reservation.waitlist_slot_available', async (event) => {
+		const html = templates.waitlistSlotAvailable({
+			userName: event.userName,
+			date: event.date,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			expiresAt: event.expiresAt,
+			confirmUrl: event.confirmUrl
+		});
+
+		await dispatch({
+			type: 'waitlist_slot_available',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'A slot has opened up!',
+			body: `${event.date} ${event.startTime}–${event.endTime} is available — confirm within 24 hours`,
+			href: `/member/reservations?confirm=${event.reservationId}`,
+			emailSubject: `Slot available: ${event.date} ${event.startTime}`,
+			emailHtml: html
+		});
+	});
+
+	// --- Waitlist expired ---
+	domainEvents.on('reservation.waitlist_expired', async (event) => {
+		const html = templates.waitlistExpired({
+			userName: event.userName,
+			date: event.date,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			siteUrl
+		});
+
+		await dispatch({
+			type: 'waitlist_expired',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Waitlisted reservation expired',
+			body: `${event.date} ${event.startTime}–${event.endTime} was not confirmed in time`,
+			href: '/member/reservations',
+			emailSubject: `Waitlisted reservation expired: ${event.date}`,
+			emailHtml: html
+		});
+	});
+
 	// --- Contact form submission ---
 	domainEvents.on('contact.form_submitted', async (event) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';

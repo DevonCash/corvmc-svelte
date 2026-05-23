@@ -16,7 +16,7 @@ export function isBookerType(value: string): value is BookerType {
 	return bookerTypes.includes(value as BookerType);
 }
 
-export const reservationStatuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled'] as const;
+export const reservationStatuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled', 'waitlisted'] as const;
 export type ReservationStatus = (typeof reservationStatuses)[number];
 
 export interface TimeSlot {
@@ -59,6 +59,8 @@ export const reservation = sqliteTable(
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
+		waitlistNotifiedAt: timestamp('waitlist_notified_at'),
+		waitlistExpiresAt: timestamp('waitlist_expires_at'),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
 		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 	},
@@ -69,6 +71,9 @@ export const reservation = sqliteTable(
 		uniqueIndex('uq_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
 			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),
+		index('idx_reservation_waitlist_expires')
+			.on(t.waitlistExpiresAt)
+			.where(sql`status = 'waitlisted' AND waitlist_expires_at IS NOT NULL`),
 		check('reservation_time_order', sql`ends_at > starts_at`)
 	]
 );

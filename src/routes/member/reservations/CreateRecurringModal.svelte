@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 	import { bookMemberReservation } from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconRepeat } from '@tabler/icons-svelte';
@@ -14,7 +15,14 @@
 	class="btn-ghost btn-sm"
 	maxWidth="max-w-md"
 	noFooter
-	onsuccess={() => invalidateAll()}
+	successToast="Recurring series created"
+	onsuccess={(result) => {
+		const r = result as { waitlisted?: boolean } | undefined;
+		if (r?.waitlisted) {
+			toast.info('The first instance is waitlisted because the slot is currently booked.');
+		}
+		invalidateAll();
+	}}
 >
 	{#snippet icon()}<IconRepeat size={16} />{/snippet}
 	{#snippet form({ close })}

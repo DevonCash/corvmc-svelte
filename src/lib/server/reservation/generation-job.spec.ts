@@ -54,6 +54,7 @@ vi.mock('drizzle-orm', () => ({
 	gte: vi.fn(),
 	lte: vi.fn(),
 	ne: vi.fn(),
+	notInArray: vi.fn(),
 	sql: vi.fn(() => 'sql')
 }));
 
@@ -138,20 +139,22 @@ describe('generateRecurringReservations', () => {
 		expect(result).toEqual({
 			seriesProcessed: 0,
 			instancesCreated: 0,
+			instancesWaitlisted: 0,
 			instancesSkipped: 0,
 			errors: []
 		});
 	});
 
 	it('creates reservation instances for occurrences with no conflicts', async () => {
-		// Selects: activeSeries, prototype, owner, existingInstances, eventConflict, closureConflict
+		// Selects: activeSeries, prototype, owner, existingInstances, eventConflict, closureConflict, reservationConflict
 		queueSelects(
 			[SERIES],        // 1. active series
 			[PROTOTYPE],     // 2. prototype reservation
 			[OWNER],         // 3. user/owner info
 			[],              // 4. existing instances in window (none)
 			[],              // 5. event conflict check (none)
-			[]               // 6. closure conflict check (none)
+			[],              // 6. closure conflict check (none)
+			[]               // 7. regular reservation conflict check (none)
 		);
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -267,7 +270,8 @@ describe('generateRecurringReservations', () => {
 			[OWNER],             // 4. owner for series-2
 			[],                  // 5. no existing instances
 			[],                  // 6. no event conflict for OCC2
-			[]                   // 7. no closure conflict for OCC2
+			[],                  // 7. no closure conflict for OCC2
+			[]                   // 8. no regular reservation conflict for OCC2
 		);
 		setupInsert();
 
@@ -291,6 +295,52 @@ describe('generateRecurringReservations', () => {
 			endsAt: OCC2_END,
 			recurringSeriesId: SERIES_2.id
 		});
+	});
+
+	it('creates waitlisted instances when regular reservation conflicts exist', async () => {
+		queueSelects(
+			[SERIES],            // 1. active series
+			[PROTOTYPE],         // 2. prototype reservation
+			[OWNER],             // 3. user/owner info
+			[],                  // 4. existing instances in window (none)
+			[],                  // 5. no event conflict
+			[],                  // 6. no closure conflict
+			[{ id: 'res-99' }]   // 7. regular reservation conflict found
+		);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		const { generateRecurringReservations } = await import('./generation-job');
+		const result = await generateRecurringReservations();
+
+		expect(result.seriesProcessed).toBe(1);
+		expect(result.instancesCreated).toBe(0);
+		expect(result.instancesWaitlisted).toBe(1);
+		expect(result.instancesSkipped).toBe(0);
+		expect(result.errors).toHaveLength(0);
+		expect(insertedRows).toHaveLength(1);
+		expect(insertedRows[0]).toMatchObject({
+			bookerType: PROTOTYPE.bookerType,
+			bookerId: PROTOTYPE.bookerId,
+			createdByUserId: PROTOTYPE.createdByUserId,
+			status: 'waitlisted',
+			startsAt: OCC1,
+			endsAt: OCC1_END,
+			notes: PROTOTYPE.notes,
+			recurringSeriesId: SERIES.id
+		});
+
+		expect(mockEmit).toHaveBeenCalledOnce();
+		expect(mockEmit).toHaveBeenCalledWith(
+			'reservation.recurring_waitlisted',
+			expect.objectContaining({
+				seriesId: SERIES.id,
+				userId: PROTOTYPE.createdByUserId,
+				userName: OWNER.name,
+				userEmail: OWNER.email,
+				reason: 'Time slot is currently booked'
+			})
+		);
 	});
 
 	it('handles missing prototype gracefully (adds to errors)', async () => {

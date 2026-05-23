@@ -72,6 +72,25 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'recurring_waitlisted',
+		label: 'Recurring reservation waitlisted',
+		description: 'Notification when a recurring reservation instance is waitlisted due to a conflict',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'waitlist_slot_available',
+		label: 'Waitlist slot available',
+		description: 'Notification when a waitlisted reservation slot becomes available for confirmation',
+		defaults: { email: true, inApp: true, sms: false },
+		mandatory: true
+	},
+	{
+		key: 'waitlist_expired',
+		label: 'Waitlist expired',
+		description: 'Notification when a waitlisted reservation expires without confirmation',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'equipment_loan_scheduled',
 		label: 'Equipment loan confirmed',
 		description: 'Notification when staff confirms your equipment pickup',

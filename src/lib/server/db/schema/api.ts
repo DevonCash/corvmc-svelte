@@ -105,6 +105,8 @@ type MemberReservation = Pick<
 	paidAt: string | null;
 	refundedAt: string | null;
 	paidWithCredits: boolean;
+	waitlistNotifiedAt: string | null;
+	waitlistExpiresAt: string | null;
 };
 
 export interface MemberReservationsResponse {

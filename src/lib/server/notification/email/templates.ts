@@ -255,3 +255,61 @@ export function recurringSkipped(vars: {
 		vars
 	);
 }
+
+export function recurringWaitlisted(vars: {
+	userName: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	reason: string;
+	siteUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">Recurring reservation waitlisted</mj-text>
+		<mj-text>Hi {{userName}}, your recurring reservation on <strong>{{date}}</strong> from <strong>{{startTime}} – {{endTime}}</strong> is on the waitlist because the time slot is currently booked.</mj-text>
+		<mj-text>You'll be notified automatically if the slot opens up.</mj-text>
+		<mj-button href="{{siteUrl}}/member/reservations">View My Reservations</mj-button>
+		`,
+		`Recurring reservation waitlisted: ${vars.date}`,
+		vars
+	);
+}
+
+export function waitlistSlotAvailable(vars: {
+	userName: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	expiresAt: string;
+	confirmUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">A slot has opened up!</mj-text>
+		<mj-text>Hi {{userName}}, the time slot on <strong>{{date}}</strong> from <strong>{{startTime}} – {{endTime}}</strong> is now available.</mj-text>
+		<mj-text>You have <strong>24 hours</strong> to confirm your reservation before it expires.</mj-text>
+		<mj-button href="{{confirmUrl}}">Confirm Reservation</mj-button>
+		`,
+		`Slot available: ${vars.date} ${vars.startTime}`,
+		vars
+	);
+}
+
+export function waitlistExpired(vars: {
+	userName: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	siteUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text font-size="18px" font-weight="600">Waitlisted reservation expired</mj-text>
+		<mj-text>Hi {{userName}}, your waitlisted reservation on <strong>{{date}}</strong> from <strong>{{startTime}} – {{endTime}}</strong> has expired because it was not confirmed within 24 hours.</mj-text>
+		<mj-button href="{{siteUrl}}/member/reservations">View My Reservations</mj-button>
+		`,
+		`Waitlisted reservation expired: ${vars.date}`,
+		vars
+	);
+}

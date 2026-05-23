@@ -18,7 +18,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			and(
 				eq(reservation.createdByUserId, locals.user.id),
 				gt(reservation.endsAt, now),
-				inArray(reservation.status, ["scheduled", "confirmed"])
+				inArray(reservation.status, ["scheduled", "confirmed", "waitlisted"])
 			)
 		)
 		.orderBy(reservation.startsAt);
@@ -79,6 +79,8 @@ function serializeReservation(row: any, credits: Map<string, any>) {
 		recurringSeriesId: row.recurringSeriesId ?? null,
 		paidAt: row.paidAt && !isNaN(row.paidAt.getTime()) ? row.paidAt.toISOString() : null,
 		refundedAt: row.refundedAt && !isNaN(row.refundedAt.getTime()) ? row.refundedAt.toISOString() : null,
-		paidWithCredits: credit != null
+		paidWithCredits: credit != null,
+		waitlistNotifiedAt: row.waitlistNotifiedAt && !isNaN(row.waitlistNotifiedAt.getTime()) ? row.waitlistNotifiedAt.toISOString() : null,
+		waitlistExpiresAt: row.waitlistExpiresAt && !isNaN(row.waitlistExpiresAt.getTime()) ? row.waitlistExpiresAt.toISOString() : null
 	};
 }

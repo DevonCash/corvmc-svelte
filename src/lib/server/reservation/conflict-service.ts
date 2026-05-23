@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation, closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
-import { and, ne, eq, lt, gt } from 'drizzle-orm';
+import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
 import { getReservationConfig } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '$lib/server/db/schema/reservation';
@@ -30,7 +30,7 @@ export async function hasConflict(
 		.from(reservation)
 		.where(
 			and(
-				ne(reservation.status, 'cancelled'),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, bufferedEnd),
 				gt(reservation.endsAt, bufferedStart),
 				excludeReservationId ? ne(reservation.id, excludeReservationId) : undefined
@@ -68,13 +68,13 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
 	const dayEnd = buildDateInTz(dateStr, config.operatingHoursEnd, tz);
 
-	// Fetch all non-cancelled reservations for this day
+	// Fetch all active reservations for this day (exclude cancelled and waitlisted)
 	const dayReservations = await db
 		.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
 		.from(reservation)
 		.where(
 			and(
-				ne(reservation.status, 'cancelled'),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, dayEnd),
 				gt(reservation.endsAt, dayStart)
 			)
@@ -229,7 +229,7 @@ export async function getConflictDetails(
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.where(
 			and(
-				ne(reservation.status, 'cancelled'),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, bufferedEnd),
 				gt(reservation.endsAt, bufferedStart)
 			)

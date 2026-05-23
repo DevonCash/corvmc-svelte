@@ -12,7 +12,8 @@
 		IconPencil,
 		IconWorld,
 		IconAlertTriangle,
-		IconArrowBackUp
+		IconArrowBackUp,
+		IconClockPause
 	} from '@tabler/icons-svelte';
 	import { Tooltip } from 'bits-ui';
 	import type { SvelteComponent } from 'svelte';
@@ -37,6 +38,7 @@
 		completed: 'badge-success',
 		no_show: 'badge-error',
 		cancelled: 'badge-ghost',
+		waitlisted: 'badge-ghost',
 		refunded: 'badge-error',
 		draft: 'badge-warning',
 		published: 'badge-success',
@@ -54,6 +56,7 @@
 		completed: { icon: IconCircleCheckFilled, color: 'text-success' },
 		no_show: { icon: IconUserX, color: 'text-error' },
 		cancelled: { icon: IconCircleX, color: 'text-base-content' },
+		waitlisted: { icon: IconClockPause, color: 'text-base-content' },
 		refunded: { icon: IconArrowBackUp, color: 'text-error' },
 
 		// Event statuses
