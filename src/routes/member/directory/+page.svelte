@@ -5,8 +5,8 @@
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
-	import logoMono from '$lib/assets/cmc-logo-mono.svg';
+	import IdCard from '$lib/components/shared/IdCard.svelte';
+	import VinylCard from '$lib/components/shared/VinylCard.svelte';
 
 	let activeTab = $state<'members' | 'bands'>('members');
 	let search = $state('');
@@ -29,10 +29,6 @@
 	let genreSuggestions = $derived(await getGenreSuggestions());
 
 	const bandColors = ['#e5771e', '#003b5c', '#00859b', '#f84d13', '#ffb500', '#5a3d2b'];
-
-	function initials(name: string): string {
-		return name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-	}
 </script>
 
 <PageHeader title="Directory" subtitle="Community">
@@ -95,59 +91,18 @@
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
 				{#each members as member (member.id)}
-					<a href="/member/directory/members/{member.id}" class="id-card">
-						<div class="id-card__header">
-							<div class="id-card__brand">
-								<img src={speakerLogo} alt="" class="id-card__logo" />
-								<span>Corvallis Music<br/>Collective</span>
-							</div>
-							<div class="id-card__tag">MEMBER</div>
-						</div>
-						<div class="id-card__body">
-							<div class="id-card__photo">
-								{#if member.image}
-									<img src={member.image} alt={member.name} class="w-full h-full object-cover rounded" />
-								{:else}
-									{initials(member.name)}
-								{/if}
-							</div>
-							<div class="id-card__info">
-								<div class="id-card__name">
-									{member.name}
-									{#if member.pronouns}
-										<span class="id-card__pronouns">{member.pronouns}</span>
-									{/if}
-								</div>
-								{#if member.tagline}
-									<div class="id-card__role">{member.tagline}</div>
-								{/if}
-								{#if member.instruments?.length || member.genres?.length}
-									<div class="id-card__badges">
-										{#each member.instruments ?? [] as inst}
-											<span class="id-tag id-tag--teal">{inst}</span>
-										{/each}
-										{#each member.genres ?? [] as genre}
-											<span class="id-tag">{genre}</span>
-										{/each}
-									</div>
-								{/if}
-								{#if member.bands?.length}
-									<div class="id-card__bands">
-										{#each member.bands as b}
-											<span class="id-tag id-tag--band">{b.name}</span>
-										{/each}
-									</div>
-								{/if}
-							</div>
-						</div>
-						{#if member.lookingForBand}
-							<div class="id-card__gaff bg-primary text-primary-contrast">seeking a band</div>
-						{/if}
-						<div class="id-card__footer">
-							<div class="id-card__since">Member since {new Date(member.createdAt).getFullYear()}</div>
-							<div class="id-card__barcode" aria-hidden="true"></div>
-						</div>
-					</a>
+					<IdCard
+						href="/member/directory/members/{member.id}"
+						name={member.name}
+						image={member.image}
+						pronouns={member.pronouns}
+						tagline={member.tagline}
+						instruments={member.instruments}
+						genres={member.genres}
+						bands={member.bands}
+						lookingForBand={member.lookingForBand}
+						memberSince={new Date(member.createdAt).getFullYear()}
+					/>
 				{/each}
 			</div>
 		{/if}
@@ -159,49 +114,16 @@
 		{:else}
 			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
 				{#each bands as b, i (b.id)}
-					<a href="/member/directory/bands/{b.slug}" class="vinyl-card" style="--vinyl-label: {bandColors[i % bandColors.length]}">
-						<div class="vinyl-card__sleeve-wrap">
-							<div class="vinyl-card__disc">
-								<div class="vinyl-card__label">
-									<svg class="vinyl-card__arc" viewBox="0 0 100 100">
-										<defs>
-											<path id="arc-top-{b.id}" d="M 15,50 a 35,35 0 1,1 70,0" fill="none" />
-											<path id="arc-bot-{b.id}" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
-										</defs>
-										<text>
-											<textPath href="#arc-top-{b.id}" startOffset="50%" text-anchor="middle">{b.name}</textPath>
-										</text>
-										<text>
-											<textPath href="#arc-bot-{b.id}" startOffset="50%" text-anchor="middle">Corvallis Music Collective</textPath>
-										</text>
-									</svg>
-									<img class="vinyl-card__logo" src={logoMono} alt="" />
-								</div>
-							</div>
-							<div class="vinyl-card__sleeve">
-								<div class="vinyl-card__sleeve-art">
-									{#if b.avatarUrl}
-										<img src={b.avatarUrl} alt={b.name} class="w-full h-full object-cover" />
-									{:else}
-										{initials(b.name)}
-									{/if}
-								</div>
-								{#if b.lookingForMembers}
-									<div class="vinyl-card__gaff">seeking members</div>
-								{/if}
-							</div>
-						</div>
-						<div class="vinyl-card__caption">
-							<div class="vinyl-card__band">{b.name}</div>
-							<div class="vinyl-card__meta">
-								{#if b.tagline}
-									{b.tagline}
-								{:else}
-									{b.memberCount} member{b.memberCount === 1 ? '' : 's'}
-								{/if}
-							</div>
-						</div>
-					</a>
+					<VinylCard
+						href="/member/directory/bands/{b.slug}"
+						id={b.id}
+						name={b.name}
+						avatarUrl={b.avatarUrl}
+						tagline={b.tagline}
+						memberCount={b.memberCount}
+						lookingForMembers={b.lookingForMembers}
+						color={bandColors[i % bandColors.length]}
+					/>
 				{/each}
 			</div>
 		{/if}
