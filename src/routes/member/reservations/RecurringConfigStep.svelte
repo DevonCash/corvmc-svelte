@@ -11,7 +11,6 @@
 	let startTime = $state('');
 	let endTime = $state('');
 	let seriesEndsAt = $state('');
-	let notes = $state('');
 
 	let slotsData = $state<{
 		startSlots: { value: string; label: string }[];
@@ -173,15 +172,6 @@
 			bind:value={seriesEndsAt}
 			min={minEndsAt}
 			description="Leave empty for ongoing"
-		/>
-
-		<Form.Field
-			name="notes"
-			label="Notes (optional)"
-			type="textarea"
-			bind:value={notes}
-			placeholder="What are you working on?"
-			rows={2}
 		/>
 
 		<div class="flex justify-end pt-2">
