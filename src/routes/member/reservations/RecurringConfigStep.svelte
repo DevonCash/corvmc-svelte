@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { getRecurringTimeSlots } from '$lib/remote/reservations.remote';
 	import * as Form from '$lib/components/shared/Form';
+	import CalendarSelect from '$lib/components/shared/Form/CalendarSelect.svelte';
 	import { formatSlotTime, formatScheduleLabel } from '$lib/utils/format';
+	import { today, getLocalTimeZone, startOfMonth, endOfMonth } from '@internationalized/date';
+	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
 
 	let frequency = $state<'weekly' | 'biweekly' | 'monthly'>('weekly');
 	let date = $state('');
@@ -56,11 +59,22 @@
 		endTime = '';
 	});
 
-	const tomorrow = $derived.by(() => {
-		const d = new Date();
-		d.setDate(d.getDate() + 1);
-		return d.toISOString().split('T')[0];
-	});
+	const tz = getLocalTimeZone();
+	const todayDate = today(tz);
+	const minDate = todayDate.add({ days: 1 });
+
+	let viewMonth = $state(todayDate);
+	const monthStart = $derived(startOfMonth(viewMonth));
+	const monthEnd = $derived(endOfMonth(viewMonth));
+
+	function prevMonth() {
+		viewMonth = viewMonth.subtract({ months: 1 });
+	}
+	function nextMonth() {
+		viewMonth = viewMonth.add({ months: 1 });
+	}
+
+	const canGoPrev = $derived(monthEnd.compare(minDate) >= 0 && monthStart.compare(todayDate) > 0);
 
 	const minEndsAt = $derived.by(() => {
 		if (!date) return '';
@@ -106,17 +120,32 @@
 			</div>
 		</fieldset>
 
-		<Form.Field
-			name="date"
-			label="First occurrence"
-			type="date"
-			bind:value={date}
-			min={tomorrow}
-		/>
-
-		{#if scheduleLabel}
-			<p class="mt-[-0.5rem] text-sm opacity-60">{scheduleLabel}</p>
-		{/if}
+		<fieldset class="fieldset">
+			<legend class="fieldset-legend">First occurrence</legend>
+			<div class="flex items-center justify-between px-2 pb-1">
+				<button type="button" class="btn btn-ghost btn-xs btn-square" onclick={prevMonth} disabled={!canGoPrev}>
+					<IconChevronLeft size={16} />
+				</button>
+				<span class="text-sm font-medium">
+					{viewMonth.toDate(tz).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+				</span>
+				<button type="button" class="btn btn-ghost btn-xs btn-square" onclick={nextMonth}>
+					<IconChevronRight size={16} />
+				</button>
+			</div>
+			<div class="hide-calendar-heading">
+				<CalendarSelect
+					name="date"
+					bind:value={date}
+					minValue={monthStart}
+					maxValue={monthEnd}
+					isDateUnavailable={(d) => d.compare(minDate) < 0}
+				/>
+			</div>
+			{#if scheduleLabel}
+				<p class="text-sm opacity-60">{scheduleLabel}</p>
+			{/if}
+		</fieldset>
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
@@ -163,3 +192,9 @@
 		</div>
 	{/if}
 </Form.Step>
+
+<style>
+	.hide-calendar-heading > :global(div > p:first-child) {
+		display: none;
+	}
+</style>
