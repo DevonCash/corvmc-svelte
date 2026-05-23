@@ -101,26 +101,6 @@
 		<input type="hidden" name="seriesEndsAt" value={seriesEndsAt} />
 
 		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Frequency</legend>
-			<div class="flex gap-1">
-				{#each [
-					{ value: 'weekly', label: 'Weekly' },
-					{ value: 'biweekly', label: 'Every 2 Weeks' },
-					{ value: 'monthly', label: 'Monthly' }
-				] as opt (opt.value)}
-					<button
-						type="button"
-						class="btn btn-sm flex-1"
-						class:btn-primary={frequency === opt.value}
-						onclick={() => (frequency = opt.value as typeof frequency)}
-					>
-						{opt.label}
-					</button>
-				{/each}
-			</div>
-		</fieldset>
-
-		<fieldset class="fieldset">
 			<legend class="fieldset-legend">First occurrence</legend>
 			<div class="flex items-center justify-between px-2 pb-1">
 				<button type="button" class="btn btn-ghost btn-xs btn-square" onclick={prevMonth} disabled={!canGoPrev}>
@@ -146,6 +126,23 @@
 				<p class="text-sm opacity-60">{scheduleLabel}</p>
 			{/if}
 		</fieldset>
+
+		<div class="flex gap-1">
+			{#each [
+				{ value: 'weekly', label: 'Weekly' },
+				{ value: 'biweekly', label: 'Every 2 Weeks' },
+				{ value: 'monthly', label: 'Monthly' }
+			] as opt (opt.value)}
+				<button
+					type="button"
+					class="btn btn-sm flex-1"
+					class:btn-primary={frequency === opt.value}
+					onclick={() => (frequency = opt.value as typeof frequency)}
+				>
+					{opt.label}
+				</button>
+			{/each}
+		</div>
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
