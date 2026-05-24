@@ -5,7 +5,7 @@
  */
 
 import { DateTime } from 'luxon';
-import type { ISODateString } from '$lib/server/db/schema/columns';
+import type { ISODateString } from '$lib/types/dates';
 
 const TZ = 'America/Los_Angeles';
 

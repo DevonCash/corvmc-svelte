@@ -9,7 +9,7 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		open = $bindable(false),

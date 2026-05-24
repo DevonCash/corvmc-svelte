@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 	import Logo from '$lib/components/shared/Logo.svelte';
 
 	interface Props {

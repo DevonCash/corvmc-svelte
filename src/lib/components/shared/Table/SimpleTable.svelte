@@ -4,7 +4,7 @@
 	import type { DataTableContext, ColumnDef, ColumnType } from './DataTable.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatDateTime, formatCents } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		data,

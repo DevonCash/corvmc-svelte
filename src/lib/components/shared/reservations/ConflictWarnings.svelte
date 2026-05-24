@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	type Conflict = {
 		type: 'reservation' | 'closure';

@@ -4,7 +4,7 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		reservation

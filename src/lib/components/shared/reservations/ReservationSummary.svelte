@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fullDate, formatTimeRange, formatDuration } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		reservation

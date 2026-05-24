@@ -9,7 +9,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
-	import { toISO } from '$lib/server/db/schema/columns';
+	import { toISO } from '$lib/types/dates';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring.remote';

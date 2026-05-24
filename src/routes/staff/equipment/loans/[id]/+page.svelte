@@ -15,7 +15,7 @@
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { toISO } from '$lib/server/db/schema/columns';
+	import { toISO } from '$lib/types/dates';
 
 	let id = $derived(page.params.id!);
 	let loan = $derived(await getLoan(id));

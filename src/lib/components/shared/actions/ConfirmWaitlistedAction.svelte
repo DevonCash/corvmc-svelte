@@ -4,7 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import { formatDate } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		reservation,

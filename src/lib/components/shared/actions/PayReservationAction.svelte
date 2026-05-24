@@ -4,7 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
 	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		reservation,

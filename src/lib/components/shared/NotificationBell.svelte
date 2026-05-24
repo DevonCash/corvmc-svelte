@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Notification } from '$lib/server/db/schema';
-	import { toISO } from '$lib/server/db/schema/columns';
+	import { toISO } from '$lib/types/dates';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';

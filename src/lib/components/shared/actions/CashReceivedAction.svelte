@@ -3,7 +3,7 @@
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cashReceivedReservation } from '$lib/remote/reservations.remote';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		reservation,

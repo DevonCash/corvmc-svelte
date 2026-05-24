@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { ISODateString } from '$lib/server/db/schema/columns';
+import type { ISODateString } from '$lib/types/dates';
 
 interface EventDetail {
 	event: {

@@ -9,7 +9,7 @@
 		formatDayNumber,
 		formatShortMonth
 	} from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import {
@@ -24,12 +24,33 @@
 
 	const h = $derived(durationHours(reservation.startsAt, reservation.endsAt));
 	const durationLabel = $derived(h === 1 ? '1 hr' : `${h} hrs`);
+
+	let isToday = $derived(reservation.startsAt)
+	let isTomorrow = $derived(reservation.startsAt)
+	let isThisWeek = $derived(reservation.startsAt)
 </script>
 
-<div class="flex rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100">
+<div class="my-1 flex rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100">
 	<div
-		class="flex w-20 shrink-0 flex-col items-center justify-center rounded-l-sm border-r-2 border-(--cmc-brown) bg-primary py-3 text-primary-content"
+		class="relative flex w-20 shrink-0 flex-col items-center justify-center rounded-l-sm border-r-2 border-(--cmc-brown) bg-primary py-3 text-primary-content"
 	>
+		{#if isToday}
+			<span
+				class="absolute -top-3 left-0 ml-[-2.5px] rounded-sm rounded-bl-none border-[2.5px] bg-error px-1 text-[.6rem] font-bold tracking-wide text-error-content uppercase"
+				>Today</span
+			>
+		{:else if isTomorrow}
+			<span
+				class="absolute -top-3 left-0 ml-[-2.5px] rounded-sm rounded-bl-none border-[2.5px] bg-error px-1 text-[.6rem] font-bold tracking-wide text-error-content uppercase"
+				>Tomorrow</span
+			>
+		{:else if isThisWeek}
+			<span
+				class="absolute -top-3 left-0 ml-[-2.5px] rounded-sm rounded-bl-none border-[2.5px] bg-error px-1 text-[.6rem] font-bold tracking-wide text-error-content uppercase"
+				>This Week</span
+			>
+		{/if}
+
 		<span class="text-xs leading-tight font-bold">{formatDayOfWeek(reservation.startsAt)}</span>
 		<span class="text-3xl leading-tight font-bold">{formatDayNumber(reservation.startsAt)}</span>
 		<span class="text-xs leading-tight font-bold">{formatShortMonth(reservation.startsAt)}</span>
@@ -72,27 +93,16 @@
 				</span>
 			</div>
 		</div>
-		<div class="flex min-h-5 items-center justify-end rounded-br-lg bg-base-200 pt-0">
-			{#if reservation.status === 'waitlisted' || reservation.status === 'scheduled' || reservation.status === 'confirmed'}
-				<ActionGroup class="m-[-2.4px]">
-					{#if reservation.status === 'waitlisted'}
-						<CancelReservationAction reservation={reservation} class="btn-ghost btn-xs" />
-						{#if reservation.waitlistNotifiedAt}
-							<ConfirmWaitlistedAction reservation={reservation} class="btn-xs btn-success" />
-						{/if}
-					{:else}
-						<CancelReservationAction reservation={reservation} class="btn-ghost btn-xs" />
-						{#if reservation.status === 'scheduled'}
-							<ConfirmReservationAction reservation={reservation} class="btn-xs btn-primary" />
-						{:else if reservation.status === 'confirmed' && !reservation.paidAt && !reservation.paidWithCredits}
-							<PayReservationAction
-								reservation={reservation}
-								label="Pay Ahead"
-								class="btn-xs btn-primary"
-							/>
-						{/if}
-					{/if}
-				</ActionGroup>
+		<div class="mt-2 flex h-0 items-center justify-end gap-2 px-2">
+			{#if ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
+				<CancelReservationAction {reservation} class="btn-ghost btn-xs" />
+				{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
+					<ConfirmWaitlistedAction {reservation} class="btn-xs btn-success" />
+				{:else if reservation.status === 'scheduled'}
+					<ConfirmReservationAction {reservation} class="btn-xs btn-primary" />
+				{:else if reservation.status === 'confirmed' && !reservation.paidAt && !reservation.paidWithCredits}
+					<PayReservationAction {reservation} label="Pay Ahead" class="btn-xs btn-primary" />
+				{/if}
 			{/if}
 		</div>
 	</div>

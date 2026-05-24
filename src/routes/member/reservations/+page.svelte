@@ -8,7 +8,7 @@
 		formatScheduleLabel,
 		formatDateYear
 	} from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';

@@ -1,11 +1,10 @@
 import { customType } from 'drizzle-orm/sqlite-core';
 import type { z } from 'zod';
 
-export type ISODateString = string & { readonly __brand: 'ISODateString' };
+export type { ISODateString } from '$lib/types/dates';
+export { toISO } from '$lib/types/dates';
 
-export function toISO(d: Date): ISODateString {
-	return d.toISOString() as ISODateString;
-}
+import type { ISODateString } from '$lib/types/dates';
 
 export type Serialized<T> = {
 	[K in keyof T]: T[K] extends Date

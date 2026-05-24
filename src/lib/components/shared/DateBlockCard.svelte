@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { formatDayOfWeek, formatDayNumber, formatShortMonth } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/server/db/schema/columns';
+	import type { ISODateString } from '$lib/types/dates';
 	import ActionGroup from './ActionGroup.svelte';
 
 	let {

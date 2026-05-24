@@ -4,7 +4,7 @@ import { query, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { toISO } from '$lib/server/db/schema/columns';
+import { toISO } from '$lib/types/dates';
 import { desc, eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
