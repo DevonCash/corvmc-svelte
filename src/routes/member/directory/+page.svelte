@@ -32,14 +32,22 @@
 </script>
 
 <PageHeader title="Directory" subtitle="Community">
-	<ButtonGroup
-		tabs={[
-			{ key: 'members', label: `Members (${members.length})` },
-			{ key: 'bands', label: `Bands (${bands.length})` }
-		]}
-		active={activeTab}
-		onchange={(key) => (activeTab = key as 'members' | 'bands')}
-	/>
+	<ButtonGroup>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={activeTab === 'members'}
+			onclick={() => (activeTab = 'members')}
+		>
+			Members ({members.length})
+		</button>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={activeTab === 'bands'}
+			onclick={() => (activeTab = 'bands')}
+		>
+			Bands ({bands.length})
+		</button>
+	</ButtonGroup>
 </PageHeader>
 <PageContent>
 	<!-- Search & Filters -->

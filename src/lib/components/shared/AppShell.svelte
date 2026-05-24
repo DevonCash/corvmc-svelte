@@ -42,7 +42,7 @@
 		<AppTopbar {drawerId} {user} {panels} {activePanel} />
 		<div class="tri-stripe"></div>
 
-		<main class="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-0">
+		<main class="flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">
 			{@render children()}
 		</main>
 	</div>
@@ -51,10 +51,10 @@
 		<label for={drawerId} class="drawer-overlay"></label>
 		<Sidebar>
 			{#snippet brand()}
-				<span class="block flex items-center justify-between h-[48px] px-3">
+				<span class="block flex h-[48px] items-center justify-between px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
-					<Button class='btn-ghost  btn-square btn-sm latched' title='To Public Site' href='/'>
-						<IconWorld class='text-primary size-5' />
+					<Button class="latched btn-square btn-outline btn-sm" title="To Public Site" href="/">
+						<IconWorld class="size-5 text-primary" />
 					</Button>
 				</span>
 

@@ -1,34 +1,23 @@
 <script lang="ts">
-	type Tab = {
-		key: string;
-		label: string;
-	};
+	import type { Snippet } from 'svelte';
 
 	let {
-		tabs,
-		active,
-		onchange
+		children,
+		vertical = false,
+		wrap = false,
+		class: className = '',
+		style = ''
 	}: {
-		tabs: Tab[];
-		active: string;
-		onchange?: (key: string) => void;
+		children: Snippet;
+		vertical?: boolean;
+		wrap?: boolean;
+		class?: string;
+		style?: string;
 	} = $props();
 </script>
 
-<div class="button-group">
-	{#each tabs as tab, i (tab.key)}
-		{@const isActive = tab.key === active}
-		{@const hasUnlatchedRight = isActive && i < tabs.length - 1 && tabs[i + 1].key !== active}
-		<button
-			class="btn btn-sm"
-			class:btn-primary={isActive}
-			class:latched={isActive}
-			style:z-index={hasUnlatchedRight ? 1 : undefined}
-			onclick={() => onchange?.(tab.key)}
-		>
-			{tab.label}
-		</button>
-	{/each}
+<div class="button-group {className}" class:vertical class:wrap {style}>
+	{@render children()}
 </div>
 
 <style>
@@ -36,21 +25,68 @@
 		display: inline-flex;
 	}
 
-	.button-group > .btn {
+	.button-group > :global(.btn) {
 		border-radius: 0;
+		position: relative;
+		--shadow-color: var(--cmc-brown) !important;
 	}
 
-	.button-group > .btn:first-child {
+	/* Horizontal (default) */
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:first-child) {
 		border-start-start-radius: var(--radius-field);
 		border-end-start-radius: var(--radius-field);
 	}
 
-	.button-group > .btn:last-child {
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:last-child) {
 		border-start-end-radius: var(--radius-field);
 		border-end-end-radius: var(--radius-field);
 	}
 
-	.button-group > .btn:not(:first-child) {
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:not(:first-child)) {
 		margin-inline-start: -2.5px;
 	}
+
+	/* Vertical */
+	.button-group.vertical {
+		flex-direction: column;
+	}
+
+	.button-group.vertical > :global(.btn:first-child) {
+		border-start-start-radius: var(--radius-field);
+		border-start-end-radius: var(--radius-field);
+	}
+
+	.button-group.vertical > :global(.btn:last-child) {
+		border-end-start-radius: var(--radius-field);
+		border-end-end-radius: var(--radius-field);
+	}
+
+	.button-group.vertical > :global(.btn:not(:first-child)) {
+		margin-block-start: -2.5px;
+	}
+
+	/* Wrap — buttons keep their own radius and tile with overlap in both axes */
+	.button-group.wrap {
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.button-group.wrap > :global(.btn) {
+		border-radius: var(--radius-field);
+		margin: 0 -1.25px -1.25px 0;
+	}
+
+	/* Horizontal: leftmost on top */
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(5)) { z-index: 5; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(4)) { z-index: 4; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(3)) { z-index: 3; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(2)) { z-index: 2; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(1)) { z-index: 1; }
+
+	/* Vertical: bottommost on top */
+	.button-group.vertical > :global(.btn:nth-child(1)) { z-index: 1; }
+	.button-group.vertical > :global(.btn:nth-child(2)) { z-index: 2; }
+	.button-group.vertical > :global(.btn:nth-child(3)) { z-index: 3; }
+	.button-group.vertical > :global(.btn:nth-child(4)) { z-index: 4; }
+	.button-group.vertical > :global(.btn:nth-child(5)) { z-index: 5; }
 </style>

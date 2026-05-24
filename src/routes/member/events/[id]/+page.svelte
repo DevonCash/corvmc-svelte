@@ -5,11 +5,11 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import { fullDate, formatTime, formatCents, formatDate } from '$lib/utils/format';
+	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { purchaseTickets } from '$lib/remote/events.remote';
 
 	import type { PageProps } from './$types';
@@ -40,6 +40,9 @@
 		return tags.split(',').map((t) => t.trim()).filter(Boolean);
 	}
 
+	const tagList = $derived(parseTags(evt.tags));
+	const primaryTag = $derived(tagList[0] ?? null);
+
 	async function handlePurchaseSuccess(result?: unknown) {
 		const data = result as { redirectUrl?: string } | undefined;
 		if (data?.redirectUrl) {
@@ -53,69 +56,110 @@
 </script>
 
 <PageHeader title={evt.title} backHref="/member/events" />
-<PageContent width="2xl">
+<PageContent>
 
-	{#if evt.posterUrl}
-		<figure class="rounded-lg overflow-hidden">
-			<img src={evt.posterUrl} alt={evt.title} class="w-full max-h-64 object-cover" />
-		</figure>
+	{#if data.myTicket}
+		<a href="/member/events/{evt.id}" class="tixbanner">
+			<div class="tixbanner__icon">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M5 12l4 4 10-10"/></svg>
+			</div>
+			<div class="tixbanner__text">
+				<strong>You're going!</strong>
+				<small>{data.myTicket.code}</small>
+			</div>
+			<span class="tixbanner__action">
+				View ticket
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg>
+			</span>
+		</a>
 	{/if}
 
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<p class="opacity-70">
-				{fullDate(evt.startsAt)}
-				{#if evt.doorsAt}
-					· Doors {formatTime(evt.doorsAt!)}
-				{/if}
-				· {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
-			</p>
+	<div class="edet">
+		<div class="edet__poster">
+			<PosterCard
+				href="/member/events/{evt.id}"
+				title={evt.title}
+				posterUrl={evt.posterUrl}
+				startsAt={evt.startsAt}
+				ticketingEnabled={evt.ticketingEnabled}
+				ticketPrice={evt.ticketPrice}
+				tags={evt.tags}
+				tapeLabel={primaryTag ?? undefined}
+				tapeColor={primaryTag ? tagToTapeVariant(primaryTag) : ''}
+				isStatic
+				class="w-full"
+			/>
+		</div>
 
-			{#if evt.description}
-				<p class="mt-2 whitespace-pre-line">{evt.description}</p>
-			{/if}
-
-			{#if parseTags(evt.tags).length > 0}
-				<div class="flex gap-1.5 flex-wrap mt-3">
-					{#each parseTags(evt.tags) as tag (tag)}
-						<span class="badge badge-outline">{tag}</span>
+		<div class="edet__main">
+			{#if tagList.length > 0}
+				<div class="edet__tags">
+					{#each tagList as tag (tag)}
+						<span class="sticker {tagToStickerColor(tag)}">{tag}</span>
 					{/each}
 				</div>
 			{/if}
-		</div>
-	</div>
 
-	{#if evt.ticketingEnabled && evt.ticketPrice}
-		<div class="card bg-base-100 shadow">
-			<div class="card-body">
-				<h3 class="card-title text-base">Tickets</h3>
-				<div class="flex items-baseline gap-2">
-					{#if data.isSustainingMember && discountedPrice}
-						<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-						<span class="text-sm line-through opacity-50">{formatCents(evt.ticketPrice)}</span>
-						<Badge variant="success">Member 50% off</Badge>
-					{:else}
-						<span class="text-lg font-bold">{formatCents(evt.ticketPrice)}</span>
-					{/if}
+			<h1 class="edet__title">{evt.title}</h1>
+
+			<div class="edet__facts">
+				<div class="edet__fact">
+					<span class="edet__fact-label">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+						Date
+					</span>
+					<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
 				</div>
-				{#if data.remaining !== null}
-					<p class="text-sm mt-1">
-						{#if soldOut}
-							<span class="text-error font-medium">Sold out</span>
-						{:else}
-							{data.remaining} tickets remaining
+				<div class="edet__fact">
+					<span class="edet__fact-label">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+						Time
+					</span>
+					<span class="edet__fact-value">
+						{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+						{#if evt.doorsAt}
+							<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span>
 						{/if}
-					</p>
-				{/if}
-				{#if !soldOut}
-					<div class="card-actions mt-3">
+					</span>
+				</div>
+				<div class="edet__fact">
+					<span class="edet__fact-label">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M13 6v12"/></svg>
+						Price
+					</span>
+					<span class="edet__fact-value">
+						{#if !evt.ticketingEnabled}
+							Free
+						{:else if evt.ticketPrice}
+							{#if data.isSustainingMember && discountedPrice}
+								{formatCents(discountedPrice)}
+								<span style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px">{formatCents(evt.ticketPrice)}</span>
+							{:else}
+								{formatCents(evt.ticketPrice)}
+							{/if}
+						{:else}
+							Free
+						{/if}
+					</span>
+				</div>
+			</div>
+
+			{#if evt.description}
+				<p class="edet__desc">{evt.description}</p>
+			{/if}
+
+			{#if evt.ticketingEnabled && evt.ticketPrice}
+				<div class="edet__ctas">
+					{#if soldOut}
+						<button class="btn btn-lg" disabled>Sold Out</button>
+					{:else if !data.myTicket}
 						<Action
 							action={purchaseTickets}
 							label="Get Tickets"
 							modalTitle="Get Tickets"
 							submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-							class="btn-primary"
+							class="btn-primary btn-lg"
 							onsuccess={handlePurchaseSuccess}
 							onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 						>
@@ -146,9 +190,7 @@
 								</Field>
 
 								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
-
 								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
-
 								<Field name="coverFees" type="checkbox" bind:value={coverFees}
 									checkboxLabel="Cover processing fees so the collective receives the full amount" />
 
@@ -163,10 +205,14 @@
 								</div>
 							{/snippet}
 						</Action>
-					</div>
-				{/if}
-			</div>
+					{/if}
+
+					{#if data.remaining !== null && !soldOut}
+						<span class="text-sm" style="color: var(--fg-2)">{data.remaining} remaining</span>
+					{/if}
+				</div>
+			{/if}
 		</div>
-	{/if}
+	</div>
 
 </PageContent>

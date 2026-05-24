@@ -12,7 +12,6 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -41,11 +40,14 @@
 
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
+	const hasHours = $derived(creditData.freeHoursBalance > 0);
 
 	// Waitlist confirmation via ?confirm={id}
 	const confirmReservation = $derived(
 		data.confirmId
-			? upcoming.find((r) => r.id === data.confirmId && r.status === 'waitlisted' && r.waitlistNotifiedAt)
+			? upcoming.find(
+					(r) => r.id === data.confirmId && r.status === 'waitlisted' && r.waitlistNotifiedAt
+				)
 			: null
 	);
 	let confirmModalOpen = $state(false);
@@ -72,25 +74,66 @@
 	<CreateModal {isSustaining} />
 </PageHeader>
 <PageContent>
-	<p class="text-sm opacity-60">
-		Our practice space is available for $15/hour between 9 AM and 10 PM daily. Reserve anywhere from
-		1 to 8 hours at a time with at least one day's notice. Payment is due at the reservation start
-		time via cash in person or card online. If you have specific needs for equipment or space, note
-		them in the reservation form.
-	</p>
+	<div
+		class="overflow-hidden rounded-lg border-[2.5px] border-(--cmc-brown) bg-(--cmc-parchment)"
+	>
+		<div class="grid grid-cols-2 divide-x divide-(--cmc-brown)/30 sm:grid-cols-4">
+			<div class="px-4 py-3 text-center">
+				<span class="block text-[.6rem] font-bold tracking-wide text-(--cmc-brown)/60 uppercase"
+					>Rate</span
+				>
+				<span class="block text-lg font-bold text-(--cmc-brown)">$15/hr</span>
+			</div>
+			<div class="px-4 py-3 text-center">
+				<span class="block text-[.6rem] font-bold tracking-wide text-(--cmc-brown)/60 uppercase"
+					>Hours</span
+				>
+				<span class="block text-lg font-bold text-(--cmc-brown)">9 AM – 10 PM</span>
+			</div>
+			<div class="px-4 py-3 text-center">
+				<span class="block text-[.6rem] font-bold tracking-wide text-(--cmc-brown)/60 uppercase"
+					>Length</span
+				>
+				<span class="block text-lg font-bold text-(--cmc-brown)">1 – 8 hrs</span>
+			</div>
+			<div class="px-4 py-3 text-center">
+				<span class="block text-[.6rem] font-bold tracking-wide text-(--cmc-brown)/60 uppercase"
+					>Notice</span
+				>
+				<span class="block text-lg font-bold text-(--cmc-brown)">1 day+</span>
+			</div>
+		</div>
+		<details class="border-t-[2.5px] border-(--cmc-brown)/30">
+			<summary
+				class="cursor-pointer px-4 py-2 text-xs font-semibold tracking-wide text-(--cmc-brown)/60 uppercase hover:text-(--cmc-brown)"
+			>
+				Booking Policy
+			</summary>
+			<div class="space-y-1 px-4 pb-3 text-sm opacity-70">
+				<p>Payment is due at reservation start time via cash in person or card online.</p>
+				<p>
+					If you have specific needs for equipment or space, note them in the reservation form.
+				</p>
+			</div>
+		</details>
+	</div>
 
 	{#if isSustaining}
 		<div
 			class="flex flex-col gap-1 rounded-lg border border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2"
 		>
 			<div class="flex items-center gap-2">
-				<IconClock size={18} class="text-success" />
-				<span class="font-medium">{creditData.freeHoursBalance}</span>
-				<span class="text-sm opacity-60">free hours remaining</span>
+				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
+				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
+					>{creditData.freeHoursBalance}</span
+				>
+				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">free hours remaining</span>
 			</div>
 			{#if creditData.creditsResetAt}
-				<span class="text-sm opacity-60">
-					Resets to {creditData.hoursPerReset} on {formatDate(creditData.creditsResetAt as ISODateString)}
+				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
+					Resets to {creditData.hoursPerReset} on {formatDate(
+						creditData.creditsResetAt as ISODateString
+					)}
 				</span>
 			{/if}
 		</div>
@@ -108,14 +151,24 @@
 
 	<div class="flex w-full flex-row flex-wrap items-center justify-between gap-2">
 		<h2 class="shrink-0 text-2xl font-bold text-nowrap">My Reservations</h2>
-		<ButtonGroup
-			tabs={[
-				{ key: 'upcoming', label: `Active (${upcoming.length})` },
-				{ key: 'all', label: 'All' }
-			]}
-			active={activeTab}
-			onchange={(key) => (activeTab = key as 'upcoming' | 'all')}
-		/>
+		<ButtonGroup>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={activeTab === 'upcoming'}
+				class:latched={activeTab === 'upcoming'}
+				onclick={() => (activeTab = 'upcoming')}
+			>
+				Active ({upcoming.length})
+			</button>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={activeTab === 'all'}
+				class:latched={activeTab==='all'}
+				onclick={() => (activeTab = 'all')}
+			>
+				All
+			</button>
+		</ButtonGroup>
 	</div>
 
 	<DataTable
@@ -159,10 +212,10 @@
 			</Column>
 			<Column key="id" header="" shrink stopClick>
 				{#snippet cell(_value, row)}
-					<ActionGroup>
-						<CancelSeriesAction seriesId={row.id} class="btn-ghost btn-square">
+					<ButtonGroup>
+						<CancelSeriesAction seriesId={row.id} class="btn-square btn-ghost">
 							{#snippet trigger({ onclick, disabled })}
-								<Button class="btn-ghost btn-square" {disabled} {onclick}>
+								<Button class="btn-square btn-ghost btn-sm" {disabled} {onclick}>
 									<IconX size={20} />
 								</Button>
 							{/snippet}
@@ -176,22 +229,7 @@
 							class="btn-xs btn-primary"
 						>
 							{#snippet trigger({ onclick, disabled })}
-								<Button
-									class="btn-ghost btn-square"
-									{disabled}
-									onclick={() => {
-										const start = new Date(row.startsAt);
-										const end = new Date(row.endsAt);
-										editDate = start.toISOString().slice(0, 10);
-										editStartTime = start.toTimeString().slice(0, 5);
-										editEndTime = end.toTimeString().slice(0, 5);
-										const label = row.frequencyLabel.toLowerCase();
-										if (label.includes('2') || label.includes('bi')) editFrequency = 'biweekly';
-										else if (label.includes('month')) editFrequency = 'monthly';
-										else editFrequency = 'weekly';
-										onclick();
-									}}
-								>
+								<Button class="btn-square btn-ghost btn-sm" {disabled} {onclick}>
 									<IconPencil size={20} />
 								</Button>
 							{/snippet}
@@ -224,10 +262,10 @@
 								</p>
 							{/snippet}
 						</Action>
-						<Button class="btn-ghost btn-square" title="Pause series">
+						<Button class="btn-square btn-sm btn-ghost" title="Pause series">
 							<IconPlayerPause size={20} />
 						</Button>
-					</ActionGroup>
+					</ButtonGroup>
 				{/snippet}
 			</Column>
 		</DataTable>
@@ -246,7 +284,12 @@
 </PageContent>
 
 {#if confirmReservation}
-	<Modal bind:open={confirmModalOpen} title="Slot Available" maxWidth="max-w-md" onclose={closeConfirmModal}>
+	<Modal
+		bind:open={confirmModalOpen}
+		title="Slot Available"
+		maxWidth="max-w-md"
+		onclose={closeConfirmModal}
+	>
 		<Form
 			remote={confirmWaitlisted}
 			successToast="Reservation confirmed"
@@ -265,13 +308,15 @@
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-xs opacity-60">
-						Confirm by {formatDate(confirmReservation.waitlistExpiresAt)} or the slot will be offered to someone else.
+						Confirm by {formatDate(confirmReservation.waitlistExpiresAt)} or the slot will be offered
+						to someone else.
 					</p>
 				{/if}
 				<input type="hidden" name="id" value={confirmReservation.id} />
 				<div class="flex justify-end gap-2">
-					<Button type="button" class="btn-ghost btn-sm" onclick={closeConfirmModal}>Dismiss</Button>
-					<SubmitButton label="Confirm Reservation" class="btn-success btn-sm" />
+					<Button type="button" class="btn-ghost btn-sm" onclick={closeConfirmModal}>Dismiss</Button
+					>
+					<SubmitButton label="Confirm Reservation" class="btn-sm btn-success" />
 				</div>
 			</div>
 		</Form>

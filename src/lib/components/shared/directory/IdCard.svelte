@@ -104,7 +104,7 @@
 			0 14px 26px -10px rgba(20, 20, 25, 0.4),
 			0 4px 10px -4px rgba(20, 20, 25, 0.2),
 			inset 0 0 0 1px rgba(0, 0, 0, 0.05); */
-		border: 4px solid var(--cmc-brown);
+		border: 2px solid var(--cmc-brown);
 		overflow: visible;
 		transform: rotate(var(--tilt, -1deg));
 		transition:

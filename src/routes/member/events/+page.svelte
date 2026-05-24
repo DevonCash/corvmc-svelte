@@ -2,7 +2,11 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import TicketCard from './TicketCard.svelte';
+	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
+	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
+	import Carousel from '$lib/components/shared/Carousel.svelte';
+	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
+	import { tagToTapeVariant } from '$lib/utils/tag-colors';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -13,6 +17,40 @@
 		)
 	);
 
+	const ticketedEventIds = $derived(new Set(activeTickets.map((t) => t.eventId)));
+
+	const eventTagMap = $derived(
+		new Map(data.events.map((e) => [e.id, e.tags]))
+	);
+
+	const allTags = $derived.by(() => {
+		const tags = new Set<string>();
+		for (const evt of data.events) {
+			if (evt.tags) {
+				for (const t of evt.tags.split(',')) {
+					const trimmed = t.trim();
+					if (trimmed) tags.add(trimmed);
+				}
+			}
+		}
+		return [...tags];
+	});
+
+	let activeFilter = $state<string | null>(null);
+
+	const filteredEvents = $derived(
+		activeFilter
+			? data.events.filter((e) => {
+					if (!e.tags) return false;
+					return e.tags.split(',').some((t) => t.trim() === activeFilter);
+				})
+			: data.events
+	);
+
+	function primaryTag(tags: string | null | undefined): string | undefined {
+		if (!tags) return undefined;
+		return tags.split(',')[0]?.trim() || undefined;
+	}
 </script>
 
 <PageHeader title="Events" />
@@ -20,27 +58,51 @@
 
 	{#if activeTickets.length > 0}
 		<section>
-			<div class="flex items-center justify-between mb-3">
-				<h3 class="text-sm font-medium opacity-60 uppercase tracking-wide">My Tickets</h3>
-			</div>
-			<div class="flex overflow-x-auto gap-3 pb-2">
+			<SectionLabel label="My Tickets" count={activeTickets.length} />
+			<Carousel itemCount={activeTickets.length} cardWidth={360}>
 				{#each activeTickets as ticket (ticket.id)}
-					<TicketCard {ticket} class="shrink-0 w-80" />
+					<TicketStub {ticket} tags={eventTagMap.get(ticket.eventId) ?? null} />
 				{/each}
-			</div>
+			</Carousel>
 		</section>
 	{/if}
 
 	<section>
-		<h3 class="text-sm font-medium opacity-60 uppercase tracking-wide mb-3">Upcoming Events</h3>
+		<SectionLabel label="Upcoming" count={filteredEvents.length} />
 
-		{#if data.events.length === 0}
+		{#if allTags.length > 1}
+			<div class="mb-4">
+				<ButtonGroup wrap>
+					<button
+						class="btn btn-sm"
+						class:latched={activeFilter === null}
+						onclick={() => (activeFilter = null)}
+					>
+						All <span class="opacity-60 ml-1">{data.events.length}</span>
+					</button>
+					{#each allTags as tag (tag)}
+						<button
+							class="btn btn-sm"
+							class:latched={activeFilter === tag}
+							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
+						>
+							{tag}
+							<span class="opacity-60 ml-1">
+								{data.events.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
+							</span>
+						</button>
+					{/each}
+				</ButtonGroup>
+			</div>
+		{/if}
+
+		{#if filteredEvents.length === 0}
 			<div class="text-center py-8 opacity-60">
 				<p class="text-base">No upcoming events right now. Check back soon!</p>
 			</div>
 		{:else}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-				{#each data.events as evt (evt.id)}
+			<div class="pgrid">
+				{#each filteredEvents as evt (evt.id)}
 					<PosterCard
 						href="/member/events/{evt.id}"
 						title={evt.title}
@@ -49,6 +111,9 @@
 						ticketingEnabled={evt.ticketingEnabled}
 						ticketPrice={evt.ticketPrice}
 						tags={evt.tags}
+						tapeLabel={primaryTag(evt.tags)}
+						tapeColor={primaryTag(evt.tags) ? tagToTapeVariant(primaryTag(evt.tags)!) : ''}
+						hasTicket={ticketedEventIds.has(evt.id)}
 						class="w-full"
 					/>
 				{/each}

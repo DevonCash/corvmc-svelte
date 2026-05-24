@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { formatDayOfWeek, formatDayNumber, formatShortMonth } from '$lib/utils/format';
 	import type { ISODateString } from '$lib/types/dates';
-	import ActionGroup from './ActionGroup.svelte';
+	import ButtonGroup from './ButtonGroup.svelte';
 
 	let {
 		date,
@@ -31,9 +31,9 @@
 		</div>
 		<div class="flex min-h-5 items-center justify-end rounded-br-lg bg-base-200 pt-0">
 			{#if actions}
-				<ActionGroup class="m-[-2.4px]">
+				<ButtonGroup class="m-[-2.4px]">
 					{@render actions()}
-				</ActionGroup>
+				</ButtonGroup>
 			{/if}
 		</div>
 	</div>
