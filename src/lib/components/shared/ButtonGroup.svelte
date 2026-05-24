@@ -78,12 +78,12 @@
 		margin-block-end: -2.5px;
 	}
 
-	/* Horizontal: leftmost on top */
-	.button-group:not(.vertical) > :global(.btn:nth-last-child(5)) { z-index: 5; }
-	.button-group:not(.vertical) > :global(.btn:nth-last-child(4)) { z-index: 4; }
-	.button-group:not(.vertical) > :global(.btn:nth-last-child(3)) { z-index: 3; }
-	.button-group:not(.vertical) > :global(.btn:nth-last-child(2)) { z-index: 2; }
-	.button-group:not(.vertical) > :global(.btn:nth-last-child(1)) { z-index: 1; }
+	/* Horizontal (no wrap): leftmost on top */
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(5)) { z-index: 5; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(4)) { z-index: 4; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(3)) { z-index: 3; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(2)) { z-index: 2; }
+	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(1)) { z-index: 1; }
 
 	/* Vertical: bottommost on top */
 	.button-group.vertical > :global(.btn:nth-child(1)) { z-index: 1; }
