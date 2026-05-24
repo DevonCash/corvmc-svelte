@@ -4,7 +4,9 @@
 	import { fullDate, formatTime } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 
-	let { data }: { data: any } = $props();
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const evt = $derived(data.event);
 </script>

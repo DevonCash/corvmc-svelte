@@ -42,12 +42,12 @@ export const reservation = sqliteTable(
 	'reservation',
 	{
 		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-		bookerType: text('booker_type').notNull(),
+		bookerType: text('booker_type', { enum: bookerTypes }).notNull(),
 		bookerId: text('booker_id').notNull(),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		status: text('status').notNull().default('scheduled'),
+		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
 		startsAt: timestamp('starts_at').notNull(),
 		endsAt: timestamp('ends_at').notNull(),
 		notes: text('notes'),

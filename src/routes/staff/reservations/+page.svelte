@@ -18,9 +18,9 @@
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { StaffReservationsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffReservationsResponse } = $props();
+	let { data }: PageProps = $props();
 
 	type Reservation = (typeof data.reservations)[number];
 

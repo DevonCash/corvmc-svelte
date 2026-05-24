@@ -227,7 +227,7 @@ export async function getEquipmentById(id: string) {
 export interface ListEquipmentOptions {
 	search?: string;
 	categoryId?: string;
-	status?: string;
+	status?: EquipmentStatus;
 	includeDeleted?: boolean;
 }
 

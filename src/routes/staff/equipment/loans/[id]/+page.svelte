@@ -15,6 +15,7 @@
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
+	import { toISO } from '$lib/server/db/schema/columns';
 
 	let id = $derived(page.params.id!);
 	let loan = $derived(await getLoan(id));
@@ -66,26 +67,26 @@
 				<dd>{loan.quantity}</dd>
 
 				<dt class="opacity-60">Requested pickup</dt>
-				<dd>{formatDate(loan.requestedPickupDate.toISOString())}</dd>
+				<dd>{formatDate(toISO(loan.requestedPickupDate))}</dd>
 
 				{#if loan.scheduledPickupDate}
 					<dt class="opacity-60">Scheduled pickup</dt>
-					<dd>{formatDate(loan.scheduledPickupDate.toISOString())}</dd>
+					<dd>{formatDate(toISO(loan.scheduledPickupDate))}</dd>
 				{/if}
 
 				{#if loan.dueDate}
 					<dt class="opacity-60">Due date</dt>
-					<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate.toISOString())}</dd>
+					<dd class:text-error={loan.isOverdue}>{formatDate(toISO(loan.dueDate))}</dd>
 				{/if}
 
 				{#if loan.checkedOutAt}
 					<dt class="opacity-60">Checked out</dt>
-					<dd>{formatDate(loan.checkedOutAt.toISOString())}</dd>
+					<dd>{formatDate(toISO(loan.checkedOutAt))}</dd>
 				{/if}
 
 				{#if loan.returnedAt}
 					<dt class="opacity-60">Returned</dt>
-					<dd>{formatDate(loan.returnedAt.toISOString())}</dd>
+					<dd>{formatDate(toISO(loan.returnedAt))}</dd>
 				{/if}
 
 				{#if loan.dailyRateCents != null}

@@ -9,9 +9,9 @@
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { StaffPaymentsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffPaymentsResponse } = $props();
+	let { data }: PageProps = $props();
 
 	type Payment = (typeof data.payments)[number];
 

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import type { AudienceDetailResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: AudienceDetailResponse } = $props();
+	let { data }: PageProps = $props();
 
 	let success = $state(false);
 

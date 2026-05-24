@@ -18,7 +18,7 @@ import { DateTime } from 'luxon';
 // EventService — create, update, publish, cancel events
 // ---------------------------------------------------------------------------
 
-export type EventStatus = 'draft' | 'published' | 'cancelled';
+export type { EventStatus } from '$lib/server/db/schema/event';
 
 export interface EventRow {
 	id: string;

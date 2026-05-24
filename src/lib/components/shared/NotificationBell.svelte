@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Notification } from '$lib/server/db/schema';
+	import { toISO } from '$lib/server/db/schema/columns';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
@@ -98,7 +99,7 @@
 			body: JSON.stringify({ id })
 		});
 		notifications = notifications.map((n) =>
-			n.id === id ? { ...n, readAt: new Date().toISOString() } : n
+			n.id === id ? { ...n, readAt: toISO(new Date()) } : n
 		);
 		unreadCount = Math.max(0, unreadCount - 1);
 	}
@@ -111,7 +112,7 @@
 		});
 		notifications = notifications.map((n) => ({
 			...n,
-			readAt: n.readAt ?? new Date().toISOString()
+			readAt: n.readAt ?? toISO(new Date())
 		}));
 		unreadCount = 0;
 	}

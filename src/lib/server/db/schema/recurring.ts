@@ -9,6 +9,9 @@ import { timestamp, uuid, type Serialized } from './columns';
 export const RECURRING_FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const;
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 
+export const prototypeTypes = ['user', 'band', 'event', 'lesson', 'reservation'] as const;
+export type PrototypeType = (typeof prototypeTypes)[number];
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -18,7 +21,7 @@ export const recurringSeries = sqliteTable(
 	{
 		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		supersededBy: text('superseded_by'),
-		prototypeType: text('prototype_type').notNull(),
+		prototypeType: text('prototype_type', { enum: prototypeTypes }).notNull(),
 		prototypeId: text('prototype_id').notNull(),
 		rrule: text('rrule').notNull(),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),

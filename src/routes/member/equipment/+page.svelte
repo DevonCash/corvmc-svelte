@@ -13,12 +13,12 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
-	import type { MemberEquipmentResponse } from '$lib/server/db/schema/api';
 	import { estimateLoanCost } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { formatCents } from '$lib/utils/format';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: MemberEquipmentResponse } = $props();
+	let { data }: PageProps = $props();
 
 	let showRequestModal = $state(false);
 	let selectedEquipmentId = $state<string | undefined>(undefined);

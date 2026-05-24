@@ -26,9 +26,9 @@
 
 
 	} from '@tabler/icons-svelte';
-	import type { StaffLayoutResponse } from '$lib/server/db/schema/api';
+	import type { LayoutProps } from './$types';
 
-	let { data, children }: { data: StaffLayoutResponse; children: import('svelte').Snippet } = $props();
+	let { data, children }: LayoutProps = $props();
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },

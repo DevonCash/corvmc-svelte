@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { UnsubscribeResponse } from '$lib/server/db/schema/api';
 	import Button from '$lib/components/shared/Button.svelte';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: UnsubscribeResponse } = $props();
+	let { data }: PageProps = $props();
 </script>
 
 <div class="max-w-md mx-auto p-6 text-center space-y-4">

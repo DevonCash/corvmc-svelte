@@ -7,9 +7,9 @@
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { StaffEventsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffEventsResponse } = $props();
+	let { data }: PageProps = $props();
 	let showCreateModal = $state(false);
 
 	function buildPageHref(page: number): string {

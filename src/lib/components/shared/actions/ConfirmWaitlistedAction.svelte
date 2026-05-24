@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import { formatDate } from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 
 	let {
 		reservation,
@@ -13,9 +14,9 @@
 	}: {
 		reservation: {
 			id: string;
-			startsAt: string;
-			endsAt: string;
-			waitlistExpiresAt?: string | null;
+			startsAt: ISODateString;
+			endsAt: ISODateString;
+			waitlistExpiresAt?: ISODateString | null;
 		};
 		class?: string;
 		onsuccess?: () => void;

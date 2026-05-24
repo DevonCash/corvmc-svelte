@@ -9,9 +9,9 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { loanStatuses } from '$lib/config';
 	import { CreateLoanAction } from '$lib/components/shared/actions';
-	import type { StaffEquipmentLoansResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffEquipmentLoansResponse } = $props();
+	let { data }: PageProps = $props();
 
 	function buildPageHref(page: number): string {
 		const params = new URLSearchParams();

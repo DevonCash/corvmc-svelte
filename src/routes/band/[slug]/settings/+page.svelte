@@ -8,9 +8,9 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
-	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: BandLayoutResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const band = $derived(data?.band);
 

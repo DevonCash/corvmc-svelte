@@ -4,6 +4,7 @@
 	import type { DataTableContext, ColumnDef, ColumnType } from './DataTable.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatDateTime, formatCents } from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 
 	let {
 		data,
@@ -34,9 +35,9 @@
 		if (value == null) return '—';
 		switch (type) {
 			case 'date':
-				return formatDate(String(value));
+				return formatDate(String(value) as ISODateString);
 			case 'datetime':
-				return formatDateTime(String(value));
+				return formatDateTime(String(value) as ISODateString);
 			case 'currency':
 				return formatCents(Number(value));
 			default:

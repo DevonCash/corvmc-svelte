@@ -2,9 +2,9 @@
 	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { DirectoryMemberResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: DirectoryMemberResponse } = $props();
+	let { data }: PageProps = $props();
 	const member = $derived(data.member);
 	const contact = $derived(member.directoryContact ?? {});
 	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);

@@ -16,9 +16,9 @@
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { StaffEventDetailResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffEventDetailResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const evt = $derived(data.event);
 

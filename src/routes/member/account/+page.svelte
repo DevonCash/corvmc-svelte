@@ -19,9 +19,9 @@
 		getMySubscriptions,
 		getAvailableLists
 	} from '$lib/remote/account.remote';
-	import type { AccountResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: AccountResponse } = $props();
+	let { data }: PageProps = $props();
 
 
 	interface NotifPref {

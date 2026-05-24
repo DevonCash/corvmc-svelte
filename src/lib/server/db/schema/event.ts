@@ -4,6 +4,9 @@ import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { reservation } from './reservation';
 
+export const eventStatuses = ['draft', 'published', 'cancelled'] as const;
+export type EventStatus = (typeof eventStatuses)[number];
+
 export const event = sqliteTable(
 	'event',
 	{
@@ -13,7 +16,7 @@ export const event = sqliteTable(
 		startsAt: timestamp('starts_at').notNull(),
 		endsAt: timestamp('ends_at').notNull(),
 		doorsAt: timestamp('doors_at'),
-		status: text('status').notNull().default('draft'),
+		status: text('status', { enum: eventStatuses }).notNull().default('draft'),
 		publishedAt: timestamp('published_at'),
 		reservationId: text('reservation_id').references(() => reservation.id),
 		posterKey: text('poster_key'),

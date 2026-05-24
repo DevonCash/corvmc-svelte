@@ -12,23 +12,9 @@
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import { purchaseTickets } from '$lib/remote/events.remote';
 
-	let { data }: { data: {
-		event: {
-			id: string;
-			title: string;
-			description: string | null;
-			startsAt: string;
-			endsAt: string;
-			doorsAt: string | null;
-			tags: string | null;
-			posterUrl: string | null;
-			ticketingEnabled: boolean;
-			ticketPrice: number | null;
-			ticketQuantity: number | null;
-		};
-		remaining: number | null;
-		isSustainingMember: boolean;
-	} } = $props();
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const evt = $derived(data.event);
 	const soldOut = $derived(data.remaining === 0);
@@ -80,7 +66,7 @@
 			<p class="opacity-70">
 				{fullDate(evt.startsAt)}
 				{#if evt.doorsAt}
-					· Doors {formatTime(evt.doorsAt)}
+					· Doors {formatTime(evt.doorsAt!)}
 				{/if}
 				· {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 			</p>

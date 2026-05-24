@@ -5,9 +5,9 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import type { BandLayoutResponse, BandUpcomingResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: BandLayoutResponse & BandUpcomingResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const band = $derived(data.band);
 	const upcoming = $derived(data.upcoming);

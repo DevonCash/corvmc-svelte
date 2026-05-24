@@ -192,13 +192,13 @@ describe('addCredits', () => {
 	});
 
 	it('throws when amount is not positive', async () => {
-		await expect(addCredits('user-1', 'free_hours', 0, 'test')).rejects.toThrow('Amount must be positive');
-		await expect(addCredits('user-1', 'free_hours', -1, 'test')).rejects.toThrow('Amount must be positive');
+		await expect(addCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
+		await expect(addCredits('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
 	});
 
 	it('throws when user not found', async () => {
 		selectResult = [];
-		await expect(addCredits('missing', 'free_hours', 1, 'test')).rejects.toThrow('User missing not found');
+		await expect(addCredits('missing', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow('User missing not found');
 	});
 });
 
@@ -233,7 +233,7 @@ describe('deductCredits', () => {
 	});
 
 	it('throws when amount is not positive', async () => {
-		await expect(deductCredits('user-1', 'free_hours', 0, 'test')).rejects.toThrow('Amount must be positive');
+		await expect(deductCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
 	});
 });
 
@@ -268,12 +268,12 @@ describe('setBalance', () => {
 	});
 
 	it('throws for negative balance', async () => {
-		await expect(setBalance('user-1', 'free_hours', -1, 'test')).rejects.toThrow('Balance cannot be negative');
+		await expect(setBalance('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow('Balance cannot be negative');
 	});
 
 	it('throws when user not found', async () => {
 		selectResult = [];
-		await expect(setBalance('missing', 'free_hours', 5, 'test')).rejects.toThrow('User missing not found');
+		await expect(setBalance('missing', 'free_hours', 5, 'admin_adjustment')).rejects.toThrow('User missing not found');
 	});
 });
 

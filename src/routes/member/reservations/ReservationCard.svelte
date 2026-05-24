@@ -9,6 +9,7 @@
 		formatDayNumber,
 		formatShortMonth
 	} from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import ActionGroup from '$lib/components/shared/ActionGroup.svelte';
 	import {
@@ -48,16 +49,16 @@
 				<span class="text-xs opacity-40">
 					{#if reservation.status === 'waitlisted'}
 						{#if reservation.waitlistNotifiedAt}
-							Slot available — confirm by {formatDate(reservation.waitlistExpiresAt ?? '')}
+							Slot available — confirm by {formatDate(reservation.waitlistExpiresAt!)}
 						{:else}
 							Waiting for slot
 						{/if}
 					{:else if reservation.refundedAt}
-						Refunded {formatDate(reservation.refundedAt)}
+						Refunded {formatDate(reservation.refundedAt!)}
 					{:else if reservation.status === 'cancelled'}
 						Cancelled
 					{:else if reservation.paidAt}
-						Paid {formatDate(reservation.paidAt)}{#if reservation.paidWithCredits}
+						Paid {formatDate(reservation.paidAt!)}{#if reservation.paidWithCredits}
 							· credits{/if}
 					{:else if reservation.paidWithCredits}
 						Paid with credits

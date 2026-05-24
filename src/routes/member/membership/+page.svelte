@@ -11,10 +11,10 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { MembershipResponse } from '$lib/server/db/schema/api';
 	import { createSubscription, updateAmount, resumeSubscription } from '$lib/remote/membership.remote';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: MembershipResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);

@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
-import { type CreditType, creditTypes } from '$lib/server/db/schema/finance';
+import { type CreditType, type TransactionSource, creditTypes } from '$lib/server/db/schema/finance';
 import { calculateTotalWithFeeCoverage } from './fees';
 import { getStripeProductId } from './product-config-service';
 
@@ -467,7 +467,7 @@ async function reverseDeductions(
 	userId: string,
 	deductions: CreditDeduction[],
 	sourceId: string | undefined,
-	source: string
+	source: TransactionSource
 ): Promise<void> {
 	for (const deduction of deductions) {
 		await creditService.addCredits(

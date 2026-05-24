@@ -5,10 +5,10 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 	import { payReservation } from '$lib/remote/reservations.remote';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: ReservationPayResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);

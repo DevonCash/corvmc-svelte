@@ -15,9 +15,9 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import type { MemberLayoutResponse } from '$lib/server/db/schema/api';
+	import type { LayoutProps } from './$types';
 
-	let { data, children }: { data: MemberLayoutResponse; children: import('svelte').Snippet } = $props();
+	let { data, children }: LayoutProps = $props();
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },

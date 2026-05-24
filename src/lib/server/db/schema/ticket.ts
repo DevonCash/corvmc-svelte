@@ -4,6 +4,9 @@ import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
 import { event } from './event';
 
+export const ticketStatuses = ['pending', 'valid', 'checked_in', 'cancelled'] as const;
+export type TicketStatus = (typeof ticketStatuses)[number];
+
 export const ticket = sqliteTable(
 	'ticket',
 	{
@@ -16,7 +19,7 @@ export const ticket = sqliteTable(
 		attendeeName: text('attendee_name').notNull(),
 		attendeeEmail: text('attendee_email').notNull(),
 		code: text('code').notNull().unique(),
-		status: text('status').notNull().default('pending'),
+		status: text('status', { enum: ticketStatuses }).notNull().default('pending'),
 		checkedInAt: timestamp('checked_in_at'),
 		checkedInByUserId: text('checked_in_by_user_id').references(() => user.id, {
 			onDelete: 'set null'

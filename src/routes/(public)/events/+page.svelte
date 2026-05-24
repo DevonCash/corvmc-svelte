@@ -1,8 +1,8 @@
 <script lang="ts">
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import type { EventsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: EventsResponse } = $props();
+	let { data }: PageProps = $props();
 </script>
 
 <svelte:head>

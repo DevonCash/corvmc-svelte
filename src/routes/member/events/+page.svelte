@@ -3,9 +3,9 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import TicketCard from './TicketCard.svelte';
-	import type { EventsResponse, MemberTicketsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: { events: EventsResponse['events']; tickets: MemberTicketsResponse['tickets'] } } = $props();
+	let { data }: PageProps = $props();
 
 	const activeTickets = $derived(
 		data.tickets.filter(

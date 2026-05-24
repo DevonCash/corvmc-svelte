@@ -10,7 +10,9 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { purchaseTickets } from '$lib/remote/events.remote';
 
-	let { data }: { data: any } = $props();
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	let quantity = $state(1);
 	let attendeeName = $state('');

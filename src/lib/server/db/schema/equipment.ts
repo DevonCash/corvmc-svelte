@@ -87,7 +87,7 @@ export const equipmentCategory = sqliteTable('equipment_category', {
 	id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	displayOrder: integer('display_order').notNull().default(0),
-	pricingTier: text('pricing_tier').notNull(),
+	pricingTier: text('pricing_tier', { enum: pricingTiers }).notNull(),
 	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
 	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
 });
@@ -105,8 +105,8 @@ export const equipment = sqliteTable(
 		outOfOrderQuantity: integer('out_of_order_quantity').notNull().default(0),
 		serialNumber: text('serial_number'),
 		resourceId: text('resource_id'),
-		condition: text('condition').notNull(),
-		status: text('status').notNull().default('available'),
+		condition: text('condition', { enum: equipmentConditions }).notNull(),
+		status: text('status', { enum: equipmentStatuses }).notNull().default('available'),
 		notes: text('notes'),
 		imageUrl: text('image_url'),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
@@ -142,7 +142,7 @@ export const equipmentLoan = sqliteTable(
 		dueDate: timestamp('due_date'),
 		checkedOutAt: timestamp('checked_out_at'),
 		returnedAt: timestamp('returned_at'),
-		status: text('status').notNull().default('requested'),
+		status: text('status', { enum: loanStatuses }).notNull().default('requested'),
 		dailyRateCents: integer('daily_rate_cents'),
 		estimatedCostCents: integer('estimated_cost_cents'),
 		totalChargeCents: integer('total_charge_cents'),

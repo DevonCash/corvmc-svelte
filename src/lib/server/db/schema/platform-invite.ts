@@ -2,7 +2,10 @@ import { sqliteTable, text, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { timestamp, uuid, type Serialized } from './columns';
 import { user } from './auth';
-import { band } from './band';
+import { band, bandRoles } from './band';
+
+export const inviteStatuses = ['pending', 'accepted', 'revoked'] as const;
+export type InviteStatus = (typeof inviteStatuses)[number];
 
 export const platformInvite = sqliteTable(
 	'platform_invite',
@@ -13,12 +16,12 @@ export const platformInvite = sqliteTable(
 		bandId: text('band_id')
 			.notNull()
 			.references(() => band.id, { onDelete: 'cascade' }),
-		role: text('role').notNull(),
+		role: text('role', { enum: bandRoles }).notNull(),
 		position: text('position'),
 		invitedById: text('invited_by_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'set null' }),
-		status: text('status').notNull().default('pending'),
+		status: text('status', { enum: inviteStatuses }).notNull().default('pending'),
 		expiresAt: timestamp('expires_at').notNull(),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
 		acceptedAt: timestamp('accepted_at')

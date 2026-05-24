@@ -4,9 +4,9 @@
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import type { StaffDashboardResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffDashboardResponse } = $props();
+	let { data }: PageProps = $props();
 
 	type RecentUser = (typeof data.recentUsers)[number];
 

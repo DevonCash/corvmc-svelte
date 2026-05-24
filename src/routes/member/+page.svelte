@@ -9,9 +9,9 @@
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import type { DashboardResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: DashboardResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
 	const freeHours = $derived(data.credits.free_hours ?? 0);

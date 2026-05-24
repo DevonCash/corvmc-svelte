@@ -11,9 +11,9 @@
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation } from '$lib/remote/reservations.remote';
-	import type { BandLayoutResponse, BandReservationsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: BandLayoutResponse & BandReservationsResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);

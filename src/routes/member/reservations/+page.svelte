@@ -8,6 +8,7 @@
 		formatScheduleLabel,
 		formatDateYear
 	} from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Column from '$lib/components/shared/Table/Column.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -27,9 +28,9 @@
 	import { IconClock, IconPencil, IconPlayerPause, IconX } from '@tabler/icons-svelte';
 	import CreateModal from './CreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
-	import type { MemberReservationsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: MemberReservationsResponse & { confirmId?: string | null } } = $props();
+	let { data }: PageProps = $props();
 
 	const upcoming = $derived(data.upcoming);
 	const all = $derived(data.all);
@@ -89,7 +90,7 @@
 			</div>
 			{#if creditData.creditsResetAt}
 				<span class="text-sm opacity-60">
-					Resets to {creditData.hoursPerReset} on {formatDate(creditData.creditsResetAt)}
+					Resets to {creditData.hoursPerReset} on {formatDate(creditData.creditsResetAt as ISODateString)}
 				</span>
 			{/if}
 		</div>
@@ -148,12 +149,12 @@
 			</Column>
 			<Column key="createdAt" header="Start Date" sortable>
 				{#snippet cell(value)}
-					{formatDateYear(String(value))}
+					{formatDateYear(String(value) as ISODateString)}
 				{/snippet}
 			</Column>
 			<Column key="seriesEndsAt" header="End Date" sortable>
 				{#snippet cell(value)}
-					{value ? formatDateYear(String(value)) : '—'}
+					{value ? formatDateYear(String(value) as ISODateString) : '—'}
 				{/snippet}
 			</Column>
 			<Column key="id" header="" shrink stopClick>

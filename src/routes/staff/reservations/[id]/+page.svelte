@@ -25,10 +25,10 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
-	import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 	import { visibleActions } from '$lib/utils/reservation-actions';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffReservationDetailResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);

@@ -17,9 +17,9 @@
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffEquipmentResponse } = $props();
+	let { data }: PageProps = $props();
 
 	function buildPageHref(page: number): string {
 		const params = new URLSearchParams();

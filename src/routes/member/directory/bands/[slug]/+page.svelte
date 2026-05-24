@@ -5,9 +5,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { DirectoryBandResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: DirectoryBandResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);

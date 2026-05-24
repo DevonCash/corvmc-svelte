@@ -11,9 +11,9 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
-	import type { BandLayoutResponse } from '$lib/server/db/schema/api';
+	import type { LayoutProps } from './$types';
 
-	let { data, children }: { data: BandLayoutResponse; children: import('svelte').Snippet } = $props();
+	let { data, children }: LayoutProps = $props();
 
 	const base = $derived(`/band/${data.band.slug}`);
 	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');

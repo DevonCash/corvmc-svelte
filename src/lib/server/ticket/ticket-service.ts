@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { ticket } from '$lib/server/db/schema/ticket';
+import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, inArray, sql, asc, desc } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { eq, and, inArray, sql, asc, desc } from 'drizzle-orm';
 // Types
 // ---------------------------------------------------------------------------
 
-export type TicketStatus = 'pending' | 'valid' | 'checked_in' | 'cancelled';
+export type { TicketStatus };
 
 export interface CreateTicketsOptions {
 	eventId: string;

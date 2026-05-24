@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
 	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 
 	let {
 		reservation,
@@ -11,7 +12,7 @@
 		class: className = 'btn-primary btn-sm',
 		...rest
 	}: {
-		reservation: { id: string; startsAt: string; endsAt: string };
+		reservation: { id: string; startsAt: ISODateString; endsAt: ISODateString };
 		label?: string;
 		class?: string;
 		[key: string]: unknown;

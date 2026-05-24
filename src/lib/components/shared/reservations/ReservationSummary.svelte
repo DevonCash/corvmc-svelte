@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { fullDate, formatTimeRange, formatDuration } from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 
 	let {
 		reservation
 	}: {
 		reservation: {
-			startsAt: string;
-			endsAt: string;
+			startsAt: ISODateString;
+			endsAt: ISODateString;
 			memberName?: string;
 		};
 	} = $props();

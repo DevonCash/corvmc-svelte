@@ -67,9 +67,9 @@ export const bandMember = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		role: text('role').notNull(),
+		role: text('role', { enum: bandRoles }).notNull(),
 		position: text('position'),
-		status: text('status').notNull(),
+		status: text('status', { enum: bandMemberStatuses }).notNull(),
 		invitedById: text('invited_by_id').references(() => user.id, { onDelete: 'set null' }),
 		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
 	},

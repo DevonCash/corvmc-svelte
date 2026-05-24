@@ -39,9 +39,11 @@ export function getBalance(credits: Credits, type: CreditType): number {
 export const transactionSources = [
 	'monthly_allocation',
 	'checkout',
+	'checkout_failed',
 	'refund',
 	'cancelled',
-	'admin_adjustment'
+	'admin_adjustment',
+	'reservation'
 ] as const;
 
 export type TransactionSource = (typeof transactionSources)[number];
@@ -102,10 +104,10 @@ export const creditTransaction = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		creditType: text('credit_type').notNull(),
+		creditType: text('credit_type', { enum: creditTypes }).notNull(),
 		amount: integer('amount').notNull(),
 		balanceAfter: integer('balance_after').notNull(),
-		source: text('source').notNull(),
+		source: text('source', { enum: transactionSources }).notNull(),
 		sourceId: text('source_id'),
 		description: text('description').notNull(),
 		metadata: zodJson(z.record(z.string(), z.unknown()).default({}))('metadata'),

@@ -4,11 +4,12 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
+	import type { ISODateString } from '$lib/server/db/schema/columns';
 
 	let {
 		reservation
 	}: {
-		reservation?: { id: string; startsAt: string; endsAt: string };
+		reservation?: { id: string; startsAt: ISODateString; endsAt: ISODateString };
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -83,8 +84,8 @@
 					recurringFrequency = (fd.get('recurring') as string) || '';
 					const seriesEndsAt = (fd.get('seriesEndsAt') as string) || undefined;
 					if (date && startTime) {
-						const startIso = `${date}T${startTime}:00`;
-						const endIso = endTime ? `${date}T${endTime}:00` : startIso;
+						const startIso = `${date}T${startTime}:00` as ISODateString;
+						const endIso = (endTime ? `${date}T${endTime}:00` : startIso) as ISODateString;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
 					}
@@ -96,7 +97,7 @@
 								: recurringFrequency === 'biweekly'
 									? 'Every 2 weeks'
 									: 'Monthly';
-						scheduleLabel = formatScheduleLabel(freqLabel, `${date}T${startTime}:00`);
+						scheduleLabel = formatScheduleLabel(freqLabel, `${date}T${startTime}:00` as ISODateString);
 						recurringPreview = null;
 						previewRecurringInstances({
 							date,

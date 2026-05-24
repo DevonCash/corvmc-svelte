@@ -6,9 +6,9 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconUserCog, IconUserShield, IconUserHeart, IconDots, IconEye, IconCopy, IconUserUp } from '@tabler/icons-svelte';
-	import type { StaffUsersResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffUsersResponse } = $props();
+	let { data }: PageProps = $props();
 
 	type User = (typeof data.users)[number];
 

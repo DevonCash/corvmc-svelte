@@ -3,9 +3,9 @@
 	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { DirectoryBandResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: DirectoryBandResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);

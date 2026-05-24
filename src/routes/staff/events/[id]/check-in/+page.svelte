@@ -7,9 +7,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { CancelTicketAction } from '$lib/components/shared/actions';
 	import { checkInTicket } from '$lib/remote/events.remote';
-	import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffCheckInResponse } = $props();
+	let { data }: PageProps = $props();
 
 	let search = $state('');
 

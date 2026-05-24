@@ -11,9 +11,9 @@
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { createBand, acceptInvite, declineInvite } from '$lib/remote/bands.remote';
-	import type { MemberBandsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: MemberBandsResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const pending = $derived(data.pending);
 	const active = $derived(data.active);

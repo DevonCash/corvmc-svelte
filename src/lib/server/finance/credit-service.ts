@@ -8,7 +8,8 @@ import { creditTypeConfig } from '$lib/config';
 import {
 	isCreditType,
 	type CreditType,
-	type Credits
+	type Credits,
+	type TransactionSource
 } from '$lib/server/db/schema/finance';
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ export async function addCredits(
 	userId: string,
 	creditType: CreditType,
 	amount: number,
-	source: string,
+	source: TransactionSource,
 	sourceId?: string,
 	description?: string
 ): Promise<number> {
@@ -109,7 +110,7 @@ export async function deductCredits(
 	userId: string,
 	creditType: CreditType,
 	amount: number,
-	source: string,
+	source: TransactionSource,
 	sourceId?: string,
 	description?: string
 ): Promise<number> {
@@ -153,7 +154,7 @@ export async function setBalance(
 	userId: string,
 	creditType: CreditType,
 	balance: number,
-	source: string,
+	source: TransactionSource,
 	sourceId?: string,
 	description?: string
 ): Promise<number> {
@@ -196,7 +197,7 @@ export async function setBalance(
 // Monthly allocation helpers
 // ---------------------------------------------------------------------------
 
-export async function hasTransaction(source: string, sourceId: string): Promise<boolean> {
+export async function hasTransaction(source: TransactionSource, sourceId: string): Promise<boolean> {
 	const [row] = await db
 		.select({ id: creditTransaction.id })
 		.from(creditTransaction)
@@ -252,8 +253,8 @@ export interface CreditTransactionRow {
 
 export interface CreditTransactionFilters {
 	search?: string;
-	creditType?: string;
-	source?: string;
+	creditType?: CreditType;
+	source?: TransactionSource;
 	from?: string;
 	to?: string;
 }

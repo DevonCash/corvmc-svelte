@@ -21,9 +21,9 @@
 		inviteByEmail,
 		revokePlatformInviteRemote
 	} from '$lib/remote/bands.remote';
-	import type { BandLayoutResponse, BandMembersResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: BandLayoutResponse & BandMembersResponse } = $props();
+	let { data }: PageProps = $props();
 
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');

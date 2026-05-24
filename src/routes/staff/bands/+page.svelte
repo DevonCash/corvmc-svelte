@@ -7,9 +7,9 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { CreateBandAction } from '$lib/components/shared/actions';
-	import type { StaffBandsResponse } from '$lib/server/db/schema/api';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: StaffBandsResponse } = $props();
+	let { data }: PageProps = $props();
 
 	function buildPageHref(page: number): string {
 		const params = new URLSearchParams();
