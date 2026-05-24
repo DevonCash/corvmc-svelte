@@ -65,23 +65,25 @@
 		margin-block-start: -2.5px;
 	}
 
-	/* Wrap — buttons keep their own radius and tile with overlap in both axes */
+	/* Wrap — connected edges, flex-wrap for overflow */
 	.button-group.wrap {
 		flex-wrap: wrap;
-		gap: 0;
+	}
+
+	.button-group.wrap > :global(.btn:not(:first-child)) {
+		margin-inline-start: -2.5px;
 	}
 
 	.button-group.wrap > :global(.btn) {
-		border-radius: var(--radius-field);
-		margin: 0 -1.25px -1.25px 0;
+		margin-block-end: -2.5px;
 	}
 
 	/* Horizontal: leftmost on top */
-	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(5)) { z-index: 5; }
-	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(4)) { z-index: 4; }
-	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(3)) { z-index: 3; }
-	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(2)) { z-index: 2; }
-	.button-group:not(.vertical):not(.wrap) > :global(.btn:nth-last-child(1)) { z-index: 1; }
+	.button-group:not(.vertical) > :global(.btn:nth-last-child(5)) { z-index: 5; }
+	.button-group:not(.vertical) > :global(.btn:nth-last-child(4)) { z-index: 4; }
+	.button-group:not(.vertical) > :global(.btn:nth-last-child(3)) { z-index: 3; }
+	.button-group:not(.vertical) > :global(.btn:nth-last-child(2)) { z-index: 2; }
+	.button-group:not(.vertical) > :global(.btn:nth-last-child(1)) { z-index: 1; }
 
 	/* Vertical: bottommost on top */
 	.button-group.vertical > :global(.btn:nth-child(1)) { z-index: 1; }
