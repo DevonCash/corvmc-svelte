@@ -790,7 +790,7 @@ p {
 	text-wrap: balance;
 	z-index: 1;
 }
-.poster-gen__title--dark { color: var(--cmc-navy); }
+.poster-gen__title--dark { color: var(--color-secondary); }
 .poster-gen__spacer { flex: 1; }
 .poster-gen__date {
 	font-weight: 700;
@@ -833,7 +833,7 @@ p {
 	border-radius: 8px;
 	background: var(--bg-card);
 	border: 2.5px solid var(--cmc-brown);
-	color: var(--cmc-navy);
+	color: var(--color-secondary);
 	cursor: pointer;
 	transition: transform 180ms ease, box-shadow 180ms ease;
 	overflow: hidden;
@@ -896,7 +896,7 @@ p {
 	line-height: 1.15;
 	margin: 4px 0 2px;
 	letter-spacing: -0.005em;
-	color: var(--cmc-navy);
+	color: var(--color-secondary);
 }
 .stub__when {
 	font-size: 13px;
@@ -927,7 +927,7 @@ p {
 .stub--red .stub__stub { background: var(--cmc-red-orange); }
 .stub--red .stub__eyebrow { color: var(--cmc-red-orange); }
 .stub--navy .stub__stub { background: var(--cmc-navy); }
-.stub--navy .stub__eyebrow { color: var(--cmc-navy); }
+.stub--navy .stub__eyebrow { color: var(--color-secondary); }
 
 /* ---------------------------------------------------------------------------
    Section Label — uppercase header with trailing hairline
@@ -1026,7 +1026,7 @@ p {
 	font-weight: 700;
 	line-height: 1.05;
 	margin: 0;
-	color: var(--cmc-navy);
+	color: var(--color-secondary);
 	letter-spacing: -0.02em;
 	text-wrap: balance;
 }
@@ -1060,7 +1060,7 @@ p {
 .edet__fact-value {
 	font-size: 14px;
 	font-weight: 600;
-	color: var(--cmc-navy);
+	color: var(--color-secondary);
 	line-height: 1.3;
 }
 .edet__desc {

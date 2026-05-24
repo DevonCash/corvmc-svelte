@@ -213,7 +213,7 @@
 		font-weight: 700;
 		font-size: 15px;
 		line-height: 1.15;
-		color: var(--cmc-navy);
+		color: var(--color-secondary);
 		letter-spacing: -0.005em;
 		text-wrap: balance;
 	}
