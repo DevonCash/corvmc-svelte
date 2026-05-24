@@ -884,7 +884,7 @@ p {
 	text-wrap: balance;
 	z-index: 1;
 }
-.poster-gen__title--dark { color: var(--color-secondary); }
+.poster-gen__title--dark { color: #000; }
 .poster-gen__spacer { flex: 1; }
 .poster-gen__date {
 	font-weight: 700;
