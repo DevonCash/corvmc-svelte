@@ -29,7 +29,6 @@
 		border-radius: 0;
 		position: relative;
 		--shadow-color: var(--cmc-brown) !important;
-		--shadow: 0;
 	}
 
 	/* Horizontal (default) */
