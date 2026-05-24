@@ -159,7 +159,7 @@
 			</Column>
 			<Column key="id" header="" shrink stopClick>
 				{#snippet cell(_value, row)}
-					<ActionGroup style="--shadow: 4px">
+					<ActionGroup>
 						<CancelSeriesAction seriesId={row.id} class="btn-ghost btn-square">
 							{#snippet trigger({ onclick, disabled })}
 								<Button class="btn-ghost btn-square" {disabled} {onclick}>

@@ -106,7 +106,7 @@
 				<Setlist class="w-[clamp(200px,80%,340px)] -rotate-[1.4deg]" />
 			</div>
 			<div class="flex flex-col gap-5">
-				<div class="rounded-lg p-6" style="background: color-mix(in oklch, var(--cmc-yellow) 25%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-yellow) 30%, transparent)">
+				<div class="rounded-lg p-6" style="background: color-mix(in oklch, var(--cmc-goldenrod) 25%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-goldenrod) 30%, transparent)">
 					<div class="flex items-center gap-3 mb-3">
 						<IconMusic size={24} style="color: var(--cmc-navy)" />
 						<h3 class="text-xl font-bold">Real Book Club</h3>

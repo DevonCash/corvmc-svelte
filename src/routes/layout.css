@@ -9,8 +9,6 @@
 
 /* ---------------------------------------------------------------------------
    corvmc — light theme (default)
-   Derived from the CMC design system. oklch values mirror the daisyUI `corvmc`
-   theme from the Laravel codebase's app.css.
    --------------------------------------------------------------------------- */
 @plugin 'daisyui/theme' {
 	name: 'corvmc';
@@ -18,13 +16,13 @@
 	prefersdark: false;
 	color-scheme: 'light';
 
-	--color-primary: oklch(67% 0.18 43);
+	--color-primary: oklch(64% 0.175 48);
 	--color-primary-content: oklch(from white 1 100% none);
 
-	--color-secondary: oklch(25% 0.09 250);
-	--color-secondary-content: oklch(90% 0.02 270);
-	--color-accent: oklch(85% 0.05 200);
-	--color-accent-content: oklch(20% 0.03 270);
+	--color-secondary: oklch(60% 0.115 215);
+	--color-secondary-content: oklch(from white 1 100% none);
+	--color-accent: oklch(85% 0.04 200);
+	--color-accent-content: oklch(27% 0.10 254);
 	--color-neutral: oklch(24% 0.03 270);
 	--color-neutral-content: oklch(90% 0.02 270);
 
@@ -33,14 +31,14 @@
 	--color-base-300: oklch(92% 0.025 55);
 	--color-base-content: oklch(20% 0.03 270);
 
-	--color-info: oklch(85% 0.05 200);
-	--color-info-content: oklch(20% 0.03 270);
+	--color-info: oklch(85% 0.04 200);
+	--color-info-content: oklch(27% 0.10 254);
 	--color-success: oklch(70% 0.14 160);
-	--color-success-content: oklch(20% 0.03 270);
-	--color-warning: oklch(90% 0.08 85);
-	--color-warning-content: oklch(20% 0.03 270);
-	--color-error: oklch(70% 0.18 15);
-	--color-error-content: oklch(20% 0.03 270);
+	--color-success-content: oklch(from white 1 100% none);
+	--color-warning: oklch(81% 0.17 85);
+	--color-warning-content: oklch(20% 0.03 55);
+	--color-error: oklch(60% 0.22 38);
+	--color-error-content: oklch(from white 1 100% none);
 
 	--radius-selector: 0.5rem;
 	--radius-field: 0.5rem;
@@ -56,7 +54,9 @@
 
 /* ---------------------------------------------------------------------------
    corvmc-dark — dark theme
-   Cool blue-gray bases with warm off-white text and lifted brand accents.
+   Warm brown-tinted bases with cream text and lifted brand accents.
+   All dark brand palette overrides live here so DaisyUI's prefersdark
+   mechanism emits both [data-theme] and @media selectors automatically.
    --------------------------------------------------------------------------- */
 @plugin 'daisyui/theme' {
 	name: 'corvmc-dark';
@@ -64,28 +64,28 @@
 	prefersdark: true;
 	color-scheme: 'dark';
 
-	--color-primary: oklch(72% 0.16 50);
+	--color-primary: oklch(73% 0.17 50);
 	--color-primary-content: oklch(from white 1 100% none);
-	--color-secondary: oklch(68% 0.1 230);
+	--color-secondary: oklch(74% 0.13 213);
 	--color-secondary-content: oklch(15% 0.02 240);
-	--color-accent: oklch(78% 0.06 200);
+	--color-accent: oklch(88% 0.04 200);
 	--color-accent-content: oklch(15% 0.02 240);
 	--color-neutral: oklch(85% 0.02 240);
 	--color-neutral-content: oklch(15% 0.02 240);
 
-	--color-base-100: oklch(22% 0.02 250);
-	--color-base-200: oklch(24% 0.02 248);
-	--color-base-300: oklch(27% 0.02 245);
-	--color-base-content: oklch(90% 0.02 60);
+	--color-base-100: oklch(14% 0.015 55);
+	--color-base-200: oklch(17% 0.015 50);
+	--color-base-300: oklch(21% 0.015 45);
+	--color-base-content: oklch(91% 0.025 65);
 
-	--color-info: oklch(75% 0.1 220);
+	--color-info: oklch(74% 0.13 213);
 	--color-info-content: oklch(15% 0.02 240);
 	--color-success: oklch(72% 0.13 160);
 	--color-success-content: oklch(15% 0.02 240);
-	--color-warning: oklch(80% 0.1 85);
+	--color-warning: oklch(82% 0.17 86);
 	--color-warning-content: oklch(15% 0.02 240);
-	--color-error: oklch(72% 0.18 15);
-	--color-error-content: oklch(15% 0.02 240);
+	--color-error: oklch(65% 0.22 40);
+	--color-error-content: oklch(from white 1 100% none);
 
 	--radius-selector: 0.5rem;
 	--radius-field: 0.5rem;
@@ -96,7 +96,26 @@
 	--depth: 1;
 	--noise: 0;
 
-	--shadow-color: var(--color-primary);
+	--shadow-color: oklch(6% 0.01 60);
+
+	/* Dark brand palette overrides */
+	--cmc-orange: oklch(73% 0.17 50);
+	--cmc-teal: oklch(74% 0.13 213);
+	--cmc-navy: oklch(72% 0.15 255);
+	--cmc-goldenrod: oklch(82% 0.17 86);
+	--cmc-red-orange: oklch(65% 0.22 40);
+	--cmc-light-blue: oklch(88% 0.04 200);
+	--cmc-green: oklch(72% 0.13 160);
+	--cmc-cream: oklch(91% 0.025 65);
+	--cmc-parchment: oklch(21% 0.015 45);
+	--cmc-aged-paper: oklch(25% 0.02 50);
+	--cmc-brown: oklch(78% 0.04 60);
+
+	/* Dark surface & background overrides */
+	--bg-card: var(--color-base-300);
+	--bg-soft: var(--color-base-300);
+	--surface: var(--color-base-300);
+	--surface-border: rgba(255, 255, 255, 0.06);
 }
 
 /* ---------------------------------------------------------------------------
@@ -111,19 +130,28 @@
 	--font-chalk: 'Permanent Marker', 'Lexend', system-ui, sans-serif;
 	--font-script: 'Caveat', 'Permanent Marker', cursive;
 
-	/* Brand palette (hex) */
-	--cmc-orange: #e5771e;
-	--cmc-orange-soft: #ff8c42;
-	--cmc-yellow: #ffe28a;
-	--cmc-goldenrod: #ffb500;
-	--cmc-red-orange: #f84d13;
-	--cmc-navy: #003b5c;
-	--cmc-teal: #00859b;
-	--cmc-light-blue: #b8dde1;
-	--cmc-brown: #5a3d2b;
-	--cmc-cream: #fffbf6;
-	--cmc-parchment: #ffe2cd;
-	--cmc-aged-paper: #ecdfc4;
+	/* Brand palette (oklch) */
+	--cmc-orange: oklch(64% 0.175 48);
+	--cmc-goldenrod: oklch(81% 0.17 85);
+	--cmc-red-orange: oklch(60% 0.22 38);
+	--cmc-teal: oklch(60% 0.115 215);
+	--cmc-navy: oklch(27% 0.10 254);
+	--cmc-light-blue: oklch(85% 0.04 200);
+	--cmc-green: oklch(70% 0.14 160);
+	--cmc-brown: oklch(33% 0.06 55);
+	--cmc-cream: oklch(99% 0.01 70);
+	--cmc-parchment: oklch(93% 0.04 60);
+	--cmc-aged-paper: oklch(91% 0.04 75);
+
+	/* Deprecated — use --cmc-goldenrod directly */
+	--cmc-yellow: var(--cmc-goldenrod);
+
+	/* Depth scale — independent axis for shadow offset */
+	--depth-0: 0;
+	--depth-1: 2px;
+	--depth-2: 5px;
+	--depth-3: 9px;
+	--depth-4: 11px;
 
 	/* Foreground tiers */
 	--fg-1: var(--color-base-content);
@@ -142,7 +170,7 @@
 
 	/* Logo-specific tokens */
 	--speaker-case: var(--cmc-orange);
-	--speaker-fill: var(--cmc-yellow);
+	--speaker-fill: var(--cmc-goldenrod);
 	--speaker-front: var(--cmc-light-blue);
 	--sound-lines: var(--cmc-teal);
 
@@ -154,42 +182,10 @@
 	--font-features-display: 'cv05', 'cv11', 'ss01';
 }
 
-/* Dark-theme overrides for brand palette & surface tokens */
-[data-theme='corvmc-dark'] {
-	--cmc-orange: #ff8c42;
-	--cmc-teal: #3eb5ca;
-	--cmc-navy: #6da5cc;
-	--cmc-yellow: #f4d27a;
-	--cmc-light-blue: #b8dde1;
-	--cmc-cream: #e6dcd0;
-	--cmc-parchment: #2a2722;
-	--cmc-brown: #d3b59a;
-
-	--bg-card: var(--color-base-300);
-	--bg-soft: var(--color-base-300);
-
-	--surface: var(--color-base-300);
-	--surface-border: rgba(255, 255, 255, 0.06);
-}
-
-@media (prefers-color-scheme: dark) {
-	:root:not([data-theme='corvmc']) {
-		--cmc-orange: #ff8c42;
-		--cmc-teal: #3eb5ca;
-		--cmc-navy: #6da5cc;
-		--cmc-yellow: #f4d27a;
-		--cmc-light-blue: #b8dde1;
-		--cmc-cream: #e6dcd0;
-		--cmc-parchment: #2a2722;
-		--cmc-brown: #d3b59a;
-
-		--bg-card: var(--color-base-300);
-		--bg-soft: var(--color-base-300);
-
-		--surface: var(--color-base-300);
-		--surface-border: rgba(255, 255, 255, 0.06);
-	}
-}
+/* Dark brand palette + surface overrides now live in the corvmc-dark
+   @plugin 'daisyui/theme' block above. DaisyUI's prefersdark mechanism
+   emits both [data-theme='corvmc-dark'] and @media (prefers-color-scheme: dark)
+   selectors automatically — no duplication needed. */
 
 /* ---------------------------------------------------------------------------
    Typography foundations
@@ -248,59 +244,15 @@ p {
 
 /* ---------------------------------------------------------------------------
    Tri-stripe band — the 10px brand recall stripe under the site header.
-   Public variant: teal / goldenrod / red-orange
-   Admin/navy variant: navy / goldenrod / red-orange
    --------------------------------------------------------------------------- */
 .tri-stripe {
 	height: 10px;
 	background: linear-gradient(
 		to bottom,
-		var(--cmc-teal) 0%,
-		var(--cmc-teal) 33.333%,
-		var(--cmc-goldenrod) 33.333%,
-		var(--cmc-goldenrod) 66.666%,
-		var(--cmc-red-orange) 66.666%,
-		var(--cmc-red-orange) 100%
+		var(--cmc-teal) 0% 33.333%,
+		var(--cmc-goldenrod) 33.333% 66.666%,
+		var(--cmc-red-orange) 66.666% 100%
 	);
-}
-
-.tri-stripe--navy {
-	background: linear-gradient(
-		to bottom,
-		var(--cmc-navy) 0%,
-		var(--cmc-navy) 33.333%,
-		var(--cmc-goldenrod) 33.333%,
-		var(--cmc-goldenrod) 66.666%,
-		var(--cmc-red-orange) 66.666%,
-		var(--cmc-red-orange) 100%
-	);
-}
-
-/* Dark mode: swap to the navy (mid-blue) top band for better contrast */
-[data-theme='corvmc-dark'] .tri-stripe {
-	background: linear-gradient(
-		to bottom,
-		var(--cmc-navy) 0%,
-		var(--cmc-navy) 33.333%,
-		var(--cmc-goldenrod) 33.333%,
-		var(--cmc-goldenrod) 66.666%,
-		var(--cmc-red-orange) 66.666%,
-		var(--cmc-red-orange) 100%
-	);
-}
-
-@media (prefers-color-scheme: dark) {
-	:root:not([data-theme='corvmc']) .tri-stripe {
-		background: linear-gradient(
-			to bottom,
-			var(--cmc-navy) 0%,
-			var(--cmc-navy) 33.333%,
-			var(--cmc-goldenrod) 33.333%,
-			var(--cmc-goldenrod) 66.666%,
-			var(--cmc-red-orange) 66.666%,
-			var(--cmc-red-orange) 100%
-		);
-	}
 }
 
 /* ---------------------------------------------------------------------------
@@ -314,7 +266,7 @@ p {
 	background: color-mix(in oklch, #2ea076 12%, var(--bg-page));
 }
 .section-tint-warning {
-	background: color-mix(in oklch, var(--cmc-yellow) 35%, var(--bg-page));
+	background: color-mix(in oklch, var(--cmc-goldenrod) 35%, var(--bg-page));
 }
 .section-tint-info {
 	background: color-mix(in oklch, var(--cmc-light-blue) 32%, var(--bg-page));
@@ -375,10 +327,6 @@ p {
 	box-shadow: 2px 2px 0 var(--cmc-brown);
 	transform: translate(-1px, -1px);
 }
-
-/* ---------------------------------------------------------------------------
-   Retro-btn alias — for non-btn elements (cards, links) that want the look.
-   --------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------------
    Washi-tape badges — semi-transparent stripe texture + slight rotation.
@@ -589,11 +537,11 @@ p {
 		linear-gradient(
 			180deg,
 			transparent 0 70%,
-			#f84d13 70% 76%,
-			#e5771e 76% 82%,
-			#ffb500 82% 88%,
-			#00859b 88% 94%,
-			#003b5c 94% 100%
+			var(--cmc-red-orange) 70% 76%,
+			var(--cmc-orange) 76% 82%,
+			var(--cmc-goldenrod) 82% 88%,
+			var(--cmc-teal) 88% 94%,
+			var(--cmc-navy) 94% 100%
 		),
 		repeating-linear-gradient(180deg, transparent 0 12px, rgba(0, 0, 90, 0.06) 12px 13px), #f4ead8;
 	border-radius: 2px;
@@ -713,4 +661,88 @@ p {
 	text-transform: uppercase;
 	color: var(--fg-3);
 	margin-bottom: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Retro buttons — hard shadow derived from the brand shadow-color.
+   Shadow offset controlled by depth scale (--depth-0 … --depth-4).
+   Placed in @layer components so it merges with DaisyUI's .btn definition.
+   --------------------------------------------------------------------------- */
+@layer components {
+	.btn {
+		--shadow: var(--depth-2);
+		--shadow-size: var(--shadow);
+		--retro-shadow: color-mix(in oklch, var(--shadow-color) 50%, black);
+		border-width: 2.5px;
+		border-color: var(--retro-shadow);
+		box-shadow: 0 var(--shadow-size) 0 var(--retro-shadow);
+		transform: translate(0, calc(-1 * var(--shadow-size)));
+		transition:
+			transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1),
+			box-shadow 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
+	}
+
+	.btn:disabled {
+		--shadow: calc(var(--shadow) / 2);
+	}
+
+	.btn::before {
+		z-index: -2;
+		content: '';
+		box-sizing: border-box;
+		width: calc(100% + var(--shadow-size));
+		height: calc(100% + var(--shadow-size));
+		position: absolute;
+		top: 0;
+		right: 0;
+		transition:
+			width 180ms cubic-bezier(0.2, 0.7, 0.3, 1),
+			height 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
+	}
+
+	.btn:hover,
+	.btn:focus-visible {
+		--shadow-size: calc(var(--shadow) * 0.75);
+	}
+
+	.btn.is-pressing,
+	.btn:active {
+		--shadow-size: 0;
+		translate: none;
+	}
+	.btn:active {
+		transition-duration: 0ms;
+	}
+	.btn.is-pressing {
+		transition-duration: 60ms;
+	}
+
+	.btn.depth-0.is-pressing,
+	.btn.depth-0:active {
+		transform: translateY(1px);
+	}
+
+	.btn.latched {
+		--shadow: var(--depth-1);
+	}
+
+	.btn.flat {
+		--shadow: 0;
+		transform: none;
+	}
+	.btn.flat:hover,
+	.btn.flat:focus-visible {
+		filter: brightness(0.94);
+	}
+
+	.depth-0 { --shadow: var(--depth-0); }
+	.depth-1 { --shadow: var(--depth-1); }
+	.depth-2 { --shadow: var(--depth-2); }
+	.depth-3 { --shadow: var(--depth-3); }
+	.depth-4 { --shadow: var(--depth-4); }
+
+	.btn-ghost {
+		background: var(--color-base-100);
+		border-color: var(--shadow-color);
+	}
 }
