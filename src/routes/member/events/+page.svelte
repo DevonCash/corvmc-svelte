@@ -75,7 +75,7 @@
 				<ButtonGroup wrap>
 					<button
 						class="btn btn-sm"
-						class:latched={activeFilter === null}
+						class:btn-primary={activeFilter === null}
 						onclick={() => (activeFilter = null)}
 					>
 						All <span class="opacity-60 ml-1">{data.events.length}</span>
@@ -83,7 +83,7 @@
 					{#each allTags as tag (tag)}
 						<button
 							class="btn btn-sm"
-							class:latched={activeFilter === tag}
+							class:btn-primary={activeFilter === tag}
 							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
 						>
 							{tag}
