@@ -34,14 +34,14 @@
 <PageHeader title="Directory" subtitle="Community">
 	<ButtonGroup>
 		<button
-			class="btn btn-sm"
+			class="join-item btn btn-sm"
 			class:btn-primary={activeTab === 'members'}
 			onclick={() => (activeTab = 'members')}
 		>
 			Members ({members.length})
 		</button>
 		<button
-			class="btn btn-sm"
+			class="join-item btn btn-sm"
 			class:btn-primary={activeTab === 'bands'}
 			onclick={() => (activeTab = 'bands')}
 		>

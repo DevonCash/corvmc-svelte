@@ -74,7 +74,7 @@
 			<div class="mb-4">
 				<ButtonGroup wrap>
 					<button
-						class="btn btn-sm"
+						class="join-item btn btn-sm"
 						class:btn-primary={activeFilter === null}
 						class:latched={activeFilter === null}
 						onclick={() => (activeFilter = null)}
@@ -83,7 +83,7 @@
 					</button>
 					{#each allTags as tag (tag)}
 						<button
-							class="btn btn-sm"
+							class="join-item btn btn-sm"
 							class:btn-primary={activeFilter === tag}
 							class:latched={activeFilter === tag}
 							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}

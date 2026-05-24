@@ -51,49 +51,49 @@
 		</label>
 
 		<!-- Panel tabs - desktop only -->
-		<ButtonGroup class="ml-4 hidden">
+		<ButtonGroup class="ml-4 hidden lg:flex">
 			{#each primaryPanels as panel (panel.key)}
 				<a
 					href={panel.href}
-					class="btn btn-sm {panel.key === activePanel ? 'latched btn-primary' : 'btn-ghost'}"
+					class="join-item btn btn-sm {panel.key === activePanel ? 'latched btn-primary' : 'btn-ghost'}"
 				>
 					{panel.label}
 				</a>
 			{/each}
-		</ButtonGroup>
 
-		{#if bandPanels.length > 0}
-			<div class="bands-dropdown-wrapper relative">
-				<button
-					class="btn btn-sm {activeBand ? 'latched btn-primary' : 'btn-ghost'}"
-					onclick={() => (bandsOpen = !bandsOpen)}
-				>
-					<IconMusic size={16} />
-					{activeBand?.label ?? 'Bands'}
-					<IconChevronDown size={14} />
-				</button>
-
-				{#if bandsOpen}
-					<div
-						class="absolute top-full left-0 z-[1000] mt-1 w-48 rounded-lg border border-base-300 bg-base-100 shadow-lg"
+			{#if bandPanels.length > 0}
+				<div class="bands-dropdown-wrapper join-item relative">
+					<button
+						class="btn btn-sm rounded-[inherit] {activeBand ? 'latched btn-primary' : 'btn-ghost'}"
+						onclick={() => (bandsOpen = !bandsOpen)}
 					>
-						<ul class="menu menu-sm p-2">
-							{#each bandPanels as band (band.key)}
-								<li>
-									<a
-										href={band.href}
-										class:active={band.key === activePanel}
-										onclick={() => (bandsOpen = false)}
-									>
-										{band.label}
-									</a>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-			</div>
-		{/if}
+						<IconMusic size={16} />
+						{activeBand?.label ?? 'Bands'}
+						<IconChevronDown size={14} />
+					</button>
+
+					{#if bandsOpen}
+						<div
+							class="absolute top-full left-0 z-[1000] mt-1 w-48 rounded-lg border border-base-300 bg-base-100 shadow-lg"
+						>
+							<ul class="menu menu-sm p-2">
+								{#each bandPanels as band (band.key)}
+									<li>
+										<a
+											href={band.href}
+											class:active={band.key === activePanel}
+											onclick={() => (bandsOpen = false)}
+										>
+											{band.label}
+										</a>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</ButtonGroup>
 	</div>
 
 	<!-- Mobile brand -->

@@ -153,7 +153,7 @@
 		<h2 class="shrink-0 text-2xl font-bold text-nowrap">My Reservations</h2>
 		<ButtonGroup>
 			<button
-				class="btn btn-sm"
+				class="join-item btn btn-sm"
 				class:btn-primary={activeTab === 'upcoming'}
 				class:latched={activeTab === 'upcoming'}
 				onclick={() => (activeTab = 'upcoming')}
@@ -161,7 +161,7 @@
 				Active ({upcoming.length})
 			</button>
 			<button
-				class="btn btn-sm"
+				class="join-item btn btn-sm"
 				class:btn-primary={activeTab === 'all'}
 				class:latched={activeTab==='all'}
 				onclick={() => (activeTab = 'all')}
@@ -213,7 +213,7 @@
 			<Column key="id" header="" shrink stopClick>
 				{#snippet cell(_value, row)}
 					<ButtonGroup>
-						<CancelSeriesAction seriesId={row.id} class="btn-square btn-ghost">
+						<CancelSeriesAction seriesId={row.id} class="join-item btn-square btn-ghost">
 							{#snippet trigger({ onclick, disabled })}
 								<Button class="btn-square btn-ghost btn-sm" {disabled} {onclick}>
 									<IconX size={20} />
@@ -226,7 +226,7 @@
 							modalTitle="Edit Schedule"
 							successToast="Series schedule updated"
 							onsuccess={() => invalidateAll()}
-							class="btn-xs btn-primary"
+							class="join-item btn-xs btn-primary"
 						>
 							{#snippet trigger({ onclick, disabled })}
 								<Button class="btn-square btn-ghost btn-sm" {disabled} {onclick}>
