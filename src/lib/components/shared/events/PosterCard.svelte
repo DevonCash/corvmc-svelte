@@ -46,7 +46,15 @@
 
 	const tagList = $derived(parseTags(tags));
 
-	const patterns = ['rays', 'stripes', 'checker', 'halftone', 'blobs'] as const;
+	const patterns = [
+		'rays', 'stripes', 'checker', 'halftone', 'blobs',
+		'zigzag', 'diamonds', 'waves', 'cross', 'triangles',
+		'scales', 'dots-lg', 'grid-thick', 'houndstooth', 'concentric',
+		'horizon', 'argyle', 'bricks', 'polka'
+	] as const;
+	const darkTextPatterns = new Set([
+		'checker', 'halftone', 'blobs', 'cross', 'triangles', 'houndstooth', 'diamonds'
+	]);
 	const patternClass = $derived.by(() => {
 		let hash = 0;
 		for (let i = 0; i < title.length; i++) {
@@ -56,9 +64,7 @@
 	});
 
 	const needsDarkText = $derived(
-		patternClass === 'poster-gen--checker' ||
-		patternClass === 'poster-gen--halftone' ||
-		patternClass === 'poster-gen--blobs'
+		darkTextPatterns.has(patternClass.replace('poster-gen--', ''))
 	);
 
 	const stateClasses = $derived(

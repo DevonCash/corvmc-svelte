@@ -768,6 +768,98 @@ p {
 		radial-gradient(circle at 80% 70%, var(--cmc-teal) 0 60px, transparent 80px),
 		var(--cmc-cream);
 }
+.poster-gen--zigzag {
+	background: linear-gradient(135deg, var(--cmc-orange) 25%, transparent 25%) -14px 0/28px 28px,
+		linear-gradient(225deg, var(--cmc-orange) 25%, transparent 25%) -14px 0/28px 28px,
+		linear-gradient(315deg, var(--cmc-orange) 25%, transparent 25%) 0 0/28px 28px,
+		linear-gradient(45deg, var(--cmc-orange) 25%, transparent 25%) 0 0/28px 28px,
+		var(--cmc-navy);
+}
+.poster-gen--diamonds {
+	background:
+		linear-gradient(45deg, var(--cmc-goldenrod) 25%, transparent 25%, transparent 75%, var(--cmc-goldenrod) 75%) 0 0/30px 30px,
+		linear-gradient(45deg, var(--cmc-goldenrod) 25%, transparent 25%, transparent 75%, var(--cmc-goldenrod) 75%) 15px 15px/30px 30px,
+		var(--cmc-orange);
+}
+.poster-gen--waves {
+	background:
+		radial-gradient(ellipse at 50% 0%, transparent 60%, var(--cmc-teal) 61%, var(--cmc-teal) 65%, transparent 66%) 0 0/40px 20px,
+		radial-gradient(ellipse at 50% 100%, transparent 60%, var(--cmc-teal) 61%, var(--cmc-teal) 65%, transparent 66%) 20px 10px/40px 20px,
+		var(--cmc-navy);
+}
+.poster-gen--cross {
+	background:
+		linear-gradient(var(--cmc-brown) 2px, transparent 2px) 0 0/18px 18px,
+		linear-gradient(90deg, var(--cmc-brown) 2px, transparent 2px) 0 0/18px 18px,
+		var(--cmc-cream);
+}
+.poster-gen--triangles {
+	background:
+		linear-gradient(60deg, var(--cmc-red-orange) 25%, transparent 25.5%) 0 0/32px 56px,
+		linear-gradient(120deg, var(--cmc-red-orange) 25%, transparent 25.5%) 0 0/32px 56px,
+		linear-gradient(60deg, transparent 74.5%, var(--cmc-red-orange) 75%) 16px 28px/32px 56px,
+		linear-gradient(120deg, transparent 74.5%, var(--cmc-red-orange) 75%) 16px 28px/32px 56px,
+		var(--cmc-goldenrod);
+}
+.poster-gen--scales {
+	background:
+		radial-gradient(circle at 50% 0%, transparent 48%, var(--cmc-navy) 49%, var(--cmc-navy) 52%, transparent 53%) 0 0/26px 26px,
+		radial-gradient(circle at 50% 0%, transparent 48%, var(--cmc-navy) 49%, var(--cmc-navy) 52%, transparent 53%) 13px 13px/26px 26px,
+		var(--cmc-teal);
+}
+.poster-gen--dots-lg {
+	background:
+		radial-gradient(circle, var(--cmc-orange) 6px, transparent 7px) 0 0/24px 24px,
+		var(--cmc-navy);
+}
+.poster-gen--grid-thick {
+	background:
+		linear-gradient(var(--cmc-orange) 4px, transparent 4px) 0 0/24px 24px,
+		linear-gradient(90deg, var(--cmc-orange) 4px, transparent 4px) 0 0/24px 24px,
+		var(--cmc-teal);
+}
+.poster-gen--houndstooth {
+	background:
+		linear-gradient(45deg, var(--cmc-brown) 25%, transparent 25%) 0 0/20px 20px,
+		linear-gradient(-45deg, var(--cmc-brown) 25%, transparent 25%) 0 10px/20px 20px,
+		linear-gradient(45deg, transparent 75%, var(--cmc-brown) 75%) 10px 0/20px 20px,
+		linear-gradient(-45deg, transparent 75%, var(--cmc-brown) 75%) 10px 10px/20px 20px,
+		var(--cmc-cream);
+}
+.poster-gen--concentric {
+	background:
+		repeating-radial-gradient(circle at 50% 50%, var(--cmc-orange) 0 8px, var(--cmc-goldenrod) 8px 16px, var(--cmc-red-orange) 16px 24px, var(--cmc-orange) 24px 32px);
+}
+.poster-gen--horizon {
+	background:
+		linear-gradient(180deg,
+			var(--cmc-orange) 0 20%,
+			var(--cmc-goldenrod) 20% 40%,
+			var(--cmc-red-orange) 40% 55%,
+			var(--cmc-teal) 55% 70%,
+			var(--cmc-navy) 70% 100%
+		);
+}
+.poster-gen--argyle {
+	background:
+		linear-gradient(45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px 40px,
+		linear-gradient(-45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px 40px,
+		linear-gradient(45deg, var(--cmc-navy) 25%, transparent 25%, transparent 75%, var(--cmc-navy) 75%) 0 0/40px 40px,
+		var(--cmc-teal);
+}
+.poster-gen--bricks {
+	background:
+		linear-gradient(transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
+		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
+		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 24px 12px/48px 24px,
+		var(--cmc-orange);
+}
+.poster-gen--polka {
+	background:
+		radial-gradient(circle, var(--cmc-cream) 5px, transparent 6px) 0 0/20px 20px,
+		radial-gradient(circle, var(--cmc-cream) 5px, transparent 6px) 10px 10px/20px 20px,
+		var(--cmc-red-orange);
+}
 .poster-gen__eyebrow {
 	font-weight: 700;
 	font-size: 10px;
