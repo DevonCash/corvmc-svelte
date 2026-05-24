@@ -76,6 +76,7 @@
 					<button
 						class="btn btn-sm"
 						class:btn-primary={activeFilter === null}
+						class:latched={activeFilter === null}
 						onclick={() => (activeFilter = null)}
 					>
 						All <span class="opacity-60 ml-1">{data.events.length}</span>
@@ -84,6 +85,7 @@
 						<button
 							class="btn btn-sm"
 							class:btn-primary={activeFilter === tag}
+							class:latched={activeFilter === tag}
 							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
 						>
 							{tag}
