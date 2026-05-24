@@ -8,6 +8,7 @@ import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
 import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
+import type { MembershipResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -41,5 +42,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		feeSchedule: {
 			perUnit: calculateTotalWithFeeCoverage(contributionConfig.unitAmountCents).feeCents
 		}
-	});
+	} satisfies MembershipResponse);
 };

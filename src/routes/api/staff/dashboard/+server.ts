@@ -5,6 +5,8 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { role, permission } from '$lib/server/db/schema/authorization';
 import { count, desc, gte } from 'drizzle-orm';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffDashboardResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -40,6 +42,11 @@ export const GET: RequestHandler = async ({ locals }) => {
 			totalPermissions: totalPermissionsResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
-		recentUsers
-	});
+		recentUsers: recentUsers.map((u) => ({
+			id: u.id,
+			name: u.name,
+			email: u.email,
+			createdAt: toISO(u.createdAt)
+		}))
+	} satisfies StaffDashboardResponse);
 };

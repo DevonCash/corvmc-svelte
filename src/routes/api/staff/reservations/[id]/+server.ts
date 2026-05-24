@@ -7,6 +7,8 @@ import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, asc, desc, count } from 'drizzle-orm';
 import { config } from '$lib/server/site-config/site-config-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -96,22 +98,34 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 
 	return json({
 		reservation: {
-			...row,
-			startsAt: row.startsAt.toISOString(),
-			endsAt: row.endsAt.toISOString(),
-			createdAt: row.createdAt.toISOString()
+			id: row.id,
+			status: row.status,
+			startsAt: toISO(row.startsAt),
+			endsAt: toISO(row.endsAt),
+			bookerType: row.bookerType,
+			bookerId: row.bookerId,
+			notes: row.notes,
+			cancellationReason: row.cancellationReason,
+			stripePaymentRecordId: row.stripePaymentRecordId,
+			createdByUserId: row.createdByUserId,
+			createdAt: toISO(row.createdAt),
+			memberName: row.memberName,
+			memberEmail: row.memberEmail,
+			memberPhone: row.memberPhone,
+			memberPronouns: row.memberPronouns,
+			memberImage: row.memberImage
 		},
 		sameDayReservations: sameDayReservations.map((r) => ({
 			id: r.id,
 			memberName: '',
 			bookerType: r.bookerType,
-			startsAt: r.startsAt.toISOString(),
-			endsAt: r.endsAt.toISOString()
+			startsAt: toISO(r.startsAt),
+			endsAt: toISO(r.endsAt)
 		})),
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
 		isFirstReservation: completedCount.count === 0,
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
-	});
+	} satisfies StaffReservationDetailResponse);
 };

@@ -6,6 +6,8 @@ import { user } from '$lib/server/db/schema/auth';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { count, desc, like, eq, isNull, or } from 'drizzle-orm';
 import { paginate, parsePagination } from '$lib/server/db/paginate';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffUsersResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -64,10 +66,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	return json({
 		users: users.map((u) => ({
-			...u,
+			id: u.id,
+			name: u.name,
+			email: u.email,
+			pronouns: u.pronouns,
+			createdAt: toISO(u.createdAt),
 			roles: roleMap[u.id] ?? []
 		})),
 		pagination,
 		search
-	});
+	} satisfies StaffUsersResponse);
 };

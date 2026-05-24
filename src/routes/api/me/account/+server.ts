@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
 import { hasAnyRole } from '$lib/server/authorization';
+import type { AccountResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -27,10 +28,12 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 	return json({
 		user: {
-			...row,
-			pronouns: row.pronouns ?? undefined,
-			phone: row.phone ?? undefined
+			id: row.id,
+			name: row.name,
+			email: row.email,
+			pronouns: row.pronouns,
+			phone: row.phone
 		},
 		isStaff
-	});
+	} satisfies AccountResponse);
 };

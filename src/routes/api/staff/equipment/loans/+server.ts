@@ -4,6 +4,8 @@ import { hasAnyRole } from '$lib/server/authorization';
 import { listLoans } from '$lib/server/equipment/loan-service';
 import { parsePagination } from '$lib/server/db/paginate';
 import type { LoanStatus } from '$lib/server/db/schema/equipment';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -20,17 +22,17 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	return json({
 		loans: rows.map((l) => ({
-			...l,
-			requestedPickupDate: l.requestedPickupDate.toISOString(),
-			estimatedReturnDate: l.estimatedReturnDate?.toISOString() ?? null,
-			scheduledPickupDate: l.scheduledPickupDate?.toISOString() ?? null,
-			dueDate: l.dueDate?.toISOString() ?? null,
-			checkedOutAt: l.checkedOutAt?.toISOString() ?? null,
-			returnedAt: l.returnedAt?.toISOString() ?? null,
-			createdAt: l.createdAt.toISOString(),
-			updatedAt: l.updatedAt.toISOString()
+			id: l.id,
+			status: l.status,
+			requestedPickupDate: toISO(l.requestedPickupDate),
+			scheduledPickupDate: l.scheduledPickupDate ? toISO(l.scheduledPickupDate) : null,
+			dueDate: l.dueDate ? toISO(l.dueDate) : null,
+			checkedOutAt: l.checkedOutAt ? toISO(l.checkedOutAt) : null,
+			returnedAt: l.returnedAt ? toISO(l.returnedAt) : null,
+			createdAt: toISO(l.createdAt),
+			updatedAt: toISO(l.updatedAt)
 		})),
 		pagination,
 		filters: { search, status: status ?? '' }
-	});
+	} satisfies StaffEquipmentLoansResponse);
 };

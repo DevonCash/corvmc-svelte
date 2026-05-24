@@ -4,6 +4,8 @@ import { getUserTickets } from '$lib/server/ticket/ticket-service';
 import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
 import { inArray } from 'drizzle-orm';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { MemberTicketsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -34,15 +36,20 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	return json({
-		tickets: tickets.map((t) => ({
-			id: t.id,
-			eventId: t.eventId,
-			code: t.code,
-			status: t.status,
-			attendeeName: t.attendeeName,
-			checkedInAt: t.checkedInAt ?? null,
-			createdAt: t.createdAt,
-			event: eventMap[t.eventId] ?? null
-		}))
-	});
+		tickets: tickets.map((t) => {
+			const evt = eventMap[t.eventId];
+			return {
+				id: t.id,
+				eventId: t.eventId,
+				code: t.code,
+				status: t.status,
+				attendeeName: t.attendeeName,
+				checkedInAt: t.checkedInAt ? toISO(t.checkedInAt) : null,
+				createdAt: toISO(t.createdAt),
+				event: evt
+					? { title: evt.title, startsAt: toISO(evt.startsAt), endsAt: toISO(evt.endsAt) }
+					: null
+			};
+		})
+	} satisfies MemberTicketsResponse);
 };

@@ -5,6 +5,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, gt, lte, ne, desc, inArray } from 'drizzle-orm';
 import { listForUser } from '$lib/server/reservation/recurring-series-service';
+import { toISO, type ISODateString } from '$lib/server/db/schema/columns';
+import type { MemberReservationsResponse, MemberReservation } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -58,29 +60,33 @@ export const GET: RequestHandler = async ({ locals }) => {
 			id: s.id,
 			frequencyLabel: s.frequencyLabel,
 			bookerType: s.bookerType,
-			startsAt: s.startsAt.toISOString(),
-			endsAt: s.endsAt.toISOString(),
-			createdAt: s.createdAt.toISOString(),
-			seriesEndsAt: s.seriesEndsAt?.toISOString() ?? null
+			startsAt: toISO(s.startsAt),
+			endsAt: toISO(s.endsAt),
+			createdAt: toISO(s.createdAt),
+			seriesEndsAt: s.seriesEndsAt ? toISO(s.seriesEndsAt) : null
 		}))
-	});
+	} satisfies MemberReservationsResponse);
 };
 
-function serializeReservation(row: any, credits: Map<string, any>) {
+function toISOOrNull(d: Date | null | undefined): ISODateString | null {
+	return d && !isNaN(d.getTime()) ? toISO(d) : null;
+}
+
+function serializeReservation(row: any, credits: Map<string, any>): MemberReservation {
 	const credit = credits.get(row.id);
 	return {
 		id: row.id,
 		bookerType: row.bookerType,
 		bookerId: row.bookerId,
 		status: row.status,
-		startsAt: row.startsAt.toISOString(),
-		endsAt: row.endsAt.toISOString(),
+		startsAt: toISO(row.startsAt),
+		endsAt: toISO(row.endsAt),
 		notes: row.notes,
 		recurringSeriesId: row.recurringSeriesId ?? null,
-		paidAt: row.paidAt && !isNaN(row.paidAt.getTime()) ? row.paidAt.toISOString() : null,
-		refundedAt: row.refundedAt && !isNaN(row.refundedAt.getTime()) ? row.refundedAt.toISOString() : null,
+		paidAt: toISOOrNull(row.paidAt),
+		refundedAt: toISOOrNull(row.refundedAt),
 		paidWithCredits: credit != null,
-		waitlistNotifiedAt: row.waitlistNotifiedAt && !isNaN(row.waitlistNotifiedAt.getTime()) ? row.waitlistNotifiedAt.toISOString() : null,
-		waitlistExpiresAt: row.waitlistExpiresAt && !isNaN(row.waitlistExpiresAt.getTime()) ? row.waitlistExpiresAt.toISOString() : null
+		waitlistNotifiedAt: toISOOrNull(row.waitlistNotifiedAt),
+		waitlistExpiresAt: toISOOrNull(row.waitlistExpiresAt)
 	};
 }

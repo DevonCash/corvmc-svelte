@@ -2,11 +2,13 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole, primaryRoleFor } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, ne, gt, lt, inArray, like, or, desc, asc, count } from 'drizzle-orm';
 import { config } from '$lib/server/site-config/site-config-service';
 import { paginate, parsePagination } from '$lib/server/db/paginate';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffReservationsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -16,7 +18,9 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const now = new Date();
 	const tab = url.searchParams.get('tab') ?? 'upcoming';
 	const search = url.searchParams.get('q') ?? '';
-	const statusFilter = url.searchParams.getAll('status');
+	const statusFilter = url.searchParams.getAll('status').filter(
+		(s): s is ReservationStatus => (reservationStatuses as readonly string[]).includes(s)
+	);
 	const dateFrom = url.searchParams.get('from');
 	const dateTo = url.searchParams.get('to');
 
@@ -113,14 +117,31 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	return json({
 		reservations: reservations.map((r) => ({
-			...r,
-			startsAt: r.startsAt.toISOString(),
-			endsAt: r.endsAt.toISOString()
+			id: r.id,
+			status: r.status,
+			startsAt: toISO(r.startsAt),
+			endsAt: toISO(r.endsAt),
+			bookerType: r.bookerType,
+			notes: r.notes,
+			stripePaymentRecordId: r.stripePaymentRecordId,
+			createdByUserId: r.createdByUserId,
+			recurringSeriesId: r.recurringSeriesId,
+			memberName: r.memberName,
+			memberEmail: r.memberEmail,
+			memberPronouns: r.memberPronouns,
+			memberRole: r.memberRole
 		})),
 		unresolved: unresolved.map((r) => ({
-			...r,
-			startsAt: r.startsAt.toISOString(),
-			endsAt: r.endsAt.toISOString()
+			id: r.id,
+			status: r.status,
+			startsAt: toISO(r.startsAt),
+			endsAt: toISO(r.endsAt),
+			createdByUserId: r.createdByUserId,
+			notes: r.notes,
+			memberName: r.memberName,
+			memberEmail: r.memberEmail,
+			memberPronouns: r.memberPronouns,
+			memberRole: r.memberRole
 		})),
 		pagination,
 		tab,
@@ -134,5 +155,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			unresolved: unresolved.length
 		},
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
-	});
+	} satisfies StaffReservationsResponse);
 };

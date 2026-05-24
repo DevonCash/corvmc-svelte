@@ -1,6 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listUserLoans } from '$lib/server/equipment/loan-service';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { MemberEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -15,19 +17,19 @@ export const GET: RequestHandler = async ({ locals }) => {
 		.filter((l) => ['returned', 'cancelled'].includes(l.status))
 		.map(serializeLoan);
 
-	return json({ active, past });
+	return json({ active, past } satisfies MemberEquipmentLoansResponse);
 };
 
 function serializeLoan(l: Awaited<ReturnType<typeof listUserLoans>>[number]) {
 	return {
 		...l,
-		requestedPickupDate: l.requestedPickupDate.toISOString(),
-		estimatedReturnDate: l.estimatedReturnDate?.toISOString() ?? null,
-		scheduledPickupDate: l.scheduledPickupDate?.toISOString() ?? null,
-		dueDate: l.dueDate?.toISOString() ?? null,
-		checkedOutAt: l.checkedOutAt?.toISOString() ?? null,
-		returnedAt: l.returnedAt?.toISOString() ?? null,
-		createdAt: l.createdAt.toISOString(),
-		updatedAt: l.updatedAt.toISOString()
+		requestedPickupDate: toISO(l.requestedPickupDate),
+		estimatedReturnDate: l.estimatedReturnDate ? toISO(l.estimatedReturnDate) : null,
+		scheduledPickupDate: l.scheduledPickupDate ? toISO(l.scheduledPickupDate) : null,
+		dueDate: l.dueDate ? toISO(l.dueDate) : null,
+		checkedOutAt: l.checkedOutAt ? toISO(l.checkedOutAt) : null,
+		returnedAt: l.returnedAt ? toISO(l.returnedAt) : null,
+		createdAt: toISO(l.createdAt),
+		updatedAt: toISO(l.updatedAt)
 	};
 }

@@ -8,6 +8,9 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq } from 'drizzle-orm';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { EventStatus } from '$lib/server/db/schema/event';
+import type { StaffEventDetailResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -25,12 +28,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		.limit(1);
 
 	// Load linked reservation details if present
-	let linkedReservation: {
-		id: string;
-		status: string;
-		startsAt: string;
-		endsAt: string;
-	} | null = null;
+	let linkedReservation: StaffEventDetailResponse['linkedReservation'] = null;
 
 	if (evt.reservationId) {
 		const [res] = await db
@@ -48,8 +46,8 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 			linkedReservation = {
 				id: res.id,
 				status: res.status,
-				startsAt: res.startsAt.toISOString(),
-				endsAt: res.endsAt.toISOString()
+				startsAt: toISO(res.startsAt),
+				endsAt: toISO(res.endsAt)
 			};
 		}
 	}
@@ -61,17 +59,8 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 	}
 
 	// Load ticket data if ticketing is enabled
-	let ticketStats: { sold: number; remaining: number | null } | null = null;
-	let tickets: Array<{
-		id: string;
-		purchaseId: string;
-		attendeeName: string;
-		attendeeEmail: string;
-		code: string;
-		status: string;
-		checkedInAt: string | null;
-		createdAt: string;
-	}> = [];
+	let ticketStats: StaffEventDetailResponse['ticketStats'] = null;
+	let tickets: StaffEventDetailResponse['tickets'] = [];
 
 	if (evt.ticketingEnabled) {
 		const [sold, remaining, allTickets] = await Promise.all([
@@ -87,25 +76,34 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 			attendeeEmail: t.attendeeEmail,
 			code: t.code,
 			status: t.status,
-			checkedInAt: t.checkedInAt?.toISOString() ?? null,
-			createdAt: t.createdAt.toISOString()
+			checkedInAt: t.checkedInAt ? toISO(t.checkedInAt) : null,
+			createdAt: toISO(t.createdAt)
 		}));
 	}
 
 	return json({
 		event: {
-			...evt,
-			startsAt: evt.startsAt.toISOString(),
-			endsAt: evt.endsAt.toISOString(),
-			doorsAt: evt.doorsAt?.toISOString() ?? null,
-			publishedAt: evt.publishedAt?.toISOString() ?? null,
-			createdAt: evt.createdAt.toISOString(),
-			updatedAt: evt.updatedAt.toISOString()
+			id: evt.id,
+			title: evt.title,
+			description: evt.description,
+			startsAt: toISO(evt.startsAt),
+			endsAt: toISO(evt.endsAt),
+			doorsAt: evt.doorsAt ? toISO(evt.doorsAt) : null,
+			publishedAt: evt.publishedAt ? toISO(evt.publishedAt) : null,
+			createdAt: toISO(evt.createdAt),
+			updatedAt: toISO(evt.updatedAt),
+			status: evt.status as EventStatus,
+			tags: evt.tags,
+			reservationId: evt.reservationId,
+			ticketingEnabled: evt.ticketingEnabled,
+			ticketPrice: evt.ticketPrice,
+			ticketQuantity: evt.ticketQuantity,
+			posterKey: evt.posterKey
 		},
 		posterUrl,
 		creator,
 		linkedReservation,
 		ticketStats,
 		tickets
-	});
+	} satisfies StaffEventDetailResponse);
 };

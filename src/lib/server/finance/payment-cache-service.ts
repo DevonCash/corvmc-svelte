@@ -24,6 +24,7 @@ export interface PaymentCacheRow {
 	status: string;
 	paidAt: string; // ISO string
 	refundedAt: string | null;
+	createdAt: string; // ISO string
 }
 
 export interface PaymentCacheFilters {
@@ -50,7 +51,8 @@ const baseSelect = {
 	paymentMethod: paymentCache.paymentMethod,
 	status: paymentCache.status,
 	paidAt: paymentCache.paidAt,
-	refundedAt: paymentCache.refundedAt
+	refundedAt: paymentCache.refundedAt,
+	createdAt: paymentCache.createdAt
 };
 
 /** Escape LIKE/ILIKE wildcards so user input is treated literally. */
@@ -94,12 +96,14 @@ function serialize(row: {
 	id: string;
 	paidAt: Date;
 	refundedAt: Date | null;
+	createdAt: Date;
 	[key: string]: unknown;
 }): PaymentCacheRow {
 	return {
 		...row,
 		paidAt: row.paidAt.toISOString(),
-		refundedAt: row.refundedAt?.toISOString() ?? null
+		refundedAt: row.refundedAt?.toISOString() ?? null,
+		createdAt: row.createdAt.toISOString()
 	} as PaymentCacheRow;
 }
 

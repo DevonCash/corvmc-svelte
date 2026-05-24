@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { listEquipment, listCategories } from '$lib/server/equipment/equipment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
+import type { MemberEquipmentResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -42,5 +43,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		creditBalance,
 		isSustainingMember,
 		filters: { search, categoryId: categoryId ?? '' }
-	});
+	} satisfies MemberEquipmentResponse);
 };

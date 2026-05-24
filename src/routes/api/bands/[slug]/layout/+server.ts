@@ -2,6 +2,8 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBySlug, getUserRole, listForUser } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -9,9 +11,10 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const band = await getBySlug(params.slug);
 	if (!band) return error(404, 'Band not found');
 
-	const [role, isStaff] = await Promise.all([
+	const [role, isStaff, userBands] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
-		hasAnyRole(locals.user.id, ['admin', 'staff'])
+		hasAnyRole(locals.user.id, ['admin', 'staff']),
+		listForUser(locals.user.id).catch(() => [])
 	]);
 
 	if (!role && !isStaff) {
@@ -27,10 +30,13 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			ownerId: band.ownerId,
 			avatarKey: band.avatarKey,
 			memberCount: band.memberCount,
-			createdAt: band.createdAt
+			createdAt: toISO(band.createdAt)
 		},
 		userRole: role ?? 'staff',
 		isStaff,
-		userBands: await listForUser(locals.user.id).catch(() => [])
-	});
+		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
+		user: locals.user
+			? { id: locals.user.id, name: locals.user.name, email: locals.user.email }
+			: null
+	} satisfies BandLayoutResponse);
 };

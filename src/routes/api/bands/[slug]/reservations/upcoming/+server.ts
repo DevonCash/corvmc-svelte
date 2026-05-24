@@ -5,6 +5,8 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/auth';
 import { eq, and, gt, ne } from 'drizzle-orm';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { BandUpcomingResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -40,10 +42,10 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		upcoming: upcoming.map((r) => ({
 			id: r.id,
 			status: r.status,
-			startsAt: r.startsAt,
-			endsAt: r.endsAt,
+			startsAt: toISO(r.startsAt),
+			endsAt: toISO(r.endsAt),
 			notes: r.notes,
 			bookedByName: r.bookedByName
 		}))
-	});
+	} satisfies BandUpcomingResponse);
 };

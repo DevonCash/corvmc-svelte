@@ -3,6 +3,8 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listAll } from '$lib/server/band/band-service';
 import { parsePagination } from '$lib/server/db/paginate';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffBandsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -22,11 +24,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	return json({
 		bands: rows.map((b) => ({
-			...b,
-			createdAt: b.createdAt.toISOString(),
-			deletedAt: b.deletedAt?.toISOString() ?? null
+			id: b.id,
+			name: b.name,
+			slug: b.slug,
+			status: b.deletedAt ? 'deactivated' : 'active',
+			createdAt: toISO(b.createdAt),
+			deletedAt: b.deletedAt ? toISO(b.deletedAt) : null
 		})),
 		pagination,
 		filters: { search, status: status ?? '' }
-	});
+	} satisfies StaffBandsResponse);
 };

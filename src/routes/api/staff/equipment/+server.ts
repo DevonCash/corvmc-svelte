@@ -3,6 +3,9 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listEquipment, listCategories } from '$lib/server/equipment/equipment-service';
 import { parsePagination } from '$lib/server/db/paginate';
+import { equipmentStatuses } from '$lib/config';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -11,7 +14,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	const search = url.searchParams.get('q')?.trim() ?? '';
 	const categoryId = url.searchParams.get('category') || undefined;
-	const status = url.searchParams.get('status') || undefined;
+	const statusParam = url.searchParams.get('status') || '';
+	const status = (equipmentStatuses as readonly string[]).includes(statusParam) ? statusParam as (typeof equipmentStatuses)[number] : undefined;
 
 	const [{ rows: equipmentList, pagination }, categories] = await Promise.all([
 		listEquipment({ search: search || undefined, categoryId, status }, parsePagination(url)),
@@ -20,22 +24,30 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	return json({
 		equipment: equipmentList.map((e) => ({
-			...e,
-			createdAt: e.createdAt.toISOString(),
-			updatedAt: e.updatedAt.toISOString(),
-			deletedAt: e.deletedAt?.toISOString() ?? null,
+			id: e.id,
+			name: e.name,
+			description: e.description,
+			categoryId: e.categoryId,
+			createdAt: toISO(e.createdAt),
+			updatedAt: toISO(e.updatedAt),
+			deletedAt: e.deletedAt ? toISO(e.deletedAt) : null,
 			category: {
-				...e.category,
-				createdAt: e.category.createdAt.toISOString(),
-				updatedAt: e.category.updatedAt.toISOString()
+				id: e.category.id,
+				name: e.category.name,
+				pricingTier: e.category.pricingTier,
+				createdAt: toISO(e.category.createdAt),
+				updatedAt: toISO(e.category.updatedAt)
 			}
 		})),
 		categories: categories.map((c) => ({
-			...c,
-			createdAt: c.createdAt.toISOString(),
-			updatedAt: c.updatedAt.toISOString()
+			id: c.id,
+			name: c.name,
+			pricingTier: c.pricingTier,
+			displayOrder: c.displayOrder,
+			createdAt: toISO(c.createdAt),
+			updatedAt: toISO(c.updatedAt)
 		})),
 		pagination,
 		filters: { search, categoryId: categoryId ?? '', status: status ?? '' }
-	});
+	} satisfies StaffEquipmentResponse);
 };

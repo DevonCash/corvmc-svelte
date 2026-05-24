@@ -3,6 +3,8 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { list } from '$lib/server/finance/payment-cache-service';
 import { parsePagination } from '$lib/server/db/paginate';
+import type { ISODateString } from '$lib/server/db/schema/columns';
+import type { StaffPaymentsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -27,8 +29,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	);
 
 	return json({
-		payments: rows,
+		payments: rows.map((r) => ({
+			...r,
+			userName: r.userName ?? '',
+			createdAt: r.createdAt as ISODateString
+		})),
 		pagination,
 		filters: { search, method, status, from, to }
-	});
+	} satisfies StaffPaymentsResponse);
 };

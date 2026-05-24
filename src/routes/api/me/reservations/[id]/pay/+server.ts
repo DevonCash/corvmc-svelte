@@ -7,6 +7,8 @@ import { getBalance } from '$lib/server/finance/credit-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -31,15 +33,15 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	return json({
 		reservation: {
 			id: row.id,
-			startsAt: row.startsAt.toISOString(),
-			endsAt: row.endsAt.toISOString(),
+			startsAt: toISO(row.startsAt),
+			endsAt: toISO(row.endsAt),
 			notes: row.notes
 		},
 		durationHours,
 		totalCents,
 		hourlyRateCents,
 		freeHoursBalance
-	});
+	} satisfies ReservationPayResponse);
 };
 
 export const POST: RequestHandler = async ({ params, locals, request }) => {

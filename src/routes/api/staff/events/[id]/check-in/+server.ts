@@ -3,6 +3,8 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getById } from '$lib/server/event/event-service';
 import { getEventTickets, getTicketsSold } from '$lib/server/ticket/ticket-service';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -24,7 +26,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		event: {
 			id: evt.id,
 			title: evt.title,
-			startsAt: evt.startsAt.toISOString(),
+			startsAt: toISO(evt.startsAt),
 			ticketQuantity: evt.ticketQuantity
 		},
 		tickets: tickets
@@ -35,8 +37,8 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 				attendeeEmail: t.attendeeEmail,
 				code: t.code,
 				status: t.status,
-				checkedInAt: t.checkedInAt?.toISOString() ?? null
+				checkedInAt: t.checkedInAt ? toISO(t.checkedInAt) : null
 			})),
 		stats: { sold, checkedIn }
-	});
+	} satisfies StaffCheckInResponse);
 };

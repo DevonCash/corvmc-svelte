@@ -1,6 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBySlug, getMembers } from '$lib/server/band/band-service';
+import { toISO } from '$lib/server/db/schema/columns';
+import type { BandMembersResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -20,7 +22,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				position: m.position,
 				userName: m.userName,
 				userEmail: m.userEmail,
-				createdAt: m.createdAt.toISOString()
+				createdAt: toISO(m.createdAt)
 			})),
 		pending: members
 			.filter((m) => m.status === 'pending')
@@ -32,7 +34,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				userName: m.userName,
 				userEmail: m.userEmail,
 				invitedById: m.invitedById,
-				createdAt: m.createdAt.toISOString()
+				createdAt: toISO(m.createdAt)
 			}))
-	});
+	} satisfies BandMembersResponse);
 };
