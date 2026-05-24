@@ -156,7 +156,7 @@
 		padding: 10px 10px 14px;
 		border: 2.5px solid var(--cmc-brown);
 		border-radius: 8px;
-		background: var(--cmc-parchment);
+		background: var(--bg-card);
 		text-decoration: none;
 		color: inherit;
 		cursor: pointer;
