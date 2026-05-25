@@ -2,6 +2,7 @@
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import type { ISODateString } from '$lib/types/dates';
 	import Logo from '$lib/components/shared/Logo.svelte';
+	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
 
 	interface Props {
 		href: string;
@@ -46,26 +47,9 @@
 
 	const tagList = $derived(parseTags(tags));
 
-	const patterns = [
-		'rays', 'stripes', 'checker', 'halftone', 'blobs',
-		'zigzag', 'diamonds', 'waves', 'cross', 'triangles',
-		'scales', 'dots-lg', 'grid-thick', 'houndstooth', 'concentric',
-		'horizon', 'argyle', 'bricks', 'polka'
-	] as const;
-	const darkTextPatterns = new Set([
-		'checker', 'halftone', 'blobs', 'cross', 'triangles', 'houndstooth', 'diamonds'
-	]);
-	const patternClass = $derived.by(() => {
-		let hash = 0;
-		for (let i = 0; i < title.length; i++) {
-			hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
-		}
-		return `poster-gen--${patterns[Math.abs(hash) % patterns.length]}`;
-	});
-
-	const needsDarkText = $derived(
-		darkTextPatterns.has(patternClass.replace('poster-gen--', ''))
-	);
+	const pattern = $derived(hashPattern(title));
+	const patternClass = $derived(`poster-gen--${pattern}`);
+	const needsDarkText = $derived(darkTextPatterns.has(pattern));
 
 	const stateClasses = $derived(
 		[isPast && 'polaroid--past', isSoldOut && 'polaroid--soldout', isStatic && 'polaroid--static']

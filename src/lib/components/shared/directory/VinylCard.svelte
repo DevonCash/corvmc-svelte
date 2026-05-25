@@ -1,5 +1,6 @@
 <script lang="ts">
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
+	import { hashPattern } from '$lib/utils/patterns';
 
 	interface Props {
 		href: string;
@@ -22,6 +23,8 @@
 		color = 'var(--cmc-orange)',
 		id
 	}: Props = $props();
+
+	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 
 	function initials(n: string): string {
 		return n
@@ -59,7 +62,9 @@
 				{#if avatarUrl}
 					<img src={avatarUrl} alt={name} class="h-full w-full object-cover" />
 				{:else}
-					{initials(name)}
+					<div class="poster-gen {patternClass} vinyl-card__pattern">
+						<span class="vinyl-card__initials">{initials(name)}</span>
+					</div>
 				{/if}
 			</div>
 			{#if lookingForMembers}
@@ -192,19 +197,23 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--vinyl-label);
-		color: #fff;
+		overflow: hidden;
+	}
+	.vinyl-card__pattern {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.vinyl-card__initials {
 		font-weight: 700;
-		font-size: 1.5rem;
-		line-height: 1;
-		letter-spacing: -0.01em;
-		text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
-		background-image:
-			radial-gradient(circle at center, rgba(0, 0, 0, 0.18) 1px, transparent 1.5px),
-			linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%);
-		background-size:
-			6px 6px,
-			100% 100%;
+		font-size: 2rem;
+		color: #fff;
+		-webkit-text-stroke: 3px var(--cmc-brown);
+		paint-order: stroke fill;
+		letter-spacing: 0.02em;
+		z-index: 1;
 	}
 	.vinyl-card__gaff {
 		position: absolute;

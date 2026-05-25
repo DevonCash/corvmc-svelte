@@ -1,5 +1,6 @@
 <script lang="ts">
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
+	import { hashPattern } from '$lib/utils/patterns';
 
 	interface Props {
 		href: string;
@@ -27,6 +28,8 @@
 		memberSince
 	}: Props = $props();
 
+	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
+
 	function initials(n: string): string {
 		return n
 			.split(' ')
@@ -50,7 +53,9 @@
 			{#if image}
 				<img src={image} alt={name} class="h-full w-full rounded object-cover" />
 			{:else}
-				{initials(name)}
+				<div class="poster-gen {patternClass} id-card__pattern">
+					<span class="id-card__initials">{initials(name)}</span>
+				</div>
 			{/if}
 		</div>
 		<div class="id-card__info">
@@ -96,7 +101,7 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		background: #ffe8d6;
+		background: var(--bg-card, var(--color-base-200));
 		width: 100%;
 		max-width: 320px;
 		border-radius: 10px;
@@ -201,16 +206,28 @@
 		width: 17.5cqi;
 		align-self: stretch;
 		border-radius: 4px;
-		background: var(--photo-bg, var(--cmc-light-blue));
-		color: var(--cmc-navy);
+		overflow: hidden;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-weight: 700;
-		font-size: 6cqi;
-		letter-spacing: 0.02em;
 		flex-shrink: 0;
 		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+	}
+	.id-card__pattern {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.id-card__initials {
+		font-weight: 700;
+		font-size: 6cqi;
+		color: #fff;
+		-webkit-text-stroke: 2px var(--cmc-brown);
+		paint-order: stroke fill;
+		letter-spacing: 0.02em;
+		z-index: 1;
 	}
 	.id-card__info {
 		display: flex;
@@ -223,7 +240,7 @@
 		font-weight: 700;
 		font-size: 5.8cqi;
 		line-height: 1.15;
-		color: var(--cmc-navy);
+		color: var(--color-secondary);
 	}
 	.id-card__pronouns {
 		white-space: nowrap;
@@ -264,17 +281,19 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		white-space: nowrap;
-		color: rgba(90, 61, 43, 0.55);
-		/* text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); */
+		color: var(--color-base-content, currentColor);
+		opacity: 0.55;
 	}
 	.id-tag--teal {
-		color: rgba(0, 133, 155, 0.5);
+		color: var(--cmc-teal);
+		opacity: 0.6;
 		&:has(+ .id-tag--teal)::after {
 			content: ', ';
 		}
 	}
 	.id-tag--band {
-		color: rgba(0, 59, 92, 0.5);
+		color: var(--color-secondary);
+		opacity: 0.6;
 
 		&:has(+ .id-tag--band)::after {
 			content: ', ';
@@ -303,27 +322,28 @@
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: rgba(90, 61, 43, 0.4);
-		text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+		color: var(--color-base-content, currentColor);
+		opacity: 0.4;
 		white-space: nowrap;
 	}
 	.id-card__barcode {
 		flex: 1;
 		max-width: 28cqi;
 		height: 5cqi;
+		opacity: 0.35;
 		background: repeating-linear-gradient(
 			to right,
-			rgba(90, 61, 43, 0.35) 0 0.5cqi,
+			currentColor 0 0.5cqi,
 			transparent 0.5cqi 1cqi,
-			rgba(90, 61, 43, 0.35) 1cqi 1.3cqi,
+			currentColor 1cqi 1.3cqi,
 			transparent 1.3cqi 2cqi,
-			rgba(90, 61, 43, 0.35) 2cqi 2.3cqi,
+			currentColor 2cqi 2.3cqi,
 			transparent 2.3cqi 3.2cqi,
-			rgba(90, 61, 43, 0.35) 3.2cqi 3.5cqi,
+			currentColor 3.2cqi 3.5cqi,
 			transparent 3.5cqi 4cqi,
-			rgba(90, 61, 43, 0.35) 4cqi 5cqi,
+			currentColor 4cqi 5cqi,
 			transparent 5cqi 5.4cqi,
-			rgba(90, 61, 43, 0.35) 5.4cqi 5.7cqi,
+			currentColor 5.4cqi 5.7cqi,
 			transparent 5.7cqi 6.5cqi
 		);
 	}
