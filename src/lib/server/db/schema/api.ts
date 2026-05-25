@@ -251,43 +251,6 @@ export interface StaffEventsResponse {
 	>[];
 }
 
-export interface StaffEventDetailResponse {
-	event: Pick<
-		Event,
-		| 'id'
-		| 'title'
-		| 'description'
-		| 'startsAt'
-		| 'endsAt'
-		| 'doorsAt'
-		| 'publishedAt'
-		| 'createdAt'
-		| 'updatedAt'
-		| 'status'
-		| 'tags'
-		| 'reservationId'
-		| 'ticketingEnabled'
-		| 'ticketPrice'
-		| 'ticketQuantity'
-		| 'posterKey'
-	>;
-	posterUrl: string | null;
-	creator: { name: string; email: string };
-	linkedReservation: Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt'> | null;
-	ticketStats: { sold: number; remaining: number | null } | null;
-	tickets: Pick<
-		Ticket,
-		| 'id'
-		| 'purchaseId'
-		| 'attendeeName'
-		| 'attendeeEmail'
-		| 'code'
-		| 'status'
-		| 'checkedInAt'
-		| 'createdAt'
-	>[];
-}
-
 export interface StaffCheckInResponse {
 	event: Pick<Event, 'id' | 'title' | 'startsAt' | 'ticketQuantity'>;
 	tickets: Pick<

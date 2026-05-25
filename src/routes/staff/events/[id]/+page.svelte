@@ -1,25 +1,23 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { PublishEventAction, UnpublishEventAction, CancelEventAction, CompTicketsAction } from '$lib/components/shared/actions';
-	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
+	import { getStaffEventDetail, updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import Column from '$lib/components/shared/Table/Column.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let id = $derived(page.params.id!);
+	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
 
@@ -123,7 +121,7 @@
 		editing = false;
 		rebookNeeded = false;
 		rebookConfirmed = false;
-		await invalidateAll();
+		void getStaffEventDetail(id).refresh();
 	}
 
 	async function handlePosterUpload(e: Event) {
@@ -141,7 +139,7 @@
 			});
 			if (!res.ok) throw new Error('Upload failed');
 			toast.success('Poster updated');
-			await invalidateAll();
+			void getStaffEventDetail(id).refresh();
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
 		}
@@ -416,24 +414,28 @@
 		<!-- Ticket list -->
 		{#if data.tickets.length > 0}
 			<InfoCard title="Tickets ({data.tickets.length})">
-				<DataTable data={data.tickets} empty="No tickets">
-					<Column key="attendeeName" header="Name" sortable />
-					<Column key="attendeeEmail" header="Email">
-						{#snippet cell(_, t)}
-							<span class="text-sm opacity-70">{t.attendeeEmail}</span>
-						{/snippet}
-					</Column>
-					<Column key="code" header="Code" shrink>
-						{#snippet cell(_, t)}
-							<span class="font-mono text-sm">{t.code}</span>
-						{/snippet}
-					</Column>
-					<Column key="status" header="Status" shrink>
-						{#snippet cell(_, t)}
-							<StatusBadge status={t.status} />
-						{/snippet}
-					</Column>
-				</DataTable>
+				<div class="overflow-x-auto">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Email</th>
+								<th class="w-px">Code</th>
+								<th class="w-px">Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each data.tickets as t (t.id)}
+								<tr class="hover">
+									<td>{t.attendeeName}</td>
+									<td><span class="text-sm opacity-70">{t.attendeeEmail}</span></td>
+									<td class="w-px"><span class="font-mono text-sm">{t.code}</span></td>
+									<td class="w-px"><StatusBadge status={t.status} /></td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</InfoCard>
 		{/if}
 	{/if}

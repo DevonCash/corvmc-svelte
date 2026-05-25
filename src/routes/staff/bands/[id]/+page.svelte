@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
+
 	import {
 		getStaffBand as getBand,
 		getStaffBandMembers as getBandMembers,
@@ -20,8 +21,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import Column from '$lib/components/shared/Table/Column.svelte';
+	import { goto } from '$app/navigation';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -36,7 +36,6 @@
 
 	const { fields: reactivateFields } = reactivateBand;
 	const { fields: deactivateFields } = deactivateBand;
-	const { fields: roleFields } = updateMemberRole;
 
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
@@ -135,113 +134,139 @@
 				</div>
 			</header>
 		{/snippet}
-		<DataTable data={members} empty="No members">
-			<Column key="userName" header="Member" stopClick>
-				{#snippet cell(_, m)}
-					<MemberLink member={{ name: m.userName, email: m.userEmail, pronouns: m.userPronouns, role: m.userRole, userId: m.userId }} />
-				{/snippet}
-			</Column>
-			<Column key="role" header="Role" shrink stopClick>
-				{#snippet cell(_, m)}
-					{#if m.role !== 'owner' && m.status === 'active'}
-						<Form remote={updateMemberRole} onsuccess={() => toast.success('Role updated')} onfailure={() => toast.error('Failed to update role')}>
-							<input {...roleFields.memberId.as('hidden', m.id)} />
-							<select
-								class="select select-bordered select-xs"
-								name="role"
-								value={m.role}
-								onchange={(e) => e.currentTarget.form?.requestSubmit()}
-							>
-								<option value="member">Member</option>
-								<option value="admin">Admin</option>
-							</select>
-						</Form>
-					{:else}
-						<Badge variant="outline">{m.role}</Badge>
-					{/if}
-				{/snippet}
-			</Column>
-			<Column key="position" header="Position">
-				{#snippet cell(_, m)}
-					<span class="text-sm opacity-70">{m.position ?? '—'}</span>
-				{/snippet}
-			</Column>
-			<Column key="status" header="Status" shrink>
-				{#snippet cell(_, m)}
-					<StatusBadge status={m.status} />
-				{/snippet}
-			</Column>
-			<Column key="createdAt" header="Joined" type="date" shrink />
-			<Column key="actions" header="" shrink stopClick>
-				{#snippet cell(_, m)}
-					{#if m.role !== 'owner'}
-						<div class="flex gap-1 justify-end">
-							{#if m.status === 'pending'}
-								<RevokeInviteAction bandId={id} memberId={m.id} name={m.userName} />
-							{/if}
-							{#if m.status === 'active'}
-								<TransferOwnershipAction bandId={id} newOwnerId={m.userId} name={m.userName} />
-							{/if}
-							<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.userName} />
-						</div>
-					{/if}
-				{/snippet}
-			</Column>
-		</DataTable>
+		{#if members.length === 0}
+				<p class="text-center opacity-60 py-8">No members</p>
+			{:else}
+				<div class="overflow-x-auto">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Member</th>
+								<th class="w-px">Role</th>
+								<th>Position</th>
+								<th class="w-px">Status</th>
+								<th class="w-px">Joined</th>
+								<th class="w-px"></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each members as m (m.id)}
+								<tr class="hover">
+									<td onclick={(e) => e.stopPropagation()}>
+										<MemberLink member={{ name: m.userName, email: m.userEmail, pronouns: m.userPronouns, role: m.userRole, userId: m.userId }} />
+									</td>
+									<td class="w-px" onclick={(e) => e.stopPropagation()}>
+										{#if m.role !== 'owner' && m.status === 'active'}
+											{@const rf = updateMemberRole.for(m.id)}
+											<form
+												{...rf.enhance(async ([{ submit }]) => {
+													if (await submit()) toast.success('Role updated');
+													else toast.error('Failed to update role');
+												})}
+											>
+												<input {...rf.fields.memberId.as('hidden', m.id)} />
+												<select
+													class="select select-bordered select-xs"
+													name="role"
+													value={m.role}
+													onchange={(e) => e.currentTarget.form?.requestSubmit()}
+												>
+													<option value="member">Member</option>
+													<option value="admin">Admin</option>
+												</select>
+											</form>
+										{:else}
+											<Badge variant="outline">{m.role}</Badge>
+										{/if}
+									</td>
+									<td>
+										<span class="text-sm opacity-70">{m.position ?? '—'}</span>
+									</td>
+									<td class="w-px">
+										<StatusBadge status={m.status} />
+									</td>
+									<td class="w-px">{formatDate(m.createdAt)}</td>
+									<td class="w-px" onclick={(e) => e.stopPropagation()}>
+										{#if m.role !== 'owner'}
+											<div class="flex gap-1 justify-end">
+												{#if m.status === 'pending'}
+													<RevokeInviteAction bandId={id} memberId={m.id} name={m.userName} />
+												{/if}
+												{#if m.status === 'active'}
+													<TransferOwnershipAction bandId={id} newOwnerId={m.userId} name={m.userName} />
+												{/if}
+												<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.userName} />
+											</div>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 	</InfoCard>
 
 	<!-- Platform invites -->
 	{#if platformInvites.filter((i) => i.status === 'pending').length > 0}
 		<InfoCard title="Awaiting Signup">
-			<DataTable data={platformInvites.filter((i) => i.status === 'pending')} empty="No pending email invites">
-				<Column key="email" header="Email" />
-				<Column key="role" header="Role" shrink>
-					{#snippet cell(_, inv)}
-						<Badge variant="outline">{inv.role}</Badge>
-					{/snippet}
-				</Column>
-				<Column key="position" header="Position">
-					{#snippet cell(_, inv)}
-						<span class="text-sm opacity-70">{inv.position ?? '—'}</span>
-					{/snippet}
-				</Column>
-				<Column key="invitedByName" header="Invited by" />
-				<Column key="actions" header="" shrink stopClick>
-					{#snippet cell(_, inv)}
-						<RevokePlatformInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
-					{/snippet}
-				</Column>
-			</DataTable>
+			<div class="overflow-x-auto">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Email</th>
+								<th class="w-px">Role</th>
+								<th>Position</th>
+								<th>Invited by</th>
+								<th class="w-px"></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each platformInvites.filter((i) => i.status === 'pending') as inv (inv.id)}
+								<tr class="hover">
+									<td>{inv.email}</td>
+									<td class="w-px"><Badge variant="outline">{inv.role}</Badge></td>
+									<td><span class="text-sm opacity-70">{inv.position ?? '—'}</span></td>
+									<td>{inv.invitedByName}</td>
+									<td class="w-px" onclick={(e) => e.stopPropagation()}>
+										<RevokePlatformInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 		</InfoCard>
 	{/if}
 
 	<InfoCard title="Recent Reservations">
-		<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`} empty="No reservations">
-			<Column key="startsAt" header="Date">
-				{#snippet cell(_, r)}
-					{formatDate(r.startsAt.toISOString())}
-				{/snippet}
-			</Column>
-			<Column key="time" header="Time">
-				{#snippet cell(_, r)}
-					<span class="text-sm">{formatTimeRange(r.startsAt.toISOString(), r.endsAt.toISOString())}</span>
-				{/snippet}
-			</Column>
-			<Column key="status" header="Status" shrink>
-				{#snippet cell(_, r)}
-					<StatusBadge status={r.status} />
-				{/snippet}
-			</Column>
-			<Column key="bookedByName" header="Booked by">
-				{#snippet cell(_, r)}
-					<span class="text-sm">{r.bookedByName ?? '—'}</span>
-				{/snippet}
-			</Column>
-			<Column key="notes" header="Notes">
-				{#snippet cell(_, r)}
-					<span class="text-sm opacity-70 max-w-xs truncate">{r.notes ?? '—'}</span>
-				{/snippet}
-			</Column>
-		</DataTable>
+		{#if reservations.length === 0}
+			<p class="text-center opacity-60 py-8">No reservations</p>
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Date</th>
+							<th>Time</th>
+							<th class="w-px">Status</th>
+							<th>Booked by</th>
+							<th>Notes</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each reservations as r (r.id)}
+							<tr class="hover cursor-pointer" onclick={() => goto(`/staff/reservations/${r.id}`)}>
+								<td>{formatDate(r.startsAt)}</td>
+								<td><span class="text-sm">{formatTimeRange(r.startsAt, r.endsAt)}</span></td>
+								<td class="w-px"><StatusBadge status={r.status} /></td>
+								<td><span class="text-sm">{r.bookedByName ?? '—'}</span></td>
+								<td><span class="text-sm opacity-70 max-w-xs truncate">{r.notes ?? '—'}</span></td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	</InfoCard>
 	</PageContent>

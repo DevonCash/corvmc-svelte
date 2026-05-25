@@ -5,15 +5,101 @@ import { requireStaff } from '$lib/server/authorization';
 import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById } from '$lib/server/event/event-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getTicketsRemaining, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
+import { getTicketsRemaining, getTicketsSold, getEventTickets, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
+import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { db } from '$lib/server/db';
+import { reservation } from '$lib/server/db/schema/reservation';
+import { user } from '$lib/server/db/schema/authentication';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
+
+export const getStaffEventDetail = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const evt = await getById(id);
+	if (!evt) throw error(404, 'Event not found');
+
+	const [creator] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, evt.createdByUserId))
+		.limit(1);
+
+	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
+	if (evt.reservationId) {
+		const [res] = await db
+			.select({
+				id: reservation.id,
+				status: reservation.status,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt
+			})
+			.from(reservation)
+			.where(eq(reservation.id, evt.reservationId))
+			.limit(1);
+		if (res) linkedReservation = res;
+	}
+
+	let posterUrl: string | null = null;
+	if (evt.posterKey && isConfigured()) {
+		posterUrl = getPublicUrl(evt.posterKey);
+	}
+
+	let ticketStats: { sold: number; remaining: number | null } | null = null;
+	let tickets: { id: string; purchaseId: string | null; attendeeName: string; attendeeEmail: string; code: string; status: string; checkedInAt: Date | null; createdAt: Date }[] = [];
+
+	if (evt.ticketingEnabled) {
+		const [sold, remaining, allTickets] = await Promise.all([
+			getTicketsSold(evt.id),
+			getTicketsRemaining(evt.id),
+			getEventTickets(evt.id)
+		]);
+		ticketStats = { sold, remaining };
+		tickets = allTickets.map((t) => ({
+			id: t.id,
+			purchaseId: t.purchaseId,
+			attendeeName: t.attendeeName,
+			attendeeEmail: t.attendeeEmail,
+			code: t.code,
+			status: t.status,
+			checkedInAt: t.checkedInAt,
+			createdAt: t.createdAt
+		}));
+	}
+
+	return {
+		event: {
+			id: evt.id,
+			title: evt.title,
+			description: evt.description,
+			startsAt: evt.startsAt,
+			endsAt: evt.endsAt,
+			doorsAt: evt.doorsAt,
+			publishedAt: evt.publishedAt,
+			createdAt: evt.createdAt,
+			updatedAt: evt.updatedAt,
+			status: evt.status,
+			tags: evt.tags,
+			reservationId: evt.reservationId,
+			ticketingEnabled: evt.ticketingEnabled,
+			ticketPrice: evt.ticketPrice,
+			ticketQuantity: evt.ticketQuantity,
+			posterKey: evt.posterKey
+		},
+		posterUrl,
+		creator,
+		linkedReservation,
+		ticketStats,
+		tickets
+	};
+});
 
 export const checkConflicts = query(
 	z.object({

@@ -4,8 +4,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import Column from '$lib/components/shared/Table/Column.svelte';
+	import { formatDate } from '$lib/utils/format';
 	import {
 		DeleteAudienceAction,
 		BulkAddMembersAction,
@@ -94,33 +93,42 @@
 
 		<!-- Subscriber List -->
 		<InfoCard title="Subscribers ({audienceData.subscriberCount})">
-			<DataTable data={subscribers} empty="No subscribers yet">
-				<Column key="email" header="Email">
-					{#snippet cell(_, s)}
-						<span class="font-mono text-sm">{s.email}</span>
-					{/snippet}
-				</Column>
-				<Column key="name" header="Name">
-					{#snippet cell(_, s)}
-						{s.name ?? '—'}
-					{/snippet}
-				</Column>
-				<Column key="status" header="Status" shrink>
-					{#snippet cell(_, s)}
-						{#if s.unsubscribedAt}
-							<Badge variant="ghost" size="xs">Unsubscribed</Badge>
-						{:else}
-							<Badge variant="success" size="xs">Active</Badge>
-						{/if}
-					{/snippet}
-				</Column>
-				<Column key="createdAt" header="Joined" type="date" shrink />
-				<Column key="actions" header="" shrink stopClick>
-					{#snippet cell(_, s)}
-						<RemoveSubscriberAction audienceId={id} subscriberId={s.subscriberId} email={s.email} />
-					{/snippet}
-				</Column>
-			</DataTable>
+			{#if subscribers.length === 0}
+				<p class="text-center opacity-60 py-8">No subscribers yet</p>
+			{:else}
+				<div class="overflow-x-auto">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Email</th>
+								<th>Name</th>
+								<th class="w-px">Status</th>
+								<th class="w-px">Joined</th>
+								<th class="w-px"></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each subscribers as s (s.subscriberId)}
+								<tr class="hover">
+									<td><span class="font-mono text-sm">{s.email}</span></td>
+									<td>{s.name ?? '—'}</td>
+									<td class="w-px">
+										{#if s.unsubscribedAt}
+											<Badge variant="ghost" size="xs">Unsubscribed</Badge>
+										{:else}
+											<Badge variant="success" size="xs">Active</Badge>
+										{/if}
+									</td>
+									<td class="w-px">{formatDate(s.createdAt)}</td>
+									<td class="w-px" onclick={(e) => e.stopPropagation()}>
+										<RemoveSubscriberAction audienceId={id} subscriberId={s.subscriberId} email={s.email} />
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 		</InfoCard>
 		</PageContent>
 	{/if}
