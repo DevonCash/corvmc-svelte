@@ -8,6 +8,8 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
+	const { fields } = createReservation;
+
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);
 	let date = $state(new Date().toISOString().split('T')[0]);
 	let startTime = $state('');
@@ -86,11 +88,11 @@
 >
 	{#snippet form({ close })}
 		<svelte:boundary>
-			<input type="hidden" name="memberId" value={selectedMember?.id ?? ''} />
-			<input type="hidden" name="date" value={date} />
-			<input type="hidden" name="startTime" value={startTime} />
-			<input type="hidden" name="endTime" value={endTime} />
-			<input type="hidden" name="notes" value={notes} />
+			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
+			<input {...fields.date.as('hidden', date)} />
+			<input {...fields.startTime.as('hidden', startTime)} />
+			<input {...fields.endTime.as('hidden', endTime)} />
+			<input {...fields.notes.as('hidden', notes)} />
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Member</legend>

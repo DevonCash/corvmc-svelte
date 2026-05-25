@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
+	const { fields } = createArticle;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -59,7 +60,7 @@
 				placeholder="Brief description for listings" />
 
 			<FormField name="content" label="Content">
-				<input type="hidden" name="content" value={contentValue} />
+				<input {...fields.content.as('hidden', contentValue)} />
 				<MarkdownEditor bind:value={contentValue} />
 			</FormField>
 

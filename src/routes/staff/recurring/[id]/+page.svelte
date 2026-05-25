@@ -13,6 +13,8 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring.remote';
+	const { fields: cancelFields } = cancelDetailSeries;
+	const { fields: editFields } = editStaffSeries;
 
 	let id = $derived(page.params.id!);
 	let series = $derived(await getSeries(id));
@@ -57,7 +59,7 @@
 				onsuccess={() => invalidateAll()}
 			>
 				{#snippet form({ close })}
-					<input type="hidden" name="seriesId" value={id} />
+					<input {...cancelFields.seriesId.as('hidden', id)} />
 					<p class="py-4">Cancel this recurring series? No new reservations will be generated.</p>
 				{/snippet}
 			</Action>
@@ -110,7 +112,7 @@
 				successToast="Series schedule updated"
 				onsuccess={() => { editing = false; invalidateAll(); }}
 			>
-				<input type="hidden" name="seriesId" value={id} />
+				<input {...editFields.seriesId.as('hidden', id)} />
 				<div class="space-y-4">
 					<label class="form-control w-full">
 						<div class="label"><span class="label-text">Day (first occurrence)</span></div>

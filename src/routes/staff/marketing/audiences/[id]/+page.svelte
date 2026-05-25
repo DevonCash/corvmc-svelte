@@ -20,6 +20,8 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 
+	const { fields } = updateAudience;
+
 	let id = $derived(page.params.id!);
 	let audienceData = $derived(await getAudienceDetail(id));
 	let subscribers = $derived(await getAudienceSubscribers(id));
@@ -66,7 +68,7 @@
 						remote={updateAudience}
 						successToast="Opt-in setting updated"
 					>
-						<input type="hidden" name="id" value={id} />
+						<input {...fields.id.as('hidden', id)} />
 						<label class="label cursor-pointer justify-start gap-3">
 							<input
 								type="checkbox"

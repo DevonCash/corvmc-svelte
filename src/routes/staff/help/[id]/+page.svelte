@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { getStaffArticle, getStaffCategories, updateArticle, deleteArticle } from '$lib/remote/help.remote';
+	const { fields: deleteFields } = deleteArticle;
+	const { fields: updateFields } = updateArticle;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -34,7 +36,7 @@
 		class="btn-error btn-sm btn-outline"
 	>
 		{#snippet form({ close })}
-			<input type="hidden" name="id" value={id} />
+			<input {...deleteFields.id.as('hidden', id)} />
 			<p class="py-4">Permanently delete "{article?.title}"?</p>
 		{/snippet}
 		<IconTrash size={16} /> Delete
@@ -46,7 +48,7 @@
 			remote={updateArticle}
 			successToast="Article updated"
 		>
-			<input type="hidden" name="id" value={article.id} />
+			<input {...updateFields.id.as('hidden', article.id)} />
 
 			<div class="space-y-4">
 				<div class="grid gap-4 sm:grid-cols-2">
@@ -71,7 +73,7 @@
 					placeholder="Brief description" />
 
 				<FormField name="content" label="Content">
-					<input type="hidden" name="content" value={contentValue} />
+					<input {...updateFields.content.as('hidden', contentValue)} />
 					<MarkdownEditor bind:value={contentValue} />
 				</FormField>
 

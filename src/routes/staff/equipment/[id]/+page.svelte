@@ -24,6 +24,8 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
+	const { fields } = editEquipment;
+
 	let id = $derived(page.params.id!);
 	let item = $derived(await getEquipment(id));
 	let categories = $derived(await getCategories());
@@ -33,7 +35,7 @@
 </script>
 
 	<Form remote={editEquipment} successToast="Equipment updated">
-		<input type="hidden" name="id" value={id} />
+		<input {...fields.id.as('hidden', id)} />
 		<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
 			{#if isDeactivated}
 				<Badge variant="error" size="md">Deactivated</Badge>
@@ -48,26 +50,26 @@
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Equipment Info">
 				<div class="grid grid-cols-1 gap-x-2">
-					<Field name="name" type="text" value={item.name} />
-					<Field name="description" type="textarea" value={item.description ?? ''} />
-					<Field name="categoryId" type="select" value={item.categoryId} label="Category">
+					<Field field={fields.name} type="text" value={item.name} />
+					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
+					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
 						{#each categories as cat}
 							<option value={cat.id}>{cat.name}</option>
 						{/each}
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
-						<Field name="condition" type="select" value={item.condition}>
+						<Field field={fields.condition} type="select" value={item.condition}>
 							{#each equipmentConditions as c}
 								<option value={c}>{c}</option>
 							{/each}
 						</Field>
-						<Field name="status" type="select" value={item.status}>
+						<Field field={fields.status} type="select" value={item.status}>
 							{#each equipmentStatuses as s}
 								<option value={s}>{s}</option>
 							{/each}
 						</Field>
 					</div>
-					<Field name="notes" type="textarea" value={item.notes ?? ''} />
+					<Field field={fields.notes} type="textarea" value={item.notes ?? ''} />
 				</div>
 			</InfoCard>
 
@@ -92,12 +94,12 @@
 				</dl>
 
 				<div class="grid grid-cols-2 gap-3 mt-4">
-					<Field name="totalQuantity" type="number" value={item.totalQuantity} label="Total Qty" />
-					<Field name="outOfOrderQuantity" type="number" value={item.outOfOrderQuantity} label="Out of Order" />
+					<Field field={fields.totalQuantity} type="number" value={item.totalQuantity} label="Total Qty" />
+					<Field field={fields.outOfOrderQuantity} type="number" value={item.outOfOrderQuantity} label="Out of Order" />
 				</div>
 				<div class="grid grid-cols-2 gap-3">
-					<Field name="serialNumber" type="text" value={item.serialNumber ?? ''} label="Serial Number" />
-					<Field name="resourceId" type="text" value={item.resourceId ?? ''} label="Resource ID" />
+					<Field field={fields.serialNumber} type="text" value={item.serialNumber ?? ''} label="Serial Number" />
+					<Field field={fields.resourceId} type="text" value={item.resourceId ?? ''} label="Resource ID" />
 				</div>
 
 				<div class="mt-4 flex gap-2">

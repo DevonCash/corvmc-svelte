@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { getStaffArticles, getStaffCategories, createCategory, deleteCategory } from '$lib/remote/help.remote';
+	const { fields: deleteFields } = deleteCategory;
+	const { fields: createCatFields } = createCategory;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -55,7 +57,7 @@
 							class="btn-ghost btn-xs"
 						>
 							{#snippet form({ close })}
-								<input type="hidden" name="id" value={cat.id} />
+								<input {...deleteFields.id.as('hidden', cat.id)} />
 								<p class="py-4">Delete "{cat.name}" and all its articles?</p>
 							{/snippet}
 							<IconTrash size={14} />
@@ -73,7 +75,7 @@
 						<input name="slug" type="text" class="input input-bordered input-sm w-40"
 							placeholder={slugFromName(catNameValue) || 'auto'} />
 					</FormField>
-					<input type="hidden" name="sortOrder" value={categories.length} />
+					<input {...createCatFields.sortOrder.as('hidden', categories.length)} />
 					<SubmitButton label="Add" class="btn-primary btn-sm" />
 				</div>
 			</Form>

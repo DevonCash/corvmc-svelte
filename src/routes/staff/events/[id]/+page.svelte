@@ -9,6 +9,7 @@
 	import { toast } from 'svelte-sonner';
 	import { PublishEventAction, UnpublishEventAction, CancelEventAction, CompTicketsAction } from '$lib/components/shared/actions';
 	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
+	const { fields } = updateEvent;
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
@@ -200,16 +201,16 @@
 					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
 
 					<Form remote={updateEvent} successToast="Updated" onsuccess={handleUpdateSuccess}>
-						<input type="hidden" name="eventId" value={evt.id} />
-						<input type="hidden" name="ticketingEnabled" value={editTicketingEnabled ? 'on' : 'off'} />
+						<input {...fields.eventId.as('hidden', evt.id)} />
+						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled ? 'on' : 'off')} />
 						{#if editTicketingEnabled}
-							<input type="hidden" name="ticketPrice" value={editTicketPriceCents} />
+							<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
 						{/if}
 						{#if rebookNeeded && rebookConfirmed}
-							<input type="hidden" name="rebookReservation" value="on" />
+							<input {...fields.rebookReservation.as('hidden', 'on')} />
 						{/if}
 						{#if overrideConflicts}
-							<input type="hidden" name="overrideConflicts" value="on" />
+							<input {...fields.overrideConflicts.as('hidden', 'on')} />
 						{/if}
 
 						<div class="space-y-4">

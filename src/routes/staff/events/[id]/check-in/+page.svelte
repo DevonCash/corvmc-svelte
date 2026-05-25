@@ -7,6 +7,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { CancelTicketAction } from '$lib/components/shared/actions';
 	import { checkInTicket } from '$lib/remote/events.remote';
+	const { fields } = checkInTicket;
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -67,7 +68,7 @@
 							<StatusBadge status="cancelled" />
 						{:else}
 							<Form remote={checkInTicket.for(ticket.id)} successToast="Checked in" onsuccess={() => invalidateAll()} class="inline">
-								<input type="hidden" name="ticketId" value={ticket.id} />
+								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<SubmitButton label="Check In" class="btn-primary btn-sm" />
 							</Form>
 							<CancelTicketAction eventId={data.event.id} ticketId={ticket.id} attendeeName={ticket.attendeeName} />

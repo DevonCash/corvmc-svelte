@@ -19,6 +19,8 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import type { PageProps } from './$types';
 
+	const { fields: editCategoryFields } = editCategory;
+
 	let { data }: PageProps = $props();
 
 	function buildPageHref(page: number): string {
@@ -144,7 +146,7 @@
 				class="space-y-3"
 			>
 				{#if editingCategory.id}
-					<input type="hidden" name="id" value={editingCategory.id} />
+					<input {...editCategoryFields.id.as('hidden', editingCategory.id)} />
 				{/if}
 				<div class="grid grid-cols-3 gap-3">
 					<Field name="name" type="text" label="Name" class="col-span-2" value={editingCategory.name} />

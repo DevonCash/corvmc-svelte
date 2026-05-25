@@ -10,6 +10,7 @@
 	import { IconRepeat } from '@tabler/icons-svelte';
 	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear } from '$lib/utils/format';
 	import { cancelStaffSeries } from '$lib/remote/recurring.remote';
+	const { fields: cancelFields } = cancelStaffSeries;
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -99,7 +100,7 @@
 						class="btn-ghost btn-xs text-error"
 					>
 						{#snippet form({ close })}
-							<input type="hidden" name="seriesId" value={s.id} />
+							<input {...cancelFields.seriesId.as('hidden', s.id)} />
 							<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
 						{/snippet}
 					</Action>

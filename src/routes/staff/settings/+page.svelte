@@ -25,6 +25,8 @@
 	let orgSettings = $derived(await getOrgSettings());
 	let integrationSettings = $derived(await getIntegrationSettings());
 
+	const { fields: reservationFields } = updateReservationSettings;
+
 	let connectionTestResult = $state<{ ok: boolean; error?: string } | null>(null);
 	let connectionTesting = $state(false);
 
@@ -83,7 +85,7 @@
 								<p class="text-xs opacity-50">Stripe product will be created on first checkout</p>
 							{/if}
 
-							<input type="hidden" name="key" value={product.key} />
+							<input {...instance.fields.key.as('hidden', product.key)} />
 
 							<div class="mt-2 grid gap-4 sm:grid-cols-2">
 								<div class="form-control">
@@ -132,10 +134,10 @@
 												class="grow bg-transparent outline-none"
 											/>
 										</label>
-										<input type="hidden" name="unitAmountCents" value={product.unitAmountCents} />
+										<input {...instance.fields.unitAmountCents.as('hidden', product.unitAmountCents)} />
 									</div>
 								{:else}
-									<input type="hidden" name="unitAmountCents" value="0" />
+									<input {...instance.fields.unitAmountCents.as('hidden', '0')} />
 								{/if}
 							</div>
 
@@ -202,11 +204,7 @@
 										class="grow bg-transparent outline-none"
 									/>
 								</label>
-								<input
-									type="hidden"
-									name="hourlyRateCents"
-									value={String(reservationSettings.hourlyRateCents ?? 1500)}
-								/>
+								<input {...reservationFields.hourlyRateCents.as('hidden', String(reservationSettings.hourlyRateCents ?? 1500))} />
 							</div>
 						</div>
 					</div>

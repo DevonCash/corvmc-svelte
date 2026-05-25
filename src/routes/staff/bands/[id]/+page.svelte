@@ -34,6 +34,10 @@
 		RevokePlatformInviteAction
 	} from '$lib/components/shared/actions';
 
+	const { fields: reactivateFields } = reactivateBand;
+	const { fields: deactivateFields } = deactivateBand;
+	const { fields: roleFields } = updateMemberRole;
+
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
 	let members = $derived(await getBandMembers(id));
@@ -96,7 +100,7 @@
 							onsuccess={() => { void getBand(id).refresh(); }}
 						>
 							{#snippet form({ close })}
-								<input type="hidden" name="id" value={id} />
+								<input {...reactivateFields.id.as('hidden', id)} />
 								<p class="py-4">Reactivate this band?</p>
 							{/snippet}
 						</Action>
@@ -109,7 +113,7 @@
 							onsuccess={() => { void getBand(id).refresh(); }}
 						>
 							{#snippet form({ close })}
-								<input type="hidden" name="id" value={id} />
+								<input {...deactivateFields.id.as('hidden', id)} />
 								<p class="py-4">Deactivate this band? All future reservations will be cancelled.</p>
 							{/snippet}
 						</Action>
@@ -141,7 +145,7 @@
 				{#snippet cell(_, m)}
 					{#if m.role !== 'owner' && m.status === 'active'}
 						<Form remote={updateMemberRole} onsuccess={() => toast.success('Role updated')} onfailure={() => toast.error('Failed to update role')}>
-							<input type="hidden" name="memberId" value={m.id} />
+							<input {...roleFields.memberId.as('hidden', m.id)} />
 							<select
 								class="select select-bordered select-xs"
 								name="role"

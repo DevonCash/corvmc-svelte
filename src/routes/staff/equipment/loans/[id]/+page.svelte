@@ -17,6 +17,9 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { toISO } from '$lib/types/dates';
 
+	const { fields: scheduleFields } = schedule;
+	const { fields: checkoutFields } = checkout;
+
 	let id = $derived(page.params.id!);
 	let loan = $derived(await getLoan(id));
 	let availableEquipment = $derived(await getAvailableEquipment());
@@ -130,7 +133,7 @@
 			{#if loan.status === 'requested'}
 				<h4 class="text-sm font-semibold mb-3">Schedule Pickup</h4>
 				<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
-					<input type="hidden" name="loanId" value={id} />
+					<input {...scheduleFields.loanId.as('hidden', id)} />
 					{#if !loan.equipmentId}
 						<Field name="equipmentId" label="Assign Equipment">
 							<select class="select select-bordered w-full" name="equipmentId" required>
@@ -143,7 +146,7 @@
 							</select>
 						</Field>
 					{:else}
-						<input type="hidden" name="equipmentId" value={loan.equipmentId} />
+						<input {...scheduleFields.equipmentId.as('hidden', loan.equipmentId)} />
 					{/if}
 					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
@@ -155,7 +158,7 @@
 			{:else if loan.status === 'scheduled'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Checked Out</h4>
 				<Form remote={checkout} successToast="Checked out" class="space-y-3">
-					<input type="hidden" name="loanId" value={id} />
+					<input {...checkoutFields.loanId.as('hidden', id)} />
 					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
 						<SubmitButton label="Check Out" class="btn-primary btn-sm" />

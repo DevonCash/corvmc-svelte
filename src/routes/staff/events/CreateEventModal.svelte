@@ -9,6 +9,8 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { checkConflicts, createEvent } from '$lib/remote/events.remote';
 
+	const { fields } = createEvent;
+
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
 	let title = $state('');
@@ -122,7 +124,7 @@
 				<div class="card bg-base-200 p-4 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<Field name="ticketPriceDollars" type="number" label="Ticket price ($)" bind:value={ticketPriceDollars} />
-						<input type="hidden" name="ticketPrice" value={ticketPriceCents} />
+						<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
 						<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					</div>
 					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
@@ -156,7 +158,7 @@
 			{/if}
 
 			{#if hasConflicts}
-				<input type="hidden" name="overrideConflicts" value="on" />
+				<input {...fields.overrideConflicts.as('hidden', 'on')} />
 			{/if}
 
 			<div class="modal-action">
