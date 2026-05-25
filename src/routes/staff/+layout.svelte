@@ -4,7 +4,6 @@
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import {
-		IconHome,
 		IconUsers,
 		IconClipboardCheck,
 		IconCalendarEvent,
@@ -19,21 +18,18 @@
 		IconTool,
 		IconPackage,
 		IconBook,
-
-		IconDashboard,
-
 		IconLayoutDashboard
-
-
 	} from '@tabler/icons-svelte';
-	import type { LayoutProps } from './$types';
+	import { getStaffLayout } from '$lib/remote/layout.remote';
 
-	let { data, children }: LayoutProps = $props();
+	let { children } = $props();
+
+	let layout = $derived(await getStaffLayout());
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
 		{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const },
-		...data.userBands.map((b) => ({
+		...layout.userBands.map((b) => ({
 			key: b.slug,
 			label: b.name,
 			href: `/band/${b.slug}`,
@@ -42,7 +38,7 @@
 	]);
 </script>
 
-<AppShell drawerId="staff-drawer" user={data.user} {panels} activePanel="staff">
+<AppShell drawerId="staff-drawer" user={layout.user} {panels} activePanel="staff">
 	{#snippet brand()}
 		<div class="flex items-center gap-2 px-6 py-5">
 			<span class="truncate text-xl font-bold">CorvMC</span>

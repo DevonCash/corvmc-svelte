@@ -7,11 +7,12 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { updateBand } from '$lib/remote/bands.remote';
-	import type { PageProps } from './$types';
+	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let layout = $derived(await getBandLayout(page.params.slug));
 
-	const band = $derived(data.band);
+	const band = $derived(layout.band);
 
 	const initial = $derived({
 		name: band.name,

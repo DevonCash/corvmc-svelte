@@ -22,9 +22,10 @@
 		inviteByEmail,
 		revokePlatformInviteRemote
 	} from '$lib/remote/bands.remote';
-	import type { PageProps } from './$types';
+	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let layout = $derived(await getBandLayout(page.params.slug));
 
 	const { fields: removeFields } = removeMember;
 	const { fields: revokeFields } = revokeInvitation;
@@ -32,10 +33,10 @@
 	const { fields: inviteFields } = inviteMember;
 	const { fields: transferFields } = transferOwner;
 
-	const isAdmin = $derived(data.userRole === 'admin');
-	const isOwner = $derived(data.userRole === 'owner');
+	const isAdmin = $derived(layout.userRole === 'admin');
+	const isOwner = $derived(layout.userRole === 'owner');
 
-	let membersResult = $derived(getBandMembersList(data.band.id));
+	let membersResult = $derived(getBandMembersList(layout.band.id));
 
 	// Invite form state
 	let showInviteModal = $state(false);
@@ -61,7 +62,7 @@
 	});
 
 	function refreshMembers() {
-		void getBandMembersList(data.band.id).refresh();
+		void getBandMembersList(layout.band.id).refresh();
 	}
 
 	const looksLikeEmail = $derived(searchQuery.includes('@') && searchQuery.includes('.'));
@@ -92,7 +93,7 @@
 	}
 </script>
 
-<PageHeader title="Members" subtitle={data.band.name}>
+<PageHeader title="Members" subtitle={layout.band.name}>
 		{#if isOwner || isAdmin}
 			<Button class="btn-sm" onclick={() => (showInviteModal = true)}>
 				Invite Member
@@ -241,7 +242,7 @@
 		{/if}
 
 		<!-- Leave band (non-owners) -->
-		{#if !isOwner && data.userRole !== 'staff'}
+		{#if !isOwner && layout.userRole !== 'staff'}
 			<div class="pt-4">
 				<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
 					Leave Band
@@ -392,7 +393,7 @@
 			<div class="space-y-4">
 				<div class="alert alert-warning">
 					<p>
-						You are about to transfer ownership of <strong>{data.band.name}</strong> to
+						You are about to transfer ownership of <strong>{layout.band.name}</strong> to
 						<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
 						undone without the new owner's consent.
 					</p>
@@ -415,7 +416,7 @@
 	>
 		<div class="space-y-4">
 			<p>
-				Are you sure you want to leave <strong>{data.band.name}</strong>? You will need to be re-invited
+				Are you sure you want to leave <strong>{layout.band.name}</strong>? You will need to be re-invited
 				to rejoin.
 			</p>
 			<div class="flex justify-end pt-2">

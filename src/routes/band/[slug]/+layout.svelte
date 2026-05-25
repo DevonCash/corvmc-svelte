@@ -11,19 +11,22 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
-	import type { LayoutProps } from './$types';
+	import { page } from '$app/state';
+	import { getBandLayout } from '$lib/remote/layout.remote';
 
-	let { data, children }: LayoutProps = $props();
+	let { children } = $props();
 
-	const base = $derived(`/band/${data.band.slug}`);
-	const isOwnerOrAdmin = $derived(data.userRole === 'owner' || data.userRole === 'admin');
+	let layout = $derived(await getBandLayout(page.params.slug));
+
+	const base = $derived(`/band/${layout.band.slug}`);
+	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
-		...(data.isStaff
+		...(layout.isStaff
 			? [{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const }]
 			: []),
-		...data.userBands.map((b) => ({
+		...layout.userBands.map((b) => ({
 			key: b.slug,
 			label: b.name,
 			href: `/band/${b.slug}`,
@@ -34,13 +37,13 @@
 
 <AppShell
 	drawerId="band-drawer"
-	user={data.user!}
+	user={layout.user}
 	{panels}
-	activePanel={data.band.slug}
+	activePanel={layout.band.slug}
 >
 	{#snippet brand()}
 		<div class="flex items-center gap-2 px-6 py-5">
-			<span class="truncate text-xl font-bold">{data.band.name}</span>
+			<span class="truncate text-xl font-bold">{layout.band.name}</span>
 			<Badge variant="primary">Band</Badge>
 		</div>
 	{/snippet}
@@ -62,7 +65,7 @@
 				{#snippet icon()}<IconUser />{/snippet}
 			</Nav.Item>
 		{/if}
-		{#if data.userRole === 'owner'}
+		{#if layout.userRole === 'owner'}
 			<Nav.Item href={`${base}/settings`} label="Settings">
 				{#snippet icon()}<IconSettings />{/snippet}
 			</Nav.Item>

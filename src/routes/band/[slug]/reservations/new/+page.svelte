@@ -2,17 +2,17 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { getBandSlots, getBandMembershipStatus, bookBandReservation } from '$lib/remote/reservations.remote';
+	import { getBandLayout } from '$lib/remote/layout.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let layout = $derived(await getBandLayout(page.params.slug));
 
-	const band = $derived(data.band);
+	const band = $derived(layout.band);
 
 	// Resolve date from URL, default to today
 	let dateParam = $derived(

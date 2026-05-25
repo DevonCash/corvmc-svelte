@@ -2,6 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import { getMe } from '$lib/remote/layout.remote';
+
+	let me = $derived(await getMe());
+	$effect(() => {
+		if (me) goto('/member');
+	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
 	let inviteMeta = $state<{ bandName: string; inviterName: string; role: string; email: string } | null>(null);

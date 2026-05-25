@@ -6,13 +6,14 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
-	import type { PageProps } from './$types';
+	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let layout = $derived(await getBandLayout(page.params.slug));
 
-	const band = $derived(data.band);
+	const band = $derived(layout.band);
 	const isOwnerOrAdmin = $derived(
-		data.userRole === 'owner' || data.userRole === 'admin'
+		layout.userRole === 'owner' || layout.userRole === 'admin'
 	);
 
 	let upcoming = $derived(getBandUpcoming(band.id));
@@ -37,7 +38,7 @@
 			</div>
 			<div class="stat bg-base-100 shadow rounded-box">
 				<div class="stat-title">Your Role</div>
-				<div class="stat-value text-2xl capitalize">{data.userRole}</div>
+				<div class="stat-value text-2xl capitalize">{layout.userRole}</div>
 			</div>
 		</div>
 
