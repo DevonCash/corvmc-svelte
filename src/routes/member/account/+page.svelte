@@ -15,11 +15,11 @@
 		changePassword,
 		deleteAccount,
 		getMySubscriptions,
-		getAvailableLists
+		getAvailableLists,
+		getMemberAccount
 	} from '$lib/remote/account.remote';
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getMemberAccount());
 
 
 	interface NotifPref {

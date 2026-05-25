@@ -1,16 +1,22 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq, or, like, isNull, count, desc, gte, and } from 'drizzle-orm';
+import { reservation } from '$lib/server/db/schema/reservation';
+import { band, bandMember } from '$lib/server/db/schema/band';
+import { eq, or, like, isNull, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import { getAllBalances, addCredits, deductCredits, listTransactions } from '$lib/server/finance/credit-service';
+import { getSubscription } from '$lib/server/finance/subscription-service';
+import { listUpcoming } from '$lib/server/event/event-service';
+import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { DateTime } from 'luxon';
 import type { CreditType } from '$lib/server/db/schema/finance';
 
 // ---------------------------------------------------------------------------
@@ -265,4 +271,104 @@ export const getLocalUser = query(async () => {
 	const { locals } = await getRequestEvent();
 
 	return locals.user;
+});
+
+// ---------------------------------------------------------------------------
+// Member dashboard
+// ---------------------------------------------------------------------------
+
+const TZ = 'America/Los_Angeles';
+
+export const getMemberDashboard = query(async () => {
+	const currentUser = requireUser();
+	const r2Available = isConfigured();
+
+	const now = DateTime.now().setZone(TZ);
+	const weekStart = now.startOf('week').toJSDate();
+	const weekEnd = now.endOf('week').toJSDate();
+
+	const userBands = await db
+		.select({ bandId: bandMember.bandId, bandName: band.name })
+		.from(bandMember)
+		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'active')));
+
+	const activeBandIds = userBands.map((b) => b.bandId);
+	const bandNameMap = Object.fromEntries(userBands.map((b) => [b.bandId, b.bandName]));
+
+	const [{ count: pendingInviteCount }] = await db
+		.select({ count: sql<number>`cast(count(*) as integer)` })
+		.from(bandMember)
+		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
+
+	const [weekReservations, bandWeekReservations, upcomingEvents, credits, subscription] =
+		await Promise.all([
+			db
+				.select()
+				.from(reservation)
+				.where(
+					and(
+						eq(reservation.createdByUserId, currentUser.id),
+						eq(reservation.bookerType, 'user'),
+						gte(reservation.startsAt, weekStart),
+						lte(reservation.startsAt, weekEnd),
+						ne(reservation.status, 'cancelled')
+					)
+				)
+				.orderBy(reservation.startsAt),
+			activeBandIds.length > 0
+				? db
+						.select()
+						.from(reservation)
+						.where(
+							and(
+								eq(reservation.bookerType, 'band'),
+								inArray(reservation.bookerId, activeBandIds),
+								gte(reservation.startsAt, weekStart),
+								lte(reservation.startsAt, weekEnd),
+								ne(reservation.status, 'cancelled')
+							)
+						)
+						.orderBy(reservation.startsAt)
+				: Promise.resolve([]),
+			listUpcoming(4),
+			getAllBalances(currentUser.id),
+			currentUser.stripeId ? getSubscription(currentUser.stripeId) : Promise.resolve(null)
+		]);
+
+	const allReservations = [...weekReservations, ...bandWeekReservations].sort(
+		(a, b) => a.startsAt.getTime() - b.startsAt.getTime()
+	);
+
+	let allocatedThisMonth = 0;
+	if (subscription && credits.free_hours != null) {
+		allocatedThisMonth = subscription.quantity;
+	}
+	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
+
+	return {
+		weekReservations: allReservations.map((r) => ({
+			id: r.id,
+			bookerType: r.bookerType,
+			bookerId: r.bookerId,
+			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
+			status: r.status,
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
+			notes: r.notes
+		})),
+		upcomingEvents: upcomingEvents.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ? e.doorsAt : null,
+			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+		})),
+		credits,
+		subscription,
+		allocatedThisMonth,
+		usedThisMonth,
+		pendingInviteCount
+	};
 });

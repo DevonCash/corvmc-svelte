@@ -23,6 +23,29 @@ import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscri
 // Queries
 // ---------------------------------------------------------------------------
 
+export const getMemberAccount = query(async () => {
+	const currentUser = requireUser();
+
+	const [row, staff] = await Promise.all([
+		db
+			.select({
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				pronouns: user.pronouns,
+				phone: user.phone
+			})
+			.from(user)
+			.where(eq(user.id, currentUser.id))
+			.then((rows) => rows[0]),
+		hasAnyRole(currentUser.id, ['admin', 'staff'])
+	]);
+
+	if (!row) throw error(404, 'User not found');
+
+	return { user: row, isStaff: staff };
+});
+
 export const getMySubscriptions = query(z.void(), async () => {
 	const currentUser = requireUser();
 	return getSubscriptionsForUser(currentUser.id);

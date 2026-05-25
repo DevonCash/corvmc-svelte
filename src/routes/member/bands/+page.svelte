@@ -10,10 +10,9 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { createBand, acceptInvite, declineInvite } from '$lib/remote/bands.remote';
-	import type { PageProps } from './$types';
+	import { createBand, acceptInvite, declineInvite, getMemberBands } from '$lib/remote/bands.remote';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getMemberBands());
 
 	const pending = $derived(data.pending);
 	const active = $derived(data.active);

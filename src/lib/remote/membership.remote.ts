@@ -4,10 +4,51 @@ import { form, getRequestEvent, query } from '$app/server';
 import { requireMember } from '$lib/server/authorization';
 import {
 	createCheckoutSession,
+	getSubscription,
+	createBillingPortalUrl,
 	updateQuantity,
 	resume
 } from '$lib/server/finance/subscription-service';
+import { getAllBalances } from '$lib/server/finance/credit-service';
+import { getCommunityStats } from '$lib/server/finance/community-stats';
+import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
+import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
+
+export const getMemberMembership = query(async () => {
+	const user = await requireMember();
+	const { url } = getRequestEvent();
+
+	const [subscription, credits, communityStats, contributionConfig, billingPortalUrl] =
+		await Promise.all([
+			user.stripeId ? getSubscription(user.stripeId) : Promise.resolve(null),
+			getAllBalances(user.id),
+			getCommunityStats(),
+			getProductConfig('contribution'),
+			user.stripeId
+				? createBillingPortalUrl(user.stripeId, `${url.origin}/member/membership`)
+				: Promise.resolve(null)
+		]);
+
+	let allocatedThisMonth = 0;
+	if (subscription && credits.free_hours != null) {
+		allocatedThisMonth = subscription.quantity;
+	}
+	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
+
+	return {
+		subscription,
+		credits,
+		billingPortalUrl,
+		communityStats,
+		allocatedThisMonth,
+		usedThisMonth,
+		contributionUnitCents: contributionConfig.unitAmountCents,
+		feeSchedule: {
+			perUnit: calculateTotalWithFeeCoverage(contributionConfig.unitAmountCents).feeCents
+		}
+	};
+});
 
 const MIN_QUANTITY = 2;
 

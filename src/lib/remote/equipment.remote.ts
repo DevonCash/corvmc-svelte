@@ -22,7 +22,8 @@ import {
 	requestLoan,
 	cancelLoan as cancelLoanService,
 	returnLoan as returnLoanService,
-	listLoans
+	listLoans,
+	listUserLoans
 } from '$lib/server/equipment/loan-service';
 import {
 	createCategorySchema,
@@ -152,6 +153,16 @@ export const getMemberEquipmentMeta = query(z.void(), async () => {
 		categories: categories.map((c) => ({ id: c.id, name: c.name, pricingTier: c.pricingTier })),
 		creditBalance,
 		isSustainingMember
+	};
+});
+
+export const getMemberEquipmentLoans = query(async () => {
+	const currentUser = requireUser();
+	const loans = await listUserLoans(currentUser.id);
+
+	return {
+		active: loans.filter((l) => ['requested', 'scheduled', 'checked_out'].includes(l.status)),
+		past: loans.filter((l) => ['returned', 'cancelled'].includes(l.status))
 	};
 });
 

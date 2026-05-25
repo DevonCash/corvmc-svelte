@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
-import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents } from '$lib/server/event/event-service';
+import { requireStaff, requireUser } from '$lib/server/authorization';
+import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents, listUpcoming } from '$lib/server/event/event-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getTicketsRemaining, getTicketsSold, getEventTickets, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
+import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
@@ -13,12 +13,91 @@ import { getPublicUrl, isConfigured } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import { event } from '$lib/server/db/schema/event';
+import { hasAnyRole } from '$lib/server/authorization';
 import { randomUUID } from 'crypto';
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
+
+export const getMemberEvents = query(async () => {
+	const r2Available = isConfigured();
+	const events = await listAllEvents();
+	return events.map((e) => ({
+		id: e.id,
+		title: e.title,
+		startsAt: e.startsAt,
+		endsAt: e.endsAt,
+		doorsAt: e.doorsAt ?? null,
+		tags: e.tags as string | null,
+		ticketingEnabled: e.ticketingEnabled,
+		ticketPrice: e.ticketPrice,
+		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+	}));
+});
+
+export const getMemberTickets = query(async () => {
+	const currentUser = requireUser();
+	const tickets = await getUserTickets(currentUser.id);
+
+	const eventIds = [...new Set(tickets.map((t) => t.eventId))];
+	let eventMap: Record<string, { title: string; startsAt: Date; endsAt: Date }> = {};
+
+	if (eventIds.length > 0) {
+		const events = await db
+			.select({ id: event.id, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt })
+			.from(event)
+			.where(inArray(event.id, eventIds));
+
+		eventMap = Object.fromEntries(events.map((e) => [e.id, { title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }]));
+	}
+
+	return tickets.map((t) => {
+		const evt = eventMap[t.eventId];
+		return {
+			id: t.id,
+			eventId: t.eventId,
+			code: t.code,
+			status: t.status,
+			attendeeName: t.attendeeName,
+			checkedInAt: t.checkedInAt ?? null,
+			createdAt: t.createdAt,
+			event: evt ?? null
+		};
+	});
+});
+
+export const getMemberEventDetail = query(z.string(), async (id) => {
+	const { locals } = getRequestEvent();
+	const evt = await getById(id);
+	if (!evt) throw error(404, 'Event not found');
+
+	const r2Available = isConfigured();
+	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
+	const isSustainingMember = locals.user
+		? await hasAnyRole(locals.user.id, ['sustaining'])
+		: false;
+
+	return {
+		event: {
+			id: evt.id,
+			title: evt.title,
+			description: evt.description,
+			startsAt: evt.startsAt,
+			endsAt: evt.endsAt,
+			doorsAt: evt.doorsAt ?? null,
+			tags: evt.tags as string | null,
+			posterUrl: evt.posterKey && r2Available ? getPublicUrl(evt.posterKey) : null,
+			ticketingEnabled: evt.ticketingEnabled,
+			ticketPrice: evt.ticketPrice,
+			ticketQuantity: evt.ticketQuantity
+		},
+		remaining,
+		isSustainingMember
+	};
+});
 
 export const getStaffEvents = query(
 	z.object({ page: z.number().optional() }),

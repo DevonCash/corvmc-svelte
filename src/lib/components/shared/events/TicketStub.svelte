@@ -1,14 +1,24 @@
 <script lang="ts">
 	import { formatDayNumber, formatShortMonth, formatDate, formatTime } from '$lib/utils/format';
 	import { tagToColor } from '$lib/utils/tag-colors';
-	import type { MemberTicketsResponse } from '$lib/server/db/schema/api';
+
+	interface TicketData {
+		id: string;
+		eventId: string;
+		code: string;
+		status: string;
+		attendeeName: string;
+		checkedInAt: Date | null;
+		createdAt: Date;
+		event: { title: string; startsAt: Date; endsAt: Date } | null;
+	}
 
 	let {
 		ticket,
 		tags,
 		class: className = ''
 	}: {
-		ticket: MemberTicketsResponse['tickets'][number];
+		ticket: TicketData;
 		tags?: string | null;
 		class?: string;
 	} = $props();

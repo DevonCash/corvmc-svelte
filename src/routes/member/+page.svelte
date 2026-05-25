@@ -9,9 +9,9 @@
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import type { PageProps } from './$types';
+	import { getMemberDashboard } from '$lib/remote/users.remote';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getMemberDashboard());
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
 	const freeHours = $derived(data.credits.free_hours ?? 0);

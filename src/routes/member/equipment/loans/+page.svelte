@@ -7,9 +7,9 @@
 	import { CancelLoanAction } from '$lib/components/shared/actions';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
-	import type { PageProps } from './$types';
+	import { getMemberEquipmentLoans } from '$lib/remote/equipment.remote';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getMemberEquipmentLoans());
 
 	let activeTab = $state<'active' | 'past'>('active');
 </script>

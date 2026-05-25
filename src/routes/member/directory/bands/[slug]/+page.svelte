@@ -5,9 +5,10 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { PageProps } from './$types';
+	import { getDirectoryBand } from '$lib/remote/directory.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getDirectoryBand(page.params.slug!));
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/types/dates';
 	import Logo from '$lib/components/shared/Logo.svelte';
 	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
 
@@ -8,7 +7,7 @@
 		href: string;
 		title: string;
 		posterUrl?: string | null;
-		startsAt: ISODateString;
+		startsAt: Date;
 		ticketingEnabled?: boolean;
 		ticketPrice?: number | null;
 		tags?: string | null;

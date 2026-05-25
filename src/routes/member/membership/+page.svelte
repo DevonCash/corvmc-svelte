@@ -11,10 +11,9 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { createSubscription, updateAmount, resumeSubscription } from '$lib/remote/membership.remote';
-	import type { PageProps } from './$types';
+	import { createSubscription, updateAmount, resumeSubscription, getMemberMembership } from '$lib/remote/membership.remote';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getMemberMembership());
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);

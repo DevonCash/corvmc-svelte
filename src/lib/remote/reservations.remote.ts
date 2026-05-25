@@ -55,6 +55,39 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 // Queries
 // ===========================================================================
 
+export const getReservationPayment = query(z.string(), async (id) => {
+	const currentUser = requireUser();
+
+	const [row] = await db
+		.select()
+		.from(reservation)
+		.where(eq(reservation.id, id))
+		.limit(1);
+
+	if (!row) throw error(404, 'Reservation not found');
+	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+	if (row.status !== 'scheduled') throw error(400, 'This reservation is not awaiting payment');
+
+	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
+	const durationHours = durationMs / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+	const freeHoursBalance = await getBalance(currentUser.id, 'free_hours');
+
+	return {
+		reservation: {
+			id: row.id,
+			startsAt: row.startsAt,
+			endsAt: row.endsAt,
+			notes: row.notes
+		},
+		durationHours,
+		totalCents,
+		hourlyRateCents,
+		freeHoursBalance
+	};
+});
+
 /** Staff: search members by name or email for the create-reservation modal. */
 export const searchMembers = query(z.string(), async (q) => {
 	await requireStaff();

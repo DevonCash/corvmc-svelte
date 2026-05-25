@@ -5,10 +5,10 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { payReservation } from '$lib/remote/reservations.remote';
-	import type { PageProps } from './$types';
+	import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getReservationPayment(page.params.id!));
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);
@@ -21,8 +21,8 @@
 	const creditDiscountCents = $derived(creditsApplicable * (totalCents / durationHours));
 	const remainingCents = $derived(totalCents - creditDiscountCents);
 
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
+	function formatDate(d: Date): string {
+		return d.toLocaleDateString('en-US', {
 			timeZone: 'America/Los_Angeles',
 			weekday: 'long',
 			month: 'long',
@@ -30,8 +30,8 @@
 		});
 	}
 
-	function formatTime(iso: string): string {
-		return new Date(iso).toLocaleTimeString('en-US', {
+	function formatTime(d: Date): string {
+		return d.toLocaleTimeString('en-US', {
 			timeZone: 'America/Los_Angeles',
 			hour: 'numeric',
 			minute: '2-digit'

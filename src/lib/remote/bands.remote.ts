@@ -6,7 +6,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { listAll } from '$lib/server/band/band-service';
+import { listAll, listForUser } from '$lib/server/band/band-service';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -156,6 +156,26 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 	return {
 		active: members.filter((m) => m.status === 'active'),
 		pending: members.filter((m) => m.status === 'pending')
+	};
+});
+
+export const getMemberBands = query(async () => {
+	const currentUser = requireUser();
+	const bands = await listForUser(currentUser.id);
+
+	const serialize = (b: (typeof bands)[number]) => ({
+		id: b.id,
+		name: b.name,
+		slug: b.slug,
+		avatarKey: b.avatarKey,
+		role: b.role,
+		status: b.status,
+		memberCount: b.memberCount
+	});
+
+	return {
+		pending: bands.filter((b) => b.status === 'pending').map(serialize),
+		active: bands.filter((b) => b.status === 'active').map(serialize)
 	};
 });
 

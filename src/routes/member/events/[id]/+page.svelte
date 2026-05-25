@@ -10,13 +10,14 @@
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import { fullDate, formatTime, formatCents, formatDate } from '$lib/utils/format';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { purchaseTickets } from '$lib/remote/events.remote';
+	import { purchaseTickets, getMemberEventDetail, getMemberTickets } from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
 
-	import type { PageProps } from './$types';
-
-	let { data }: PageProps = $props();
+	let eventData = $derived(await getMemberEventDetail(page.params.id!));
+	let allTickets = $derived(await getMemberTickets());
+	let myTicket = $derived(allTickets.find((t) => t.eventId === page.params.id && t.status !== 'cancelled') ?? null);
+	let data = $derived({ ...eventData, myTicket });
 
 	const evt = $derived(data.event);
 	const soldOut = $derived(data.remaining === 0);

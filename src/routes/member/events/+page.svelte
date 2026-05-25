@@ -7,25 +7,38 @@
 	import Carousel from '$lib/components/shared/Carousel.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import { tagToTapeVariant } from '$lib/utils/tag-colors';
-	import type { PageProps } from './$types';
+	import { getMemberEvents, getMemberTickets } from '$lib/remote/events.remote';
 
-	let { data }: PageProps = $props();
+	interface EventItem {
+		id: string;
+		title: string;
+		startsAt: Date;
+		endsAt: Date;
+		doorsAt: Date | null;
+		tags: string | null;
+		ticketingEnabled: boolean;
+		ticketPrice: number | null;
+		posterUrl: string | null;
+	}
+
+	let events: EventItem[] = $derived(await getMemberEvents());
+	let tickets = $derived(await getMemberTickets());
 
 	const activeTickets = $derived(
-		data.tickets.filter(
-			(t) => t.event && new Date(t.event.startsAt) > new Date() && t.status !== 'cancelled'
+		tickets.filter(
+			(t) => t.event && t.event.startsAt > new Date() && t.status !== 'cancelled'
 		)
 	);
 
 	const ticketedEventIds = $derived(new Set(activeTickets.map((t) => t.eventId)));
 
 	const eventTagMap = $derived(
-		new Map(data.events.map((e) => [e.id, e.tags]))
+		new Map(events.map((e) => [e.id, e.tags]))
 	);
 
 	const allTags = $derived.by(() => {
 		const tags = new Set<string>();
-		for (const evt of data.events) {
+		for (const evt of events) {
 			if (evt.tags) {
 				for (const t of evt.tags.split(',')) {
 					const trimmed = t.trim();
@@ -40,11 +53,11 @@
 
 	const filteredEvents = $derived(
 		activeFilter
-			? data.events.filter((e) => {
+			? events.filter((e) => {
 					if (!e.tags) return false;
 					return e.tags.split(',').some((t) => t.trim() === activeFilter);
 				})
-			: data.events
+			: events
 	);
 
 	function primaryTag(tags: string | null | undefined): string | undefined {
@@ -79,7 +92,7 @@
 						class:latched={activeFilter === null}
 						onclick={() => (activeFilter = null)}
 					>
-						All <span class="opacity-60 ml-1">{data.events.length}</span>
+						All <span class="opacity-60 ml-1">{events.length}</span>
 					</button>
 					{#each allTags as tag (tag)}
 						<button
@@ -90,7 +103,7 @@
 						>
 							{tag}
 							<span class="opacity-60 ml-1">
-								{data.events.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
+								{events.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
 							</span>
 						</button>
 					{/each}
