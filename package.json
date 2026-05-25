@@ -28,6 +28,9 @@
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
 		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done"
 	},
+	"imports": {
+		"#/*": "./src/*"
+	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",
 		"@chromatic-com/storybook": "^5.2.1",
@@ -91,6 +94,7 @@
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"daisyui": "^5.5.19",
+		"date-fns": "^4.3.0",
 		"emittery": "^1.2.1",
 		"isomorphic-dompurify": "^3.14.0",
 		"luxon": "^3.7.2",
