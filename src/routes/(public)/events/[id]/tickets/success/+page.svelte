@@ -3,10 +3,11 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTime } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
+	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';
+	import { page } from '$app/state';
 
-	import type { PageProps } from './$types';
-
-	let { data }: PageProps = $props();
+	const purchaseId = page.url.searchParams.get('purchase_id') ?? '';
+	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
 
 	const evt = $derived(data.event);
 </script>

@@ -5,7 +5,9 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation, type Reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
+import { like, or, eq, ne, and, lt, gt, lte, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
+import { getBySlug } from '$lib/server/band/band-service';
+import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency } from '$lib/server/reservation/rrule-helpers';
 import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
 import {
@@ -24,7 +26,6 @@ import {
 	recordCashAndComplete,
 	ReservationConflictError
 } from '$lib/server/reservation/reservation-service';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
@@ -85,6 +86,152 @@ export const getReservationPayment = query(z.string(), async (id) => {
 		totalCents,
 		hourlyRateCents,
 		freeHoursBalance
+	};
+});
+
+export const getBandReservations = query(z.string(), async (slug) => {
+	requireUser();
+	const band = await getBySlug(slug);
+	if (!band) throw error(404, 'Band not found');
+
+	const now = new Date();
+
+	const upcoming = await db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			notes: reservation.notes,
+			bookedByName: user.name
+		})
+		.from(reservation)
+		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(
+			and(
+				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerId, band.id),
+				gt(reservation.startsAt, now),
+				ne(reservation.status, 'cancelled')
+			)
+		)
+		.orderBy(reservation.startsAt);
+
+	const past = await db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			notes: reservation.notes,
+			bookedByName: user.name
+		})
+		.from(reservation)
+		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(
+			and(
+				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerId, band.id),
+				lte(reservation.startsAt, now)
+			)
+		)
+		.orderBy(desc(reservation.startsAt))
+		.limit(20);
+
+	return { upcoming, past };
+});
+
+export const getStaffReservationDetail = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const rows = await db
+		.select({
+			reservation: reservation,
+			memberName: user.name,
+			memberEmail: user.email,
+			memberPhone: user.phone,
+			memberPronouns: user.pronouns,
+			memberImage: user.image
+		})
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(eq(reservation.id, id))
+		.limit(1);
+
+	if (!rows[0]) throw error(404, 'Reservation not found');
+
+	const row = {
+		...rows[0].reservation,
+		memberName: rows[0].memberName,
+		memberEmail: rows[0].memberEmail,
+		memberPhone: rows[0].memberPhone,
+		memberPronouns: rows[0].memberPronouns,
+		memberImage: rows[0].memberImage
+	};
+
+	const tz = 'America/Los_Angeles';
+	const dayStr = formatDateInTz(row.startsAt, tz);
+	const dayStart = buildDateInTz(dayStr, '00:00', tz);
+	const dayEnd = buildDateInTz(dayStr, '23:59', tz);
+
+	const sameDayReservations = await db
+		.select({
+			id: reservation.id,
+			bookerType: reservation.bookerType,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			status: reservation.status
+		})
+		.from(reservation)
+		.where(
+			and(
+				ne(reservation.status, 'cancelled'),
+				ne(reservation.id, id),
+				lt(reservation.startsAt, dayEnd),
+				gt(reservation.endsAt, dayStart)
+			)
+		)
+		.orderBy(asc(reservation.startsAt));
+
+	const isLastOfDay = sameDayReservations.filter(
+		(r) => r.startsAt.getTime() > row.startsAt.getTime()
+	).length === 0;
+
+	const [prevRow] = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(and(ne(reservation.status, 'cancelled'), lt(reservation.startsAt, row.startsAt)))
+		.orderBy(desc(reservation.startsAt))
+		.limit(1);
+
+	const [nextRow] = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(and(ne(reservation.status, 'cancelled'), gt(reservation.startsAt, row.startsAt)))
+		.orderBy(asc(reservation.startsAt))
+		.limit(1);
+
+	const [completedCount] = await db
+		.select({ count: count() })
+		.from(reservation)
+		.where(
+			and(eq(reservation.createdByUserId, row.createdByUserId), eq(reservation.status, 'completed'))
+		);
+
+	return {
+		reservation: row,
+		sameDayReservations: sameDayReservations.map((r) => ({
+			id: r.id,
+			memberName: '',
+			bookerType: r.bookerType,
+			startsAt: r.startsAt,
+			endsAt: r.endsAt
+		})),
+		isLastOfDay,
+		prevId: prevRow?.id ?? null,
+		nextId: nextRow?.id ?? null,
+		isFirstReservation: completedCount.count === 0,
+		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
 	};
 });
 

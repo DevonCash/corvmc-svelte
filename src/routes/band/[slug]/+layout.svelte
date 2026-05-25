@@ -16,7 +16,7 @@
 
 	let { children } = $props();
 
-	let layout = $derived(await getBandLayout(page.params.slug));
+	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const base = $derived(`/band/${layout.band.slug}`);
 	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');

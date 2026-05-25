@@ -8,20 +8,18 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { purchaseTickets } from '$lib/remote/events.remote';
+	import { purchaseTickets, getPublicTicketPage } from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
 
-	import type { PageProps } from './$types';
-
-	let { data }: PageProps = $props();
+	let data = $derived(await getPublicTicketPage(page.params.id!));
 
 	let quantity = $state(1);
 	let attendeeName = $state('');
 	let attendeeEmail = $state('');
 	let coverFees = $state(false);
 
-	const evt = $derived(data!.event);
+	const evt = $derived(data.event);
 	const unitPrice = $derived(evt.ticketPrice);
 	const discountedPrice = $derived(
 		data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice
@@ -86,7 +84,7 @@
 			onsuccess={handlePurchaseSuccess}
 			onfailure={() => toast.error('Something went wrong')}
 		>
-			<input {...fields.eventId.as('hidden', page.params.id)} />
+			<input {...fields.eventId.as('hidden', page.params.id!)} />
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of tickets" name="quantity">

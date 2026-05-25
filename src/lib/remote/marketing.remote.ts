@@ -1,15 +1,18 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import {
 	listAudiences,
 	getAudience,
+	getAudienceBySlug,
 	getOptInAudiences,
 	createAudience as createAudienceService,
 	updateAudience as updateAudienceService,
 	deleteAudience as deleteAudienceService,
 	addSubscriber as addSubscriberService,
 	removeSubscriber as removeSubscriberService,
+	unsubscribe,
 	bulkAddMembers as bulkAddMembersService,
 	listSubscribers
 } from '$lib/server/marketing/audience-service';
@@ -26,11 +29,51 @@ import {
 	type CampaignStatus
 } from '$lib/server/marketing/campaign-service';
 import { findOrCreateByEmail } from '$lib/server/marketing/subscriber-service';
+import { verifyUnsubscribeToken } from '$lib/server/marketing/unsubscribe';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { audience } from '$lib/server/db/schema/marketing';
 
 // ---------------------------------------------------------------------------
-// Queries
+// Public queries
+// ---------------------------------------------------------------------------
+
+export const getPublicAudienceBySlug = query(z.string(), async (slug) => {
+	const aud = await getAudienceBySlug(slug);
+	if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
+	return {
+		audience: {
+			id: aud.id,
+			name: aud.name,
+			slug: aud.slug,
+			description: aud.description
+		}
+	};
+});
+
+export const subscribeToAudience = form(
+	z.object({ slug: z.string(), email: z.string().email(), name: z.string().optional() }),
+	async (data) => {
+		const aud = await getAudienceBySlug(data.slug);
+		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
+		const sub = await findOrCreateByEmail(data.email.trim().toLowerCase(), data.name?.trim());
+		await addSubscriberService(aud.id, sub.id);
+		return { success: true };
+	}
+);
+
+export const getUnsubscribeInfo = query(z.string(), async (token) => {
+	const decoded = verifyUnsubscribeToken(token);
+	if (!decoded) return { valid: false as const, audienceName: null };
+
+	const aud = await getAudience(decoded.audienceId);
+	if (!aud) return { valid: false as const, audienceName: null };
+
+	await unsubscribe(decoded.subscriberId, decoded.audienceId);
+	return { valid: true as const, audienceName: aud.name };
+});
+
+// ---------------------------------------------------------------------------
+// Staff queries
 // ---------------------------------------------------------------------------
 
 /** List all audiences (staff). Used on audiences index and as audience options. */

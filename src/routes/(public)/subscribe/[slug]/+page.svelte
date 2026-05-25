@@ -1,30 +1,12 @@
 <script lang="ts">
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import type { PageProps } from './$types';
+	import { getPublicAudienceBySlug, subscribeToAudience } from '$lib/remote/marketing.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getPublicAudienceBySlug(page.params.slug!));
 
 	let success = $state(false);
-
-	async function handleSubmit(formData: FormData) {
-		const email = (formData.get('email') as string).trim();
-		const name = (formData.get('name') as string)?.trim() || undefined;
-		if (!email) return;
-
-		const res = await fetch(`/api/marketing/audiences/${data.audience.slug}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email, name })
-		});
-
-		if (!res.ok) {
-			const body = await res.json().catch(() => null) as { message?: string } | null;
-			throw new Error(body?.message ?? 'Something went wrong');
-		}
-
-		success = true;
-	}
 </script>
 
 <div class="max-w-md mx-auto p-6 space-y-6">
@@ -38,7 +20,8 @@
 	{#if success}
 		<Alert type="success">You're subscribed! Look out for our next email.</Alert>
 	{:else}
-		<Form action={handleSubmit} class="space-y-4">
+		<Form remote={subscribeToAudience} onsuccess={() => (success = true)} class="space-y-4">
+			<input type="hidden" name="slug" value={data.audience.slug} />
 			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
 			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
 			<SubmitButton label="Subscribe" class="btn-primary w-full" />

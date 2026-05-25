@@ -3,8 +3,8 @@
 
 	type TimeSlot = {
 		id: string;
-		startsAt: string;
-		endsAt: string;
+		startsAt: Date;
+		endsAt: Date;
 		bookerType: string;
 		label?: string;
 		href?: string;
@@ -23,8 +23,7 @@
 	const END_HOUR = 22;
 	const RANGE = END_HOUR - START_HOUR;
 
-	function percent(iso: string): number {
-		const d = new Date(iso);
+	function percent(d: Date): number {
 		const h = Number(
 			d.toLocaleTimeString('en-GB', {
 				timeZone: 'America/Los_Angeles',

@@ -9,7 +9,7 @@
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
 
-	let layout = $derived(await getBandLayout(page.params.slug));
+	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const band = $derived(layout.band);
 	const isOwnerOrAdmin = $derived(

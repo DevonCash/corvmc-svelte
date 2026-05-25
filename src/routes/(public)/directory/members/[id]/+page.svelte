@@ -2,9 +2,10 @@
 	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { PageProps } from './$types';
+	import { getPublicMemberProfile } from '$lib/remote/directory.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getPublicMemberProfile(page.params.id!));
 	const member = $derived(data.member);
 	const contact = $derived(member.directoryContact ?? {});
 	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);

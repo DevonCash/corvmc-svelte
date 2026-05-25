@@ -26,9 +26,10 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
 	import { visibleActions } from '$lib/utils/reservation-actions';
-	import type { PageProps } from './$types';
+	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getStaffReservationDetail(page.params.id!));
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);

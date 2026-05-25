@@ -10,15 +10,14 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import { cancelBandReservation } from '$lib/remote/reservations.remote';
+	import { cancelBandReservation, getBandReservations } from '$lib/remote/reservations.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
 	const { fields: cancelFields } = cancelBandReservation;
 
-	let layout = $derived(await getBandLayout(page.params.slug));
+	let layout = $derived(await getBandLayout(page.params.slug!));
+	let data = $derived(await getBandReservations(page.params.slug!));
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
 	const band = $derived(layout.band);

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Button from '$lib/components/shared/Button.svelte';
-	import type { PageProps } from './$types';
+	import { getUnsubscribeInfo } from '$lib/remote/marketing.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getUnsubscribeInfo(page.params.token!));
 </script>
 
 <div class="max-w-md mx-auto p-6 text-center space-y-4">

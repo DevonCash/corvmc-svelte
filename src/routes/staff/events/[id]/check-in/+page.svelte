@@ -6,11 +6,11 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { CancelTicketAction } from '$lib/components/shared/actions';
-	import { checkInTicket } from '$lib/remote/events.remote';
+	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
+	import { page } from '$app/state';
 	const { fields } = checkInTicket;
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getStaffCheckIn(page.params.id!));
 
 	let search = $state('');
 

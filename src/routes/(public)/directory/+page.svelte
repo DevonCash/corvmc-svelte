@@ -3,9 +3,9 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
 	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
-	import type { PageProps } from './$types';
+	import { getPublicDirectory } from '$lib/remote/directory.remote';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getPublicDirectory({}));
 
 	const members = $derived(data.members);
 	const bands = $derived(data.bands);

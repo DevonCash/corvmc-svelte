@@ -10,7 +10,7 @@
 	import { formatSlotTime } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 
-	let layout = $derived(await getBandLayout(page.params.slug));
+	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const band = $derived(layout.band);
 

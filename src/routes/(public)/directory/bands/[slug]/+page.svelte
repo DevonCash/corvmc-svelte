@@ -3,9 +3,10 @@
 	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { PageProps } from './$types';
+	import { getPublicBandProfile } from '$lib/remote/directory.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
+	let data = $derived(await getPublicBandProfile(page.params.slug!));
 
 	const band = $derived(data.band);
 	const members = $derived(data.members);

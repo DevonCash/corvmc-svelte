@@ -1,8 +1,8 @@
 <script lang="ts">
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import type { PageProps } from './$types';
+	import { getPublicEvents } from '$lib/remote/events.remote';
 
-	let { data }: PageProps = $props();
+	let events = $derived(await getPublicEvents());
 </script>
 
 <svelte:head>
@@ -10,7 +10,7 @@
 	<meta name="description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
 </svelte:head>
 
-{#if data.events.length === 0}
+{#if events.length === 0}
 	<section class="py-16 px-6">
 		<div class="max-w-4xl mx-auto text-center">
 			<h1 class="text-4xl font-bold tracking-tight mb-4" style="color: var(--cmc-navy)">Upcoming Events</h1>
@@ -26,7 +26,7 @@
 			</div>
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-				{#each data.events as evt (evt.id)}
+				{#each events as evt (evt.id)}
 					<PosterCard
 						href="/events/{evt.id}"
 						title={evt.title}

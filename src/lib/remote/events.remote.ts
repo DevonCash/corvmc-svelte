@@ -5,7 +5,7 @@ import { requireStaff, requireUser } from '$lib/server/authorization';
 import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents, listUpcoming } from '$lib/server/event/event-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
+import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, getTicketsByPurchase, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
@@ -24,7 +24,7 @@ import { randomUUID } from 'crypto';
 
 export const getMemberEvents = query(async () => {
 	const r2Available = isConfigured();
-	const events = await listAllEvents();
+	const events = await listUpcoming();
 	return events.map((e) => ({
 		id: e.id,
 		title: e.title,
@@ -96,6 +96,120 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 		},
 		remaining,
 		isSustainingMember
+	};
+});
+
+export const getPublicEvents = query(async () => {
+	const events = await listUpcoming();
+	const r2Available = isConfigured();
+	return events.map((e) => ({
+		id: e.id,
+		title: e.title,
+		description: e.description,
+		startsAt: e.startsAt,
+		endsAt: e.endsAt,
+		doorsAt: e.doorsAt ?? null,
+		tags: e.tags as string | null,
+		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null,
+		ticketingEnabled: e.ticketingEnabled,
+		ticketPrice: e.ticketPrice
+	}));
+});
+
+export const getPublicTicketPage = query(z.string(), async (id) => {
+	const { locals } = getRequestEvent();
+	const evt = await getById(id);
+	if (!evt) throw error(404, 'Event not found');
+	if (evt.status !== 'published') throw error(404, 'Event not found');
+	if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(404, 'Tickets not available for this event');
+
+	const remaining = await getTicketsRemaining(id);
+
+	let isSustainingMember = false;
+	if (locals.user?.stripeId) {
+		const sub = await getSubscription(locals.user.stripeId);
+		isSustainingMember = sub !== null;
+	}
+
+	const posterUrl = evt.posterKey && isConfigured() ? getPublicUrl(evt.posterKey) : null;
+
+	return {
+		event: {
+			id: evt.id,
+			title: evt.title,
+			description: evt.description,
+			startsAt: evt.startsAt,
+			endsAt: evt.endsAt,
+			doorsAt: evt.doorsAt ?? null,
+			ticketPrice: evt.ticketPrice,
+			ticketQuantity: evt.ticketQuantity
+		},
+		remaining,
+		isSustainingMember,
+		posterUrl,
+		isAuthenticated: !!locals.user
+	};
+});
+
+export const getTicketPurchaseSuccess = query(
+	z.object({ eventId: z.string(), purchaseId: z.string() }),
+	async ({ eventId, purchaseId }) => {
+		const evt = await getById(eventId);
+		if (!evt) throw error(404, 'Event not found');
+
+		const tickets = await getTicketsByPurchase(purchaseId);
+		if (tickets.length === 0) throw error(404, 'Purchase not found');
+
+		return {
+			event: {
+				id: evt.id,
+				title: evt.title,
+				startsAt: evt.startsAt,
+				endsAt: evt.endsAt,
+				doorsAt: evt.doorsAt ?? null
+			},
+			tickets: tickets.map((t) => ({
+				id: t.id,
+				code: t.code,
+				attendeeName: t.attendeeName,
+				attendeeEmail: t.attendeeEmail,
+				status: t.status
+			}))
+		};
+	}
+);
+
+export const getStaffCheckIn = query(z.string(), async (id) => {
+	await requireStaff();
+	const evt = await getById(id);
+	if (!evt) throw error(404, 'Event not found');
+	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
+
+	const [tickets, sold] = await Promise.all([
+		getEventTickets(id),
+		getTicketsSold(id)
+	]);
+
+	const checkedIn = tickets.filter((t) => t.status === 'checked_in').length;
+
+	return {
+		event: {
+			id: evt.id,
+			title: evt.title,
+			startsAt: evt.startsAt,
+			ticketQuantity: evt.ticketQuantity
+		},
+		tickets: tickets
+			.filter((t) => t.status === 'valid' || t.status === 'checked_in')
+			.map((t) => ({
+				id: t.id,
+				attendeeName: t.attendeeName,
+				attendeeEmail: t.attendeeEmail,
+				code: t.code,
+				status: t.status,
+				checkedInAt: t.checkedInAt
+			})),
+		stats: { sold, checkedIn }
 	};
 });
 
