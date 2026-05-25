@@ -14,7 +14,7 @@ import 'dotenv/config';
 import { randomUUID } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
@@ -484,7 +484,17 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		rows.push(e);
 	}
 
-	for (let i = 0; i < 4; i++) {
+	// Future events: 2 paid ticketed, 2 free RSVP, 2 open (no ticketing)
+	const futureConfigs: { ticketingEnabled: boolean; ticketPrice: number | null; ticketQuantity: number | null }[] = [
+		{ ticketingEnabled: true, ticketPrice: 1500, ticketQuantity: 50 },
+		{ ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 30 },
+		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: 40 },
+		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: null },
+		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null },
+		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null }
+	];
+
+	for (let i = 0; i < 6; i++) {
 		const day = randomInt(3, 28);
 		const hour = randomInt(18, 20);
 		const duration = pick([2, 3]);
@@ -492,6 +502,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const startsAt = ptDate(day, hour);
 		const endsAt = ptDate(day, hour + duration);
 		const creator = pick(staffUsers);
+		const config = futureConfigs[i];
 
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
@@ -500,12 +511,17 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		const [e] = await db.insert(event).values({
 			title: pick(EVENT_TITLES),
-			description: 'An evening of live performances at the Collective.',
+			description: config.ticketingEnabled && !config.ticketPrice
+				? 'A free community event — RSVP to reserve your spot!'
+				: 'An evening of live performances at the Collective.',
 			startsAt, endsAt,
 			doorsAt: ptDate(day, hour - 0.5),
 			status: 'published',
 			publishedAt: new Date(),
 			tags, reservationId,
+			ticketingEnabled: config.ticketingEnabled,
+			ticketPrice: config.ticketPrice,
+			ticketQuantity: config.ticketQuantity,
 			createdByUserId: creator.id
 		}).returning();
 		rows.push(e);
@@ -769,30 +785,46 @@ async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservati
 async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
 	console.log('Seeding tickets...');
 	const rows = [];
-	const publishedEvents = events.filter((e) => e.status === 'published');
 
-	for (const evt of publishedEvents) {
-		const ticketCount = randomInt(2, 6);
-		const purchaseId = randomUUID();
-		const buyers = pickN(users, ticketCount);
+	const ticketedEvents = await db
+		.select({ id: event.id, startsAt: event.startsAt, ticketPrice: event.ticketPrice })
+		.from(event)
+		.where(eq(event.ticketingEnabled, true));
 
-		for (let i = 0; i < ticketCount; i++) {
-			const buyer = buyers[i];
-			const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
-			const isPast = evt.startsAt < new Date();
+	for (const evt of ticketedEvents) {
+		const ticketCount = randomInt(3, 8);
+		const isPast = evt.startsAt < new Date();
+		const isFree = !evt.ticketPrice || evt.ticketPrice === 0;
 
-			const [t] = await db.insert(ticket).values({
-				eventId: evt.id,
-				purchaseId,
-				userId: buyer.id,
-				attendeeName: buyer.name,
-				attendeeEmail: `${buyer.name.toLowerCase().replace(' ', '.')}@example.com`,
-				code,
-				status: isPast ? (Math.random() > 0.2 ? 'used' : 'pending') : 'pending',
-				checkedInAt: isPast && Math.random() > 0.3 ? evt.startsAt : null,
-				checkedInByUserId: isPast && Math.random() > 0.3 ? users[0].id : null
-			}).returning();
-			rows.push(t);
+		// Group tickets into 2-3 separate purchases/RSVPs
+		const purchaseCount = randomInt(2, 3);
+		let remaining = ticketCount;
+
+		for (let p = 0; p < purchaseCount && remaining > 0; p++) {
+			const qty = p === purchaseCount - 1 ? remaining : randomInt(1, Math.min(3, remaining));
+			remaining -= qty;
+
+			const purchaseId = isFree ? `rsvp-${randomUUID()}` : randomUUID();
+			const buyer = pick(users);
+			const email = `${buyer.name.toLowerCase().replace(' ', '.')}@example.com`;
+
+			for (let i = 0; i < qty; i++) {
+				const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
+				const checkedIn = isPast && Math.random() > 0.3;
+
+				const [t] = await db.insert(ticket).values({
+					eventId: evt.id,
+					purchaseId,
+					userId: buyer.id,
+					attendeeName: buyer.name,
+					attendeeEmail: email,
+					code,
+					status: checkedIn ? 'checked_in' : 'valid',
+					checkedInAt: checkedIn ? evt.startsAt : null,
+					checkedInByUserId: checkedIn ? users[0].id : null
+				}).returning();
+				rows.push(t);
+			}
 		}
 	}
 
