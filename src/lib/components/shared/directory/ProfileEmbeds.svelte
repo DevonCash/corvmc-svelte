@@ -6,6 +6,7 @@
 
 	let embeddableLinks = $derived(
 		links
+			.filter((l) => l.embed !== false) // respect embed toggle (default to embed if not set)
 			.map((l) => ({ ...l, embedUrl: getEmbedUrl(l.url) }))
 			.filter((l): l is typeof l & { embedUrl: string } => !!l.embedUrl)
 	);

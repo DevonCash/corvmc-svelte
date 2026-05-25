@@ -100,7 +100,7 @@ export async function syncFromWebhook(
 			.update(band)
 			.set({
 				tier: 'premium',
-				subscription: subscription as unknown as Record<string, unknown>,
+				subscription: subscription as BandSubscription,
 				updatedAt: new Date()
 			})
 			.where(eq(band.id, bandId));
@@ -144,7 +144,7 @@ export async function cancelBandSubscription(bandId: string): Promise<void> {
 	await db
 		.update(band)
 		.set({
-			subscription: updated as unknown as Record<string, unknown>,
+			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
 		.where(eq(band.id, bandId));
@@ -177,7 +177,7 @@ export async function resumeBandSubscription(bandId: string): Promise<void> {
 	await db
 		.update(band)
 		.set({
-			subscription: updated as unknown as Record<string, unknown>,
+			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
 		.where(eq(band.id, bandId));

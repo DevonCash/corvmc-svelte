@@ -7,7 +7,8 @@
 		IconPencil,
 		IconSettings,
 		IconUser,
-		IconCrown
+		IconCrown,
+		IconBrush
 	} from '@tabler/icons-svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -68,6 +69,11 @@
 			</Nav.Item>
 			<Nav.Item href={`${base}/profile`} label="Profile">
 				{#snippet icon()}<IconUser />{/snippet}
+			</Nav.Item>
+		{/if}
+		{#if isOwnerOrAdmin && layout.band.tier === 'premium'}
+			<Nav.Item href={`${base}/page-editor`} label="Page Editor">
+				{#snippet icon()}<IconBrush />{/snippet}
 			</Nav.Item>
 		{/if}
 		{#if layout.userRole === 'owner'}

@@ -1,9 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -24,7 +21,7 @@
 </script>
 
 <PageHeader title="Subscription" subtitle={band.name} />
-<PageContent width="lg">
+<PageContent width="2xl">
 	{#if info.tier === 'premium' && info.subscription}
 		<!-- Active premium subscription -->
 		<div class="card bg-base-100 shadow-sm">
@@ -49,28 +46,38 @@
 						<p>Your subscription will end on {formatDate(new Date(info.subscription.currentPeriodEnd))}.</p>
 					</div>
 					{#if isOwner}
-						<Form
-							action={resumePremium}
-							onSuccess={() => {
-								toast.success('Subscription resumed');
-								invalidateAll();
-							}}
+						<form
+							{...resumePremium.enhance(async (form) => {
+								try {
+									if (await form.submit()) {
+										toast.success('Subscription resumed');
+										invalidateAll();
+									}
+								} catch {
+									toast.error('Something went wrong');
+								}
+							})}
 						>
-							<input type="hidden" name="slug" value={band.slug} />
-							<SubmitButton class="btn-primary btn-sm mt-2">Resume Subscription</SubmitButton>
-						</Form>
+							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
+							<button class="btn btn-primary btn-sm mt-2">Resume Subscription</button>
+						</form>
 					{/if}
 				{:else if isOwner}
-					<Form
-						action={cancelPremium}
-						onSuccess={() => {
-							toast.success('Subscription will cancel at end of billing period');
-							invalidateAll();
-						}}
+					<form
+						{...cancelPremium.enhance(async (form) => {
+							try {
+								if (await form.submit()) {
+									toast.success('Subscription will cancel at end of billing period');
+									invalidateAll();
+								}
+							} catch {
+								toast.error('Something went wrong');
+							}
+						})}
 					>
-						<input type="hidden" name="slug" value={band.slug} />
-						<SubmitButton class="btn-ghost btn-sm mt-4 text-error">Cancel Subscription</SubmitButton>
-					</Form>
+						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
+						<button class="btn btn-ghost btn-sm mt-4 text-error">Cancel Subscription</button>
+					</form>
 				{/if}
 			</div>
 		</div>
@@ -94,16 +101,22 @@
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">$15<span class="text-sm font-normal opacity-60">/mo</span></p>
 						{#if isOwner}
-							<Form
-								action={upgradeToPremium}
-								onSuccess={(result) => {
-									if (result.redirectUrl) goto(result.redirectUrl);
-								}}
+							<form
+								{...upgradeToPremium.enhance(async (form) => {
+									try {
+										const result = await form.submit();
+										if (result && upgradeToPremium.result?.redirectUrl) {
+											goto(upgradeToPremium.result.redirectUrl);
+										}
+									} catch {
+										toast.error('Something went wrong');
+									}
+								})}
 							>
-								<input type="hidden" name="slug" value={band.slug} />
-								<input type="hidden" name="billingInterval" value="monthly" />
-								<SubmitButton class="btn-primary mt-4">Subscribe Monthly</SubmitButton>
-							</Form>
+								<input {...upgradeToPremium.fields.slug.as('hidden', band.slug)} />
+								<input {...upgradeToPremium.fields.billingInterval.as('hidden', 'monthly')} />
+								<button class="btn btn-primary mt-4">Subscribe Monthly</button>
+							</form>
 						{/if}
 					</div>
 				</div>
@@ -115,16 +128,22 @@
 						<h3 class="text-lg font-bold">Yearly</h3>
 						<p class="text-3xl font-bold">$120<span class="text-sm font-normal opacity-60">/yr</span></p>
 						{#if isOwner}
-							<Form
-								action={upgradeToPremium}
-								onSuccess={(result) => {
-									if (result.redirectUrl) goto(result.redirectUrl);
-								}}
+							<form
+								{...upgradeToPremium.enhance(async (form) => {
+									try {
+										const result = await form.submit();
+										if (result && upgradeToPremium.result?.redirectUrl) {
+											goto(upgradeToPremium.result.redirectUrl);
+										}
+									} catch {
+										toast.error('Something went wrong');
+									}
+								})}
 							>
-								<input type="hidden" name="slug" value={band.slug} />
-								<input type="hidden" name="billingInterval" value="yearly" />
-								<SubmitButton class="btn-primary mt-4">Subscribe Yearly</SubmitButton>
-							</Form>
+								<input {...upgradeToPremium.fields.slug.as('hidden', band.slug)} />
+								<input {...upgradeToPremium.fields.billingInterval.as('hidden', 'yearly')} />
+								<button class="btn btn-primary mt-4">Subscribe Yearly</button>
+							</form>
 						{/if}
 					</div>
 				</div>

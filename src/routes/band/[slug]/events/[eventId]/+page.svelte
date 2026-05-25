@@ -3,8 +3,6 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import Form, { Field } from '$lib/components/shared/Form';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime } from '$lib/utils/format';
@@ -31,7 +29,7 @@
 <PageHeader title={evt.title} subtitle={band.name}>
 	<StatusBadge status={evt.status} />
 </PageHeader>
-<PageContent width="lg">
+<PageContent width="2xl">
 	<div class="space-y-6">
 		<!-- Event details -->
 		<div class="card bg-base-100 shadow-sm">
@@ -81,42 +79,60 @@
 		{#if isAdmin && evt.status !== 'cancelled'}
 			<div class="flex flex-wrap gap-2">
 				{#if evt.status === 'draft'}
-					<Form
-						action={publishBandEvent}
-						onSuccess={() => {
-							toast.success('Event published');
-							invalidateAll();
-						}}
+					<form
+						{...publishBandEvent.enhance(async (form) => {
+							try {
+								if (await form.submit()) {
+									toast.success('Event published');
+									invalidateAll();
+								}
+							} catch {
+								toast.error('Failed to publish');
+							}
+						})}
+						class="inline"
 					>
-						<input type="hidden" name="slug" value={band.slug} />
-						<input type="hidden" name="eventId" value={evt.id} />
-						<SubmitButton class="btn-primary btn-sm">Publish</SubmitButton>
-					</Form>
+						<input {...publishBandEvent.fields.slug.as('hidden', band.slug)} />
+						<input {...publishBandEvent.fields.eventId.as('hidden', evt.id)} />
+						<button class="btn btn-primary btn-sm">Publish</button>
+					</form>
 				{:else if evt.status === 'published'}
-					<Form
-						action={unpublishBandEvent}
-						onSuccess={() => {
-							toast.success('Event unpublished');
-							invalidateAll();
-						}}
+					<form
+						{...unpublishBandEvent.enhance(async (form) => {
+							try {
+								if (await form.submit()) {
+									toast.success('Event unpublished');
+									invalidateAll();
+								}
+							} catch {
+								toast.error('Failed to unpublish');
+							}
+						})}
+						class="inline"
 					>
-						<input type="hidden" name="slug" value={band.slug} />
-						<input type="hidden" name="eventId" value={evt.id} />
-						<SubmitButton class="btn-ghost btn-sm">Unpublish</SubmitButton>
-					</Form>
+						<input {...unpublishBandEvent.fields.slug.as('hidden', band.slug)} />
+						<input {...unpublishBandEvent.fields.eventId.as('hidden', evt.id)} />
+						<button class="btn btn-ghost btn-sm">Unpublish</button>
+					</form>
 				{/if}
 
-				<Form
-					action={cancelBandEventForm}
-					onSuccess={() => {
-						toast.success('Event cancelled');
-						invalidateAll();
-					}}
+				<form
+					{...cancelBandEventForm.enhance(async (form) => {
+						try {
+							if (await form.submit()) {
+								toast.success('Event cancelled');
+								invalidateAll();
+							}
+						} catch {
+							toast.error('Failed to cancel');
+						}
+					})}
+					class="inline"
 				>
-					<input type="hidden" name="slug" value={band.slug} />
-					<input type="hidden" name="eventId" value={evt.id} />
-					<SubmitButton class="btn-error btn-outline btn-sm">Cancel Event</SubmitButton>
-				</Form>
+					<input {...cancelBandEventForm.fields.slug.as('hidden', band.slug)} />
+					<input {...cancelBandEventForm.fields.eventId.as('hidden', evt.id)} />
+					<button class="btn btn-error btn-outline btn-sm">Cancel Event</button>
+				</form>
 
 				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
@@ -128,37 +144,47 @@
 		{#if editing && isAdmin}
 			<div class="card bg-base-200 shadow-sm">
 				<div class="card-body">
-					<Form
-						action={updateBandEventForm}
-						onSuccess={() => {
-							toast.success('Event updated');
-							editing = false;
-							invalidateAll();
-						}}
+					<form
+						{...updateBandEventForm.enhance(async (form) => {
+							try {
+								if (await form.submit()) {
+									toast.success('Event updated');
+									editing = false;
+									invalidateAll();
+								}
+							} catch {
+								toast.error('Failed to update');
+							}
+						})}
+						class="space-y-4"
 					>
-						<input type="hidden" name="slug" value={band.slug} />
-						<input type="hidden" name="eventId" value={evt.id} />
+						<input {...updateBandEventForm.fields.slug.as('hidden', band.slug)} />
+						<input {...updateBandEventForm.fields.eventId.as('hidden', evt.id)} />
 
-						<Field name="title" label="Title">
-							<input type="text" name="title" class="input input-bordered w-full" value={evt.title} maxlength="200" />
-						</Field>
+						<div class="form-control">
+							<label class="label"><span class="label-text">Title</span></label>
+							<input {...updateBandEventForm.fields.title.as('text', evt.title)} class="input input-bordered w-full" maxlength="200" />
+						</div>
 
-						<Field name="description" label="Description">
-							<textarea name="description" class="textarea textarea-bordered w-full" rows="4" maxlength="5000">{evt.description ?? ''}</textarea>
-						</Field>
+						<div class="form-control">
+							<label class="label"><span class="label-text">Description</span></label>
+							<textarea {...updateBandEventForm.fields.description.as('text', evt.description ?? '')} class="textarea textarea-bordered w-full" rows="4" maxlength="5000"></textarea>
+						</div>
 
-						<Field name="location" label="Location">
-							<input type="text" name="location" class="input input-bordered w-full" value={evt.location ?? ''} maxlength="500" />
-						</Field>
+						<div class="form-control">
+							<label class="label"><span class="label-text">Location</span></label>
+							<input {...updateBandEventForm.fields.location.as('text', evt.location ?? '')} class="input input-bordered w-full" maxlength="500" />
+						</div>
 
-						<Field name="externalTicketUrl" label="Ticket Link">
-							<input type="url" name="externalTicketUrl" class="input input-bordered w-full" value={evt.externalTicketUrl ?? ''} />
-						</Field>
+						<div class="form-control">
+							<label class="label"><span class="label-text">Ticket Link</span></label>
+							<input {...updateBandEventForm.fields.externalTicketUrl.as('text', evt.externalTicketUrl ?? '')} class="input input-bordered w-full" />
+						</div>
 
 						<div class="flex justify-end pt-2">
-							<SubmitButton>Save Changes</SubmitButton>
+							<button class="btn btn-primary">Save Changes</button>
 						</div>
-					</Form>
+					</form>
 				</div>
 			</div>
 		{/if}
