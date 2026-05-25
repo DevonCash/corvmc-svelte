@@ -5,6 +5,8 @@
 	import { refundReservation } from '$lib/remote/reservations.remote';
 	import type { ISODateString } from '$lib/types/dates';
 
+	const { fields } = refundReservation;
+
 	let {
 		reservation,
 		class: className = 'btn-error btn-outline btn-sm',
@@ -29,7 +31,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
+		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">Refund the payment for this reservation? This does not cancel the reservation.</p>
 	{/snippet}

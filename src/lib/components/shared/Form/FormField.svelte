@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
+	import type { RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
 	import TagInput from './TagInput.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import { getFormContext } from './Form.svelte';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
 	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file' | 'calendar';
@@ -14,6 +14,7 @@
 		name,
 		id: propId,
 		type,
+		field,
 		class: className = '',
 		input,
 		description,
@@ -29,6 +30,7 @@
 		name?: string;
 		id?: string;
 		label?: string;
+		field?: RemoteFormField<any>;
 		input?: Snippet<[id: string]>;
 		children?: Snippet;
 		description?: string;
@@ -45,20 +47,37 @@
 
 	const form = getFormContext();
 
-	// Support old API: use `id` prop if `name` is not provided
 	const uid = Math.random().toString(16).slice(2, 8);
 	let _name = $derived(name ?? propId ?? '');
 	let _id = $derived(propId ?? `form-field-${_name}-${uid}`);
 	let _label = $derived.by(() => label ?? (_name ? _name.slice(0, 1).toUpperCase() + _name.slice(1) : ''));
-	// When inside a Form context, derive issues from form; otherwise use prop
-	let issues = $derived.by(() => form ? form.issuesFor(_name) : (propIssues ?? null));
+
+	// Resolve field attributes from SvelteKit field definition when provided
+	let fieldAttrs = $derived.by(() => {
+		if (!field) return null;
+		const asType = type === 'textarea' || type === 'tags' || type === 'calendar' || type === 'toggle' || type === 'file' ? 'text' : type ?? 'text';
+		return field.as(asType as any);
+	});
+
+	// When field is provided, derive name/id from it
+	let resolvedName = $derived(fieldAttrs?.name ?? _name);
+	let resolvedId = $derived(propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id));
+
+	// Issues: field.issues() > propIssues > form context
+	let issues = $derived.by(() => {
+		if (field) return field.issues() ?? null;
+		if (form) return form.issuesFor(_name);
+		return propIssues ?? null;
+	});
+
 	let pending = $derived(form ? form.status === 'pending' : false);
 
 	let inputProps = $derived({
-		id: _id,
-		name: _name,
+		id: resolvedId,
+		name: resolvedName,
 		type,
-		disabled: pending || readonly
+		disabled: pending || readonly,
+		...(fieldAttrs ? { 'aria-invalid': fieldAttrs['aria-invalid'] } : {})
 	});
 </script>
 
@@ -76,7 +95,7 @@
 	{#if children}
 		{@render children()}
 	{:else if input}
-		{@render input(_id)}
+		{@render input(resolvedId)}
 	{:else if readonly}
 		<p class="input-bordered input w-full">
 			<span class="grow">{value}</span>
@@ -88,27 +107,27 @@
 	{:else if type === 'tags'}
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
 	{:else if type === 'calendar'}
-		<CalendarSelect {...rest} name={_name} bind:value disabled={pending || readonly} />
+		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2 items-center">
-			<input type="checkbox" class="checkbox shrink-0" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
+			<input type="checkbox" class="checkbox shrink-0" bind:checked={value} disabled={pending || readonly} id={resolvedId} name={resolvedName} />
 			{#if rest.checkboxLabel}<span class="text-wrap">{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="toggle" bind:checked={value} disabled={pending || readonly} id={_id} name={_name} />
+			<input type="checkbox" class="toggle" bind:checked={value} disabled={pending || readonly} id={resolvedId} name={resolvedName} />
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'file' && upload}
-		<FileUpload name={_name} {upload} {accept} {value} {src} disabled={pending || readonly} />
+		<FileUpload name={resolvedName} {upload} {accept} {value} {src} disabled={pending || readonly} />
 	{:else if type === 'select' && rest.multiple}
-		<input type="hidden" name={_name} value={JSON.stringify(Array.isArray(value) ? value : [])} />
+		<input type="hidden" name={resolvedName} value={JSON.stringify(Array.isArray(value) ? value : [])} />
 		<select
 			class="select-bordered select w-full"
 			class:ghost={readonly}
 			multiple
 			disabled={pending || readonly}
-			id={_id}
+			id={resolvedId}
 			onchange={(e) => {
 				const sel = e.currentTarget;
 				value = Array.from(sel.selectedOptions, (o) => o.value);
@@ -131,6 +150,8 @@
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>
+	{:else if field && fieldAttrs}
+		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...fieldAttrs} id={resolvedId} disabled={pending || readonly} />
 	{:else}
 		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}

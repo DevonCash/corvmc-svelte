@@ -5,6 +5,8 @@
 	import { completeReservation } from '$lib/remote/reservations.remote';
 	import type { ISODateString } from '$lib/types/dates';
 
+	const { fields } = completeReservation;
+
 	let {
 		reservation,
 		class: className = 'btn-success btn-sm',
@@ -29,7 +31,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
+		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">Mark this reservation as completed?</p>
 	{/snippet}

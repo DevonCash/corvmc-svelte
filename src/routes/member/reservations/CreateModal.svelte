@@ -8,6 +8,8 @@
 	import ConfirmStep from './ConfirmStep.svelte';
 	import PaymentStep from './PaymentStep.svelte';
 
+	const { fields } = bookAndPayReservation;
+
 	let {
 		isSustaining = false
 	}: {
@@ -37,7 +39,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form({ close })}
 		<DateTimeStep {isSustaining} />
-		<ConfirmStep />
-		<PaymentStep />
+		<ConfirmStep fields={{ skipPayment: fields.skipPayment }} />
+		<PaymentStep fields={{ coverFees: fields.coverFees }} />
 	{/snippet}
 </Action>

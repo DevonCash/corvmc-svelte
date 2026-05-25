@@ -5,6 +5,7 @@
 	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
 	import { formatDate } from '$lib/utils/format';
 	import type { ISODateString } from '$lib/types/dates';
+	import type { Reservation } from '$lib/server/reservation';
 
 	let {
 		reservation,
@@ -12,16 +13,13 @@
 		onsuccess,
 		...rest
 	}: {
-		reservation: {
-			id: string;
-			startsAt: ISODateString;
-			endsAt: ISODateString;
-			waitlistExpiresAt?: ISODateString | null;
-		};
+		reservation: Reservation;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const { fields } = confirmWaitlisted;
 </script>
 
 <Action
@@ -36,14 +34,15 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
+		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">
 			A slot has opened up for this time. Would you like to confirm this reservation?
 		</p>
 		{#if reservation.waitlistExpiresAt}
 			<p class="text-xs opacity-60">
-				You have until {formatDate(reservation.waitlistExpiresAt)} to confirm before the slot is offered to someone else.
+				You have until {formatDate(reservation.waitlistExpiresAt)} to confirm before the slot is offered
+				to someone else.
 			</p>
 		{/if}
 	{/snippet}

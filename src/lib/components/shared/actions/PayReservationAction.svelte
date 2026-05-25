@@ -4,7 +4,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
 	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
-	import type { ISODateString } from '$lib/types/dates';
+	import type { Reservation } from '$lib/server/reservation';
+
+	const { fields } = payForReservation;
 
 	let {
 		reservation,
@@ -12,7 +14,7 @@
 		class: className = 'btn-primary btn-sm',
 		...rest
 	}: {
-		reservation: { id: string; startsAt: ISODateString; endsAt: ISODateString };
+		reservation: Reservation;
 		label?: string;
 		class?: string;
 		[key: string]: unknown;
@@ -38,6 +40,6 @@
 >
 	{#snippet form({ close })}
 		<ReservationSummary {reservation} />
-		<PaymentStep {reservation} precedingSteps={0} />
+		<PaymentStep {reservation} fields={{ id: fields.id, coverFees: fields.coverFees }} precedingSteps={0} />
 	{/snippet}
 </Action>

@@ -5,11 +5,14 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
 	import type { ISODateString } from '$lib/types/dates';
+	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
-		reservation
+		reservation,
+		fields
 	}: {
 		reservation?: { id: string; startsAt: ISODateString; endsAt: ISODateString };
+		fields: { id?: RemoteFormField<string>; skipPayment: RemoteFormField<string> };
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -130,10 +133,10 @@
 
 <div bind:this={el}>
 	<Form.Step>
-		{#if reservation}
-			<input type="hidden" name="id" value={reservation.id} />
+		{#if reservation && fields.id}
+			<input {...fields.id.as('hidden', reservation.id)} />
 		{/if}
-		<input type="hidden" name="skipPayment" value="" bind:this={skipPaymentInput} />
+		<input {...fields.skipPayment.as('hidden', '')} bind:this={skipPaymentInput} />
 
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}

@@ -8,6 +8,8 @@
 	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import { format, formatDistanceStrict } from 'date-fns';
 	import { IconPencil } from '@tabler/icons-svelte';
+
+	const { fields } = editMemberSeries;
 </script>
 
 {#if !(await getLocalUser()).subscription}
@@ -59,29 +61,29 @@
 						</Button>
 					{/snippet}
 					{#snippet form({ close })}
-						<input type="hidden" name="seriesId" value={series.id} />
+						<input {...fields.seriesId.as('hidden', series.id)} />
 						<div class="grid grid-cols-3 gap-3">
 							<FormField
-								name="date"
 								label="Day"
 								type="date"
+								field={fields.date}
 								value={format(series.startsAt, 'yyyy-MM-dd')}
 							/>
 							<FormField
-								name="startTime"
 								label="Start"
 								type="time"
+								field={fields.startTime}
 								value={format(series.startsAt, 'HH:mm')}
 							/>
 							<FormField
-								name="endTime"
 								label="End"
 								type="time"
+								field={fields.endTime}
 								value={format(series.endsAt, 'HH:mm')}
 							/>
 						</div>
-						<FormField name="frequency" label="Frequency">
-							<select class="select-bordered select w-full" name="frequency">
+						<FormField label="Frequency" field={fields.frequency}>
+							<select class="select-bordered select w-full" {...fields.frequency.as('select')}>
 								<option value="weekly" selected={series.frequencyLabel === 'Weekly'}>Weekly</option>
 								<option value="biweekly" selected={series.frequencyLabel === 'Every 2 weeks'}
 									>Every 2 weeks</option

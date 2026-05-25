@@ -3,12 +3,15 @@
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
+	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
 		reservation,
+		fields,
 		precedingSteps = reservation ? 1 : 2
 	}: {
 		reservation?: { id: string; startsAt: string; endsAt: string };
+		fields: { id?: RemoteFormField<string>; coverFees: RemoteFormField<string> };
 		precedingSteps?: number;
 	} = $props();
 
@@ -95,8 +98,8 @@
 
 <div bind:this={el}>
 	<Form.Step>
-		{#if reservation}
-			<input type="hidden" name="id" value={reservation.id} />
+		{#if reservation && fields.id}
+			<input {...fields.id.as('hidden', reservation.id)} />
 		{/if}
 
 		{#if !pricing}
@@ -152,7 +155,7 @@
 
 			{#if pricing.remainingCents > 0}
 				<Form.Field
-					name="coverFees"
+					field={fields.coverFees}
 					label=""
 					type="checkbox"
 					bind:value={coverFees}

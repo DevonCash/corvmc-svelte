@@ -5,6 +5,8 @@
 	import { cashReceivedReservation } from '$lib/remote/reservations.remote';
 	import type { ISODateString } from '$lib/types/dates';
 
+	const { fields } = cashReceivedReservation;
+
 	let {
 		reservation,
 		class: className = 'btn-success btn-outline btn-sm',
@@ -29,7 +31,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
+		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">Record that cash was received for this reservation?</p>
 	{/snippet}

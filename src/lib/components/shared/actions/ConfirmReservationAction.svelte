@@ -4,7 +4,9 @@
 	import { payForReservation } from '$lib/remote/reservations.remote';
 	import ConfirmStep from '../../../../routes/member/reservations/ConfirmStep.svelte';
 	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
-	import type { ISODateString } from '$lib/types/dates';
+	import type { Reservation } from '$lib/server/reservation';
+
+	const { fields } = payForReservation;
 
 	let {
 		reservation,
@@ -12,7 +14,7 @@
 		onsuccess,
 		...rest
 	}: {
-		reservation: { id: string; startsAt: ISODateString; endsAt: ISODateString; memberName?: string };
+		reservation: Reservation;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -39,7 +41,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<ConfirmStep {reservation} />
-		<PaymentStep {reservation} />
+		<ConfirmStep {reservation} fields={{ id: fields.id, skipPayment: fields.skipPayment }} />
+		<PaymentStep {reservation} fields={{ id: fields.id, coverFees: fields.coverFees }} />
 	{/snippet}
 </Action>

@@ -3,7 +3,7 @@
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cancelReservation } from '$lib/remote/reservations.remote';
-	import type { ISODateString } from '$lib/types/dates';
+	import type { Reservation } from '$lib/server/reservation';
 
 	let {
 		reservation,
@@ -12,12 +12,14 @@
 		onsuccess,
 		...rest
 	}: {
-		reservation: { id: string; startsAt: ISODateString; endsAt: ISODateString; memberName?: string };
+		reservation: Reservation;
 		showReasonInput?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const { fields } = cancelReservation;
 </script>
 
 <Action
@@ -31,13 +33,12 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={reservation.id} />
+		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">Are you sure you want to cancel this reservation?</p>
 		{#if showReasonInput}
 			<input
-				type="text"
-				name="reason"
+				{...fields.reason.as('text')}
 				placeholder="Reason (optional)"
 				class="input-bordered input input-sm w-full"
 			/>

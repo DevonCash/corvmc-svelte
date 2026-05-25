@@ -14,6 +14,8 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const { fields } = cancelRecurringSeries;
 </script>
 
 <Action
@@ -26,7 +28,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={seriesId} />
+		<input {...fields.id.as('hidden', seriesId)} />
 		<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
 	{/snippet}
 </Action>
