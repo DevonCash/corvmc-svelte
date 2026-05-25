@@ -25,6 +25,8 @@
 		[key: string]: unknown;
 	} = $props();
 
+	const action = $derived(isDeactivated ? reactivateAction : deactivateAction);
+	const fields = $derived(action.fields);
 	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
 	const resolvedClass = $derived(className ?? (isDeactivated ? 'btn-success btn-sm' : 'btn-error btn-sm'));
 	const confirmText = $derived(
@@ -34,7 +36,7 @@
 </script>
 
 <Action
-	action={isDeactivated ? reactivateAction : deactivateAction}
+	{action}
 	{label}
 	modalTitle="Confirm"
 	successToast={toast}
@@ -43,7 +45,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={entityId} />
+		<input {...fields.id.as('hidden', entityId)} />
 		{#if confirmText}
 			<p class="py-4">{confirmText}</p>
 		{:else}

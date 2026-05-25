@@ -5,6 +5,8 @@
 	import { Field } from '../Form';
 	import { equipmentConditions } from '$lib/config';
 
+	const { fields } = createEquipment;
+
 	let {
 		categories,
 		class: className = 'btn-primary btn-sm',
@@ -28,22 +30,22 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<Field name="name" type="text" label="Name" />
-		<Field name="description" type="textarea" label="Description" />
+		<Field field={fields.name} type="text" label="Name" />
+		<Field field={fields.description} type="textarea" label="Description" />
 		<div class="grid grid-cols-2 gap-3">
-			<Field name="categoryId" type="select" label="Category"
+			<Field field={fields.categoryId} type="select" label="Category"
 				options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-			<Field name="condition" type="select" label="Condition" value="good"
+			<Field field={fields.condition} type="select" label="Condition" value="good"
 				options={equipmentConditions.map((c) => ({ value: c, label: c }))} />
 		</div>
 		<div class="grid grid-cols-2 gap-3">
-			<Field name="totalQuantity" type="number" label="Total Quantity" value={1} />
-			<Field name="outOfOrderQuantity" type="number" label="Out of Order" value={0} />
+			<Field field={fields.totalQuantity} type="number" label="Total Quantity" value={1} />
+			<Field field={fields.outOfOrderQuantity} type="number" label="Out of Order" value={0} />
 		</div>
 		<div class="grid grid-cols-2 gap-3">
-			<Field name="serialNumber" type="text" label="Serial Number" />
-			<Field name="resourceId" type="text" label="Resource ID" />
+			<Field field={fields.serialNumber} type="text" label="Serial Number" />
+			<Field field={fields.resourceId} type="text" label="Resource ID" />
 		</div>
-		<Field name="notes" type="textarea" label="Notes" />
+		<Field field={fields.notes} type="textarea" label="Notes" />
 	{/snippet}
 </Action>

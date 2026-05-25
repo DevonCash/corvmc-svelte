@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { cancelTicket } from '$lib/remote/events.remote';
 
+	const { fields } = cancelTicket;
+
 	let {
 		eventId,
 		ticketId,
@@ -30,7 +32,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="ticketId" value={ticketId} />
+		<input {...fields.ticketId.as('hidden', ticketId)} />
 		<p class="py-2">Cancel ticket for {attendeeName}?</p>
 	{/snippet}
 </Action>

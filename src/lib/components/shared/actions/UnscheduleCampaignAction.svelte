@@ -2,6 +2,8 @@
 	import Action from '../Action.svelte';
 	import { unscheduleCampaign } from '$lib/remote/marketing.remote';
 
+	const { fields } = unscheduleCampaign;
+
 	let {
 		campaignId,
 		class: className = 'btn-warning btn-sm',
@@ -25,7 +27,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="campaignId" value={campaignId} />
+		<input {...fields.campaignId.as('hidden', campaignId)} />
 		<p class="py-4">Cancel the scheduled send and return this campaign to draft?</p>
 	{/snippet}
 </Action>

@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { cancelLoan } from '$lib/remote/equipment.remote';
 
+	const { fields } = cancelLoan;
+
 	let {
 		loanId,
 		label = 'Cancel',
@@ -30,7 +32,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={loanId} />
+		<input {...fields.id.as('hidden', loanId)} />
 		<p class="py-4">{confirmText}</p>
 	{/snippet}
 </Action>

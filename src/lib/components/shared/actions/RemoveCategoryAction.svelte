@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { removeCategory } from '$lib/remote/equipment.remote';
 
+	const { fields } = removeCategory;
+
 	let {
 		categoryId,
 		name,
@@ -28,7 +30,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={categoryId} />
+		<input {...fields.id.as('hidden', categoryId)} />
 		<p class="py-4">Delete "{name}"? Category must have no equipment.</p>
 	{/snippet}
 </Action>

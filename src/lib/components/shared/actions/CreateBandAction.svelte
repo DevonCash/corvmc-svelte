@@ -5,6 +5,8 @@
 	import { Field } from '../Form';
 	import SearchSelect from '../Form/SearchSelect.svelte';
 
+	const { fields } = createBandApi;
+
 	let {
 		class: className = 'btn-primary btn-sm',
 		onsuccess,
@@ -41,7 +43,7 @@
 >
 	{#snippet form({ close })}
 		{#if selectedOwner}
-			<input type="hidden" name="ownerId" value={selectedOwner.id} />
+			<input {...fields.ownerId.as('hidden', selectedOwner.id)} />
 		{/if}
 		<Field name="name" type="text" label="Name" />
 		<Field name="bio" type="textarea" label="Bio" />

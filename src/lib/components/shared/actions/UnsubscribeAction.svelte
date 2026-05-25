@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { unsubscribe } from '$lib/remote/account.remote';
 
+	const { fields } = unsubscribe;
+
 	let {
 		audienceId,
 		name,
@@ -28,7 +30,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="audienceId" value={audienceId} />
+		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<p class="py-4">Unsubscribe from {name}?</p>
 	{/snippet}
 </Action>

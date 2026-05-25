@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { addSubscriber } from '$lib/remote/marketing.remote';
 
+	const { fields } = addSubscriber;
+
 	let {
 		audienceId,
 		class: className = 'btn-primary btn-sm',
@@ -34,7 +36,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="audienceId" value={audienceId} />
+		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<div>
 			<label for="sub-email" class="text-xs opacity-60">Email</label>
 			<input

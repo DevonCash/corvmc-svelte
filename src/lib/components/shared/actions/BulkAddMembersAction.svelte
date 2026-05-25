@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { bulkAddMembers } from '$lib/remote/marketing.remote';
 
+	const { fields } = bulkAddMembers;
+
 	let {
 		audienceId,
 		class: className = 'btn-outline btn-sm',
@@ -26,7 +28,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="audienceId" value={audienceId} />
+		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<p class="py-4">Add all active members to this audience?</p>
 	{/snippet}
 </Action>

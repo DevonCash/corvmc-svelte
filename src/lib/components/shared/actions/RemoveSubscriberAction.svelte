@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { removeSubscriber } from '$lib/remote/marketing.remote';
 
+	const { fields } = removeSubscriber;
+
 	let {
 		audienceId,
 		subscriberId,
@@ -30,8 +32,8 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="audienceId" value={audienceId} />
-		<input type="hidden" name="subscriberId" value={subscriberId} />
+		<input {...fields.audienceId.as('hidden', audienceId)} />
+		<input {...fields.subscriberId.as('hidden', subscriberId)} />
 		<p class="py-4">Remove {email} from this audience?</p>
 	{/snippet}
 </Action>

@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { publishEvent } from '$lib/remote/events.remote';
 
+	const { fields } = publishEvent;
+
 	let {
 		eventId,
 		class: className = 'btn-success btn-sm',
@@ -25,7 +27,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={eventId} />
+		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">Publish this event to make it visible to the public?</p>
 	{/snippet}
 </Action>

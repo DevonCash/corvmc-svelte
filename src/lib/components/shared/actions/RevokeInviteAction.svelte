@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { revokeBandInvite } from '$lib/remote/bands.remote';
 
+	const { fields } = revokeBandInvite;
+
 	let {
 		bandId,
 		memberId,
@@ -30,7 +32,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="memberId" value={memberId} />
+		<input {...fields.memberId.as('hidden', memberId)} />
 		<p class="py-4">Revoke invitation for {name}?</p>
 	{/snippet}
 </Action>

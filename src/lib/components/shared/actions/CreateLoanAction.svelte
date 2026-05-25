@@ -5,6 +5,8 @@
 	import { Field } from '../Form';
 	import Button from '$lib/components/shared/Button.svelte';
 
+	const { fields } = createLoan;
+
 	let {
 		class: className = 'btn-sm btn-primary',
 		onsuccess,
@@ -62,7 +64,7 @@
 >
 	{#snippet form({ close })}
 		<div class="space-y-3">
-			<input type="hidden" name="userId" value={userId} />
+			<input {...fields.userId.as('hidden', userId)} />
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
@@ -90,16 +92,16 @@
 					</div>
 				{/if}
 			{/if}
-			<Field name="equipmentId" type="select" label="Equipment">
+			<Field field={fields.equipmentId} type="select" label="Equipment">
 				<option value="">-- Select equipment --</option>
 				{#each equipmentOptions as eq}
 					<option value={eq.id}>{eq.name}</option>
 				{/each}
 			</Field>
-			<Field name="quantity" type="number" label="Quantity" value={1} />
-			<Field name="requestedPickupDate" type="date" label="Requested pickup date" />
-			<Field name="estimatedReturnDate" type="date" label="Estimated return date" />
-			<Field name="memberNotes" type="textarea" label="Notes (optional)" />
+			<Field field={fields.quantity} type="number" label="Quantity" value={1} />
+			<Field field={fields.requestedPickupDate} type="date" label="Requested pickup date" />
+			<Field field={fields.estimatedReturnDate} type="date" label="Estimated return date" />
+			<Field field={fields.memberNotes} type="textarea" label="Notes (optional)" />
 		</div>
 	{/snippet}
 </Action>

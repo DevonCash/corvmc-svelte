@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { transferOwnership } from '$lib/remote/bands.remote';
 
+	const { fields } = transferOwnership;
+
 	let {
 		bandId,
 		newOwnerId,
@@ -30,8 +32,8 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="bandId" value={bandId} />
-		<input type="hidden" name="newOwnerId" value={newOwnerId} />
+		<input {...fields.bandId.as('hidden', bandId)} />
+		<input {...fields.newOwnerId.as('hidden', newOwnerId)} />
 		<p class="py-4">Transfer ownership to {name}? The current owner will be demoted to admin.</p>
 	{/snippet}
 </Action>

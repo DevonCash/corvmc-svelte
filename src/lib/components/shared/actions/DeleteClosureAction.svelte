@@ -14,6 +14,8 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const { fields } = deleteClosure;
 </script>
 
 <Action
@@ -26,7 +28,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={closureId} />
+		<input {...fields.id.as('hidden', closureId)} />
 		<p class="py-4">Delete this closure?</p>
 	{/snippet}
 </Action>

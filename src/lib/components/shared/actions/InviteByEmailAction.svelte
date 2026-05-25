@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { inviteByEmailApi } from '$lib/remote/bands.remote';
 
+	const { fields } = inviteByEmailApi;
+
 	let {
 		bandId,
 		class: className = 'btn-sm btn-outline btn-primary',
@@ -26,23 +28,23 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="bandId" value={bandId} />
+		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
 			<p class="text-sm opacity-70">Invite someone who doesn't have a CorvMC account. They'll get a signup link and be auto-added to this band.</p>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Email</span></div>
-				<input type="email" name="email" class="input input-bordered w-full" placeholder="musician@example.com" />
+				<input {...fields.email.as('email')} class="input input-bordered w-full" placeholder="musician@example.com" />
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<select class="select select-bordered w-full" name="role">
+				<select class="select select-bordered w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input type="text" name="position" class="input input-bordered w-full" placeholder="e.g. Bassist" />
+				<input {...fields.position.as('text')} class="input input-bordered w-full" placeholder="e.g. Bassist" />
 			</label>
 		</div>
 	{/snippet}

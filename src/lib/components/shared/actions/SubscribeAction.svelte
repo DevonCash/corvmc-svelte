@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { subscribe } from '$lib/remote/account.remote';
 
+	const { fields } = subscribe;
+
 	let {
 		audienceId,
 		name,
@@ -28,7 +30,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="audienceId" value={audienceId} />
+		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<p class="py-4">Subscribe to {name}?</p>
 	{/snippet}
 </Action>

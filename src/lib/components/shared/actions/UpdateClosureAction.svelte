@@ -20,6 +20,8 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	const { fields } = updateClosure;
 </script>
 
 <Action
@@ -31,9 +33,9 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={closureId} />
-		<input type="hidden" name="reason" value={reason} />
-		<input type="hidden" name="startsAt" value={startsAt} />
-		<input type="hidden" name="endsAt" value={endsAt} />
+		<input {...fields.id.as('hidden', closureId)} />
+		<input {...fields.reason.as('hidden', reason)} />
+		<input {...fields.startsAt.as('hidden', startsAt)} />
+		<input {...fields.endsAt.as('hidden', endsAt)} />
 	{/snippet}
 </Action>

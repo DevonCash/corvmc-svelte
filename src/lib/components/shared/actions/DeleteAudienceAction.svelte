@@ -2,6 +2,8 @@
 	import Action from '../Action.svelte';
 	import { deleteAudience } from '$lib/remote/marketing.remote';
 
+	const { fields } = deleteAudience;
+
 	let {
 		audienceId,
 		class: className = 'btn-error btn-sm',
@@ -25,7 +27,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={audienceId} />
+		<input {...fields.id.as('hidden', audienceId)} />
 		<p class="py-4">Delete this audience? All subscribers will be removed.</p>
 	{/snippet}
 </Action>

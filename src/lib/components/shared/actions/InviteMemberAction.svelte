@@ -4,6 +4,8 @@
 	import { addBandMember } from '$lib/remote/bands.remote';
 	import Button from '$lib/components/shared/Button.svelte';
 
+	const { fields } = addBandMember;
+
 	let {
 		bandId,
 		class: className = 'btn-sm btn-primary',
@@ -52,8 +54,8 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="bandId" value={bandId} />
-		<input type="hidden" name="userId" value={userId} />
+		<input {...fields.bandId.as('hidden', bandId)} />
+		<input {...fields.userId.as('hidden', userId)} />
 		<div class="space-y-3">
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
@@ -84,14 +86,14 @@
 			{/if}
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<select class="select select-bordered w-full" name="role">
+				<select class="select select-bordered w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input type="text" name="position" class="input input-bordered w-full" placeholder="e.g. Guitarist" />
+				<input {...fields.position.as('text')} class="input input-bordered w-full" placeholder="e.g. Guitarist" />
 			</label>
 		</div>
 	{/snippet}

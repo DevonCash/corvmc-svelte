@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { compTickets } from '$lib/remote/events.remote';
 
+	const { fields } = compTickets;
+
 	let {
 		eventId,
 		class: className = 'btn-sm btn-primary btn-outline',
@@ -27,19 +29,19 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="eventId" value={eventId} />
+		<input {...fields.eventId.as('hidden', eventId)} />
 		<div class="space-y-3">
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Attendee name</span></div>
-				<input type="text" name="attendeeName" class="input input-bordered w-full" required />
+				<input {...fields.attendeeName.as('text')} class="input input-bordered w-full" required />
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Email</span></div>
-				<input type="email" name="attendeeEmail" class="input input-bordered w-full" required />
+				<input {...fields.attendeeEmail.as('email')} class="input input-bordered w-full" required />
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Quantity</span></div>
-				<input type="number" name="quantity" class="input input-bordered w-full" value="1" min="1" max="50" />
+				<input {...fields.quantity.as('text')} type="number" class="input input-bordered w-full" value="1" min="1" max="50" />
 			</label>
 		</div>
 	{/snippet}

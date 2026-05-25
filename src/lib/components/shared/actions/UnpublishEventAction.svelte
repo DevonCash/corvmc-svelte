@@ -3,6 +3,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { unpublishEvent } from '$lib/remote/events.remote';
 
+	const { fields } = unpublishEvent;
+
 	let {
 		eventId,
 		class: className = 'btn-warning btn-outline btn-sm',
@@ -26,7 +28,7 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={eventId} />
+		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">Revert this event to draft? It will no longer be visible to the public.</p>
 	{/snippet}
 </Action>

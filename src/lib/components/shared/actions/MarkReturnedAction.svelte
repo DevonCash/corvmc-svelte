@@ -4,6 +4,8 @@
 	import { returnLoan } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
 
+	const { fields } = returnLoan;
+
 	let {
 		loanId,
 		chargeMessage,
@@ -29,12 +31,12 @@
 	{...rest}
 >
 	{#snippet form({ close })}
-		<input type="hidden" name="id" value={loanId} />
+		<input {...fields.id.as('hidden', loanId)} />
 		{#if chargeMessage}
 			<div class="bg-base-200 rounded p-3 mb-3 text-sm">
 				<p>{chargeMessage}</p>
 			</div>
 		{/if}
-		<Field name="staffNotes" type="textarea" label="Staff Notes (optional)" />
+		<Field field={fields.staffNotes} type="textarea" label="Staff Notes (optional)" />
 	{/snippet}
 </Action>
