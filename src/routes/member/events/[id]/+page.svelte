@@ -17,7 +17,8 @@
 
 	let eventData = $derived(await getMemberEventDetail(page.params.id!));
 	let allTickets = $derived(await getMemberTickets());
-	let myTicket = $derived(allTickets.find((t) => t.eventId === page.params.id && t.status !== 'cancelled') ?? null);
+	let myTickets = $derived(allTickets.filter((t) => t.eventId === page.params.id && t.status !== 'cancelled'));
+	let myTicket = $derived(myTickets[0] ?? null);
 	let data = $derived({ ...eventData, myTicket });
 
 	const evt = $derived(data.event);
@@ -70,14 +71,14 @@
 			</div>
 			<div class="tixbanner__text">
 				<strong>You're going!</strong>
-				<small>{data.myTicket.code}</small>
+				<small>{myTickets.length === 1 ? data.myTicket.code : `${myTickets.length} tickets`}</small>
 			</div>
 			<span class="tixbanner__action">
 				View ticket
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg>
 			</span>
 		</button>
-		<TicketQRModal bind:open={qrOpen} ticket={data.myTicket} />
+		<TicketQRModal bind:open={qrOpen} tickets={myTickets} />
 	{/if}
 
 	<div class="edet">

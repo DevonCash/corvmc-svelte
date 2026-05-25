@@ -52,7 +52,12 @@
 
 	let activeFilter = $state<string | null>(null);
 	let qrOpen = $state(false);
-	let selectedTicket = $state<(typeof activeTickets)[number] | null>(null);
+	let selectedEventId = $state<string | null>(null);
+	let selectedIndex = $state(0);
+
+	const selectedTickets = $derived(
+		selectedEventId ? activeTickets.filter((t) => t.eventId === selectedEventId) : []
+	);
 
 	const filteredEvents = $derived(
 		activeFilter
@@ -80,7 +85,12 @@
 					<TicketStub
 						{ticket}
 						tags={eventTagMap.get(ticket.eventId) ?? null}
-						onclick={() => { selectedTicket = ticket; qrOpen = true; }}
+						onclick={() => {
+							selectedEventId = ticket.eventId;
+							const siblings = activeTickets.filter((t) => t.eventId === ticket.eventId);
+							selectedIndex = siblings.indexOf(ticket);
+							qrOpen = true;
+						}}
 					/>
 				{/each}
 			</Carousel>
@@ -143,8 +153,8 @@
 		{/if}
 	</section>
 
-{#if selectedTicket}
-	<TicketQRModal bind:open={qrOpen} ticket={selectedTicket} />
+{#if selectedTickets.length > 0}
+	<TicketQRModal bind:open={qrOpen} tickets={selectedTickets} initialIndex={selectedIndex} />
 {/if}
 
 </PageContent>
