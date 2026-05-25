@@ -1,12 +1,10 @@
 import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
 import type { User } from './authentication';
 import type { Band, BandMember } from './band';
-import type { Reservation, Closure } from './reservation';
+import type { Reservation } from './reservation';
 import type { Event } from './event';
-import type { Equipment, EquipmentCategory, EquipmentLoan } from './equipment';
+import type { EquipmentLoan } from './equipment';
 import type { Ticket } from './ticket';
-import type { RecurringSeries } from './recurring';
-import type { Payment, CreditTransaction } from './finance';
 import type { Audience } from './marketing';
 
 // ---------------------------------------------------------------------------
@@ -140,18 +138,6 @@ export interface MemberTicketsResponse {
 	})[];
 }
 
-export interface MemberEquipmentResponse {
-	equipment: (Pick<Equipment, 'id' | 'name' | 'description' | 'categoryId' | 'condition' | 'totalQuantity'> & {
-		categoryName: string;
-		pricingTier: string;
-		availableQuantity: number;
-	})[];
-	categories: Pick<EquipmentCategory, 'id' | 'name' | 'pricingTier'>[];
-	creditBalance: number;
-	isSustainingMember: boolean;
-	filters: { search: string; categoryId: string };
-}
-
 export interface MemberEquipmentLoansResponse {
 	active: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
 	past: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
@@ -172,23 +158,6 @@ export interface MembershipResponse {
 // Band pages
 // ---------------------------------------------------------------------------
 
-export interface BandUpcomingResponse {
-	upcoming: (Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt' | 'notes'> & {
-		bookedByName: string | null;
-	})[];
-}
-
-export interface BandMembersResponse {
-	active: (Pick<BandMember, 'id' | 'userId' | 'role' | 'position' | 'createdAt'> & {
-		userName: string;
-		userEmail: string;
-	})[];
-	pending: (Pick<BandMember, 'id' | 'userId' | 'role' | 'position' | 'invitedById' | 'createdAt'> & {
-		userName: string;
-		userEmail: string;
-	})[];
-}
-
 export interface BandReservationsResponse {
 	upcoming: (Pick<Reservation, 'id' | 'status' | 'startsAt' | 'endsAt' | 'notes'> & {
 		bookedByName: string | null;
@@ -201,55 +170,6 @@ export interface BandReservationsResponse {
 // ---------------------------------------------------------------------------
 // Staff pages
 // ---------------------------------------------------------------------------
-
-export interface StaffDashboardResponse {
-	stats: {
-		totalUsers: number;
-		totalRoles: number;
-		totalPermissions: number;
-		newUsersThisMonth: number;
-	};
-	recentUsers: Pick<User, 'id' | 'name' | 'email' | 'createdAt'>[];
-}
-
-export interface StaffUsersResponse {
-	users: (Pick<User, 'id' | 'name' | 'email' | 'pronouns' | 'createdAt'> & {
-		roles: string[];
-	})[];
-	pagination: Pagination;
-	search: string;
-}
-
-export interface StaffBandsResponse {
-	bands: (Pick<Band, 'id' | 'name' | 'slug' | 'createdAt' | 'deletedAt'> & {
-		status: string;
-	})[];
-	pagination: Pagination;
-	filters: { search: string; status: string };
-}
-
-export interface StaffEventsResponse {
-	pagination: Pagination;
-	events: Pick<
-		Event,
-		| 'id'
-		| 'title'
-		| 'description'
-		| 'startsAt'
-		| 'endsAt'
-		| 'doorsAt'
-		| 'publishedAt'
-		| 'createdAt'
-		| 'updatedAt'
-		| 'status'
-		| 'tags'
-		| 'reservationId'
-		| 'ticketingEnabled'
-		| 'ticketPrice'
-		| 'ticketQuantity'
-		| 'posterKey'
-	>[];
-}
 
 export interface StaffCheckInResponse {
 	event: Pick<Event, 'id' | 'title' | 'startsAt' | 'ticketQuantity'>;
@@ -289,77 +209,6 @@ export interface StaffReservationDetailResponse {
 	nextId: string | null;
 	isFirstReservation: boolean;
 	hourlyRateCents: number;
-}
-
-export interface StaffEquipmentResponse {
-	equipment: (Pick<
-		Equipment,
-		'id' | 'name' | 'description' | 'categoryId' | 'createdAt' | 'updatedAt' | 'deletedAt'
-	> & {
-		category: Pick<
-			EquipmentCategory,
-			'id' | 'name' | 'pricingTier' | 'createdAt' | 'updatedAt'
-		>;
-	})[];
-	categories: Pick<
-		EquipmentCategory,
-		'id' | 'name' | 'pricingTier' | 'displayOrder' | 'createdAt' | 'updatedAt'
-	>[];
-	pagination: Pagination;
-	filters: { search: string; categoryId: string; status: string };
-}
-
-export interface StaffEquipmentLoansResponse {
-	loans: Pick<
-		EquipmentLoan,
-		| 'id'
-		| 'status'
-		| 'requestedPickupDate'
-		| 'scheduledPickupDate'
-		| 'dueDate'
-		| 'checkedOutAt'
-		| 'returnedAt'
-		| 'createdAt'
-		| 'updatedAt'
-	>[];
-	pagination: Pagination;
-	filters: { search: string; status: string };
-}
-
-export interface StaffClosuresResponse {
-	closures: Pick<Closure, 'id' | 'reason' | 'startsAt' | 'endsAt'>[];
-}
-
-export interface StaffPaymentsResponse {
-	payments: (Pick<Payment, 'id' | 'userId' | 'amountCents' | 'paymentMethod' | 'status' | 'reservationId' | 'createdAt'> & {
-		userName: string;
-		userEmail: string;
-	})[];
-	pagination: Pagination;
-	filters: { search: string; method: string; status: string; from: string; to: string };
-}
-
-export interface StaffCreditsResponse {
-	transactions: (Pick<CreditTransaction, 'id' | 'userId' | 'creditType' | 'amount' | 'balanceAfter' | 'source' | 'sourceId' | 'description' | 'createdAt'> & {
-		userName: string | null;
-		userEmail: string;
-	})[];
-	pagination: Pagination;
-	filters: { search: string; creditType: string; source: string; from: string; to: string };
-}
-
-export interface StaffRecurringResponse {
-	series: (Pick<RecurringSeries, 'id' | 'createdAt' | 'endsAt' | 'cancelledAt'> & {
-		userName: string;
-		userPronouns: string | null;
-		userRole: string | null;
-		frequencyLabel: string;
-		bookerType: string;
-		startsAt: string;
-		endsAt: string;
-	})[];
-	pagination: Pagination;
-	filter: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -421,12 +270,6 @@ export interface EventsResponse {
 // ---------------------------------------------------------------------------
 // Marketing
 // ---------------------------------------------------------------------------
-
-export interface AudiencesResponse {
-	audiences: (Pick<Audience, 'id' | 'name' | 'slug' | 'description'> & {
-		optIn: boolean;
-	})[];
-}
 
 export interface AudienceDetailResponse {
 	audience: Pick<Audience, 'id' | 'name' | 'slug' | 'description'>;
