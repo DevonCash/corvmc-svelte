@@ -16,10 +16,12 @@
 	let {
 		ticket,
 		tags,
+		onclick,
 		class: className = ''
 	}: {
 		ticket: TicketData;
 		tags?: string | null;
+		onclick?: () => void;
 		class?: string;
 	} = $props();
 
@@ -38,7 +40,7 @@
 </script>
 
 {#if ticket.event}
-	<a href="/member/events/{ticket.eventId}" class="stub {stubColor} {className}">
+	<button type="button" class="stub {stubColor} {className}" {onclick}>
 		<div class="stub__main">
 			<span class="stub__eyebrow">{eyebrowText}</span>
 			<span class="stub__title">{ticket.event.title}</span>
@@ -52,5 +54,5 @@
 			<span class="stub__date-month">{formatShortMonth(ticket.event.startsAt)}</span>
 			<span class="stub__id">{ticket.code}</span>
 		</div>
-	</a>
+	</button>
 {/if}

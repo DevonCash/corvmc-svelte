@@ -933,6 +933,13 @@ p {
 	overflow: hidden;
 	isolation: isolate;
 	text-decoration: none;
+	padding: 0;
+	font: inherit;
+	text-align: left;
+}
+.stub:focus-visible {
+	outline: 2px solid var(--cmc-orange);
+	outline-offset: 2px;
 }
 .stub:hover  { transform: translateY(-3px); box-shadow: 0 6px 0 var(--cmc-brown); }
 .stub:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--cmc-brown); }
@@ -1212,6 +1219,12 @@ p {
 	transition: transform 180ms ease, box-shadow 180ms ease;
 	text-decoration: none;
 	color: inherit;
+	font: inherit;
+	text-align: left;
+}
+.tixbanner:focus-visible {
+	outline: 2px solid var(--cmc-orange);
+	outline-offset: 2px;
 }
 .tixbanner:hover  { transform: translateY(-3px); box-shadow: 0 6px 0 var(--cmc-brown); }
 .tixbanner:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--cmc-brown); }

@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
+	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
 	import Carousel from '$lib/components/shared/Carousel.svelte';
 	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
@@ -50,6 +51,8 @@
 	});
 
 	let activeFilter = $state<string | null>(null);
+	let qrOpen = $state(false);
+	let selectedTicket = $state<(typeof activeTickets)[number] | null>(null);
 
 	const filteredEvents = $derived(
 		activeFilter
@@ -74,7 +77,11 @@
 			<SectionLabel label="My Tickets" count={activeTickets.length} />
 			<Carousel itemCount={activeTickets.length} cardWidth={360}>
 				{#each activeTickets as ticket (ticket.id)}
-					<TicketStub {ticket} tags={eventTagMap.get(ticket.eventId) ?? null} />
+					<TicketStub
+						{ticket}
+						tags={eventTagMap.get(ticket.eventId) ?? null}
+						onclick={() => { selectedTicket = ticket; qrOpen = true; }}
+					/>
 				{/each}
 			</Carousel>
 		</section>
@@ -135,5 +142,9 @@
 			</div>
 		{/if}
 	</section>
+
+{#if selectedTicket}
+	<TicketQRModal bind:open={qrOpen} ticket={selectedTicket} />
+{/if}
 
 </PageContent>

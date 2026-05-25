@@ -8,6 +8,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents, formatDate } from '$lib/utils/format';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { purchaseTickets, getMemberEventDetail, getMemberTickets } from '$lib/remote/events.remote';
@@ -35,6 +36,7 @@
 	let attendeeName = $state((page.data as any).user?.name ?? '');
 	let attendeeEmail = $state((page.data as any).user?.email ?? '');
 	let coverFees = $state(false);
+	let qrOpen = $state(false);
 
 	const subtotal = $derived((discountedPrice ?? 0) * quantity);
 
@@ -62,7 +64,7 @@
 <PageContent>
 
 	{#if data.myTicket}
-		<a href="/member/events/{evt.id}" class="tixbanner">
+		<button type="button" class="tixbanner" onclick={() => (qrOpen = true)}>
 			<div class="tixbanner__icon">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M5 12l4 4 10-10"/></svg>
 			</div>
@@ -74,7 +76,8 @@
 				View ticket
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg>
 			</span>
-		</a>
+		</button>
+		<TicketQRModal bind:open={qrOpen} ticket={data.myTicket} />
 	{/if}
 
 	<div class="edet">
