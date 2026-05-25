@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { reservation, type Reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
 import { like, or, eq, ne, and, lt, gt, lte, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
@@ -540,12 +540,13 @@ export const getMembershipStatus = query(async () => {
 		.limit(1);
 
 	const freeHoursBalance = await getBalance(locals.user.id, 'free_hours');
+	const sub = row?.subscription as Subscription | null;
 
 	return {
-		isSustainingMember: row?.subscription != null,
+		isSustainingMember: sub != null,
 		freeHoursBalance,
-		creditsResetAt: row?.subscription?.creditsResetAt ?? null,
-		hoursPerReset: row?.subscription?.hoursPerReset ?? 0
+		creditsResetAt: sub?.creditsResetAt ?? null,
+		hoursPerReset: sub?.hoursPerReset ?? 0
 	};
 });
 

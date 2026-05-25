@@ -8,11 +8,11 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
-	import type { PageProps } from './$types';
+	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { page } from '$app/state';
 
-	let { data }: PageProps = $props();
-
-	const band = $derived(data?.band);
+	let layout = $derived(await getBandLayout(page.params.slug!));
+	const band = $derived(layout.band);
 
 	let showDeleteModal = $state(false);
 </script>

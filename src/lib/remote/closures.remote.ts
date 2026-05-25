@@ -4,7 +4,6 @@ import { query, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { toISO } from '$lib/types/dates';
 import { desc, eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -21,8 +20,8 @@ export const getClosures = query(z.void(), async () => {
 	return rows.map((c) => ({
 		id: c.id,
 		reason: c.reason,
-		startsAt: toISO(c.startsAt),
-		endsAt: toISO(c.endsAt)
+		startsAt: c.startsAt,
+		endsAt: c.endsAt
 	}));
 });
 

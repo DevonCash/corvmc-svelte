@@ -134,7 +134,7 @@
 												class="grow bg-transparent outline-none"
 											/>
 										</label>
-										<input {...instance.fields.unitAmountCents.as('hidden', product.unitAmountCents)} />
+										<input {...instance.fields.unitAmountCents.as('hidden', String(product.unitAmountCents))} />
 									</div>
 								{:else}
 									<input {...instance.fields.unitAmountCents.as('hidden', '0')} />

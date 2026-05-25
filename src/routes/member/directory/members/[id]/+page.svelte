@@ -48,7 +48,7 @@
 				<div class="profile-card__avatar-row">
 					<Avatar
 						class="-mt-14 size-24 border-4 border-base-100"
-						src={member.image}
+						src={member.image ?? undefined}
 						name={member.name}
 					/>
 					<div class="profile-card__identity">

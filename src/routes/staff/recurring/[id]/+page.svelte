@@ -9,7 +9,6 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
-	import { toISO } from '$lib/types/dates';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getSeries, getSeriesHistory, cancelDetailSeries, editStaffSeries } from '$lib/remote/recurring.remote';
@@ -83,7 +82,7 @@
 			<dd class="font-mono text-xs">{series.rrule}</dd>
 
 			<dt class="opacity-60">Prototype Time</dt>
-			<dd>{formatTimeRange(toISO(series.prototypeStartsAt), toISO(series.prototypeEndsAt))}</dd>
+			<dd>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</dd>
 
 			<dt class="opacity-60">Booker</dt>
 			<dd>{series.prototypeBookerType}: {series.prototypeBookerId}</dd>
@@ -94,11 +93,11 @@
 			{/if}
 
 			<dt class="opacity-60">Created</dt>
-			<dd>{formatDate(toISO(series.createdAt))}</dd>
+			<dd>{formatDate(series.createdAt)}</dd>
 
 			{#if series.cancelledAt}
 				<dt class="opacity-60">Cancelled</dt>
-				<dd>{formatDate(toISO(series.cancelledAt))}</dd>
+				<dd>{formatDate(series.cancelledAt)}</dd>
 			{/if}
 		</dl>
 	</InfoCard>
@@ -157,7 +156,7 @@
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
 						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
 						<span class="font-mono text-xs flex-1">{h.rrule}</span>
-						<span>{formatDate(toISO(h.createdAt))}</span>
+						<span>{formatDate(h.createdAt)}</span>
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />
 						{:else if h.supersededBy}

@@ -29,8 +29,8 @@
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
 
-	let activeReservations = getReservations({ after: new Date().toISOString() });
-	let allReservations = getReservations({ includeTerminal: true });
+	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
+	let allReservations = $state(getReservations({ includeTerminal: true }));
 
 	// Waitlist confirmation via ?confirm={id}
 	const confirmId = $derived(page.url.searchParams.get('confirm'));

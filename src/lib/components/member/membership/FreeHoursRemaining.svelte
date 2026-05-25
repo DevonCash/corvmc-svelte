@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { formatDate } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/types/dates';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconClock } from '@tabler/icons-svelte';
@@ -27,7 +26,7 @@
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
 					Resets to {membership.hoursPerReset} on {formatDate(
-						membership.creditsResetAt as ISODateString
+						new Date(membership.creditsResetAt)
 					)}
 				</span>
 			{/if}

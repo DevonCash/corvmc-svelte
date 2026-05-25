@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/types/dates';
 
 	type Conflict = {
 		type: 'reservation' | 'closure';
@@ -46,8 +45,8 @@
 		const msgs: string[] = [];
 
 		for (const c of conflictData.conflicts) {
-			const start = (typeof c.startsAt === 'string' ? c.startsAt : c.startsAt.toISOString()) as ISODateString;
-			const end = (typeof c.endsAt === 'string' ? c.endsAt : c.endsAt.toISOString()) as ISODateString;
+			const start = typeof c.startsAt === 'string' ? new Date(c.startsAt) : c.startsAt;
+			const end = typeof c.endsAt === 'string' ? new Date(c.endsAt) : c.endsAt;
 			const range = `${formatSlotTime(toLocalTime(start))} – ${formatSlotTime(toLocalTime(end))}`;
 
 			if (c.type === 'reservation') {

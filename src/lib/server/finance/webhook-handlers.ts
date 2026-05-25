@@ -100,8 +100,9 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		? new Date(contributionLine.period.end * 1000).toISOString()
 		: new Date(Date.now() + 30 * 86400_000).toISOString();
 
+	const existingSub = existing?.subscription as Subscription | null;
 	const subscription: Subscription = {
-		startedAt: existing?.subscription?.startedAt ?? new Date().toISOString(),
+		startedAt: existingSub?.startedAt ?? new Date().toISOString(),
 		stripeSubscriptionId: typeof subDetails.subscription === 'string'
 			? subDetails.subscription
 			: subDetails.subscription?.id ?? '',

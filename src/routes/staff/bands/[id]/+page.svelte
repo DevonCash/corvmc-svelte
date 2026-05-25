@@ -159,7 +159,7 @@
 										{#if m.role !== 'owner' && m.status === 'active'}
 											{@const rf = updateMemberRole.for(m.id)}
 											<form
-												{...rf.enhance(async ([{ submit }]) => {
+												{...rf.enhance(async ({ submit }) => {
 													if (await submit()) toast.success('Role updated');
 													else toast.error('Failed to update role');
 												})}

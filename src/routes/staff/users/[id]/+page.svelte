@@ -138,7 +138,7 @@
 						<tbody>
 							{#each payments as p (p.id)}
 								<tr class="hover">
-									<td>{formatDateTime(p.paidAt)}</td>
+									<td>{formatDateTime(new Date(p.paidAt))}</td>
 									<td class="w-px"><span class="font-medium">{formatCents(p.amountCents)}</span></td>
 									<td class="w-px"><Badge variant="outline">{p.paymentMethod}</Badge></td>
 									<td class="w-px"><StatusBadge status={p.status} /></td>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Notification } from '$lib/server/db/schema';
-	import { toISO } from '$lib/types/dates';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
@@ -99,7 +98,7 @@
 			body: JSON.stringify({ id })
 		});
 		notifications = notifications.map((n) =>
-			n.id === id ? { ...n, readAt: toISO(new Date()) } : n
+			n.id === id ? { ...n, readAt: new Date() } : n
 		);
 		unreadCount = Math.max(0, unreadCount - 1);
 	}
@@ -112,7 +111,7 @@
 		});
 		notifications = notifications.map((n) => ({
 			...n,
-			readAt: n.readAt ?? toISO(new Date())
+			readAt: n.readAt ?? new Date()
 		}));
 		unreadCount = 0;
 	}
@@ -199,7 +198,7 @@
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}
-											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt)}</p>
+											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt.toISOString())}</p>
 										</div>
 									</div>
 								</a>
@@ -220,7 +219,7 @@
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}
-											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt)}</p>
+											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt.toISOString())}</p>
 										</div>
 									</div>
 								</div>

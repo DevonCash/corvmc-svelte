@@ -19,18 +19,17 @@
 	let editStartsAt = $state('');
 	let editEndsAt = $state('');
 
-	function isFuture(iso: string): boolean {
-		return new Date(iso) > new Date();
+	function isFuture(d: Date): boolean {
+		return d > new Date();
 	}
 
-	function toLocalDatetime(iso: string): string {
-		const d = new Date(iso);
+	function toLocalDatetime(d: Date): string {
 		const offset = d.getTimezoneOffset();
 		const local = new Date(d.getTime() - offset * 60000);
 		return local.toISOString().slice(0, 16);
 	}
 
-	function startEdit(c: { id: string; reason: string; startsAt: string; endsAt: string }) {
+	function startEdit(c: { id: string; reason: string; startsAt: Date; endsAt: Date }) {
 		editId = c.id;
 		editReason = c.reason;
 		editStartsAt = toLocalDatetime(c.startsAt);

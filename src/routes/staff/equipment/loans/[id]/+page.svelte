@@ -15,7 +15,6 @@
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
-	import { toISO } from '$lib/types/dates';
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;
@@ -70,26 +69,26 @@
 				<dd>{loan.quantity}</dd>
 
 				<dt class="opacity-60">Requested pickup</dt>
-				<dd>{formatDate(toISO(loan.requestedPickupDate))}</dd>
+				<dd>{formatDate(loan.requestedPickupDate)}</dd>
 
 				{#if loan.scheduledPickupDate}
 					<dt class="opacity-60">Scheduled pickup</dt>
-					<dd>{formatDate(toISO(loan.scheduledPickupDate))}</dd>
+					<dd>{formatDate(loan.scheduledPickupDate)}</dd>
 				{/if}
 
 				{#if loan.dueDate}
 					<dt class="opacity-60">Due date</dt>
-					<dd class:text-error={loan.isOverdue}>{formatDate(toISO(loan.dueDate))}</dd>
+					<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</dd>
 				{/if}
 
 				{#if loan.checkedOutAt}
 					<dt class="opacity-60">Checked out</dt>
-					<dd>{formatDate(toISO(loan.checkedOutAt))}</dd>
+					<dd>{formatDate(loan.checkedOutAt)}</dd>
 				{/if}
 
 				{#if loan.returnedAt}
 					<dt class="opacity-60">Returned</dt>
-					<dd>{formatDate(toISO(loan.returnedAt))}</dd>
+					<dd>{formatDate(loan.returnedAt)}</dd>
 				{/if}
 
 				{#if loan.dailyRateCents != null}
