@@ -4,8 +4,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, gt, lte, ne, desc, inArray } from 'drizzle-orm';
-import { listForUser } from '$lib/server/reservation/recurring-series-service';
-import { toISO, type ISODateString } from '$lib/server/db/schema/columns';
+import { listActive } from '$lib/server/reservation/recurring-series-service';
 import type { MemberReservationsResponse, MemberReservation } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -20,7 +19,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			and(
 				eq(reservation.createdByUserId, locals.user.id),
 				gt(reservation.endsAt, now),
-				inArray(reservation.status, ["scheduled", "confirmed", "waitlisted"])
+				inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 			)
 		)
 		.orderBy(reservation.startsAt);
@@ -31,27 +30,30 @@ export const GET: RequestHandler = async ({ locals }) => {
 		.where(eq(reservation.createdByUserId, locals.user.id))
 		.orderBy(desc(reservation.startsAt));
 
-	const recurringSeries = await listForUser(locals.user.id);
+	const recurringSeries = await listActive({ forUser: locals.user.id });
 
 	const allIds = [...upcoming, ...all].map((r) => r.id);
 
-	const credits = allIds.length > 0
-		? await db
-				.select({
-					sourceId: creditTransaction.sourceId,
-					amount: creditTransaction.amount,
-					createdAt: creditTransaction.createdAt
-				})
-				.from(creditTransaction)
-				.where(
-					and(
-						eq(creditTransaction.source, 'reservation'),
-						inArray(creditTransaction.sourceId, allIds)
+	const credits =
+		allIds.length > 0
+			? await db
+					.select({
+						sourceId: creditTransaction.sourceId,
+						amount: creditTransaction.amount,
+						createdAt: creditTransaction.createdAt
+					})
+					.from(creditTransaction)
+					.where(
+						and(
+							eq(creditTransaction.source, 'reservation'),
+							inArray(creditTransaction.sourceId, allIds)
+						)
 					)
-				)
-		: [];
+			: [];
 
-	const creditsByRes = new Map(credits.filter((c) => c.sourceId != null).map((c) => [c.sourceId!, c]));
+	const creditsByRes = new Map(
+		credits.filter((c) => c.sourceId != null).map((c) => [c.sourceId!, c])
+	);
 
 	return json({
 		upcoming: upcoming.map((r) => serializeReservation(r, creditsByRes)),
@@ -60,17 +62,13 @@ export const GET: RequestHandler = async ({ locals }) => {
 			id: s.id,
 			frequencyLabel: s.frequencyLabel,
 			bookerType: s.bookerType,
-			startsAt: toISO(s.startsAt),
-			endsAt: toISO(s.endsAt),
-			createdAt: toISO(s.createdAt),
-			seriesEndsAt: s.seriesEndsAt ? toISO(s.seriesEndsAt) : null
+			startsAt: s.startsAt,
+			endsAt: s.endsAt,
+			createdAt: s.createdAt,
+			seriesEndsAt: s.seriesEndsAt ? s.seriesEndsAt : null
 		}))
 	} satisfies MemberReservationsResponse);
 };
-
-function toISOOrNull(d: Date | null | undefined): ISODateString | null {
-	return d && !isNaN(d.getTime()) ? toISO(d) : null;
-}
 
 function serializeReservation(row: any, credits: Map<string, any>): MemberReservation {
 	const credit = credits.get(row.id);
@@ -79,14 +77,14 @@ function serializeReservation(row: any, credits: Map<string, any>): MemberReserv
 		bookerType: row.bookerType,
 		bookerId: row.bookerId,
 		status: row.status,
-		startsAt: toISO(row.startsAt),
-		endsAt: toISO(row.endsAt),
+		startsAt: row.startsAt,
+		endsAt: row.endsAt,
 		notes: row.notes,
 		recurringSeriesId: row.recurringSeriesId ?? null,
-		paidAt: toISOOrNull(row.paidAt),
-		refundedAt: toISOOrNull(row.refundedAt),
+		paidAt: row.paidAt,
+		refundedAt: row.refundedAt,
 		paidWithCredits: credit != null,
-		waitlistNotifiedAt: toISOOrNull(row.waitlistNotifiedAt),
-		waitlistExpiresAt: toISOOrNull(row.waitlistExpiresAt)
+		waitlistNotifiedAt: row.waitlistNotifiedAt,
+		waitlistExpiresAt: row.waitlistExpiresAt
 	};
 }

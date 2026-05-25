@@ -7,7 +7,6 @@ import { getBalance } from '$lib/server/finance/credit-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { ReservationPayResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -33,8 +32,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	return json({
 		reservation: {
 			id: row.id,
-			startsAt: toISO(row.startsAt),
-			endsAt: toISO(row.endsAt),
+			startsAt: row.startsAt,
+			endsAt: row.endsAt,
 			notes: row.notes
 		},
 		durationHours,

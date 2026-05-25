@@ -16,7 +16,7 @@ import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
-import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/auth';
+import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
@@ -685,7 +685,8 @@ async function seedRecurringSeries(users: SeedUser[]) {
 		const [series] = await db.insert(recurringSeries).values({
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
-			rrule
+			rrule,
+			createdBy: member.id
 		}).returning();
 		rows.push(series);
 
@@ -724,6 +725,7 @@ async function seedRecurringSeries(users: SeedUser[]) {
 			prototypeType: 'reservation',
 			prototypeId: proto.id,
 			rrule,
+			createdBy: member.id,
 			cancelledAt: new Date(Date.now() - 7 * 86400000)
 		}).returning();
 		rows.push(series);

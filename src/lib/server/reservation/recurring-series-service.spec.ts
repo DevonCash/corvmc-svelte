@@ -29,7 +29,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	reservation: { id: 'reservation.id' }
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'user.id' }
 }));
 
@@ -464,11 +464,11 @@ describe('recurring-series-service', () => {
 	});
 
 	// -------------------------------------------------------------------------
-	// listForUser()
+	// listActive({ forUser })
 	// -------------------------------------------------------------------------
 
-	describe('listForUser()', () => {
-		function setupListForUserSelect(rows: unknown[]) {
+	describe('listActive({ forUser })', () => {
+		function setupListActiveSelect(rows: unknown[]) {
 			const where = vi.fn().mockResolvedValue(rows);
 			const innerJoin2 = vi.fn().mockReturnValue({ where });
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
@@ -477,9 +477,9 @@ describe('recurring-series-service', () => {
 		}
 
 		it('returns an empty array when the user has no active series', async () => {
-			setupListForUserSelect([]);
+			setupListActiveSelect([]);
 
-			const result = await svc.listForUser('user-1');
+			const result = await svc.listActive({ forUser: 'user-1' });
 
 			expect(result).toEqual([]);
 		});
@@ -498,9 +498,9 @@ describe('recurring-series-service', () => {
 				startsAt: new Date('2026-06-05T09:00:00Z'),
 				endsAt: new Date('2026-06-05T11:00:00Z')
 			};
-			setupListForUserSelect([row]);
+			setupListActiveSelect([row]);
 
-			const result = await svc.listForUser('user-3');
+			const result = await svc.listActive({ forUser: 'user-3' });
 
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({

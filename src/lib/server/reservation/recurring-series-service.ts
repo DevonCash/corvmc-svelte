@@ -1,7 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
@@ -78,6 +78,13 @@ export interface SeriesListItem {
 export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 	const { prototypeReservationId, frequency, prototypeStartsAt, endsAt } = params;
 
+	const [proto] = await db
+		.select({ createdByUserId: reservation.createdByUserId })
+		.from(reservation)
+		.where(eq(reservation.id, prototypeReservationId))
+		.limit(1);
+	if (!proto) throw new RecurringSeriesError('Prototype reservation not found');
+
 	const rruleString = buildRRule(prototypeStartsAt, frequency);
 
 	const seriesId = crypto.randomUUID();
@@ -88,6 +95,7 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 			prototypeType: 'reservation',
 			prototypeId: prototypeReservationId,
 			rrule: rruleString,
+			createdBy: proto.createdByUserId,
 			endsAt: endsAt ?? null
 		}),
 		db
@@ -123,9 +131,9 @@ export async function edit(params: EditSeriesParams): Promise<SeriesRow> {
 
 	const rruleString = buildRRule(prototypeStartsAt, frequency);
 
-	// Verify old series is still active before batching writes
+	// Verify old series is still active and get owner
 	const [oldSeries] = await db
-		.select({ id: recurringSeries.id })
+		.select({ id: recurringSeries.id, createdBy: recurringSeries.createdBy })
 		.from(recurringSeries)
 		.where(
 			and(
@@ -147,7 +155,8 @@ export async function edit(params: EditSeriesParams): Promise<SeriesRow> {
 			id: newSeriesId,
 			prototypeType: 'reservation',
 			prototypeId: newPrototypeReservationId,
-			rrule: rruleString
+			rrule: rruleString,
+			createdBy: oldSeries.createdBy
 		}),
 		db
 			.update(recurringSeries)
@@ -272,7 +281,17 @@ export async function getByReservation(reservationId: string): Promise<SeriesRow
 // listActive() — all active series (staff view)
 // ---------------------------------------------------------------------------
 
-export async function listActive(): Promise<SeriesListItem[]> {
+export async function listActive(opts?: { forUser?: string }): Promise<SeriesListItem[]> {
+	const conditions = [
+		eq(recurringSeries.prototypeType, 'reservation'),
+		isNull(recurringSeries.cancelledAt),
+		isNull(recurringSeries.supersededBy)
+	];
+
+	if (opts?.forUser) {
+		conditions.push(eq(recurringSeries.createdBy, opts.forUser));
+	}
+
 	const rows = await db
 		.select({
 			id: recurringSeries.id,
@@ -291,13 +310,7 @@ export async function listActive(): Promise<SeriesListItem[]> {
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				eq(recurringSeries.prototypeType, 'reservation'),
-				isNull(recurringSeries.cancelledAt),
-				isNull(recurringSeries.supersededBy)
-			)
-		);
+		.where(and(...conditions));
 
 	return rows.map((r) => ({
 		...r,
@@ -363,43 +376,6 @@ export async function listAll(
 	};
 }
 
-// ---------------------------------------------------------------------------
-// listForUser() — active series for a specific member
-// ---------------------------------------------------------------------------
-
-export async function listForUser(userId: string): Promise<SeriesListItem[]> {
-	const rows = await db
-		.select({
-			id: recurringSeries.id,
-			rrule: recurringSeries.rrule,
-			createdAt: recurringSeries.createdAt,
-			seriesEndsAt: recurringSeries.endsAt,
-			cancelledAt: recurringSeries.cancelledAt,
-			userName: user.name,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id),
-			bookerType: reservation.bookerType,
-			bookerId: reservation.bookerId,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt
-		})
-		.from(recurringSeries)
-		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				eq(recurringSeries.prototypeType, 'reservation'),
-				eq(reservation.createdByUserId, userId),
-				isNull(recurringSeries.cancelledAt),
-				isNull(recurringSeries.supersededBy)
-			)
-		);
-
-	return rows.map((r) => ({
-		...r,
-		frequencyLabel: describeFrequency(r.rrule)
-	}));
-}
 
 // ---------------------------------------------------------------------------
 // getHistory() — follow the superseded_by chain for a series

@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { user } from '$lib/server/db/schema/authentication';
+import { reservation, type Reservation } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql } from 'drizzle-orm';
+import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql, isNull } from 'drizzle-orm';
+import { describeFrequency } from '$lib/server/reservation/rrule-helpers';
 import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
@@ -34,9 +35,17 @@ import {
 } from '$lib/server/finance/payment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
+import {
+	RECURRING_FREQUENCIES,
+	recurringSeries,
+	type RecurringFrequency
+} from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
-import { buildRRule, getOccurrences, generationWindowEnd } from '$lib/server/reservation/rrule-helpers';
+import {
+	buildRRule,
+	getOccurrences,
+	generationWindowEnd
+} from '$lib/server/reservation/rrule-helpers';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
@@ -335,7 +344,13 @@ export const checkConflicts = query(
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
-	if (!locals.user) return { isSustainingMember: false, freeHoursBalance: 0, creditsResetAt: null, hoursPerReset: 0 };
+	if (!locals.user)
+		return {
+			isSustainingMember: false,
+			freeHoursBalance: 0,
+			creditsResetAt: null,
+			hoursPerReset: 0
+		};
 
 	const [row] = await db
 		.select({ subscription: user.subscription })
@@ -349,7 +364,7 @@ export const getMembershipStatus = query(async () => {
 		isSustainingMember: row?.subscription != null,
 		freeHoursBalance,
 		creditsResetAt: row?.subscription?.creditsResetAt ?? null,
-		hoursPerReset: row?.subscription?.hoursPerReset ?? 0,
+		hoursPerReset: row?.subscription?.hoursPerReset ?? 0
 	};
 });
 
@@ -567,7 +582,11 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		quantity: 1
 	};
 
-	const stripeCustomerId = await ensureStripeCustomer(locals.user.id, locals.user.email, locals.user.name);
+	const stripeCustomerId = await ensureStripeCustomer(
+		locals.user.id,
+		locals.user.email,
+		locals.user.name
+	);
 
 	const result = await checkout({
 		stripeCustomerId,
@@ -690,15 +709,12 @@ export const payForReservation = form(
 		const currentUser = requireUser();
 		const { url } = getRequestEvent();
 
-		const [row] = await db
-			.select()
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
+		const [row] = await db.select().from(reservation).where(eq(reservation.id, data.id)).limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-		if (row.status !== 'scheduled' && row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (row.status !== 'scheduled' && row.status !== 'confirmed')
+			throw error(400, 'Not eligible for payment');
 
 		if (data.skipPayment === 'on') {
 			if (row.status === 'scheduled') await confirm(data.id);
@@ -721,7 +737,11 @@ export const payForReservation = form(
 			quantity: 1
 		};
 
-		const stripeCustomerId = await ensureStripeCustomer(currentUser.id, currentUser.email, currentUser.name);
+		const stripeCustomerId = await ensureStripeCustomer(
+			currentUser.id,
+			currentUser.email,
+			currentUser.name
+		);
 
 		const result = await checkout({
 			stripeCustomerId,
@@ -771,7 +791,8 @@ export const payReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-		if (row.status !== 'scheduled' && row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (row.status !== 'scheduled' && row.status !== 'confirmed')
+			throw error(400, 'Not eligible for payment');
 
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = reservationConfig.hourlyRateCents;
@@ -789,7 +810,11 @@ export const payReservation = form(
 			quantity: 1
 		};
 
-		const stripeCustomerId = await ensureStripeCustomer(currentUser.id, currentUser.email, currentUser.name);
+		const stripeCustomerId = await ensureStripeCustomer(
+			currentUser.id,
+			currentUser.email,
+			currentUser.name
+		);
 
 		const result = await checkout({
 			stripeCustomerId,
@@ -938,10 +963,7 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 		userId: row.createdByUserId,
 		stripePaymentRecordId: row.stripePaymentRecordId
 	});
-	await db
-		.update(reservation)
-		.set({ refundedAt: new Date() })
-		.where(eq(reservation.id, data.id));
+	await db.update(reservation).set({ refundedAt: new Date() }).where(eq(reservation.id, data.id));
 	return { success: true };
 });
 
@@ -950,11 +972,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 
-	const [row] = await db
-		.select()
-		.from(reservation)
-		.where(eq(reservation.id, data.id))
-		.limit(1);
+	const [row] = await db.select().from(reservation).where(eq(reservation.id, data.id)).limit(1);
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== locals.user.id) throw error(403, 'Not your reservation');
@@ -994,3 +1012,80 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 
 	return { success: true };
 });
+
+type ReservationWithPrice = Reservation & { price: number };
+export const getReservations = query(
+	z
+		.object({
+			after: z.coerce.date().optional(),
+			forUser: z.string().optional(),
+			includeTerminal: z.boolean().optional()
+		})
+		.optional(),
+	async ({ after, forUser, includeTerminal } = {}): Promise<ReservationWithPrice[]> => {
+		const { locals } = getRequestEvent();
+
+		if (!locals.user) throw error(401, 'Not authenticated');
+		if (forUser && !locals.user.isStaff && forUser !== locals.user.id) {
+			throw error(403, "Not authorized to view other users' reservations");
+		}
+
+		const filters = [
+			eq(reservation.createdByUserId, forUser ?? locals.user?.id),
+			after && gt(reservation.endsAt, after),
+			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
+		];
+		const rateInCents = await config<number>('reservation.hourlyRateCents');
+
+		return (
+			await db
+				.select()
+				.from(reservation)
+				.where(and(...(filters.filter(Boolean) as any[])))
+				.orderBy(reservation.startsAt)
+		).map((value: Reservation) => ({
+			...value,
+			price:
+				(((value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60)) * rateInCents) /
+				100
+		}));
+	}
+);
+
+export const getRecurringReservations = query(
+	z
+		.object({
+			includeCancelled: z.boolean().optional()
+		})
+		.optional(),
+	async (options) => {
+		const includeCancelled = options?.includeCancelled ?? false;
+
+		const filters = [
+			eq(reservation.createdByUserId, getRequestEvent().locals.user?.id),
+			eq(recurringSeries.prototypeType, 'reservation'),
+			isNull(recurringSeries.supersededBy),
+			!includeCancelled && isNull(recurringSeries.cancelledAt)
+		];
+
+		const rows = await db
+			.select({
+				id: recurringSeries.id,
+				rrule: recurringSeries.rrule,
+				createdAt: recurringSeries.createdAt,
+				seriesEndsAt: recurringSeries.endsAt,
+				cancelledAt: recurringSeries.cancelledAt,
+				bookerType: reservation.bookerType,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt
+			})
+			.from(recurringSeries)
+			.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
+			.where(and(...(filters.filter(Boolean) as any[])));
+
+		return rows.map((r) => ({
+			...r,
+			frequencyLabel: describeFrequency(r.rrule)
+		}));
+	}
+);

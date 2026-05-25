@@ -1,8 +1,7 @@
-import { sqliteTable, text, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, uniqueIndex, check, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 import { recurringSeries } from './recurring';
 
 // ---------------------------------------------------------------------------
@@ -16,7 +15,14 @@ export function isBookerType(value: string): value is BookerType {
 	return bookerTypes.includes(value as BookerType);
 }
 
-export const reservationStatuses = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled', 'waitlisted'] as const;
+export const reservationStatuses = [
+	'scheduled',
+	'confirmed',
+	'completed',
+	'no_show',
+	'cancelled',
+	'waitlisted'
+] as const;
 export type ReservationStatus = (typeof reservationStatuses)[number];
 
 export interface TimeSlot {
@@ -41,28 +47,34 @@ export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 export const reservation = sqliteTable(
 	'reservation',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		bookerType: text('booker_type', { enum: bookerTypes }).notNull(),
 		bookerId: text('booker_id').notNull(),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
-		startsAt: timestamp('starts_at').notNull(),
-		endsAt: timestamp('ends_at').notNull(),
+		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
+		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
 		notes: text('notes'),
 		cancellationReason: text('cancellation_reason'),
 		stripePaymentRecordId: text('stripe_payment_record_id'),
-		paidAt: timestamp('paid_at'),
-		refundedAt: timestamp('refunded_at'),
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
 		lockAccessId: text('lock_access_id'),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
-		waitlistNotifiedAt: timestamp('waitlist_notified_at'),
-		waitlistExpiresAt: timestamp('waitlist_expires_at'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		waitlistNotifiedAt: integer('waitlist_notified_at', { mode: 'timestamp' }),
+		waitlistExpiresAt: integer('waitlist_expires_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_reservation_conflict').on(t.startsAt, t.endsAt),
@@ -81,11 +93,15 @@ export const reservation = sqliteTable(
 export const closure = sqliteTable(
 	'closure',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		reason: text('reason').notNull(),
-		startsAt: timestamp('starts_at').notNull(),
-		endsAt: timestamp('ends_at').notNull(),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
+		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_closure_time').on(t.startsAt, t.endsAt),
@@ -97,5 +113,5 @@ export const closure = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Reservation = Serialized<typeof reservation.$inferSelect>;
-export type Closure = Serialized<typeof closure.$inferSelect>;
+export type Reservation = typeof reservation.$inferSelect;
+export type Closure = typeof closure.$inferSelect;
