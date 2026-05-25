@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
-import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById } from '$lib/server/event/event-service';
+import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents } from '$lib/server/event/event-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getTicketsRemaining, getTicketsSold, getEventTickets, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
@@ -19,6 +19,14 @@ import { randomUUID } from 'crypto';
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
+
+export const getStaffEvents = query(
+	z.object({ page: z.number().optional() }),
+	async (filters) => {
+		await requireStaff();
+		return listAllEvents({ page: filters.page ?? 1, pageSize: 50 });
+	}
+);
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();

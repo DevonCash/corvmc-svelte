@@ -5,11 +5,138 @@ import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq } from 'drizzle-orm';
+import { eq, or, like, isNull, count, desc, gte, and } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
-import { listByUser } from '$lib/server/finance/payment-cache-service';
-import { getAllBalances, addCredits, deductCredits } from '$lib/server/finance/credit-service';
+import { permission } from '$lib/server/db/schema/authorization';
+import { paginate } from '$lib/server/db/paginate';
+import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
+import { getAllBalances, addCredits, deductCredits, listTransactions } from '$lib/server/finance/credit-service';
 import type { CreditType } from '$lib/server/db/schema/finance';
+
+// ---------------------------------------------------------------------------
+// Staff list queries
+// ---------------------------------------------------------------------------
+
+export const getStaffDashboard = query(async () => {
+	await requireStaff();
+	const startOfMonth = new Date();
+	startOfMonth.setDate(1);
+	startOfMonth.setHours(0, 0, 0, 0);
+
+	const [totalUsersResult, totalRolesResult, totalPermissionsResult, newUsersResult, recentUsers] =
+		await Promise.all([
+			db.select({ value: count() }).from(user),
+			db.select({ value: count() }).from(role),
+			db.select({ value: count() }).from(permission),
+			db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
+			db.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+				.from(user).orderBy(desc(user.createdAt)).limit(5)
+		]);
+
+	return {
+		stats: {
+			totalUsers: totalUsersResult[0].value,
+			totalRoles: totalRolesResult[0].value,
+			totalPermissions: totalPermissionsResult[0].value,
+			newUsersThisMonth: newUsersResult[0].value
+		},
+		recentUsers
+	};
+});
+
+const staffUsersFilters = z.object({
+	search: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffUsers = query(staffUsersFilters, async (filters) => {
+	await requireStaff();
+
+	const search = filters.search?.trim();
+	const searchCondition = search
+		? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`))
+		: undefined;
+	const activeCondition = isNull(user.deletedAt);
+	const where = searchCondition ? and(searchCondition, activeCondition) : activeCondition;
+
+	const dataQ = db
+		.select({ id: user.id, name: user.name, email: user.email, pronouns: user.pronouns, createdAt: user.createdAt })
+		.from(user)
+		.where(where)
+		.orderBy(desc(user.createdAt))
+		.$dynamic();
+
+	const countQ = db.select({ count: count() }).from(user).where(where);
+
+	const { rows: users, pagination } = await paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 20 });
+
+	const userIds = users.map((u) => u.id);
+	let roleMap: Record<string, string[]> = {};
+
+	if (userIds.length > 0) {
+		const roleRows = await db
+			.select({ userId: modelHasRole.userId, roleName: role.name })
+			.from(modelHasRole)
+			.innerJoin(role, eq(role.id, modelHasRole.roleId))
+			.where(or(...userIds.map((id) => eq(modelHasRole.userId, id)))!);
+
+		for (const row of roleRows) {
+			if (!roleMap[row.userId]) roleMap[row.userId] = [];
+			roleMap[row.userId].push(row.roleName);
+		}
+	}
+
+	return {
+		rows: users.map((u) => ({ ...u, roles: roleMap[u.id] ?? [] })),
+		pagination
+	};
+});
+
+const staffPaymentsFilters = z.object({
+	search: z.string().optional(),
+	method: z.string().optional(),
+	status: z.string().optional(),
+	from: z.string().optional(),
+	to: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffPayments = query(staffPaymentsFilters, async (filters) => {
+	await requireStaff();
+	return listPayments(
+		{
+			search: filters.search || undefined,
+			method: filters.method || undefined,
+			status: filters.status || undefined,
+			from: filters.from || undefined,
+			to: filters.to || undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+});
+
+const staffCreditsFilters = z.object({
+	search: z.string().optional(),
+	creditType: z.string().optional(),
+	source: z.string().optional(),
+	from: z.string().optional(),
+	to: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
+	await requireStaff();
+	return listTransactions(
+		{
+			search: filters.search || undefined,
+			creditType: (filters.creditType || undefined) as CreditType | undefined,
+			source: (filters.source || undefined) as import('$lib/server/finance/credit-service').CreditTransactionFilters['source'],
+			from: filters.from || undefined,
+			to: filters.to || undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+});
 
 // ---------------------------------------------------------------------------
 // Queries

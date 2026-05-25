@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { getStaffArticles, getStaffCategories, createCategory, deleteCategory } from '$lib/remote/help.remote';
 	const { fields: deleteFields } = deleteCategory;
 	const { fields: createCatFields } = createCategory;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import Column from '$lib/components/shared/Table/Column.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -16,6 +13,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import { formatDate } from '$lib/utils/format';
 
 	let articles = $derived(await getStaffArticles());
 	let categories = $derived(await getStaffCategories());
@@ -28,6 +26,11 @@
 
 	function slugFromName(name: string) {
 		return name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+	}
+
+	function refreshData() {
+		void getStaffArticles().refresh();
+		void getStaffCategories().refresh();
 	}
 </script>
 
@@ -53,7 +56,7 @@
 							action={deleteCategory}
 							modalTitle="Confirm"
 							successToast="Category deleted"
-							onsuccess={() => invalidateAll()}
+							onsuccess={refreshData}
 							class="btn-ghost btn-xs"
 						>
 							{#snippet form({ close })}
@@ -65,7 +68,7 @@
 					</div>
 				{/each}
 			</div>
-			<Form remote={createCategory} successToast="Category created" onsuccess={() => invalidateAll()}>
+			<Form remote={createCategory} successToast="Category created" onsuccess={refreshData}>
 				<div class="flex gap-2 mt-4 items-end">
 					<FormField name="name" label="Name">
 						<input name="name" type="text" class="input input-bordered input-sm w-40"
@@ -75,7 +78,7 @@
 						<input name="slug" type="text" class="input input-bordered input-sm w-40"
 							placeholder={slugFromName(catNameValue) || 'auto'} />
 					</FormField>
-					<input {...createCatFields.sortOrder.as('hidden', categories.length)} />
+					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
 					<SubmitButton label="Add" class="btn-primary btn-sm" />
 				</div>
 			</Form>
@@ -86,29 +89,33 @@
 	{#if articles.length === 0}
 		<EmptyState message="No help articles yet. Create one to get started." />
 	{:else}
-		<DataTable data={articles} rowHref={(row) => `/staff/help/${row.id}`}>
-			<Column key="title" header="Title" sortable />
-			<Column key="categoryId" header="Category">
-				{#snippet cell(value)}
-					{categoryMap[value] ?? '—'}
-				{/snippet}
-			</Column>
-			<Column key="published" header="Status">
-				{#snippet cell(value)}
-					<StatusBadge status={value ? 'published' : 'draft'} />
-				{/snippet}
-			</Column>
-			<Column key="source" header="Source">
-				{#snippet cell(value)}
-					<span class="badge badge-xs {value === 'static' ? 'badge-info' : 'badge-ghost'}">{value}</span>
-				{/snippet}
-			</Column>
-			<Column key="minRole" header="Role">
-				{#snippet cell(value)}
-					<span class="text-xs">{value}</span>
-				{/snippet}
-			</Column>
-			<Column key="updatedAt" header="Updated" sortable type="date" />
-		</DataTable>
+		<div class="overflow-x-auto">
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Title</th>
+						<th>Category</th>
+						<th class="w-px">Status</th>
+						<th class="w-px">Source</th>
+						<th class="w-px">Role</th>
+						<th class="w-px">Updated</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each articles as a (a.id)}
+						<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/help/${a.id}`}>
+							<td>{a.title}</td>
+							<td>{categoryMap[a.categoryId] ?? '—'}</td>
+							<td class="w-px"><StatusBadge status={a.published ? 'published' : 'draft'} /></td>
+							<td class="w-px">
+								<span class="badge badge-xs {a.source === 'static' ? 'badge-info' : 'badge-ghost'}">{a.source}</span>
+							</td>
+							<td class="w-px"><span class="text-xs">{a.minRole}</span></td>
+							<td class="w-px">{formatDate(a.updatedAt)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </PageContent>

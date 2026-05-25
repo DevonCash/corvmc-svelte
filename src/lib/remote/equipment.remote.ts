@@ -21,7 +21,8 @@ import {
 	checkoutLoan,
 	requestLoan,
 	cancelLoan as cancelLoanService,
-	returnLoan as returnLoanService
+	returnLoan as returnLoanService,
+	listLoans
 } from '$lib/server/equipment/loan-service';
 import {
 	createCategorySchema,
@@ -64,6 +65,42 @@ export const getAvailableEquipment = query(z.void(), async () => {
 	await requireStaff();
 	const { rows } = await listEquipment({ status: 'available' });
 	return rows;
+});
+
+const staffEquipmentFilters = z.object({
+	search: z.string().optional(),
+	categoryId: z.string().optional(),
+	status: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters) => {
+	await requireStaff();
+	return listEquipment(
+		{
+			search: filters.search || undefined,
+			categoryId: filters.categoryId || undefined,
+			status: (filters.status || undefined) as import('$lib/server/db/schema/equipment').EquipmentStatus | undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+});
+
+const staffLoansFilters = z.object({
+	search: z.string().optional(),
+	status: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffLoans = query(staffLoansFilters, async (filters) => {
+	await requireStaff();
+	return listLoans(
+		{
+			search: filters.search || undefined,
+			status: (filters.status || undefined) as import('$lib/server/db/schema/equipment').LoanStatus | undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
 });
 
 // ---------------------------------------------------------------------------

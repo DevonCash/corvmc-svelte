@@ -1,44 +1,111 @@
 <script lang="ts">
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import Column from '$lib/components/shared/Table/Column.svelte';
-	import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
-	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { CreateBandAction } from '$lib/components/shared/actions';
-	import type { PageProps } from './$types';
+	import { getStaffBands } from '$lib/remote/bands.remote';
+	import { formatDate } from '$lib/utils/format';
 
-	let { data }: PageProps = $props();
+	let search = $state('');
+	let status = $state<'active' | 'deactivated' | ''>('');
+	let page = $state(1);
 
-	function buildPageHref(page: number): string {
-		const params = new URLSearchParams();
-		if (data.filters.search) params.set('q', data.filters.search);
-		if (data.filters.status) params.set('status', data.filters.status);
-		params.set('page', String(page));
-		return `/staff/bands?${params.toString()}`;
+	let searchDebounced = $state('');
+	let searchTimer: ReturnType<typeof setTimeout>;
+	function onSearchInput(e: Event) {
+		search = (e.target as HTMLInputElement).value;
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			searchDebounced = search;
+			page = 1;
+		}, 300);
+	}
+
+	let filters = $derived({
+		search: searchDebounced || undefined,
+		status: status || undefined,
+		page
+	});
+
+	let result = $derived(getStaffBands(filters));
+
+	function hasActiveFilters(): boolean {
+		return !!(searchDebounced || status);
+	}
+
+	function clearFilters() {
+		search = '';
+		searchDebounced = '';
+		status = '';
+		page = 1;
 	}
 </script>
 
 <PageHeader title="Bands">
-		<CreateBandAction />
-	</PageHeader>
+	<CreateBandAction />
+</PageHeader>
 <PageContent>
-	<DataTable data={data.bands} rowHref={(b) => `/staff/bands/${b.id}`} clearHref="/staff/bands" empty="No bands found"
-		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
-		{#snippet toolbar()}
-			<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
-			<Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
-				options={[['active', 'Active'], ['deactivated', 'Deactivated']]} />
-		{/snippet}
-		<Column key="deletedAt" header="" shrink>
-			{#snippet cell(_, b)}
-				<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />
-			{/snippet}
-		</Column>
-		<Column key="name" header="Name" sortable />
-		<MemberColumn nameKey="ownerName" userIdKey="ownerId" header="Owner" />
-		<Column key="memberCount" header="Members" sortable />
-		<Column key="createdAt" header="Created" sortable type="date" />
-	</DataTable>
+	<div class="flex flex-wrap items-end gap-2 mb-4">
+		<input
+			type="text"
+			class="input input-bordered input-sm"
+			placeholder="Search by name..."
+			value={search}
+			oninput={onSearchInput}
+		/>
+		<select
+			class="select select-bordered select-sm"
+			value={status}
+			onchange={(e) => { status = (e.currentTarget as HTMLSelectElement).value as typeof status; page = 1; }}
+		>
+			<option value="">All statuses</option>
+			<option value="active">Active</option>
+			<option value="deactivated">Deactivated</option>
+		</select>
+		{#if hasActiveFilters()}
+			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
+		{/if}
+	</div>
+
+	{#await result}
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:then { rows: bands, pagination }}
+		{#if bands.length === 0}
+			<p class="text-center opacity-60 py-8">No bands found</p>
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="table">
+					<thead>
+						<tr>
+							<th class="w-px"></th>
+							<th>Name</th>
+							<th>Owner</th>
+							<th>Members</th>
+							<th>Created</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each bands as b (b.id)}
+							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/bands/${b.id}`}>
+								<td class="w-px">
+									<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />
+								</td>
+								<td>{b.name}</td>
+								<td onclick={(e) => e.stopPropagation()}>
+									<MemberLink member={{ name: b.ownerName, userId: b.ownerId }} />
+								</td>
+								<td>{b.memberCount}</td>
+								<td>{formatDate(b.createdAt)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+		{/if}
+	{/await}
 </PageContent>

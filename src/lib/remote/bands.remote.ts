@@ -6,6 +6,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { listAll } from '$lib/server/band/band-service';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -36,7 +37,28 @@ import {
 } from '$lib/server/band/band-context';
 
 // ===========================================================================
-// Queries — Staff
+// Queries — Staff (list)
+// ===========================================================================
+
+const staffBandsFilters = z.object({
+	search: z.string().optional(),
+	status: z.enum(['active', 'deactivated']).optional(),
+	page: z.number().optional()
+});
+
+export const getStaffBands = query(staffBandsFilters, async (filters) => {
+	await requireStaff();
+	return listAll(
+		{
+			search: filters.search || undefined,
+			status: filters.status || undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+});
+
+// ===========================================================================
+// Queries — Staff (detail)
 // ===========================================================================
 
 export const getStaffBand = query(z.string(), async (id) => {

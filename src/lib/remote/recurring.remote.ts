@@ -6,7 +6,8 @@ import {
 	get,
 	getHistory,
 	edit,
-	cancel
+	cancel,
+	listAll as listAllSeries
 } from '$lib/server/reservation/recurring-series-service';
 import { staffCreate, create } from '$lib/server/reservation/reservation-service';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
@@ -28,6 +29,19 @@ export const getSeries = query(z.string(), async (id) => {
 export const getSeriesHistory = query(z.string(), async (id) => {
 	await requireStaff();
 	return getHistory(id);
+});
+
+const staffRecurringFilters = z.object({
+	filter: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffRecurring = query(staffRecurringFilters, async (filters) => {
+	await requireStaff();
+	return listAllSeries(
+		{ filter: filters.filter || 'active' },
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
 });
 
 // ---------------------------------------------------------------------------
