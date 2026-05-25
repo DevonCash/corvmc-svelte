@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { band, bandMember } from '$lib/server/db/schema/band';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';

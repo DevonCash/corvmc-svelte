@@ -58,7 +58,7 @@ vi.mock('$lib/server/db/schema/marketing', () => ({
 	subscriber: { id: 'id', email: 'email', name: 'name', userId: 'user_id' }
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', email: 'email', name: 'name', deletedAt: 'deleted_at' }
 }));
 

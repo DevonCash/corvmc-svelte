@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { redirect, error } from '@sveltejs/kit';
-import { form, getRequestEvent } from '$app/server';
+import { form, getRequestEvent, query } from '$app/server';
 import { requireMember } from '$lib/server/authorization';
 import {
 	createCheckoutSession,
@@ -21,7 +21,10 @@ const amountSchema = z
 		amount: z
 			.string()
 			.transform(Number)
-			.refine((n) => !isNaN(n) && n >= MIN_QUANTITY * DOLLARS_PER_UNIT, `Contribution must be at least $${MIN_QUANTITY * DOLLARS_PER_UNIT}/month`),
+			.refine(
+				(n) => !isNaN(n) && n >= MIN_QUANTITY * DOLLARS_PER_UNIT,
+				`Contribution must be at least $${MIN_QUANTITY * DOLLARS_PER_UNIT}/month`
+			),
 		coverFees: z.literal('on').optional()
 	})
 	.refine((d) => d.amount % DOLLARS_PER_UNIT === 0, {
@@ -61,3 +64,4 @@ export const resumeSubscription = form(z.object({}), async () => {
 	await resume(stripeId);
 	return { success: true };
 });
+

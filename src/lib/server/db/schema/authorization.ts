@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
 // Roles & permissions (translated from spatie/laravel-permission)
@@ -13,8 +12,8 @@ export const permission = sqliteTable(
 		id: integer('id').primaryKey({ autoIncrement: true }),
 		name: text('name').notNull(),
 		guardName: text('guard_name').notNull().default('web'),
-		createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)
 	},
 	(t) => [unique('permissions_name_guard_unique').on(t.name, t.guardName)]
 );
@@ -25,8 +24,8 @@ export const role = sqliteTable(
 		id: integer('id').primaryKey({ autoIncrement: true }),
 		name: text('name').notNull(),
 		guardName: text('guard_name').notNull().default('web'),
-		createdAt: timestamp('created_at').default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)
 	},
 	(t) => [unique('roles_name_guard_unique').on(t.name, t.guardName)]
 );

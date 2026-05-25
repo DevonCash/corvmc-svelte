@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { form, query, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { auth } from '$lib/server/auth';
 import { eq, and, gt, ne } from 'drizzle-orm';

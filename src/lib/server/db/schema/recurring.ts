@@ -1,6 +1,6 @@
-import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
+import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
 // Recurring domain types
@@ -9,7 +9,7 @@ import { timestamp, uuid, type Serialized } from './columns';
 export const RECURRING_FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const;
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 
-export const prototypeTypes = ['user', 'band', 'event', 'lesson', 'reservation'] as const;
+export const prototypeTypes = ['event', 'lesson', 'reservation'] as const;
 export type PrototypeType = (typeof prototypeTypes)[number];
 
 // ---------------------------------------------------------------------------
@@ -19,19 +19,26 @@ export type PrototypeType = (typeof prototypeTypes)[number];
 export const recurringSeries = sqliteTable(
 	'recurring_series',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		supersededBy: text('superseded_by'),
 		prototypeType: text('prototype_type', { enum: prototypeTypes }).notNull(),
 		prototypeId: text('prototype_id').notNull(),
 		rrule: text('rrule').notNull(),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		endsAt: timestamp('ends_at'),
-		cancelledAt: timestamp('cancelled_at')
+		createdBy: text('created_by')
+			.references(() => user.id)
+			.notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		endsAt: integer('ends_at', { mode: 'timestamp' }),
+		cancelledAt: integer('cancelled_at', { mode: 'timestamp' })
 	},
 	(t) => [
-		index('idx_recurring_series_active').on(t.prototypeType).where(
-			sql`cancelled_at IS NULL AND superseded_by IS NULL`
-		),
+		index('idx_recurring_series_active')
+			.on(t.prototypeType)
+			.where(sql`cancelled_at IS NULL AND superseded_by IS NULL`),
 		index('idx_recurring_series_prototype').on(t.prototypeType, t.prototypeId)
 	]
 );
@@ -40,4 +47,4 @@ export const recurringSeries = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type RecurringSeries = Serialized<typeof recurringSeries.$inferSelect>;
+export type RecurringSeries = typeof recurringSeries.$inferSelect;

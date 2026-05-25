@@ -1,8 +1,7 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 import {
 	equipmentConditions,
 	equipmentStatuses,
@@ -84,18 +83,26 @@ export const checkoutLoanSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const equipmentCategory = sqliteTable('equipment_category', {
-	id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	displayOrder: integer('display_order').notNull().default(0),
 	pricingTier: text('pricing_tier', { enum: pricingTiers }).notNull(),
-	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-	updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`)
 });
 
 export const equipment = sqliteTable(
 	'equipment',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull(),
 		description: text('description'),
 		categoryId: text('category_id')
@@ -109,9 +116,13 @@ export const equipment = sqliteTable(
 		status: text('status', { enum: equipmentStatuses }).notNull().default('available'),
 		notes: text('notes'),
 		imageUrl: text('image_url'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`),
-		deletedAt: timestamp('deleted_at')
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		deletedAt: integer('deleted_at', { mode: 'timestamp' })
 	},
 	(t) => [
 		index('idx_equipment_category').on(t.categoryId),
@@ -130,18 +141,20 @@ export const equipment = sqliteTable(
 export const equipmentLoan = sqliteTable(
 	'equipment_loan',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		equipmentId: text('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		quantity: integer('quantity').notNull().default(1),
-		requestedPickupDate: timestamp('requested_pickup_date').notNull(),
-		estimatedReturnDate: timestamp('estimated_return_date'),
-		scheduledPickupDate: timestamp('scheduled_pickup_date'),
-		dueDate: timestamp('due_date'),
-		checkedOutAt: timestamp('checked_out_at'),
-		returnedAt: timestamp('returned_at'),
+		requestedPickupDate: integer('requested_pickup_date', { mode: 'timestamp' }).notNull(),
+		estimatedReturnDate: integer('estimated_return_date', { mode: 'timestamp' }),
+		scheduledPickupDate: integer('scheduled_pickup_date', { mode: 'timestamp' }),
+		dueDate: integer('due_date', { mode: 'timestamp' }),
+		checkedOutAt: integer('checked_out_at', { mode: 'timestamp' }),
+		returnedAt: integer('returned_at', { mode: 'timestamp' }),
 		status: text('status', { enum: loanStatuses }).notNull().default('requested'),
 		dailyRateCents: integer('daily_rate_cents'),
 		estimatedCostCents: integer('estimated_cost_cents'),
@@ -150,8 +163,12 @@ export const equipmentLoan = sqliteTable(
 		cashCents: integer('cash_cents'),
 		memberNotes: text('member_notes'),
 		staffNotes: text('staff_notes'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_loan_equipment').on(t.equipmentId),
@@ -165,6 +182,6 @@ export const equipmentLoan = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Equipment = Serialized<typeof equipment.$inferSelect>;
-export type EquipmentCategory = Serialized<typeof equipmentCategory.$inferSelect>;
-export type EquipmentLoan = Serialized<typeof equipmentLoan.$inferSelect>;
+export type Equipment = typeof equipment.$inferSelect;
+export type EquipmentCategory = typeof equipmentCategory.$inferSelect;
+export type EquipmentLoan = typeof equipmentLoan.$inferSelect;

@@ -1,7 +1,6 @@
-import { sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index,  integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 import { event } from './event';
 
 export const ticketStatuses = ['pending', 'valid', 'checked_in', 'cancelled'] as const;
@@ -10,7 +9,7 @@ export type TicketStatus = (typeof ticketStatuses)[number];
 export const ticket = sqliteTable(
 	'ticket',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
 			.references(() => event.id, { onDelete: 'cascade' }),
@@ -20,12 +19,12 @@ export const ticket = sqliteTable(
 		attendeeEmail: text('attendee_email').notNull(),
 		code: text('code').notNull().unique(),
 		status: text('status', { enum: ticketStatuses }).notNull().default('pending'),
-		checkedInAt: timestamp('checked_in_at'),
+		checkedInAt: integer('checked_in_at', { mode: 'timestamp' }),
 		checkedInByUserId: text('checked_in_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_ticket_event').on(t.eventId),
@@ -39,4 +38,4 @@ export const ticket = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Ticket = Serialized<typeof ticket.$inferSelect>;
+export type Ticket = typeof ticket.$inferSelect;

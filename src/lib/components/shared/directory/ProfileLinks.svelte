@@ -14,7 +14,7 @@
 		IconBrandLinkedin,
 		IconLink
 	} from '@tabler/icons-svelte';
-	import type { ProfileLink } from '$lib/server/db/schema/auth';
+	import type { ProfileLink } from '$lib/server/db/schema/authentication';
 
 	let { links }: { links: ProfileLink[] } = $props();
 

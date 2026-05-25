@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMemberProfile } from '$lib/server/directory/directory-service';
-import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/auth';
+import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 import type { DirectoryMemberResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params }) => {

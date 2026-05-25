@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { requireStaffRole } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { or, like } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url, locals }) => {

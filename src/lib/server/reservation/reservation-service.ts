@@ -4,7 +4,7 @@ import { eq, and, lt, ne, gt, isNotNull, inArray, notInArray, sql } from 'drizzl
 import { hasConflict, validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
 

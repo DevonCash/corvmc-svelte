@@ -9,7 +9,6 @@ import { getPublicUrl, isConfigured } from '$lib/server/storage';
 import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { DateTime } from 'luxon';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { DashboardResponse } from '$lib/server/db/schema/api';
 
 const TZ = 'America/Los_Angeles';
@@ -108,16 +107,16 @@ export const GET: RequestHandler = async ({ locals }) => {
 			bookerId: r.bookerId,
 			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
 			status: r.status,
-			startsAt: toISO(r.startsAt),
-			endsAt: toISO(r.endsAt),
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
 			notes: r.notes
 		})),
 		upcomingEvents: upcomingEvents.map((e) => ({
 			id: e.id,
 			title: e.title,
-			startsAt: toISO(e.startsAt),
-			endsAt: toISO(e.endsAt),
-			doorsAt: e.doorsAt ? toISO(e.doorsAt) : null,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ? e.doorsAt : null,
 			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
 		})),
 		credits,

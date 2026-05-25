@@ -10,7 +10,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import { toast } from 'svelte-sonner';
-	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
+	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
 
 	let profile = $derived(await getBandProfile());
 	let genreSuggestions = $derived(await getGenreSuggestions());

@@ -2,10 +2,9 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { role, permission } from '$lib/server/db/schema/authorization';
 import { count, desc, gte } from 'drizzle-orm';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffDashboardResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -46,7 +45,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			id: u.id,
 			name: u.name,
 			email: u.email,
-			createdAt: toISO(u.createdAt)
+			createdAt: u.createdAt
 		}))
-	} satisfies StaffDashboardResponse);
+	});
 };

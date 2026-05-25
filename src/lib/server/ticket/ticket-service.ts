@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
 import { event } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, inArray, sql, asc, desc } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 import { reservation } from './reservation';
 
 export const eventStatuses = ['draft', 'published', 'cancelled'] as const;
@@ -10,14 +9,16 @@ export type EventStatus = (typeof eventStatuses)[number];
 export const event = sqliteTable(
 	'event',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		title: text('title').notNull(),
 		description: text('description'),
-		startsAt: timestamp('starts_at').notNull(),
-		endsAt: timestamp('ends_at').notNull(),
-		doorsAt: timestamp('doors_at'),
+		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
+		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		doorsAt: integer('doors_at', { mode: 'timestamp' }),
 		status: text('status', { enum: eventStatuses }).notNull().default('draft'),
-		publishedAt: timestamp('published_at'),
+		publishedAt: integer('published_at', { mode: 'timestamp' }),
 		reservationId: text('reservation_id').references(() => reservation.id),
 		posterKey: text('poster_key'),
 		tags: text('tags'),
@@ -27,8 +28,12 @@ export const event = sqliteTable(
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_event_status_starts').on(t.status, t.startsAt),
@@ -41,4 +46,4 @@ export const event = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Event = Serialized<typeof event.$inferSelect>;
+export type Event = typeof event.$inferSelect;

@@ -3,8 +3,12 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listTransactions } from '$lib/server/finance/credit-service';
 import { parsePagination } from '$lib/server/db/paginate';
-import { creditTypes, transactionSources, type CreditType, type TransactionSource } from '$lib/server/db/schema/finance';
-import type { ISODateString } from '$lib/server/db/schema/columns';
+import {
+	creditTypes,
+	transactionSources,
+	type CreditType,
+	type TransactionSource
+} from '$lib/server/db/schema/finance';
 import type { StaffCreditsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -18,8 +22,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const from = url.searchParams.get('from') ?? '';
 	const to = url.searchParams.get('to') ?? '';
 
-	const creditType = (creditTypes as readonly string[]).includes(creditTypeParam) ? creditTypeParam as (typeof creditTypes)[number] : undefined;
-	const source = (transactionSources as readonly string[]).includes(sourceParam) ? sourceParam as (typeof transactionSources)[number] : undefined;
+	const creditType = (creditTypes as readonly string[]).includes(creditTypeParam)
+		? (creditTypeParam as (typeof creditTypes)[number])
+		: undefined;
+	const source = (transactionSources as readonly string[]).includes(sourceParam)
+		? (sourceParam as (typeof transactionSources)[number])
+		: undefined;
 
 	const { rows, pagination } = await listTransactions(
 		{
@@ -35,11 +43,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	return json({
 		transactions: rows.map((r) => ({
 			...r,
-			creditType: r.creditType as CreditType,
-			source: r.source as TransactionSource,
-			createdAt: r.createdAt as ISODateString
+			creditType: r.creditType,
+			source: r.source,
+			createdAt: r.createdAt
 		})),
 		pagination,
 		filters: { search, creditType: creditType ?? '', source: source ?? '', from, to }
-	} satisfies StaffCreditsResponse);
+	});
 };

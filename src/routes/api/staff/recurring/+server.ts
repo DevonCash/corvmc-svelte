@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listAll } from '$lib/server/reservation/recurring-series-service';
 import { parsePagination } from '$lib/server/db/paginate';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffRecurringResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -23,12 +22,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			userRole: s.userRole,
 			frequencyLabel: s.frequencyLabel,
 			bookerType: s.bookerType,
-			startsAt: toISO(s.startsAt),
-			endsAt: toISO(s.endsAt),
-			createdAt: toISO(s.createdAt),
-			cancelledAt: s.cancelledAt ? toISO(s.cancelledAt) : null
+			startsAt: s.startsAt,
+			endsAt: s.endsAt,
+			createdAt: s.createdAt,
+			cancelledAt: s.cancelledAt
 		})),
 		pagination,
 		filter
-	} satisfies StaffRecurringResponse);
+	});
 };

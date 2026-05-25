@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db';
-import { user, userInstrument, userGenre } from '$lib/server/db/schema/auth';
+import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
-import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/server/db/schema/auth';
+import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
 // Validation

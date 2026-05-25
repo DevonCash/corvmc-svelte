@@ -67,7 +67,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: {
 		id: 'id',
 		creditFreeHours: { name: 'credit_free_hours' },

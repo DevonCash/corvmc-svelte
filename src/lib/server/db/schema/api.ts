@@ -1,7 +1,6 @@
 import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
-import type { User } from './auth';
+import type { User } from './authentication';
 import type { Band, BandMember } from './band';
-import type { ISODateString } from './columns';
 import type { Reservation, Closure } from './reservation';
 import type { Event } from './event';
 import type { Equipment, EquipmentCategory, EquipmentLoan } from './equipment';
@@ -103,11 +102,11 @@ export type MemberReservation = Pick<
 	| 'notes'
 	| 'recurringSeriesId'
 > & {
-	paidAt: ISODateString | null;
-	refundedAt: ISODateString | null;
+	paidAt: Date | null;
+	refundedAt: Date | null;
 	paidWithCredits: boolean;
-	waitlistNotifiedAt: ISODateString | null;
-	waitlistExpiresAt: ISODateString | null;
+	waitlistNotifiedAt: Date | null;
+	waitlistExpiresAt: Date | null;
 };
 
 export interface MemberReservationsResponse {
@@ -117,10 +116,10 @@ export interface MemberReservationsResponse {
 		id: string;
 		frequencyLabel: string;
 		bookerType: string;
-		startsAt: ISODateString;
-		endsAt: ISODateString;
-		createdAt: ISODateString;
-		seriesEndsAt: ISODateString | null;
+		startsAt: Date;
+		endsAt: Date;
+		createdAt: Date;
+		seriesEndsAt: Date | null;
 	}[];
 }
 

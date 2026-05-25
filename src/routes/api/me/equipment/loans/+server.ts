@@ -1,7 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listUserLoans } from '$lib/server/equipment/loan-service';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { MemberEquipmentLoansResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -23,13 +22,13 @@ export const GET: RequestHandler = async ({ locals }) => {
 function serializeLoan(l: Awaited<ReturnType<typeof listUserLoans>>[number]) {
 	return {
 		...l,
-		requestedPickupDate: toISO(l.requestedPickupDate),
-		estimatedReturnDate: l.estimatedReturnDate ? toISO(l.estimatedReturnDate) : null,
-		scheduledPickupDate: l.scheduledPickupDate ? toISO(l.scheduledPickupDate) : null,
-		dueDate: l.dueDate ? toISO(l.dueDate) : null,
-		checkedOutAt: l.checkedOutAt ? toISO(l.checkedOutAt) : null,
-		returnedAt: l.returnedAt ? toISO(l.returnedAt) : null,
-		createdAt: toISO(l.createdAt),
-		updatedAt: toISO(l.updatedAt)
+		requestedPickupDate: l.requestedPickupDate,
+		estimatedReturnDate: l.estimatedReturnDate ? l.estimatedReturnDate : null,
+		scheduledPickupDate: l.scheduledPickupDate ? l.scheduledPickupDate : null,
+		dueDate: l.dueDate ? l.dueDate : null,
+		checkedOutAt: l.checkedOutAt ? l.checkedOutAt : null,
+		returnedAt: l.returnedAt ? l.returnedAt : null,
+		createdAt: l.createdAt,
+		updatedAt: l.updatedAt
 	};
 }

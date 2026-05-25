@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
 import { DateTime } from 'luxon';

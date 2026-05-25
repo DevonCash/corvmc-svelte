@@ -3,11 +3,10 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole, primaryRoleFor } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, ne, gt, lt, inArray, like, or, desc, asc, count } from 'drizzle-orm';
 import { config } from '$lib/server/site-config/site-config-service';
 import { paginate, parsePagination } from '$lib/server/db/paginate';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffReservationsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -119,8 +118,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		reservations: reservations.map((r) => ({
 			id: r.id,
 			status: r.status,
-			startsAt: toISO(r.startsAt),
-			endsAt: toISO(r.endsAt),
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
 			bookerType: r.bookerType,
 			notes: r.notes,
 			stripePaymentRecordId: r.stripePaymentRecordId,
@@ -134,8 +133,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		unresolved: unresolved.map((r) => ({
 			id: r.id,
 			status: r.status,
-			startsAt: toISO(r.startsAt),
-			endsAt: toISO(r.endsAt),
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
 			createdByUserId: r.createdByUserId,
 			notes: r.notes,
 			memberName: r.memberName,
@@ -155,5 +154,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			unresolved: unresolved.length
 		},
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
-	} satisfies StaffReservationsResponse);
+	} );
 };

@@ -5,7 +5,6 @@ import {
 	listPublicBands
 } from '$lib/server/directory/directory-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { DirectoryResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -37,7 +36,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			instruments: m.instruments,
 			genres: m.genres,
 			lookingForBand: m.lookingForBand,
-			memberSince: toISO(m.createdAt),
+			memberSince: m.createdAt,
 			bands: m.bands
 		})),
 		bands: bands.map((b) => ({

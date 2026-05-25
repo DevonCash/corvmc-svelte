@@ -4,7 +4,6 @@ import { hasAnyRole } from '$lib/server/authorization';
 import { listEquipment, listCategories } from '$lib/server/equipment/equipment-service';
 import { parsePagination } from '$lib/server/db/paginate';
 import { equipmentStatuses } from '$lib/config';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffEquipmentResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -15,7 +14,9 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const search = url.searchParams.get('q')?.trim() ?? '';
 	const categoryId = url.searchParams.get('category') || undefined;
 	const statusParam = url.searchParams.get('status') || '';
-	const status = (equipmentStatuses as readonly string[]).includes(statusParam) ? statusParam as (typeof equipmentStatuses)[number] : undefined;
+	const status = (equipmentStatuses as readonly string[]).includes(statusParam)
+		? (statusParam as (typeof equipmentStatuses)[number])
+		: undefined;
 
 	const [{ rows: equipmentList, pagination }, categories] = await Promise.all([
 		listEquipment({ search: search || undefined, categoryId, status }, parsePagination(url)),
@@ -44,10 +45,10 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			name: c.name,
 			pricingTier: c.pricingTier,
 			displayOrder: c.displayOrder,
-			createdAt: toISO(c.createdAt),
-			updatedAt: toISO(c.updatedAt)
+			createdAt: c.createdAt,
+			updatedAt: c.updatedAt
 		})),
 		pagination,
 		filters: { search, categoryId: categoryId ?? '', status: status ?? '' }
-	} satisfies StaffEquipmentResponse);
+	});
 };

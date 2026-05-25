@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listAll } from '$lib/server/band/band-service';
 import { parsePagination } from '$lib/server/db/paginate';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffBandsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -28,8 +27,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			name: b.name,
 			slug: b.slug,
 			status: b.deletedAt ? 'deactivated' : 'active',
-			createdAt: toISO(b.createdAt),
-			deletedAt: b.deletedAt ? toISO(b.deletedAt) : null
+			createdAt: b.createdAt,
+			deletedAt: b.deletedAt ? b.deletedAt : null
 		})),
 		pagination,
 		filters: { search, status: status ?? '' }

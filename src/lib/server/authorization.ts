@@ -3,7 +3,7 @@ import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq, and, sql, inArray, type SQL } from 'drizzle-orm';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 
 /**
  * Correlated subquery returning the highest-priority role name for a given user ID column.

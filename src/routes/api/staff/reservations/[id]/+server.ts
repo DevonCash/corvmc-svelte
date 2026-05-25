@@ -3,11 +3,10 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, ne, gt, lt, asc, desc, count } from 'drizzle-orm';
 import { config } from '$lib/server/site-config/site-config-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffReservationDetailResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
@@ -100,15 +99,15 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		reservation: {
 			id: row.id,
 			status: row.status,
-			startsAt: toISO(row.startsAt),
-			endsAt: toISO(row.endsAt),
+			startsAt: row.startsAt,
+			endsAt: row.endsAt,
 			bookerType: row.bookerType,
 			bookerId: row.bookerId,
 			notes: row.notes,
 			cancellationReason: row.cancellationReason,
 			stripePaymentRecordId: row.stripePaymentRecordId,
 			createdByUserId: row.createdByUserId,
-			createdAt: toISO(row.createdAt),
+			createdAt: row.createdAt,
 			memberName: row.memberName,
 			memberEmail: row.memberEmail,
 			memberPhone: row.memberPhone,
@@ -119,13 +118,13 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 			id: r.id,
 			memberName: '',
 			bookerType: r.bookerType,
-			startsAt: toISO(r.startsAt),
-			endsAt: toISO(r.endsAt)
+			startsAt: r.startsAt,
+			endsAt: r.endsAt
 		})),
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
 		isFirstReservation: completedCount.count === 0,
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
-	} satisfies StaffReservationDetailResponse);
+	} );
 };

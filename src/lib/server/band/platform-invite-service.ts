@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { platformInvite } from '$lib/server/db/schema/platform-invite';
 import { band, bandMember } from '$lib/server/db/schema/band';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { invite } from './band-service';
 import { domainEvents } from '$lib/server/events/event-bus';

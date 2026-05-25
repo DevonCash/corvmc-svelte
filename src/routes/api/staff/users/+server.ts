@@ -2,12 +2,10 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { count, desc, like, eq, isNull, or } from 'drizzle-orm';
 import { paginate, parsePagination } from '$lib/server/db/paginate';
-import { toISO } from '$lib/server/db/schema/columns';
-import type { StaffUsersResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -21,9 +19,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		: undefined;
 
 	const activeCondition = isNull(user.deletedAt);
-	const where = searchCondition
-		? (searchCondition && activeCondition)
-		: activeCondition;
+	const where = searchCondition ? searchCondition && activeCondition : activeCondition;
 
 	const dataQ = db
 		.select({
@@ -54,9 +50,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			})
 			.from(modelHasRole)
 			.innerJoin(role, eq(role.id, modelHasRole.roleId))
-			.where(
-				or(...userIds.map((id) => eq(modelHasRole.userId, id)))!
-			);
+			.where(or(...userIds.map((id) => eq(modelHasRole.userId, id)))!);
 
 		for (const row of roleRows) {
 			if (!roleMap[row.userId]) roleMap[row.userId] = [];
@@ -70,10 +64,10 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			name: u.name,
 			email: u.email,
 			pronouns: u.pronouns,
-			createdAt: toISO(u.createdAt),
+			createdAt: u.createdAt,
 			roles: roleMap[u.id] ?? []
 		})),
 		pagination,
 		search
-	} satisfies StaffUsersResponse);
+	});
 };

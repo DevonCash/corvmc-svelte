@@ -59,7 +59,7 @@ vi.mock('$lib/server/db/schema/band', () => ({
 	bandMember: { id: 'id', bandId: 'band_id', userId: 'user_id', role: 'role', position: 'position', status: 'status', invitedById: 'invited_by_id' }
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name', email: 'email' }
 }));
 

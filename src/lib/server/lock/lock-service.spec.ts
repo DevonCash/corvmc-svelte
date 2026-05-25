@@ -53,7 +53,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	closure: { id: 'id', startsAt: 'starts_at', endsAt: 'ends_at', reason: 'reason' }
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name', email: 'email' }
 }));
 

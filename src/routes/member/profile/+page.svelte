@@ -15,7 +15,7 @@
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { toast } from 'svelte-sonner';
-	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/auth';
+	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
 
 	let profile = $derived(await getMemberProfile());
 	let instrumentSuggestions = $derived(await getInstrumentSuggestions());

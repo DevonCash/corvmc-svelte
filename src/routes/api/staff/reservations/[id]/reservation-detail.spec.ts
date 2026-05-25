@@ -41,7 +41,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name', email: 'email', phone: 'phone', pronouns: 'pronouns', image: 'image' }
 }));
 

@@ -2,7 +2,6 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBySlug, getUserRole, listForUser } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { BandLayoutResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -22,16 +21,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	return json({
-		band: {
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			ownerId: band.ownerId,
-			avatarKey: band.avatarKey,
-			memberCount: band.memberCount,
-			createdAt: toISO(band.createdAt)
-		},
+		band,
 		userRole: role ?? 'staff',
 		isStaff,
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),

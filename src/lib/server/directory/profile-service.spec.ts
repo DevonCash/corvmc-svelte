@@ -51,7 +51,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', bio: 'bio', tagline: 'tagline', lookingForBand: 'looking_for_band', directoryVisibility: 'directory_visibility', directoryContact: 'directory_contact', links: 'links', updatedAt: 'updated_at' },
 	userInstrument: { userId: 'user_id', instrument: 'instrument' },
 	userGenre: { userId: 'user_id', genre: 'genre' }

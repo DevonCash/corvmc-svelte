@@ -93,7 +93,7 @@ vi.mock('$lib/server/db/schema/event', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/auth', () => ({
+vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name' }
 }));
 

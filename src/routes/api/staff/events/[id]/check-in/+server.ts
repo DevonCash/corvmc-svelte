@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getById } from '$lib/server/event/event-service';
 import { getEventTickets, getTicketsSold } from '$lib/server/ticket/ticket-service';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffCheckInResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
@@ -26,7 +25,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		event: {
 			id: evt.id,
 			title: evt.title,
-			startsAt: toISO(evt.startsAt),
+			startsAt: evt.startsAt,
 			ticketQuantity: evt.ticketQuantity
 		},
 		tickets: tickets
@@ -37,8 +36,8 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 				attendeeEmail: t.attendeeEmail,
 				code: t.code,
 				status: t.status,
-				checkedInAt: t.checkedInAt ? toISO(t.checkedInAt) : null
+				checkedInAt: t.checkedInAt
 			})),
 		stats: { sold, checkedIn }
-	} satisfies StaffCheckInResponse);
+	});
 };

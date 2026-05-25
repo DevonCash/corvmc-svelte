@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { createTemporaryUser, removeTemporaryUser } from './ultraloc-client';

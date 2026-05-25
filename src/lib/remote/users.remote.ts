@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { eq } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
@@ -58,9 +58,11 @@ const updateUserSchema = z.object({
 	name: z.string().trim().min(1).max(255),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
-	roles: z.string().transform((s) => JSON.parse(s) as string[]).pipe(
-		z.array(z.string().regex(/^\d+$/, 'Invalid role ID'))
-	).default([])
+	roles: z
+		.string()
+		.transform((s) => JSON.parse(s) as string[])
+		.pipe(z.array(z.string().regex(/^\d+$/, 'Invalid role ID')))
+		.default([])
 });
 
 export const updateUser = form(updateUserSchema, async (rawData) => {
@@ -117,10 +119,23 @@ export const adjustCredits = form(
 		if (amount > 0) {
 			await addCredits(userId, type, amount, 'admin_adjustment', undefined, description);
 		} else {
-			await deductCredits(userId, type, Math.abs(amount), 'admin_adjustment', undefined, description);
+			await deductCredits(
+				userId,
+				type,
+				Math.abs(amount),
+				'admin_adjustment',
+				undefined,
+				description
+			);
 		}
 
 		void getUserCredits(userId).refresh();
 		return { success: true };
 	}
 );
+
+export const getLocalUser = query(async () => {
+	const { locals } = await getRequestEvent();
+
+	return locals.user;
+});

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { userInstrument, userGenre } from '$lib/server/db/schema/auth';
+import { userInstrument, userGenre } from '$lib/server/db/schema/authentication';
 import { bandGenre } from '$lib/server/db/schema/band';
 import { asc, like, sql } from 'drizzle-orm';
 
@@ -148,7 +148,14 @@ export async function getMemberProfile(
 
 	const row = await db.query.user.findFirst({
 		where: { AND: conditions },
-		with: { instruments: true, genres: true },
+		with: {
+			instruments: true,
+			genres: true,
+			bandMembers: {
+				columns: { status: true },
+				with: { band: { columns: { name: true, slug: true } } },
+			},
+		},
 		columns: memberColumns,
 	});
 

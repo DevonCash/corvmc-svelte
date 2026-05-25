@@ -1,6 +1,6 @@
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 
 export async function ensureStripeCustomer(

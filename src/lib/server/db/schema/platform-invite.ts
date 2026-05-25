@@ -1,7 +1,6 @@
-import { sqliteTable, text, index, unique } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, unique, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 import { band, bandRoles } from './band';
 
 export const inviteStatuses = ['pending', 'accepted', 'revoked'] as const;
@@ -10,9 +9,14 @@ export type InviteStatus = (typeof inviteStatuses)[number];
 export const platformInvite = sqliteTable(
 	'platform_invite',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		email: text('email').notNull(),
-		token: text('token').notNull().unique().$defaultFn(() => crypto.randomUUID()),
+		token: text('token')
+			.notNull()
+			.unique()
+			.$defaultFn(() => crypto.randomUUID()),
 		bandId: text('band_id')
 			.notNull()
 			.references(() => band.id, { onDelete: 'cascade' }),
@@ -22,9 +26,11 @@ export const platformInvite = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'set null' }),
 		status: text('status', { enum: inviteStatuses }).notNull().default('pending'),
-		expiresAt: timestamp('expires_at').notNull(),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		acceptedAt: timestamp('accepted_at')
+		expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		acceptedAt: integer('accepted_at', { mode: 'timestamp' })
 	},
 	(t) => [
 		index('idx_platform_invite_email').on(t.email),
@@ -32,4 +38,4 @@ export const platformInvite = sqliteTable(
 	]
 );
 
-export type PlatformInvite = Serialized<typeof platformInvite.$inferSelect>;
+export type PlatformInvite = typeof platformInvite.$inferSelect;

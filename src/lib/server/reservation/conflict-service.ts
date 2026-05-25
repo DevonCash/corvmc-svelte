@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { reservation, closure } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
 import { getReservationConfig } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';

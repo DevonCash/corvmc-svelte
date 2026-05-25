@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { listAll } from '$lib/server/event/event-service';
 import { parsePagination } from '$lib/server/db/paginate';
-import { toISO } from '$lib/server/db/schema/columns';
 import type { StaffEventsResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -18,12 +17,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			id: e.id,
 			title: e.title,
 			description: e.description,
-			startsAt: toISO(e.startsAt),
-			endsAt: toISO(e.endsAt),
-			doorsAt: e.doorsAt ? toISO(e.doorsAt) : null,
-			publishedAt: e.publishedAt ? toISO(e.publishedAt) : null,
-			createdAt: toISO(e.createdAt),
-			updatedAt: toISO(e.updatedAt),
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt,
+			publishedAt: e.publishedAt,
+			createdAt: e.createdAt,
+			updatedAt: e.updatedAt,
 			status: e.status,
 			tags: e.tags,
 			reservationId: e.reservationId,
@@ -33,5 +32,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			posterKey: e.posterKey
 		})),
 		pagination
-	} satisfies StaffEventsResponse);
+	});
 };

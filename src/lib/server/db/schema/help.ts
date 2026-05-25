@@ -1,20 +1,25 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 
 export const helpCategory = sqliteTable(
 	'help_categories',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull(),
 		slug: text('slug').notNull(),
 		description: text('description'),
 		icon: text('icon'),
 		sortOrder: integer('sort_order').notNull().default(0),
 		minRole: text('min_role').notNull().default('member'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [unique('help_categories_slug_unique').on(t.slug)]
 );
@@ -22,7 +27,9 @@ export const helpCategory = sqliteTable(
 export const helpArticle = sqliteTable(
 	'help_articles',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		categoryId: text('category_id')
 			.notNull()
 			.references(() => helpCategory.id, { onDelete: 'cascade' }),
@@ -37,8 +44,8 @@ export const helpArticle = sqliteTable(
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 	},
 	(t) => [
 		unique('help_articles_slug_unique').on(t.slug),
@@ -47,5 +54,5 @@ export const helpArticle = sqliteTable(
 	]
 );
 
-export type HelpCategory = Serialized<typeof helpCategory.$inferSelect>;
-export type HelpArticle = Serialized<typeof helpArticle.$inferSelect>;
+export type HelpCategory = typeof helpCategory.$inferSelect;
+export type HelpArticle = typeof helpArticle.$inferSelect;

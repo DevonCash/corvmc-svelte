@@ -1,8 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
-import { user } from './auth';
+import { user } from './authentication';
 import { reservation } from './reservation';
 
 // ---------------------------------------------------------------------------
@@ -82,9 +81,11 @@ export const paymentCache = sqliteTable(
 		currency: text('currency').notNull().default('usd'),
 		paymentMethod: text('payment_method').notNull(),
 		status: text('status').notNull().default('completed'),
-		paidAt: timestamp('paid_at').notNull(),
-		refundedAt: timestamp('refunded_at'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		paidAt: integer('paid_at', { mode: 'timestamp' }).notNull(),
+		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_payment_record_user').on(t.userId),
@@ -110,8 +111,10 @@ export const creditTransaction = sqliteTable(
 		source: text('source', { enum: transactionSources }).notNull(),
 		sourceId: text('source_id'),
 		description: text('description').notNull(),
-		metadata: zodJson(z.record(z.string(), z.unknown()).default({}))('metadata'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		metadata: text('metadata', { mode: 'json' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('credit_transaction_user_idx').on(t.userId),
@@ -123,5 +126,5 @@ export const creditTransaction = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Payment = Serialized<typeof paymentCache.$inferSelect>;
-export type CreditTransaction = Serialized<typeof creditTransaction.$inferSelect>;
+export type Payment = typeof paymentCache.$inferSelect;
+export type CreditTransaction = typeof creditTransaction.$inferSelect;

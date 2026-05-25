@@ -27,7 +27,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 
-import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/auth';
+import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/authentication';
 import { band, bandGenre, bandMember } from '../src/lib/server/db/schema/band';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';

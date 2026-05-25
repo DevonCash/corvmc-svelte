@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, type Serialized } from './columns';
-import { user } from './auth';
+import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
 // Subscribers
@@ -10,11 +9,15 @@ import { user } from './auth';
 export const subscriber = sqliteTable(
 	'subscriber',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		email: text('email').notNull().unique(),
 		name: text('name'),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [index('idx_subscriber_user').on(t.userId)]
 );
@@ -24,12 +27,16 @@ export const subscriber = sqliteTable(
 // ---------------------------------------------------------------------------
 
 export const audience = sqliteTable('audience', {
-	id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
 	allowOptIn: integer('allow_opt_in', { mode: 'boolean' }).notNull().default(false),
-	createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`)
 });
 
 // ---------------------------------------------------------------------------
@@ -39,19 +46,25 @@ export const audience = sqliteTable('audience', {
 export const audienceMember = sqliteTable(
 	'audience_member',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		subscriberId: text('subscriber_id')
 			.notNull()
 			.references(() => subscriber.id, { onDelete: 'cascade' }),
 		audienceId: text('audience_id')
 			.notNull()
 			.references(() => audience.id, { onDelete: 'cascade' }),
-		unsubscribedAt: timestamp('unsubscribed_at'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		unsubscribedAt: integer('unsubscribed_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		unique('uq_audience_member').on(t.subscriberId, t.audienceId),
-		index('idx_audience_member_active').on(t.audienceId).where(sql`unsubscribed_at IS NULL`)
+		index('idx_audience_member_active')
+			.on(t.audienceId)
+			.where(sql`unsubscribed_at IS NULL`)
 	]
 );
 
@@ -62,21 +75,29 @@ export const audienceMember = sqliteTable(
 export const campaign = sqliteTable(
 	'campaign',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		subject: text('subject').notNull(),
 		markdownBody: text('markdown_body').notNull(),
 		htmlBody: text('html_body').notNull(),
-		scheduledFor: timestamp('scheduled_for'),
-		sentAt: timestamp('sent_at'),
+		scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
+		sentAt: integer('sent_at', { mode: 'timestamp' }),
 		sentById: text('sent_by_id')
 			.notNull()
 			.references(() => user.id),
 		recipientCount: integer('recipient_count'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		index('idx_campaign_pending_send').on(t.scheduledFor).where(sql`sent_at IS NULL`),
+		index('idx_campaign_pending_send')
+			.on(t.scheduledFor)
+			.where(sql`sent_at IS NULL`),
 		index('idx_campaign_sent_by').on(t.sentById)
 	]
 );
@@ -102,4 +123,4 @@ export const campaignAudience = sqliteTable(
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Audience = Serialized<typeof audience.$inferSelect>;
+export type Audience = typeof audience.$inferSelect;

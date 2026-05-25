@@ -2,11 +2,10 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
-import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/auth';
-import { toISO } from '$lib/server/db/schema/columns';
+import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 import type { DirectoryBandResponse } from '$lib/server/db/schema/api';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -49,12 +48,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(
-			and(
-				eq(bandMember.bandId, row.id),
-				eq(bandMember.status, 'active')
-			)
-		)
+		.where(and(eq(bandMember.bandId, row.id), eq(bandMember.status, 'active')))
 		.orderBy(
 			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
@@ -69,7 +63,7 @@ export const GET: RequestHandler = async ({ params }) => {
 			tagline: row.tagline,
 			avatarUrl: row.avatarKey && r2Available ? getPublicUrl(row.avatarKey) : null,
 			memberCount: row.memberCount,
-			createdAt: toISO(row.createdAt),
+			createdAt: row.createdAt,
 			genres: genres.map((r) => r.genre),
 			lookingForMembers: row.lookingForMembers,
 			directoryContact: row.directoryContact as DirectoryContact | null,

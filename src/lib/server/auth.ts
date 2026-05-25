@@ -7,7 +7,7 @@ import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { account } from '$lib/server/db/schema/auth';
+import { account } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 
 export const auth = betterAuth({

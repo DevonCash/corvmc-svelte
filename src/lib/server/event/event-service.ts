@@ -1,6 +1,6 @@
 import { db, getRowCount } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eq, and, gt, ne, asc, desc, inArray, count } from 'drizzle-orm';

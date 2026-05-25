@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/auth';
+import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
-import type { Subscription } from '$lib/server/db/schema/auth';
+import type { Subscription } from '$lib/server/db/schema/authentication';
 
 // Re-export so downstream consumers can import from one place
 export { registeredEvents };

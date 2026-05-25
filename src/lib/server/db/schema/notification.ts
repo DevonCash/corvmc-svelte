@@ -1,8 +1,7 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamp, uuid, zodJson, type Serialized } from './columns';
 import { z } from 'zod';
-import { user } from './auth';
+import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
 // Notification type registry
@@ -74,13 +73,15 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'recurring_waitlisted',
 		label: 'Recurring reservation waitlisted',
-		description: 'Notification when a recurring reservation instance is waitlisted due to a conflict',
+		description:
+			'Notification when a recurring reservation instance is waitlisted due to a conflict',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
 		key: 'waitlist_slot_available',
 		label: 'Waitlist slot available',
-		description: 'Notification when a waitlisted reservation slot becomes available for confirmation',
+		description:
+			'Notification when a waitlisted reservation slot becomes available for confirmation',
 		defaults: { email: true, inApp: true, sms: false },
 		mandatory: true
 	},
@@ -122,7 +123,9 @@ export function getNotificationType(key: string): NotificationTypeDef | undefine
 export const notification = sqliteTable(
 	'notification',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -130,9 +133,11 @@ export const notification = sqliteTable(
 		title: text('title').notNull(),
 		body: text('body'),
 		href: text('href'),
-		data: zodJson(z.record(z.string(), z.unknown()).nullable().default(null))('data'),
-		readAt: timestamp('read_at'),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`)
+		data: text('data', { mode: 'json' }),
+		readAt: integer('read_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_notification_user').on(t.userId),
@@ -147,7 +152,9 @@ export const notification = sqliteTable(
 export const notificationPreference = sqliteTable(
 	'notification_preference',
 	{
-		id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -155,8 +162,12 @@ export const notificationPreference = sqliteTable(
 		emailEnabled: integer('email_enabled', { mode: 'boolean' }).notNull().default(true),
 		inAppEnabled: integer('in_app_enabled', { mode: 'boolean' }).notNull().default(true),
 		smsEnabled: integer('sms_enabled', { mode: 'boolean' }).notNull().default(false),
-		createdAt: timestamp('created_at').notNull().default(sql`(current_timestamp)`),
-		updatedAt: timestamp('updated_at').notNull().default(sql`(current_timestamp)`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		unique('uq_notification_pref_user_type').on(t.userId, t.notificationType),
@@ -164,4 +175,4 @@ export const notificationPreference = sqliteTable(
 	]
 );
 
-export type Notification = Serialized<typeof notification.$inferSelect>;
+export type Notification = typeof notification.$inferSelect;

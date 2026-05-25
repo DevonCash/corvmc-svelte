@@ -13,7 +13,7 @@ import 'dotenv/config';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { user } from '../src/lib/server/db/schema/auth';
+import { user } from '../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 
 const email = process.argv[2];
