@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,22 @@ export type BandRole = (typeof bandRoles)[number];
 
 export const bandMemberStatuses = ['pending', 'active'] as const;
 export type BandMemberStatus = (typeof bandMemberStatuses)[number];
+
+export const bandTiers = ['free', 'premium'] as const;
+export type BandTier = (typeof bandTiers)[number];
+
+export const bandSubscriptionSchema = z
+	.object({
+		startedAt: z.string(),
+		stripeSubscriptionId: z.string(),
+		billingInterval: z.enum(['monthly', 'yearly']),
+		currentPeriodEnd: z.string(),
+		cancelAtPeriodEnd: z.boolean().optional()
+	})
+	.nullable()
+	.default(null);
+
+export type BandSubscription = z.infer<typeof bandSubscriptionSchema>;
 
 // ---------------------------------------------------------------------------
 // Tables
@@ -36,6 +53,10 @@ export const band = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`),
 		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+
+		// subscription & tier
+		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
+		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
 
 		// directory profile
 		tagline: text('tagline'),

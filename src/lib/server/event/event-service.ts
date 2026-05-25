@@ -35,6 +35,10 @@ export interface EventRow {
 	ticketingEnabled: boolean;
 	ticketPrice: number | null;
 	ticketQuantity: number | null;
+	bandId: string | null;
+	source: string;
+	location: string | null;
+	externalTicketUrl: string | null;
 	createdByUserId: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -452,7 +456,7 @@ export async function getById(eventId: string): Promise<EventRow | null> {
 	return row ?? null;
 }
 
-/** Published events with startsAt in the future, ordered by date. */
+/** Published CMC events with startsAt in the future, ordered by date. */
 export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
@@ -460,6 +464,7 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 		.where(
 			and(
 				eq(event.status, 'published'),
+				eq(event.source, 'cmc'),
 				gt(event.startsAt, new Date())
 			)
 		)
@@ -474,6 +479,173 @@ export async function listAll(pagination: PaginationInput = {}) {
 	const dataQ = db.select().from(event).orderBy(desc(event.startsAt)).$dynamic();
 	const countQ = db.select({ count: count() }).from(event);
 	return paginate(dataQ, countQ, pagination);
+}
+
+// ---------------------------------------------------------------------------
+// Band Events
+// ---------------------------------------------------------------------------
+
+export interface CreateBandEventParams {
+	bandId: string;
+	createdByUserId: string;
+	title: string;
+	description?: string;
+	startsAt: Date;
+	endsAt: Date;
+	doorsAt?: Date;
+	location?: string;
+	tags?: string;
+	externalTicketUrl?: string;
+	posterFile?: {
+		buffer: ArrayBuffer;
+		contentType: string;
+	};
+}
+
+export async function createBandEvent(params: CreateBandEventParams): Promise<EventRow> {
+	const {
+		bandId,
+		createdByUserId,
+		title,
+		description,
+		startsAt,
+		endsAt,
+		doorsAt,
+		location,
+		tags,
+		externalTicketUrl,
+		posterFile
+	} = params;
+
+	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+
+	const [row] = await db
+		.insert(event)
+		.values({
+			title,
+			description: description ?? null,
+			startsAt,
+			endsAt,
+			doorsAt: doorsAt ?? null,
+			tags: tags ?? null,
+			location: location ?? null,
+			externalTicketUrl: externalTicketUrl ?? null,
+			bandId,
+			source: 'band',
+			createdByUserId
+		})
+		.returning();
+
+	if (posterFile) {
+		const ext = extensionFromType(posterFile.contentType);
+		const key = `events/posters/${row.id}.${ext}`;
+		await uploadFile(posterFile.buffer, key, posterFile.contentType);
+		await db
+			.update(event)
+			.set({ posterKey: key, updatedAt: new Date() })
+			.where(eq(event.id, row.id));
+		row.posterKey = key;
+	}
+
+	return row;
+}
+
+export interface UpdateBandEventParams {
+	title?: string;
+	description?: string | null;
+	startsAt?: Date;
+	endsAt?: Date;
+	doorsAt?: Date | null;
+	location?: string | null;
+	tags?: string | null;
+	externalTicketUrl?: string | null;
+	posterFile?: {
+		buffer: ArrayBuffer;
+		contentType: string;
+	};
+}
+
+export async function updateBandEvent(
+	eventId: string,
+	bandId: string,
+	params: UpdateBandEventParams
+): Promise<EventRow> {
+	const existing = await getById(eventId);
+	if (!existing) throw new Error('Event not found');
+	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+
+	const updates: Record<string, unknown> = { updatedAt: new Date() };
+	if (params.title !== undefined) updates.title = params.title;
+	if (params.description !== undefined) updates.description = params.description;
+	if (params.startsAt !== undefined) updates.startsAt = params.startsAt;
+	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
+	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
+	if (params.location !== undefined) updates.location = params.location;
+	if (params.tags !== undefined) updates.tags = params.tags;
+	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+
+	if (params.posterFile) {
+		if (existing.posterKey) {
+			await deleteObject(existing.posterKey);
+		}
+		const ext = extensionFromType(params.posterFile.contentType);
+		const key = `events/posters/${eventId}.${ext}`;
+		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
+		updates.posterKey = key;
+	}
+
+	const [updated] = await db
+		.update(event)
+		.set(updates)
+		.where(eq(event.id, eventId))
+		.returning();
+
+	return updated;
+}
+
+export async function cancelBandEvent(eventId: string, bandId: string): Promise<void> {
+	const existing = await getById(eventId);
+	if (!existing) throw new Error('Event not found');
+	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (existing.status === 'cancelled') throw new Error('Event is already cancelled');
+
+	await db
+		.update(event)
+		.set({ status: 'cancelled', updatedAt: new Date() })
+		.where(eq(event.id, eventId));
+
+	if (existing.posterKey) {
+		await deleteObject(existing.posterKey);
+	}
+}
+
+/** Published band events with startsAt in the future. */
+export async function listBandEventsUpcoming(bandId: string, limit?: number): Promise<EventRow[]> {
+	const query = db
+		.select()
+		.from(event)
+		.where(
+			and(
+				eq(event.bandId, bandId),
+				eq(event.status, 'published'),
+				gt(event.startsAt, new Date())
+			)
+		)
+		.orderBy(asc(event.startsAt));
+
+	if (limit) return query.limit(limit);
+	return query;
+}
+
+/** All events for a band (all statuses), newest first. */
+export async function listBandEvents(bandId: string): Promise<EventRow[]> {
+	return db
+		.select()
+		.from(event)
+		.where(eq(event.bandId, bandId))
+		.orderBy(desc(event.startsAt));
 }
 
 // ---------------------------------------------------------------------------

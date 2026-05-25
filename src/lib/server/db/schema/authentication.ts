@@ -34,7 +34,8 @@ export type DirectoryContact = z.infer<typeof directoryContactSchema>;
 
 export const profileLinkSchema = z.object({
 	label: z.string(),
-	url: z.string()
+	url: z.string(),
+	embed: z.boolean().optional()
 });
 
 export const profileLinksSchema = z.array(profileLinkSchema).nullable().default(null);

@@ -3,9 +3,11 @@
 		IconLayoutDashboard,
 		IconUsersGroup,
 		IconCalendar,
+		IconCalendarEvent,
 		IconPencil,
 		IconSettings,
-		IconUser
+		IconUser,
+		IconCrown
 	} from '@tabler/icons-svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -57,6 +59,9 @@
 		<Nav.Item href={`${base}/reservations`} label="Reservations">
 			{#snippet icon()}<IconCalendar />{/snippet}
 		</Nav.Item>
+		<Nav.Item href={`${base}/events`} label="Events">
+			{#snippet icon()}<IconCalendarEvent />{/snippet}
+		</Nav.Item>
 		{#if isOwnerOrAdmin}
 			<Nav.Item href={`${base}/edit`} label="Edit Band">
 				{#snippet icon()}<IconPencil />{/snippet}
@@ -66,6 +71,9 @@
 			</Nav.Item>
 		{/if}
 		{#if layout.userRole === 'owner'}
+			<Nav.Item href={`${base}/subscription`} label="Subscription">
+				{#snippet icon()}<IconCrown />{/snippet}
+			</Nav.Item>
 			<Nav.Item href={`${base}/settings`} label="Settings">
 				{#snippet icon()}<IconSettings />{/snippet}
 			</Nav.Item>
