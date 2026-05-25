@@ -1,15 +1,9 @@
 <script lang="ts">
 	import Button from '$lib/components/shared/Button.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { CancelSeriesAction } from '$lib/components/shared/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
 	import { getRecurringReservations } from '$lib/remote/reservations.remote';
-	import { editMemberSeries } from '$lib/remote/recurring.remote';
 	import { format, formatDistanceStrict } from 'date-fns';
-	import { IconPencil } from '@tabler/icons-svelte';
-
-	const { fields } = editMemberSeries;
 </script>
 
 {#if !(await getLocalUser()).subscription}
@@ -46,64 +40,11 @@
 					<p class="text-xs opacity-50">Ends {format(series.seriesEndsAt, 'PP')}</p>
 				{/if}
 			</div>
-			<div class="flex shrink-0 items-center gap-1">
-				<Action
-					action={editMemberSeries}
-					label="Edit"
-					modalTitle="Edit Schedule"
-					successToast="Series schedule updated"
-					onsuccess={() => getRecurringReservations().refresh()}
-					class="btn-ghost btn-sm btn-square"
-				>
-					{#snippet trigger({ onclick, disabled })}
-						<Button class="btn-ghost btn-sm btn-square" {disabled} onclick={onclick}>
-							<IconPencil size={18} />
-						</Button>
-					{/snippet}
-					{#snippet form({ close })}
-						<input {...fields.seriesId.as('hidden', series.id)} />
-						<div class="grid grid-cols-3 gap-3">
-							<FormField
-								label="Day"
-								type="date"
-								field={fields.date}
-								value={format(series.startsAt, 'yyyy-MM-dd')}
-							/>
-							<FormField
-								label="Start"
-								type="time"
-								field={fields.startTime}
-								value={format(series.startsAt, 'HH:mm')}
-							/>
-							<FormField
-								label="End"
-								type="time"
-								field={fields.endTime}
-								value={format(series.endsAt, 'HH:mm')}
-							/>
-						</div>
-						<FormField label="Frequency" field={fields.frequency}>
-							<select class="select-bordered select w-full" {...fields.frequency.as('select')}>
-								<option value="weekly" selected={series.frequencyLabel === 'Weekly'}>Weekly</option>
-								<option value="biweekly" selected={series.frequencyLabel === 'Every 2 weeks'}
-									>Every 2 weeks</option
-								>
-								<option value="monthly" selected={series.frequencyLabel === 'Monthly'}
-									>Monthly</option
-								>
-							</select>
-						</FormField>
-						<p class="text-xs opacity-60">
-							This will create a new series with the updated schedule. The current series will end.
-						</p>
-					{/snippet}
-				</Action>
-				<CancelSeriesAction
-					seriesId={series.id}
-					class="btn-ghost btn-sm btn-square"
-					onsuccess={() => getRecurringReservations().refresh()}
-				/>
-			</div>
+			<CancelSeriesAction
+				seriesId={series.id}
+				class="btn-ghost btn-sm btn-square"
+				onsuccess={() => getRecurringReservations().refresh()}
+			/>
 		</div>
 	{:else}
 		<p class="text-sm opacity-60">No active recurring reservations.</p>

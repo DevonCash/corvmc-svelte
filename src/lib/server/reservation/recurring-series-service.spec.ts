@@ -99,8 +99,6 @@ function setupBatchMock({
 		})
 	} as any);
 
-	// db.select() is called for: pre-check in edit(), and final row fetch after batch.
-	// When editPreCheckFound is false, the code throws before reaching the second select.
 	vi.mocked(db.select).mockImplementation((() => ({
 		from: vi.fn().mockReturnValue({
 			where: vi.fn().mockReturnValue(Promise.resolve(selectReturning))
@@ -169,60 +167,6 @@ describe('recurring-series-service', () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// edit()
-	// -------------------------------------------------------------------------
-
-	describe('edit()', () => {
-		const params = {
-			oldSeriesId: 'series-old',
-			newPrototypeReservationId: 'res-2',
-			frequency: 'weekly' as const,
-			prototypeStartsAt: new Date('2026-06-08T10:00:00Z')
-		};
-
-		it('inserts a new series row for the new prototype via batch', async () => {
-			setupBatchMock();
-
-			await svc.edit(params);
-
-			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
-				expect.objectContaining({
-					prototypeType: 'reservation',
-					prototypeId: 'res-2'
-				})
-			);
-		});
-
-		it('calls db.batch with the queries', async () => {
-			setupBatchMock();
-
-			await svc.edit(params);
-
-			expect(db.batch).toHaveBeenCalled();
-		});
-
-		it('returns the new series row', async () => {
-			setupBatchMock();
-
-			const result = await svc.edit(params);
-
-			expect(result).toMatchObject({ id: 'series-new' });
-		});
-
-		it('throws RecurringSeriesError when old series was already cancelled', async () => {
-			setupBatchMock();
-			// Override select to return empty (series not found)
-			vi.mocked(db.select).mockImplementation((() => ({
-				from: vi.fn().mockReturnValue({
-					where: vi.fn().mockReturnValue(Promise.resolve([]))
-				})
-			})) as any);
-
-			await expect(svc.edit(params)).rejects.toThrow(svc.RecurringSeriesError);
-			await expect(svc.edit(params)).rejects.toThrow('already cancelled or superseded');
-		});
-	});
 
 	// -------------------------------------------------------------------------
 	// cancel()

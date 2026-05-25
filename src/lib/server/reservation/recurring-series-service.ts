@@ -9,7 +9,7 @@ import { buildRRule, describeFrequency } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
 // ---------------------------------------------------------------------------
-// RecurringSeriesService — create, edit, cancel, and query recurring series
+// RecurringSeriesService — create, cancel, and query recurring series
 // ---------------------------------------------------------------------------
 
 export class RecurringSeriesError extends Error {
@@ -111,69 +111,6 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 	return series;
 }
 
-// ---------------------------------------------------------------------------
-// edit() — supersede a series with a new one (new prototype, new schedule)
-// ---------------------------------------------------------------------------
-
-export interface EditSeriesParams {
-	/** The series being replaced */
-	oldSeriesId: string;
-	/** The new prototype reservation */
-	newPrototypeReservationId: string;
-	/** New frequency */
-	frequency: RecurringFrequency;
-	/** New prototype's startsAt */
-	prototypeStartsAt: Date;
-}
-
-export async function edit(params: EditSeriesParams): Promise<SeriesRow> {
-	const { oldSeriesId, newPrototypeReservationId, frequency, prototypeStartsAt } = params;
-
-	const rruleString = buildRRule(prototypeStartsAt, frequency);
-
-	// Verify old series is still active and get owner
-	const [oldSeries] = await db
-		.select({ id: recurringSeries.id, createdBy: recurringSeries.createdBy })
-		.from(recurringSeries)
-		.where(
-			and(
-				eq(recurringSeries.id, oldSeriesId),
-				isNull(recurringSeries.cancelledAt),
-				isNull(recurringSeries.supersededBy)
-			)
-		);
-
-	if (!oldSeries) {
-		throw new RecurringSeriesError('Series was already cancelled or superseded');
-	}
-
-	const newSeriesId = crypto.randomUUID();
-	const now = new Date();
-
-	await db.batch([
-		db.insert(recurringSeries).values({
-			id: newSeriesId,
-			prototypeType: 'reservation',
-			prototypeId: newPrototypeReservationId,
-			rrule: rruleString,
-			createdBy: oldSeries.createdBy
-		}),
-		db
-			.update(recurringSeries)
-			.set({ supersededBy: newSeriesId, cancelledAt: now })
-			.where(eq(recurringSeries.id, oldSeriesId)),
-		db
-			.update(reservation)
-			.set({ recurringSeriesId: newSeriesId, updatedAt: now })
-			.where(eq(reservation.id, newPrototypeReservationId))
-	]);
-
-	const [newSeries] = await db
-		.select()
-		.from(recurringSeries)
-		.where(eq(recurringSeries.id, newSeriesId));
-	return newSeries;
-}
 
 // ---------------------------------------------------------------------------
 // cancel() — stop a series from generating new instances
