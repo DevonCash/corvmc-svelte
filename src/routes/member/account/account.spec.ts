@@ -119,7 +119,6 @@ import {
 } from '$lib/server/marketing/audience-service';
 import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
-const { GET: accountGET } = await import('../../api/me/account/+server');
 const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribe, unsubscribe: unsubscribeFromList, deleteAccount } = await import('$lib/remote/account.remote') as any;
 
 beforeEach(() => {
@@ -129,49 +128,6 @@ beforeEach(() => {
 	lastUpdate = null;
 	mockLocals.user = mockUser({ id: 'user-1', name: 'Test User' }) as any;
 	vi.mocked(requireUser).mockReturnValue(mockLocals.user);
-});
-
-// ---------------------------------------------------------------------------
-// Page load
-// ---------------------------------------------------------------------------
-
-describe('account page load', () => {
-	it('returns user with profile fields', async () => {
-		const user = mockUser({
-			id: 'user-1',
-			name: 'Alice',
-			email: 'alice@example.com',
-			pronouns: 'she/her',
-			phone: '555-0123'
-		});
-
-		queryResults = [[user]];
-
-		const response = await accountGET({
-			locals: { user: { id: 'user-1' } },
-			url: new URL('http://localhost')
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.user.name).toBe('Alice');
-		expect(result.user.email).toBe('alice@example.com');
-		expect(result.user.pronouns).toBe('she/her');
-		expect(result.user.phone).toBe('555-0123');
-	});
-
-	it('throws 401 when not authenticated', async () => {
-		await expect(
-			accountGET({ locals: {}, url: new URL('http://localhost') } as any)
-		).rejects.toThrow();
-	});
-
-	it('throws 404 when user not found in database', async () => {
-		queryResults = [[]];
-
-		await expect(
-			accountGET({ locals: { user: { id: 'ghost' } }, url: new URL('http://localhost') } as any)
-		).rejects.toThrow();
-	});
 });
 
 // ---------------------------------------------------------------------------

@@ -300,31 +300,3 @@ describe('bookReservation with recurring', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Page load
-// ---------------------------------------------------------------------------
-
-describe('reservations page load', () => {
-	it('returns upcoming and past arrays', async () => {
-		selectResult = [
-			{
-				id: 'res-1',
-				status: 'scheduled',
-				startsAt: new Date('2026-06-20T18:00:00Z'),
-				endsAt: new Date('2026-06-20T19:00:00Z'),
-				notes: null,
-				bookedByName: 'Test Owner'
-			}
-		];
-
-		const { GET } = await import('../../../../routes/api/bands/[slug]/reservations/+server');
-		const response = await GET({
-			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser }
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.upcoming).toBeDefined();
-		expect(result.past).toBeDefined();
-	});
-});

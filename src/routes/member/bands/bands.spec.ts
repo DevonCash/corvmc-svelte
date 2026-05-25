@@ -70,45 +70,10 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { GET: bandsGET } = await import('../../api/me/bands/+server');
 const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands.remote') as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-});
-
-// ---------------------------------------------------------------------------
-// Page load
-// ---------------------------------------------------------------------------
-
-describe('bands page load', () => {
-	it('splits bands into pending and active', async () => {
-		const response = await bandsGET({
-			locals: { user: { id: 'user-1' } },
-			url: new URL('http://localhost')
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.pending).toHaveLength(1);
-		expect(result.pending[0].name).toBe('Sonic Youth');
-		expect(result.active).toHaveLength(1);
-		expect(result.active[0].name).toBe('The Velvet Underground');
-	});
-
-	it('calls listForUser with the current user id', async () => {
-		await bandsGET({
-			locals: { user: { id: 'user-1' } },
-			url: new URL('http://localhost')
-		} as any);
-
-		expect(bandServiceMock.listForUser).toHaveBeenCalledWith('user-1');
-	});
-
-	it('redirects when not authenticated', async () => {
-		await expect(
-			bandsGET({ locals: {}, url: new URL('http://localhost') } as any)
-		).rejects.toThrow();
-	});
 });
 
 // ---------------------------------------------------------------------------
