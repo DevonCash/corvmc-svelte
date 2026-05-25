@@ -35,7 +35,7 @@
 					{:else if title}
 						<Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
 					{/if}
-					<Dialog.Close class="btn btn-sm btn-ghost btn-circle">✕</Dialog.Close>
+					<Dialog.Close class="btn btn-sm btn-outline btn-circle">✕</Dialog.Close>
 				</div>
 
 				{@render children()}

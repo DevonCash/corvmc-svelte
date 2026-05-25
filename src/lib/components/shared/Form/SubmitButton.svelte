@@ -50,9 +50,7 @@
 	{/if}
 	<button
 		type={isLastStep ? 'submit' : 'button'}
-		class="btn {className}"
-		class:btn-success={ctx.status === 'success'}
-		class:btn-error={ctx.status === 'error'}
+		class="btn {className} {ctx.status === 'success' ? 'btn-success' : ''} {ctx.status === 'error' ? 'btn-error' : ''}"
 		disabled={isDisabled}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}

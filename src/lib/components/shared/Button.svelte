@@ -3,19 +3,14 @@
 	import { Button as BitsButton, Tooltip } from 'bits-ui';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
+	import clsx from 'clsx';
 
 	type Status = 'idle' | 'pending' | 'success' | 'error';
 
 	let {
 		href,
 		type,
-		label,
 		title,
-		icon,
-		shortcut,
-		status = 'idle',
-		successLabel = 'Done',
-		errorLabel = 'Error',
 		disabled = false,
 		class: className = 'btn-primary',
 		children,
@@ -23,73 +18,26 @@
 	}: {
 		href?: string;
 		type?: 'button' | 'submit' | 'reset';
-		label?: string;
 		title?: string;
-		icon?: Snippet;
-		shortcut?: string;
-		status?: Status;
-		successLabel?: string;
-		errorLabel?: string;
 		disabled?: boolean;
 		class?: string;
 		children?: Snippet;
 		[key: string]: unknown;
 	} = $props();
-
-	let keys = useShortcut(
-		() => shortcut,
-		() => {
-			if (!disabled && status !== 'pending') {
-				(rest.onclick as (() => void) | undefined)?.();
-			}
-		}
-	);
-
-	let statusClass = $derived(
-		status === 'success' ? 'btn-success' : status === 'error' ? 'btn-error' : ''
-	);
 </script>
 
-{#snippet buttonContent()}
-	{#if children}
-		{@render children()}
-	{:else if status === 'pending'}
-		<span class="loading loading-sm loading-spinner"></span>
-		{label}
-	{:else if status === 'success'}
-		<IconCheck size={20} />
-		{successLabel}
-	{:else if status === 'error'}
-		<IconX size={20} />
-		{errorLabel}
-	{:else}
-		{#if keys.modHeld && keys.parsed}
-			<kbd class="kbd kbd-sm text-base-content">{shortcutLabel(keys.parsed)}</kbd>
-		{:else if icon}
-			{@render icon()}
-		{/if}
-		{label}
-	{/if}
+{#snippet renderButton()}
+	<BitsButton.Root {href} {disabled} class={clsx('btn', className)} {...rest}>
+		{@render children?.()}
+	</BitsButton.Root>
 {/snippet}
 
-{#snippet renderButton(extraProps?: Record<string, unknown>)}
-	{#if href}
-		<BitsButton.Root {href} {disabled} class="btn {statusClass || className}" {...extraProps} {...rest}>
-			{@render buttonContent()}
-		</BitsButton.Root>
-	{:else}
-		<BitsButton.Root {type} {disabled} class="btn {statusClass || className}" {...extraProps} {...rest}>
-			{@render buttonContent()}
-		</BitsButton.Root>
-	{/if}
-{/snippet}
-
-{#if title}
+{#if !title}
+	{@render renderButton()}
+{:else}
 	<Tooltip.Root>
 		<Tooltip.Trigger>
-			{#snippet child({ props })}
-				{@render renderButton(props)}
-			{/snippet}
+			{@render renderButton()}
 		</Tooltip.Trigger>
 		<Tooltip.Portal>
 			<Tooltip.Content
@@ -101,7 +49,4 @@
 			</Tooltip.Content>
 		</Tooltip.Portal>
 	</Tooltip.Root>
-{:else}
-	{@render renderButton()}
 {/if}
-

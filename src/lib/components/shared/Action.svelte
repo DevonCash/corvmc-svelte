@@ -7,6 +7,7 @@
 	import Button from './Button.svelte';
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
+	import { IconCheck, IconX } from '@tabler/icons-svelte';
 
 	// ---------------------------------------------------------------------------
 	// Props
@@ -77,7 +78,7 @@
 	// ---------------------------------------------------------------------------
 
 	const isForm = $derived(typeof action !== 'function');
-	const hasModal = $derived(isForm || !!body || (!!formSnippet && !confirm));
+	const hasModal = $derived(isForm || !!body || !!confirm);
 
 	// ---------------------------------------------------------------------------
 	// Shared state
@@ -104,35 +105,24 @@
 			const result = await (action as () => Promise<unknown>)();
 			await minDelay;
 			dialogOpen = false;
-			if (typeof onsuccess === 'function') onsuccess(result);
-			if (successToast) toast.success(successToast);
+			onsuccess?.(result);
+			toast.success(successToast ?? `${label} successful`);
 			status = 'success';
 		} catch (err) {
-			console.error('[Action] action failed:', err);
 			await minDelay;
-			if (typeof onfailure === 'function') onfailure(err);
-			else errorBoundary?.reportError(err);
+			onfailure?.(err);
 			status = 'error';
+			console.error('[Action] action failed:', err);
+			throw err;
+		} finally {
+			setTimeout(() => {
+				status = 'idle';
+			}, flashDuration);
 		}
-
-		setTimeout(() => {
-			status = 'idle';
-		}, flashDuration);
 	}
 
 	function handleClick() {
-		if (hasModal) {
-			dialogOpen = true;
-		} else if (confirm) {
-			dialogOpen = true;
-		} else {
-			run();
-		}
-	}
-
-	function handleConfirm() {
-		dialogOpen = false;
-		run();
+		hasModal ? (dialogOpen = true) : run();
 	}
 
 	function handleFormSuccess(result?: unknown) {
@@ -152,56 +142,54 @@
 	<Button
 		{label}
 		{icon}
-		{shortcut}
-		{status}
-		{successLabel}
-		{errorLabel}
 		disabled={disabled || status === 'pending'}
 		onclick={handleClick}
 		class={className}
 		{...rest}
-	/>
+	>
+		{#if status === 'success'}
+			<IconCheck size={16} />
+			{successLabel}
+		{:else if status === 'error'}
+			<IconX size={16} />
+			{errorLabel}
+		{:else if status === 'pending'}
+			<span class="loading loading-spinner"></span>
+			{label}
+		{:else}
+			{@render icon?.()}
+			{label}
+		{/if}
+	</Button>
 {/if}
 
-{#if confirm || formSnippet || body}
+{#if hasModal}
 	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
 		{#if body}
 			{@render body({ close, run, status })}
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" variant="ghost" onclick={close} label="Close"></Button>
-				<Button
-					type="button"
+				<Button type="button" class="btn-outline" onclick={close}>Dismiss</Button>
+				<Button type="button" variant="primary" onclick={run}>
+					{@render icon?.()}
 					{label}
-					class={submitClass}
-					variant="primary"
-					onclick={() => {
-						run();
-						close();
-					}}
-				/>
+				</Button>
 			</div>
 		{:else if formSnippet}
 			<Form
+				class="space-y-4"
 				remote={action as RemoteForm<any, any>}
 				{successToast}
-				onsuccess={(result) => {
-					dialogOpen = false;
-					onsuccess?.(result);
-				}}
-				onfailure={(issues) => {
-					onfailure?.(issues);
-				}}
+				onsuccess={handleFormSuccess}
+				onfailure={handleFormFailure}
 			>
-				<div class="space-y-4">
-					{@render formSnippet?.({ close })}
-					{#if !noFooter}
-						<div class="flex justify-end pt-2">
-							<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
-						</div>
-					{/if}
-				</div>
+				{@render formSnippet?.({ close })}
+				{#if !noFooter}
+					<div class="flex justify-end pt-2">
+						<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
+					</div>
+				{/if}
 			</Form>
 		{/if}
 	</Modal>
