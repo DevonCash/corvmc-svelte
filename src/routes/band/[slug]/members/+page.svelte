@@ -1,17 +1,18 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		searchBandUsers as searchUsers,
+		getBandMembersList,
 		inviteMember,
 		removeMember,
 		revokeInvitation,
@@ -33,6 +34,8 @@
 
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');
+
+	let membersResult = $derived(getBandMembersList(data.band.id));
 
 	// Invite form state
 	let showInviteModal = $state(false);
@@ -56,6 +59,10 @@
 			getPlatformInvites().then((r) => (platformInvites = r));
 		}
 	});
+
+	function refreshMembers() {
+		void getBandMembersList(data.band.id).refresh();
+	}
 
 	const looksLikeEmail = $derived(searchQuery.includes('@') && searchQuery.includes('.'));
 
@@ -93,142 +100,155 @@
 		{/if}
 	</PageHeader>
 <PageContent width="2xl">
-	<!-- Active members -->
-	<section>
-		<h2 class="mb-3 text-lg font-semibold">Active Members ({data.active.length})</h2>
-		<DataTable data={data.active} gridClass="grid grid-cols-1 gap-2" empty="No active members.">
-			{#snippet card(member)}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body flex-row items-center justify-between py-3">
-						<div class="flex items-center gap-3">
-							<div class="placeholder avatar">
-								<div class="w-8 rounded-full bg-neutral text-neutral-content">
-									<span class="text-xs">{member.userName?.charAt(0).toUpperCase() ?? '?'}</span>
+	{#await membersResult}
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:then { active, pending }}
+		<!-- Active members -->
+		<section>
+			<h2 class="mb-3 text-lg font-semibold">Active Members ({active.length})</h2>
+			{#if active.length === 0}
+				<EmptyState message="No active members." />
+			{:else}
+				<div class="grid grid-cols-1 gap-2">
+					{#each active as member (member.id)}
+						<div class="card bg-base-100 shadow">
+							<div class="card-body flex-row items-center justify-between py-3">
+								<div class="flex items-center gap-3">
+									<div class="placeholder avatar">
+										<div class="w-8 rounded-full bg-neutral text-neutral-content">
+											<span class="text-xs">{member.userName?.charAt(0).toUpperCase() ?? '?'}</span>
+										</div>
+									</div>
+									<div>
+										<p class="font-medium">{member.userName}</p>
+										<p class="text-xs opacity-60">
+											{member.userEmail}
+											{#if member.position}
+												&middot; {member.position}
+											{/if}
+										</p>
+									</div>
+								</div>
+								<div class="flex items-center gap-2">
+									<StatusBadge status={member.role} />
+									{#if (isOwner || isAdmin) && member.role !== 'owner'}
+										{@const remove = removeMember.for(member.id)}
+										<Form
+											remote={remove}
+											onsuccess={() => { toast.success('Member removed'); refreshMembers(); }}
+											onfailure={() => toast.error('Failed to remove')}
+										>
+											<input {...removeFields.memberId.as('hidden', member.id)} />
+											<SubmitButton label="Remove" class="btn-ghost btn-xs" />
+										</Form>
+									{/if}
+									{#if isOwner && member.role !== 'owner'}
+										<Button
+											class="btn-ghost btn-xs"
+											onclick={() => {
+												transferTarget = { userId: member.userId, name: member.userName ?? '' };
+												showTransferModal = true;
+											}}
+										>
+											Transfer
+										</Button>
+									{/if}
 								</div>
 							</div>
-							<div>
-								<p class="font-medium">{member.userName}</p>
-								<p class="text-xs opacity-60">
-									{member.userEmail}
-									{#if member.position}
-										&middot; {member.position}
-									{/if}
-								</p>
-							</div>
 						</div>
-						<div class="flex items-center gap-2">
-							<StatusBadge status={member.role} />
-							{#if (isOwner || isAdmin) && member.role !== 'owner'}
-								{@const remove = removeMember.for(member.id)}
-								<Form
-									remote={remove}
-									onsuccess={() => { toast.success('Member removed'); invalidateAll(); }}
-									onfailure={() => toast.error('Failed to remove')}
-								>
-									<input {...removeFields.memberId.as('hidden', member.id)} />
-									<SubmitButton label="Remove" class="btn-ghost btn-xs" />
-								</Form>
-							{/if}
-							{#if isOwner && member.role !== 'owner'}
-								<Button
-									class="btn-ghost btn-xs"
-									onclick={() => {
-										transferTarget = { userId: member.userId, name: member.userName ?? '' };
-										showTransferModal = true;
-									}}
-								>
-									Transfer
-								</Button>
-							{/if}
-						</div>
-					</div>
+					{/each}
 				</div>
-			{/snippet}
-		</DataTable>
-	</section>
-
-	<!-- Pending invitations -->
-	{#if data.pending.length > 0}
-		<section>
-			<h2 class="mb-3 text-lg font-semibold">Pending Invitations ({data.pending.length})</h2>
-			<DataTable data={data.pending} gridClass="grid grid-cols-1 gap-2" empty="No pending invitations.">
-				{#snippet card(invite)}
-					<div class="card bg-base-100 shadow">
-						<div class="card-body flex-row items-center justify-between py-3">
-							<div>
-								<p class="font-medium">{invite.userName}</p>
-								<p class="text-xs opacity-60">
-									{invite.userEmail} &middot; Invited as {invite.role}
-									{#if invite.position}
-										&middot; {invite.position}
-									{/if}
-								</p>
-							</div>
-							{#if isOwner || isAdmin}
-								{@const revoke = revokeInvitation.for(invite.id)}
-								<Form
-									remote={revoke}
-									onsuccess={() => { toast.success('Invitation revoked'); invalidateAll(); }}
-									onfailure={() => toast.error('Failed to revoke')}
-								>
-									<input {...revokeFields.memberId.as('hidden', invite.id)} />
-									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
-								</Form>
-							{/if}
-						</div>
-					</div>
-				{/snippet}
-			</DataTable>
+			{/if}
 		</section>
-	{/if}
 
-	<!-- Platform invites (awaiting signup) -->
-	{#if (isOwner || isAdmin) && platformInvites && platformInvites.length > 0}
-		<section>
-			<h2 class="mb-3 text-lg font-semibold">Awaiting Signup ({platformInvites.filter((i) => i.status === 'pending').length})</h2>
-			<DataTable data={platformInvites.filter((i) => i.status === 'pending')} gridClass="grid grid-cols-1 gap-2" empty="No pending email invites.">
-				{#snippet card(invite)}
-					<div class="card bg-base-100 shadow">
-						<div class="card-body flex-row items-center justify-between py-3">
-							<div>
-								<p class="font-medium">{invite.email}</p>
-								<p class="text-xs opacity-60">
-									Invited as {invite.role}
-									{#if invite.position}
-										&middot; {invite.position}
-									{/if}
-									&middot; by {invite.invitedByName}
-								</p>
-							</div>
-							<div class="flex items-center gap-2">
-								<Badge variant="warning">awaiting signup</Badge>
-								<Form
-									remote={revokePlatformInviteRemote}
-									onsuccess={() => {
-										toast.success('Invite revoked');
-										getPlatformInvites().then((r) => (platformInvites = r));
-									}}
-									onfailure={() => toast.error('Failed to revoke')}
-								>
-									<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
-									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
-								</Form>
+		<!-- Pending invitations -->
+		{#if pending.length > 0}
+			<section>
+				<h2 class="mb-3 text-lg font-semibold">Pending Invitations ({pending.length})</h2>
+				<div class="grid grid-cols-1 gap-2">
+					{#each pending as invite (invite.id)}
+						<div class="card bg-base-100 shadow">
+							<div class="card-body flex-row items-center justify-between py-3">
+								<div>
+									<p class="font-medium">{invite.userName}</p>
+									<p class="text-xs opacity-60">
+										{invite.userEmail} &middot; Invited as {invite.role}
+										{#if invite.position}
+											&middot; {invite.position}
+										{/if}
+									</p>
+								</div>
+								{#if isOwner || isAdmin}
+									{@const revoke = revokeInvitation.for(invite.id)}
+									<Form
+										remote={revoke}
+										onsuccess={() => { toast.success('Invitation revoked'); refreshMembers(); }}
+										onfailure={() => toast.error('Failed to revoke')}
+									>
+										<input {...revokeFields.memberId.as('hidden', invite.id)} />
+										<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+									</Form>
+								{/if}
 							</div>
 						</div>
-					</div>
-				{/snippet}
-			</DataTable>
-		</section>
-	{/if}
+					{/each}
+				</div>
+			</section>
+		{/if}
 
-	<!-- Leave band (non-owners) -->
-	{#if !isOwner && data.userRole !== 'staff'}
-		<div class="pt-4">
-			<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
-				Leave Band
-			</Button>
-		</div>
-	{/if}
+		<!-- Platform invites (awaiting signup) -->
+		{#if (isOwner || isAdmin) && platformInvites && platformInvites.length > 0}
+			{@const pendingPlatform = platformInvites.filter((i) => i.status === 'pending')}
+			{#if pendingPlatform.length > 0}
+				<section>
+					<h2 class="mb-3 text-lg font-semibold">Awaiting Signup ({pendingPlatform.length})</h2>
+					<div class="grid grid-cols-1 gap-2">
+						{#each pendingPlatform as invite (invite.id)}
+							<div class="card bg-base-100 shadow">
+								<div class="card-body flex-row items-center justify-between py-3">
+									<div>
+										<p class="font-medium">{invite.email}</p>
+										<p class="text-xs opacity-60">
+											Invited as {invite.role}
+											{#if invite.position}
+												&middot; {invite.position}
+											{/if}
+											&middot; by {invite.invitedByName}
+										</p>
+									</div>
+									<div class="flex items-center gap-2">
+										<Badge variant="warning">awaiting signup</Badge>
+										<Form
+											remote={revokePlatformInviteRemote}
+											onsuccess={() => {
+												toast.success('Invite revoked');
+												getPlatformInvites().then((r) => (platformInvites = r));
+											}}
+											onfailure={() => toast.error('Failed to revoke')}
+										>
+											<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
+											<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+										</Form>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</section>
+			{/if}
+		{/if}
+
+		<!-- Leave band (non-owners) -->
+		{#if !isOwner && data.userRole !== 'staff'}
+			<div class="pt-4">
+				<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
+					Leave Band
+				</Button>
+			</div>
+		{/if}
+	{/await}
 </PageContent>
 
 <!-- Invite Member Modal -->
@@ -259,7 +279,7 @@
 				showInviteModal = false;
 				selectedUser = null;
 				searchQuery = '';
-				invalidateAll();
+				refreshMembers();
 			}}
 			onfailure={() => toast.error('Failed to send invitation')}
 		>
@@ -332,7 +352,7 @@
 				toast.success('Invitation sent');
 				showInviteModal = false;
 				searchQuery = '';
-				invalidateAll();
+				refreshMembers();
 				getPlatformInvites().then((r) => (platformInvites = r));
 			}}
 			onfailure={() => toast.error('Failed to send invitation')}
@@ -365,7 +385,7 @@
 			onsuccess={() => {
 				toast.success('Ownership transferred');
 				showTransferModal = false;
-				invalidateAll();
+				refreshMembers();
 			}}
 			onfailure={() => toast.error('Failed to transfer')}
 		>

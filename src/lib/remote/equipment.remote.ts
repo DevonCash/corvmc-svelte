@@ -104,6 +104,58 @@ export const getStaffLoans = query(staffLoansFilters, async (filters) => {
 });
 
 // ---------------------------------------------------------------------------
+// Queries — Member
+// ---------------------------------------------------------------------------
+
+const memberEquipmentFilters = z.object({
+	search: z.string().optional(),
+	categoryId: z.string().optional()
+});
+
+export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
+	const currentUser = requireUser();
+	const { rows } = await listEquipment({
+		search: filters.search || undefined,
+		categoryId: filters.categoryId || undefined,
+		status: 'available'
+	});
+	return rows.map((e) => ({
+		id: e.id,
+		name: e.name,
+		description: e.description,
+		categoryId: e.categoryId,
+		categoryName: e.category.name,
+		pricingTier: e.category.pricingTier,
+		condition: e.condition,
+		totalQuantity: e.totalQuantity,
+		availableQuantity: e.availableQuantity
+	}));
+});
+
+export const getMemberEquipmentMeta = query(z.void(), async () => {
+	const currentUser = requireUser();
+	const { getBalance } = await import('$lib/server/finance/credit-service');
+	const { getSubscription } = await import('$lib/server/finance/subscription-service');
+
+	const [categories, creditBalance] = await Promise.all([
+		listCategories(),
+		getBalance(currentUser.id, 'equipment_credits')
+	]);
+
+	let isSustainingMember = false;
+	if (currentUser.stripeId) {
+		const sub = await getSubscription(currentUser.stripeId);
+		isSustainingMember = sub !== null;
+	}
+
+	return {
+		categories: categories.map((c) => ({ id: c.id, name: c.name, pricingTier: c.pricingTier })),
+		creditBalance,
+		isSustainingMember
+	};
+});
+
+// ---------------------------------------------------------------------------
 // Forms — Equipment
 // ---------------------------------------------------------------------------
 

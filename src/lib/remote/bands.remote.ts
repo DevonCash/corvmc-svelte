@@ -4,7 +4,7 @@ import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll } from '$lib/server/band/band-service';
 import {
@@ -32,6 +32,7 @@ import {
 } from '$lib/server/band/platform-invite-service';
 import {
 	requireBandBySlug,
+	requireBandMember,
 	requireBandAdmin,
 	requireBandOwner
 } from '$lib/server/band/band-context';
@@ -115,6 +116,47 @@ export const searchBandUsers = query(z.string(), async (q) => {
 export const getBandPlatformInvites = query(z.void(), async () => {
 	const { band } = await requireBandAdmin();
 	return listForBand(band.id);
+});
+
+// ===========================================================================
+// Queries — Band-context (member-facing)
+// ===========================================================================
+
+export const getBandUpcoming = query(z.string(), async (bandId) => {
+	const { band } = await requireBandMember();
+	if (band.id !== bandId) error(403, 'Not authorized');
+	const now = new Date();
+	return db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			notes: reservation.notes,
+			bookedByName: user.name
+		})
+		.from(reservation)
+		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(
+			and(
+				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerId, bandId),
+				gt(reservation.startsAt, now),
+				ne(reservation.status, 'cancelled')
+			)
+		)
+		.orderBy(reservation.startsAt)
+		.limit(10);
+});
+
+export const getBandMembersList = query(z.string(), async (bandId) => {
+	const { band } = await requireBandMember();
+	if (band.id !== bandId) error(403, 'Not authorized');
+	const members = await getMembers(bandId);
+	return {
+		active: members.filter((m) => m.status === 'active'),
+		pending: members.filter((m) => m.status === 'pending')
+	};
 });
 
 // ===========================================================================

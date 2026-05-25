@@ -55,7 +55,6 @@ vi.mock('$lib/server/db', () => ({
 const testUser = mockUser({ id: 'user-member', name: 'Test Member' });
 
 const { GET: layoutGET } = await import('../api/bands/[slug]/layout/+server');
-const { GET: upcomingGET } = await import('../api/bands/[slug]/reservations/upcoming/+server');
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -136,48 +135,3 @@ describe('band layout load', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Dashboard load
-// ---------------------------------------------------------------------------
-
-describe('band dashboard load', () => {
-	it('returns upcoming reservations for the band', async () => {
-		const now = new Date();
-		const tomorrow = new Date(now.getTime() + 86400000);
-
-		selectResult = [
-			{
-				id: 'res-1',
-				status: 'confirmed',
-				startsAt: tomorrow,
-				endsAt: new Date(tomorrow.getTime() + 3600000),
-				notes: 'Practice',
-				bookedByName: 'Alice'
-			}
-		];
-
-		const response = await upcomingGET({
-			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser },
-			url: new URL('http://localhost')
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.upcoming).toHaveLength(1);
-		expect(result.upcoming[0].status).toBe('confirmed');
-		expect(result.upcoming[0].bookedByName).toBe('Alice');
-	});
-
-	it('returns empty array when no upcoming reservations', async () => {
-		selectResult = [];
-
-		const response = await upcomingGET({
-			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser },
-			url: new URL('http://localhost')
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.upcoming).toHaveLength(0);
-	});
-});

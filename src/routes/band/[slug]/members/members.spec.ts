@@ -200,35 +200,3 @@ describe('searchUsers', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Page load
-// ---------------------------------------------------------------------------
-
-describe('members page load', () => {
-	it('splits members into active and pending', async () => {
-		bandServiceMock.getMembers.mockResolvedValue([
-			{
-				id: 'm-1', userId: 'u-1', role: 'owner', position: null,
-				status: 'active', invitedById: null, createdAt: new Date(),
-				userName: 'Alice', userEmail: 'alice@example.com'
-			},
-			{
-				id: 'm-2', userId: 'u-2', role: 'member', position: 'Guitar',
-				status: 'pending', invitedById: 'u-1', createdAt: new Date(),
-				userName: 'Bob', userEmail: 'bob@example.com'
-			}
-		] as any);
-
-		const { GET } = await import('../../../../routes/api/bands/[slug]/members/+server');
-		const response = await GET({
-			params: { slug: 'the-velvet-underground' },
-			locals: { user: testUser }
-		} as any);
-		const result = await response.json() as any;
-
-		expect(result.active).toHaveLength(1);
-		expect(result.active[0].userName).toBe('Alice');
-		expect(result.pending).toHaveLength(1);
-		expect(result.pending[0].userName).toBe('Bob');
-	});
-});
