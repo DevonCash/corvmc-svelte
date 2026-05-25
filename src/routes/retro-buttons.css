@@ -6,33 +6,21 @@
 .btn {
 	--shadow: var(--depth-2);
 	--shadow-size: var(--shadow);
-	--shadow-color: color-mix(in oklch, var(--btn-color, var(--cmc-brown)) 50%, black);
+	--shadow-color: color-mix(in oklch, var(--btn-color, var(--cmc-brown)) 80%, black);
 	border-width: 2.5px;
 	border-color: var(--shadow-color);
 	box-shadow: 0 var(--shadow-size) 0 var(--shadow-color);
-	transform: translate(0, calc(-1 * var(--shadow-size)));
+	transform: translateY(calc(-1 * var(--shadow-size)));
 	transition:
 		transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1),
-		box-shadow 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
+		box-shadow 170ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
+
 
 .btn:disabled {
 	--shadow: calc(var(--shadow) / 2);
 }
 
-.btn::before {
-	z-index: -2;
-	content: '';
-	box-sizing: border-box;
-	width: calc(100% + var(--shadow-size));
-	height: calc(100% + var(--shadow-size));
-	position: absolute;
-	top: 0;
-	right: 0;
-	transition:
-		width 180ms cubic-bezier(0.2, 0.7, 0.3, 1),
-		height 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
-}
 
 .btn:hover,
 .btn:focus-visible {
@@ -69,11 +57,31 @@
 	filter: brightness(0.94);
 }
 
-.depth-0 { --shadow: var(--depth-0); }
-.depth-1 { --shadow: var(--depth-1); }
-.depth-2 { --shadow: var(--depth-2); }
-.depth-3 { --shadow: var(--depth-3); }
-.depth-4 { --shadow: var(--depth-4); }
+.depth-0 {
+	--shadow: var(--depth-0);
+}
+.depth-1 {
+	--shadow: var(--depth-1);
+}
+.depth-2 {
+	--shadow: var(--depth-2);
+}
+.depth-3 {
+	--shadow: var(--depth-3);
+}
+.depth-4 {
+	--shadow: var(--depth-4);
+}
+
+.btn-outline {
+	background: var(--color-base-100);
+}
+
+.btn-outline:active,
+.btn-outline:hover {
+	background: var(--btn-color);
+	color: var(--btn-fg);
+}
 
 .btn-ghost {
 	background: var(--color-base-100);
