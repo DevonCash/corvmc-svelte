@@ -36,6 +36,7 @@
 		<button
 			class="join-item btn btn-sm"
 			class:btn-primary={activeTab === 'members'}
+			class:latched={activeTab=="members"}
 			onclick={() => (activeTab = 'members')}
 		>
 			Members ({members.length})
@@ -43,6 +44,7 @@
 		<button
 			class="join-item btn btn-sm"
 			class:btn-primary={activeTab === 'bands'}
+			class:latched={activeTab === 'bands'}
 			onclick={() => (activeTab = 'bands')}
 		>
 			Bands ({bands.length})
