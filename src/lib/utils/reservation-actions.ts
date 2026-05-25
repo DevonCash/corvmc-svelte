@@ -9,14 +9,14 @@ export type ReservationActionKey =
 
 export function visibleActions(
 	status: string,
-	startsAt: string,
-	endsAt: string,
+	startsAt: Date,
+	endsAt: Date,
 	stripePaymentRecordId?: string | null,
 	now: Date = new Date()
 ): Set<ReservationActionKey> {
 	const actions = new Set<ReservationActionKey>();
-	const start = new Date(startsAt);
-	const end = new Date(endsAt);
+	const start = startsAt;
+	const end = endsAt;
 
 	if (status === 'scheduled') {
 		actions.add('confirm');

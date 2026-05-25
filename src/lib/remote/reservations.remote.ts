@@ -3,11 +3,11 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { reservation, type Reservation } from '$lib/server/db/schema/reservation';
+import { reservation, type Reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql, isNull } from 'drizzle-orm';
+import { like, or, eq, ne, and, lt, gt, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
 import { describeFrequency } from '$lib/server/reservation/rrule-helpers';
-import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
+import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
 	getConflictDetails,
@@ -49,6 +49,7 @@ import {
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 
 // ===========================================================================
 // Queries
@@ -383,6 +384,130 @@ export const getBandMembershipStatus = query(z.void(), async () => {
 		.limit(1);
 
 	return { hasSustainingMember: sustaining != null };
+});
+
+// ===========================================================================
+// Queries — staff reservations
+// ===========================================================================
+
+const staffReservationFiltersSchema = z.object({
+	tab: z.enum(['upcoming', 'all']).optional(),
+	search: z.string().optional(),
+	dateFrom: z.string().optional(),
+	dateTo: z.string().optional(),
+	statusFilter: z.array(z.string()).optional(),
+	page: z.number().optional()
+});
+
+/** Staff: paginated, filtered reservation list. */
+export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
+	await requireStaff();
+
+	const now = new Date();
+	const tab = filters.tab ?? 'upcoming';
+	const conditions = [];
+
+	if (tab === 'upcoming') {
+		conditions.push(gt(reservation.endsAt, now));
+		conditions.push(ne(reservation.status, 'cancelled'));
+	}
+
+	if (filters.statusFilter && filters.statusFilter.length > 0) {
+		const valid = filters.statusFilter.filter(
+			(s): s is ReservationStatus => (reservationStatuses as readonly string[]).includes(s)
+		);
+		if (valid.length > 0) conditions.push(inArray(reservation.status, valid));
+	}
+
+	if (filters.dateFrom) {
+		conditions.push(gt(reservation.startsAt, new Date(filters.dateFrom + 'T00:00:00')));
+	}
+	if (filters.dateTo) {
+		conditions.push(lt(reservation.startsAt, new Date(filters.dateTo + 'T23:59:59')));
+	}
+
+	if (filters.search) {
+		const pattern = `%${filters.search}%`;
+		conditions.push(or(like(user.name, pattern), like(user.email, pattern)));
+	}
+
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const dataQ = db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			bookerType: reservation.bookerType,
+			notes: reservation.notes,
+			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			createdByUserId: reservation.createdByUserId,
+			recurringSeriesId: reservation.recurringSeriesId,
+			memberName: user.name,
+			memberEmail: user.email,
+			memberPronouns: user.pronouns,
+			memberRole: primaryRoleFor(user.id)
+		})
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(where)
+		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
+		.$dynamic();
+
+	const countQ = db
+		.select({ count: count() })
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(where);
+
+	return paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 50 });
+});
+
+/** Staff: tab badge counts for reservations. */
+export const getReservationCounts = query(async () => {
+	await requireStaff();
+	const now = new Date();
+
+	const [upcomingCount] = await db
+		.select({ count: count() })
+		.from(reservation)
+		.where(and(gt(reservation.endsAt, now), ne(reservation.status, 'cancelled')));
+
+	const [allCount] = await db.select({ count: count() }).from(reservation);
+
+	return { upcoming: upcomingCount.count, all: allCount.count };
+});
+
+/** Staff: unresolved reservations (past end time, still scheduled). */
+export const getUnresolvedReservations = query(async () => {
+	await requireStaff();
+	const now = new Date();
+
+	return db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			createdByUserId: reservation.createdByUserId,
+			notes: reservation.notes,
+			memberName: user.name,
+			memberEmail: user.email,
+			memberPronouns: user.pronouns,
+			memberRole: primaryRoleFor(user.id)
+		})
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(and(eq(reservation.status, 'scheduled'), lt(reservation.endsAt, now)))
+		.orderBy(asc(reservation.endsAt))
+		.limit(100);
+});
+
+/** Staff: current hourly rate for reservation pricing. */
+export const getHourlyRate = query(async () => {
+	await requireStaff();
+	return config<number>('reservation.hourlyRateCents');
 });
 
 // ===========================================================================

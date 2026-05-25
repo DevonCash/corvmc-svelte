@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { Reservation } from '$lib/server/reservation';
 	import { format, formatDistanceStrict, formatDistanceToNow } from 'date-fns';
 
 	let {
@@ -7,7 +6,7 @@
 		member,
 		class: className = ''
 	}: {
-		reservation: Reservation & { price?: number };
+		reservation: { startsAt: Date; endsAt: Date; notes?: string | null; price?: number; status?: string; paidAt?: Date | null; refundedAt?: Date | null };
 		member?: { name: string };
 		class?: string;
 	} = $props();

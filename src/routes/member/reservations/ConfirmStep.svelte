@@ -4,14 +4,13 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/types/dates';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
 		reservation,
 		fields
 	}: {
-		reservation?: { id: string; startsAt: ISODateString; endsAt: ISODateString };
+		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields: { id?: RemoteFormField<string>; skipPayment: RemoteFormField<string> };
 	} = $props();
 
@@ -22,8 +21,7 @@
 	let el: HTMLDivElement;
 	let skipPaymentInput: HTMLInputElement;
 
-	function extractTimeFields(iso: string) {
-		const d = new Date(iso);
+	function extractTimeFields(d: Date) {
 		const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const time = d.toLocaleTimeString('en-GB', {
 			timeZone: 'America/Los_Angeles',
@@ -87,8 +85,8 @@
 					recurringFrequency = (fd.get('recurring') as string) || '';
 					const seriesEndsAt = (fd.get('seriesEndsAt') as string) || undefined;
 					if (date && startTime) {
-						const startIso = `${date}T${startTime}:00` as ISODateString;
-						const endIso = (endTime ? `${date}T${endTime}:00` : startIso) as ISODateString;
+						const startIso = new Date(`${date}T${startTime}:00`);
+						const endIso = endTime ? new Date(`${date}T${endTime}:00`) : startIso;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
 					}
@@ -100,7 +98,7 @@
 								: recurringFrequency === 'biweekly'
 									? 'Every 2 weeks'
 									: 'Monthly';
-						scheduleLabel = formatScheduleLabel(freqLabel, `${date}T${startTime}:00` as ISODateString);
+						scheduleLabel = formatScheduleLabel(freqLabel, new Date(`${date}T${startTime}:00`));
 						recurringPreview = null;
 						previewRecurringInstances({
 							date,

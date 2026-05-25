@@ -4,8 +4,6 @@
 	import { payForReservation } from '$lib/remote/reservations.remote';
 	import ConfirmStep from '../../../../routes/member/reservations/ConfirmStep.svelte';
 	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
-	import type { Reservation } from '$lib/server/reservation';
-
 	const { fields } = payForReservation;
 
 	let {
@@ -14,7 +12,7 @@
 		onsuccess,
 		...rest
 	}: {
-		reservation: Reservation;
+		reservation: { id: string; startsAt: Date; endsAt: Date };
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;

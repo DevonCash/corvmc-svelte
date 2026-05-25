@@ -10,7 +10,7 @@
 		fields,
 		precedingSteps = reservation ? 1 : 2
 	}: {
-		reservation?: { id: string; startsAt: string; endsAt: string };
+		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields: { id?: RemoteFormField<string>; coverFees: RemoteFormField<string> };
 		precedingSteps?: number;
 	} = $props();
@@ -33,8 +33,7 @@
 		isSustainingMember: boolean;
 	} | null>(null);
 
-	function extractTimeFields(iso: string) {
-		const d = new Date(iso);
+	function extractTimeFields(d: Date) {
 		// Format in Pacific time to match the create flow
 		const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 		const time = d.toLocaleTimeString('en-GB', {

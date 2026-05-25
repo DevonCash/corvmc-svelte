@@ -4,24 +4,30 @@
 	let {
 		page,
 		totalPages,
-		buildHref
+		buildHref,
+		onpage
 	}: {
 		page: number;
 		totalPages: number;
-		buildHref: (page: number) => string;
+		buildHref?: (page: number) => string;
+		onpage?: (page: number) => void;
 	} = $props();
+
+	function nav(p: number) {
+		return onpage ? { onclick: () => onpage(p) } : { href: buildHref!(p) };
+	}
 </script>
 
 {#if totalPages > 1}
 	<div class="flex justify-center">
 		<div class="join">
 			{#if page > 1}
-				<Button href={buildHref(page - 1)} class="join-item">«</Button>
+				<Button {...nav(page - 1)} class="join-item">«</Button>
 			{/if}
 
 			{#each Array.from({ length: totalPages }, (_, i) => i + 1) as p (p)}
 				<Button
-					href={buildHref(p)}
+					{...nav(p)}
 					class="join-item {p === page ? 'btn-active' : ''}"
 				>
 					{p}
@@ -29,7 +35,7 @@
 			{/each}
 
 			{#if page < totalPages}
-				<Button href={buildHref(page + 1)} class="join-item">»</Button>
+				<Button {...nav(page + 1)} class="join-item">»</Button>
 			{/if}
 		</div>
 	</div>

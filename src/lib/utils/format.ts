@@ -1,43 +1,40 @@
 /**
  * Shared date, time, and currency formatting utilities.
- * All date/time functions use the America/Los_Angeles timezone
- * and accept only branded ISODateString values.
  */
 
-import { DateTime } from 'luxon';
-import type { ISODateString } from '$lib/types/dates';
-
-const TZ = 'America/Los_Angeles';
-
-function dt(iso: ISODateString): DateTime {
-	return DateTime.fromISO(iso, { zone: TZ });
-}
+import {
+	format,
+	differenceInCalendarDays,
+	getDate
+} from 'date-fns';
 
 // ---------------------------------------------------------------------------
 // Date formatting
 // ---------------------------------------------------------------------------
 
 /** Short date: "Tue, May 13" */
-export function formatDate(iso: ISODateString): string {
-	return dt(iso).toFormat('EEE, MMM d');
+export function formatDate(d: Date): string {
+	return format(d, 'EEE, MMM d');
 }
 
 /** Short date with year: "Tue, May 13, 2026" */
-export function formatDateYear(iso: ISODateString): string {
-	return dt(iso).toFormat('EEE, MMM d, yyyy');
+export function formatDateYear(d: Date): string {
+	return format(d, 'EEE, MMM d, yyyy');
 }
 
 /** Relative day label: "Today", "Tomorrow", "Next Wednesday", "in 3 weeks", "2 months ago" */
-export function relativeDay(iso: ISODateString): string {
-	const now = DateTime.now().setZone(TZ).startOf('day');
-	const target = dt(iso).startOf('day');
-	const diffDays = Math.round(target.diff(now, 'days').days);
+export function relativeDay(d: Date): string {
+	const now = new Date();
+	now.setHours(0, 0, 0, 0);
+	const target = new Date(d);
+	target.setHours(0, 0, 0, 0);
+	const diffDays = differenceInCalendarDays(target, now);
 
 	if (diffDays === 0) return 'Today';
 	if (diffDays === 1) return 'Tomorrow';
 	if (diffDays === -1) return 'Yesterday';
 
-	const dayName = dt(iso).toFormat('EEEE');
+	const dayName = format(d, 'EEEE');
 	if (diffDays > 1 && diffDays <= 7) return `This ${dayName}`;
 	if (diffDays > 7 && diffDays <= 14) return `Next ${dayName}`;
 	if (diffDays < -1 && diffDays >= -7) return `Last ${dayName}`;
@@ -55,28 +52,28 @@ export function relativeDay(iso: ISODateString): string {
 }
 
 /** Long date: "Tuesday, May 13, 2026" */
-export function fullDate(iso: ISODateString): string {
-	return dt(iso).toFormat('EEEE, MMMM d, yyyy');
+export function fullDate(d: Date): string {
+	return format(d, 'EEEE, MMMM d, yyyy');
 }
 
 /** Short uppercase weekday: "SAT" */
-export function formatDayOfWeek(iso: ISODateString): string {
-	return dt(iso).toFormat('EEE').toUpperCase();
+export function formatDayOfWeek(d: Date): string {
+	return format(d, 'EEE').toUpperCase();
 }
 
 /** Day of month number: "23" */
-export function formatDayNumber(iso: ISODateString): string {
-	return dt(iso).toFormat('d');
+export function formatDayNumber(d: Date): string {
+	return format(d, 'd');
 }
 
 /** Short uppercase month: "MAY" */
-export function formatShortMonth(iso: ISODateString): string {
-	return dt(iso).toFormat('MMM').toUpperCase();
+export function formatShortMonth(d: Date): string {
+	return format(d, 'MMM').toUpperCase();
 }
 
 /** Date + time combined: "Tue, May 13, 2:30 PM" */
-export function formatDateTime(iso: ISODateString): string {
-	return dt(iso).toFormat("EEE, MMM d, h:mm a");
+export function formatDateTime(d: Date): string {
+	return format(d, 'EEE, MMM d, h:mm a');
 }
 
 // ---------------------------------------------------------------------------
@@ -84,36 +81,36 @@ export function formatDateTime(iso: ISODateString): string {
 // ---------------------------------------------------------------------------
 
 /** Time only: "2:30 PM" */
-export function formatTime(iso: ISODateString): string {
-	return dt(iso).toFormat('h:mm a');
+export function formatTime(d: Date): string {
+	return format(d, 'h:mm a');
 }
 
 /** Time range: "2:30 PM – 5:00 PM" */
-export function formatTimeRange(startsAt: ISODateString, endsAt: ISODateString): string {
+export function formatTimeRange(startsAt: Date, endsAt: Date): string {
 	return `${formatTime(startsAt)} – ${formatTime(endsAt)}`;
 }
 
-/** ISO → local date string for date inputs: "2026-05-13" */
-export function toLocalDate(iso: ISODateString): string {
-	return dt(iso).toFormat('yyyy-MM-dd');
+/** Date → local date string for date inputs: "2026-05-13" */
+export function toLocalDate(d: Date): string {
+	return format(d, 'yyyy-MM-dd');
 }
 
-/** ISO → local 24h time for time inputs: "14:30" */
-export function toLocalTime(iso: ISODateString): string {
-	return dt(iso).toFormat('HH:mm');
+/** Date → local 24h time for time inputs: "14:30" */
+export function toLocalTime(d: Date): string {
+	return format(d, 'HH:mm');
 }
 
 // ---------------------------------------------------------------------------
 // Duration
 // ---------------------------------------------------------------------------
 
-/** Duration between two ISO timestamps in decimal hours. */
-export function durationHours(startsAt: ISODateString, endsAt: ISODateString): number {
-	return dt(endsAt).diff(dt(startsAt), 'hours').hours;
+/** Duration between two timestamps in decimal hours. */
+export function durationHours(startsAt: Date, endsAt: Date): number {
+	return (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 }
 
 /** Human-readable duration: "1 hour" or "2.5 hours" */
-export function formatDuration(startsAt: ISODateString, endsAt: ISODateString): string {
+export function formatDuration(startsAt: Date, endsAt: Date): string {
 	const h = durationHours(startsAt, endsAt);
 	return `${h} hour${h === 1 ? '' : 's'}`;
 }
@@ -133,33 +130,32 @@ export function formatDollars(cents: number): string {
 }
 
 /** Calculate amount from duration and rate, formatted: "$30.00" */
-export function formatDurationAmount(startsAt: ISODateString, endsAt: ISODateString, hourlyRateCents: number): string {
+export function formatDurationAmount(startsAt: Date, endsAt: Date, hourlyRateCents: number): string {
 	const hours = durationHours(startsAt, endsAt);
 	const cents = Math.round(hours * hourlyRateCents);
 	return formatCents(cents);
 }
 
 /** "2 hrs · $24.50" */
-export function formatDurationAndAmount(startsAt: ISODateString, endsAt: ISODateString, hourlyRateCents: number): string {
+export function formatDurationAndAmount(startsAt: Date, endsAt: Date, hourlyRateCents: number): string {
 	const h = durationHours(startsAt, endsAt);
 	const label = h === 1 ? '1 hr' : `${h} hrs`;
 	return `${label} · ${formatDurationAmount(startsAt, endsAt, hourlyRateCents)}`;
 }
 
 /** "May 3, 2026" — month, day, year without weekday */
-export function formatMonthDayYear(iso: ISODateString): string {
-	return dt(iso).toFormat('MMMM d, yyyy');
+export function formatMonthDayYear(d: Date): string {
+	return format(d, 'MMMM d, yyyy');
 }
 
 /** "Every Sunday", "Every other Tuesday", "1st Saturday of each month" */
-export function formatScheduleLabel(frequencyLabel: string, startsAtIso: ISODateString): string {
-	const d = dt(startsAtIso);
-	const dayName = d.toFormat('EEEE');
+export function formatScheduleLabel(frequencyLabel: string, startsAt: Date): string {
+	const dayName = format(startsAt, 'EEEE');
 
 	if (frequencyLabel === 'Weekly') return `Every ${dayName}`;
 	if (frequencyLabel === 'Every 2 weeks') return `Every other ${dayName}`;
 	if (frequencyLabel === 'Monthly') {
-		const dayOfMonth = d.day;
+		const dayOfMonth = getDate(startsAt);
 		const nth = Math.ceil(dayOfMonth / 7);
 		const ordinal = nth === 1 ? '1st' : nth === 2 ? '2nd' : nth === 3 ? '3rd' : `${nth}th`;
 		return `${ordinal} ${dayName} of each month`;

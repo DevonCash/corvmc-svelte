@@ -1,11 +1,9 @@
 <script lang="ts">
-	import type { Column } from '$lib/components/shared/Table/DataTable.svelte';
-	import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-	import * as Filter from '$lib/components/shared/Table/Filter';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
+	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import {
 		ConfirmReservationAction,
 		CompleteReservationAction
@@ -18,24 +16,46 @@
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import type { PageProps } from './$types';
+	import {
+		getStaffReservations,
+		getReservationCounts,
+		getUnresolvedReservations,
+		getHourlyRate
+	} from '$lib/remote/reservations.remote';
 
-	let { data }: PageProps = $props();
+	type Reservation = Awaited<ReturnType<typeof getStaffReservations>>['rows'][number];
 
-	type Reservation = (typeof data.reservations)[number];
+	let tab = $state<'upcoming' | 'all'>('upcoming');
+	let search = $state('');
+	let dateFrom = $state('');
+	let dateTo = $state('');
+	let page = $state(1);
+
+	let searchDebounced = $state('');
+	let searchTimer: ReturnType<typeof setTimeout>;
+	function onSearchInput(e: Event) {
+		search = (e.target as HTMLInputElement).value;
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			searchDebounced = search;
+			page = 1;
+		}, 300);
+	}
+
+	let filters = $derived({
+		tab,
+		search: searchDebounced || undefined,
+		dateFrom: dateFrom || undefined,
+		dateTo: dateTo || undefined,
+		page
+	});
+
+	let result = $derived(getStaffReservations(filters));
+	let counts = $derived(getReservationCounts());
+	let unresolved = $derived(getUnresolvedReservations());
+	let hourlyRate = $derived(getHourlyRate());
 
 	let resolveOpen = $state(false);
-
-	function buildPageHref(page: number): string {
-		const params = new URLSearchParams();
-		if (data.tab) params.set('tab', data.tab);
-		if (data.search) params.set('q', data.search);
-		if (data.dateFrom) params.set('from', data.dateFrom);
-		if (data.dateTo) params.set('to', data.dateTo);
-		for (const s of data.statusFilter) params.append('status', s);
-		params.set('page', String(page));
-		return `/staff/reservations?${params.toString()}`;
-	}
 
 	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
 		if (r.status === 'no_show') return { label: 'No-show', color: 'text-error', icon: IconUserX };
@@ -45,7 +65,6 @@
 				: { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
 		}
 		if (r.status === 'scheduled') return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
-		// confirmed or completed
 		return r.stripePaymentRecordId
 			? { label: 'Paid', color: 'text-success', icon: IconCheck }
 			: { label: 'Comped', color: 'text-info', icon: IconGift };
@@ -62,114 +81,187 @@
 		return label;
 	}
 
-	const columns: Column<Reservation>[] = [
-		{ key: 'status', header: '' },
-		{ key: 'startsAt', header: 'Time', sortable: true },
-		{ key: 'memberName', header: 'Reserved for', sortable: true },
-		{ key: 'stripePaymentRecordId', header: 'Payment', align: 'center' },
-		{ key: 'actions', header: ''}
-	];
+	function hasActiveFilters(): boolean {
+		return !!(searchDebounced || dateFrom || dateTo);
+	}
+
+	function clearFilters() {
+		search = '';
+		searchDebounced = '';
+		dateFrom = '';
+		dateTo = '';
+		page = 1;
+	}
 </script>
 
 <PageHeader title="Reservations">
-		<div class="flex gap-2">
+	<div class="flex gap-2">
+		{#await Promise.all([unresolved, counts])}
+			<button class="btn btn-sm btn-ghost" onclick={() => (resolveOpen = true)}>Resolve</button>
+		{:then [unresolvedData, countsData]}
 			<button
-				class="btn btn-sm {data.counts.unresolved > 0 ? 'btn-warning' : 'btn-ghost'}"
+				class="btn btn-sm {unresolvedData.length > 0 ? 'btn-warning' : 'btn-ghost'}"
 				onclick={() => (resolveOpen = true)}
 			>
 				Resolve
-				{#if data.counts.unresolved > 0}
-					<Badge>{data.counts.unresolved}</Badge>
+				{#if unresolvedData.length > 0}
+					<Badge>{unresolvedData.length}</Badge>
 				{/if}
 			</button>
-			<CreateReservation />
-		</div>
-	</PageHeader>
+		{/await}
+		<CreateReservation />
+	</div>
+</PageHeader>
 <PageContent>
-	<TabBar
-		tabs={[
-			{
-				key: 'upcoming',
-				label: 'Upcoming',
-				badge: data.counts.upcoming,
-				href: '/staff/reservations?tab=upcoming'
-			},
-			{ key: 'all', label: 'All', badge: data.counts.all, href: '/staff/reservations?tab=all' }
-		]}
-		active={data.tab}
-	/>
+	{#await counts}
+		<TabBar
+			tabs={[
+				{ key: 'upcoming', label: 'Upcoming' },
+				{ key: 'all', label: 'All' }
+			]}
+			active={tab}
+			onchange={(key) => { tab = key as 'upcoming' | 'all'; page = 1; }}
+		/>
+	{:then c}
+		<TabBar
+			tabs={[
+				{ key: 'upcoming', label: 'Upcoming', badge: c.upcoming },
+				{ key: 'all', label: 'All', badge: c.all }
+			]}
+			active={tab}
+			onchange={(key) => { tab = key as 'upcoming' | 'all'; page = 1; }}
+		/>
+	{/await}
 
-	<DataTable data={data.reservations} {columns} groupBy={dayLabel} clearHref="/staff/reservations?tab={data.tab}" empty="No reservations found"
-		pagination={{ page: data.pagination.page, totalPages: data.pagination.totalPages }} {buildPageHref}>
-		{#snippet toolbar()}
-			<input type="hidden" name="tab" value={data.tab} />
-			<Filter.Search name="q" value={data.search} placeholder="Search name or email..." />
-			<Filter.Date name="from" value={data.dateFrom ?? ''} />
-			<Filter.Date name="to" value={data.dateTo ?? ''} />
-		{/snippet}
-		{#snippet row(r)}
-			<tr
-				class="hover cursor-pointer"
-				onclick={() => (window.location.href = `/staff/reservations/${r.id}`)}
-			>
-				<td class="w-px">
-					<StatusBadge status={r.status} class='size-6'/>
-				</td>
-				<td class='w-min'>
-					<div class="flex items-center gap-1">
-						{formatTimeRange(r.startsAt, r.endsAt)}
-						{#if r.recurringSeriesId}
-							<span class="tooltip" data-tip="Recurring">
-								<IconRepeat size={14} class="text-base-content" />
-							</span>
-						{/if}
-					</div>
-					<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
-				</td>
-				<td onclick={(e) => e.stopPropagation()} style='padding-inline: 0;'>
-					<div class="flex items-center gap-1">
-						{#if r.bookerType !== 'user'}
-							<span class="tooltip" data-tip={r.bookerType}>
-								<BookerTypeIcon type={r.bookerType} size={16} />
-							</span>
-						{/if}
-						<MemberLink hideAvatar member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole, userId: r.createdByUserId }} class='p-7 px-4 w-full'/>
-					</div>
-				</td>
-				<td>
-					{#if r.bookerType === 'event'}
-						<span class="text-sm opacity-40">—</span>
-					{:else}
-						{@const ps = paymentStatus(r)}
-						<div class="flex items-center justify-center gap-1">
-							{formatDurationAmount(r.startsAt, r.endsAt, data.hourlyRateCents)}
-							<span class="tooltip" data-tip={ps.label}>
-								<ps.icon size={16} class={ps.color} />
-							</span>
-						</div>
-					{/if}
-				</td>
-				<td onclick={(e) => e.stopPropagation()}>
-					<div class="flex items-center gap-1">
-						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
-							<ConfirmReservationAction reservation={r} class="btn-ghost btn-sm latched">
-								{#snippet icon()}<IconCheck size={16} />{/snippet}
-							</ConfirmReservationAction>
-						{/if}
-						{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
-							<CompleteReservationAction reservation={r} class="btn-ghost btn-xs btn-square">
-								{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
-							</CompleteReservationAction>
-						{/if}
-					</div>
-				</td>
-			</tr>
-		{/snippet}
-	</DataTable>
+	<div class="flex flex-wrap items-end gap-2">
+		<input
+			type="text"
+			class="input input-bordered input-sm"
+			placeholder="Search name or email..."
+			value={search}
+			oninput={onSearchInput}
+		/>
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateFrom}
+			onchange={() => { page = 1; }}
+		/>
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateTo}
+			onchange={() => { page = 1; }}
+		/>
+		{#if hasActiveFilters()}
+			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
+		{/if}
+	</div>
+
+	{#await result}
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:then { rows: reservations, pagination }}
+		{#if reservations.length === 0}
+			<p class="text-center opacity-60 py-8">No reservations found</p>
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="table">
+					<thead>
+						<tr>
+							<th></th>
+							<th>Time</th>
+							<th>Reserved for</th>
+							<th class="text-center">Payment</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each reservations as r, idx (r.id)}
+							{@const label = dayLabel(r)}
+							{@const prevLabel = idx > 0 ? dayLabel(reservations[idx - 1]) : null}
+							{#if label !== prevLabel}
+								<tr>
+									<td
+										colspan="5"
+										class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+									>
+										{label}
+									</td>
+								</tr>
+							{/if}
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/reservations/${r.id}`)}
+							>
+								<td class="w-px">
+									<StatusBadge status={r.status} class="size-6" />
+								</td>
+								<td class="w-min">
+									<div class="flex items-center gap-1">
+										{formatTimeRange(r.startsAt, r.endsAt)}
+										{#if r.recurringSeriesId}
+											<span class="tooltip" data-tip="Recurring">
+												<IconRepeat size={14} class="text-base-content" />
+											</span>
+										{/if}
+									</div>
+									<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
+								</td>
+								<td onclick={(e) => e.stopPropagation()} style="padding-inline: 0;">
+									<div class="flex items-center gap-1">
+										{#if r.bookerType !== 'user'}
+											<span class="tooltip" data-tip={r.bookerType}>
+												<BookerTypeIcon type={r.bookerType} size={16} />
+											</span>
+										{/if}
+										<MemberLink hideAvatar member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole, userId: r.createdByUserId }} class="p-7 px-4 w-full" />
+									</div>
+								</td>
+								<td>
+									{#await hourlyRate then rate}
+										{#if r.bookerType === 'event'}
+											<span class="text-sm opacity-40">—</span>
+										{:else}
+											{@const ps = paymentStatus(r)}
+											<div class="flex items-center justify-center gap-1">
+												{formatDurationAmount(r.startsAt, r.endsAt, rate)}
+												<span class="tooltip" data-tip={ps.label}>
+													<ps.icon size={16} class={ps.color} />
+												</span>
+											</div>
+										{/if}
+									{/await}
+								</td>
+								<td onclick={(e) => e.stopPropagation()}>
+									<div class="flex items-center gap-1">
+										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
+											<ConfirmReservationAction reservation={r} class="btn-ghost btn-sm latched">
+												{#snippet icon()}<IconCheck size={16} />{/snippet}
+											</ConfirmReservationAction>
+										{/if}
+										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
+											<CompleteReservationAction reservation={r} class="btn-ghost btn-xs btn-square">
+												{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
+											</CompleteReservationAction>
+										{/if}
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+		{/if}
+	{/await}
 </PageContent>
 
-<ResolveModal
-	bind:open={resolveOpen}
-	unresolved={data.unresolved}
-	hourlyRateCents={data.hourlyRateCents}
-/>
+{#await Promise.all([unresolved, hourlyRate]) then [unresolvedData, rate]}
+	<ResolveModal
+		bind:open={resolveOpen}
+		unresolved={unresolvedData}
+		hourlyRateCents={rate}
+	/>
+{/await}

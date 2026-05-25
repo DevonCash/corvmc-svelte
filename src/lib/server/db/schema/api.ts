@@ -297,43 +297,6 @@ export interface StaffCheckInResponse {
 	stats: { sold: number; checkedIn: number };
 }
 
-export interface StaffReservationsResponse {
-	reservations: (Pick<
-		Reservation,
-		| 'id'
-		| 'status'
-		| 'startsAt'
-		| 'endsAt'
-		| 'bookerType'
-		| 'notes'
-		| 'stripePaymentRecordId'
-		| 'createdByUserId'
-		| 'recurringSeriesId'
-	> & {
-		memberName: string;
-		memberEmail: string;
-		memberPronouns: string | null;
-		memberRole: string | null;
-	})[];
-	unresolved: (Pick<
-		Reservation,
-		'id' | 'status' | 'startsAt' | 'endsAt' | 'createdByUserId' | 'notes'
-	> & {
-		memberName: string;
-		memberEmail: string;
-		memberPronouns: string | null;
-		memberRole: string | null;
-	})[];
-	pagination: Pagination;
-	tab: string;
-	search: string;
-	statusFilter: string[];
-	dateFrom: string | null;
-	dateTo: string | null;
-	counts: { upcoming: number; all: number; unresolved: number };
-	hourlyRateCents: number;
-}
-
 export interface StaffReservationDetailResponse {
 	reservation: Pick<
 		Reservation,

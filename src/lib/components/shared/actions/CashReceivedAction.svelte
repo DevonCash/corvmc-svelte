@@ -3,8 +3,6 @@
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cashReceivedReservation } from '$lib/remote/reservations.remote';
-	import type { ISODateString } from '$lib/types/dates';
-
 	const { fields } = cashReceivedReservation;
 
 	let {
@@ -13,7 +11,7 @@
 		onsuccess,
 		...rest
 	}: {
-		reservation: { id: string; startsAt: ISODateString; endsAt: ISODateString; memberName?: string };
+		reservation: { id: string; startsAt: Date; endsAt: Date; memberName?: string };
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;

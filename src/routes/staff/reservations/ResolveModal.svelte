@@ -9,7 +9,6 @@
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
-	import type { ISODateString } from '$lib/types/dates';
 
 	let {
 		open = $bindable(false),
@@ -20,14 +19,14 @@
 		unresolved: Array<{
 			id: string;
 			status: string;
-			startsAt: ISODateString;
-			endsAt: ISODateString;
+			startsAt: Date;
+			endsAt: Date;
 			createdByUserId: string;
 			notes: string | null;
 			memberName: string;
 			memberEmail: string;
 			memberPronouns: string | null;
-		memberRole: string | null;
+			memberRole: string | null;
 		}>;
 		hourlyRateCents: number;
 	} = $props();
