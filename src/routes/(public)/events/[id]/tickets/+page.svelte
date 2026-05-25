@@ -10,6 +10,8 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { purchaseTickets } from '$lib/remote/events.remote';
 
+	const { fields } = purchaseTickets;
+
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -84,7 +86,7 @@
 			onsuccess={handlePurchaseSuccess}
 			onfailure={() => toast.error('Something went wrong')}
 		>
-			<input type="hidden" name="eventId" value={page.params.id} />
+			<input {...fields.eventId.as('hidden', page.params.id)} />
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of tickets" name="quantity">

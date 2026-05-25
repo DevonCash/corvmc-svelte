@@ -6,6 +6,8 @@
 		getGenreSuggestions,
 		saveMemberProfile
 	} from '$lib/remote/directory.remote';
+
+	const { fields } = saveMemberProfile;
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -64,23 +66,23 @@
 		</PageHeader>
 		<PageContent width="3xl">
 		<!-- Hidden fields for complex data -->
-		<input type="hidden" name="instruments" value={JSON.stringify(instruments)} />
-		<input type="hidden" name="genres" value={JSON.stringify(genres)} />
-		<input type="hidden" name="links" value={JSON.stringify(links)} />
+		<input {...fields.instruments.as('hidden', JSON.stringify(instruments))} />
+		<input {...fields.genres.as('hidden', JSON.stringify(genres))} />
+		<input {...fields.links.as('hidden', JSON.stringify(links))} />
 
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Identity & About -->
 			<InfoCard title="About You">
 				<div class="space-y-4">
-					<FormField name="tagline" label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Drummer | Jazz & Funk" description="A short one-liner shown on your directory card" />
-					<FormField name="bio" label="Bio" type="textarea" value={profile?.bio ?? ''} placeholder="Tell other members about yourself..." />
+					<FormField field={fields.tagline} label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Drummer | Jazz & Funk" description="A short one-liner shown on your directory card" />
+					<FormField field={fields.bio} label="Bio" type="textarea" value={profile?.bio ?? ''} placeholder="Tell other members about yourself..." />
 				</div>
 			</InfoCard>
 
 			<!-- Music -->
 			<InfoCard title="Music">
 				<div class="space-y-4">
-					<FormField name="instruments" label="Instruments">
+					<FormField field={fields.instruments} label="Instruments">
 						<FreeformTagInput
 							bind:value={instruments}
 							suggestions={instrumentSuggestions}
@@ -88,7 +90,7 @@
 						/>
 					</FormField>
 
-					<FormField name="genres" label="Genres">
+					<FormField field={fields.genres} label="Genres">
 						<FreeformTagInput
 							bind:value={genres}
 							suggestions={genreSuggestions}
@@ -96,7 +98,7 @@
 						/>
 					</FormField>
 
-					<FormField name="lookingForBand" type="toggle" value={lookingForBand} checkboxLabel="I'm looking for a band" />
+					<FormField field={fields.lookingForBand} type="toggle" value={lookingForBand} checkboxLabel="I'm looking for a band" />
 				</div>
 			</InfoCard>
 		</div>
@@ -150,14 +152,14 @@
 						Leave blank to keep private.
 					</p>
 					<div class="space-y-3">
-						<FormField name="contactEmail" label="Display email" type="email" value={contact.email ?? ''} placeholder="you@example.com" />
-						<FormField name="contactPhone" label="Phone" type="tel" value={contact.phone ?? ''} placeholder="Optional" />
-						<FormField name="contactSocial" label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
+						<FormField field={fields.contactEmail} label="Display email" type="email" value={contact.email ?? ''} placeholder="you@example.com" />
+						<FormField field={fields.contactPhone} label="Phone" type="tel" value={contact.phone ?? ''} placeholder="Optional" />
+						<FormField field={fields.contactSocial} label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
 					</div>
 				</InfoCard>
 
 				<InfoCard title="Visibility">
-					<FormField name="directoryVisibility" label="Directory visibility">
+					<FormField field={fields.directoryVisibility} label="Directory visibility">
 						<div class="space-y-2">
 							<label class="label cursor-pointer justify-start gap-3">
 								<input type="radio" name="directoryVisibility" value="hidden" class="radio" checked={directoryVisibility === 'hidden'} onchange={() => (directoryVisibility = 'hidden')} />

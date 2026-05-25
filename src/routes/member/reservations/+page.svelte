@@ -10,6 +10,8 @@
 		getReservations,
 		getMembershipStatus
 	} from '$lib/remote/reservations.remote';
+
+	const { fields } = confirmWaitlisted;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -134,7 +136,7 @@
 						offered to someone else.
 					</p>
 				{/if}
-				<input type="hidden" name="id" value={confirmReservation.id} />
+				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
 					<Button type="button" class="btn-outline btn-sm" onclick={closeConfirmModal}
 						>Dismiss</Button

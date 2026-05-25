@@ -50,7 +50,7 @@
 										onfailure={() => toast.error('Failed to accept')}
 										onsuccess={() => { toast.success('Invitation accepted'); invalidateAll(); }}
 									>
-										<input type="hidden" name="memberId" value={invite.id} />
+										<input {...accept.fields.memberId.as('hidden', invite.id)} />
 										<SubmitButton label="Accept" successLabel="Accepted" class="btn-primary btn-sm" />
 									</Form>
 									<Form
@@ -58,7 +58,7 @@
 										onfailure={() => toast.error('Failed to decline')}
 										onsuccess={() => { toast.success('Invitation declined'); invalidateAll(); }}
 									>
-										<input type="hidden" name="memberId" value={invite.id} />
+										<input {...decline.fields.memberId.as('hidden', invite.id)} />
 										<SubmitButton label="Decline" successLabel="Declined" class="btn-ghost btn-sm" />
 									</Form>
 								</div>

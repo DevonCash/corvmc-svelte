@@ -6,6 +6,8 @@
 	import * as Filter from '$lib/components/shared/Table/Filter';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { submitLoanRequest as submitRequest } from '$lib/remote/equipment.remote';
+
+	const { fields } = submitRequest;
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -137,7 +139,7 @@
 		}}
 	>
 		{#if !isFreeForm}
-			<input type="hidden" name="equipmentId" value={selectedEquipmentId} />
+			<input {...fields.equipmentId.as('hidden', selectedEquipmentId)} />
 		{/if}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div oninput={(e: Event) => { pickupDateValue = (e.target as HTMLInputElement).value; }}>

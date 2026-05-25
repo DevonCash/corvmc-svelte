@@ -12,6 +12,8 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { purchaseTickets } from '$lib/remote/events.remote';
 
+	const { fields } = purchaseTickets;
+
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -164,7 +166,7 @@
 							onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 						>
 							{#snippet form({ close })}
-								<input type="hidden" name="eventId" value={evt.id} />
+								<input {...fields.eventId.as('hidden', evt.id)} />
 
 								<div class="flex items-baseline gap-2">
 									{#if data.isSustainingMember && discountedPrice}
