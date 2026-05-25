@@ -84,6 +84,7 @@
 		return (eh * 60 + em - (sh * 60 + sm)) / 60;
 	});
 
+	const { fields } = bookBandReservation;
 	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
 </script>
 
@@ -112,7 +113,7 @@
 			}}
 			onfailure={() => toast.error('Booking failed')}
 		>
-			<input type="hidden" name="date" value={currentDate} />
+			<input {...fields.date.as('hidden', currentDate)} />
 
 			<div class="form-control">
 				<label class="label" for="startTime">

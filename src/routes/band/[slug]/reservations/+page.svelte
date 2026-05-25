@@ -14,6 +14,7 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	const { fields: cancelFields } = cancelBandReservation;
 
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
@@ -72,7 +73,7 @@
 										onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
 										onfailure={() => toast.error('Failed to cancel')}
 									>
-										<input type="hidden" name="reservationId" value={res.id} />
+										<input {...cancelFields.reservationId.as('hidden', res.id)} />
 										<SubmitButton label="Cancel" class="btn-ghost btn-xs" />
 									</Form>
 								{/if}

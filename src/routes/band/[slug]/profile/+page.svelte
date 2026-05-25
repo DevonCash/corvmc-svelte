@@ -29,6 +29,7 @@
 		}
 	});
 
+	const { fields } = saveBandProfile;
 	let contact = $derived((profile?.directoryContact as DirectoryContact | null) ?? {});
 
 	function addLink() {
@@ -53,16 +54,16 @@
 			</SubmitButton>
 		</PageHeader>
 		<PageContent width="3xl">
-		<input type="hidden" name="genres" value={JSON.stringify(genres)} />
-		<input type="hidden" name="links" value={JSON.stringify(links)} />
+		<input {...fields.genres.as('hidden', JSON.stringify(genres))} />
+		<input {...fields.links.as('hidden', JSON.stringify(links))} />
 
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Identity -->
 			<InfoCard title="About">
 				<div class="space-y-4">
-					<FormField name="tagline" label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Funk trio from Portland" description="A short one-liner shown on your directory card" />
+					<FormField field={fields.tagline} label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Funk trio from Portland" description="A short one-liner shown on your directory card" />
 
-					<FormField name="genres" label="Genres">
+					<FormField field={fields.genres} label="Genres">
 						<FreeformTagInput
 							bind:value={genres}
 							suggestions={genreSuggestions}
@@ -70,7 +71,7 @@
 						/>
 					</FormField>
 
-					<FormField name="lookingForMembers" type="toggle" value={lookingForMembers} checkboxLabel="We're looking for members" />
+					<FormField field={fields.lookingForMembers} type="toggle" value={lookingForMembers} checkboxLabel="We're looking for members" />
 				</div>
 			</InfoCard>
 
@@ -121,15 +122,15 @@
 					Optional contact details shown on your directory listing.
 				</p>
 				<div class="space-y-3">
-					<FormField name="contactEmail" label="Display email" type="email" value={contact.email ?? ''} placeholder="band@example.com" />
-					<FormField name="contactPhone" label="Phone" type="tel" value={contact.phone ?? ''} />
-					<FormField name="contactSocial" label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
+					<FormField field={fields.contactEmail} label="Display email" type="email" value={contact.email ?? ''} placeholder="band@example.com" />
+					<FormField field={fields.contactPhone} label="Phone" type="tel" value={contact.phone ?? ''} />
+					<FormField field={fields.contactSocial} label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
 				</div>
 			</InfoCard>
 
 			<!-- Visibility -->
 			<InfoCard title="Visibility">
-				<FormField name="directoryVisibility" label="Directory visibility">
+				<FormField field={fields.directoryVisibility} label="Directory visibility">
 					<div class="space-y-2">
 						<label class="label cursor-pointer justify-start gap-3">
 							<input type="radio" name="directoryVisibility" value="hidden" class="radio" checked={directoryVisibility === 'hidden'} onchange={() => (directoryVisibility = 'hidden')} />

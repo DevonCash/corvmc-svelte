@@ -25,6 +25,12 @@
 
 	let { data }: PageProps = $props();
 
+	const { fields: removeFields } = removeMember;
+	const { fields: revokeFields } = revokeInvitation;
+	const { fields: revokePlatformFields } = revokePlatformInviteRemote;
+	const { fields: inviteFields } = inviteMember;
+	const { fields: transferFields } = transferOwner;
+
 	const isAdmin = $derived(data.userRole === 'admin');
 	const isOwner = $derived(data.userRole === 'owner');
 
@@ -119,7 +125,7 @@
 									onsuccess={() => { toast.success('Member removed'); invalidateAll(); }}
 									onfailure={() => toast.error('Failed to remove')}
 								>
-									<input type="hidden" name="memberId" value={member.id} />
+									<input {...removeFields.memberId.as('hidden', member.id)} />
 									<SubmitButton label="Remove" class="btn-ghost btn-xs" />
 								</Form>
 							{/if}
@@ -165,7 +171,7 @@
 									onsuccess={() => { toast.success('Invitation revoked'); invalidateAll(); }}
 									onfailure={() => toast.error('Failed to revoke')}
 								>
-									<input type="hidden" name="memberId" value={invite.id} />
+									<input {...revokeFields.memberId.as('hidden', invite.id)} />
 									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
 								</Form>
 							{/if}
@@ -204,7 +210,7 @@
 									}}
 									onfailure={() => toast.error('Failed to revoke')}
 								>
-									<input type="hidden" name="inviteId" value={invite.id} />
+									<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
 									<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
 								</Form>
 							</div>
@@ -272,7 +278,7 @@
 						autocomplete="off"
 					/>
 					{#if selectedUser}
-						<input type="hidden" name="userId" value={selectedUser.id} />
+						<input {...inviteFields.userId.as('hidden', selectedUser.id)} />
 					{/if}
 
 					<!-- Search results dropdown -->
@@ -371,7 +377,7 @@
 						undone without the new owner's consent.
 					</p>
 				</div>
-				<input type="hidden" name="newOwnerId" value={transferTarget.userId} />
+				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
 					<SubmitButton label="Transfer Ownership" successLabel="Transferred" class="btn-warning" />
 				</div>
