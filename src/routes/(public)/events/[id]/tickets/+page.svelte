@@ -8,9 +8,10 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { purchaseTickets, getPublicTicketPage } from '$lib/remote/events.remote';
+	import { purchaseTickets, rsvpForEvent, getPublicTicketPage } from '$lib/remote/events.remote';
 
-	const { fields } = purchaseTickets;
+	const purchaseFields = purchaseTickets.fields;
+	const rsvpFields = rsvpForEvent.fields;
 
 	let data = $derived(await getPublicTicketPage(page.params.id!));
 
@@ -20,7 +21,8 @@
 	let coverFees = $state(false);
 
 	const evt = $derived(data.event);
-	const unitPrice = $derived(evt.ticketPrice);
+	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
+	const unitPrice = $derived(evt.ticketPrice ?? 0);
 	const discountedPrice = $derived(
 		data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice
 	);
@@ -30,7 +32,7 @@
 		data.remaining !== null ? Math.min(data.remaining, 10) : 10
 	);
 
-	async function handlePurchaseSuccess(result?: { redirectUrl?: string }) {
+	async function handleSuccess(result?: { redirectUrl?: string }) {
 		if (result?.redirectUrl) {
 			if (result.redirectUrl.startsWith('http')) {
 				window.location.href = result.redirectUrl;
@@ -42,7 +44,7 @@
 </script>
 
 <div class="max-w-lg mx-auto space-y-6">
-	<PageHeader title="Get Tickets" backHref="/events" />
+	<PageHeader title={isFreeEvent ? 'RSVP' : 'Get Tickets'} backHref="/events" />
 
 	<div class="card bg-base-100 shadow">
 		<div class="card-body">
@@ -54,22 +56,28 @@
 				{/if}
 				· {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 			</p>
-			<div class="mt-2 flex items-baseline gap-2">
-				{#if data.isSustainingMember}
-					<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-					<span class="text-sm line-through opacity-50">{formatCents(unitPrice)}</span>
-					<Badge variant="success">Member 50% off</Badge>
-				{:else}
-					<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
-				{/if}
-				<span class="text-sm opacity-50">per ticket</span>
-			</div>
+			{#if !isFreeEvent}
+				<div class="mt-2 flex items-baseline gap-2">
+					{#if data.isSustainingMember}
+						<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
+						<span class="text-sm line-through opacity-50">{formatCents(unitPrice)}</span>
+						<Badge variant="success">Member 50% off</Badge>
+					{:else}
+						<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
+					{/if}
+					<span class="text-sm opacity-50">per ticket</span>
+				</div>
+			{:else}
+				<div class="mt-2">
+					<Badge variant="info">Free event</Badge>
+				</div>
+			{/if}
 			{#if data.remaining !== null}
 				<p class="text-sm mt-1">
 					{#if soldOut}
-						<span class="text-error font-medium">Sold out</span>
+						<span class="text-error font-medium">{isFreeEvent ? 'Full' : 'Sold out'}</span>
 					{:else}
-						{data.remaining} tickets remaining
+						{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining
 					{/if}
 				</p>
 			{/if}
@@ -77,14 +85,43 @@
 	</div>
 
 	{#if soldOut}
-		<div class="alert alert-warning">This event is sold out.</div>
+		<div class="alert alert-warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</div>
+	{:else if isFreeEvent}
+		<Form
+			remote={rsvpForEvent}
+			onsuccess={handleSuccess}
+			onfailure={() => toast.error('Something went wrong')}
+		>
+			<input {...rsvpFields.eventId.as('hidden', page.params.id!)} />
+			<div class="card bg-base-100 shadow">
+				<div class="card-body space-y-4">
+					<Field label="Number of spots" name="quantity">
+						<select
+							name="quantity"
+							bind:value={quantity}
+							class="select select-bordered w-full"
+						>
+							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+								<option value={n}>{n}</option>
+							{/each}
+						</select>
+					</Field>
+
+					<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
+
+					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+
+					<SubmitButton label="RSVP{quantity > 1 ? ` for ${quantity}` : ''}" class="btn-primary w-full" />
+				</div>
+			</div>
+		</Form>
 	{:else}
 		<Form
 			remote={purchaseTickets}
-			onsuccess={handlePurchaseSuccess}
+			onsuccess={handleSuccess}
 			onfailure={() => toast.error('Something went wrong')}
 		>
-			<input {...fields.eventId.as('hidden', page.params.id!)} />
+			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of tickets" name="quantity">
