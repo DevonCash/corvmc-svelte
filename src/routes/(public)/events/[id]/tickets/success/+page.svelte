@@ -10,10 +10,11 @@
 	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
 
 	const evt = $derived(data.event);
+	const isRsvp = $derived(purchaseId.startsWith('rsvp-'));
 </script>
 
 <div class="max-w-lg mx-auto space-y-6">
-	<PageHeader title="Tickets Confirmed" backHref="/events" />
+	<PageHeader title={isRsvp ? 'RSVP Confirmed' : 'Tickets Confirmed'} backHref="/events" />
 
 	<div class="card bg-base-100 shadow">
 		<div class="card-body text-center space-y-4">

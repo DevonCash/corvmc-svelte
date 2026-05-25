@@ -121,7 +121,7 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
-	if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(404, 'Tickets not available for this event');
+	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -566,6 +566,50 @@ export const checkInTicket = form(
 		const staff = await requireStaff();
 		await checkIn(data.ticketId, staff.id);
 		return { success: true };
+	}
+);
+
+export const rsvpForEvent = form(
+	z.object({
+		eventId: z.string(),
+		quantity: z.string().transform(Number),
+		attendeeName: z.string().min(1),
+		attendeeEmail: z.string().email()
+	}),
+	async (data, issue) => {
+		const { locals } = getRequestEvent();
+
+		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
+			issue.quantity('Quantity must be between 1 and 10');
+		}
+
+		const evt = await getById(data.eventId);
+		if (!evt) throw error(404, 'Event not found');
+		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		if (!evt.ticketingEnabled) throw error(400, 'RSVPs not available');
+		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
+
+		const remaining = await getTicketsRemaining(data.eventId);
+		if (remaining !== null && data.quantity > remaining) {
+			throw error(
+				400,
+				remaining === 0 ? 'This event is full' : `Only ${remaining} spots remaining`
+			);
+		}
+
+		const purchaseId = `rsvp-${randomUUID()}`;
+
+		await createTickets({
+			eventId: evt.id,
+			purchaseId,
+			quantity: data.quantity,
+			userId: locals.user?.id ?? undefined,
+			attendeeName: data.attendeeName,
+			attendeeEmail: data.attendeeEmail,
+			status: 'valid'
+		});
+
+		return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
 	}
 );
 

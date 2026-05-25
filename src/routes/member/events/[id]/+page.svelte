@@ -10,9 +10,10 @@
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import { fullDate, formatTime, formatCents, formatDate } from '$lib/utils/format';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { purchaseTickets, getMemberEventDetail, getMemberTickets } from '$lib/remote/events.remote';
+	import { purchaseTickets, rsvpForEvent, getMemberEventDetail, getMemberTickets } from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
+	const rsvpFields = rsvpForEvent.fields;
 
 	let eventData = $derived(await getMemberEventDetail(page.params.id!));
 	let allTickets = $derived(await getMemberTickets());
@@ -20,6 +21,7 @@
 	let data = $derived({ ...eventData, myTicket });
 
 	const evt = $derived(data.event);
+	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(
 		data.remaining !== null ? Math.min(data.remaining, 10) : 10
@@ -151,67 +153,99 @@
 				<p class="edet__desc">{evt.description}</p>
 			{/if}
 
-			{#if evt.ticketingEnabled && evt.ticketPrice}
+			{#if evt.ticketingEnabled}
 				<div class="edet__ctas">
 					{#if soldOut}
-						<button class="btn btn-lg" disabled>Sold Out</button>
+						<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
 					{:else if !data.myTicket}
-						<Action
-							action={purchaseTickets}
-							label="Get Tickets"
-							modalTitle="Get Tickets"
-							submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
-							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-							class="btn-primary btn-lg"
-							onsuccess={handlePurchaseSuccess}
-							onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
-						>
-							{#snippet form({ close })}
-								<input {...fields.eventId.as('hidden', evt.id)} />
+						{#if isFreeEvent}
+							<Action
+								action={rsvpForEvent}
+								label="RSVP"
+								modalTitle="RSVP"
+								submitLabel="RSVP{quantity > 1 ? ` for ${quantity}` : ''}"
+								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
+								class="btn-primary btn-lg"
+								onsuccess={handlePurchaseSuccess}
+								onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
+							>
+								{#snippet form({ close })}
+									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
-								<div class="flex items-baseline gap-2">
-									{#if data.isSustainingMember && discountedPrice}
-										<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-										<span class="text-sm line-through opacity-50">{formatCents(evt.ticketPrice!)}</span>
-										<Badge variant="success">Member 50% off</Badge>
-									{:else}
-										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
-									{/if}
-									<span class="text-sm opacity-50">per ticket</span>
-								</div>
+									<Field label="Number of spots" name="quantity">
+										<select
+											name="quantity"
+											bind:value={quantity}
+											class="select select-bordered w-full"
+										>
+											{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+												<option value={n}>{n}</option>
+											{/each}
+										</select>
+									</Field>
 
-								<Field label="Number of tickets" name="quantity">
-									<select
-										name="quantity"
-										bind:value={quantity}
-										class="select select-bordered w-full"
-									>
-										{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
-											<option value={n}>{n}</option>
-										{/each}
-									</select>
-								</Field>
+									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+									<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+								{/snippet}
+							</Action>
+						{:else}
+							<Action
+								action={purchaseTickets}
+								label="Get Tickets"
+								modalTitle="Get Tickets"
+								submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
+								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
+								class="btn-primary btn-lg"
+								onsuccess={handlePurchaseSuccess}
+								onfailure={(err) => toast.error(err instanceof Error ? err.message : 'Something went wrong')}
+							>
+								{#snippet form({ close })}
+									<input {...fields.eventId.as('hidden', evt.id)} />
 
-								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
-								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
-								<Field name="coverFees" type="checkbox" bind:value={coverFees}
-									checkboxLabel="Cover processing fees so the collective receives the full amount" />
-
-								<div class="border-t border-base-200 pt-4">
-									<div class="flex justify-between text-lg font-medium">
-										<span>Total</span>
-										<span>{formatCents(subtotal)}</span>
+									<div class="flex items-baseline gap-2">
+										{#if data.isSustainingMember && discountedPrice}
+											<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
+											<span class="text-sm line-through opacity-50">{formatCents(evt.ticketPrice!)}</span>
+											<Badge variant="success">Member 50% off</Badge>
+										{:else}
+											<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
+										{/if}
+										<span class="text-sm opacity-50">per ticket</span>
 									</div>
-									{#if data.isSustainingMember}
-										<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
-									{/if}
-								</div>
-							{/snippet}
-						</Action>
+
+									<Field label="Number of tickets" name="quantity">
+										<select
+											name="quantity"
+											bind:value={quantity}
+											class="select select-bordered w-full"
+										>
+											{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+												<option value={n}>{n}</option>
+											{/each}
+										</select>
+									</Field>
+
+									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+									<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+									<Field name="coverFees" type="checkbox" bind:value={coverFees}
+										checkboxLabel="Cover processing fees so the collective receives the full amount" />
+
+									<div class="border-t border-base-200 pt-4">
+										<div class="flex justify-between text-lg font-medium">
+											<span>Total</span>
+											<span>{formatCents(subtotal)}</span>
+										</div>
+										{#if data.isSustainingMember}
+											<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+										{/if}
+									</div>
+								{/snippet}
+							</Action>
+						{/if}
 					{/if}
 
 					{#if data.remaining !== null && !soldOut}
-						<span class="text-sm" style="color: var(--fg-2)">{data.remaining} remaining</span>
+						<span class="text-sm" style="color: var(--fg-2)">{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span>
 					{/if}
 				</div>
 			{/if}
