@@ -26,6 +26,7 @@ import { productConfig } from '../src/lib/server/db/schema/product-config';
 import { creditTransaction, paymentCache as paymentRecord } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { band, bandMember, bandGenre } from '../src/lib/server/db/schema/band';
+import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
 	subscriber,
 	audience,
@@ -196,6 +197,48 @@ const SAMPLE_LINKS = [
 	{ label: 'Personal Site', url: 'https://example.com' }
 ];
 
+const BAND_EVENT_TITLES = [
+	'Live at The Peacock', 'House Show — All Ages', 'Album Release Party',
+	'Benefit for Local Food Bank', 'Late Night at Cloud & Kelly\'s',
+	'Backyard BBQ & Music', 'Summer Solstice Set', 'Vinyl Night',
+	'Residency Night #4', 'Co-Headliner with Paper Wolves'
+];
+
+const BAND_EVENT_LOCATIONS = [
+	'The Peacock Tavern, 125 SW 2nd St', 'Cloud & Kelly\'s, 126 SW 1st St',
+	'Bombs Away Cafe, 2527 NW Monroe Ave', 'Majestic Theatre, 115 SW 2nd St',
+	'House show (DM for address)', 'OSU MU Ballroom',
+	'Avery Park Amphitheater', 'Block 15 Brewery, 300 SW Jefferson Ave'
+];
+
+const PRESS_QUOTES = [
+	{ quote: 'One of the most exciting acts to come out of the Willamette Valley in years.', publication: 'Oregon Music News', date: '2025-11' },
+	{ quote: 'Their live energy is absolutely electric — don\'t miss them.', publication: 'Corvallis Gazette-Times', date: '2025-09' },
+	{ quote: 'A refreshing blend of genres that shouldn\'t work but absolutely does.', publication: 'PDX Monthly', date: '2026-01' },
+	{ quote: 'The real deal. Tight, inventive, and impossible not to dance to.', publication: 'Willamette Week', date: '2026-03' },
+	{ quote: 'They pack every venue they play. Simple as that.', publication: 'Eugene Weekly', date: '2025-12' }
+];
+
+const ACHIEVEMENTS_POOL = [
+	'Opened for Built to Spill at the McDonald Theatre (2025)',
+	'Selected for Pickathon Festival 2026',
+	'150,000+ streams on Spotify',
+	'Featured on KBOO Portland\'s Local Music Spotlight',
+	'Won Battle of the Bands at Bombs Away (2025)',
+	'Sold out Majestic Theatre (400 cap) twice',
+	'Oregon Music Award nominee — Best New Act 2025',
+	'Recorded at Jackpot! Recording Studio, Portland'
+];
+
+const BACKLINE_ITEMS = [
+	{ instrument: 'Drums', details: 'DW 5-piece kit, 22" kick. Band provides cymbals and snare.', provided: false },
+	{ instrument: 'Bass Amp', details: 'Ampeg SVT-style, 300W minimum with 4x10 or 8x10 cab', provided: false },
+	{ instrument: 'Guitar Amp', details: 'Fender Twin Reverb or equivalent clean amp', provided: false },
+	{ instrument: 'Keys', details: 'Nord Stage 3 or similar weighted 88-key', provided: false },
+	{ instrument: 'Monitors', details: '4 monitor wedges with independent mixes', provided: false },
+	{ instrument: 'DI Boxes', details: '2x active DI (Radial J48 or equivalent)', provided: false }
+];
+
 // ---------------------------------------------------------------------------
 // Seed functions
 // ---------------------------------------------------------------------------
@@ -207,7 +250,7 @@ async function deleteAll() {
 		'equipment_loan', 'equipment', 'equipment_category',
 		'campaign_audience', 'campaign', 'audience_member', 'audience', 'subscriber',
 		'notification_preference', 'notification',
-		'ticket', 'band_genre', 'band_member', 'band',
+		'ticket', 'band_media', 'band_page_config', 'band_genre', 'band_member', 'band',
 		'payment_cache', 'credit_transaction',
 		'recurring_series', 'event', 'closure', 'reservation',
 		'model_has_roles', 'model_has_permissions', 'role_has_permissions',
@@ -563,7 +606,8 @@ async function seedProductConfig() {
 	await db.insert(productConfig).values([
 		{ key: 'contribution', name: 'Monthly Contribution', description: 'Sustaining member monthly contribution', unitAmountCents: 500, unitLabel: 'per unit / month' },
 		{ key: 'rehearsal', name: 'Rehearsal Space', description: 'Practice room hourly rate', unitAmountCents: 1500, unitLabel: 'per hour' },
-		{ key: 'fee_coverage', name: 'Fee Coverage', description: 'Covers payment processing fees', unitAmountCents: 0, unitLabel: null }
+		{ key: 'fee_coverage', name: 'Fee Coverage', description: 'Covers payment processing fees', unitAmountCents: 0, unitLabel: null },
+		{ key: 'band_premium', name: 'Band Premium Page', description: 'Premium band page with subdomain, block editor, and EPK', unitAmountCents: 1500, unitLabel: 'per month' }
 	]);
 }
 
@@ -600,20 +644,36 @@ async function seedBands(users: SeedUser[]) {
 	console.log('Seeding bands...');
 	const bands = [];
 
+	// First 3 bands are premium, rest are free
+	const PREMIUM_BAND_COUNT = 3;
+
 	for (let i = 0; i < BAND_NAMES.length; i++) {
 		const owner = users[i % users.length];
 		const slug = BAND_NAMES[i].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
 
 		const genres = pickN(GENRES, randomInt(1, 3));
-		const bandLinks = Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 2)) : null;
-		const bandVisibility = Math.random() > 0.8 ? 'hidden' : Math.random() > 0.4 ? 'public' : 'members';
+		const isPremiumBand = i < PREMIUM_BAND_COUNT;
+		const bandLinks = [
+			{ label: 'Spotify', url: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb', embed: true },
+			{ label: 'YouTube', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embed: true },
+			...pickN(SAMPLE_LINKS.slice(3), randomInt(0, 2))
+		];
+		const bandVisibility = 'public';
 
 		const [b] = await db.insert(band).values({
 			name: BAND_NAMES[i],
 			slug,
-			bio: `${BAND_NAMES[i]} is a local band from Corvallis.`,
+			bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`,
 			ownerId: owner.id,
-			tagline: Math.random() > 0.3 ? `${pick(GENRES)} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis` : null,
+			tier: isPremiumBand ? 'premium' : 'free',
+			subscription: isPremiumBand ? {
+				startedAt: new Date(Date.now() - randomInt(30, 180) * 86400000).toISOString(),
+				stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
+				billingInterval: i === 0 ? 'yearly' : 'monthly',
+				currentPeriodEnd: new Date(Date.now() + randomInt(10, 30) * 86400000).toISOString(),
+				cancelAtPeriodEnd: false
+			} : null,
+			tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
 			lookingForMembers: Math.random() > 0.6,
 			directoryVisibility: bandVisibility,
 			links: bandLinks
@@ -656,6 +716,124 @@ async function seedBands(users: SeedUser[]) {
 	bands.push(deactivated);
 
 	return bands;
+}
+
+async function seedBandEvents(bands: any[], users: SeedUser[]) {
+	console.log('Seeding band events...');
+	const rows = [];
+
+	for (const b of bands.slice(0, 6)) {
+		if (b.deletedAt) continue;
+		const eventCount = randomInt(2, 4);
+
+		for (let i = 0; i < eventCount; i++) {
+			const day = randomInt(-10, 30);
+			const hour = randomInt(19, 21);
+			const duration = pick([2, 3, 4]);
+			const startsAt = ptDate(day, hour);
+			const endsAt = ptDate(day, hour + duration);
+			const isPast = day < 0;
+
+			const [e] = await db.insert(event).values({
+				title: pick(BAND_EVENT_TITLES),
+				description: `${b.name} live! Join us for a night of original music and good vibes. All ages welcome.`,
+				startsAt,
+				endsAt,
+				doorsAt: ptDate(day, hour - 0.5),
+				status: isPast ? 'published' : pick(['published', 'published', 'draft']),
+				publishedAt: isPast ? new Date(startsAt.getTime() - 14 * 86400000) : (Math.random() > 0.3 ? new Date() : null),
+				tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
+				bandId: b.id,
+				source: 'band',
+				location: pick(BAND_EVENT_LOCATIONS),
+				externalTicketUrl: Math.random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
+				createdByUserId: b.ownerId
+			}).returning();
+			rows.push(e);
+		}
+	}
+
+	return rows;
+}
+
+async function seedBandPageConfigs(bands: any[]) {
+	console.log('Seeding band page configs (premium bands)...');
+	const configs = [];
+	const themes = ['punk', 'jazz', 'electronic', 'metal', 'indie', 'folk'] as const;
+
+	// Only premium bands get page configs
+	const premiumBands = bands.filter((b) => b.tier === 'premium' && !b.deletedAt);
+
+	for (let i = 0; i < premiumBands.length; i++) {
+		const b = premiumBands[i];
+		const theme = themes[i % themes.length];
+
+		const blocks = [
+			{ id: randomUUID(), type: 'hero', imageKey: 'bands/hero-placeholder.jpg', headline: b.name, subtitle: b.tagline || 'Live music from Corvallis, OR' },
+			{ id: randomUUID(), type: 'bio', content: b.bio || `${b.name} brings their unique sound to venues across the Pacific Northwest.` },
+			{ id: randomUUID(), type: 'embed', platform: 'spotify', url: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb' },
+			{ id: randomUUID(), type: 'events', limit: 5 },
+			{ id: randomUUID(), type: 'members', showPositions: true },
+			{ id: randomUUID(), type: 'links', style: 'buttons' },
+			{ id: randomUUID(), type: 'press' },
+			{ id: randomUUID(), type: 'achievements' },
+			{ id: randomUUID(), type: 'gallery', imageKeys: ['bands/gallery-1.jpg', 'bands/gallery-2.jpg', 'bands/gallery-3.jpg'], downloadable: true },
+			{ id: randomUUID(), type: 'contact' },
+			{ id: randomUUID(), type: 'tech_rider' },
+			{ id: randomUUID(), type: 'spacer', height: 'md' }
+		];
+
+		const epk = {
+			bookingContact: {
+				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+				email: `booking@${b.slug}.band`,
+				phone: `541-555-${randomInt(1000, 9999)}`
+			},
+			managementContact: {
+				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+				email: `mgmt@${b.slug}.band`
+			},
+			prContact: Math.random() > 0.5 ? {
+				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+				email: `press@${b.slug}.band`
+			} : undefined,
+			pressQuotes: pickN(PRESS_QUOTES, randomInt(2, 4)),
+			achievements: pickN(ACHIEVEMENTS_POOL, randomInt(3, 5)),
+			backline: pickN(BACKLINE_ITEMS, randomInt(3, 5)),
+			technicalRiderKey: 'bands/rider-placeholder.pdf',
+			stagePlotKey: 'bands/stage-plot-placeholder.png'
+		};
+
+		const customCss = theme === 'punk'
+			? `.band-site-hero { text-transform: uppercase; letter-spacing: 0.1em; }\n.band-site-block { border-bottom: 2px solid var(--bs-accent); }`
+			: theme === 'electronic'
+				? `.band-site-hero h1 { text-shadow: 0 0 20px var(--bs-accent); }\n.band-site-block { transition: opacity 0.3s; }`
+				: null;
+
+		const [config] = await db.insert(bandPageConfig).values({
+			bandId: b.id,
+			theme,
+			customCss,
+			blocks,
+			epk,
+			updatedAt: new Date()
+		}).returning();
+		configs.push(config);
+
+		// Add some band media entries
+		const mediaTypes = ['image', 'image', 'image', 'hero', 'stage_plot'];
+		for (let m = 0; m < mediaTypes.length; m++) {
+			await db.insert(bandMedia).values({
+				bandId: b.id,
+				key: `bands/${b.slug}/${mediaTypes[m]}-${m}.jpg`,
+				type: mediaTypes[m],
+				caption: mediaTypes[m] === 'image' ? `${b.name} live at ${pick(BAND_EVENT_LOCATIONS).split(',')[0]}` : null,
+				sortOrder: m
+			});
+		}
+	}
+
+	return configs;
 }
 
 async function seedRecurringSeries(users: SeedUser[]) {
@@ -1051,6 +1229,8 @@ async function main() {
 	await seedClosures();
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
+	const bandEvents = await seedBandEvents(bands, allUsers);
+	const pageConfigs = await seedBandPageConfigs(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -1064,21 +1244,28 @@ async function main() {
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
+	const premiumBands = bands.filter((b: any) => b.tier === 'premium' && !b.deletedAt);
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
-	console.log(`  ${events.length} events`);
-	console.log(`  ${bands.length} bands`);
+	console.log(`  ${events.length} CMC events`);
+	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
+	console.log(`  ${bandEvents.length} band events`);
+	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
-	console.log('  3 product configs');
+	console.log('  4 product configs');
 	console.log(`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.campaigns} campaigns`);
 	console.log(`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`);
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
+	console.log('\n  Premium band pages available at:');
+	for (const b of premiumBands) {
+		console.log(`    http://localhost:5173/?__band_subdomain=${b.slug}`);
+	}
 
 	await dispose();
 }
