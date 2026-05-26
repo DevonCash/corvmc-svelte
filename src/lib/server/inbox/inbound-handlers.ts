@@ -24,3 +24,47 @@ export async function handleContactForm(params: ContactFormParams) {
 
 	return { thread, message };
 }
+
+export interface PostmarkInboundPayload {
+	From: string;
+	FromName: string;
+	FromFull: { Email: string; Name: string };
+	To: string;
+	Subject: string;
+	TextBody: string;
+	HtmlBody: string;
+	StrippedTextReply: string;
+	MessageID: string;
+	Date: string;
+	Headers: Array<{ Name: string; Value: string }>;
+	Attachments: Array<{ Name: string; Content: string; ContentType: string; ContentLength: number }>;
+}
+
+export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
+	const fromEmail = payload.FromFull?.Email ?? payload.From;
+	const fromName = payload.FromName || fromEmail;
+	const body = payload.StrippedTextReply || payload.TextBody || '';
+	const subject = payload.Subject || null;
+
+	const thread = await findOrCreateThread({
+		channel: 'email',
+		contactName: fromName,
+		contactEmail: fromEmail,
+		subject
+	});
+
+	const message = await addInboundMessage({
+		threadId: thread.id,
+		body,
+		bodyHtml: payload.HtmlBody || null,
+		authorName: fromName,
+		channelMessageId: payload.MessageID || null,
+		channelMetadata: {
+			headers: payload.Headers,
+			attachmentCount: payload.Attachments?.length ?? 0,
+			date: payload.Date
+		}
+	});
+
+	return { thread, message };
+}
