@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
 import { templates } from '$lib/server/notification/email';
+import { sendSms } from './twilio-client';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
 
 export interface DispatchReplyParams {
@@ -23,6 +24,7 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 		case 'email':
 			return dispatchEmailReply(params);
 		case 'sms':
+			return dispatchSmsReply(params);
 		case 'instagram':
 		case 'messenger':
 			console.warn(`[inbox] Channel "${params.channel}" dispatch not yet implemented`);
@@ -30,6 +32,15 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 		case 'web':
 			return null;
 	}
+}
+
+async function dispatchSmsReply(params: DispatchReplyParams): Promise<string> {
+	if (!params.contactPhone) {
+		throw new Error('Cannot send SMS reply: no contact phone on thread');
+	}
+
+	const sid = await sendSms(params.contactPhone, params.body);
+	return sid;
 }
 
 async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> {

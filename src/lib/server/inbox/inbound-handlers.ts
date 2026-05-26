@@ -68,3 +68,33 @@ export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 
 	return { thread, message };
 }
+
+export interface TwilioInboundParams {
+	From: string;
+	To: string;
+	Body: string;
+	MessageSid: string;
+	NumMedia?: string;
+}
+
+export async function handleTwilioInbound(params: TwilioInboundParams) {
+	const phone = params.From;
+	const body = params.Body || '';
+
+	const thread = await findOrCreateThread({
+		channel: 'sms',
+		contactPhone: phone
+	});
+
+	const message = await addInboundMessage({
+		threadId: thread.id,
+		body,
+		channelMessageId: params.MessageSid,
+		channelMetadata: {
+			to: params.To,
+			numMedia: params.NumMedia ?? '0'
+		}
+	});
+
+	return { thread, message };
+}
