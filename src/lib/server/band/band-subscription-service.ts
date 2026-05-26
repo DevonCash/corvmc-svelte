@@ -75,15 +75,23 @@ export async function syncFromWebhook(
 	stripeSubscription: {
 		id: string;
 		status: string;
-		current_period_end: number;
 		cancel_at_period_end: boolean;
-		items?: { data: Array<{ price?: { recurring?: { interval?: string } } }> };
+		items?: {
+			data: Array<{
+				current_period_end?: number;
+				price?: { recurring?: { interval?: string } };
+			}>;
+		};
 	}
 ): Promise<void> {
-	const { id, status, current_period_end, cancel_at_period_end, items } = stripeSubscription;
+	const { id, status, cancel_at_period_end, items } = stripeSubscription;
+
+	// In Stripe v22, current_period_end lives on the subscription item
+	const firstItem = items?.data[0];
+	const currentPeriodEnd = firstItem?.current_period_end;
 
 	// Determine billing interval from subscription items
-	const interval = items?.data[0]?.price?.recurring?.interval;
+	const interval = firstItem?.price?.recurring?.interval;
 	const billingInterval: 'monthly' | 'yearly' =
 		interval === 'year' ? 'yearly' : 'monthly';
 
@@ -92,7 +100,9 @@ export async function syncFromWebhook(
 			startedAt: new Date().toISOString(),
 			stripeSubscriptionId: id,
 			billingInterval,
-			currentPeriodEnd: new Date(current_period_end * 1000).toISOString(),
+			currentPeriodEnd: currentPeriodEnd
+				? new Date(currentPeriodEnd * 1000).toISOString()
+				: new Date(Date.now() + 30 * 86400_000).toISOString(),
 			cancelAtPeriodEnd: cancel_at_period_end
 		};
 
