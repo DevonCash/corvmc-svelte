@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
 import { templates } from '$lib/server/notification/email';
 import { sendSms } from './twilio-client';
+import { isChannelEnabled } from './channel-config-service';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
 
 export interface DispatchReplyParams {
@@ -21,6 +22,11 @@ export interface DispatchReplyParams {
 }
 
 export async function dispatchReply(params: DispatchReplyParams): Promise<string | null> {
+	const enabled = await isChannelEnabled(params.channel);
+	if (!enabled) {
+		throw new Error(`Channel "${params.channel}" is not enabled. Enable it in Settings → Inbox Channels.`);
+	}
+
 	switch (params.channel) {
 		case 'email':
 			return dispatchEmailReply(params);

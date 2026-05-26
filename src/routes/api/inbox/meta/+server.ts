@@ -2,6 +2,7 @@ import { json, error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { handleMetaInbound } from '$lib/server/inbox/inbound-handlers';
+import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
 
 async function verifySignature(body: string, signature: string): Promise<boolean> {
 	const secret = env.META_APP_SECRET;
@@ -57,6 +58,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const channel: 'instagram' | 'messenger' =
 		payload.object === 'instagram' ? 'instagram' : 'messenger';
+
+	const enabled = await isChannelEnabled(channel);
+	if (!enabled) {
+		return json({ ok: true, skipped: 'channel disabled' });
+	}
 
 	for (const entry of payload.entry ?? []) {
 		for (const event of entry.messaging ?? []) {

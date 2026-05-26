@@ -2,8 +2,14 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { handlePostmarkInbound, type PostmarkInboundPayload } from '$lib/server/inbox/inbound-handlers';
+import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
 
 export const POST: RequestHandler = async ({ request }) => {
+	const enabled = await isChannelEnabled('email');
+	if (!enabled) {
+		return json({ ok: true, skipped: 'channel disabled' });
+	}
+
 	const token = request.headers.get('x-postmark-token');
 	const expectedToken = env.POSTMARK_INBOUND_TOKEN;
 

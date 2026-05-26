@@ -10,6 +10,11 @@ import {
 	updateStatus,
 	getUnresolvedCount
 } from '$lib/server/inbox/thread-service';
+import {
+	getAllChannelConfigs,
+	getEnabledChannels,
+	updateChannelConfig as updateChannelConfigSvc
+} from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { inboxChannels, inboxThreadStatuses } from '$lib/config';
@@ -125,5 +130,32 @@ export const updateThreadStatus = form(statusSchema, async (data) => {
 	await requireStaff();
 	await updateStatus(data.threadId, data.status);
 	void getInboxThread(data.threadId).refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Channel configuration
+// ---------------------------------------------------------------------------
+
+export const getInboxChannelConfigs = query(z.void(), async () => {
+	await requireStaff();
+	return getAllChannelConfigs();
+});
+
+export const getInboxEnabledChannels = query(z.void(), async () => {
+	await requireStaff();
+	return getEnabledChannels();
+});
+
+const channelConfigSchema = z.object({
+	channel: z.enum(inboxChannels),
+	enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
+});
+
+export const updateInboxChannelConfig = form(channelConfigSchema, async (data) => {
+	await requireStaff();
+	await updateChannelConfigSvc(data.channel, data.enabled);
+	void getInboxChannelConfigs().refresh();
+	void getInboxEnabledChannels().refresh();
 	return { success: true };
 });

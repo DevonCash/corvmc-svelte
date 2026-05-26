@@ -5,7 +5,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { inboxChannels, inboxThreadStatuses } from '$lib/config';
-	import { getInboxThreads } from '$lib/remote/inbox.remote';
+	import { getInboxThreads, getInboxEnabledChannels } from '$lib/remote/inbox.remote';
 	import {
 		IconMail,
 		IconMessageCircle,
@@ -54,6 +54,7 @@
 	});
 
 	let result = $derived(getInboxThreads(filters));
+	let enabledChannels = $derived(getInboxEnabledChannels());
 
 	function hasActiveFilters(): boolean {
 		return !!(searchDebounced || statusFilter || channelFilter);
@@ -78,12 +79,14 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
+		{#await enabledChannels then channels}
 		<select class="select select-bordered select-sm" value={channelFilter} onchange={(e) => { channelFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
 			<option value="">All channels</option>
-			{#each inboxChannels as ch}
+			{#each channels as ch}
 				<option value={ch}>{channelLabels[ch]}</option>
 			{/each}
 		</select>
+		{/await}
 		<select class="select select-bordered select-sm" value={statusFilter} onchange={(e) => { statusFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
 			<option value="">All statuses</option>
 			{#each inboxThreadStatuses as s}

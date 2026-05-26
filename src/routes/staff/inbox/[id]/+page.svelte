@@ -9,7 +9,8 @@
 		getInboxThread,
 		replyToThread,
 		addThreadNote,
-		updateThreadStatus
+		updateThreadStatus,
+		getInboxEnabledChannels
 	} from '$lib/remote/inbox.remote';
 	import {
 		IconMail,
@@ -41,6 +42,7 @@
 
 	const threadId = $derived(page.params.id!);
 	let thread = $derived(getInboxThread(threadId));
+	let enabledChannels = $derived(getInboxEnabledChannels());
 
 	const replyForm = replyToThread.for('reply');
 	const noteForm = addThreadNote.for('note');
@@ -88,29 +90,38 @@
 
 				<!-- Reply form -->
 				<div class="divider text-xs opacity-60">Reply</div>
-				<form
-					{...replyForm.enhance(async ({ submit }) => {
-						if (await submit()) {
-							toast.success('Reply sent');
-							void getInboxThread(threadId).refresh();
-						} else {
-							toast.error('Failed to send reply');
-						}
-					})}
-					class="flex flex-col gap-2"
-				>
-					<input {...replyForm.fields.threadId.as('hidden', t.id)} />
-					<textarea
-						name="body"
-						class="textarea textarea-bordered w-full"
-						placeholder="Type your reply..."
-						rows="3"
-						required
-					></textarea>
-					<div class="flex justify-end">
-						<button type="submit" class="btn btn-primary btn-sm">Send Reply</button>
-					</div>
-				</form>
+				{#await enabledChannels then channels}
+					{#if t.channel === 'web' || channels.includes(t.channel)}
+						<form
+							{...replyForm.enhance(async ({ submit }) => {
+								if (await submit()) {
+									toast.success('Reply sent');
+									void getInboxThread(threadId).refresh();
+								} else {
+									toast.error('Failed to send reply');
+								}
+							})}
+							class="flex flex-col gap-2"
+						>
+							<input {...replyForm.fields.threadId.as('hidden', t.id)} />
+							<textarea
+								name="body"
+								class="textarea textarea-bordered w-full"
+								placeholder="Type your reply..."
+								rows="3"
+								required
+							></textarea>
+							<div class="flex justify-end">
+								<button type="submit" class="btn btn-primary btn-sm">Send Reply</button>
+							</div>
+						</form>
+					{:else}
+						<div class="alert alert-warning text-sm">
+							The {channelLabels[t.channel]} channel is disabled. Enable it in
+							<a href="/staff/settings" class="link">Settings → Inbox Channels</a> to send replies.
+						</div>
+					{/if}
+				{/await}
 
 				<!-- Note form -->
 				{#if showNoteForm}

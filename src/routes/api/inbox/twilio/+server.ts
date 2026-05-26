@@ -2,8 +2,16 @@ import { error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { handleTwilioInbound } from '$lib/server/inbox/inbound-handlers';
 import { validateTwilioSignature } from '$lib/server/inbox/twilio-client';
+import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
+
+const EMPTY_TWIML = '<Response></Response>';
 
 export const POST: RequestHandler = async ({ request, url }) => {
+	const enabled = await isChannelEnabled('sms');
+	if (!enabled) {
+		return text(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });
+	}
+
 	const body = await request.text();
 	const params = Object.fromEntries(new URLSearchParams(body));
 
