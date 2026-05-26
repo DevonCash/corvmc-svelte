@@ -98,3 +98,32 @@ export async function handleTwilioInbound(params: TwilioInboundParams) {
 
 	return { thread, message };
 }
+
+export interface MetaInboundParams {
+	channel: 'instagram' | 'messenger';
+	senderId: string;
+	senderName?: string;
+	messageId: string;
+	text: string;
+	timestamp: number;
+}
+
+export async function handleMetaInbound(params: MetaInboundParams) {
+	const thread = await findOrCreateThread({
+		channel: params.channel,
+		contactExternalId: params.senderId,
+		contactName: params.senderName ?? null
+	});
+
+	const message = await addInboundMessage({
+		threadId: thread.id,
+		body: params.text,
+		authorName: params.senderName ?? params.senderId,
+		channelMessageId: params.messageId,
+		channelMetadata: {
+			timestamp: params.timestamp
+		}
+	});
+
+	return { thread, message };
+}

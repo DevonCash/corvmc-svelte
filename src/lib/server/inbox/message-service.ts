@@ -102,6 +102,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			contactName: thread.contactName,
 			contactEmail: thread.contactEmail,
 			contactPhone: thread.contactPhone,
+			contactExternalId: thread.contactExternalId,
 			subject: thread.subject,
 			lastInboundMessageId: lastInbound?.channelMessageId ?? null,
 			references

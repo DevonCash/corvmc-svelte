@@ -12,6 +12,7 @@ export interface DispatchReplyParams {
 	contactName: string | null;
 	contactEmail: string | null;
 	contactPhone: string | null;
+	contactExternalId: string | null;
 	subject: string | null;
 	/** Last inbound channelMessageId for email threading */
 	lastInboundMessageId: string | null;
@@ -27,8 +28,7 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 			return dispatchSmsReply(params);
 		case 'instagram':
 		case 'messenger':
-			console.warn(`[inbox] Channel "${params.channel}" dispatch not yet implemented`);
-			return null;
+			return dispatchMetaReply(params);
 		case 'web':
 			return null;
 	}
@@ -72,4 +72,36 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 	});
 
 	return messageId;
+}
+
+async function dispatchMetaReply(params: DispatchReplyParams): Promise<string> {
+	if (!params.contactExternalId) {
+		throw new Error('Cannot send Meta reply: no contact external ID on thread');
+	}
+
+	const pageToken = env.META_PAGE_ACCESS_TOKEN;
+	if (!pageToken) {
+		throw new Error('META_PAGE_ACCESS_TOKEN is not configured');
+	}
+
+	const response = await fetch('https://graph.facebook.com/v21.0/me/messages', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${pageToken}`
+		},
+		body: JSON.stringify({
+			recipient: { id: params.contactExternalId },
+			message: { text: params.body },
+			messaging_type: 'RESPONSE'
+		})
+	});
+
+	if (!response.ok) {
+		const err = await response.text();
+		throw new Error(`Meta API error (${response.status}): ${err}`);
+	}
+
+	const result = (await response.json()) as { message_id?: string };
+	return result.message_id ?? '';
 }
