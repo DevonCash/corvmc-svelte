@@ -23,6 +23,9 @@ export function registerListeners(): void {
 	// --- Notification dispatch ---
 	registerNotificationListeners();
 
+	// --- Inbox message → staff notification ---
+	registerInboxListeners();
+
 	// --- Waitlist promotion on cancellation ---
 	registerWaitlistListeners();
 }
@@ -61,6 +64,37 @@ async function registerNotificationListeners(): Promise<void> {
 		'$lib/server/notification/notification-listeners'
 	);
 	registerAllNotificationListeners();
+}
+
+// ---------------------------------------------------------------------------
+// Inbox listeners
+// ---------------------------------------------------------------------------
+// When a new inbound message arrives in the inbox, notify staff users.
+// ---------------------------------------------------------------------------
+
+async function registerInboxListeners(): Promise<void> {
+	const { dispatch } = await import('$lib/server/notification/dispatcher');
+	const { listStaffUsers } = await import('$lib/server/authorization');
+
+	domainEvents.on('inbox.message_received', async (event) => {
+		const staffUsers = await listStaffUsers();
+		const contactLabel = event.contactName ?? 'Someone';
+
+		for (const staff of staffUsers) {
+			try {
+				await dispatch({
+					type: 'inbox_message_received',
+					userId: staff.id,
+					userEmail: staff.email,
+					title: `New message from ${contactLabel}`,
+					body: event.preview,
+					href: `/staff/inbox/${event.threadId}`
+				});
+			} catch (err) {
+				console.error(`[inbox] Failed to notify staff ${staff.email}:`, err);
+			}
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------

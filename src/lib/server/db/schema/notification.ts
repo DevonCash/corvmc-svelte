@@ -109,6 +109,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description: 'Forwarded contact form messages (staff only)',
 		defaults: { email: true, inApp: false, sms: false },
 		mandatory: true
+	},
+	{
+		key: 'inbox_message_received',
+		label: 'New inbox message (staff)',
+		description: 'Notification when a new message arrives in the staff inbox',
+		defaults: { email: false, inApp: true, sms: false }
 	}
 ];
 

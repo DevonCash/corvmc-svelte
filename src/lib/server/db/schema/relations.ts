@@ -120,4 +120,17 @@ export const relations = defineRelations(schema, (t) => ({
 		band: t.one.band({ from: t.platformInvite.bandId, to: t.band.id }),
 		invitedBy: t.one.user({ from: t.platformInvite.invitedById, to: t.user.id }),
 	},
+	inboxThread: {
+		messages: t.many.inboxMessage(),
+		notes: t.many.inboxNote(),
+		assignedTo: t.one.user({ from: t.inboxThread.assignedToUserId, to: t.user.id }),
+	},
+	inboxMessage: {
+		thread: t.one.inboxThread({ from: t.inboxMessage.threadId, to: t.inboxThread.id }),
+		author: t.one.user({ from: t.inboxMessage.authorUserId, to: t.user.id }),
+	},
+	inboxNote: {
+		thread: t.one.inboxThread({ from: t.inboxNote.threadId, to: t.inboxThread.id }),
+		author: t.one.user({ from: t.inboxNote.authorUserId, to: t.user.id }),
+	},
 }));

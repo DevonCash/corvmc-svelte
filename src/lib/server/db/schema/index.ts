@@ -12,4 +12,5 @@ export * from './equipment';
 export * from './band';
 export * from './platform-invite';
 export * from './help';
+export * from './inbox';
 export * from './api';

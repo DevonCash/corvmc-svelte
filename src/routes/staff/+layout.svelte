@@ -18,7 +18,8 @@
 		IconTool,
 		IconPackage,
 		IconBook,
-		IconLayoutDashboard
+		IconLayoutDashboard,
+		IconInbox
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -48,6 +49,9 @@
 	{#snippet navigation()}
 		<Nav.Item href="/staff" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
+		</Nav.Item>
+		<Nav.Item href="/staff/inbox" label="Inbox">
+			{#snippet icon()}<IconInbox />{/snippet}
 		</Nav.Item>
 
 		<Nav.Group title="Operations">

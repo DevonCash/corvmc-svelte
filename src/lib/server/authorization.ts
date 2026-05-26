@@ -160,3 +160,22 @@ export async function requireStaffRole(userId: string | undefined): Promise<void
 	const staff = await isStaff(userId);
 	if (!staff) throw error(403, 'Staff access required');
 }
+
+/**
+ * List all users with admin or staff roles.
+ */
+export async function listStaffUsers(): Promise<Array<{ id: string; name: string; email: string }>> {
+	const rows = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
+		.innerJoin(role, eq(role.id, modelHasRole.roleId))
+		.where(inArray(role.name, ['admin', 'staff']));
+
+	const seen = new Set<string>();
+	return rows.filter((r) => {
+		if (seen.has(r.id)) return false;
+		seen.add(r.id);
+		return true;
+	});
+}

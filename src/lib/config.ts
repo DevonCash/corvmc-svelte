@@ -40,3 +40,11 @@ export const equipmentConditions = ['excellent', 'good', 'fair', 'poor'] as cons
 export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export const pricingTiers = ['major', 'accessory'] as const;
 export const loanStatuses = ['requested', 'scheduled', 'checked_out', 'returned', 'cancelled'] as const;
+
+// ---------------------------------------------------------------------------
+// Inbox enum values
+// ---------------------------------------------------------------------------
+
+export const inboxChannels = ['email', 'sms', 'web', 'instagram', 'messenger'] as const;
+export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
+export const inboxMessageDirections = ['inbound', 'outbound'] as const;

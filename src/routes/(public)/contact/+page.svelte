@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import { submitContactForm } from '$lib/remote/inbox.remote';
+	import { toast } from 'svelte-sonner';
 
 	let submitted = $state(false);
 
@@ -13,11 +14,7 @@
 		'Donations'
 	];
 
-	async function handleSubmit(data: FormData) {
-		// TODO: wire up to an API endpoint or email service
-		await new Promise((r) => setTimeout(r, 500));
-		submitted = true;
-	}
+	const rf = submitContactForm.for('contact');
 </script>
 
 <svelte:head>
@@ -37,17 +34,37 @@
 					Thanks for reaching out! We'll get back to you soon.
 				</div>
 			{:else}
-				<Form action={handleSubmit} class="flex flex-col gap-4">
+				<form
+					{...rf.enhance(async ({ submit }) => {
+						if (await submit()) submitted = true;
+						else toast.error('Something went wrong. Please try again.');
+					})}
+					class="flex flex-col gap-4"
+				>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<Field name="name" type="text" label="Name" />
-						<Field name="email" type="email" label="Email" />
+						<label class="form-control w-full">
+							<div class="label"><span class="label-text">Name</span></div>
+							<input {...rf.fields.name.as('text')} class="input input-bordered w-full" required />
+						</label>
+						<label class="form-control w-full">
+							<div class="label"><span class="label-text">Email</span></div>
+							<input {...rf.fields.email.as('email')} class="input input-bordered w-full" required />
+						</label>
 					</div>
-					<Field name="subject" type="select" label="Subject"
-						value="General Inquiry"
-						options={subjects.map((s) => ({ value: s, label: s }))} />
-					<Field name="message" type="textarea" label="Message" />
-					<SubmitButton label="Send Message" class="btn-primary" />
-				</Form>
+					<label class="form-control w-full">
+						<div class="label"><span class="label-text">Subject</span></div>
+						<select {...rf.fields.subject.as('select')} class="select select-bordered w-full">
+							{#each subjects as s}
+								<option value={s}>{s}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="form-control w-full">
+						<div class="label"><span class="label-text">Message</span></div>
+						<textarea name="message" class="textarea textarea-bordered w-full" rows="5" required></textarea>
+					</label>
+					<button type="submit" class="btn btn-primary">Send Message</button>
+				</form>
 			{/if}
 		</div>
 
