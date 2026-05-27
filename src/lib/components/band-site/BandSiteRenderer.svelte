@@ -383,3 +383,13 @@
 		{/if}
 	</div>
 {/if}
+
+<!-- Navigation footer -->
+<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
+	{#if events.length > 0}
+		<a href="events" class="hover:opacity-100 transition-opacity">All Events</a>
+	{/if}
+	{#if epk}
+		<a href="epk" class="hover:opacity-100 transition-opacity">Press Kit</a>
+	{/if}
+</nav>
