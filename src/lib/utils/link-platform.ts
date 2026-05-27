@@ -65,7 +65,9 @@ const PLATFORM_MATCHERS: Array<{
 	{
 		name: 'Apple Music',
 		icon: 'IconBrandApple',
-		pattern: /music\.apple\.com/
+		pattern: /music\.apple\.com\/[\w-]+\/(album|playlist|song)\//,
+		getEmbedUrl: (url) =>
+			`https://embed.music.apple.com/${url.replace('https://music.apple.com/', '')}`
 	},
 	{
 		name: 'GitHub',

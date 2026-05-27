@@ -10,6 +10,7 @@ export * from './recurring';
 export * from './marketing';
 export * from './equipment';
 export * from './band';
+export * from './band-page';
 export * from './platform-invite';
 export * from './help';
 export * from './api';

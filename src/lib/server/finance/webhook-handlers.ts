@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
+import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
 import type { Subscription } from '$lib/server/db/schema/authentication';
@@ -31,6 +32,7 @@ export type WebhookHandlerFn = (data: any) => Promise<void>;
 export const webhookHandlerMap: Record<RegisteredEvent, WebhookHandlerFn> = {
 	'checkout.session.completed': handleCheckoutCompleted,
 	'invoice.paid': handleInvoicePaid,
+	'customer.subscription.updated': handleSubscriptionUpdated,
 	'customer.subscription.deleted': handleSubscriptionDeleted
 };
 
@@ -116,12 +118,40 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
-// customer.subscription.deleted — reset credits
+// customer.subscription.updated — sync band premium or member subscription
+// ---------------------------------------------------------------------------
+
+export async function handleSubscriptionUpdated(
+	subscription: Stripe.Subscription
+): Promise<void> {
+	const metadata = subscription.metadata ?? {};
+
+	// Band premium subscription
+	if (metadata.subscription_type === 'band_premium' && metadata.band_id) {
+		await syncFromWebhook(metadata.band_id, subscription);
+		return;
+	}
+
+	// User subscriptions don't currently need update handling beyond invoice.paid
+	// (period renewal is handled there). Future: track cancel_at_period_end for user subs.
+}
+
+// ---------------------------------------------------------------------------
+// customer.subscription.deleted — reset credits or downgrade band
 // ---------------------------------------------------------------------------
 
 export async function handleSubscriptionDeleted(
 	subscription: Stripe.Subscription
 ): Promise<void> {
+	const metadata = subscription.metadata ?? {};
+
+	// Band premium subscription deleted
+	if (metadata.subscription_type === 'band_premium' && metadata.band_id) {
+		await syncFromWebhook(metadata.band_id, subscription);
+		return;
+	}
+
+	// User subscription deleted — reset credits
 	const customerId = typeof subscription.customer === 'string'
 		? subscription.customer
 		: subscription.customer.id;

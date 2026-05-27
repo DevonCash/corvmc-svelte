@@ -1,0 +1,149 @@
+/* Band Site Theme System
+ * Each theme defines CSS custom properties scoped to .theme-{name}
+ * Custom CSS from users is injected AFTER these, allowing overrides.
+ */
+
+/* Default — clean, neutral */
+.theme-default {
+	--bs-bg: #ffffff;
+	--bs-text: #1a1a1a;
+	--bs-accent: #3b82f6;
+	--bs-surface: #f5f5f5;
+	--bs-muted: #6b7280;
+	font-family: system-ui, -apple-system, sans-serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+}
+
+/* Punk — high contrast, bold, neon accents */
+.theme-punk {
+	--bs-bg: #0a0a0a;
+	--bs-text: #ffffff;
+	--bs-accent: #ff2d55;
+	--bs-surface: #1a1a1a;
+	--bs-muted: #888888;
+	font-family: 'Impact', 'Arial Black', sans-serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+	letter-spacing: -0.02em;
+}
+
+.theme-punk .band-site-hero {
+	border-bottom: 4px solid var(--bs-accent);
+}
+
+.theme-punk a {
+	color: var(--bs-accent);
+}
+
+.theme-punk .btn-outline {
+	border-color: var(--bs-accent);
+	color: var(--bs-accent);
+}
+
+/* Jazz — warm tones, serif, elegant */
+.theme-jazz {
+	--bs-bg: #1c1917;
+	--bs-text: #fef3c7;
+	--bs-accent: #d4a853;
+	--bs-surface: #292524;
+	--bs-muted: #a8a29e;
+	font-family: 'Georgia', 'Times New Roman', serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+}
+
+.theme-jazz h1,
+.theme-jazz h2,
+.theme-jazz h3 {
+	font-family: 'Playfair Display', 'Georgia', serif;
+	color: var(--bs-accent);
+}
+
+.theme-jazz a {
+	color: var(--bs-accent);
+}
+
+/* Metal — dark, angular, red/silver */
+.theme-metal {
+	--bs-bg: #0c0c0c;
+	--bs-text: #e0e0e0;
+	--bs-accent: #dc2626;
+	--bs-surface: #1c1c1c;
+	--bs-muted: #666666;
+	font-family: 'Oswald', 'Impact', sans-serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.theme-metal h1,
+.theme-metal h2 {
+	color: var(--bs-accent);
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.theme-metal .band-site-hero {
+	border-bottom: 3px solid var(--bs-accent);
+}
+
+/* Indie — pastel, rounded, friendly */
+.theme-indie {
+	--bs-bg: #fdf6f0;
+	--bs-text: #3d3d3d;
+	--bs-accent: #e879a8;
+	--bs-surface: #ffffff;
+	--bs-muted: #8b8b8b;
+	font-family: 'Inter', system-ui, sans-serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+}
+
+.theme-indie .band-site-block {
+	border-radius: 1rem;
+}
+
+.theme-indie .btn {
+	border-radius: 9999px;
+}
+
+/* Electronic — dark with vibrant accents, monospace */
+.theme-electronic {
+	--bs-bg: #0f0f23;
+	--bs-text: #e0e0ff;
+	--bs-accent: #00ff88;
+	--bs-surface: #1a1a3e;
+	--bs-muted: #7777aa;
+	font-family: 'JetBrains Mono', 'Fira Code', monospace;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+}
+
+.theme-electronic h1,
+.theme-electronic h2 {
+	color: var(--bs-accent);
+	text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.theme-electronic a {
+	color: var(--bs-accent);
+}
+
+/* Folk — earth tones, warm, textured */
+.theme-folk {
+	--bs-bg: #faf7f2;
+	--bs-text: #3b2f1a;
+	--bs-accent: #8b5e3c;
+	--bs-surface: #f0e8dc;
+	--bs-muted: #7a6f62;
+	font-family: 'Lora', 'Georgia', serif;
+	background-color: var(--bs-bg);
+	color: var(--bs-text);
+}
+
+.theme-folk h1,
+.theme-folk h2 {
+	font-family: 'Playfair Display', 'Georgia', serif;
+	color: var(--bs-accent);
+}

@@ -8,6 +8,7 @@
 export const registeredEvents = [
 	'checkout.session.completed',
 	'invoice.paid',
+	'customer.subscription.updated',
 	'customer.subscription.deleted'
 ] as const;
 

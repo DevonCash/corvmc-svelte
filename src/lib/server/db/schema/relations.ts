@@ -24,6 +24,7 @@ export const relations = defineRelations(schema, (t) => ({
 	band: {
 		genres: t.many.bandGenre(),
 		members: t.many.bandMember(),
+		events: t.many.event(),
 	},
 	bandGenre: {
 		band: t.one.band({ from: t.bandGenre.bandId, to: t.band.id }),
@@ -39,6 +40,7 @@ export const relations = defineRelations(schema, (t) => ({
 	event: {
 		reservation: t.one.reservation({ from: t.event.reservationId, to: t.reservation.id }),
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
+		band: t.one.band({ from: t.event.bandId, to: t.band.id }),
 	},
 	equipmentCategory: {
 		equipment: t.many.equipment(),
