@@ -10,6 +10,10 @@
 		updateIntegrationSettings,
 		testUtecConnection
 	} from '$lib/remote/settings.remote';
+	import {
+		getInboxChannelConfigs,
+		updateInboxChannelConfig
+	} from '$lib/remote/inbox.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -17,13 +21,22 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatDollars } from '$lib/utils/format';
-	import { IconPlugConnected } from '@tabler/icons-svelte';
+	import { toast } from 'svelte-sonner';
+	import {
+		IconPlugConnected,
+		IconMail,
+		IconMessageCircle,
+		IconWorld,
+		IconBrandInstagram,
+		IconBrandFacebook
+	} from '@tabler/icons-svelte';
 
 	let activeTab = $state('pricing');
 	let products = $derived(await getProducts());
 	let reservationSettings = $derived(await getReservationSettings());
 	let orgSettings = $derived(await getOrgSettings());
 	let integrationSettings = $derived(await getIntegrationSettings());
+	let channelConfigs = $derived(await getInboxChannelConfigs());
 
 	const { fields: reservationFields } = updateReservationSettings;
 
@@ -34,8 +47,17 @@
 		{ key: 'pricing', label: 'Pricing' },
 		{ key: 'reservations', label: 'Reservations' },
 		{ key: 'organization', label: 'Organization' },
-		{ key: 'integrations', label: 'Integrations' }
+		{ key: 'integrations', label: 'Integrations' },
+		{ key: 'inbox', label: 'Inbox Channels' }
 	];
+
+	const channelMeta: Record<string, { label: string; icon: typeof IconMail; description: string; envHint: string }> = {
+		email: { label: 'Email', icon: IconMail, description: 'Receive and reply to emails via Postmark', envHint: 'POSTMARK_SERVER_TOKEN, POSTMARK_INBOUND_TOKEN' },
+		sms: { label: 'SMS', icon: IconMessageCircle, description: 'Send and receive text messages via Twilio', envHint: 'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER' },
+		web: { label: 'Contact Form', icon: IconWorld, description: 'Receive messages from the public contact form', envHint: 'Always enabled' },
+		instagram: { label: 'Instagram DMs', icon: IconBrandInstagram, description: 'Receive and reply to Instagram direct messages', envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN' },
+		messenger: { label: 'Messenger', icon: IconBrandFacebook, description: 'Receive and reply to Facebook Messenger messages', envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN' }
+	};
 
 	async function handleTestConnection() {
 		connectionTesting = true;
@@ -441,6 +463,54 @@
 					</div>
 				</div>
 			</Form>
+
+		{:else if activeTab === 'inbox'}
+			<p class="text-sm opacity-70">
+				Enable or disable communication channels for the staff inbox. Disabled channels won't receive
+				or send messages. Environment variables must be configured for each channel to function.
+			</p>
+
+			{#each channelConfigs as cfg (cfg.channel)}
+				{@const meta = channelMeta[cfg.channel]}
+				{@const isWeb = cfg.channel === 'web'}
+				{@const ChannelIcon = meta.icon}
+				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<ChannelIcon size={20} class="opacity-60" />
+								<div>
+									<h3 class="font-semibold">{meta.label}</h3>
+									<p class="text-xs opacity-60">{meta.description}</p>
+								</div>
+							</div>
+							{#if isWeb}
+								<span class="badge badge-success badge-sm">Always On</span>
+							{:else}
+								<form
+									{...toggleForm.enhance(async ({ submit }) => {
+										if (await submit()) {
+											toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`);
+										}
+									})}
+								>
+									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
+									<input {...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')} />
+									<button type="submit" class="btn btn-sm {cfg.enabled ? 'btn-error btn-outline' : 'btn-success'}">
+										{cfg.enabled ? 'Disable' : 'Enable'}
+									</button>
+								</form>
+							{/if}
+						</div>
+						{#if !isWeb}
+							<div class="mt-2 text-xs opacity-40">
+								Env: {meta.envHint}
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/each}
 		{/if}
 	</div>
 </PageContent>

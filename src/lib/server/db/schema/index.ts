@@ -13,4 +13,5 @@ export * from './band';
 export * from './band-page';
 export * from './platform-invite';
 export * from './help';
+export * from './inbox';
 export * from './api';

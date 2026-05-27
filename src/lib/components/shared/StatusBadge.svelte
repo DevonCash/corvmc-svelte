@@ -13,7 +13,9 @@
 		IconWorld,
 		IconAlertTriangle,
 		IconArrowBackUp,
-		IconClockPause
+		IconClockPause,
+		IconInboxOff,
+		IconAlarmSnooze
 	} from '@tabler/icons-svelte';
 	import { Tooltip } from 'bits-ui';
 	import type { SvelteComponent } from 'svelte';
@@ -44,7 +46,10 @@
 		published: 'badge-success',
 		active: 'badge-success',
 		pending: 'badge-warning',
-		error: 'badge-error'
+		error: 'badge-error',
+		open: 'badge-info',
+		resolved: 'badge-success',
+		snoozed: 'badge-ghost'
 	};
 
 	type Variant = { icon: IconComponent; color: string };
@@ -62,6 +67,11 @@
 		// Event statuses
 		draft: { icon: IconPencil, color: 'text-warning' },
 		published: { icon: IconWorld, color: 'text-success' },
+
+		// Inbox statuses
+		open: { icon: IconClock, color: 'text-info' },
+		resolved: { icon: IconInboxOff, color: 'text-success' },
+		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },

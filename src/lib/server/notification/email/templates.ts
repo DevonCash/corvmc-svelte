@@ -313,3 +313,26 @@ export function waitlistExpired(vars: {
 		vars
 	);
 }
+
+export function inboxReply(vars: {
+	contactName: string;
+	staffName: string;
+	body: string;
+	siteUrl: string;
+}): string {
+	return compileEmail(
+		`
+		<mj-text>Hi {{contactName}},</mj-text>
+		<mj-text>{{body}}</mj-text>
+		<mj-divider border-color="#e5e7eb" border-width="1px" />
+		<mj-text css-class="footer-text">{{staffName}} · Corvallis Music Collective</mj-text>
+		`,
+		vars.body.slice(0, 100),
+		{
+			contactName: vars.contactName,
+			staffName: vars.staffName,
+			body: vars.body,
+			siteUrl: vars.siteUrl
+		}
+	);
+}

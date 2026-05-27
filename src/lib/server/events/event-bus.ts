@@ -206,6 +206,21 @@ export interface WaitlistExpiredEvent {
 	endTime: string;
 }
 
+export interface InboxMessageReceivedEvent {
+	threadId: string;
+	messageId: string;
+	channel: string;
+	contactName: string | null;
+	preview: string;
+}
+
+export interface InboxMessageSentEvent {
+	threadId: string;
+	messageId: string;
+	channel: string;
+	sentByUserId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -230,6 +245,8 @@ export type DomainEvents = {
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
 	'platform_invite.created': PlatformInviteCreatedEvent;
+	'inbox.message_received': InboxMessageReceivedEvent;
+	'inbox.message_sent': InboxMessageSentEvent;
 };
 
 // ---------------------------------------------------------------------------

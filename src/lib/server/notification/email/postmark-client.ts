@@ -106,3 +106,53 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
 		throw err;
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Inbox reply sending (with email threading headers)
+// ---------------------------------------------------------------------------
+
+export interface SendInboxReplyParams {
+	to: string;
+	subject: string;
+	htmlBody: string;
+	textBody: string;
+	/** Original Message-ID for In-Reply-To header */
+	inReplyTo?: string | null;
+	/** Accumulated References header for threading */
+	references?: string | null;
+	metadata?: Record<string, string>;
+}
+
+export async function sendInboxReply(params: SendInboxReplyParams): Promise<string> {
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+
+	const headers: Array<{ Name: string; Value: string }> = [];
+	if (params.inReplyTo) {
+		headers.push({ Name: 'In-Reply-To', Value: params.inReplyTo });
+	}
+	if (params.references) {
+		headers.push({ Name: 'References', Value: params.references });
+	}
+
+	try {
+		const result = await getClient().sendEmail({
+			From: `${fromName} <${fromAddress}>`,
+			To: params.to,
+			Subject: params.subject,
+			HtmlBody: params.htmlBody,
+			TextBody: params.textBody,
+			Tag: 'inbox-reply',
+			Metadata: params.metadata,
+			Headers: headers.length > 0 ? headers : undefined
+		});
+		return result.MessageID;
+	} catch (err) {
+		console.error('[inbox] Failed to send reply:', {
+			to: params.to,
+			subject: params.subject,
+			error: err
+		});
+		throw err;
+	}
+}
