@@ -25,6 +25,11 @@ vi.mock('$lib/server/ticket/checkout-listener', () => ({
 	handleTicketCheckout: (...args: unknown[]) => mockHandleTicketCheckout(...args)
 }));
 
+const mockHandleBandPremiumCheckout = vi.fn();
+vi.mock('$lib/server/band/band-checkout-listener', () => ({
+	handleBandPremiumCheckout: (...args: unknown[]) => mockHandleBandPremiumCheckout(...args)
+}));
+
 const mockRegisterAllNotificationListeners = vi.fn();
 vi.mock('$lib/server/notification/notification-listeners', () => ({
 	registerAllNotificationListeners: (...args: unknown[]) =>
@@ -44,7 +49,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for reservation and ticket fulfillment', async () => {
+	it('registers checkout.completed listeners for reservation, ticket, and band premium fulfillment', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -52,7 +57,7 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		expect(registeredHandlers['checkout.completed']).toBeDefined();
-		expect(registeredHandlers['checkout.completed'].length).toBe(2);
+		expect(registeredHandlers['checkout.completed'].length).toBe(3);
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
@@ -79,6 +84,19 @@ describe('registerListeners', () => {
 		await registeredHandlers['checkout.completed'][1](event);
 
 		expect(mockHandleTicketCheckout).toHaveBeenCalledWith(mockSession);
+	});
+
+	it('invokes handleBandPremiumCheckout with stripe session', async () => {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+
+		const mockSession = { id: 'cs_test3', metadata: { subscription_type: 'band_premium' } };
+		const event = { stripeSession: mockSession, sessionId: 'cs_test3', metadata: {} };
+
+		await registeredHandlers['checkout.completed'][2](event);
+
+		expect(mockHandleBandPremiumCheckout).toHaveBeenCalledWith(mockSession);
 	});
 
 	it('calls registerAllNotificationListeners', async () => {
