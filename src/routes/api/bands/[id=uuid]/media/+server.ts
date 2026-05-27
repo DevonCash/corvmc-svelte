@@ -44,7 +44,7 @@ function extensionFromType(contentType: string): string {
 export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
-	const bandId = params.id;
+	const bandId = params.id!;
 	const [row] = await db.select({ id: band.id }).from(band).where(eq(band.id, bandId)).limit(1);
 	if (!row) throw error(404, 'Band not found');
 
@@ -107,19 +107,17 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		await uploadFile(buffer, key, file.type);
 
-		const [inserted] = await db
+		await db
 			.insert(bandMedia)
 			.values({
-				id: fileId,
 				bandId,
 				key,
 				type: mediaType,
-				caption: files.length === 1 ? caption : null,
+				caption: files.length === 1 ? (caption ?? undefined) : undefined,
 				sortOrder: sortOrder++
-			})
-			.returning({ id: bandMedia.id, key: bandMedia.key, sortOrder: bandMedia.sortOrder });
+			});
 
-		uploaded.push(inserted);
+		uploaded.push({ id: fileId, key, sortOrder: sortOrder - 1 });
 	}
 
 	return json({ success: true, media: uploaded });
@@ -134,7 +132,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 export const DELETE: RequestHandler = async ({ params, url, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
-	const bandId = params.id;
+	const bandId = params.id!;
 	await requireAdminOfBand(bandId, locals.user.id);
 
 	const mediaId = url.searchParams.get('mediaId');
