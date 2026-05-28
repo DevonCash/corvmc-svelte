@@ -10,7 +10,7 @@ import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, asc } from 'drizzle-orm';
 import { listBandEventsUpcoming } from '$lib/server/event/event-service';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { getPublicUrl, isConfigured, resolveImageUrl } from '$lib/server/storage';
 
 // ---------------------------------------------------------------------------
 // Band Site Data — loads everything needed to render a premium band page
@@ -88,7 +88,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		members: members.map((m) => ({
 			id: m.id,
 			name: m.userName,
-			image: m.userImage,
+			image: resolveImageUrl(m.userImage),
 			position: m.position,
 			role: m.role
 		})),

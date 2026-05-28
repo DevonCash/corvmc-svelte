@@ -19,7 +19,7 @@ import {
 	getBandProfileForEdit,
 	updateBandProfile
 } from '$lib/server/directory/profile-service';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { getPublicUrl, isConfigured, resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -142,7 +142,7 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 			role: m.role,
 			position: m.position,
 			userName: m.userName,
-			userImage: m.userImage
+			userImage: resolveImageUrl(m.userImage)
 		}))
 	};
 });
@@ -179,7 +179,7 @@ export const getPublicDirectory = query(publicFiltersSchema, async (filters) => 
 			id: m.id,
 			name: m.name,
 			pronouns: m.pronouns,
-			image: m.image,
+			image: resolveImageUrl(m.image),
 			tagline: m.tagline,
 			instruments: m.instruments,
 			genres: m.genres,
@@ -267,7 +267,7 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			role: m.role,
 			position: m.position,
 			userName: m.userName,
-			userImage: m.userImage
+			userImage: resolveImageUrl(m.userImage)
 		}))
 	};
 });
@@ -281,7 +281,7 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			id: member.id,
 			name: member.name,
 			pronouns: member.pronouns,
-			image: member.image,
+			image: resolveImageUrl(member.image),
 			bio: member.bio,
 			tagline: member.tagline,
 			instruments: member.instruments,

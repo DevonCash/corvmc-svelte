@@ -4,11 +4,12 @@ import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
+import { resolveImageUrl } from '$lib/server/storage';
 
 export const getMe = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return null;
-	return { id: locals.user.id, name: locals.user.name, email: locals.user.email, image: locals.user.image ?? null };
+	return { id: locals.user.id, name: locals.user.name, email: locals.user.email, image: resolveImageUrl(locals.user.image) };
 });
 
 export const getMemberLayout = query(async () => {

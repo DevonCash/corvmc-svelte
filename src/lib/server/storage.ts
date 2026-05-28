@@ -49,6 +49,16 @@ export function getPublicUrl(key: string): string {
 	return `${publicUrl}/${key}`;
 }
 
+/**
+ * Resolve an R2 key to a public URL, returning null if not available.
+ * Convenience wrapper for optional image keys stored on models.
+ */
+export function resolveImageUrl(key: string | null | undefined): string | null {
+	if (!key) return null;
+	if (!_bucket) return null;
+	return getPublicUrl(key);
+}
+
 export function isConfigured(): boolean {
 	return !!_bucket;
 }

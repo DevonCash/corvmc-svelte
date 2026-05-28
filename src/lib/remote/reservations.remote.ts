@@ -8,6 +8,7 @@ import { createReservationSchema } from '$lib/server/db/schema/reservation';
 import { like, or, eq, ne, and, lt, gt, lte, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
 import { getBySlug } from '$lib/server/band/band-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
+import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency } from '$lib/server/reservation/rrule-helpers';
 import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
 import {
@@ -166,7 +167,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		memberEmail: rows[0].memberEmail,
 		memberPhone: rows[0].memberPhone,
 		memberPronouns: rows[0].memberPronouns,
-		memberImage: rows[0].memberImage
+		memberImage: resolveImageUrl(rows[0].memberImage)
 	};
 
 	const tz = 'America/Los_Angeles';
