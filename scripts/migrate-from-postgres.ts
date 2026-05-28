@@ -914,6 +914,59 @@ async function exportCashPayments() {
 	console.log(`  ✓ Exported ${records.length} records to ${outPath}`);
 }
 
+async function migrateMedia() {
+	console.log('── Media (R2 keys) ──');
+
+	// Spatie media library stores files at {media_id}/{file_name} in R2
+	const media = await pg`
+		SELECT m.id as media_id, m.model_type, m.model_id, m.file_name,
+			CASE
+				WHEN m.model_type = 'member_profile' THEN (SELECT user_id FROM member_profiles WHERE id = m.model_id)
+				WHEN m.model_type = 'staff_profile' THEN (SELECT user_id FROM staff_profiles WHERE id = m.model_id)
+				WHEN m.model_type = 'event' THEN m.model_id
+				WHEN m.model_type = 'band' THEN m.model_id
+			END as resolved_id
+		FROM media m
+		ORDER BY m.id
+	`;
+	console.log(`  Source: ${media.length} media records`);
+
+	if (!COMMIT) return;
+
+	const seenUsers = new Set<string>();
+	let updated = 0;
+
+	// Process in reverse so latest media wins for users with multiple uploads
+	for (const m of [...media].reverse()) {
+		const r2Key = `${m.media_id}/${m.file_name}`;
+		const resolvedId = String(m.resolved_id);
+
+		if (m.model_type === 'band') {
+			const bandId = lookupId('band_profiles', resolvedId);
+			if (bandId) {
+				await db.update(band).set({ avatarKey: r2Key }).where(sql`id = ${bandId}`);
+				updated++;
+			}
+		} else if (m.model_type === 'event') {
+			const eventId = lookupId('events', resolvedId);
+			if (eventId) {
+				await db.update(event).set({ posterKey: r2Key }).where(sql`id = ${eventId}`);
+				updated++;
+			}
+		} else if (m.model_type === 'member_profile' || m.model_type === 'staff_profile') {
+			if (seenUsers.has(resolvedId)) continue;
+			seenUsers.add(resolvedId);
+			const userId = lookupId('users', resolvedId);
+			if (userId) {
+				await db.update(user).set({ image: r2Key }).where(sql`id = ${userId}`);
+				updated++;
+			}
+		}
+	}
+
+	console.log(`  ✓ Updated ${updated} image/avatar/poster references`);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -934,6 +987,7 @@ async function main() {
 	await migrateEquipment();
 	await migrateNotifications();
 	await migrateInvitations();
+	await migrateMedia();
 
 	// Save ID map for reference/re-runs
 	saveIdMap();
