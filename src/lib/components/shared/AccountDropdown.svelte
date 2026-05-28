@@ -26,7 +26,7 @@
 		onclick={() => (open = !open)}
 		aria-label="Account menu"
 	>
-		<Avatar class="size-7 text-xs" name={me?.name} src={user.image ?? undefined} />
+		<Avatar class="size-7 text-xs" name={me?.name ?? ''} src={me?.image ?? undefined} />
 	</button>
 
 	{#if open}

@@ -13,6 +13,7 @@ import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { formatDateFull } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // EventService — create, update, publish, cancel events
@@ -426,7 +427,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 				await domainEvents.emit('event.cancelled', {
 					eventId,
 					eventTitle: existing.title,
-					eventDate: formatDateFull(existing.startsAt, 'America/Los_Angeles'),
+					eventDate: formatDateFull(existing.startsAt, DEFAULT_TIMEZONE),
 					ticketHolders: holders.map((h) => ({
 						attendeeName: h.attendeeName,
 						attendeeEmail: h.attendeeEmail,

@@ -15,6 +15,7 @@
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
@@ -96,7 +97,7 @@
 			return;
 		}
 
-		const tz = 'America/Los_Angeles';
+		const tz = DEFAULT_TIMEZONE;
 		const newStartsAt = buildISOFromLocal(editDate, editStartTime, tz);
 		const newEndsAt = buildISOFromLocal(editDate, editEndTime, tz);
 

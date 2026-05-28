@@ -104,6 +104,6 @@
 	<!-- Right: notifications + account -->
 	<div class="flex flex-none items-center gap-1">
 		<NotificationBell />
-		<AccountDropdown {user} />
+		<AccountDropdown />
 	</div>
 </nav>

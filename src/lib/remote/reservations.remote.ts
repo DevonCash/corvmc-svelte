@@ -52,6 +52,7 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ===========================================================================
 // Queries
@@ -170,7 +171,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		memberImage: resolveImageUrl(rows[0].memberImage)
 	};
 
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const dayStr = formatDateInTz(row.startsAt, tz);
 	const dayStart = buildDateInTz(dayStr, '00:00', tz);
 	const dayEnd = buildDateInTz(dayStr, '23:59', tz);
@@ -278,7 +279,7 @@ export const getAvailableDates = query(async () => {
 	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
 	const days = Math.ceil(config.maxAdvanceDaysOneoff);
 	const today = new Date();
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const todayStr = today.toLocaleDateString('en-CA', { timeZone: tz });
 
 	const results: string[] = [];
@@ -468,7 +469,7 @@ export const previewRecurringInstances = query(
 		endsAt: z.string().optional()
 	}),
 	async ({ date, startTime, frequency, endsAt }) => {
-		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
+		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
 		const rruleString = buildRRule(startsAt, frequency as RecurringFrequency);
 		const now = new Date();
 		// Show ~60 days of preview
@@ -513,8 +514,8 @@ export const checkConflicts = query(
 	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
 	async ({ date, startTime, endTime }) => {
 		await requireStaff();
-		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
-		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
+		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
+		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
@@ -707,8 +708,8 @@ const staffCreateSchema = z.object({
 
 export const createReservation = form(staffCreateSchema, async (data, issue) => {
 	await requireStaff();
-	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
-	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
 	const res = await staffCreate({
 		userId: data.memberId,
@@ -747,8 +748,8 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 		}
 	}
 
-	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
-	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
 	let res;
 	let waitlisted = false;
@@ -780,7 +781,7 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, issu
 
 	if (isRecurring && recurringFrequency) {
 		const seriesEndsAt = data.seriesEndsAt
-			? buildDateInTz(data.seriesEndsAt, '23:59', 'America/Los_Angeles')
+			? buildDateInTz(data.seriesEndsAt, '23:59', DEFAULT_TIMEZONE)
 			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
@@ -819,8 +820,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		}
 	}
 
-	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
-	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
 	let res;
 	let waitlisted = false;
@@ -852,7 +853,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 
 	if (isRecurring && recurringFrequency) {
 		const seriesEndsAt = data.seriesEndsAt
-			? buildDateInTz(data.seriesEndsAt, '23:59', 'America/Los_Angeles')
+			? buildDateInTz(data.seriesEndsAt, '23:59', DEFAULT_TIMEZONE)
 			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
@@ -935,8 +936,8 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
-	const startsAt = buildDateInTz(data.date, data.startTime, 'America/Los_Angeles');
-	const endsAt = buildDateInTz(data.date, data.endTime, 'America/Los_Angeles');
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
 	let res;
 	let waitlisted = false;

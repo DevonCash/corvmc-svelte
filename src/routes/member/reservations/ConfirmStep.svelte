@@ -4,6 +4,7 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -22,9 +23,9 @@
 	let skipPaymentInput: HTMLInputElement;
 
 	function extractTimeFields(d: Date) {
-		const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
 		const time = d.toLocaleTimeString('en-GB', {
-			timeZone: 'America/Los_Angeles',
+			timeZone: DEFAULT_TIMEZONE,
 			hour: '2-digit',
 			minute: '2-digit'
 		});
@@ -53,7 +54,7 @@
 	function formatPreviewDate(iso: string): string {
 		const d = new Date(iso);
 		return d.toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
+			timeZone: DEFAULT_TIMEZONE,
 			weekday: 'short',
 			month: 'short',
 			day: 'numeric'

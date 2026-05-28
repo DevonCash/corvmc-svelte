@@ -16,6 +16,7 @@ import {
 } from '$lib/server/event/event-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -111,7 +112,7 @@ export const createBandEventForm = form(
 			issue.title('Title is required');
 		}
 
-		const tz = 'America/Los_Angeles';
+		const tz = DEFAULT_TIMEZONE;
 		const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
 		const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
 		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
@@ -150,7 +151,7 @@ export const updateBandEventForm = form(
 	async (data) => {
 		const { band } = await requireBandAdmin();
 
-		const tz = 'America/Los_Angeles';
+		const tz = DEFAULT_TIMEZONE;
 		const params: Parameters<typeof updateBandEvent>[2] = {};
 
 		if (data.title !== undefined) params.title = data.title;

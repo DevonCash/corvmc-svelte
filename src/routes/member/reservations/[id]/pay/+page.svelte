@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DOLLARS_PER_UNIT } from '$lib/config';
+	import { DOLLARS_PER_UNIT, DEFAULT_TIMEZONE } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -23,7 +23,7 @@
 
 	function formatDate(d: Date): string {
 		return d.toLocaleDateString('en-US', {
-			timeZone: 'America/Los_Angeles',
+			timeZone: DEFAULT_TIMEZONE,
 			weekday: 'long',
 			month: 'long',
 			day: 'numeric'
@@ -32,7 +32,7 @@
 
 	function formatTime(d: Date): string {
 		return d.toLocaleTimeString('en-US', {
-			timeZone: 'America/Los_Angeles',
+			timeZone: DEFAULT_TIMEZONE,
 			hour: 'numeric',
 			minute: '2-digit'
 		});

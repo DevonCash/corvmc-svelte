@@ -14,6 +14,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { IconCheck, IconCircleCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import {
@@ -71,10 +72,10 @@
 	}
 
 	function dayLabel(r: Reservation): string {
-		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
 		const now = new Date();
-		const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-		const tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+		const today = now.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
+		const tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
 		const label = formatDate(r.startsAt);
 		if (localDate === today) return `${label} (Today)`;
 		if (localDate === tomorrow) return `${label} (Tomorrow)`;

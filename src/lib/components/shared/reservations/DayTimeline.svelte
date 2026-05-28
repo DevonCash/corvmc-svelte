@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 
 	type TimeSlot = {
 		id: string;
@@ -26,13 +27,13 @@
 	function percent(d: Date): number {
 		const h = Number(
 			d.toLocaleTimeString('en-GB', {
-				timeZone: 'America/Los_Angeles',
+				timeZone: DEFAULT_TIMEZONE,
 				hour: '2-digit',
 				hour12: false
 			})
 		);
 		const m = Number(
-			d.toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', minute: '2-digit' })
+			d.toLocaleTimeString('en-GB', { timeZone: DEFAULT_TIMEZONE, minute: '2-digit' })
 		);
 		const hourDecimal = h + m / 60;
 		return Math.max(0, Math.min(100, ((hourDecimal - START_HOUR) / RANGE) * 100));
