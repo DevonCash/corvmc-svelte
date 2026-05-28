@@ -168,6 +168,40 @@ Ensure the `ORIGIN` secret matches the domain exactly (including `https://`).
 
 ---
 
+## 7a. Password Migration (bcrypt → scrypt)
+
+bcrypt-ts silently fails on Cloudflare Workers (returns `false` in 0ms), so bcrypt passwords migrated from the Laravel app cannot be verified on the worker. A proxy flow handles this transparently:
+
+1. SvelteKit detects a `$2y$` hash → calls `LARAVEL_URL/api/verify-password`
+2. Laravel verifies bcrypt natively and returns `{ valid: true/false }`
+3. On success, SvelteKit re-hashes with scrypt and updates D1
+4. Future logins use scrypt directly — no more Laravel calls
+
+**Secrets required on Cloudflare Pages:**
+- `LARAVEL_URL` — base URL of the Laravel app (e.g. `https://corvmc.org`)
+- `MIGRATION_SECRET` — shared secret matching `MIGRATION_SECRET` in Laravel's `.env`
+
+**When cutting the domain to SvelteKit:**
+
+1. Move the Laravel app to a subdomain (e.g. `legacy.corvmc.org`)
+2. Update the Pages secret:
+   ```bash
+   npx wrangler pages secret put LARAVEL_URL --project-name corvmc <<< "https://legacy.corvmc.org"
+   ```
+3. Monitor logs for `[auth] bcrypt→scrypt migration complete` messages
+4. Once no bcrypt hashes remain in D1, remove:
+   - `LARAVEL_URL` and `MIGRATION_SECRET` secrets from Cloudflare Pages
+   - The `verifyBcryptViaLaravel()` function and bcrypt branch in `src/lib/server/auth.ts`
+   - The `/api/verify-password` route from the Laravel app
+   - The Laravel app itself (if no longer needed)
+
+**Check remaining bcrypt hashes:**
+```sql
+SELECT count(*) FROM account WHERE provider_id = 'credential' AND password LIKE '$2%';
+```
+
+---
+
 ## 8. Post-deploy Verification
 
 - [ ] Site loads at production URL

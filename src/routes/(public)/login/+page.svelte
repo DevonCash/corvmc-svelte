@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { getMe } from '$lib/remote/layout.remote';
 
@@ -14,6 +15,7 @@
 
 	let mode = $state<'login' | 'register'>(page.url.searchParams.has('invite') || page.url.searchParams.has('register') ? 'register' : 'login');
 	let error = $state('');
+	let showPassword = $state(false);
 
 	$effect(() => {
 		if (inviteToken) {
@@ -84,8 +86,32 @@
 						<Field name="name" type="text" label="Name" />
 					{/if}
 					<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
-					<Field name="password" type="password" label="Password"
-						minlength={mode === 'register' ? 8 : undefined} />
+					<Field name="password" type={showPassword ? 'text' : 'password'} label="Password"
+						minlength={mode === 'register' ? 8 : undefined}>
+						{#snippet input(id)}
+							<div class="relative">
+								<input
+									{id}
+									name="password"
+									type={showPassword ? 'text' : 'password'}
+									class="input-bordered input w-full pr-10"
+									minlength={mode === 'register' ? 8 : undefined}
+								/>
+								<button
+									type="button"
+									class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
+									onclick={() => (showPassword = !showPassword)}
+									tabindex={-1}
+								>
+									{#if showPassword}
+										<IconEyeOff size={16} />
+									{:else}
+										<IconEye size={16} />
+									{/if}
+								</button>
+							</div>
+						{/snippet}
+					</Field>
 					<SubmitButton
 						label={mode === 'login' ? 'Sign in' : 'Create account'}
 						class="btn-primary w-full mt-1"

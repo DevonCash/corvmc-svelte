@@ -15,9 +15,8 @@
 		}
 	}
 
-	async function signOut() {
-		await fetch('/api/auth/sign-out', { method: 'POST' });
-		goto('/login');
+	function signOut() {
+		window.location.href = '/logout';
 	}
 </script>
 

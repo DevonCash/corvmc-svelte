@@ -27,3 +27,8 @@ export async function listKeys(prefix: string): Promise<string[]> {
 export async function deleteKey(key: string): Promise<void> {
 	await getKv().delete(key);
 }
+
+/** Expose raw KV for direct use (e.g. debug logging) */
+export function kv(): KVNamespace {
+	return getKv();
+}
