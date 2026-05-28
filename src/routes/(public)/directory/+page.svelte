@@ -2,10 +2,16 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
+	import IdCardCta from '$lib/components/shared/directory/IdCardCta.svelte';
 	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
-	import { getPublicDirectory } from '$lib/remote/directory.remote';
+	import VinylCardCta from '$lib/components/shared/directory/VinylCardCta.svelte';
+	import { getPublicDirectory, getMyDirectoryVisibility } from '$lib/remote/directory.remote';
+	import { getMe } from '$lib/remote/layout.remote';
 
 	let data = $derived(await getPublicDirectory({}));
+	let user = $derived(await getMe());
+	let visibility = $derived(await getMyDirectoryVisibility());
+	const profileIsHidden = $derived(user && visibility !== 'public');
 
 	const members = $derived(data.members);
 	const bands = $derived(data.bands);
@@ -57,6 +63,7 @@
 							memberSince={new Date(member.memberSince).getFullYear()}
 						/>
 					{/each}
+							{#if !user}<IdCardCta />{/if}
 				</div>
 			{/if}
 		{/if}
@@ -78,8 +85,17 @@
 							color={bandColors[i % bandColors.length]}
 						/>
 					{/each}
+							{#if !user}<VinylCardCta />{/if}
 				</div>
 			{/if}
+		{/if}
+		{#if activeTab === 'members' && profileIsHidden}
+			<p class="text-center text-sm mt-10" style="color: var(--fg-3)">
+				Don't see your name? Your profile is set to
+				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
+				<a href="/member/directory" class="underline" style="color: var(--cmc-teal)">Update your visibility</a>
+				to appear here.
+			</p>
 		{/if}
 	</div>
 </section>

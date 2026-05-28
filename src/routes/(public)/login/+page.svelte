@@ -12,7 +12,7 @@
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
 	let inviteMeta = $state<{ bandName: string; inviterName: string; role: string; email: string } | null>(null);
 
-	let mode = $state<'login' | 'register'>(page.url.searchParams.has('invite') ? 'register' : 'login');
+	let mode = $state<'login' | 'register'>(page.url.searchParams.has('invite') || page.url.searchParams.has('register') ? 'register' : 'login');
 	let error = $state('');
 
 	$effect(() => {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
@@ -283,6 +283,16 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			links: (member.links as ProfileLink[] | null) ?? []
 		}
 	};
+});
+
+export const getMyDirectoryVisibility = query(z.void(), async () => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) return null;
+	const [row] = await db
+		.select({ directoryVisibility: user.directoryVisibility })
+		.from(user)
+		.where(eq(user.id, locals.user.id));
+	return row?.directoryVisibility ?? null;
 });
 
 export const getInstrumentSuggestions = query(z.void(), async () => {

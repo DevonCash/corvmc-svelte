@@ -80,14 +80,8 @@
 				{formatDate(startsAt)} · {formatTime(startsAt)}
 			</div>
 			{@render priceLine()}
+			{@render tagBadges()}
 		</div>
-		{#if tagList.length > 0 && !tapeLabel}
-			<div class="absolute right-0 top-4 flex flex-col gap-1.5 items-end">
-				{#each tagList as tag (tag)}
-					<span class="sticker-badge sticker-badge--sm">{tag}</span>
-				{/each}
-			</div>
-		{/if}
 	</div>
 {:else}
 	<a {href} class="poster-card {stateClasses} {className}">
@@ -112,14 +106,8 @@
 				{formatDate(startsAt)} · {formatTime(startsAt)}
 			</div>
 			{@render priceLine()}
+			{@render tagBadges()}
 		</div>
-		{#if tagList.length > 0 && !tapeLabel}
-			<div class="absolute right-0 top-4 flex flex-col gap-1.5 items-end">
-				{#each tagList as tag (tag)}
-					<span class="sticker-badge sticker-badge--sm">{tag}</span>
-				{/each}
-			</div>
-		{/if}
 	</a>
 {/if}
 
@@ -136,12 +124,22 @@
 	{/if}
 {/snippet}
 
+{#snippet tagBadges()}
+	{#if tagList.length > 0 && !tapeLabel}
+		<div class="poster-card__tags">
+			{#each tagList as tag (tag)}
+				<span class="sticker-badge sticker-badge--sm">{tag}</span>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
 <style>
 	.poster-card {
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		max-width: 380px;
+		width: 100%;
 		padding: 10px 10px 14px;
 		border: 2.5px solid var(--cmc-brown);
 		border-radius: 8px;
@@ -225,6 +223,14 @@
 		font-size: 11.5px;
 		letter-spacing: 0.04em;
 	}
+	.poster-card__tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 4px;
+		margin-top: 6px;
+	}
+
 	.poster-card__price--free { color: var(--cmc-teal); }
 	.poster-card__price--ticketed {
 		color: var(--cmc-green);
