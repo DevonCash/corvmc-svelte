@@ -13,8 +13,8 @@ describe('domainEvents', () => {
 
 	it('emits and receives typed events', async () => {
 		const received: unknown[] = [];
-		domainEvents.on('contact.form_submitted', (evt) => {
-			received.push(evt);
+		domainEvents.on('contact.form_submitted', ({ data }) => {
+			received.push(data);
 		});
 
 		await domainEvents.emit('contact.form_submitted', {
@@ -45,8 +45,8 @@ describe('domainEvents', () => {
 
 	it('passes event payload to listeners', async () => {
 		let receivedPayload: unknown;
-		domainEvents.on('reservation.confirmed', (evt) => {
-			receivedPayload = evt;
+		domainEvents.on('reservation.confirmed', ({ data }) => {
+			receivedPayload = data;
 		});
 
 		const payload = {

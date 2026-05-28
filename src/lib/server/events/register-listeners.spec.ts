@@ -66,9 +66,9 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		const mockSession = { id: 'cs_test', metadata: {} };
-		const event = { stripeSession: mockSession, sessionId: 'cs_test', metadata: {} };
+		const eventData = { stripeSession: mockSession, sessionId: 'cs_test', metadata: {} };
 
-		await registeredHandlers['checkout.completed'][0](event);
+		await registeredHandlers['checkout.completed'][0]({ name: 'checkout.completed', data: eventData });
 
 		expect(mockHandleReservationCheckout).toHaveBeenCalledWith(mockSession);
 	});
@@ -79,9 +79,9 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		const mockSession = { id: 'cs_test2', metadata: { type: 'ticket' } };
-		const event = { stripeSession: mockSession, sessionId: 'cs_test2', metadata: {} };
+		const eventData = { stripeSession: mockSession, sessionId: 'cs_test2', metadata: {} };
 
-		await registeredHandlers['checkout.completed'][1](event);
+		await registeredHandlers['checkout.completed'][1]({ name: 'checkout.completed', data: eventData });
 
 		expect(mockHandleTicketCheckout).toHaveBeenCalledWith(mockSession);
 	});
@@ -92,9 +92,9 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		const mockSession = { id: 'cs_test3', metadata: { subscription_type: 'band_premium' } };
-		const event = { stripeSession: mockSession, sessionId: 'cs_test3', metadata: {} };
+		const eventData = { stripeSession: mockSession, sessionId: 'cs_test3', metadata: {} };
 
-		await registeredHandlers['checkout.completed'][2](event);
+		await registeredHandlers['checkout.completed'][2]({ name: 'checkout.completed', data: eventData });
 
 		expect(mockHandleBandPremiumCheckout).toHaveBeenCalledWith(mockSession);
 	});

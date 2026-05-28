@@ -15,7 +15,7 @@ export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.com';
 
 	// --- Ticket purchase confirmation ---
-	domainEvents.on('ticket.purchased', async (event) => {
+	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		const html = templates.ticketConfirmation({
 			attendeeName: event.attendeeName,
 			eventTitle: event.eventTitle,
@@ -35,7 +35,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Event cancellation to ticket holders ---
-	domainEvents.on('event.cancelled', async (event) => {
+	domainEvents.on('event.cancelled', async ({ data: event }) => {
 		for (const holder of event.ticketHolders) {
 			try {
 				const html = templates.eventCancellation({
@@ -71,7 +71,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Reservation reminder ---
-	domainEvents.on('reservation.reminder_due', async (event) => {
+	domainEvents.on('reservation.reminder_due', async ({ data: event }) => {
 		const html = templates.reservationReminder({
 			userName: event.userName,
 			date: event.date,
@@ -93,7 +93,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Confirmation reminder ---
-	domainEvents.on('reservation.confirmation_reminder_due', async (event) => {
+	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
 		const html = templates.confirmationReminder({
 			userName: event.userName,
 			date: event.date,
@@ -115,7 +115,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Band invitation sent ---
-	domainEvents.on('band.invitation_sent', async (event) => {
+	domainEvents.on('band.invitation_sent', async ({ data: event }) => {
 		const html = templates.bandInvitation({
 			invitedUserName: event.invitedUserName,
 			bandName: event.bandName,
@@ -136,7 +136,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Band invitation accepted ---
-	domainEvents.on('band.invitation_accepted', async (event) => {
+	domainEvents.on('band.invitation_accepted', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {
 				const html = templates.bandInvitationAccepted({
@@ -164,7 +164,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Platform invite (non-user) ---
-	domainEvents.on('platform_invite.created', async (event) => {
+	domainEvents.on('platform_invite.created', async ({ data: event }) => {
 		const signupUrl = `${siteUrl}/login?invite=${event.token}`;
 		const html = templates.platformInvitation({
 			email: event.email,
@@ -183,7 +183,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Recurring reservation skipped ---
-	domainEvents.on('reservation.recurring_skipped', async (event) => {
+	domainEvents.on('reservation.recurring_skipped', async ({ data: event }) => {
 		const html = templates.recurringSkipped({
 			userName: event.userName,
 			skippedDate: event.skippedDate,
@@ -206,7 +206,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Equipment loan scheduled (notify member) ---
-	domainEvents.on('equipment.loan_scheduled', async (event) => {
+	domainEvents.on('equipment.loan_scheduled', async ({ data: event }) => {
 		const html = templates.loanScheduledConfirmation({
 			userName: event.userName,
 			equipmentName: event.equipmentName,
@@ -231,7 +231,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Equipment loan requested (notify staff) ---
-	domainEvents.on('equipment.loan_requested', async (event) => {
+	domainEvents.on('equipment.loan_requested', async ({ data: event }) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
 
 		const html = templates.loanRequestedStaffNotification({
@@ -256,7 +256,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Recurring reservation waitlisted ---
-	domainEvents.on('reservation.recurring_waitlisted', async (event) => {
+	domainEvents.on('reservation.recurring_waitlisted', async ({ data: event }) => {
 		const html = templates.recurringWaitlisted({
 			userName: event.userName,
 			date: event.date,
@@ -279,7 +279,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Waitlist slot available ---
-	domainEvents.on('reservation.waitlist_slot_available', async (event) => {
+	domainEvents.on('reservation.waitlist_slot_available', async ({ data: event }) => {
 		const html = templates.waitlistSlotAvailable({
 			userName: event.userName,
 			date: event.date,
@@ -302,7 +302,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Waitlist expired ---
-	domainEvents.on('reservation.waitlist_expired', async (event) => {
+	domainEvents.on('reservation.waitlist_expired', async ({ data: event }) => {
 		const html = templates.waitlistExpired({
 			userName: event.userName,
 			date: event.date,
@@ -324,7 +324,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Contact form submission ---
-	domainEvents.on('contact.form_submitted', async (event) => {
+	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
 
 		const html = templates.contactFormForward({

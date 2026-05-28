@@ -52,7 +52,7 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '$lib/config';
 
 // ===========================================================================
 // Queries
@@ -138,7 +138,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			)
 		)
 		.orderBy(desc(reservation.startsAt))
-		.limit(20);
+		.limit(SEARCH_LIMIT);
 
 	return { upcoming, past };
 });
@@ -247,7 +247,7 @@ export const searchMembers = query(z.string(), async (q) => {
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(or(like(user.name, pattern), like(user.email, pattern)))
-		.limit(20);
+		.limit(SEARCH_LIMIT);
 
 	return results;
 });
@@ -684,7 +684,7 @@ export const getUnresolvedReservations = query(async () => {
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.where(and(eq(reservation.status, 'scheduled'), lt(reservation.endsAt, now)))
 		.orderBy(asc(reservation.endsAt))
-		.limit(100);
+		.limit(LIST_LIMIT);
 });
 
 /** Staff: current hourly rate for reservation pricing. */

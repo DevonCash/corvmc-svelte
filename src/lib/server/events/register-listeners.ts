@@ -46,15 +46,15 @@ async function registerCheckoutListeners(): Promise<void> {
 		'$lib/server/band/band-checkout-listener'
 	);
 
-	domainEvents.on('checkout.completed', async (event) => {
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
 	});
 
-	domainEvents.on('checkout.completed', async (event) => {
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleTicketCheckout(event.stripeSession);
 	});
 
-	domainEvents.on('checkout.completed', async (event) => {
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleBandPremiumCheckout(event.stripeSession);
 	});
 }
@@ -83,7 +83,7 @@ async function registerInboxListeners(): Promise<void> {
 	const { dispatch } = await import('$lib/server/notification/dispatcher');
 	const { listStaffUsers } = await import('$lib/server/authorization');
 
-	domainEvents.on('inbox.message_received', async (event) => {
+	domainEvents.on('inbox.message_received', async ({ data: event }) => {
 		const staffUsers = await listStaffUsers();
 		const contactLabel = event.contactName ?? 'Someone';
 
@@ -116,7 +116,7 @@ async function registerWaitlistListeners(): Promise<void> {
 		'$lib/server/reservation/waitlist-service'
 	);
 
-	domainEvents.on('reservation.cancelled', async (event) => {
+	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Parse the original reservation's time range to find waitlisted candidates
 		// We need the raw Date objects — reconstruct from the formatted strings
 		// by looking up the cancelled reservation directly

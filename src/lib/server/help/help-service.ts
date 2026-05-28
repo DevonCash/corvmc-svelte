@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
 import { eq, and, like, or, sql, inArray, asc } from 'drizzle-orm';
+import { SEARCH_LIMIT } from '$lib/config';
 
 const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
 
@@ -98,7 +99,7 @@ export async function searchArticles(query: string, userRole: string) {
 			)
 		)
 		.orderBy(sql`case when ${helpArticle.title} like ${pattern} then 0 else 1 end`, asc(helpArticle.title))
-		.limit(20);
+		.limit(SEARCH_LIMIT);
 }
 
 // ---------------------------------------------------------------------------

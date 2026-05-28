@@ -145,7 +145,8 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 // Auth instance (lazy-initialized)
 // ---------------------------------------------------------------------------
 
-let _auth: ReturnType<typeof betterAuth> | undefined;
+type Auth = ReturnType<typeof createAuth>;
+let _auth: Auth | undefined;
 
 function createAuth() {
 	return betterAuth({
@@ -153,8 +154,7 @@ function createAuth() {
 		secret: env.BETTER_AUTH_SECRET,
 		database: drizzleAdapter(db, {
 			provider: 'sqlite',
-			schema,
-			experimental: { joins: true }
+			schema
 		}),
 		emailAndPassword: {
 			enabled: true,
@@ -190,7 +190,7 @@ function createAuth() {
 	});
 }
 
-export const auth = new Proxy({} as ReturnType<typeof betterAuth>, {
+export const auth = new Proxy({} as Auth, {
 	get(_target, prop, receiver) {
 		if (!_auth) _auth = createAuth();
 		return Reflect.get(_auth, prop, receiver);

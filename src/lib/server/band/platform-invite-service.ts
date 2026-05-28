@@ -3,6 +3,7 @@ import { platformInvite } from '$lib/server/db/schema/platform-invite';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
+import { SEARCH_LIMIT } from '$lib/config';
 import { invite } from './band-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -174,7 +175,7 @@ export async function listForBand(bandId: string) {
 		.leftJoin(user, eq(user.id, platformInvite.invitedById))
 		.where(eq(platformInvite.bandId, bandId))
 		.orderBy(desc(platformInvite.createdAt))
-		.limit(20);
+		.limit(SEARCH_LIMIT);
 }
 
 export async function revoke(inviteId: string): Promise<void> {

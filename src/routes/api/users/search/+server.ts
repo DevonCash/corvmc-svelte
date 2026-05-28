@@ -4,6 +4,7 @@ import { requireStaffRole } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { or, like } from 'drizzle-orm';
+import { SEARCH_LIMIT } from '$lib/config';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	await requireStaffRole(locals.user?.id);
@@ -14,6 +15,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(or(like(user.name, pattern), like(user.email, pattern)))
-		.limit(20);
+		.limit(SEARCH_LIMIT);
 	return json(results);
 };
