@@ -4,6 +4,7 @@ import { query, form, getRequestEvent } from '$app/server';
 import { requireBandOwner } from '$lib/server/band/band-context';
 import { getBySlug } from '$lib/server/band/band-service';
 import { requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
@@ -16,6 +17,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
+	await requireFeature('bandPremium');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');

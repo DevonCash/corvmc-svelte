@@ -50,9 +50,11 @@
 		<Nav.Item href="/staff" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/staff/inbox" label="Inbox">
-			{#snippet icon()}<IconInbox />{/snippet}
-		</Nav.Item>
+		{#if layout.features.staffInbox}
+			<Nav.Item href="/staff/inbox" label="Inbox">
+				{#snippet icon()}<IconInbox />{/snippet}
+			</Nav.Item>
+		{/if}
 
 		<Nav.Group title="Operations">
 			<Nav.Item href="/staff/users" label="Users">
@@ -79,34 +81,40 @@
 			<Nav.Item href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic />{/snippet}
 			</Nav.Item>
-			<Nav.Collapsible
-				href="/staff/equipment/loans"
-				label="Equipment"
-				childHrefs={['/staff/equipment/loans', '/staff/equipment']}
-			>
-				{#snippet icon()}<IconTool />{/snippet}
-				{#snippet children()}
-					<Nav.Item href="/staff/equipment" label="Inventory">
-						{#snippet icon()}<IconPackage />{/snippet}
-					</Nav.Item>
-				{/snippet}
-			</Nav.Collapsible>
+			{#if layout.features.equipment}
+				<Nav.Collapsible
+					href="/staff/equipment/loans"
+					label="Equipment"
+					childHrefs={['/staff/equipment/loans', '/staff/equipment']}
+				>
+					{#snippet icon()}<IconTool />{/snippet}
+					{#snippet children()}
+						<Nav.Item href="/staff/equipment" label="Inventory">
+							{#snippet icon()}<IconPackage />{/snippet}
+						</Nav.Item>
+					{/snippet}
+				</Nav.Collapsible>
+			{/if}
 		</Nav.Group>
 
-		<Nav.Group title="Marketing">
-			<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
-				{#snippet icon()}<IconMail />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/marketing/audiences" label="Audiences">
-				{#snippet icon()}<IconMailbox />{/snippet}
-			</Nav.Item>
-		</Nav.Group>
+		{#if layout.features.emailMarketing}
+			<Nav.Group title="Marketing">
+				<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
+					{#snippet icon()}<IconMail />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/marketing/audiences" label="Audiences">
+					{#snippet icon()}<IconMailbox />{/snippet}
+				</Nav.Item>
+			</Nav.Group>
+		{/if}
 
-		<Nav.Group title="Content">
-			<Nav.Item href="/staff/help" label="Help Articles">
-				{#snippet icon()}<IconBook />{/snippet}
-			</Nav.Item>
-		</Nav.Group>
+		{#if layout.features.helpArticles}
+			<Nav.Group title="Content">
+				<Nav.Item href="/staff/help" label="Help Articles">
+					{#snippet icon()}<IconBook />{/snippet}
+				</Nav.Item>
+			</Nav.Group>
+		{/if}
 
 		<Nav.Group title="System">
 			<Nav.Item href="/staff/payments" label="Payments">

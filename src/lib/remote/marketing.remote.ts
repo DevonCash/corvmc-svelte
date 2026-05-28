@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listAudiences,
 	getAudience,
@@ -38,6 +39,7 @@ import { audience } from '$lib/server/db/schema/marketing';
 // ---------------------------------------------------------------------------
 
 export const getPublicAudienceBySlug = query(z.string(), async (slug) => {
+	await requireFeature('emailMarketing');
 	const aud = await getAudienceBySlug(slug);
 	if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 	return {
@@ -53,6 +55,7 @@ export const getPublicAudienceBySlug = query(z.string(), async (slug) => {
 export const subscribeToAudience = form(
 	z.object({ slug: z.string(), email: z.string().email(), name: z.string().optional() }),
 	async (data) => {
+		await requireFeature('emailMarketing');
 		const aud = await getAudienceBySlug(data.slug);
 		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 		const sub = await findOrCreateByEmail(data.email.trim().toLowerCase(), data.name?.trim());
@@ -62,6 +65,7 @@ export const subscribeToAudience = form(
 );
 
 export const getUnsubscribeInfo = query(z.string(), async (token) => {
+	await requireFeature('emailMarketing');
 	const decoded = verifyUnsubscribeToken(token);
 	if (!decoded) return { valid: false as const, audienceName: null };
 
@@ -78,6 +82,7 @@ export const getUnsubscribeInfo = query(z.string(), async (token) => {
 
 /** List all audiences (staff). Used on audiences index and as audience options. */
 export const getAudiences = query(z.void(), async () => {
+	await requireFeature('emailMarketing');
 	await requireStaff();
 	return listAudiences();
 });
@@ -87,6 +92,7 @@ export const getAudienceOptions = getAudiences;
 
 /** Public: opt-in audiences (no auth required). */
 export const getPublicAudiences = query(z.void(), async () => {
+	await requireFeature('emailMarketing');
 	return getOptInAudiences();
 });
 

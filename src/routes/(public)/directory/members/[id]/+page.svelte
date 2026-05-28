@@ -11,6 +11,13 @@
 	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);
 </script>
 
+<svelte:head>
+	<title>{member.name} | Corvallis Music Collective</title>
+	<meta name="description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta property="og:title" content={member.name} />
+	<meta property="og:description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+</svelte:head>
+
 <div class="max-w-2xl mx-auto space-y-6 p-6">
 	<a href="/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
 

@@ -3,6 +3,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
+import { getAllFeatureFlags } from '$lib/server/feature-flags';
 
 export const getMe = query(async () => {
 	const { locals } = getRequestEvent();
@@ -15,9 +16,10 @@ export const getMemberLayout = query(async () => {
 	if (!locals.user) throw redirect(302, '/login');
 	const user = locals.user;
 
-	const [userBands, isStaff] = await Promise.all([
+	const [userBands, isStaff, features] = await Promise.all([
 		listForUser(user.id).catch(() => []),
-		hasAnyRole(user.id, ['admin', 'staff'])
+		hasAnyRole(user.id, ['admin', 'staff']),
+		getAllFeatureFlags()
 	]);
 
 	return {
@@ -29,7 +31,8 @@ export const getMemberLayout = query(async () => {
 			avatarKey: b.avatarKey,
 			role: b.role
 		})),
-		isStaff
+		isStaff,
+		features
 	};
 });
 
@@ -41,11 +44,15 @@ export const getStaffLayout = query(async () => {
 	if (!allowed) throw redirect(302, '/');
 
 	const user = locals.user;
-	const userBands = await listForUser(user.id).catch(() => []);
+	const [userBands, features] = await Promise.all([
+		listForUser(user.id).catch(() => []),
+		getAllFeatureFlags()
+	]);
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
-		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug }))
+		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
+		features
 	};
 });
 
@@ -56,10 +63,11 @@ export const getBandLayout = query(z.string(), async (slug) => {
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
 
-	const [role, isStaff, userBands] = await Promise.all([
+	const [role, isStaff, userBands, features] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
 		hasAnyRole(locals.user.id, ['admin', 'staff']),
-		listForUser(locals.user.id).catch(() => [])
+		listForUser(locals.user.id).catch(() => []),
+		getAllFeatureFlags()
 	]);
 
 	if (!role && !isStaff) {
@@ -71,6 +79,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		userRole: role ?? 'staff',
 		isStaff,
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
-		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email }
+		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
+		features
 	};
 });

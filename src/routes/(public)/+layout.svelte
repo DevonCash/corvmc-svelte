@@ -10,6 +10,13 @@
 	let user = $derived(await getMe());
 </script>
 
+<svelte:head>
+	<meta property="og:site_name" content="Corvallis Music Collective" />
+	<meta property="og:type" content="website" />
+	<meta property="og:image" content="/og-image.png" />
+	<meta name="twitter:card" content="summary_large_image" />
+</svelte:head>
+
 <Toaster position="bottom-right" richColors closeButton />
 <div class="flex min-h-screen flex-col">
 	<SiteHeader {user} />

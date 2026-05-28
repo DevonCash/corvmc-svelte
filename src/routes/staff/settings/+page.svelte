@@ -8,7 +8,9 @@
 		updateOrgSettings,
 		getIntegrationSettings,
 		updateIntegrationSettings,
-		testUtecConnection
+		testUtecConnection,
+		getFeatureFlags,
+		updateFeatureFlag
 	} from '$lib/remote/settings.remote';
 	import {
 		getInboxChannelConfigs,
@@ -28,7 +30,9 @@
 		IconMessageCircle,
 		IconWorld,
 		IconBrandInstagram,
-		IconBrandFacebook
+		IconBrandFacebook,
+		IconToggleRight,
+		IconToggleLeft
 	} from '@tabler/icons-svelte';
 
 	let activeTab = $state('pricing');
@@ -37,6 +41,7 @@
 	let orgSettings = $derived(await getOrgSettings());
 	let integrationSettings = $derived(await getIntegrationSettings());
 	let channelConfigs = $derived(await getInboxChannelConfigs());
+	let featureFlags = $derived(await getFeatureFlags());
 
 	const { fields: reservationFields } = updateReservationSettings;
 
@@ -48,8 +53,17 @@
 		{ key: 'reservations', label: 'Reservations' },
 		{ key: 'organization', label: 'Organization' },
 		{ key: 'integrations', label: 'Integrations' },
-		{ key: 'inbox', label: 'Inbox Channels' }
+		{ key: 'inbox', label: 'Inbox Channels' },
+		{ key: 'features', label: 'Features' }
 	];
+
+	const featureMeta: Record<string, { label: string; description: string }> = {
+		staffInbox: { label: 'Staff Inbox', description: 'Multi-channel unified inbox for email, SMS, and web messages' },
+		bandPremium: { label: 'Band Premium', description: 'Premium tier with page editor, EPK, and public band sites' },
+		emailMarketing: { label: 'Email Marketing', description: 'Audience management, campaigns, and broadcast emails' },
+		equipment: { label: 'Equipment', description: 'Equipment catalog, loan management, and equipment credits' },
+		helpArticles: { label: 'Help Articles', description: 'Knowledge base with staff-managed articles for members' }
+	};
 
 	const channelMeta: Record<string, { label: string; icon: typeof IconMail; description: string; envHint: string }> = {
 		email: { label: 'Email', icon: IconMail, description: 'Receive and reply to emails via Postmark', envHint: 'POSTMARK_SERVER_TOKEN, POSTMARK_INBOUND_TOKEN' },
@@ -381,6 +395,30 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<h3 class="card-title text-base">Social Links</h3>
+						<p class="text-xs opacity-60">Shown in the site footer. Leave blank to hide.</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								name="socialFacebook"
+								label="Facebook URL"
+								type="text"
+								value={String(orgSettings.socialFacebook ?? '')}
+								placeholder="https://facebook.com/..."
+							/>
+							<FormField
+								name="socialInstagram"
+								label="Instagram URL"
+								type="text"
+								value={String(orgSettings.socialInstagram ?? '')}
+								placeholder="https://instagram.com/..."
+							/>
+						</div>
+					</div>
+				</div>
 			</Form>
 
 		{:else if activeTab === 'integrations'}
@@ -463,6 +501,47 @@
 					</div>
 				</div>
 			</Form>
+
+		{:else if activeTab === 'features'}
+			<p class="text-sm opacity-70">
+				Enable or disable feature modules. Disabled features are hidden from navigation and return 404
+				if accessed directly. Use this to control which features are available in production.
+			</p>
+
+			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
+				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
+				{@const toggleForm = updateFeatureFlag.for(flag)}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								{#if enabled}
+									<IconToggleRight size={20} class="text-success" />
+								{:else}
+									<IconToggleLeft size={20} class="opacity-40" />
+								{/if}
+								<div>
+									<h3 class="font-semibold">{meta.label}</h3>
+									<p class="text-xs opacity-60">{meta.description}</p>
+								</div>
+							</div>
+							<form
+								{...toggleForm.enhance(async ({ submit }) => {
+									if (await submit()) {
+										toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`);
+									}
+								})}
+							>
+								<input {...toggleForm.fields.flag.as('hidden', flag)} />
+								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
+								<button type="submit" class="btn btn-sm {enabled ? 'btn-error btn-outline' : 'btn-success'}">
+									{enabled ? 'Disable' : 'Enable'}
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
+			{/each}
 
 		{:else if activeTab === 'inbox'}
 			<p class="text-sm opacity-70">

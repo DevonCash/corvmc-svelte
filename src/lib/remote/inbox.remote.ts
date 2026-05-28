@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import {
 	listThreads,
@@ -41,6 +42,7 @@ const threadFiltersSchema = z.object({
 });
 
 export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
+	await requireFeature('staffInbox');
 	await requireStaff();
 	return listThreads(
 		{
@@ -54,6 +56,7 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
+	await requireFeature('staffInbox');
 	await requireStaff();
 	const thread = await getThread(id);
 	if (!thread) throw error(404, 'Thread not found');
@@ -61,6 +64,7 @@ export const getInboxThread = query(z.string(), async (id) => {
 });
 
 export const getInboxUnreadCount = query(z.void(), async () => {
+	await requireFeature('staffInbox');
 	await requireStaff();
 	return getUnresolvedCount();
 });

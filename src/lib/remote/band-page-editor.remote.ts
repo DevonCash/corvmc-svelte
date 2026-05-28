@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import { getBySlug } from '$lib/server/band/band-service';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
@@ -14,6 +15,7 @@ import { eq } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 
 export const getBandPageEditor = query(z.string(), async (slug) => {
+	await requireFeature('bandPremium');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');

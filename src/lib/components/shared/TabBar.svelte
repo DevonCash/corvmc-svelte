@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ToggleGroup } from 'bits-ui';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
 	import { goto } from '$app/navigation';
 
 	type Tab = {
@@ -14,7 +15,7 @@
 		tabs,
 		active,
 		onchange,
-		class: className = 'tabs-bordered'
+		class: className = ''
 	}: {
 		tabs: Tab[];
 		active: string;
@@ -33,13 +34,15 @@
 	}
 </script>
 
-<ToggleGroup.Root type="single" value={active} onValueChange={handleValueChange} class="tabs {className}">
-	{#each tabs as tab (tab.key)}
-		<ToggleGroup.Item value={tab.key} class="tab {active === tab.key ? 'tab-active' : ''}">
-			{tab.label}
-			{#if tab.badge != null}
-				<Badge class="ml-1">{tab.badge}</Badge>
-			{/if}
-		</ToggleGroup.Item>
-	{/each}
+<ToggleGroup.Root type="single" value={active} onValueChange={handleValueChange}>
+	<ButtonGroup class={className}>
+		{#each tabs as tab (tab.key)}
+			<ToggleGroup.Item value={tab.key} class="join-item btn btn-sm {active === tab.key ? 'latched btn-primary depth-0' : 'depth-2'}">
+				{tab.label}
+				{#if tab.badge != null}
+					<Badge class="ml-1">{tab.badge}</Badge>
+				{/if}
+			</ToggleGroup.Item>
+		{/each}
+	</ButtonGroup>
 </ToggleGroup.Root>

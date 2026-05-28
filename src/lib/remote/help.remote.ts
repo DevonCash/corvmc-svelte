@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, getUserRoles } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listCategories,
 	listArticlesByCategory,
@@ -52,6 +53,7 @@ async function requireUserWithRole() {
 // ---------------------------------------------------------------------------
 
 export const getMemberCategories = query(z.void(), async () => {
+	await requireFeature('helpArticles');
 	const { role } = await requireUserWithRole();
 	const categories = await listCategories(role);
 
@@ -66,6 +68,7 @@ export const getMemberCategories = query(z.void(), async () => {
 });
 
 export const getMemberArticle = query(z.string(), async (slug) => {
+	await requireFeature('helpArticles');
 	const { role } = await requireUserWithRole();
 	const article = await getArticleBySlug(slug, role);
 	if (!article) throw error(404, 'Article not found');
@@ -83,6 +86,7 @@ export const searchHelp = query(z.string(), async (q) => {
 // ---------------------------------------------------------------------------
 
 export const getStaffArticles = query(z.void(), async () => {
+	await requireFeature('helpArticles');
 	await requireStaff();
 	return listAllArticles();
 });

@@ -71,15 +71,17 @@
 				{#snippet icon()}<IconUser />{/snippet}
 			</Nav.Item>
 		{/if}
-		{#if isOwnerOrAdmin && layout.band.tier === 'premium'}
+		{#if layout.features.bandPremium && isOwnerOrAdmin && layout.band.tier === 'premium'}
 			<Nav.Item href={`${base}/page-editor`} label="Page Editor">
 				{#snippet icon()}<IconBrush />{/snippet}
 			</Nav.Item>
 		{/if}
 		{#if layout.userRole === 'owner'}
-			<Nav.Item href={`${base}/subscription`} label="Subscription">
-				{#snippet icon()}<IconCrown />{/snippet}
-			</Nav.Item>
+			{#if layout.features.bandPremium}
+				<Nav.Item href={`${base}/subscription`} label="Subscription">
+					{#snippet icon()}<IconCrown />{/snippet}
+				</Nav.Item>
+			{/if}
 			<Nav.Item href={`${base}/settings`} label="Settings">
 				{#snippet icon()}<IconSettings />{/snippet}
 			</Nav.Item>

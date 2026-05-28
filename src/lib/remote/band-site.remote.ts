@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
+import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { band } from '$lib/server/db/schema/band';
 import { bandMember } from '$lib/server/db/schema/band';
@@ -16,7 +17,8 @@ import { getPublicUrl, isConfigured } from '$lib/server/storage';
 // ---------------------------------------------------------------------------
 
 export const getBandSiteData = query(z.string(), async (slug) => {
-	// Fetch band
+	await requireFeature('bandPremium');
+
 	const [bandRow] = await db
 		.select()
 		.from(band)

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
+	import { getSocialLinks } from '$lib/remote/settings.remote';
+
+	let socialLinks = $derived(await getSocialLinks());
 
 	const footerLinks = [
 		{ href: '/about', label: 'About' },
@@ -11,6 +14,11 @@
 		{ href: '/about/privacy', label: 'Privacy' },
 		{ href: '/contact', label: 'Contact' }
 	];
+
+	const socials = $derived([
+		{ href: socialLinks.facebook, label: 'Facebook', icon: IconBrandFacebook },
+		{ href: socialLinks.instagram, label: 'Instagram', icon: IconBrandInstagram }
+	].filter(s => s.href));
 </script>
 
 <footer class="mt-16" style="background: var(--bg-section); border-top: 1px solid var(--surface-border)">
@@ -22,14 +30,15 @@
 			{/each}
 		</div>
 
-		<div class="flex justify-center gap-4 mt-6">
-			<a href="https://facebook.com" aria-label="Facebook" class="opacity-60 hover:opacity-100 transition-opacity">
-				<IconBrandFacebook size={22} />
-			</a>
-			<a href="https://instagram.com" aria-label="Instagram" class="opacity-60 hover:opacity-100 transition-opacity">
-				<IconBrandInstagram size={22} />
-			</a>
-		</div>
+		{#if socials.length > 0}
+			<div class="flex justify-center gap-4 mt-6">
+				{#each socials as social}
+					<a href={social.href} aria-label={social.label} class="opacity-60 hover:opacity-100 transition-opacity">
+						<social.icon size={22} />
+					</a>
+				{/each}
+			</div>
+		{/if}
 
 		<div class="mt-6 text-xs" style="color: var(--fg-3)">
 			<p>&copy; {new Date().getFullYear()} Corvallis Music Collective. All rights reserved.</p>

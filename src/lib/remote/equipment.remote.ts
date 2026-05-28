@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import {
 	createEquipment as createEquipmentService,
 	updateEquipment,
@@ -39,6 +40,7 @@ import { equipmentConditions, equipmentStatuses } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 export const getEquipment = query(z.string(), async (id) => {
+	await requireFeature('equipment');
 	await requireStaff();
 	const item = await getEquipmentById(id);
 	if (!item) error(404, 'Equipment not found');
@@ -114,6 +116,7 @@ const memberEquipmentFilters = z.object({
 });
 
 export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
+	await requireFeature('equipment');
 	const currentUser = requireUser();
 	const { rows } = await listEquipment({
 		search: filters.search || undefined,
@@ -134,6 +137,7 @@ export const getMemberEquipment = query(memberEquipmentFilters, async (filters) 
 });
 
 export const getMemberEquipmentMeta = query(z.void(), async () => {
+	await requireFeature('equipment');
 	const currentUser = requireUser();
 	const { getBalance } = await import('$lib/server/finance/credit-service');
 	const { getSubscription } = await import('$lib/server/finance/subscription-service');
@@ -157,6 +161,7 @@ export const getMemberEquipmentMeta = query(z.void(), async () => {
 });
 
 export const getMemberEquipmentLoans = query(async () => {
+	await requireFeature('equipment');
 	const currentUser = requireUser();
 	const loans = await listUserLoans(currentUser.id);
 

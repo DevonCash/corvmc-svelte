@@ -6,7 +6,7 @@ const KV_PREFIX = 'site-config:';
 // Defaults — used when no KV entry exists for a key
 // ---------------------------------------------------------------------------
 
-const DEFAULTS: Record<string, string | number> = {
+const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursStart': '09:00',
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.minDurationHours': 1,
@@ -22,10 +22,19 @@ const DEFAULTS: Record<string, string | number> = {
 	'org.contactEmail': 'staff@corvmc.com',
 	'org.timezone': 'America/Los_Angeles',
 
+	'org.socialFacebook': '',
+	'org.socialInstagram': '',
+
 	'integration.utec.clientId': '',
 	'integration.utec.clientSecret': '',
 	'integration.utec.deviceId': '',
-	'integration.utec.refreshToken': ''
+	'integration.utec.refreshToken': '',
+
+	'feature.staffInbox': false,
+	'feature.bandPremium': false,
+	'feature.emailMarketing': false,
+	'feature.equipment': false,
+	'feature.helpArticles': false
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;
@@ -34,7 +43,7 @@ export type SiteConfigKey = keyof typeof DEFAULTS;
 // Core access
 // ---------------------------------------------------------------------------
 
-export async function config<T extends string | number = string | number>(
+export async function config<T extends string | number | boolean = string | number | boolean>(
 	key: string
 ): Promise<T> {
 	const value = await getJson<T>(`${KV_PREFIX}${key}`);
@@ -51,8 +60,8 @@ export const getSiteConfig = config;
 
 export async function getConfigsByPrefix(
 	prefix: string
-): Promise<Record<string, string | number>> {
-	const result: Record<string, string | number> = {};
+): Promise<Record<string, string | number | boolean>> {
+	const result: Record<string, string | number | boolean> = {};
 
 	for (const [key, value] of Object.entries(DEFAULTS)) {
 		if (key.startsWith(`${prefix}.`)) {
@@ -65,7 +74,7 @@ export async function getConfigsByPrefix(
 	for (const kvKey of kvKeys) {
 		const configKey = kvKey.slice(KV_PREFIX.length);
 		const shortKey = configKey.slice(prefix.length + 1);
-		const value = await getJson<string | number>(kvKey);
+		const value = await getJson<string | number | boolean>(kvKey);
 		if (value !== null) result[shortKey] = value;
 	}
 
@@ -78,7 +87,7 @@ export async function getConfigsByPrefix(
 
 export async function updateSiteConfig(
 	key: string,
-	value: string | number
+	value: string | number | boolean
 ): Promise<void> {
 	await putJson(`${KV_PREFIX}${key}`, value);
 }

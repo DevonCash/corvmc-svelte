@@ -77,9 +77,11 @@
 
 		<div class="flex grow"></div>
 
-		<Nav.Item href="/member/help" label="Help">
-			{#snippet icon()}<IconHelp />{/snippet}
-		</Nav.Item>
+		{#if layout.features.helpArticles}
+			<Nav.Item href="/member/help" label="Help">
+				{#snippet icon()}<IconHelp />{/snippet}
+			</Nav.Item>
+		{/if}
 		<Nav.Item href="/member/membership" label="Membership">
 			{#snippet icon()}<IconStar />{/snippet}
 		</Nav.Item>

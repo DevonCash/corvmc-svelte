@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import {
 	getAllProductConfigs,
@@ -8,9 +9,24 @@ import {
 import {
 	config as getConfig,
 	getConfigsByPrefix,
-	updateSiteConfigs
+	updateSiteConfigs,
+	updateSiteConfig
 } from '$lib/server/site-config/site-config-service';
 import { testConnection } from '$lib/server/lock/ultraloc-client';
+import { requireStaff } from '$lib/server/authorization';
+import { getAllFeatureFlags, type FeatureFlag } from '$lib/server/feature-flags';
+
+// ---------------------------------------------------------------------------
+// Public queries (no auth)
+// ---------------------------------------------------------------------------
+
+export const getSocialLinks = query(async () => {
+	const settings = await getConfigsByPrefix('org');
+	return {
+		facebook: String(settings.socialFacebook ?? ''),
+		instagram: String(settings.socialInstagram ?? '')
+	};
+});
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -117,7 +133,9 @@ const orgSettingsSchema = z.object({
 	name: z.string().trim().min(1, 'Organization name is required'),
 	shortName: z.string().trim().min(1, 'Short name is required'),
 	contactEmail: z.string().trim().email('Invalid email address'),
-	timezone: z.string().trim().min(1, 'Timezone is required')
+	timezone: z.string().trim().min(1, 'Timezone is required'),
+	socialFacebook: z.string().trim().max(500).optional().default(''),
+	socialInstagram: z.string().trim().max(500).optional().default('')
 });
 
 export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
@@ -127,7 +145,9 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 		{ key: 'org.name', value: data.name },
 		{ key: 'org.shortName', value: data.shortName },
 		{ key: 'org.contactEmail', value: data.contactEmail },
-		{ key: 'org.timezone', value: data.timezone }
+		{ key: 'org.timezone', value: data.timezone },
+		{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
+		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 	]);
 
 	void getOrgSettings().refresh();
@@ -145,6 +165,33 @@ const integrationSettingsSchema = z.object({
 	deviceId: z.string().trim(),
 	refreshToken: z.string().trim()
 });
+
+// ---------------------------------------------------------------------------
+// Feature flags
+// ---------------------------------------------------------------------------
+
+export const getFeatureFlags = query(async () => {
+	await requireStaff();
+	return getAllFeatureFlags();
+});
+
+const VALID_FLAGS: FeatureFlag[] = ['staffInbox', 'bandPremium', 'emailMarketing', 'equipment', 'helpArticles'];
+
+export const updateFeatureFlag = form(
+	z.object({
+		flag: z.string(),
+		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
+	}),
+	async (data) => {
+		await requireStaff();
+		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
+			throw error(400, 'Invalid feature flag');
+		}
+		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
+		void getFeatureFlags().refresh();
+		return { success: true };
+	}
+);
 
 export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {
 	const data = raw as z.infer<typeof integrationSettingsSchema>;

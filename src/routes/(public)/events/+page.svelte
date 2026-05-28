@@ -8,6 +8,8 @@
 <svelte:head>
 	<title>Events | Corvallis Music Collective</title>
 	<meta name="description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
+	<meta property="og:title" content="Events | Corvallis Music Collective" />
+	<meta property="og:description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
 </svelte:head>
 
 {#if events.length === 0}

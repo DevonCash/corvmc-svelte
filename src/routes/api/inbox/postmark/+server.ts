@@ -3,8 +3,12 @@ import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { handlePostmarkInbound, type PostmarkInboundPayload } from '$lib/server/inbox/inbound-handlers';
 import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 export const POST: RequestHandler = async ({ request }) => {
+	if (!(await isFeatureEnabled('staffInbox'))) {
+		return json({ ok: true, skipped: 'feature disabled' });
+	}
 	const enabled = await isChannelEnabled('email');
 	if (!enabled) {
 		return json({ ok: true, skipped: 'channel disabled' });
