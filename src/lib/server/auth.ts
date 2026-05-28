@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
-import bcrypt from 'bcryptjs';
+import { compare } from 'bcrypt-ts';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -28,7 +28,7 @@ function createAuth() {
 				verify: async ({ hash, password }) => {
 					if (hash.startsWith('$2')) {
 						const normalized = hash.replace(/^\$2y\$/, '$2a$');
-						const valid = await bcrypt.compare(password, normalized);
+						const valid = await compare(password, normalized);
 						if (valid) {
 							const scryptHash = await hashPassword(password);
 							await db

@@ -90,7 +90,7 @@
 		"@internationalized/date": "^3.12.1",
 		"@sentry/cloudflare": "^10.53.1",
 		"@tabler/icons-svelte": "^3.44.0",
-		"bcryptjs": "^3.0.3",
+		"bcrypt-ts": "^8.0.1",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"daisyui": "^5.5.20",
