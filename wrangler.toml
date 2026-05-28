@@ -1,6 +1,7 @@
 name = "corvmc"
 compatibility_date = "2025-05-15"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
 
 [[d1_databases]]
 binding = "DB"
@@ -8,8 +9,8 @@ database_name = "corvmc-db"
 database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
 
 [[r2_buckets]]
-binding="R2_BUCKET"
-bucket_name="corvmc"
+binding = "R2_BUCKET"
+bucket_name = "corvmc"
 
 [[kv_namespaces]]
 binding = "KV"

@@ -6,7 +6,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gte, lt } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { DateTime } from 'luxon';
+import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
 
 const TZ = 'America/Los_Angeles';
 
@@ -54,17 +54,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	let emitted = 0;
 	for (const row of rows) {
 		try {
-			const dt = DateTime.fromJSDate(row.startsAt).setZone(TZ);
-			const endDt = DateTime.fromJSDate(row.endsAt).setZone(TZ);
-
 			await domainEvents.emit('reservation.confirmation_reminder_due', {
 				reservationId: row.id,
 				userId: row.userId,
 				userName: row.userName,
 				userEmail: row.userEmail,
-				date: dt.toLocaleString(DateTime.DATE_FULL),
-				startTime: dt.toLocaleString(DateTime.TIME_SIMPLE),
-				endTime: endDt.toLocaleString(DateTime.TIME_SIMPLE)
+				date: formatDateFull(row.startsAt, TZ),
+				startTime: formatTimeSimple(row.startsAt, TZ),
+				endTime: formatTimeSimple(row.endsAt, TZ)
 			});
 			emitted++;
 		} catch (err) {

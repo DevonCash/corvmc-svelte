@@ -12,7 +12,7 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { DateTime } from 'luxon';
+import { formatDateFull } from '$lib/server/reservation/timezone';
 
 // ---------------------------------------------------------------------------
 // EventService — create, update, publish, cancel events
@@ -423,11 +423,10 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 			});
 
 			if (holders.length > 0) {
-				const eventDt = DateTime.fromJSDate(existing.startsAt);
 				await domainEvents.emit('event.cancelled', {
 					eventId,
 					eventTitle: existing.title,
-					eventDate: eventDt.toLocaleString(DateTime.DATE_FULL),
+					eventDate: formatDateFull(existing.startsAt, 'America/Los_Angeles'),
 					ticketHolders: holders.map((h) => ({
 						attendeeName: h.attendeeName,
 						attendeeEmail: h.attendeeEmail,

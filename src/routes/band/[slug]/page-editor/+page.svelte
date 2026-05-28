@@ -8,7 +8,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
-	import { BAND_THEMES, type Block } from '$lib/server/db/schema/band-page';
+	import { BAND_THEMES, type Block } from '$lib/types/band-page';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));

@@ -16,7 +16,8 @@ import { getAllBalances, addCredits, deductCredits, listTransactions } from '$li
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { getPublicUrl, isConfigured } from '$lib/server/storage';
-import { DateTime } from 'luxon';
+import { startOfWeek, endOfWeek } from 'date-fns';
+import { getPartsInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import type { CreditType } from '$lib/server/db/schema/finance';
 
 // ---------------------------------------------------------------------------
@@ -283,9 +284,9 @@ export const getMemberDashboard = query(async () => {
 	const currentUser = requireUser();
 	const r2Available = isConfigured();
 
-	const now = DateTime.now().setZone(TZ);
-	const weekStart = now.startOf('week').toJSDate();
-	const weekEnd = now.endOf('week').toJSDate();
+	const nowDate = new Date();
+	const weekStart = startOfWeek(nowDate, { weekStartsOn: 1 });
+	const weekEnd = endOfWeek(nowDate, { weekStartsOn: 1 });
 
 	const userBands = await db
 		.select({ bandId: bandMember.bandId, bandName: band.name })

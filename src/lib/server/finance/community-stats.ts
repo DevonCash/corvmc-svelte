@@ -2,8 +2,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
-import { DateTime } from 'luxon';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, getPartsInTz } from '$lib/server/reservation/timezone';
 import { getJson, putJson } from '$lib/server/kv';
 
 export interface CommunityStats {
@@ -62,10 +61,11 @@ async function queryStats(): Promise<CommunityStats> {
 }
 
 function getMonthStart(): Date {
-	const now = DateTime.now().setZone('America/Los_Angeles');
+	const TZ = 'America/Los_Angeles';
+	const now = getPartsInTz(new Date(), TZ);
 	return buildDateInTz(
 		`${now.year}-${String(now.month).padStart(2, '0')}-01`,
 		'00:00',
-		'America/Los_Angeles'
+		TZ
 	);
 }

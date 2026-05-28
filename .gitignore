@@ -37,5 +37,8 @@ scripts/.id-map.json
 # Coverage
 coverage/
 
+# Generated email layouts
+src/lib/server/generated/
+
 # Claude Code
 .claude/worktrees/

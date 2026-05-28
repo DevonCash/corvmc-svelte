@@ -1,0 +1,156 @@
+/**
+ * Pre-compile MJML email layouts into HTML at build time.
+ *
+ * This avoids bundling the heavy mjml runtime (and its transitive
+ * dependency on typescript via cosmiconfig) into the Worker.
+ *
+ * Run: pnpm tsx scripts/compile-email-layouts.ts
+ */
+import mjml2html from 'mjml';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+const OUTDIR = 'src/lib/server/generated';
+
+// ---------------------------------------------------------------------------
+// 1. Transactional email layout (notification emails)
+// ---------------------------------------------------------------------------
+// Uses placeholders: {{PREVIEW_TEXT}}, {{CONTENT}}
+
+const transactionalMjml = `
+<mjml>
+  <mj-head>
+    <mj-preview>{{PREVIEW_TEXT}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" />
+      <mj-text font-size="15px" line-height="1.6" color="#374151" />
+      <mj-button background-color="#6366f1" border-radius="6px" font-size="15px" font-weight="600" />
+    </mj-attributes>
+    <mj-style>
+      .footer-text { font-size: 12px; color: #9ca3af; }
+      a { color: #6366f1; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <mj-section padding="20px 0 0">
+      <mj-column>
+        <mj-text align="center" font-size="22px" font-weight="700" color="#111827">
+          CorvMC
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" border-radius="8px" padding="32px 24px">
+      <mj-column>
+        <mj-text>CONTENT_SLOT_START</mj-text>
+        <mj-text>CONTENT_SLOT_END</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="16px 0">
+      <mj-column>
+        <mj-text align="center" css-class="footer-text">
+          You're receiving this because of your notification preferences.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+`;
+
+// ---------------------------------------------------------------------------
+// 2. Campaign email layout (marketing emails)
+// ---------------------------------------------------------------------------
+// Uses placeholders: {{PREVIEW_TEXT}}, {{CONTENT}}, {{FOOTER}}
+
+const campaignMjml = `
+<mjml>
+  <mj-head>
+    <mj-preview>{{PREVIEW_TEXT}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" />
+      <mj-text font-size="15px" line-height="1.6" color="#374151" />
+      <mj-button background-color="#6366f1" border-radius="6px" font-size="15px" font-weight="600" />
+    </mj-attributes>
+    <mj-style>
+      .footer-text { font-size: 12px; color: #9ca3af; }
+      a { color: #6366f1; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <mj-section padding="20px 0 0">
+      <mj-column>
+        <mj-text align="center" font-size="22px" font-weight="700" color="#111827">
+          CorvMC
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" border-radius="8px" padding="32px 24px">
+      <mj-column>
+        <mj-text>{{CONTENT}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="16px 0">
+      <mj-column>
+        <mj-text align="center" css-class="footer-text">
+          {{FOOTER}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+`;
+
+// ---------------------------------------------------------------------------
+// Compile and write
+// ---------------------------------------------------------------------------
+
+async function compile(name: string, mjmlSource: string): Promise<string> {
+	const result = await mjml2html(mjmlSource, {
+		validationLevel: 'soft',
+		minify: false // keep readable; wrangler will minify
+	});
+
+	if (result.errors?.length > 0) {
+		console.warn(`[compile-email-layouts] ${name} warnings:`, result.errors);
+	}
+
+	return result.html;
+}
+
+mkdirSync(OUTDIR, { recursive: true });
+
+let transactionalHtml = await compile('transactional', transactionalMjml);
+const campaignHtml = await compile('campaign', campaignMjml);
+
+// Replace the two marker <tr> rows with a single {{CONTENT}} placeholder.
+// This lets runtime code inject multiple <tr> rows into the table body.
+const startMarker = transactionalHtml.indexOf('CONTENT_SLOT_START');
+const endMarker = transactionalHtml.indexOf('CONTENT_SLOT_END');
+if (startMarker === -1 || endMarker === -1) {
+	throw new Error('Could not find content slot markers in compiled transactional layout');
+}
+// Walk back from CONTENT_SLOT_START to find the opening <tr> of that row
+const beforeStart = transactionalHtml.lastIndexOf('<tr>', startMarker);
+// Walk forward from CONTENT_SLOT_END to find the closing </tr> + whitespace
+const afterEnd = transactionalHtml.indexOf('</tr>', endMarker) + '</tr>'.length;
+transactionalHtml =
+	transactionalHtml.slice(0, beforeStart) +
+	'{{CONTENT}}' +
+	transactionalHtml.slice(afterEnd);
+
+const header = `// AUTO-GENERATED by scripts/compile-email-layouts.ts — do not edit\n\n`;
+
+writeFileSync(
+	`${OUTDIR}/email-layout-transactional.ts`,
+	`${header}export const TRANSACTIONAL_LAYOUT = ${JSON.stringify(transactionalHtml)};\n`
+);
+
+writeFileSync(
+	`${OUTDIR}/email-layout-campaign.ts`,
+	`${header}export const CAMPAIGN_LAYOUT = ${JSON.stringify(campaignHtml)};\n`
+);
+
+console.log('✅ Email layouts compiled to', OUTDIR);

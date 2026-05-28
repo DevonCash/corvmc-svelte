@@ -190,26 +190,29 @@ export async function restoreEquipment(id: string) {
 // Queries
 // ---------------------------------------------------------------------------
 
-const activeLoansSubquery = db
-	.select({
-		equipmentId: equipmentLoan.equipmentId,
-		loanedQty: sql<number>`COALESCE(SUM(${equipmentLoan.quantity}), 0)`.as('loaned_qty')
-	})
-	.from(equipmentLoan)
-	.where(inArray(equipmentLoan.status, ['scheduled', 'checked_out']))
-	.groupBy(equipmentLoan.equipmentId)
-	.as('active_loans');
+function activeLoansSubquery() {
+	return db
+		.select({
+			equipmentId: equipmentLoan.equipmentId,
+			loanedQty: sql<number>`COALESCE(SUM(${equipmentLoan.quantity}), 0)`.as('loaned_qty')
+		})
+		.from(equipmentLoan)
+		.where(inArray(equipmentLoan.status, ['scheduled', 'checked_out']))
+		.groupBy(equipmentLoan.equipmentId)
+		.as('active_loans');
+}
 
 export async function getEquipmentById(id: string) {
+	const loans = activeLoansSubquery();
 	const [row] = await db
 		.select({
 			equipment: equipment,
 			category: equipmentCategory,
-			loanedQty: sql<number>`COALESCE(${activeLoansSubquery.loanedQty}, 0)`
+			loanedQty: sql<number>`COALESCE(${loans.loanedQty}, 0)`
 		})
 		.from(equipment)
 		.innerJoin(equipmentCategory, eq(equipment.categoryId, equipmentCategory.id))
-		.leftJoin(activeLoansSubquery, eq(equipment.id, activeLoansSubquery.equipmentId))
+		.leftJoin(loans, eq(equipment.id, loans.equipmentId))
 		.where(and(eq(equipment.id, id), isNull(equipment.deletedAt)))
 		.limit(1);
 
@@ -255,15 +258,16 @@ export async function listEquipment(opts: ListEquipmentOptions = {}, pagination:
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+	const loans = activeLoansSubquery();
 	const dataQ = db
 		.select({
 			equipment: equipment,
 			category: equipmentCategory,
-			loanedQty: sql<number>`COALESCE(${activeLoansSubquery.loanedQty}, 0)`
+			loanedQty: sql<number>`COALESCE(${loans.loanedQty}, 0)`
 		})
 		.from(equipment)
 		.innerJoin(equipmentCategory, eq(equipment.categoryId, equipmentCategory.id))
-		.leftJoin(activeLoansSubquery, eq(equipment.id, activeLoansSubquery.equipmentId))
+		.leftJoin(loans, eq(equipment.id, loans.equipmentId))
 		.where(where)
 		.orderBy(equipmentCategory.displayOrder, equipment.name)
 		.$dynamic();

@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
@@ -8,11 +8,6 @@ import { initStorage } from '$lib/server/storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 import { captureException } from '$lib/server/sentry';
-
-// Register domain event listeners once at startup
-if (!building) {
-	registerListeners();
-}
 
 const resolvedSessions = new Set<string>();
 
@@ -25,6 +20,12 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	if (event.platform?.env?.KV) {
 		initKv(event.platform.env.KV);
+	}
+
+	// Register domain event listeners once (inside request handler so
+	// $env/dynamic/private is available on Cloudflare)
+	if (!building) {
+		registerListeners();
 	}
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
@@ -42,3 +43,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 };
 
 export const handle: Handle = handleBetterAuth;
+
+export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+	console.error(`[${status}] ${event.request.method} ${event.url.pathname}`, error);
+	captureException(error);
+	return { message };
+};

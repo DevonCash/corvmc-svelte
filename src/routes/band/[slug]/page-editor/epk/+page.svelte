@@ -8,7 +8,7 @@
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandEpk } from '$lib/remote/band-page-editor.remote';
 	import { page } from '$app/state';
-	import type { BandEpk } from '$lib/server/db/schema/band-page';
+	import type { BandEpk } from '$lib/types/band-page';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let pageData = $derived(await getBandPageEditor(page.params.slug!));
