@@ -29,7 +29,7 @@ export const getMemberLayout = query(async () => {
 			id: b.id,
 			name: b.name,
 			slug: b.slug,
-			avatarKey: b.avatarKey,
+			avatarUrl: resolveImageUrl(b.avatarKey),
 			role: b.role
 		})),
 		isStaff,

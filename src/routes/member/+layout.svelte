@@ -64,7 +64,7 @@
 					{#snippet icon()}
 						<Avatar
 							class="size-8"
-							src={band.avatarKey ? `/api/bands/${band.id}/avatar` : undefined}
+							src={band.avatarUrl ?? undefined}
 							name={band.name}
 						/>
 					{/snippet}
