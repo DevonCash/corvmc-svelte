@@ -123,10 +123,10 @@ if (COMMIT) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function ts(val: Date | string | null): string | null {
+function ts(val: Date | string | null): Date | null {
 	if (!val) return null;
-	if (val instanceof Date) return val.toISOString();
-	return new Date(val).toISOString();
+	if (val instanceof Date) return val;
+	return new Date(val);
 }
 
 async function count(table: string): Promise<number> {
@@ -430,6 +430,45 @@ async function migrateBands() {
 	console.log(`  ✓ Migrated ${bands.length} bands, ${members.length} members`);
 }
 
+/**
+ * Convert an RFC 5545 RRULE string to the new JSON format.
+ * Example input: "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU"
+ */
+function convertRruleToJson(rruleStr: string, startDate: Date | string | null): string {
+	const startDt = startDate ? new Date(startDate instanceof Date ? startDate : startDate) : new Date();
+
+	// Parse RRULE parts
+	const parts: Record<string, string> = {};
+	for (const part of rruleStr.replace(/^RRULE:/, '').split(';')) {
+		const [key, val] = part.split('=');
+		if (key && val) parts[key] = val;
+	}
+
+	const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+	const interval = Number(parts.INTERVAL ?? 1);
+	const freq = parts.FREQ === 'MONTHLY' ? 'monthly' as const : 'weekly' as const;
+	const byDay = parts.BYDAY ?? '';
+	const weekday = dayMap[byDay.replace(/[^A-Z]/g, '')] ?? startDt.getDay();
+	const nthWeek = freq === 'monthly' ? Math.ceil(startDt.getDate() / 7) : undefined;
+
+	const tz = 'America/Los_Angeles';
+	const formatter = new Intl.DateTimeFormat('en-US', {
+		timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
+		hour: 'numeric', minute: 'numeric', hour12: false
+	});
+	const dateParts = formatter.formatToParts(startDt);
+	const get = (type: Intl.DateTimeFormatPartTypes) => Number(dateParts.find(p => p.type === type)?.value ?? 0);
+
+	return JSON.stringify({
+		freq,
+		interval,
+		tz,
+		start: { year: get('year'), month: get('month'), day: get('day'), hour: get('hour'), minute: get('minute') },
+		weekday,
+		...(nthWeek !== undefined ? { nthWeek } : {})
+	});
+}
+
 async function migrateRecurringSeries() {
 	console.log('── Recurring Series ──');
 	const series = await pg`SELECT * FROM recurring_series WHERE status = 'active'`;
@@ -439,17 +478,23 @@ async function migrateRecurringSeries() {
 
 	for (const s of series) {
 		const id = mapId('recurring_series', s.id);
-		// Map recurable_type to a simpler string
 		const protoType = s.recurable_type?.includes('Reservation') ? 'reservation' : 'reservation';
 		const userId = lookupId('users', s.user_id);
 		if (!userId) continue;
+
+		// Convert RFC 5545 RRULE to new JSON format
+		const rruleJson = convertRruleToJson(
+			s.recurrence_rule ?? 'FREQ=WEEKLY;INTERVAL=1',
+			s.start_date ?? s.created_at
+		);
 
 		await db.insert(recurringSeries).values({
 			id,
 			supersededBy: null,
 			prototypeType: protoType,
 			prototypeId: userId,
-			rrule: s.recurrence_rule,
+			rrule: rruleJson,
+			createdBy: userId,
 			createdAt: ts(s.created_at)!,
 			cancelledAt: s.status === 'cancelled' ? ts(s.updated_at) : null
 		}).onConflictDoNothing();
@@ -630,7 +675,7 @@ async function migrateTickets() {
 				attendeeName: t.attendee_name ?? 'Unknown',
 				attendeeEmail: t.attendee_email ?? '',
 				code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
-				status: t.status === 'valid' ? 'confirmed' : (t.status ?? 'confirmed'),
+				status: t.status === 'confirmed' ? 'valid' : (t.status ?? 'valid'),
 				checkedInAt: ts(t.checked_in_at),
 				checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
 				createdAt: ts(t.created_at)!,
@@ -827,7 +872,7 @@ async function migrateInvitations() {
 			position: null,
 			invitedById,
 			status: 'pending',
-			expiresAt: ts(inv.expires_at) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+			expiresAt: ts(inv.expires_at) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 			createdAt: ts(inv.created_at)!,
 			acceptedAt: null
 		}).onConflictDoNothing();
