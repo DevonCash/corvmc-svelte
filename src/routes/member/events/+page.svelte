@@ -22,7 +22,7 @@
 		posterUrl: string | null;
 	}
 
-	let events: EventItem[] = $derived(await getMemberEvents());
+	let { upcoming, past }: { upcoming: EventItem[]; past: EventItem[] } = $derived(await getMemberEvents());
 	let tickets = $derived(await getMemberTickets());
 
 	const activeTickets = $derived(
@@ -34,12 +34,12 @@
 	const ticketedEventIds = $derived(new Set(activeTickets.map((t) => t.eventId)));
 
 	const eventTagMap = $derived(
-		new Map(events.map((e) => [e.id, e.tags]))
+		new Map(upcoming.map((e) => [e.id, e.tags]))
 	);
 
 	const allTags = $derived.by(() => {
 		const tags = new Set<string>();
-		for (const evt of events) {
+		for (const evt of upcoming) {
 			if (evt.tags) {
 				for (const t of evt.tags.split(',')) {
 					const trimmed = t.trim();
@@ -61,11 +61,11 @@
 
 	const filteredEvents = $derived(
 		activeFilter
-			? events.filter((e) => {
+			? upcoming.filter((e) => {
 					if (!e.tags) return false;
 					return e.tags.split(',').some((t) => t.trim() === activeFilter);
 				})
-			: events
+			: upcoming
 	);
 
 	function primaryTag(tags: string | null | undefined): string | undefined {
@@ -109,7 +109,7 @@
 						class:latched={activeFilter === null}
 						onclick={() => (activeFilter = null)}
 					>
-						All <span class="opacity-60 ml-1">{events.length}</span>
+						All <span class="opacity-60 ml-1">{upcoming.length}</span>
 					</button>
 					{#each allTags as tag (tag)}
 						<button
@@ -120,7 +120,7 @@
 						>
 							{tag}
 							<span class="opacity-60 ml-1">
-								{events.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
+								{upcoming.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
 							</span>
 						</button>
 					{/each}
@@ -152,6 +152,28 @@
 			</div>
 		{/if}
 	</section>
+
+	{#if past.length > 0}
+		<section>
+			<SectionLabel label="Past Events" count={past.length} />
+			<div class="pgrid">
+				{#each past as evt (evt.id)}
+					<PosterCard
+						href="/member/events/{evt.id}"
+						title={evt.title}
+						posterUrl={evt.posterUrl}
+						startsAt={evt.startsAt}
+						ticketingEnabled={evt.ticketingEnabled}
+						ticketPrice={evt.ticketPrice}
+						tags={evt.tags}
+						tapeLabel={primaryTag(evt.tags)}
+						tapeColor={primaryTag(evt.tags) ? tagToTapeVariant(primaryTag(evt.tags)!) : ''}
+						class="w-full opacity-75"
+					/>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 {#if selectedTickets.length > 0}
 	<TicketQRModal bind:open={qrOpen} tickets={selectedTickets} initialIndex={selectedIndex} />

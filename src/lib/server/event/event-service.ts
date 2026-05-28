@@ -3,7 +3,7 @@ import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
-import { eq, and, gt, ne, asc, desc, inArray, count } from 'drizzle-orm';
+import { eq, and, gt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -468,6 +468,24 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 			)
 		)
 		.orderBy(asc(event.startsAt));
+
+	if (limit) return query.limit(limit);
+	return query;
+}
+
+/** Published events that have already ended, newest first. */
+export async function listPast(limit?: number): Promise<EventRow[]> {
+	const query = db
+		.select()
+		.from(event)
+		.where(
+			and(
+				eq(event.status, 'published'),
+				eq(event.source, 'cmc'),
+				lte(event.startsAt, new Date())
+			)
+		)
+		.orderBy(desc(event.startsAt));
 
 	if (limit) return query.limit(limit);
 	return query;

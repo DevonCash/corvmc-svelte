@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents, listUpcoming } from '$lib/server/event/event-service';
+import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents, listUpcoming, listPast } from '$lib/server/event/event-service';
 import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, getTicketsByPurchase, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
@@ -24,8 +24,8 @@ import { randomUUID } from 'crypto';
 
 export const getMemberEvents = query(async () => {
 	const r2Available = isConfigured();
-	const events = await listUpcoming();
-	return events.map((e) => ({
+	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
 		startsAt: e.startsAt,
@@ -35,7 +35,8 @@ export const getMemberEvents = query(async () => {
 		ticketingEnabled: e.ticketingEnabled,
 		ticketPrice: e.ticketPrice,
 		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
-	}));
+	});
+	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
 });
 
 export const getMemberTickets = query(async () => {
@@ -100,9 +101,9 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 });
 
 export const getPublicEvents = query(async () => {
-	const events = await listUpcoming();
 	const r2Available = isConfigured();
-	return events.map((e) => ({
+	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
 		description: e.description,
@@ -113,7 +114,8 @@ export const getPublicEvents = query(async () => {
 		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null,
 		ticketingEnabled: e.ticketingEnabled,
 		ticketPrice: e.ticketPrice
-	}));
+	});
+	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
 });
 
 export const getPublicTicketPage = query(z.string(), async (id) => {
