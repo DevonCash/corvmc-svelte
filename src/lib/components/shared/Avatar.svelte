@@ -20,9 +20,7 @@
 	{...rest}
 	class="avatar flex items-center justify-center overflow-hidden rounded-full {rest.class}"
 >
-	{#if src}
-		<img {src} alt={name} class="object-cover" />
-	{/if}
+	<Avatar.Image {src} alt={name} class="size-full object-cover" />
 	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>

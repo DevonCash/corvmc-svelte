@@ -2,6 +2,7 @@ import { addWeeks, addDays } from 'date-fns';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { getReservationConfig } from './config';
 import { getPartsInTz } from './timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Recurrence helpers — build, parse, and generate occurrence dates
@@ -13,7 +14,7 @@ import { getPartsInTz } from './timezone';
 // the frequency, interval, timezone, start components, and weekday info.
 // ---------------------------------------------------------------------------
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 
 /** Weekday names for display */
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

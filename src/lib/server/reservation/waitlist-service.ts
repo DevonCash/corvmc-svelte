@@ -5,8 +5,9 @@ import { and, eq, lt, gt, isNull, notInArray, asc } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { env } from '$env/dynamic/private';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 const WAITLIST_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // ---------------------------------------------------------------------------

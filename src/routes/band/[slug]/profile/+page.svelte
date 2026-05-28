@@ -45,7 +45,7 @@
 	}
 </script>
 
-	<Form remote={saveBandProfile} onsuccess={() => toast.success('Band profile saved')}>
+	<Form remote={saveBandProfile} guard onsuccess={() => toast.success('Band profile saved')}>
 		<PageHeader subtitle="Band Profile" title="Directory Profile">
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}

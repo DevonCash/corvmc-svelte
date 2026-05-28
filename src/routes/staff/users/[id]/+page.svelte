@@ -27,7 +27,7 @@
 	);
 </script>
 
-	<Form remote={updateUser} successToast="Changes saved">
+	<Form remote={updateUser} guard successToast="Changes saved">
 		<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
 			{#if member.deletedAt}
 				<Badge variant="error" size="md">Deleted</Badge>

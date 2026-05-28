@@ -4,8 +4,9 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, desc, and, gte, lte, like, or, sql, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 
 // ---------------------------------------------------------------------------
 // Types

@@ -7,12 +7,13 @@ import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'driz
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { domainEvents } from '$lib/server/events/event-bus';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Generation job — expand active recurring series into concrete reservations
 // ---------------------------------------------------------------------------
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 
 export interface GenerationResult {
 	seriesProcessed: number;

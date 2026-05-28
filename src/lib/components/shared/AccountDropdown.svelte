@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from './Avatar.svelte';
+	import { getMe } from '$lib/remote/layout.remote';
 
-	import type { User } from '$lib/server/db/schema';
-
-	let { user }: { user: Pick<User, 'name' | 'email'> } = $props();
+	let me = $derived(await getMe());
 	let open = $state(false);
 
 	function handleClickOutside(e: MouseEvent) {
@@ -28,7 +26,7 @@
 		onclick={() => (open = !open)}
 		aria-label="Account menu"
 	>
-		<Avatar class="size-7 text-xs" name={user.name} />
+		<Avatar class="size-7 text-xs" name={me?.name} src={user.image ?? undefined} />
 	</button>
 
 	{#if open}
@@ -36,8 +34,8 @@
 			class="absolute right-0 top-full z-[1000] mt-2 w-56 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="border-b border-base-300 px-4 py-3">
-				<p class="text-sm font-medium truncate">{user.name}</p>
-				<p class="text-xs opacity-60 truncate">{user.email}</p>
+				<p class="text-sm font-medium truncate">{me?.name}</p>
+				<p class="text-xs opacity-60 truncate">{me?.email}</p>
 			</div>
 
 			<ul class="menu menu-sm p-2">

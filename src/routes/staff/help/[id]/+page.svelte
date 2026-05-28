@@ -46,6 +46,7 @@
 	{#if article}
 		<Form
 			remote={updateArticle}
+			guard
 			successToast="Article updated"
 		>
 			<input {...updateFields.id.as('hidden', article.id)} />

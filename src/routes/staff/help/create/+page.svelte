@@ -26,6 +26,7 @@
 <PageContent width="3xl">
 	<Form
 		remote={createArticle}
+		guard
 		onsuccess={(result) => goto(`/staff/help/${result?.id}`)}
 	>
 		<div class="space-y-4">

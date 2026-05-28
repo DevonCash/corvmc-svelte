@@ -5,6 +5,7 @@ import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
 import { getReservationConfig } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '$lib/server/db/schema/reservation';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation
@@ -60,7 +61,7 @@ export async function hasConflict(
  * Returns slots within operating hours with their booked/blocked status.
  */
 export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
 
 	// Build day boundaries in local time
@@ -149,7 +150,7 @@ export async function validateBooking(
 	endsAt: Date,
 	options?: ValidateBookingOptions
 ): Promise<ValidationResult> {
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
 
 	if (endsAt <= startsAt) {
@@ -281,7 +282,7 @@ export async function getValidationWarnings(
 	endsAt: Date,
 	options?: ValidateBookingOptions
 ): Promise<string[]> {
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
 	const warnings: string[] = [];
 

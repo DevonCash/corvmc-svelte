@@ -11,6 +11,16 @@ import { captureException } from '$lib/server/sentry';
 
 const resolvedSessions = new Set<string>();
 
+function validateEnv(platform: App.Platform | undefined) {
+	const missing: string[] = [];
+	if (!platform?.env?.DB) missing.push('DB');
+	if (!platform?.env?.R2_BUCKET) missing.push('R2_BUCKET');
+	if (!platform?.env?.KV) missing.push('KV');
+	if (missing.length > 0) {
+		console.warn(`Missing platform bindings: ${missing.join(', ')}`);
+	}
+}
+
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (event.platform?.env?.DB) {
 		initDb(event.platform.env.DB);
@@ -25,6 +35,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	// Register domain event listeners once (inside request handler so
 	// $env/dynamic/private is available on Cloudflare)
 	if (!building) {
+		validateEnv(event.platform);
 		registerListeners();
 	}
 	const session = await auth.api.getSession({ headers: event.request.headers });

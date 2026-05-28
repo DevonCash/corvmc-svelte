@@ -46,7 +46,7 @@
 	let isDeactivated = $derived(!!band.deletedAt);
 </script>
 
-	<Form remote={updateBand} onsuccess={() => toast.success('Band updated')}>
+	<Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
 		<PageHeader subtitle="Band" title={band.name} backHref="/staff/bands">
 			{#if isDeactivated}
 				<Badge variant="error" size="md">Deactivated</Badge>

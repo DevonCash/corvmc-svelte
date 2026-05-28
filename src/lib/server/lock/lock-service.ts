@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { createTemporaryUser, removeTemporaryUser } from './ultraloc-client';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // LockService — provision and clean up Ultraloc temporary users
@@ -26,7 +27,7 @@ export async function runDailyLockJob(): Promise<{ provisioned: number; cleaned:
  * that don't already have lock access.
  */
 async function provisionDailyAccess(errors: string[]): Promise<number> {
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const now = new Date();
 	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
 
@@ -84,7 +85,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
  * that still have a lockAccessId.
  */
 async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
-	const tz = 'America/Los_Angeles';
+	const tz = DEFAULT_TIMEZONE;
 	const now = new Date();
 
 	// Yesterday's boundaries

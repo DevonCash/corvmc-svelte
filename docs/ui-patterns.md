@@ -108,7 +108,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 
 > **Rule:** All forms in route files (`+page.svelte`) must use `Form`, `FormField`, and `SubmitButton`. Never use raw `<form>`, `<input>`, `<select>`, or manual submit handlers directly in page files — even for small inline forms.
 
-`Form` wraps a remote form with dirty tracking, unsaved-changes guard, status management, and toast notifications. It replaces `use:enhance`.
+`Form` wraps a remote form with dirty tracking, status management, and toast notifications. It replaces `use:enhance`. Unsaved-changes protection is opt-in via the `guard` prop — add it to edit/settings forms where losing changes would be frustrating, but leave it off for login, modal, and quick-action forms.
 
 ```svelte
 <Form
@@ -125,6 +125,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 
 Props:
 - `remote` — a remote form from `data.remote.ts`
+- `guard` — enables unsaved-changes protection (blocks navigation when form is dirty)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
 

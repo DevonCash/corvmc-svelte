@@ -33,7 +33,7 @@
 	let isDeactivated = $derived(!!item.deletedAt);
 </script>
 
-	<Form remote={editEquipment} successToast="Equipment updated">
+	<Form remote={editEquipment} guard successToast="Equipment updated">
 		<input {...fields.id.as('hidden', id)} />
 		<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
 			{#if isDeactivated}

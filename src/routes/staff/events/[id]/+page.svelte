@@ -198,7 +198,7 @@
 				<div class="card-body space-y-4">
 					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
 
-					<Form remote={updateEvent} successToast="Updated" onsuccess={handleUpdateSuccess}>
+					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
 						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled ? 'on' : 'off')} />
 						{#if editTicketingEnabled}

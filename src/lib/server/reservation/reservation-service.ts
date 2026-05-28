@@ -6,6 +6,7 @@ import { refund } from '$lib/server/finance/payment-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
 import { formatDateInTz, formatTimeInTz } from './timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
 
 // ---------------------------------------------------------------------------
@@ -225,7 +226,7 @@ export async function cancel(
 	}
 
 	// Emit cancellation event (enables waitlist promotion)
-	const TZ = 'America/Los_Angeles';
+	const TZ = DEFAULT_TIMEZONE;
 	const [cancelledUser] = await db
 		.select({ name: user.name, email: user.email })
 		.from(user)

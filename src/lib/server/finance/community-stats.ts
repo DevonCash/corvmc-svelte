@@ -4,6 +4,7 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
 import { buildDateInTz, getPartsInTz } from '$lib/server/reservation/timezone';
 import { getJson, putJson } from '$lib/server/kv';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 export interface CommunityStats {
 	sustainingMemberCount: number;
@@ -61,7 +62,7 @@ async function queryStats(): Promise<CommunityStats> {
 }
 
 function getMonthStart(): Date {
-	const TZ = 'America/Los_Angeles';
+	const TZ = DEFAULT_TIMEZONE;
 	const now = getPartsInTz(new Date(), TZ);
 	return buildDateInTz(
 		`${now.year}-${String(now.month).padStart(2, '0')}-01`,

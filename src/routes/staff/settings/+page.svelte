@@ -201,6 +201,7 @@
 
 			<Form
 				remote={updateReservationSettings}
+				guard
 				successToast="Reservation settings updated"
 			>
 				<div class="card bg-base-100 shadow">
@@ -344,6 +345,7 @@
 
 			<Form
 				remote={updateOrgSettings}
+				guard
 				successToast="Organization settings updated"
 			>
 				<div class="card bg-base-100 shadow">
@@ -428,6 +430,7 @@
 
 			<Form
 				remote={updateIntegrationSettings}
+				guard
 				successToast="U-tec credentials updated"
 			>
 				<div class="card bg-base-100 shadow">

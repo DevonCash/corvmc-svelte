@@ -123,6 +123,7 @@
 	<!-- Band details form -->
 	<Form
 		remote={updateBand}
+		guard
 		onsuccess={() => {
 			toast.success('Profile updated');
 			const newSlug = updateBand.result?.slug;

@@ -7,8 +7,9 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gte, lt } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 
 /**
  * Cron endpoint for sending reservation reminders.

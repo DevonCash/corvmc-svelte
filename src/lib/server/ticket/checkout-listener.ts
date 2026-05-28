@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
 import { eq } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Ticket checkout listener
@@ -31,7 +32,7 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 		const [eventRow] = await db.select().from(event).where(eq(event.id, eventId)).limit(1);
 		if (!eventRow) return;
 
-		const TZ = 'America/Los_Angeles';
+		const TZ = DEFAULT_TIMEZONE;
 
 		await domainEvents.emit('ticket.purchased', {
 			purchaseId,

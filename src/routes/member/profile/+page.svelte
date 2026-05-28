@@ -60,7 +60,7 @@
 	}
 </script>
 
-	<Form remote={saveMemberProfile} onsuccess={() => toast.success('Profile saved')}>
+	<Form remote={saveMemberProfile} guard onsuccess={() => toast.success('Profile saved')}>
 		<PageHeader subtitle="Profile" title="My Profile">
 			<SubmitButton shortcut="mod+s">
 				{#snippet icon()}

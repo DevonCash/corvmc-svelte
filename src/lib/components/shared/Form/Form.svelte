@@ -46,6 +46,7 @@
 	let {
 		remote,
 		action,
+		guard = false,
 		flashDuration = 1500,
 		successToast,
 		onsuccess,
@@ -56,6 +57,7 @@
 	}: {
 		remote?: RemoteForm<TInput, TOutput> | Omit<RemoteForm<TInput, TOutput>, 'for'>;
 		action?: (data: FormData) => Promise<TOutput | void>;
+		guard?: boolean;
 		flashDuration?: number;
 		successToast?: string;
 		onsuccess?: (result?: TOutput) => void;
@@ -220,4 +222,6 @@
 		{@render children()}
 	</form>
 {/if}
-<FormGuard />
+{#if guard}
+	<FormGuard />
+{/if}

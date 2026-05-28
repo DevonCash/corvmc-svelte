@@ -4,7 +4,7 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, sql, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { creditTypeConfig } from '$lib/config';
+import { creditTypeConfig, DEFAULT_TIMEZONE } from '$lib/config';
 import {
 	isCreditType,
 	type CreditType,
@@ -235,7 +235,7 @@ export async function allocateEquipmentCredits(
 // Transaction listing
 // ---------------------------------------------------------------------------
 
-const TZ = 'America/Los_Angeles';
+const TZ = DEFAULT_TIMEZONE;
 
 export interface CreditTransactionRow {
 	id: number;

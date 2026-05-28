@@ -8,26 +8,6 @@ import * as schema from '$lib/server/db/schema';
 import { account } from '$lib/server/db/schema/authentication';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and } from 'drizzle-orm';
-import { kv } from '$lib/server/kv';
-
-// ---------------------------------------------------------------------------
-// Debug logging — writes to KV so it persists across Worker isolates.
-// Read via: /api/debug-auth?secret=...&action=logs
-// Remove after password migration is complete.
-// ---------------------------------------------------------------------------
-async function logAuth(msg: string) {
-	console.log(msg);
-	try {
-		const existing = await kv().get('auth-debug-log');
-		const logs: string[] = existing ? JSON.parse(existing) : [];
-		logs.push(`${new Date().toISOString()} ${msg}`);
-		if (logs.length > 30) logs.splice(0, logs.length - 30);
-		await kv().put('auth-debug-log', JSON.stringify(logs), { expirationTtl: 3600 });
-	} catch {
-		// best effort
-	}
-}
-
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -110,11 +90,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 	const laravelUrl = env.LARAVEL_URL;
 	const migrationSecret = env.MIGRATION_SECRET;
 
-	await logAuth(`[step 1] verify called. hash_prefix=${hash.substring(0, 15)} pw_len=${password.length}`);
-	await logAuth(`[step 2] env: LARAVEL_URL=${laravelUrl ?? 'NOT SET'} MIGRATION_SECRET=${migrationSecret ? 'set' : 'NOT SET'}`);
-
 	if (!laravelUrl || !migrationSecret) {
-		await logAuth('[step 2] ABORT: missing env vars');
 		return false;
 	}
 
@@ -123,8 +99,6 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		.from(account)
 		.where(and(eq(account.providerId, 'credential'), eq(account.password, hash)));
 
-	await logAuth(`[step 3] account lookup: ${acctRow ? 'found userId=' + acctRow.userId : 'NOT FOUND'}`);
-
 	if (!acctRow) return false;
 
 	const [userRow] = await db
@@ -132,13 +106,10 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		.from(user)
 		.where(eq(user.id, acctRow.userId));
 
-	await logAuth(`[step 4] user lookup: ${userRow ? 'found email=' + userRow.email : 'NOT FOUND'}`);
-
 	if (!userRow) return false;
 
 	try {
 		const fetchUrl = `${laravelUrl}/api/verify-password`;
-		await logAuth(`[step 5] calling Laravel: ${fetchUrl}`);
 
 		const res = await fetch(fetchUrl, {
 			method: 'POST',
@@ -150,27 +121,22 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		});
 
 		const body = await res.text();
-		await logAuth(`[step 6] Laravel response: status=${res.status} body=${body.substring(0, 200)}`);
 
 		if (!res.ok) return false;
 
 		const { valid } = JSON.parse(body) as { valid: boolean };
-		await logAuth(`[step 7] Laravel says valid=${valid}`);
 
 		if (valid) {
 			const newHash = await pbkdf2Hash(password);
-			await logAuth(`[step 8] PBKDF2 hash created: len=${newHash.length} prefix=${newHash.substring(0, 20)}`);
 
 			await db
 				.update(account)
 				.set({ password: newHash })
 				.where(eq(account.password, hash));
-			await logAuth(`[step 9] hash saved to D1`);
 		}
 
 		return valid;
-	} catch (err) {
-		await logAuth(`[ERROR] fetch failed: ${err}`);
+	} catch {
 		return false;
 	}
 }
@@ -194,17 +160,12 @@ function createAuth() {
 			enabled: true,
 			password: {
 				verify: async ({ hash, password }) => {
-					await logAuth(`[verify] called: hash_type=${hash.startsWith('$2') ? 'bcrypt' : hash.startsWith('pbkdf2:') ? 'pbkdf2' : 'unknown'} hash_len=${hash.length}`);
-
 					if (hash.startsWith('$2')) {
 						return verifyBcryptViaLaravel(hash, password);
 					}
 					if (hash.startsWith('pbkdf2:')) {
-						const result = await pbkdf2Verify(hash, password);
-						await logAuth(`[verify] pbkdf2 result=${result}`);
-						return result;
+						return pbkdf2Verify(hash, password);
 					}
-					await logAuth(`[verify] unrecognized hash format`);
 					return false;
 				},
 				hash: pbkdf2Hash

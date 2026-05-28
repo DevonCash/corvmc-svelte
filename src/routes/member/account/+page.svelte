@@ -73,6 +73,7 @@
 	<InfoCard title="Contact Information">
 		<Form
 			remote={updateProfile}
+			guard
 			onsuccess={() => toast.success('Contact info updated')}
 			onfailure={() => toast.error('Update failed')}
 		>

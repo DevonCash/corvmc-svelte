@@ -17,6 +17,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { event } from '$lib/server/db/schema/event';
 import { hasAnyRole } from '$lib/server/authorization';
 import { randomUUID } from 'crypto';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -313,8 +314,8 @@ export const checkConflicts = query(
 	}),
 	async ({ date, startTime, endTime, excludeReservationId }) => {
 		await requireStaff();
-		const startsAt = buildDateInTz(date, startTime, 'America/Los_Angeles');
-		const endsAt = buildDateInTz(date, endTime, 'America/Los_Angeles');
+		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
+		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
@@ -389,7 +390,7 @@ export const createEvent = form(
 			issue.title('Title is required');
 		}
 
-		const tz = 'America/Los_Angeles';
+		const tz = DEFAULT_TIMEZONE;
 		const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
 		const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
 		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
@@ -440,7 +441,7 @@ export const updateEvent = form(
 	}),
 	async (data) => {
 		const staff = await requireStaff();
-		const tz = 'America/Los_Angeles';
+		const tz = DEFAULT_TIMEZONE;
 
 		const ticketingEnabled = data.ticketingEnabled === 'on' ? true : data.ticketingEnabled === 'off' ? false : undefined;
 		const rebookReservation = data.rebookReservation === 'on';
