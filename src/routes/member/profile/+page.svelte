@@ -28,6 +28,8 @@
 	let genres = $state<string[]>([]);
 	let links = $state<ProfileLink[]>([]);
 	let lookingForBand = $state(false);
+	let availableForHire = $state(false);
+	let teachesLessons = $state(false);
 	let directoryVisibility = $state<string>('members');
 
 	// Sync from loaded profile
@@ -37,6 +39,8 @@
 			genres = profile.genres ?? [];
 			links = (profile.links as ProfileLink[] | null) ?? [];
 			lookingForBand = profile.lookingForBand;
+			availableForHire = profile.availableForHire;
+			teachesLessons = profile.teachesLessons;
 			directoryVisibility = profile.directoryVisibility;
 		}
 	});
@@ -99,6 +103,8 @@
 					</FormField>
 
 					<FormField field={fields.lookingForBand} type="toggle" value={lookingForBand} checkboxLabel="I'm looking for a band" />
+					<FormField field={fields.availableForHire} type="toggle" value={availableForHire} checkboxLabel="I'm available for hire" />
+					<FormField field={fields.teachesLessons} type="toggle" value={teachesLessons} checkboxLabel="I teach lessons" />
 				</div>
 			</InfoCard>
 		</div>

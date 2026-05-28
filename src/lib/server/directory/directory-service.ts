@@ -12,6 +12,8 @@ export type MemberFilters = {
 	instruments?: string[];
 	genres?: string[];
 	lookingForBand?: boolean;
+	availableForHire?: boolean;
+	teachesLessons?: boolean;
 };
 
 export type BandFilters = {
@@ -62,6 +64,14 @@ function memberWhereConditions(
 		conditions.push({ lookingForBand: true });
 	}
 
+	if (filters?.availableForHire) {
+		conditions.push({ availableForHire: true });
+	}
+
+	if (filters?.teachesLessons) {
+		conditions.push({ teachesLessons: true });
+	}
+
 	return { AND: conditions };
 }
 
@@ -89,6 +99,8 @@ const memberColumns = {
 	bio: true,
 	tagline: true,
 	lookingForBand: true,
+	availableForHire: true,
+	teachesLessons: true,
 	directoryContact: true,
 	links: true,
 	createdAt: true,

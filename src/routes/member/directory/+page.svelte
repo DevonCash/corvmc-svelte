@@ -13,6 +13,8 @@
 	let filterInstruments = $state<string[]>([]);
 	let filterGenres = $state<string[]>([]);
 	let lookingForBand = $state(false);
+	let availableForHire = $state(false);
+	let teachesLessons = $state(false);
 	let lookingForMembers = $state(false);
 
 	let filters = $derived({
@@ -20,6 +22,8 @@
 		instruments: filterInstruments.length > 0 ? JSON.stringify(filterInstruments) : undefined,
 		genres: filterGenres.length > 0 ? JSON.stringify(filterGenres) : undefined,
 		lookingForBand: lookingForBand ? 'true' : undefined,
+		availableForHire: availableForHire ? 'true' : undefined,
+		teachesLessons: teachesLessons ? 'true' : undefined,
 		lookingForMembers: lookingForMembers ? 'true' : undefined
 	});
 
@@ -66,6 +70,14 @@
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
 					<span>Looking for band</span>
 				</label>
+				<label class="directory-filters__toggle">
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={availableForHire} />
+					<span>Available for hire</span>
+				</label>
+				<label class="directory-filters__toggle">
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={teachesLessons} />
+					<span>Teaches lessons</span>
+				</label>
 			{:else}
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
@@ -111,6 +123,8 @@
 						genres={member.genres}
 						bands={member.bands}
 						lookingForBand={member.lookingForBand}
+						availableForHire={member.availableForHire}
+						teachesLessons={member.teachesLessons}
 						memberSince={new Date(member.createdAt).getFullYear()}
 					/>
 				{/each}

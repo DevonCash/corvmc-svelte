@@ -60,6 +60,8 @@
 							genres={member.genres}
 							bands={member.bands}
 							lookingForBand={member.lookingForBand}
+							availableForHire={member.availableForHire}
+							teachesLessons={member.teachesLessons}
 							memberSince={new Date(member.memberSince).getFullYear()}
 						/>
 					{/each}

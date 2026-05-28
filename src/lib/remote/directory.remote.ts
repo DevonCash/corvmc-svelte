@@ -41,6 +41,8 @@ const filtersSchema = z.object({
 		try { return JSON.parse(s) as string[]; } catch { return undefined; }
 	}),
 	lookingForBand: z.string().optional().transform((v) => v === 'true' ? true : undefined),
+	availableForHire: z.string().optional().transform((v) => v === 'true' ? true : undefined),
+	teachesLessons: z.string().optional().transform((v) => v === 'true' ? true : undefined),
 	lookingForMembers: z.string().optional().transform((v) => v === 'true' ? true : undefined)
 });
 
@@ -50,7 +52,9 @@ export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 		search: filters.search,
 		instruments: filters.instruments,
 		genres: filters.genres,
-		lookingForBand: filters.lookingForBand
+		lookingForBand: filters.lookingForBand,
+		availableForHire: filters.availableForHire,
+		teachesLessons: filters.teachesLessons
 	});
 });
 
@@ -158,13 +162,15 @@ const publicFiltersSchema = z.object({
 		try { return JSON.parse(s) as string[]; } catch { return undefined; }
 	}),
 	lookingForBand: z.string().optional().transform((v) => v === 'true' ? true : undefined),
+	availableForHire: z.string().optional().transform((v) => v === 'true' ? true : undefined),
+	teachesLessons: z.string().optional().transform((v) => v === 'true' ? true : undefined),
 	lookingForMembers: z.string().optional().transform((v) => v === 'true' ? true : undefined)
 });
 
 export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {
 	const r2Available = isConfigured();
 	const [members, bands] = await Promise.all([
-		listPublicMembers({ search: filters.search, instruments: filters.instruments, genres: filters.genres, lookingForBand: filters.lookingForBand }),
+		listPublicMembers({ search: filters.search, instruments: filters.instruments, genres: filters.genres, lookingForBand: filters.lookingForBand, availableForHire: filters.availableForHire, teachesLessons: filters.teachesLessons }),
 		listPublicBands({ search: filters.search, genres: filters.genres, lookingForMembers: filters.lookingForMembers })
 	]);
 
@@ -178,6 +184,8 @@ export const getPublicDirectory = query(publicFiltersSchema, async (filters) => 
 			instruments: m.instruments,
 			genres: m.genres,
 			lookingForBand: m.lookingForBand,
+			availableForHire: m.availableForHire,
+			teachesLessons: m.teachesLessons,
 			memberSince: m.createdAt,
 			bands: m.bands
 		})),
@@ -279,6 +287,8 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			instruments: member.instruments,
 			genres: member.genres,
 			lookingForBand: member.lookingForBand,
+			availableForHire: member.availableForHire,
+			teachesLessons: member.teachesLessons,
 			directoryContact: member.directoryContact as DirectoryContact | null,
 			links: (member.links as ProfileLink[] | null) ?? []
 		}
@@ -324,6 +334,8 @@ const memberProfileSchema = z.object({
 		try { return JSON.parse(s) as string[]; } catch { return []; }
 	}),
 	lookingForBand: z.string().optional().transform((v) => v === 'on'),
+	availableForHire: z.string().optional().transform((v) => v === 'on'),
+	teachesLessons: z.string().optional().transform((v) => v === 'on'),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('members'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
@@ -348,6 +360,8 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		instruments: data.instruments,
 		genres: data.genres,
 		lookingForBand: data.lookingForBand,
+		availableForHire: data.availableForHire,
+		teachesLessons: data.teachesLessons,
 		directoryVisibility: data.directoryVisibility,
 		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
 		links: data.links

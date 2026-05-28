@@ -12,6 +12,8 @@
 		genres?: string[];
 		bands?: { name: string }[];
 		lookingForBand?: boolean;
+		availableForHire?: boolean;
+		teachesLessons?: boolean;
 		memberSince: number;
 	}
 
@@ -25,6 +27,8 @@
 		genres = [],
 		bands = [],
 		lookingForBand = false,
+		availableForHire = false,
+		teachesLessons = false,
 		memberSince
 	}: Props = $props();
 
@@ -87,8 +91,12 @@
 			{/if}
 		</div>
 	</div>
-	{#if lookingForBand}
-		<div class="id-card__gaff">seeking a band</div>
+	{#if lookingForBand || availableForHire || teachesLessons}
+		<div class="id-card__gaffs">
+			{#if lookingForBand}<div class="id-card__gaff">seeking a band</div>{/if}
+			{#if availableForHire}<div class="id-card__gaff">available for hire</div>{/if}
+			{#if teachesLessons}<div class="id-card__gaff">teaches lessons</div>{/if}
+		</div>
 	{/if}
 	<div class="id-card__footer">
 		<div class="id-card__since">Member since {memberSince}</div>
@@ -259,8 +267,17 @@
 		flex-wrap: wrap;
 		margin-top: 1cqi;
 	}
-	.id-card__gaff {
+	.id-card__gaffs {
 		position: absolute;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 2px;
+		z-index: 2;
+		bottom: 4cqi;
+		right: -2cqi;
+	}
+	.id-card__gaff {
 		padding: 3px 10px;
 		background: var(--color-primary);
 		color: var(--color-primary-content);
@@ -269,9 +286,6 @@
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		transform: rotate(-2deg);
-		z-index: 2;
-		bottom: 4cqi;
-		right: -2cqi;
 	}
 
 	.id-tag {
