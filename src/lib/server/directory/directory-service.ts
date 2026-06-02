@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { userInstrument, userGenre } from '$lib/server/db/schema/authentication';
 import { bandGenre } from '$lib/server/db/schema/band';
 import { asc, like, sql } from 'drizzle-orm';
+import { resolveImageUrl } from '$lib/server/storage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,11 +79,13 @@ function memberWhereConditions(
 function mapMemberRow<T extends {
 	instruments: { instrument: string }[];
 	genres: { genre: string }[];
+	image?: string | null;
 	bandMembers?: { status: string; band: { name: string; slug: string } | null }[];
 }>(row: T) {
-	const { instruments, genres, bandMembers, ...rest } = row;
+	const { instruments, genres, bandMembers, image, ...rest } = row;
 	return {
 		...rest,
+		image: resolveImageUrl(image),
 		instruments: instruments.map(r => r.instrument),
 		genres: genres.map(r => r.genre),
 		bands: (bandMembers ?? [])
