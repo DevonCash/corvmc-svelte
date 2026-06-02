@@ -56,7 +56,11 @@ export function getPublicUrl(key: string): string {
 export function resolveImageUrl(key: string | null | undefined): string | null {
 	if (!key) return null;
 	if (!_bucket) return null;
-	return getPublicUrl(key);
+	try {
+		return getPublicUrl(key);
+	} catch {
+		return null;
+	}
 }
 
 export function isConfigured(): boolean {

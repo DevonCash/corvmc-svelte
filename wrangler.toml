@@ -12,6 +12,9 @@ database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
 binding = "R2_BUCKET"
 bucket_name = "corvmc"
 
+[vars]
+R2_PUBLIC_URL = "https://media.corvmc.org"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
