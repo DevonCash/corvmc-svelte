@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getById } from '$lib/server/event/event-service';
 import { getTicketsRemaining } from '$lib/server/ticket/ticket-service';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -10,8 +10,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 
-	const r2Available = isConfigured();
-	const posterUrl = evt.posterKey && r2Available ? getPublicUrl(evt.posterKey) : null;
+	const posterUrl = resolveImageUrl(evt.posterKey);
 
 	let remaining: number | null = null;
 	if (evt.ticketingEnabled) {

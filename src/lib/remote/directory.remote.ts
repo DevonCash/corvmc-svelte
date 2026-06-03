@@ -21,7 +21,7 @@ import {
 	setUserAvatar,
 	clearUserAvatar
 } from '$lib/server/directory/profile-service';
-import { getPublicUrl, isConfigured, resolveImageUrl } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -62,7 +62,6 @@ export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 
 export const getDirectoryBands = query(filtersSchema, async (filters) => {
 	requireUser();
-	const r2Available = isConfigured();
 	const bands = await listBands({
 		search: filters.search,
 		genres: filters.genres,
@@ -70,7 +69,7 @@ export const getDirectoryBands = query(filtersSchema, async (filters) => {
 	});
 	return bands.map((b) => ({
 		...b,
-		avatarUrl: b.avatarKey && r2Available ? getPublicUrl(b.avatarKey) : null
+		avatarUrl: resolveImageUrl(b.avatarKey)
 	}));
 });
 
@@ -81,8 +80,6 @@ export const getDirectoryMember = query(z.string(), async (userId) => {
 
 export const getDirectoryBand = query(z.string(), async (slug) => {
 	requireUser();
-	const r2Available = isConfigured();
-
 	const [row] = await db
 		.select({
 			id: band.id,
@@ -132,7 +129,7 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 			slug: row.slug,
 			bio: row.bio,
 			tagline: row.tagline,
-			avatarUrl: row.avatarKey && r2Available ? getPublicUrl(row.avatarKey) : null,
+			avatarUrl: resolveImageUrl(row.avatarKey),
 			memberCount: row.memberCount,
 			genres: genres.map((r) => r.genre),
 			lookingForMembers: row.lookingForMembers,
@@ -169,9 +166,7 @@ const publicFiltersSchema = z.object({
 	lookingForMembers: z.string().optional().transform((v) => v === 'true' ? true : undefined)
 });
 
-export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {
-	const r2Available = isConfigured();
-	const [members, bands] = await Promise.all([
+export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {	const [members, bands] = await Promise.all([
 		listPublicMembers({ search: filters.search, instruments: filters.instruments, genres: filters.genres, lookingForBand: filters.lookingForBand, availableForHire: filters.availableForHire, teachesLessons: filters.teachesLessons }),
 		listPublicBands({ search: filters.search, genres: filters.genres, lookingForMembers: filters.lookingForMembers })
 	]);
@@ -197,7 +192,7 @@ export const getPublicDirectory = query(publicFiltersSchema, async (filters) => 
 			slug: b.slug,
 			bio: b.bio ? (b.bio.length > 120 ? b.bio.slice(0, 120).trimEnd() + '…' : b.bio) : null,
 			tagline: b.tagline,
-			avatarUrl: b.avatarKey && r2Available ? getPublicUrl(b.avatarKey) : null,
+			avatarUrl: resolveImageUrl(b.avatarKey),
 			memberCount: b.memberCount,
 			genres: b.genres,
 			lookingForMembers: b.lookingForMembers
@@ -206,8 +201,6 @@ export const getPublicDirectory = query(publicFiltersSchema, async (filters) => 
 });
 
 export const getPublicBandProfile = query(z.string(), async (slug) => {
-	const r2Available = isConfigured();
-
 	const [row] = await db
 		.select({
 			id: band.id,
@@ -257,7 +250,7 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			slug: row.slug,
 			bio: row.bio,
 			tagline: row.tagline,
-			avatarUrl: row.avatarKey && r2Available ? getPublicUrl(row.avatarKey) : null,
+			avatarUrl: resolveImageUrl(row.avatarKey),
 			memberCount: row.memberCount,
 			genres: genres.map((r) => r.genre),
 			lookingForMembers: row.lookingForMembers,

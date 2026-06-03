@@ -10,7 +10,7 @@ import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, asc } from 'drizzle-orm';
 import { listBandEventsUpcoming } from '$lib/server/event/event-service';
-import { getPublicUrl, isConfigured, resolveImageUrl } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 
 // ---------------------------------------------------------------------------
 // Band Site Data — loads everything needed to render a premium band page
@@ -27,8 +27,6 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 
 	if (!bandRow) throw error(404, 'Band not found');
 	if (bandRow.tier !== 'premium') throw error(404, 'Page not found');
-
-	const r2Available = isConfigured();
 
 	// Fetch page config
 	const [config] = await db
@@ -73,7 +71,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			slug: bandRow.slug,
 			bio: bandRow.bio,
 			tagline: bandRow.tagline,
-			avatarUrl: bandRow.avatarKey && r2Available ? getPublicUrl(bandRow.avatarKey) : null,
+			avatarUrl: resolveImageUrl(bandRow.avatarKey),
 			links: bandRow.links as Array<{ label: string; url: string; embed?: boolean }> | null,
 			genres: genres.map((g) => g.genre)
 		},
@@ -100,11 +98,11 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			endsAt: e.endsAt,
 			location: e.location,
 			externalTicketUrl: e.externalTicketUrl,
-			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+			posterUrl: resolveImageUrl(e.posterKey)
 		})),
 		media: media.map((m) => ({
 			id: m.id,
-			url: r2Available ? getPublicUrl(m.key) : null,
+			url: resolveImageUrl(m.key),
 			type: m.type,
 			caption: m.caption
 		}))

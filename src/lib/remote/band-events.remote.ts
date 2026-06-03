@@ -15,7 +15,7 @@ import {
 	getById
 } from '$lib/server/event/event-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,6 @@ export const getBandEvents = query(z.string(), async (slug) => {
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
 	const events = await listBandEvents(band.id);
-	const r2Available = isConfigured();
 
 	return events.map((e) => ({
 		id: e.id,
@@ -37,14 +36,13 @@ export const getBandEvents = query(z.string(), async (slug) => {
 		endsAt: e.endsAt,
 		status: e.status,
 		location: e.location,
-		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+		posterUrl: resolveImageUrl(e.posterKey)
 	}));
 });
 
 /** Published upcoming band events — for public display. */
 export const getBandEventsPublic = query(z.string(), async (bandId) => {
 	const events = await listBandEventsUpcoming(bandId);
-	const r2Available = isConfigured();
 
 	return events.map((e) => ({
 		id: e.id,
@@ -55,7 +53,7 @@ export const getBandEventsPublic = query(z.string(), async (bandId) => {
 		doorsAt: e.doorsAt,
 		location: e.location,
 		externalTicketUrl: e.externalTicketUrl,
-		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+		posterUrl: resolveImageUrl(e.posterKey)
 	}));
 });
 
@@ -71,7 +69,6 @@ export const getBandEventDetail = query(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.bandId !== band.id) throw error(404, 'Event not found');
 
-		const r2Available = isConfigured();
 		return {
 			id: evt.id,
 			title: evt.title,
@@ -83,7 +80,7 @@ export const getBandEventDetail = query(
 			location: evt.location,
 			tags: evt.tags,
 			externalTicketUrl: evt.externalTicketUrl,
-			posterUrl: evt.posterKey && r2Available ? getPublicUrl(evt.posterKey) : null
+			posterUrl: resolveImageUrl(evt.posterKey)
 		};
 	}
 );
