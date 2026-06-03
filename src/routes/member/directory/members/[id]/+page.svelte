@@ -10,6 +10,7 @@
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { sanitizeBio } from '$lib/utils/markdown';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { IconMail, IconPhone, IconAt } from '@tabler/icons-svelte';
 
@@ -65,7 +66,7 @@
 				</div>
 
 				{#if member.bio}
-					<p class="profile-card__bio">{member.bio}</p>
+					<div class="profile-card__bio prose prose-sm max-w-none">{@html sanitizeBio(member.bio)}</div>
 				{/if}
 
 				{#if member.instruments?.length || member.genres?.length}

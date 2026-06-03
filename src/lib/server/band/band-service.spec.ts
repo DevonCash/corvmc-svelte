@@ -104,7 +104,8 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 }));
 
 vi.mock('$lib/server/storage', () => ({
-	deleteObject: vi.fn().mockResolvedValue(undefined)
+	deleteObject: vi.fn().mockResolvedValue(undefined),
+	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
 }));
 
 import {
@@ -120,6 +121,8 @@ import {
 	transferOwnership,
 	leaveBand,
 	getUserRole,
+	setBandAvatar,
+	clearBandAvatar,
 	BandMemberExistsError,
 	CannotRemoveOwnerError,
 	OwnerCannotLeaveError,
@@ -127,7 +130,7 @@ import {
 } from './band-service';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { deleteObject } from '$lib/server/storage';
+import { deleteObject, uploadFile } from '$lib/server/storage';
 
 describe('BandService', () => {
 	beforeEach(() => {
@@ -416,6 +419,50 @@ describe('BandService', () => {
 
 			const role = await getUserRole('band-1', 'user-999');
 			expect(role).toBeNull();
+		});
+	});
+
+	describe('setBandAvatar', () => {
+		it('uploads the file and returns the extension-mapped key', async () => {
+			selectResult = [{ avatarKey: null }];
+
+			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
+
+			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'bands/avatars/band-1.png', 'image/png');
+			expect(key).toBe('bands/avatars/band-1.png');
+		});
+
+		it('deletes the previous avatar before replacing it', async () => {
+			selectResult = [{ avatarKey: 'bands/avatars/band-1.jpg' }];
+
+			await setBandAvatar('band-1', new ArrayBuffer(8), 'image/webp');
+
+			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
+			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'bands/avatars/band-1.webp', 'image/webp');
+		});
+
+		it('throws when the band does not exist', async () => {
+			selectResult = [];
+
+			await expect(setBandAvatar('nope', new ArrayBuffer(8), 'image/png')).rejects.toThrow(BandNotFoundError);
+		});
+	});
+
+	describe('clearBandAvatar', () => {
+		it('deletes the stored object', async () => {
+			selectResult = [{ avatarKey: 'bands/avatars/band-1.png' }];
+
+			await clearBandAvatar('band-1');
+
+			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.png');
+		});
+
+		it('is a no-op delete when there is no avatar', async () => {
+			selectResult = [{ avatarKey: null }];
+
+			await clearBandAvatar('band-1');
+
+			expect(deleteObject).not.toHaveBeenCalled();
 		});
 	});
 });

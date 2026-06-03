@@ -3,6 +3,7 @@
 	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { getPublicMemberProfile } from '$lib/remote/directory.remote';
+	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
 
 	let data = $derived(await getPublicMemberProfile(page.params.id!));
@@ -47,7 +48,7 @@
 	</div>
 
 	{#if member.bio}
-		<p class="text-base-content/80">{member.bio}</p>
+		<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(member.bio)}</div>
 	{/if}
 
 	{#if member.instruments?.length || member.genres?.length}

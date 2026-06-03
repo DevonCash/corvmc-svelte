@@ -15,6 +15,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
+	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -36,6 +37,7 @@
 
 	const { fields: reactivateFields } = reactivateBand;
 	const { fields: deactivateFields } = deactivateBand;
+	const { fields: bandFields } = updateBand;
 
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
@@ -44,6 +46,11 @@
 	let platformInvites = $derived(await getPlatformInvites(id));
 
 	let isDeactivated = $derived(!!band.deletedAt);
+
+	let bioHtml = $state('');
+	$effect(() => {
+		bioHtml = band.bio ?? '';
+	});
 </script>
 
 	<Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
@@ -62,7 +69,10 @@
 			<InfoCard title="Band Info">
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field name="name" type="text" value={band.name} />
-					<Field name="bio" type="textarea" value={band.bio ?? ''} />
+					<Field name="bio" label="Bio">
+						<input {...bandFields.bio.as('hidden', bioHtml)} />
+						<RichTextEditor bind:value={bioHtml} placeholder="Tell people about this band..." />
+					</Field>
 				</div>
 			</InfoCard>
 

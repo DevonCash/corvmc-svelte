@@ -7,7 +7,8 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { deleteObject } from '$lib/server/storage';
+import { deleteObject, uploadFile } from '$lib/server/storage';
+import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
 import type { BandRole } from '$lib/server/db/schema/band';
@@ -78,7 +79,7 @@ export async function create(ownerId: string, data: CreateBandData) {
 			id: bandId,
 			name: data.name,
 			slug,
-			bio: data.bio ?? null,
+			bio: data.bio ? sanitizeBio(data.bio) : null,
 			ownerId
 		}),
 		db.insert(bandMember).values({
@@ -103,7 +104,7 @@ export async function update(bandId: string, data: UpdateBandData) {
 	}
 
 	if (data.bio !== undefined) {
-		updates.bio = data.bio?.slice(0, 2000) || null;
+		updates.bio = data.bio ? sanitizeBio(data.bio).slice(0, 2000) || null : null;
 	}
 
 	const [updated] = await db.update(band).set(updates).where(eq(band.id, bandId)).returning();
@@ -595,4 +596,51 @@ export async function getUserRole(bandId: string, userId: string): Promise<BandR
 		.limit(1);
 
 	return (row?.role as BandRole) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Avatar
+// ---------------------------------------------------------------------------
+
+const AVATAR_EXTENSIONS: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp'
+};
+
+/** Upload a band avatar to storage and persist its key. */
+export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
+	const [row] = await db.select({ avatarKey: band.avatarKey }).from(band).where(eq(band.id, bandId)).limit(1);
+	if (!row) throw new BandNotFoundError();
+
+	if (row.avatarKey) {
+		try {
+			await deleteObject(row.avatarKey);
+		} catch {
+			// Old avatar may not exist — that's fine
+		}
+	}
+
+	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
+	const key = `bands/avatars/${bandId}.${ext}`;
+	await uploadFile(buffer, key, contentType);
+
+	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));
+	return key;
+}
+
+/** Remove a band's avatar from storage and clear its key. */
+export async function clearBandAvatar(bandId: string) {
+	const [row] = await db.select({ avatarKey: band.avatarKey }).from(band).where(eq(band.id, bandId)).limit(1);
+	if (!row) throw new BandNotFoundError();
+
+	if (row.avatarKey) {
+		try {
+			await deleteObject(row.avatarKey);
+		} catch {
+			// Avatar may not exist — that's fine
+		}
+	}
+
+	await db.update(band).set({ avatarKey: null, updatedAt: new Date() }).where(eq(band.id, bandId));
 }

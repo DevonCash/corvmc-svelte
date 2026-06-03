@@ -2,6 +2,8 @@ import { db } from '$lib/server/db';
 import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
+import { deleteObject, uploadFile } from '$lib/server/storage';
+import { sanitizeBio } from '$lib/utils/markdown';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/server/db/schema/authentication';
 
@@ -75,7 +77,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 		db
 			.update(user)
 			.set({
-				bio: data.bio?.slice(0, MAX_BIO) ?? null,
+				bio: data.bio ? sanitizeBio(data.bio).slice(0, MAX_BIO) || null : null,
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				lookingForBand: data.lookingForBand ?? false,
 				availableForHire: data.availableForHire ?? false,
@@ -115,8 +117,10 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 export async function getMemberProfileForEdit(userId: string) {
 	const [row] = await db
 		.select({
+			name: user.name,
 			bio: user.bio,
 			tagline: user.tagline,
+			image: user.image,
 			lookingForBand: user.lookingForBand,
 			availableForHire: user.availableForHire,
 			teachesLessons: user.teachesLessons,
@@ -219,6 +223,52 @@ export async function updateBandProfile(
 	}
 
 	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
+}
+
+// ---------------------------------------------------------------------------
+// Member avatar
+// ---------------------------------------------------------------------------
+
+const AVATAR_EXTENSIONS: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp'
+};
+
+/** Upload a user's avatar to storage and persist its key on `user.image`. */
+export async function setUserAvatar(userId: string, buffer: ArrayBuffer, contentType: string) {
+	const [row] = await db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1);
+
+	// Only delete a previously-uploaded avatar key, not an external OAuth URL.
+	if (row?.image && !row.image.startsWith('http')) {
+		try {
+			await deleteObject(row.image);
+		} catch {
+			// Old avatar may not exist — that's fine
+		}
+	}
+
+	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
+	const key = `users/avatars/${userId}.${ext}`;
+	await uploadFile(buffer, key, contentType);
+
+	await db.update(user).set({ image: key, updatedAt: new Date() }).where(eq(user.id, userId));
+	return key;
+}
+
+/** Remove a user's avatar from storage and clear `user.image`. */
+export async function clearUserAvatar(userId: string) {
+	const [row] = await db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1);
+
+	if (row?.image && !row.image.startsWith('http')) {
+		try {
+			await deleteObject(row.image);
+		} catch {
+			// Avatar may not exist — that's fine
+		}
+	}
+
+	await db.update(user).set({ image: null, updatedAt: new Date() }).where(eq(user.id, userId));
 }
 
 /** Load current band profile data for the edit form */

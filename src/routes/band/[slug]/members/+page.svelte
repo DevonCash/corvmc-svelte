@@ -8,6 +8,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
+	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
@@ -83,6 +84,11 @@
 		searchResults = [];
 	}
 
+	const roleOptions = [
+		{ value: 'member', label: 'Member' },
+		{ value: 'admin', label: 'Admin' }
+	];
+
 	let searchTimeout: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
@@ -91,6 +97,8 @@
 		clearTimeout(searchTimeout);
 		searchTimeout = setTimeout(handleSearch, 300);
 	}
+
+	onDestroy(() => clearTimeout(searchTimeout));
 </script>
 
 <PageHeader title="Members" subtitle={layout.band.name}>
@@ -329,11 +337,8 @@
 				</Field>
 
 				<div class="grid grid-cols-2 gap-4">
-					<Field label="Role" id="invite-role" type="select">
-						<option value="member">Member</option>
-						<option value="admin">Admin</option>
-					</Field>
-					<Field label="Position" name="invite-position" type="text" placeholder="e.g. Guitar" />
+					<Field label="Role" name="role" type="select" value="member" options={roleOptions} />
+					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
 				</div>
 
 				<div class="flex justify-end pt-2">
@@ -364,10 +369,7 @@
 				</p>
 				<Field name="email" type="email" label="Email address" value={looksLikeEmail ? searchQuery : ''} />
 				<div class="grid grid-cols-2 gap-4">
-					<Field label="Role" name="role" type="select">
-						<option value="member">Member</option>
-						<option value="admin">Admin</option>
-					</Field>
+					<Field label="Role" name="role" type="select" value="member" options={roleOptions} />
 					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
 				</div>
 				<div class="flex justify-end pt-2">

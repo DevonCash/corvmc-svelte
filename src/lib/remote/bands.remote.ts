@@ -23,8 +23,11 @@ import {
 	searchMembers as searchMembersService,
 	deleteBand as deleteBandService,
 	deactivate,
-	reactivate
+	reactivate,
+	setBandAvatar,
+	clearBandAvatar
 } from '$lib/server/band/band-service';
+import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
 	listForBand,
@@ -512,3 +515,24 @@ export const revokePlatformInviteRemote = form(
 		return { success: true };
 	}
 );
+
+// ===========================================================================
+// Forms — Band avatar (slug-based)
+// ===========================================================================
+
+export const uploadBandAvatar = form(
+	z.object({ file: z.instanceof(File) }),
+	async (data) => {
+		const { band } = await requireBandAdmin();
+		await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
+		void getBandLayout(band.slug).refresh();
+		return { success: true };
+	}
+);
+
+export const removeBandAvatar = form(z.object({}), async () => {
+	const { band } = await requireBandAdmin();
+	await clearBandAvatar(band.id);
+	void getBandLayout(band.slug).refresh();
+	return { success: true };
+});

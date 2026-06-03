@@ -6,7 +6,6 @@
 		IconCalendarEvent,
 		IconPencil,
 		IconSettings,
-		IconUser,
 		IconCrown,
 		IconBrush
 	} from '@tabler/icons-svelte';
@@ -64,11 +63,8 @@
 			{#snippet icon()}<IconCalendarEvent />{/snippet}
 		</Nav.Item>
 		{#if isOwnerOrAdmin}
-			<Nav.Item href={`${base}/edit`} label="Edit Band">
+			<Nav.Item href={`${base}/edit`} label="Edit Profile">
 				{#snippet icon()}<IconPencil />{/snippet}
-			</Nav.Item>
-			<Nav.Item href={`${base}/profile`} label="Profile">
-				{#snippet icon()}<IconUser />{/snippet}
 			</Nav.Item>
 		{/if}
 		{#if layout.features.bandPremium && isOwnerOrAdmin && layout.band.tier === 'premium'}
