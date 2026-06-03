@@ -113,10 +113,6 @@
 		width: 100%;
 		max-width: 320px;
 		border-radius: 10px;
-		/* box-shadow:
-			0 14px 26px -10px rgba(20, 20, 25, 0.4),
-			0 4px 10px -4px rgba(20, 20, 25, 0.2),
-			inset 0 0 0 1px rgba(0, 0, 0, 0.05); */
 		border: 2px solid var(--cmc-brown);
 		overflow: visible;
 		transform: rotate(var(--tilt, -1deg));
@@ -130,12 +126,8 @@
 	}
 	.id-card:focus,
 	.id-card:hover {
-		transform: rotate(0deg) translateY(-5px);
-		box-shadow: 0 -5px 0 0 var(--cmc-brown);
-		/* box-shadow:
-			0 20px 34px -10px rgba(20, 20, 25, 0.45),
-			0 6px 14px -4px rgba(20, 20, 25, 0.25),
-			inset 0 0 0 1px rgba(0, 0, 0, 0.05); */
+		transform: rotate(0deg) translateY(-3px);
+		box-shadow: 0 6px 0 0 var(--cmc-brown);
 	}
 	.id-card:nth-child(3n + 1) {
 		--tilt: -1.2deg;
