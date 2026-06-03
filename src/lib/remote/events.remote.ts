@@ -9,7 +9,7 @@ import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, g
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
@@ -23,9 +23,7 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // Queries
 // ---------------------------------------------------------------------------
 
-export const getMemberEvents = query(async () => {
-	const r2Available = isConfigured();
-	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+export const getMemberEvents = query(async () => {	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
 	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
@@ -35,7 +33,7 @@ export const getMemberEvents = query(async () => {
 		tags: e.tags as string | null,
 		ticketingEnabled: e.ticketingEnabled,
 		ticketPrice: e.ticketPrice,
-		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+		posterUrl: resolveImageUrl(e.posterKey)
 	});
 	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
 });
@@ -75,8 +73,6 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
-
-	const r2Available = isConfigured();
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const isSustainingMember = locals.user
 		? await hasAnyRole(locals.user.id, ['sustaining'])
@@ -91,7 +87,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
 			tags: evt.tags as string | null,
-			posterUrl: evt.posterKey && r2Available ? getPublicUrl(evt.posterKey) : null,
+			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
 			ticketQuantity: evt.ticketQuantity
@@ -101,9 +97,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	};
 });
 
-export const getPublicEvents = query(async () => {
-	const r2Available = isConfigured();
-	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+export const getPublicEvents = query(async () => {	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
 	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
@@ -112,7 +106,7 @@ export const getPublicEvents = query(async () => {
 		endsAt: e.endsAt,
 		doorsAt: e.doorsAt ?? null,
 		tags: e.tags as string | null,
-		posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null,
+		posterUrl: resolveImageUrl(e.posterKey),
 		ticketingEnabled: e.ticketingEnabled,
 		ticketPrice: e.ticketPrice
 	});
@@ -134,7 +128,7 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 		isSustainingMember = sub !== null;
 	}
 
-	const posterUrl = evt.posterKey && isConfigured() ? getPublicUrl(evt.posterKey) : null;
+	const posterUrl = resolveImageUrl(evt.posterKey);
 
 	return {
 		event: {
@@ -251,10 +245,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		if (res) linkedReservation = res;
 	}
 
-	let posterUrl: string | null = null;
-	if (evt.posterKey && isConfigured()) {
-		posterUrl = getPublicUrl(evt.posterKey);
-	}
+	const posterUrl = resolveImageUrl(evt.posterKey);
 
 	let ticketStats: { sold: number; remaining: number | null } | null = null;
 	let tickets: { id: string; purchaseId: string | null; attendeeName: string; attendeeEmail: string; code: string; status: string; checkedInAt: Date | null; createdAt: Date }[] = [];

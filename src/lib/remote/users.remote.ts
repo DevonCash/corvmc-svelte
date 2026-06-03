@@ -15,7 +15,7 @@ import { listByUser, list as listPayments } from '$lib/server/finance/payment-ca
 import { getAllBalances, addCredits, deductCredits, listTransactions } from '$lib/server/finance/credit-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
-import { getPublicUrl, isConfigured } from '$lib/server/storage';
+import { resolveImageUrl } from '$lib/server/storage';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import { getPartsInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import type { CreditType } from '$lib/server/db/schema/finance';
@@ -283,7 +283,6 @@ const TZ = DEFAULT_TIMEZONE;
 
 export const getMemberDashboard = query(async () => {
 	const currentUser = requireUser();
-	const r2Available = isConfigured();
 
 	const nowDate = new Date();
 	const weekStart = startOfWeek(nowDate, { weekStartsOn: 1 });
@@ -365,7 +364,7 @@ export const getMemberDashboard = query(async () => {
 			startsAt: e.startsAt,
 			endsAt: e.endsAt,
 			doorsAt: e.doorsAt ? e.doorsAt : null,
-			posterUrl: e.posterKey && r2Available ? getPublicUrl(e.posterKey) : null
+			posterUrl: resolveImageUrl(e.posterKey)
 		})),
 		credits,
 		subscription,
