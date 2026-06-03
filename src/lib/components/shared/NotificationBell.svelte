@@ -1,13 +1,19 @@
 <script lang="ts">
-	import type { Notification } from '$lib/server/db/schema';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
+	import { invalidateAll } from '$app/navigation';
+	import {
+		getNotifications,
+		markNotificationRead,
+		markAllNotificationsRead
+	} from '$lib/remote/notifications.remote';
 
-	let unreadCount = $state(0);
-	let notifications = $state<Notification[]>([]);
+	let data = $derived(await getNotifications());
+	let notifications = $derived(data.notifications);
+	let unreadCount = $derived(data.unreadCount);
+
 	let open = $state(false);
-	let loading = $state(false);
 	let eventSource: EventSource | null = null;
 	let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
 	let retryCount = 0;
@@ -32,16 +38,12 @@
 
 		eventSource = new EventSource('/api/notifications/stream');
 
-		eventSource.addEventListener('init', (e) => {
+		eventSource.addEventListener('init', () => {
 			retryCount = 0;
-			const data = JSON.parse(e.data);
-			unreadCount = data.unreadCount;
 		});
 
-		eventSource.addEventListener('message', (e) => {
-			const notification: Notification = JSON.parse(e.data);
-			notifications = [notification, ...notifications];
-			unreadCount++;
+		eventSource.addEventListener('message', () => {
+			invalidateAll();
 		});
 
 		eventSource.onerror = () => {
@@ -70,54 +72,22 @@
 		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
-	async function toggleDropdown() {
+	function toggleDropdown() {
 		open = !open;
-		if (open && notifications.length === 0) {
-			await fetchNotifications();
-		}
-	}
-
-	async function fetchNotifications() {
-		loading = true;
-		try {
-			const res = await fetch('/api/notifications?limit=10');
-			if (res.ok) {
-				const data = await res.json() as { notifications: typeof notifications; unreadCount: number };
-				notifications = data.notifications;
-				unreadCount = data.unreadCount;
-			}
-		} finally {
-			loading = false;
-		}
 	}
 
 	async function markRead(id: string) {
-		await fetch('/api/notifications/read', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id })
-		});
-		notifications = notifications.map((n) =>
-			n.id === id ? { ...n, readAt: new Date() } : n
-		);
-		unreadCount = Math.max(0, unreadCount - 1);
+		await markNotificationRead({ id });
+		invalidateAll();
 	}
 
 	async function markAllRead() {
-		await fetch('/api/notifications/read', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ all: true })
-		});
-		notifications = notifications.map((n) => ({
-			...n,
-			readAt: n.readAt ?? new Date()
-		}));
-		unreadCount = 0;
+		await markAllNotificationsRead();
+		invalidateAll();
 	}
 
-	function timeAgo(dateStr: string): string {
-		const diff = Date.now() - new Date(dateStr).getTime();
+	function timeAgo(date: Date): string {
+		const diff = Date.now() - date.getTime();
 		const minutes = Math.floor(diff / 60_000);
 		if (minutes < 1) return 'just now';
 		if (minutes < 60) return `${minutes}m ago`;
@@ -167,11 +137,7 @@
 			</div>
 
 			<div class="max-h-80 overflow-y-auto">
-				{#if loading}
-					<div class="flex justify-center p-6">
-						<span class="loading loading-sm loading-spinner"></span>
-					</div>
-				{:else if notifications.length === 0}
+				{#if notifications.length === 0}
 					<div class="p-6 text-center text-sm text-base-content/60">No notifications yet</div>
 				{:else}
 					{#each notifications as n (n.id)}
@@ -198,7 +164,7 @@
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}
-											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt.toISOString())}</p>
+											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt)}</p>
 										</div>
 									</div>
 								</a>
@@ -219,7 +185,7 @@
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}
-											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt.toISOString())}</p>
+											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt)}</p>
 										</div>
 									</div>
 								</div>

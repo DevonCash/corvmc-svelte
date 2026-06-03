@@ -130,8 +130,8 @@
 	}
 	.id-card:focus,
 	.id-card:hover {
-		transform: rotate(0deg) translateY(-3px);
-		box-shadow: -5px -5px -5px 0 var(--cmc-brown);
+		transform: rotate(0deg) translateY(-5px);
+		box-shadow: 0 -5px 0 0 var(--cmc-brown);
 		/* box-shadow:
 			0 20px 34px -10px rgba(20, 20, 25, 0.45),
 			0 6px 14px -4px rgba(20, 20, 25, 0.25),
