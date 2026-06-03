@@ -2,6 +2,7 @@
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime } from '$lib/utils/format';
+	import { sanitizeBio } from '$lib/utils/markdown';
 
 	interface BandData {
 		id: string;
@@ -353,7 +354,7 @@
 		</div>
 
 		{#if band.bio}
-			<p class="text-center text-base-content/80 mb-8">{band.bio}</p>
+			<div class="prose prose-sm max-w-none text-center text-base-content/80 mb-8">{@html sanitizeBio(band.bio)}</div>
 		{/if}
 
 		{#if band.links && band.links.length > 0}

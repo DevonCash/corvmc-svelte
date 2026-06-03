@@ -68,8 +68,12 @@ function makeEvent(overrides?: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('hooks.server handle', () => {
-	it('calls registerListeners at module load', async () => {
-		await import('./hooks.server');
+	it('calls registerListeners when handling a request', async () => {
+		mockGetSession.mockResolvedValue(null);
+
+		const { handle } = await import('./hooks.server');
+		await handle({ event: makeEvent() as any, resolve: vi.fn() });
+
 		expect(mockRegisterListeners).toHaveBeenCalled();
 	}, 30_000);
 

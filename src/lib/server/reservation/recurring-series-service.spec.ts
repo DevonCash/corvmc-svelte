@@ -101,7 +101,10 @@ function setupBatchMock({
 
 	vi.mocked(db.select).mockImplementation((() => ({
 		from: vi.fn().mockReturnValue({
-			where: vi.fn().mockReturnValue(Promise.resolve(selectReturning))
+			where: vi.fn().mockReturnValue({
+				limit: vi.fn().mockResolvedValue(selectReturning),
+				then: (resolve: (v: unknown) => unknown) => resolve(selectReturning)
+			})
 		})
 	})) as any);
 

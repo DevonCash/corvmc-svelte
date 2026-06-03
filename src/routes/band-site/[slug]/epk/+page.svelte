@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
+	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
@@ -62,7 +63,7 @@
 	{#if band.bio}
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">About</h2>
-			<p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{band.bio}</p>
+			<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">{@html sanitizeBio(band.bio)}</div>
 		</section>
 	{/if}
 

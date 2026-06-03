@@ -6,6 +6,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { getDirectoryBand } from '$lib/remote/directory.remote';
+	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
 
 	let data = $derived(await getDirectoryBand(page.params.slug!));
@@ -44,7 +45,7 @@
 	</div>
 
 	{#if band.bio}
-		<p class="text-base-content/80">{band.bio}</p>
+		<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(band.bio)}</div>
 	{/if}
 
 	{#if band.genres?.length}

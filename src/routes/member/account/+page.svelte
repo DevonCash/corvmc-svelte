@@ -5,6 +5,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -18,52 +19,15 @@
 		getAvailableLists,
 		getMemberAccount
 	} from '$lib/remote/account.remote';
+	import {
+		getNotificationPreferences,
+		setNotificationPreference
+	} from '$lib/remote/notifications.remote';
 
 	let data = $derived(await getMemberAccount());
+	let notifPrefs = $derived(await getNotificationPreferences());
 
-
-	interface NotifPref {
-		key: string;
-		label: string;
-		description: string;
-		email: boolean;
-		inApp: boolean;
-	}
-
-	let notifPrefs = $state<NotifPref[]>([]);
-	let prefsLoading = $state(true);
-
-	async function loadPrefs() {
-		prefsLoading = true;
-		try {
-			const res = await fetch('/api/notifications/preferences');
-			if (res.ok) notifPrefs = await res.json();
-		} finally {
-			prefsLoading = false;
-		}
-	}
-
-	async function togglePref(key: string, channel: 'email' | 'inApp') {
-		const pref = notifPrefs.find((p) => p.key === key);
-		if (!pref) return;
-
-		const newEmail = channel === 'email' ? !pref.email : pref.email;
-		const newInApp = channel === 'inApp' ? !pref.inApp : pref.inApp;
-
-		// Optimistic update
-		notifPrefs = notifPrefs.map((p) =>
-			p.key === key ? { ...p, email: newEmail, inApp: newInApp } : p
-		);
-
-		await fetch('/api/notifications/preferences', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ notificationType: key, email: newEmail, inApp: newInApp })
-		});
-	}
-
-	import { onMount } from 'svelte';
-	onMount(loadPrefs);
+	const { fields } = updateProfile;
 </script>
 
 <PageHeader title="Account Settings" />
@@ -79,50 +43,31 @@
 		>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
-					<FormField label="Name" id="name">
-						<input
-							id="name"
-							name="name"
-							type="text"
-							value={data.user.name}
-							class="input input-bordered w-full"
-							required
-						/>
-					</FormField>
-
-					<FormField label="Pronouns" id="pronouns">
-						<input
-							id="pronouns"
-							name="pronouns"
-							type="text"
-							value={data.user.pronouns ?? ''}
-							class="input input-bordered w-full"
-							placeholder="e.g. they/them"
-						/>
-					</FormField>
+					<FormField field={fields.name} type="text" label="Name" value={data.user.name} required />
+					<FormField
+						field={fields.pronouns}
+						type="text"
+						label="Pronouns"
+						value={data.user.pronouns ?? ''}
+						placeholder="e.g. they/them"
+					/>
 				</div>
 
-				<FormField type="email" label="Email" id="email">
-					<input
-						id="email"
-						type="email"
-						value={data.user.email}
-						class="input input-bordered w-full"
-						disabled
-					/>
-					<p class="text-xs opacity-50 mt-1">Contact staff to change your email address.</p>
-				</FormField>
+				<FormField
+					type="email"
+					label="Email"
+					value={data.user.email}
+					readonly
+					description="Contact staff to change your email address."
+				/>
 
-				<FormField label="Phone" id="phone">
-					<input
-						id="phone"
-						name="phone"
-						type="tel"
-						value={data.user.phone ?? ''}
-						class="input input-bordered w-full"
-						placeholder="(541) 555-0123"
-					/>
-				</FormField>
+				<FormField
+					field={fields.phone}
+					type="tel"
+					label="Phone"
+					value={data.user.phone ?? ''}
+					placeholder="(541) 555-0123"
+				/>
 
 				<div class="flex justify-end pt-2">
 					<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s" />
@@ -133,17 +78,21 @@
 
 	<!-- Notification preferences -->
 	<InfoCard title="Notification Preferences">
-		{#if prefsLoading}
-			<div class="flex justify-center p-4">
-				<span class="loading loading-spinner loading-sm"></span>
-			</div>
+		{#if notifPrefs.length === 0}
+			<EmptyState message="No notification preferences available." />
 		{:else}
 			<table class="table">
 				<thead>
 					<tr>
 						<th>Notification</th>
-						<th class="text-center w-20"><span class="tooltip" data-tip="Email"><IconMail size={16} /></span></th>
-						<th class="text-center w-20"><span class="tooltip" data-tip="In-app"><IconBell size={16} /></span></th>
+						<th class="w-20 text-center">
+							<span class="tooltip" data-tip="Email"><IconMail size={16} /></span>
+							<span class="sr-only">Email</span>
+						</th>
+						<th class="w-20 text-center">
+							<span class="tooltip" data-tip="In-app"><IconBell size={16} /></span>
+							<span class="sr-only">In-app</span>
+						</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -151,24 +100,36 @@
 						<tr>
 							<td>
 								<div>
-									<p class="font-medium text-sm">{pref.label}</p>
+									<p class="text-sm font-medium">{pref.label}</p>
 									<p class="text-xs opacity-60">{pref.description}</p>
 								</div>
 							</td>
-							<td class="text-center w-20">
+							<td class="w-20 text-center">
 								<input
 									type="checkbox"
 									class="toggle toggle-sm toggle-primary"
 									checked={pref.email}
-									onchange={() => togglePref(pref.key, 'email')}
+									aria-label={`Email notifications for ${pref.label}`}
+									onchange={() =>
+										setNotificationPreference({
+											notificationType: pref.key,
+											email: !pref.email,
+											inApp: pref.inApp
+										})}
 								/>
 							</td>
-							<td class="text-center w-20">
+							<td class="w-20 text-center">
 								<input
 									type="checkbox"
 									class="toggle toggle-sm toggle-primary"
 									checked={pref.inApp}
-									onchange={() => togglePref(pref.key, 'inApp')}
+									aria-label={`In-app notifications for ${pref.label}`}
+									onchange={() =>
+										setNotificationPreference({
+											notificationType: pref.key,
+											email: pref.email,
+											inApp: !pref.inApp
+										})}
 								/>
 							</td>
 						</tr>
@@ -192,10 +153,10 @@
 					<p class="text-sm opacity-60">No mailing lists available.</p>
 				{:else}
 					{#if subs.length > 0}
-						<p class="text-xs font-medium opacity-60 mb-2">Your subscriptions</p>
-						<div class="space-y-2 mb-4">
+						<p class="mb-2 text-xs font-medium opacity-60">Your subscriptions</p>
+						<div class="mb-4 space-y-2">
 							{#each subs as sub (sub.audienceId)}
-								<div class="flex items-center justify-between border rounded-lg px-4 py-2">
+								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{sub.audienceName}</p>
 										{#if sub.audienceDescription}
@@ -209,10 +170,10 @@
 					{/if}
 
 					{#if avail.length > 0}
-						<p class="text-xs font-medium opacity-60 mb-2">Available lists</p>
+						<p class="mb-2 text-xs font-medium opacity-60">Available lists</p>
 						<div class="space-y-2">
 							{#each avail as a (a.id)}
-								<div class="flex items-center justify-between border rounded-lg px-4 py-2">
+								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{a.name}</p>
 										{#if a.description}
@@ -245,35 +206,24 @@
 					class="btn-outline btn-sm"
 				>
 					{#snippet form({ close })}
-						<FormField label="Current password" id="currentPassword">
-							<input
-								id="currentPassword"
-								name="currentPassword"
-								type="password"
-								class="input input-bordered w-full"
-								autocomplete="current-password"
-							/>
-						</FormField>
-
-						<FormField label="New password" id="newPassword">
-							<input
-								id="newPassword"
-								name="newPassword"
-								type="password"
-								class="input input-bordered w-full"
-								autocomplete="new-password"
-							/>
-						</FormField>
-
-						<FormField label="Confirm new password" id="confirmPassword">
-							<input
-								id="confirmPassword"
-								name="confirmPassword"
-								type="password"
-								class="input input-bordered w-full"
-								autocomplete="new-password"
-							/>
-						</FormField>
+						<FormField
+							name="currentPassword"
+							type="password"
+							label="Current password"
+							autocomplete="current-password"
+						/>
+						<FormField
+							name="newPassword"
+							type="password"
+							label="New password"
+							autocomplete="new-password"
+						/>
+						<FormField
+							name="confirmPassword"
+							type="password"
+							label="Confirm new password"
+							autocomplete="new-password"
+						/>
 					{/snippet}
 				</Action>
 			</div>
@@ -293,7 +243,10 @@
 						submitLabel="Delete My Account"
 						onfailure={() => toast.error('Deletion failed')}
 						class="btn-error btn-sm"
-						onsuccess={() => { toast.success('Account deleted'); goto('/login'); }}
+						onsuccess={() => {
+							toast.success('Account deleted');
+							goto('/login');
+						}}
 					>
 						{#snippet form({ close })}
 							<div class="alert alert-error">
@@ -304,17 +257,11 @@
 							</div>
 
 							<FormField
+								name="password"
+								type="password"
 								label="Enter your password to confirm"
-								id="password"
-							>
-								<input
-									id="password"
-									name="password"
-									type="password"
-									class="input input-bordered w-full"
-									autocomplete="current-password"
-								/>
-							</FormField>
+								autocomplete="current-password"
+							/>
 						{/snippet}
 					</Action>
 				{/if}

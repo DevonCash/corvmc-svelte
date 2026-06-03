@@ -5,6 +5,7 @@
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { getPublicBandProfile } from '$lib/remote/directory.remote';
 	import { getBandEventsPublic } from '$lib/remote/band-events.remote';
+	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
 
 	let data = $derived(await getPublicBandProfile(page.params.slug!));
@@ -60,7 +61,7 @@
 		<!-- Bio -->
 		{#if band.bio}
 			<section>
-				<p class="text-base-content/80 whitespace-pre-wrap">{band.bio}</p>
+				<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(band.bio)}</div>
 			</section>
 		{/if}
 

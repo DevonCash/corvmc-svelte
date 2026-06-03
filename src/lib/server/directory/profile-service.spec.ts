@@ -68,11 +68,19 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn()
 }));
 
+vi.mock('$lib/server/storage', () => ({
+	deleteObject: vi.fn().mockResolvedValue(undefined),
+	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
+}));
+
+const { deleteObject, uploadFile } = await import('$lib/server/storage');
 const {
 	updateMemberProfile,
 	getMemberProfileForEdit,
 	updateBandProfile,
-	getBandProfileForEdit
+	getBandProfileForEdit,
+	setUserAvatar,
+	clearUserAvatar
 } = await import('./profile-service');
 
 // ---------------------------------------------------------------------------
@@ -191,6 +199,51 @@ describe('updateBandProfile', () => {
 			lookingForMembers: true
 		});
 		expect(insertedRows).toHaveLength(1); // genres
+	});
+});
+
+describe('setUserAvatar', () => {
+	it('uploads the file and returns the extension-mapped key', async () => {
+		selectResults.push([{ image: null }]);
+
+		const key = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
+
+		expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'users/avatars/user-1.png', 'image/png');
+		expect(key).toBe('users/avatars/user-1.png');
+	});
+
+	it('deletes a previously-uploaded avatar key before replacing', async () => {
+		selectResults.push([{ image: 'users/avatars/user-1.jpg' }]);
+
+		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/webp');
+
+		expect(deleteObject).toHaveBeenCalledWith('users/avatars/user-1.jpg');
+	});
+
+	it('does not delete an external OAuth image URL', async () => {
+		selectResults.push([{ image: 'https://lh3.googleusercontent.com/abc' }]);
+
+		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
+
+		expect(deleteObject).not.toHaveBeenCalled();
+	});
+});
+
+describe('clearUserAvatar', () => {
+	it('deletes an uploaded avatar key', async () => {
+		selectResults.push([{ image: 'users/avatars/user-1.png' }]);
+
+		await clearUserAvatar('user-1');
+
+		expect(deleteObject).toHaveBeenCalledWith('users/avatars/user-1.png');
+	});
+
+	it('does not delete an external OAuth image URL', async () => {
+		selectResults.push([{ image: 'https://lh3.googleusercontent.com/abc' }]);
+
+		await clearUserAvatar('user-1');
+
+		expect(deleteObject).not.toHaveBeenCalled();
 	});
 });
 

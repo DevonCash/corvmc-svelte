@@ -19,88 +19,93 @@ import {
 	generationWindowEnd,
 	describeFrequency
 } from './rrule-helpers';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 describe('buildRRule', () => {
-	it('generates a weekly RRULE with correct BYDAY for a Tuesday', () => {
-		// 2026-05-12 is a Tuesday, 10:00 AM Pacific
-		const start = new Date('2026-05-12T17:00:00.000Z'); // 10:00 AM PDT
-		const result = buildRRule(start, 'weekly');
-
-		expect(result).toContain('FREQ=WEEKLY');
-		expect(result).toContain('INTERVAL=1');
-		expect(result).toContain('BYDAY=TU');
-		expect(result).toContain('TZID=America/Los_Angeles');
-	});
-
-	it('generates a biweekly RRULE with interval 2', () => {
+	it('encodes a weekly rule for a Tuesday', () => {
+		// 2026-05-12 is a Tuesday, 10:00 AM Pacific (17:00 UTC during PDT)
 		const start = new Date('2026-05-12T17:00:00.000Z');
-		const result = buildRRule(start, 'biweekly');
+		const rule = parseRRule(buildRRule(start, 'weekly'));
 
-		expect(result).toContain('FREQ=WEEKLY');
-		expect(result).toContain('INTERVAL=2');
-		expect(result).toContain('BYDAY=TU');
+		expect(rule.freq).toBe('weekly');
+		expect(rule.interval).toBe(1);
+		expect(rule.weekday).toBe(2); // 0=Sun..6=Sat
+		expect(rule.tz).toBe(DEFAULT_TIMEZONE);
 	});
 
-	it('generates a monthly RRULE with nth weekday for the 2nd Tuesday', () => {
-		// 2026-05-12 is the 2nd Tuesday of May (day 12, ceil(12/7)=2)
-		const start = new Date('2026-05-12T17:00:00.000Z');
-		const result = buildRRule(start, 'monthly');
+	it('encodes a biweekly rule with interval 2', () => {
+		const rule = parseRRule(buildRRule(new Date('2026-05-12T17:00:00.000Z'), 'biweekly'));
 
-		expect(result).toContain('FREQ=MONTHLY');
-		expect(result).toContain('INTERVAL=1');
-		// nth weekday notation: +2TU means 2nd Tuesday
-		expect(result).toMatch(/BYDAY=\+?2TU/);
+		expect(rule.freq).toBe('weekly');
+		expect(rule.interval).toBe(2);
+		expect(rule.weekday).toBe(2);
 	});
 
-	it('generates a monthly RRULE with nth weekday for the 3rd Wednesday', () => {
-		// 2026-05-20 is a Wednesday, day 20, ceil(20/7)=3 → 3rd Wednesday
-		const start = new Date('2026-05-20T17:00:00.000Z');
-		const result = buildRRule(start, 'monthly');
+	it('encodes a monthly rule on the 2nd Tuesday', () => {
+		// 2026-05-12: day 12, ceil(12/7) = 2 → 2nd Tuesday
+		const rule = parseRRule(buildRRule(new Date('2026-05-12T17:00:00.000Z'), 'monthly'));
 
-		expect(result).toContain('FREQ=MONTHLY');
-		expect(result).toMatch(/BYDAY=\+?3WE/);
+		expect(rule.freq).toBe('monthly');
+		expect(rule.interval).toBe(1);
+		expect(rule.weekday).toBe(2);
+		expect(rule.nthWeek).toBe(2);
 	});
 
-	it('generates a weekly RRULE for a Sunday', () => {
+	it('encodes a monthly rule on the 3rd Wednesday', () => {
+		// 2026-05-20 is a Wednesday, day 20, ceil(20/7) = 3 → 3rd Wednesday
+		const rule = parseRRule(buildRRule(new Date('2026-05-20T17:00:00.000Z'), 'monthly'));
+
+		expect(rule.freq).toBe('monthly');
+		expect(rule.weekday).toBe(3);
+		expect(rule.nthWeek).toBe(3);
+	});
+
+	it('encodes a weekly rule for a Sunday', () => {
 		// 2026-05-17 is a Sunday
-		const start = new Date('2026-05-17T19:00:00.000Z'); // 12:00 PM PDT
-		const result = buildRRule(start, 'weekly');
+		const rule = parseRRule(buildRRule(new Date('2026-05-17T19:00:00.000Z'), 'weekly'));
 
-		expect(result).toContain('BYDAY=SU');
+		expect(rule.weekday).toBe(0);
 	});
 
-	it('generates a weekly RRULE for a Saturday', () => {
-		// 2026-05-16 is a Saturday (Friday in some TZs, but 10am PDT = 17:00 UTC)
-		const start = new Date('2026-05-16T17:00:00.000Z'); // 10:00 AM PDT on Saturday May 16
-		const result = buildRRule(start, 'weekly');
+	it('encodes a weekly rule for a Saturday', () => {
+		// 2026-05-16 10am PDT (17:00 UTC) is a Saturday
+		const rule = parseRRule(buildRRule(new Date('2026-05-16T17:00:00.000Z'), 'weekly'));
 
-		expect(result).toContain('BYDAY=SA');
+		expect(rule.weekday).toBe(6);
 	});
 
-	it('includes DTSTART in the output', () => {
-		const start = new Date('2026-05-12T17:00:00.000Z');
-		const result = buildRRule(start, 'weekly');
+	it('captures the start time components in the target timezone', () => {
+		const rule = parseRRule(buildRRule(new Date('2026-05-12T17:00:00.000Z'), 'weekly'));
 
-		expect(result).toContain('DTSTART');
+		expect(rule.start.year).toBe(2026);
+		expect(rule.start.day).toBe(12);
+		expect(rule.start.hour).toBe(10); // 17:00 UTC → 10:00 PDT
+		expect(rule.start.minute).toBe(0);
 	});
 });
 
 describe('parseRRule', () => {
-	it('round-trips a built RRULE string', () => {
+	it('round-trips a built rule string', () => {
 		const start = new Date('2026-05-12T17:00:00.000Z');
-		const rruleString = buildRRule(start, 'weekly');
-		const rule = parseRRule(rruleString);
+		const rule = parseRRule(buildRRule(start, 'weekly'));
 
 		expect(rule).toBeDefined();
-		expect(rule.options.freq).toBeDefined();
+		expect(rule.freq).toBe('weekly');
 	});
 
-	it('parses a manually constructed RRULE string', () => {
-		const rruleString =
-			'DTSTART;TZID=America/Los_Angeles:20260512T100000\nRRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=TU';
-		const rule = parseRRule(rruleString);
+	it('parses a serialized rule object', () => {
+		const rule = parseRRule(
+			JSON.stringify({
+				freq: 'weekly',
+				interval: 1,
+				tz: DEFAULT_TIMEZONE,
+				start: { year: 2026, month: 5, day: 12, hour: 10, minute: 0 },
+				weekday: 2
+			})
+		);
 
-		expect(rule).toBeDefined();
+		expect(rule.freq).toBe('weekly');
+		expect(rule.weekday).toBe(2);
 	});
 });
 
@@ -175,10 +180,11 @@ describe('getOccurrences', () => {
 		const occurrences = getOccurrences(rruleString, after, before);
 
 		// Both boundaries are exclusive, so neither May 12 nor May 19 should be included
-		for (const occ of occurrences) {
-			expect(occ.getTime()).not.toBe(after.getTime());
-			expect(occ.getTime()).not.toBe(before.getTime());
-		}
+		expect(
+			occurrences.every(
+				(occ) => occ.getTime() !== after.getTime() && occ.getTime() !== before.getTime()
+			)
+		).toBe(true);
 	});
 });
 

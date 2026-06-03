@@ -17,7 +17,9 @@ import {
 	getMemberProfileForEdit,
 	updateMemberProfile,
 	getBandProfileForEdit,
-	updateBandProfile
+	updateBandProfile,
+	setUserAvatar,
+	clearUserAvatar
 } from '$lib/server/directory/profile-service';
 import { getPublicUrl, isConfigured, resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
@@ -321,7 +323,26 @@ export const getGenreSuggestions = query(z.void(), async () => {
 
 export const getMemberProfile = query(z.void(), async () => {
 	const user = requireUser();
-	return getMemberProfileForEdit(user.id);
+	const profile = await getMemberProfileForEdit(user.id);
+	if (!profile) return null;
+	return { ...profile, avatarUrl: resolveImageUrl(profile.image) };
+});
+
+export const uploadMemberAvatar = form(
+	z.object({ file: z.instanceof(File) }),
+	async (data) => {
+		const user = requireUser();
+		await setUserAvatar(user.id, await data.file.arrayBuffer(), data.file.type);
+		void getMemberProfile().refresh();
+		return { success: true };
+	}
+);
+
+export const removeMemberAvatar = form(z.object({}), async () => {
+	const user = requireUser();
+	await clearUserAvatar(user.id);
+	void getMemberProfile().refresh();
+	return { success: true };
 });
 
 const memberProfileSchema = z.object({

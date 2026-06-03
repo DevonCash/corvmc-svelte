@@ -2,7 +2,7 @@
 	import { getDirectoryMembers, getDirectoryBands, getInstrumentSuggestions, getGenreSuggestions } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
+	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
@@ -36,24 +36,14 @@
 </script>
 
 <PageHeader title="Directory" subtitle="Community">
-	<ButtonGroup>
-		<button
-			class="join-item btn btn-sm"
-			class:btn-primary={activeTab === 'members'}
-			class:latched={activeTab=="members"}
-			onclick={() => (activeTab = 'members')}
-		>
-			Members ({members.length})
-		</button>
-		<button
-			class="join-item btn btn-sm"
-			class:btn-primary={activeTab === 'bands'}
-			class:latched={activeTab === 'bands'}
-			onclick={() => (activeTab = 'bands')}
-		>
-			Bands ({bands.length})
-		</button>
-	</ButtonGroup>
+	<TabBar
+		tabs={[
+			{ key: 'members', label: 'Members', badge: members.length },
+			{ key: 'bands', label: 'Bands', badge: bands.length }
+		]}
+		active={activeTab}
+		onchange={(key) => (activeTab = key as 'members' | 'bands')}
+	/>
 </PageHeader>
 <PageContent>
 	<!-- Search & Filters -->
@@ -62,6 +52,7 @@
 			<input
 				type="text"
 				placeholder="Search by name..."
+				aria-label="Search by name"
 				class="input input-bordered flex-1"
 				bind:value={search}
 			/>

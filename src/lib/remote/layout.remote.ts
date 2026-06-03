@@ -76,7 +76,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 	}
 
 	return {
-		band,
+		band: { ...band, avatarUrl: resolveImageUrl(band.avatarKey) },
 		userRole: role ?? 'staff',
 		isStaff,
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),

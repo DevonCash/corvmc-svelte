@@ -35,6 +35,18 @@ export function sanitizeHtml(html: string): string {
 	return DOMPurify.sanitize(html);
 }
 
+/**
+ * Sanitize user-authored bio HTML (from the rich-text editor) with a tight
+ * allowlist — only basic inline/block formatting and links.
+ */
+export function sanitizeBio(html: string | null | undefined): string {
+	if (!html) return '';
+	return DOMPurify.sanitize(html, {
+		ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li', 'h3', 'h4', 'blockquote'],
+		ALLOWED_ATTR: ['href', 'target', 'rel']
+	});
+}
+
 export function renderMarkdown(content: string): string {
 	return sanitizeHtml(marked.parse(content) as string);
 }

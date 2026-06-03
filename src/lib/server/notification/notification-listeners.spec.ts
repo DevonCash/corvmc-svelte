@@ -43,6 +43,12 @@ vi.mock('$lib/server/events/event-bus', () => ({
 
 const { registerAllNotificationListeners } = await import('./notification-listeners');
 
+// Emittery wraps emitted payloads as `{ name, data }` before invoking
+// listeners. Calling handlers directly in tests must mirror that envelope.
+function emit(event: string, payload: unknown): Promise<unknown> {
+	return handlers[event]({ data: payload });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -73,7 +79,7 @@ describe('ticket.purchased handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('sends email-only notification to ticket buyer', async () => {
-		await handlers['ticket.purchased']({
+		await emit('ticket.purchased', {
 			attendeeName: 'Alice',
 			attendeeEmail: 'alice@test.com',
 			eventTitle: 'Jazz Night',
@@ -96,7 +102,7 @@ describe('reservation.reminder_due handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches in-app + email notification', async () => {
-		await handlers['reservation.reminder_due']({
+		await emit('reservation.reminder_due', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
@@ -118,7 +124,7 @@ describe('platform_invite.created handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('sends email with signup URL containing invite token', async () => {
-		await handlers['platform_invite.created']({
+		await emit('platform_invite.created', {
 			email: 'new@test.com',
 			token: 'tok-xyz',
 			bandId: 'band-1',
@@ -142,7 +148,7 @@ describe('band.invitation_sent handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches notification to invited user', async () => {
-		await handlers['band.invitation_sent']({
+		await emit('band.invitation_sent', {
 			invitedUserId: 'user-2',
 			invitedUserEmail: 'invited@test.com',
 			invitedUserName: 'Bob',
@@ -162,7 +168,7 @@ describe('event.cancelled handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches to ticket holders with userId via dispatch', async () => {
-		await handlers['event.cancelled']({
+		await emit('event.cancelled', {
 			eventTitle: 'Jazz Night',
 			eventDate: 'May 20',
 			refundNote: 'Full refund within 5 days',
@@ -187,7 +193,7 @@ describe('event.cancelled handler', () => {
 	});
 
 	it('dispatches to ticket holders without userId via dispatchEmailOnly', async () => {
-		await handlers['event.cancelled']({
+		await emit('event.cancelled', {
 			eventTitle: 'Jazz Night',
 			eventDate: 'May 20',
 			refundNote: 'Full refund within 5 days',
@@ -206,7 +212,7 @@ describe('event.cancelled handler', () => {
 	it('continues notifying remaining holders if one fails', async () => {
 		mockDispatch.mockRejectedValueOnce(new Error('fail'));
 
-		await handlers['event.cancelled']({
+		await emit('event.cancelled', {
 			eventTitle: 'Jazz Night',
 			eventDate: 'May 20',
 			refundNote: 'Refund pending',
@@ -224,7 +230,7 @@ describe('reservation.confirmation_reminder_due handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches confirmation reminder notification', async () => {
-		await handlers['reservation.confirmation_reminder_due']({
+		await emit('reservation.confirmation_reminder_due', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
@@ -255,7 +261,7 @@ describe('band.invitation_accepted handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches notification to each band admin', async () => {
-		await handlers['band.invitation_accepted']({
+		await emit('band.invitation_accepted', {
 			acceptedByName: 'Charlie',
 			bandName: 'The Strokes',
 			bandId: 'band-1',
@@ -287,7 +293,7 @@ describe('band.invitation_accepted handler', () => {
 	it('continues notifying remaining admins if one fails', async () => {
 		mockDispatch.mockRejectedValueOnce(new Error('fail'));
 
-		await handlers['band.invitation_accepted']({
+		await emit('band.invitation_accepted', {
 			acceptedByName: 'Charlie',
 			bandName: 'The Strokes',
 			bandId: 'band-1',
@@ -305,7 +311,7 @@ describe('reservation.recurring_skipped handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches recurring skipped notification', async () => {
-		await handlers['reservation.recurring_skipped']({
+		await emit('reservation.recurring_skipped', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
@@ -339,7 +345,7 @@ describe('equipment.loan_scheduled handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('dispatches loan scheduled notification to member', async () => {
-		await handlers['equipment.loan_scheduled']({
+		await emit('equipment.loan_scheduled', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
@@ -366,7 +372,7 @@ describe('equipment.loan_requested handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('sends email notification to staff', async () => {
-		await handlers['equipment.loan_requested']({
+		await emit('equipment.loan_requested', {
 			userName: 'Bob',
 			equipmentName: 'SM58 Microphone',
 			memberNotes: 'Need for weekend gig',
@@ -393,7 +399,7 @@ describe('contact.form_submitted handler', () => {
 	beforeEach(() => { registerAllNotificationListeners(); });
 
 	it('forwards to staff email', async () => {
-		await handlers['contact.form_submitted']({
+		await emit('contact.form_submitted', {
 			name: 'Charlie',
 			email: 'charlie@test.com',
 			message: 'Hello, I have a question'

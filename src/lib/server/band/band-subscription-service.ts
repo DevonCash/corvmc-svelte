@@ -78,8 +78,8 @@ export async function syncFromWebhook(
 		cancel_at_period_end: boolean;
 		items?: {
 			data: Array<{
-				current_period_end?: number;
-				price?: { recurring?: { interval?: string } };
+				current_period_end?: number | null;
+				price?: { recurring?: { interval?: string } | null } | null;
 			}>;
 		};
 	}

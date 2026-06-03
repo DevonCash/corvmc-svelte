@@ -53,22 +53,25 @@ vi.mock('$lib/server/authorization', () => ({
 	requireStaff: vi.fn()
 }));
 
-vi.mock('$app/server', () => ({
-	getRequestEvent: () => ({
-		locals: mockLocals,
-		request: { headers: new Headers() }
-	}),
-	form: (_schema: unknown, handler: Function) => {
-		const fn = handler;
-		(fn as any).__ = { type: 'form' };
-		return fn;
-	},
-	query: (_schema: unknown, handler: Function) => {
-		const fn = handler;
-		(fn as any).__ = { type: 'query' };
-		return fn;
-	}
-}));
+vi.mock('$app/server', () => {
+	// Remote helpers support both single-arg (handler) and two-arg
+	// (schema, handler) forms. Detect: if the first arg is a function and
+	// there's no second arg, treat it as the handler.
+	const wrap = (type: string) => (a: unknown, b?: unknown) => {
+		const handler = (typeof a === 'function' && b === undefined ? a : b) as Function;
+		(handler as any).__ = { type };
+		return handler;
+	};
+	return {
+		getRequestEvent: () => ({
+			locals: mockLocals,
+			request: { headers: new Headers() }
+		}),
+		form: wrap('form'),
+		query: wrap('query'),
+		command: wrap('command')
+	};
+});
 
 const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands.remote') as any;
 
