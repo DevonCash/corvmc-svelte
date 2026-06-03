@@ -195,9 +195,16 @@ describe('hasConflict', () => {
 // ---------------------------------------------------------------------------
 
 describe('getAvailableSlots', () => {
+	// getAvailableSlots marks slots before `now + minAdvanceMinutes` as unavailable,
+	// so use a date several days in the future to keep the whole operating window valid.
+	const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(
+		'en-CA',
+		{ timeZone: 'America/Los_Angeles' }
+	);
+
 	it('returns slots within operating hours when no reservations or closures', async () => {
 		selectResultQueue = [[], []]; // day reservations, day closures
-		const slots = await getAvailableSlots(makeDate(date, '12:00'));
+		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
 		// Operating hours 09:00 - 22:00 = 13 hours = 26 half-hour slots
 		expect(slots).toHaveLength(26);
 		expect(slots[0].startTime).toBe('09:00');
@@ -207,13 +214,13 @@ describe('getAvailableSlots', () => {
 	});
 
 	it('marks slots overlapping a reservation as unavailable', async () => {
-		const resStart = makeDate(date, '10:00');
-		const resEnd = makeDate(date, '11:00');
+		const resStart = makeDate(futureDate, '10:00');
+		const resEnd = makeDate(futureDate, '11:00');
 		selectResultQueue = [
 			[{ startsAt: resStart, endsAt: resEnd }], // reservations
 			[] // closures
 		];
-		const slots = await getAvailableSlots(makeDate(date, '12:00'));
+		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
 		// Slots at 10:00 and 10:30 should be blocked
 		const slot1000 = slots.find((s) => s.startTime === '10:00');
 		const slot1030 = slots.find((s) => s.startTime === '10:30');
@@ -225,13 +232,13 @@ describe('getAvailableSlots', () => {
 	});
 
 	it('marks slots overlapping a closure as unavailable', async () => {
-		const closureStart = makeDate(date, '14:00');
-		const closureEnd = makeDate(date, '15:30');
+		const closureStart = makeDate(futureDate, '14:00');
+		const closureEnd = makeDate(futureDate, '15:30');
 		selectResultQueue = [
 			[], // reservations
 			[{ startsAt: closureStart, endsAt: closureEnd }] // closures
 		];
-		const slots = await getAvailableSlots(makeDate(date, '12:00'));
+		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
 		const slot1400 = slots.find((s) => s.startTime === '14:00');
 		const slot1430 = slots.find((s) => s.startTime === '14:30');
 		const slot1500 = slots.find((s) => s.startTime === '15:00');

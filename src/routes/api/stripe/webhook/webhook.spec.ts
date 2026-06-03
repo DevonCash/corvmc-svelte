@@ -92,6 +92,8 @@ describe('POST /api/stripe/webhook', () => {
 	});
 
 	it('returns 200 even when handler throws', async () => {
+		// The handler only swallows errors in non-DEV; vitest sets import.meta.env.DEV true.
+		vi.stubEnv('DEV', false);
 		mockConstructEvent.mockReturnValue({
 			type: 'checkout.session.completed',
 			id: 'evt_789',
@@ -107,9 +109,11 @@ describe('POST /api/stripe/webhook', () => {
 
 		expect(body).toEqual({ received: true });
 		consoleSpy.mockRestore();
+		vi.unstubAllEnvs();
 	});
 
 	it('logs error when handler throws', async () => {
+		vi.stubEnv('DEV', false);
 		mockConstructEvent.mockReturnValue({
 			type: 'checkout.session.completed',
 			id: 'evt_err',
@@ -128,5 +132,6 @@ describe('POST /api/stripe/webhook', () => {
 			handlerError
 		);
 		consoleSpy.mockRestore();
+		vi.unstubAllEnvs();
 	});
 });

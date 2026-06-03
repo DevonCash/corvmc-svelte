@@ -36,6 +36,22 @@ vi.mock('$lib/server/notification/notification-listeners', () => ({
 		mockRegisterAllNotificationListeners(...args)
 }));
 
+// The inbox + waitlist listeners dynamically import these modules during
+// registration. Mock them so registration settles without loading the real
+// (heavy, db-backed) implementations, which otherwise causes
+// vi.dynamicImportSettled() to time out.
+vi.mock('$lib/server/notification/dispatcher', () => ({
+	dispatch: vi.fn()
+}));
+
+vi.mock('$lib/server/authorization', () => ({
+	listStaffUsers: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('$lib/server/reservation/waitlist-service', () => ({
+	promoteNextWaitlisted: vi.fn()
+}));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	for (const key of Object.keys(registeredHandlers)) {

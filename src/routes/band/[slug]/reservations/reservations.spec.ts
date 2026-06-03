@@ -210,18 +210,19 @@ describe('cancelBandReservation', () => {
 });
 
 describe('getBandMembershipStatus', () => {
-	it('returns hasSustainingMember true when a member has an active subscription', async () => {
-		selectResult = [{ stripeId: 'cus_123' }, { stripeId: 'cus_456' }];
-		subscriptionServiceMock.getSubscription.mockResolvedValueOnce({ id: 'sub-1', status: 'active' });
+	// Source queries the DB directly for an active member whose `subscription is not null`.
+	// `selectResult` represents that query's result: a non-empty array means a sustaining
+	// member was found.
+	it('returns hasSustainingMember true when an active member has a subscription', async () => {
+		selectResult = [{ id: 'user-owner' }];
 
 		const result = await getBandMembershipStatus();
 
 		expect(result.hasSustainingMember).toBe(true);
 	});
 
-	it('returns hasSustainingMember false when no members have subscriptions', async () => {
-		selectResult = [{ stripeId: 'cus_123' }];
-		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
+	it('returns hasSustainingMember false when no active member has a subscription', async () => {
+		selectResult = [];
 
 		const result = await getBandMembershipStatus();
 
@@ -237,23 +238,12 @@ describe('getBandMembershipStatus', () => {
 
 		expect(result.hasSustainingMember).toBe(false);
 	});
-
-	it('skips members without stripeId', async () => {
-		selectResult = [{ stripeId: null }, { stripeId: 'cus_456' }];
-		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
-
-		const result = await getBandMembershipStatus();
-
-		// Only called once (for cus_456), skips the null stripeId
-		expect(subscriptionServiceMock.getSubscription).toHaveBeenCalledTimes(1);
-		expect(result.hasSustainingMember).toBe(false);
-	});
 });
 
 describe('bookReservation with recurring', () => {
 	it('creates a recurring series when frequency is provided and member has sustaining subscription', async () => {
-		selectResult = [{ stripeId: 'cus_123' }];
-		subscriptionServiceMock.getSubscription.mockResolvedValueOnce({ id: 'sub-1', status: 'active' });
+		// Non-empty result => a sustaining band member exists.
+		selectResult = [{ id: 'user-owner' }];
 
 		const result = await bookReservation({
 			date: '2026-06-15',
@@ -273,8 +263,8 @@ describe('bookReservation with recurring', () => {
 	});
 
 	it('throws 403 when recurring is requested but no member has sustaining subscription', async () => {
-		selectResult = [{ stripeId: 'cus_123' }];
-		subscriptionServiceMock.getSubscription.mockResolvedValue(null);
+		// Empty result => no sustaining band member.
+		selectResult = [];
 
 		await expect(
 			bookReservation({

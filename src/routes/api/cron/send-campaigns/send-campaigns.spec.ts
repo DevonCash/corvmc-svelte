@@ -10,6 +10,14 @@ vi.mock('$lib/server/marketing/campaign-service', () => ({
 	processDueCampaigns: (...args: unknown[]) => mockProcessDueCampaigns(...args)
 }));
 
+// isFeatureEnabled reads from site-config which depends on KV (uninitialized in tests).
+// Mock the feature-flags layer so the handler runs past the feature gate.
+const mockIsFeatureEnabled = vi.fn(async (..._args: unknown[]) => true);
+
+vi.mock('$lib/server/feature-flags', () => ({
+	isFeatureEnabled: (...args: unknown[]) => mockIsFeatureEnabled(...args)
+}));
+
 vi.mock('$env/dynamic/private', () => ({
 	env: { CRON_SECRET: 'test-secret' }
 }));

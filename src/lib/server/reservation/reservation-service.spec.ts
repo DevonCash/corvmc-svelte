@@ -117,7 +117,9 @@ describe('ReservationService', () => {
 				id: 'res-1',
 				createdByUserId: 'user-1',
 				status: 'scheduled',
-				stripePaymentRecordId: null
+				stripePaymentRecordId: null,
+				startsAt: new Date('2025-07-15T17:00:00Z'),
+				endsAt: new Date('2025-07-15T19:00:00Z')
 			});
 			const set = setupUpdateMock(1);
 
@@ -134,7 +136,9 @@ describe('ReservationService', () => {
 				id: 'res-1',
 				createdByUserId: 'user-1',
 				status: 'confirmed',
-				stripePaymentRecordId: 'pr_123'
+				stripePaymentRecordId: 'pr_123',
+				startsAt: new Date('2025-07-15T17:00:00Z'),
+				endsAt: new Date('2025-07-15T19:00:00Z')
 			});
 			setupUpdateMock(1);
 
@@ -196,7 +200,9 @@ describe('ReservationService', () => {
 				id: 'res-1',
 				createdByUserId: 'user-1',
 				status: 'scheduled',
-				stripePaymentRecordId: null
+				stripePaymentRecordId: null,
+				startsAt: new Date('2025-07-15T17:00:00Z'),
+				endsAt: new Date('2025-07-15T19:00:00Z')
 			});
 			setupUpdateMock(1);
 
