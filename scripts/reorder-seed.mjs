@@ -1,22 +1,6 @@
 // Reorder a data-only D1 export so INSERTs run parent-first (FK-safe).
 import { readFileSync, writeFileSync } from 'fs';
-
-const order = [
-	// roots → leaves
-	'user', 'recurring_series',
-	'band', 'reservation', 'equipment_category',
-	'event', 'campaign', 'audience', 'equipment', 'inbox_thread',
-	'help_categories', 'subscriber', 'roles', 'permissions',
-	// independents (no FKs)
-	'closure', 'inbox_channel_config', 'product_config', 'verification',
-	// leaves
-	'user_genre', 'user_instrument', 'model_has_permissions', 'model_has_roles',
-	'role_has_permissions', 'band_genre', 'campaign_audience', 'session',
-	'audience_member', 'equipment_loan', 'notification_preference', 'notification',
-	'account', 'band_member', 'payment_cache', 'ticket', 'platform_invite',
-	'credit_transaction', 'help_articles', 'band_media', 'band_page_config',
-	'inbox_message', 'inbox_note'
-];
+import { tableOrder as order } from './d1-table-order.mjs';
 
 const lines = readFileSync('d1-seed.sql', 'utf8').split('\n');
 const byTable = new Map();
@@ -45,4 +29,6 @@ for (const t of order) {
 	total += rows.length;
 }
 writeFileSync('d1-seed-ordered.sql', out.join('\n') + '\n');
-console.log(`Reordered ${total} inserts across ${[...byTable.keys()].length} tables → d1-seed-ordered.sql`);
+console.log(
+	`Reordered ${total} inserts across ${[...byTable.keys()].length} tables → d1-seed-ordered.sql`
+);

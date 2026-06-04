@@ -253,7 +253,7 @@ SELECT count(*) FROM account WHERE provider_id = 'credential' AND password LIKE 
 
 ## 9. Subsequent Deploys
 
-**Apply migrations to remote *before* shipping the code that depends on them** — a deploy
+**Apply migrations to remote _before_ shipping the code that depends on them** — a deploy
 whose code expects columns the remote D1 doesn't have yet is a production outage (this is
 what broke `/directory`).
 
@@ -272,7 +272,52 @@ wrangler deploy
 
 If you deploy via Cloudflare Workers Builds rather than `wrangler deploy` locally, run
 `pnpm db:migrate` as part of the build/deploy command (it needs the three `CLOUDFLARE_*`
-env vars set as build secrets) so schema can never lag behind code.
+env vars set as build secrets) so schema can never lag behind code. This is automated —
+see §9a.
+
+---
+
+## 9a. Automated migrations & data sync (pre-cutover)
+
+While Postgres (DigitalOcean) is still canonical and D1 is staging, two automations keep
+D1 in sync. **Both are temporary — remove at cutover (see §10a).**
+
+### A. Schema migrate on every deploy (Cloudflare Workers Builds)
+
+`scripts/ci-migrate.mjs` runs `drizzle-kit migrate` against remote D1, but only when the
+build branch is `main` (so PR/preview builds never touch prod). Wire it into the deploy:
+
+1. **Workers Builds → Settings → Build command:** `pnpm ci:migrate && pnpm build`
+2. **Workers Builds → Build environment variables** (so `drizzle-kit migrate` can reach
+   D1 over `d1-http`): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`,
+   `CLOUDFLARE_D1_TOKEN` (a token scoped to **Account → D1 → Edit**).
+
+If migrate fails, the build fails and nothing is published — schema can never lag code.
+
+### B. Data refresh from Postgres (GitHub Actions)
+
+`.github/workflows/sync-d1.yml` runs nightly (and via the **Run workflow** button). It
+applies any pending schema migrations, then runs `scripts/sync-d1.sh`, which reloads all
+data: ETL Postgres → local D1 → export → FK-order → clear remote (DELETE) → import. No
+`pg_dump` needed; the ETL reads Postgres live over SSL.
+
+**GitHub → Settings → Secrets and variables → Actions:**
+
+- `DATABASE_URL` — DO Postgres connection string with `?sslmode=require`
+- `CLOUDFLARE_API_TOKEN` — for `wrangler ... --remote`
+- `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, `CLOUDFLARE_D1_TOKEN` — for migrate
+
+Run `scripts/sync-d1.sh` locally once (`DATABASE_URL=… bash scripts/sync-d1.sh`) before
+relying on the cron. The table dependency order lives in `scripts/d1-table-order.mjs`;
+add any new FK-bearing table there.
+
+### C. DigitalOcean Postgres connectivity
+
+GitHub runners have no static IPs, so DO Managed Postgres "trusted sources" can't allowlist
+them. For pre-cutover staging: **allow inbound connections** (rely on SSL + the managed
+password), store the public connection string (+`?sslmode=require`) as `DATABASE_URL`, and
+plan to re-lock + rotate the password at cutover. (If you'd rather not open it, leave the
+nightly job and run `sync-d1.sh` from your laptop — a trusted source — on demand instead.)
 
 ---
 
@@ -294,6 +339,22 @@ For emergency data fixes:
 ```bash
 wrangler d1 execute corvmc-db --remote --command "UPDATE user SET ..."
 ```
+
+---
+
+## 10a. Cutover teardown
+
+When D1 becomes canonical (Postgres retired), the §9a sync is no longer wanted:
+
+- Delete `.github/workflows/sync-d1.yml` and the `sync-d1.sh` / `migrate-from-postgres.ts`
+  / `reorder-seed.mjs` / `gen-d1-delete.mjs` / `d1-table-order.mjs` data-sync scripts.
+- Re-lock DO Managed Postgres trusted sources and **rotate the DB password** (it was
+  exposed to CI), then decommission the DO database.
+- Remove the `DATABASE_URL` GitHub secret.
+- Retire the bcrypt→scrypt Laravel proxy per §7a.
+
+Keep §9a part A (`pnpm ci:migrate` in the build command) — applying migrations before
+publish is still correct post-cutover.
 
 ---
 
