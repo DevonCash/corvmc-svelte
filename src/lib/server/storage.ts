@@ -44,6 +44,8 @@ export async function deleteObject(key: string): Promise<void> {
 }
 
 export function getPublicUrl(key: string): string {
+	if (/^https?:\/\//i.test(key)) return key; // already resolved — don't double-prefix
+
 	const transformUrl = env.R2_TRANSFORM_URL;
 	if (transformUrl) {
 		return `${transformUrl}/width=1200,format=webp/${key}`;
