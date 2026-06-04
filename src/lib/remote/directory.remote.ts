@@ -9,7 +9,6 @@ import {
 	listPublicMembers,
 	listPublicBands,
 	getMemberProfile as getMemberProfileService,
-	getBandProfile as getBandProfileService,
 	suggestInstruments,
 	suggestGenres
 } from '$lib/server/directory/directory-service';
