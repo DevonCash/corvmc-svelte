@@ -94,6 +94,11 @@ describe('storage', () => {
 
 			(env as any).R2_TRANSFORM_URL = '';
 		});
+
+		it('does not double-prefix an already-resolved URL', () => {
+			const full = 'https://media.corvmc.org/46/01K7W8TMZGMCBKW803NR9TAAKR.jpg';
+			expect(getPublicUrl(full)).toBe(full);
+		});
 	});
 
 	describe('isConfigured', () => {
