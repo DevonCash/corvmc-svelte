@@ -56,6 +56,67 @@ export async function getAllBalances(userId: string): Promise<Credits> {
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Balance mutations
+//
+// Cloudflare D1 has no interactive transactions, so read-modify-write flows use
+// optimistic concurrency: read the balance, compute the next value, then write
+// it with a compare-and-swap UPDATE that only matches if the balance hasn't
+// changed since the read. A concurrent writer makes the CAS match zero rows, so
+// we re-read and retry. The single relative-decrement path in deductCredits is
+// already race-free and needs no retry.
+// ---------------------------------------------------------------------------
+
+const MAX_BALANCE_RETRIES = 5;
+
+/**
+ * Compare-and-swap a user's credit balance and append a matching ledger entry.
+ * `computeNext` derives the new balance from the freshly-read current balance.
+ * Retries on contention; throws if the user is missing or contention persists.
+ */
+async function applyBalanceMutation(
+	userId: string,
+	creditType: CreditType,
+	computeNext: (current: number) => number,
+	ledger: { source: TransactionSource; sourceId?: string; description: string }
+): Promise<number> {
+	const col = creditColumn[creditType];
+
+	for (let attempt = 0; attempt <= MAX_BALANCE_RETRIES; attempt++) {
+		const [row] = await db.select({ balance: col }).from(user).where(eq(user.id, userId)).limit(1);
+
+		if (!row) throw new Error(`User ${userId} not found`);
+
+		const current = row.balance;
+		const next = computeNext(current);
+
+		// CAS: only write if the balance is still what we read.
+		const updated = await db
+			.update(user)
+			.set({ [col.name]: next })
+			.where(and(eq(user.id, userId), eq(col, current)))
+			.returning({ balance: col });
+
+		if (updated.length === 0) continue; // balance changed concurrently — retry
+
+		await db.insert(creditTransaction).values({
+			userId,
+			creditType,
+			amount: next - current,
+			balanceAfter: next,
+			source: ledger.source,
+			sourceId: ledger.sourceId ?? null,
+			description: ledger.description
+		});
+
+		return next;
+	}
+
+	throw new Error(
+		`Credit update for ${userId} failed after ${MAX_BALANCE_RETRIES} retries due to contention`
+	);
+}
+
 export async function addCredits(
 	userId: string,
 	creditType: CreditType,
@@ -67,41 +128,14 @@ export async function addCredits(
 	if (amount <= 0) throw new Error('Amount must be positive');
 	assertCreditType(creditType);
 
-	const col = creditColumn[creditType];
+	const { maxBalance } = creditTypeConfig[creditType];
 
-	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
-	return db.transaction(async (tx) => {
-		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
-
-		if (!row) throw new Error(`User ${userId} not found`);
-
-		const currentBalance = row.balance;
-		const { maxBalance } = creditTypeConfig[creditType];
-		let newBalance = currentBalance + amount;
-
-		if (maxBalance !== null && newBalance > maxBalance) {
-			newBalance = maxBalance;
-		}
-
-		const actualAdded = newBalance - currentBalance;
-
-		await tx
-			.update(user)
-			.set({ [creditColumn[creditType].name]: newBalance })
-			.where(eq(user.id, userId));
-
-		await tx.insert(creditTransaction).values({
-			userId,
-			creditType,
-			amount: actualAdded,
-			balanceAfter: newBalance,
-			source,
-			sourceId: sourceId ?? null,
-			description: description ?? `Added ${amount} ${creditType}`
-		});
-
-		return newBalance;
-	});
+	return applyBalanceMutation(
+		userId,
+		creditType,
+		(current) => (maxBalance !== null ? Math.min(current + amount, maxBalance) : current + amount),
+		{ source, sourceId, description: description ?? `Added ${amount} ${creditType}` }
+	);
 }
 
 export async function deductCredits(
@@ -117,36 +151,33 @@ export async function deductCredits(
 
 	const col = creditColumn[creditType];
 
-	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
-	return db.transaction(async (tx) => {
-		const result = await tx
-			.update(user)
-			.set({
-				[col.name]: sql`${col} - ${amount}`
-			})
-			.where(and(eq(user.id, userId), gte(col, amount)))
-			.returning({ newBalance: col });
+	// Race-free relative decrement: the WHERE guard rejects the write atomically
+	// if the balance is too low, so no read-modify-write window exists.
+	const result = await db
+		.update(user)
+		.set({ [col.name]: sql`${col} - ${amount}` })
+		.where(and(eq(user.id, userId), gte(col, amount)))
+		.returning({ newBalance: col });
 
-		if (result.length === 0) {
-			const credits = await getAllBalances(userId);
-			const current = credits[creditType] ?? 0;
-			throw new InsufficientCreditsError(creditType, amount, current);
-		}
+	if (result.length === 0) {
+		const credits = await getAllBalances(userId);
+		const current = credits[creditType] ?? 0;
+		throw new InsufficientCreditsError(creditType, amount, current);
+	}
 
-		const newBalance = result[0].newBalance;
+	const newBalance = result[0].newBalance;
 
-		await tx.insert(creditTransaction).values({
-			userId,
-			creditType,
-			amount: -amount,
-			balanceAfter: newBalance,
-			source,
-			sourceId: sourceId ?? null,
-			description: description ?? `Deducted ${amount} ${creditType}`
-		});
-
-		return newBalance;
+	await db.insert(creditTransaction).values({
+		userId,
+		creditType,
+		amount: -amount,
+		balanceAfter: newBalance,
+		source,
+		sourceId: sourceId ?? null,
+		description: description ?? `Deducted ${amount} ${creditType}`
 	});
+
+	return newBalance;
 }
 
 export async function setBalance(
@@ -160,33 +191,10 @@ export async function setBalance(
 	if (balance < 0) throw new Error('Balance cannot be negative');
 	assertCreditType(creditType);
 
-	const col = creditColumn[creditType];
-
-	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
-	return db.transaction(async (tx) => {
-		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
-
-		if (!row) throw new Error(`User ${userId} not found`);
-
-		const currentBalance = row.balance;
-		const delta = balance - currentBalance;
-
-		await tx
-			.update(user)
-			.set({ [col.name]: balance })
-			.where(eq(user.id, userId));
-
-		await tx.insert(creditTransaction).values({
-			userId,
-			creditType,
-			amount: delta,
-			balanceAfter: balance,
-			source,
-			sourceId: sourceId ?? null,
-			description: description ?? `Set ${creditType} balance to ${balance}`
-		});
-
-		return balance;
+	return applyBalanceMutation(userId, creditType, () => balance, {
+		source,
+		sourceId,
+		description: description ?? `Set ${creditType} balance to ${balance}`
 	});
 }
 

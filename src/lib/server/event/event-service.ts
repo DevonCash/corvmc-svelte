@@ -95,13 +95,38 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		throw new Error('Ticket price is required when ticketing is enabled');
 	}
 
-	// Insert event + optional reservation in a transaction
-	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
-	const row = await db.transaction(async (tx) => {
-		// Insert the event first to get the ID
-		const [newEvent] = await tx
+	// D1 has no interactive transactions, so we order the writes so the event row
+	// is never persisted in a half-linked state: check conflicts, create the
+	// reservation first, then insert the event with the link already set. If the
+	// event insert fails, compensate by deleting the just-created reservation.
+	const eventId = crypto.randomUUID();
+
+	let reservationId: string | null = null;
+	if (reservationParams) {
+		if (!reservationParams.overrideConflicts) {
+			const conflict = await hasConflict(reservationParams.startsAt, reservationParams.endsAt);
+			if (conflict) {
+				throw new ReservationConflictError();
+			}
+		}
+
+		const res = await staffCreate({
+			userId: createdByUserId,
+			bookerType: 'event',
+			bookerId: eventId,
+			startsAt: reservationParams.startsAt,
+			endsAt: reservationParams.endsAt,
+			status: 'confirmed'
+		});
+		reservationId = res.id;
+	}
+
+	let row: EventRow;
+	try {
+		[row] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title,
 				description: description ?? null,
 				startsAt,
@@ -111,38 +136,22 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				ticketingEnabled,
 				ticketPrice: ticketingEnabled ? ticketPrice! : null,
 				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
+				reservationId,
 				createdByUserId
 			})
 			.returning();
-
-		// Create linked reservation if requested
-		if (reservationParams) {
-			if (!reservationParams.overrideConflicts) {
-				const conflict = await hasConflict(reservationParams.startsAt, reservationParams.endsAt);
-				if (conflict) {
-					throw new ReservationConflictError();
-				}
+	} catch (err) {
+		// Compensating write: the event never persisted, so remove the orphan
+		// reservation we created for it.
+		if (reservationId) {
+			try {
+				await db.delete(reservation).where(eq(reservation.id, reservationId));
+			} catch (cleanupErr) {
+				captureException(cleanupErr, { event: 'event.create.compensate', reservationId });
 			}
-
-			const res = await staffCreate({
-				userId: createdByUserId,
-				bookerType: 'event',
-				bookerId: newEvent.id,
-				startsAt: reservationParams.startsAt,
-				endsAt: reservationParams.endsAt,
-				status: 'confirmed'
-			});
-
-			await tx
-				.update(event)
-				.set({ reservationId: res.id, updatedAt: new Date() })
-				.where(eq(event.id, newEvent.id));
-
-			newEvent.reservationId = res.id;
 		}
-
-		return newEvent;
-	});
+		throw err;
+	}
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {

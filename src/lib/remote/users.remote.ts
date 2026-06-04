@@ -23,6 +23,7 @@ import { listUpcoming } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
+import type { BatchItem } from 'drizzle-orm/batch';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -222,8 +223,10 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	const id = params.id!;
 	const roleIds = data.roles.map(Number);
 
-	await db.transaction(async (tx) => {
-		await tx
+	// D1 has no interactive transactions; these writes are independent, so batch
+	// them for atomicity (db.batch runs in a single implicit transaction).
+	const ops: BatchItem<'sqlite'>[] = [
+		db
 			.update(user)
 			.set({
 				name: data.name,
@@ -231,19 +234,22 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				phone: data.phone || null,
 				updatedAt: new Date()
 			})
-			.where(eq(user.id, id));
+			.where(eq(user.id, id)),
+		db.delete(modelHasRole).where(eq(modelHasRole.userId, id))
+	];
 
-		await tx.delete(modelHasRole).where(eq(modelHasRole.userId, id));
-
-		if (roleIds.length > 0) {
-			await tx.insert(modelHasRole).values(
+	if (roleIds.length > 0) {
+		ops.push(
+			db.insert(modelHasRole).values(
 				roleIds.map((roleId: number) => ({
 					roleId,
 					userId: id
 				}))
-			);
-		}
-	});
+			)
+		);
+	}
+
+	await db.batch(ops as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 
 	void getUser(id).refresh();
 

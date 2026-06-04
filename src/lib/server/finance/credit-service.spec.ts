@@ -1,69 +1,43 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
-// Mock the db module with proper operation-aware proxies
+// Mock the db module. The credit service no longer uses db.transaction (D1 has
+// no interactive transactions); it reads, then writes with a compare-and-swap
+// UPDATE ... RETURNING, then inserts a ledger row. The mock exposes queues so a
+// test can script the exact sequence of select/update results — including a CAS
+// miss (empty returning) to exercise the retry path.
 // ---------------------------------------------------------------------------
 
-let selectResult: unknown[] = [];
-let updateResult: unknown[] = [];
-const insertedRows: unknown[] = [];
+let selectResults: unknown[][] = [];
+let updateResults: unknown[][] = [];
+const insertedRows: Record<string, unknown>[] = [];
 
-function buildSelectChain(result: () => unknown[]) {
-	const proxy: any = new Proxy(() => proxy, {
+/** A thenable chain whose await pops the next result from `queue`. */
+function chain(queue: () => unknown[][]): PromiseLike<unknown[]> {
+	const proxy: PromiseLike<unknown[]> = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(result());
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
-}
-
-function buildUpdateChain(result: () => unknown[]) {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(result());
+				return (resolve: (v: unknown[]) => void) => resolve(queue().shift() ?? []);
 			}
 			if (prop === 'returning') {
-				return () => {
-					const retProxy: any = new Proxy(() => retProxy, {
-						get(_, p) {
-							if (p === 'then') {
-								return (res: (v: unknown[]) => void) => res(result());
-							}
-							return () => retProxy;
-						}
-					});
-					return retProxy;
-				};
+				return () => chain(() => updateResults);
 			}
 			return () => proxy;
 		}
-	});
+	}) as unknown as PromiseLike<unknown[]>;
 	return proxy;
 }
-
-function buildInsertChain() {
-	return {
-		values: (row: unknown) => {
-			insertedRows.push(row);
-			return Promise.resolve();
-		}
-	};
-}
-
-const txMock = {
-	select: () => buildSelectChain(() => selectResult),
-	update: () => buildUpdateChain(() => updateResult),
-	insert: () => buildInsertChain()
-};
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: () => buildSelectChain(() => selectResult),
-		transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
+		select: () => chain(() => selectResults),
+		update: () => chain(() => updateResults),
+		insert: () => ({
+			values: (row: Record<string, unknown>) => {
+				insertedRows.push(row);
+				return Promise.resolve();
+			}
+		})
 	}
 }));
 
@@ -101,60 +75,53 @@ const {
 	InsufficientCreditsError
 } = await import('./credit-service');
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-describe('getBalance', () => {
-	beforeEach(() => {
-		selectResult = [];
-		insertedRows.length = 0;
-	});
+beforeEach(() => {
+	selectResults = [];
+	updateResults = [];
+	insertedRows.length = 0;
+});
 
+// ---------------------------------------------------------------------------
+// Reads
+// ---------------------------------------------------------------------------
+
+describe('getBalance', () => {
 	it('returns 0 for user with no credits', async () => {
-		selectResult = [{ free_hours: 0, equipment_credits: 0 }];
-		const balance = await getBalance('user-1', 'free_hours');
-		expect(balance).toBe(0);
+		selectResults = [[{ free_hours: 0, equipment_credits: 0 }]];
+		expect(await getBalance('user-1', 'free_hours')).toBe(0);
 	});
 
 	it('returns 0 when user not found', async () => {
-		selectResult = [];
-		const balance = await getBalance('missing', 'free_hours');
-		expect(balance).toBe(0);
+		selectResults = [[]];
+		expect(await getBalance('missing', 'free_hours')).toBe(0);
 	});
 
 	it('returns the balance for a credit type that exists', async () => {
-		selectResult = [{ free_hours: 5, equipment_credits: 0 }];
-		const balance = await getBalance('user-1', 'free_hours');
-		expect(balance).toBe(5);
+		selectResults = [[{ free_hours: 5, equipment_credits: 0 }]];
+		expect(await getBalance('user-1', 'free_hours')).toBe(5);
 	});
 });
 
 describe('getAllBalances', () => {
-	beforeEach(() => {
-		selectResult = [];
-	});
-
 	it('returns empty object for user not found', async () => {
-		selectResult = [];
-		const credits = await getAllBalances('missing');
-		expect(credits).toEqual({});
+		selectResults = [[]];
+		expect(await getAllBalances('missing')).toEqual({});
 	});
 
 	it('returns parsed credits', async () => {
-		selectResult = [{ free_hours: 3, equipment_credits: 10 }];
-		const credits = await getAllBalances('user-1');
-		expect(credits).toEqual({ free_hours: 3, equipment_credits: 10 });
+		selectResults = [[{ free_hours: 3, equipment_credits: 10 }]];
+		expect(await getAllBalances('user-1')).toEqual({ free_hours: 3, equipment_credits: 10 });
 	});
 });
 
-describe('addCredits', () => {
-	beforeEach(() => {
-		selectResult = [];
-		insertedRows.length = 0;
-	});
+// ---------------------------------------------------------------------------
+// addCredits
+// ---------------------------------------------------------------------------
 
+describe('addCredits', () => {
 	it('increases balance and creates a transaction', async () => {
-		selectResult = [{ balance: 2 }];
+		selectResults = [[{ balance: 2 }]];
+		updateResults = [[{ balance: 5 }]]; // CAS succeeds
 
 		const result = await addCredits(
 			'user-1',
@@ -177,25 +144,45 @@ describe('addCredits', () => {
 	});
 
 	it('initializes balance when credit type does not exist yet', async () => {
-		selectResult = [{ balance: 0 }];
+		selectResults = [[{ balance: 0 }]];
+		updateResults = [[{ balance: 4 }]];
 
 		const result = await addCredits('user-1', 'free_hours', 4, 'monthly_allocation');
 		expect(result).toBe(4);
-		expect(insertedRows[0]).toMatchObject({
-			amount: 4,
-			balanceAfter: 4
-		});
+		expect(insertedRows[0]).toMatchObject({ amount: 4, balanceAfter: 4 });
 	});
 
 	it('respects maxBalance cap from config', async () => {
-		selectResult = [{ balance: 240 }];
+		selectResults = [[{ balance: 240 }]];
+		updateResults = [[{ balance: 250 }]];
 
 		const result = await addCredits('user-1', 'equipment_credits', 20, 'monthly_allocation');
 		expect(result).toBe(250);
-		expect(insertedRows[0]).toMatchObject({
-			amount: 10,
-			balanceAfter: 250
-		});
+		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 250 });
+	});
+
+	it('retries the CAS when the balance changes concurrently', async () => {
+		// First read sees 2 but the CAS misses (someone else wrote between read and
+		// write). Second read sees 4; CAS succeeds at 4 + 3 = 7.
+		selectResults = [[{ balance: 2 }], [{ balance: 4 }]];
+		updateResults = [[], [{ balance: 7 }]];
+
+		const result = await addCredits('user-1', 'free_hours', 3, 'admin_adjustment');
+		expect(result).toBe(7);
+		// Exactly one ledger row — the failed attempt must not write a transaction.
+		expect(insertedRows).toHaveLength(1);
+		expect(insertedRows[0]).toMatchObject({ amount: 3, balanceAfter: 7 });
+	});
+
+	it('throws when contention persists past the retry limit', async () => {
+		// Supply a fresh read for every attempt but never let the CAS land.
+		selectResults = Array.from({ length: 10 }, () => [{ balance: 2 }]);
+		updateResults = Array.from({ length: 10 }, () => []);
+
+		await expect(addCredits('user-1', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow(
+			'due to contention'
+		);
+		expect(insertedRows).toHaveLength(0);
 	});
 
 	it('throws when amount is not positive', async () => {
@@ -208,22 +195,20 @@ describe('addCredits', () => {
 	});
 
 	it('throws when user not found', async () => {
-		selectResult = [];
+		selectResults = [[]];
 		await expect(addCredits('missing', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow(
 			'User missing not found'
 		);
 	});
 });
 
-describe('deductCredits', () => {
-	beforeEach(() => {
-		selectResult = [];
-		updateResult = [];
-		insertedRows.length = 0;
-	});
+// ---------------------------------------------------------------------------
+// deductCredits
+// ---------------------------------------------------------------------------
 
+describe('deductCredits', () => {
 	it('decreases balance and creates a transaction', async () => {
-		updateResult = [{ newBalance: 3 }];
+		updateResults = [[{ newBalance: 3 }]]; // conditional UPDATE matched
 
 		const result = await deductCredits('user-1', 'free_hours', 2, 'checkout', 'sess-123');
 		expect(result).toBe(3);
@@ -238,12 +223,14 @@ describe('deductCredits', () => {
 	});
 
 	it('throws InsufficientCreditsError when balance is too low', async () => {
-		updateResult = [];
-		selectResult = [{ free_hours: 1, equipment_credits: 0 }];
+		updateResults = [[]]; // UPDATE ... WHERE balance >= amount matched no rows
+		selectResults = [[{ free_hours: 1, equipment_credits: 0 }]]; // re-read for error detail
 
 		await expect(deductCredits('user-1', 'free_hours', 5, 'checkout')).rejects.toBeInstanceOf(
 			InsufficientCreditsError
 		);
+		// No ledger row when the deduction is rejected.
+		expect(insertedRows).toHaveLength(0);
 	});
 
 	it('throws when amount is not positive', async () => {
@@ -253,14 +240,14 @@ describe('deductCredits', () => {
 	});
 });
 
-describe('setBalance', () => {
-	beforeEach(() => {
-		selectResult = [];
-		insertedRows.length = 0;
-	});
+// ---------------------------------------------------------------------------
+// setBalance
+// ---------------------------------------------------------------------------
 
+describe('setBalance', () => {
 	it('resets to exact value and records the delta', async () => {
-		selectResult = [{ balance: 8 }];
+		selectResults = [[{ balance: 8 }]];
+		updateResults = [[{ balance: 5 }]];
 
 		const result = await setBalance('user-1', 'free_hours', 5, 'monthly_allocation', 'sub-123');
 		expect(result).toBe(5);
@@ -273,14 +260,23 @@ describe('setBalance', () => {
 	});
 
 	it('sets balance from zero', async () => {
-		selectResult = [{ balance: 0 }];
+		selectResults = [[{ balance: 0 }]];
+		updateResults = [[{ balance: 10 }]];
 
 		const result = await setBalance('user-1', 'free_hours', 10, 'monthly_allocation');
 		expect(result).toBe(10);
-		expect(insertedRows[0]).toMatchObject({
-			amount: 10,
-			balanceAfter: 10
-		});
+		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 10 });
+	});
+
+	it('retries the CAS when the balance changes concurrently', async () => {
+		selectResults = [[{ balance: 8 }], [{ balance: 6 }]];
+		updateResults = [[], [{ balance: 5 }]];
+
+		const result = await setBalance('user-1', 'free_hours', 5, 'monthly_allocation');
+		expect(result).toBe(5);
+		expect(insertedRows).toHaveLength(1);
+		// Delta is computed against the re-read balance (6), not the stale one.
+		expect(insertedRows[0]).toMatchObject({ amount: -1, balanceAfter: 5 });
 	});
 
 	it('throws for negative balance', async () => {
@@ -290,48 +286,38 @@ describe('setBalance', () => {
 	});
 
 	it('throws when user not found', async () => {
-		selectResult = [];
+		selectResults = [[]];
 		await expect(setBalance('missing', 'free_hours', 5, 'admin_adjustment')).rejects.toThrow(
 			'User missing not found'
 		);
 	});
 });
 
-describe('hasTransaction', () => {
-	beforeEach(() => {
-		selectResult = [];
-	});
+// ---------------------------------------------------------------------------
+// hasTransaction
+// ---------------------------------------------------------------------------
 
+describe('hasTransaction', () => {
 	it('returns true when a matching transaction exists', async () => {
-		selectResult = [{ id: 1 }];
+		selectResults = [[{ id: 1 }]];
 		expect(await hasTransaction('monthly_allocation', 'inv_123')).toBe(true);
 	});
 
 	it('returns false when no matching transaction exists', async () => {
-		selectResult = [];
+		selectResults = [[]];
 		expect(await hasTransaction('monthly_allocation', 'inv_999')).toBe(false);
 	});
 });
 
+// ---------------------------------------------------------------------------
+// allocateMonthlyCredits / allocateEquipmentCredits
+// ---------------------------------------------------------------------------
+
 describe('allocateMonthlyCredits', () => {
-	beforeEach(() => {
-		selectResult = [];
-		insertedRows.length = 0;
-	});
-
 	it('sets free_hours balance via setBalance', async () => {
-		// hasTransaction uses db.select, setBalance uses tx.select
-		// Both use selectResult — sequence: [] for hasTransaction, then { balance: 3 } for setBalance
-		const results = [[] as unknown[], [{ balance: 3 }]];
-		Object.defineProperty(globalThis, '__selectResult', { value: results, configurable: true });
-
-		// Override to return sequential results
-		selectResult = [];
-		const patchedTxSelect = () =>
-			buildSelectChain(() => {
-				return [{ balance: 3 }];
-			});
-		txMock.select = patchedTxSelect;
+		// Reads in order: hasTransaction (none), then setBalance's balance read.
+		selectResults = [[], [{ balance: 3 }]];
+		updateResults = [[{ balance: 5 }]];
 
 		const result = await allocateMonthlyCredits('user-1', 5, 'inv_abc');
 		expect(result).toBe(5);
@@ -340,31 +326,22 @@ describe('allocateMonthlyCredits', () => {
 			source: 'monthly_allocation',
 			sourceId: 'inv_abc'
 		});
-
-		txMock.select = () => buildSelectChain(() => selectResult);
 	});
 
 	it('skips allocation when invoice was already processed', async () => {
-		selectResult = [{ id: 99 }]; // hasTransaction returns true (found existing)
+		// hasTransaction finds an existing row; getBalance then re-reads balances.
+		selectResults = [[{ id: 99 }], [{ free_hours: 5, equipment_credits: 0 }]];
 
-		await allocateMonthlyCredits('user-1', 5, 'inv_dup');
-		// Returns getBalance which also uses selectResult — will find the same row
-		// But getBalance expects { free_hours, equipment_credits } format
-		// Let's just verify no inserts happened
+		const result = await allocateMonthlyCredits('user-1', 5, 'inv_dup');
+		expect(result).toBe(5);
 		expect(insertedRows).toHaveLength(0);
 	});
 });
 
 describe('allocateEquipmentCredits', () => {
-	beforeEach(() => {
-		selectResult = [];
-		insertedRows.length = 0;
-	});
-
 	it('adds equipment credits via addCredits', async () => {
-		// addCredits uses tx.select to get current balance
-		const origTxSelect = txMock.select;
-		txMock.select = () => buildSelectChain(() => [{ balance: 100 }]);
+		selectResults = [[{ balance: 100 }]];
+		updateResults = [[{ balance: 150 }]];
 
 		const result = await allocateEquipmentCredits('user-1', 50, 'sub-xyz');
 		expect(result).toBe(150);
@@ -373,7 +350,5 @@ describe('allocateEquipmentCredits', () => {
 			source: 'monthly_allocation',
 			sourceId: 'sub-xyz'
 		});
-
-		txMock.select = origTxSelect;
 	});
 });
