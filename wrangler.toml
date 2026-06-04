@@ -81,8 +81,11 @@ PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "staff@corvmc.org"
-# LARAVEL_URL intentionally omitted: by the time production deploys, the Laravel
-# app at corvmc.org is gone (this Worker replaces it), so password proxying is moot.
+# LARAVEL_URL points at the live Laravel app for bcrypt password verification
+# during migration. Once corvmc.org is redirected to this Worker, update this to
+# Forge's default URL (Laravel stays reachable at its Forge hostname). Also
+# satisfies wrangler's non-inheritance check so prod deploys don't warn.
+LARAVEL_URL = "https://corvmc.org"
 # Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
 
 [[env.production.d1_databases]]
