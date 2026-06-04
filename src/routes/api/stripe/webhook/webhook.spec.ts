@@ -22,6 +22,11 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { STRIPE_WEBHOOK_SECRET: 'whsec_test' }
 }));
 
+const mockCaptureException = vi.fn();
+vi.mock('$lib/server/sentry', () => ({
+	captureException: (...args: unknown[]) => mockCaptureException(...args)
+}));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 });
@@ -112,26 +117,25 @@ describe('POST /api/stripe/webhook', () => {
 		vi.unstubAllEnvs();
 	});
 
-	it('logs error when handler throws', async () => {
+	it('captures error to Sentry with event context when handler throws', async () => {
 		vi.stubEnv('DEV', false);
 		mockConstructEvent.mockReturnValue({
 			type: 'checkout.session.completed',
 			id: 'evt_err',
-			data: { object: {} }
+			data: { object: { customer: 'cus_123' } }
 		});
 		const handlerError = new Error('handler failed');
 		mockHandler.mockRejectedValue(handlerError);
 
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
 		const { POST } = await import('./+server');
 		await POST(req());
 
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.stringContaining('checkout.session.completed'),
-			handlerError
-		);
-		consoleSpy.mockRestore();
+		expect(mockCaptureException).toHaveBeenCalledWith(handlerError, {
+			stage: 'handler',
+			eventType: 'checkout.session.completed',
+			eventId: 'evt_err',
+			customerId: 'cus_123'
+		});
 		vi.unstubAllEnvs();
 	});
 });
