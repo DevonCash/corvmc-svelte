@@ -87,11 +87,7 @@
 			{#snippet main()}
 				<ProseBlock label="Bio" markdown={member.bio} />
 				<ListenStrip {links} />
-				<ShowsBox
-					upcoming={shows.upcoming}
-					pastCount={shows.pastCount}
-					bandHref={BANDS_BASE}
-				/>
+				<ShowsBox upcoming={shows.upcoming} pastCount={shows.pastCount} bandHref={BANDS_BASE} />
 			{/snippet}
 			{#snippet side()}
 				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />

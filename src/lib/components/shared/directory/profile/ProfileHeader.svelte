@@ -44,7 +44,11 @@
 		{#if pills.length > 0}
 			<div class="profile-header__pills">
 				{#each pills as pill (pill.label)}
-					<span class="profile-pill" class:profile-pill--solid={pill.variant === 'solid'} class:profile-pill--warm={pill.variant === 'warm'}>
+					<span
+						class="profile-pill"
+						class:profile-pill--solid={pill.variant === 'solid'}
+						class:profile-pill--warm={pill.variant === 'warm'}
+					>
 						{pill.label}
 					</span>
 				{/each}
@@ -56,7 +60,12 @@
 		{#if primaryAction}
 			<a href={primaryAction.href} class="btn btn-primary btn-sm">{primaryAction.label}</a>
 		{/if}
-		<button type="button" class="btn btn-ghost btn-sm btn-square" title="Copy link to this profile" onclick={share}>
+		<button
+			type="button"
+			class="btn btn-ghost btn-sm btn-square"
+			title="Copy link to this profile"
+			onclick={share}
+		>
 			{#if copied}
 				<IconCheck size={18} />
 			{:else}

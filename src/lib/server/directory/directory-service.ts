@@ -27,9 +27,7 @@ export type BandFilters = {
 // Member queries
 // ---------------------------------------------------------------------------
 
-type MemberWhere = NonNullable<
-	NonNullable<Parameters<typeof db.query.user.findMany>[0]>['where']
->;
+type MemberWhere = NonNullable<NonNullable<Parameters<typeof db.query.user.findMany>[0]>['where']>;
 
 function memberWhereConditions(
 	visibility: 'members' | 'public',
@@ -49,15 +47,21 @@ function memberWhereConditions(
 
 	if (filters?.instruments?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
-				sql`EXISTS (SELECT 1 FROM ${userInstrument} WHERE ${userInstrument.userId} = ${table.id} AND ${userInstrument.instrument} IN (${sql.join(filters.instruments!.map(i => sql`${i}`), sql`, `)}))`
+			RAW: (table, _ops) =>
+				sql`EXISTS (SELECT 1 FROM ${userInstrument} WHERE ${userInstrument.userId} = ${table.id} AND ${userInstrument.instrument} IN (${sql.join(
+					filters.instruments!.map((i) => sql`${i}`),
+					sql`, `
+				)}))`
 		});
 	}
 
 	if (filters?.genres?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
-				sql`EXISTS (SELECT 1 FROM ${userGenre} WHERE ${userGenre.userId} = ${table.id} AND ${userGenre.genre} IN (${sql.join(filters.genres!.map(g => sql`${g}`), sql`, `)}))`
+			RAW: (table, _ops) =>
+				sql`EXISTS (SELECT 1 FROM ${userGenre} WHERE ${userGenre.userId} = ${table.id} AND ${userGenre.genre} IN (${sql.join(
+					filters.genres!.map((g) => sql`${g}`),
+					sql`, `
+				)}))`
 		});
 	}
 
@@ -76,32 +80,34 @@ function memberWhereConditions(
 	return { AND: conditions };
 }
 
-function mapMemberRow<T extends {
-	instruments: { instrument: string }[];
-	genres: { genre: string }[];
-	image?: string | null;
-	bandMembers?: {
-		status: string;
-		role?: string | null;
-		position?: string | null;
-		band: { name: string; slug: string; avatarKey: string | null } | null;
-	}[];
-}>(row: T) {
+function mapMemberRow<
+	T extends {
+		instruments: { instrument: string }[];
+		genres: { genre: string }[];
+		image?: string | null;
+		bandMembers?: {
+			status: string;
+			role?: string | null;
+			position?: string | null;
+			band: { name: string; slug: string; avatarKey: string | null } | null;
+		}[];
+	}
+>(row: T) {
 	const { instruments, genres, bandMembers, image, ...rest } = row;
 	return {
 		...rest,
 		image: resolveImageUrl(image),
-		instruments: instruments.map(r => r.instrument),
-		genres: genres.map(r => r.genre),
+		instruments: instruments.map((r) => r.instrument),
+		genres: genres.map((r) => r.genre),
 		bands: (bandMembers ?? [])
-			.filter(m => m.status === 'active' && m.band)
-			.map(m => ({
+			.filter((m) => m.status === 'active' && m.band)
+			.map((m) => ({
 				name: m.band!.name,
 				slug: m.band!.slug,
 				avatarUrl: resolveImageUrl(m.band!.avatarKey),
 				position: m.position ?? null,
-				role: m.role ?? null,
-			})),
+				role: m.role ?? null
+			}))
 	};
 }
 
@@ -119,12 +125,12 @@ const memberColumns = {
 	teachesLessons: true,
 	directoryContact: true,
 	links: true,
-	createdAt: true,
+	createdAt: true
 } as const;
 
 const memberBandsWith = {
 	columns: { status: true, role: true, position: true },
-	with: { band: { columns: { name: true, slug: true, avatarKey: true } } },
+	with: { band: { columns: { name: true, slug: true, avatarKey: true } } }
 } as const;
 
 /** Members-only directory — all active, non-opted-out members */
@@ -134,10 +140,10 @@ export async function listMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith,
+			bandMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
-		columns: memberColumns,
+		columns: memberColumns
 	});
 	return rows.map(mapMemberRow);
 }
@@ -149,23 +155,17 @@ export async function listPublicMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith,
+			bandMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
-		columns: memberColumns,
+		columns: memberColumns
 	});
 	return rows.map(mapMemberRow);
 }
 
 /** Single member profile */
-export async function getMemberProfile(
-	userId: string,
-	visibility: 'members' | 'public'
-) {
-	const conditions: MemberWhere[] = [
-		{ id: userId },
-		{ deletedAt: { isNull: true } },
-	];
+export async function getMemberProfile(userId: string, visibility: 'members' | 'public') {
+	const conditions: MemberWhere[] = [{ id: userId }, { deletedAt: { isNull: true } }];
 
 	if (visibility === 'public') {
 		conditions.push({ directoryVisibility: 'public' });
@@ -178,9 +178,9 @@ export async function getMemberProfile(
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith,
+			bandMembers: memberBandsWith
 		},
-		columns: memberColumns,
+		columns: memberColumns
 	});
 
 	if (!row) return null;
@@ -192,14 +192,9 @@ export async function getMemberProfile(
 // Band queries
 // ---------------------------------------------------------------------------
 
-type BandWhere = NonNullable<
-	NonNullable<Parameters<typeof db.query.band.findMany>[0]>['where']
->;
+type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.band.findMany>[0]>['where']>;
 
-function bandWhereConditions(
-	visibility: 'members' | 'public',
-	filters?: BandFilters
-): BandWhere {
+function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFilters): BandWhere {
 	const conditions: BandWhere[] = [{ deletedAt: { isNull: true } }];
 
 	if (visibility === 'public') {
@@ -214,8 +209,11 @@ function bandWhereConditions(
 
 	if (filters?.genres?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
-				sql`EXISTS (SELECT 1 FROM ${bandGenre} WHERE ${bandGenre.bandId} = ${table.id} AND ${bandGenre.genre} IN (${sql.join(filters.genres!.map(g => sql`${g}`), sql`, `)}))`
+			RAW: (table, _ops) =>
+				sql`EXISTS (SELECT 1 FROM ${bandGenre} WHERE ${bandGenre.bandId} = ${table.id} AND ${bandGenre.genre} IN (${sql.join(
+					filters.genres!.map((g) => sql`${g}`),
+					sql`, `
+				)}))`
 		});
 	}
 
@@ -226,12 +224,14 @@ function bandWhereConditions(
 	return { AND: conditions };
 }
 
-function mapBandRow<T extends { genres: { genre: string }[]; members: { status: string }[] }>(row: T) {
+function mapBandRow<T extends { genres: { genre: string }[]; members: { status: string }[] }>(
+	row: T
+) {
 	const { genres, members, ...rest } = row;
 	return {
 		...rest,
-		genres: genres.map(r => r.genre),
-		memberCount: members.filter(m => m.status === 'active').length,
+		genres: genres.map((r) => r.genre),
+		memberCount: members.filter((m) => m.status === 'active').length
 	};
 }
 
@@ -246,7 +246,7 @@ const bandColumns = {
 	avatarKey: true,
 	lookingForMembers: true,
 	directoryContact: true,
-	links: true,
+	links: true
 } as const;
 
 /** Members-only band directory */
@@ -255,10 +255,10 @@ export async function listBands(filters?: BandFilters) {
 		where: bandWhereConditions('members', filters),
 		with: {
 			genres: true,
-			members: { columns: { status: true } },
+			members: { columns: { status: true } }
 		},
 		orderBy: { name: 'asc' },
-		columns: bandColumns,
+		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
 }
@@ -269,23 +269,17 @@ export async function listPublicBands(filters?: BandFilters) {
 		where: bandWhereConditions('public', filters),
 		with: {
 			genres: true,
-			members: { columns: { status: true } },
+			members: { columns: { status: true } }
 		},
 		orderBy: { name: 'asc' },
-		columns: bandColumns,
+		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
 }
 
 /** Single band profile by slug */
-export async function getBandProfile(
-	slug: string,
-	visibility: 'members' | 'public'
-) {
-	const conditions: BandWhere[] = [
-		{ slug },
-		{ deletedAt: { isNull: true } },
-	];
+export async function getBandProfile(slug: string, visibility: 'members' | 'public') {
+	const conditions: BandWhere[] = [{ slug }, { deletedAt: { isNull: true } }];
 
 	if (visibility === 'public') {
 		conditions.push({ directoryVisibility: 'public' });
@@ -297,9 +291,9 @@ export async function getBandProfile(
 		where: { AND: conditions },
 		with: {
 			genres: true,
-			members: { columns: { status: true } },
+			members: { columns: { status: true } }
 		},
-		columns: bandColumns,
+		columns: bandColumns
 	});
 
 	if (!row) return null;
@@ -319,7 +313,7 @@ export async function suggestInstruments(prefix: string) {
 		.orderBy(asc(userInstrument.instrument))
 		.limit(10);
 
-	return rows.map(r => r.tag);
+	return rows.map((r) => r.tag);
 }
 
 export async function suggestGenres(prefix: string) {
@@ -336,5 +330,5 @@ export async function suggestGenres(prefix: string) {
 			.limit(10)
 	]);
 
-	return [...new Set([...userRows, ...bandRows].map(r => r.tag))].sort().slice(0, 10);
+	return [...new Set([...userRows, ...bandRows].map((r) => r.tag))].sort().slice(0, 10);
 }

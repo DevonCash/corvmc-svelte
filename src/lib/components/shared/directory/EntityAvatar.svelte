@@ -32,7 +32,11 @@
 	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>
-	<Avatar.Image src={image ?? undefined} alt={name} class="absolute inset-0 size-full object-cover" />
+	<Avatar.Image
+		src={image ?? undefined}
+		alt={name}
+		class="absolute inset-0 size-full object-cover"
+	/>
 </Avatar.Root>
 
 <style>

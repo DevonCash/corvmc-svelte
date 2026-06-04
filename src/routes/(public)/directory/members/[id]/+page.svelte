@@ -55,9 +55,15 @@
 
 <svelte:head>
 	<title>{member.name} | Corvallis Music Collective</title>
-	<meta name="description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		name="description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 	<meta property="og:title" content={member.name} />
-	<meta property="og:description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		property="og:description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 </svelte:head>
 
 <div class="profile-page">

@@ -15,6 +15,7 @@
 
 {#if html}
 	<ProfileSection title={label}>
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown prose via sanitizeBio) -->
 		<div class="prose prose-sm max-w-none text-base-content/80">{@html html}</div>
 	</ProfileSection>
 {/if}

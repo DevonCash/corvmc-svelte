@@ -31,10 +31,20 @@
 <ProfileSection title="Shows">
 	{#snippet actions()}
 		<div class="seg">
-			<button type="button" class="seg__opt" class:is-active={tab === 'upcoming'} onclick={() => (tab = 'upcoming')}>
+			<button
+				type="button"
+				class="seg__opt"
+				class:is-active={tab === 'upcoming'}
+				onclick={() => (tab = 'upcoming')}
+			>
 				Upcoming
 			</button>
-			<button type="button" class="seg__opt" class:is-active={tab === 'past'} onclick={() => (tab = 'past')}>
+			<button
+				type="button"
+				class="seg__opt"
+				class:is-active={tab === 'past'}
+				onclick={() => (tab = 'past')}
+			>
 				Past · {pastCount}
 			</button>
 		</div>
@@ -57,11 +67,16 @@
 						</div>
 						{#if show.bandName}
 							{#if bandHref && show.bandSlug}
-								<a href="{bandHref}/{show.bandSlug}" class="sticker-badge sticker-badge--orange sticker-badge--sm">
+								<a
+									href="{bandHref}/{show.bandSlug}"
+									class="sticker-badge sticker-badge--orange sticker-badge--sm"
+								>
 									w/ {show.bandName}
 								</a>
 							{:else}
-								<span class="sticker-badge sticker-badge--orange sticker-badge--sm">w/ {show.bandName}</span>
+								<span class="sticker-badge sticker-badge--orange sticker-badge--sm"
+									>w/ {show.bandName}</span
+								>
 							{/if}
 						{:else if show.tags}
 							<span class="sticker-badge sticker-badge--sm">{show.tags}</span>

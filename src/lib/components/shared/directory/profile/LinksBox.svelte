@@ -80,7 +80,12 @@
 				<div class="links-box__rows">
 					{#each web as item (item.link.url)}
 						{@const Icon = item.icon}
-						<a href={item.link.url} target="_blank" rel="noopener noreferrer" class="links-box__row">
+						<a
+							href={item.link.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="links-box__row"
+						>
 							<Icon size={16} class="links-box__row-ico" />
 							<span class="links-box__row-label">{item.link.label || item.name}</span>
 							<IconExternalLink size={14} class="links-box__row-out" />

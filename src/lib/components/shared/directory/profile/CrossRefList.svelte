@@ -40,7 +40,12 @@
 					</div>
 				{:else if item.href}
 					<a href={item.href} class="rel-row">
-						<EntityAvatar shape={item.avatarShape} name={item.name} image={item.image} class="rel-row__av" />
+						<EntityAvatar
+							shape={item.avatarShape}
+							name={item.name}
+							image={item.image}
+							class="rel-row__av"
+						/>
 						<div class="rel-row__meta">
 							<p class="rel-row__name">{item.name}</p>
 							{#if item.sub}
@@ -51,7 +56,12 @@
 					</a>
 				{:else}
 					<div class="rel-row">
-						<EntityAvatar shape={item.avatarShape} name={item.name} image={item.image} class="rel-row__av" />
+						<EntityAvatar
+							shape={item.avatarShape}
+							name={item.name}
+							image={item.image}
+							class="rel-row__av"
+						/>
 						<div class="rel-row__meta">
 							<p class="rel-row__name">{item.name}</p>
 							{#if item.sub}
