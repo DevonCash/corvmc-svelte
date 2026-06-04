@@ -623,3 +623,24 @@ Edit/detail views remain full pages at `[id]/`.
 ## Component locations
 
 All shared components live in `src/lib/components/`. Panel-specific layout components are in subdirectories (`staff/`, `member/`). Feature-specific components that are only used on one page live alongside that page or in a feature subdirectory under `member/`.
+
+## Directory profiles
+
+Member and band profiles — public (`/directory/...`) and authenticated (`/member/directory/...`) — are all built from **one parameterised component set** in `src/lib/components/shared/directory/profile/`. Member vs. band and public vs. authenticated are prop differences, never separate designs. The four `+page.svelte` files are thin assemblers: `await` the profile query (+ a shows query), map data to props, compose.
+
+Components:
+
+- `ProfileHeader` — avatar + name + subtitle + status pills + a single email-backed primary action + a copy-link share button. Pills are exception-only (omitted when absent).
+- `QuickFacts` — a 4-up key/value strip; empty facts are dropped.
+- `ProseBlock` — bio/about markdown via `sanitizeBio`; hidden when empty.
+- `ListenStrip` — service tabs + one switchable in-page embed (Spotify/YouTube/etc.).
+- `ShowsBox` — Upcoming/Past toggle with a past-show count. Bands show their own events; members show shows aggregated across their active bands.
+- `CrossRefList` — the relational spine: a member's Bands ↔ a band's Members. Private members render as locked, unlinked rows in the public view so the count stays honest.
+- `TagCloud` — instrument/genre chips (`sticker-badge`).
+- `LinksBox` — streaming services as an icon ribbon, web/social as labelled rows. Distinct from `ListenStrip` (play here vs. go elsewhere).
+- `ContactBox` — Contact (member) / Booking (band); all CTAs resolve to `mailto:`.
+- `ProfileSection` (titled box), `ProfileGrid` (main/side two-column layout), `EntityAvatar` (shared avatar) are the layout primitives.
+
+**Avatar shape convention:** a member avatar is always **round**, a band avatar always **square** — use `EntityAvatar shape="round|square"` (or `Avatar` for members) anywhere one represents these entities.
+
+Pure display logic (link partitioning, embeddable-service ordering, the private-row rule) lives in `src/lib/utils/directory-display.ts` and is unit-tested — keep DB/Svelte concerns out of it.

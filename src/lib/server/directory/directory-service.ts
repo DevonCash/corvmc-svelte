@@ -80,7 +80,12 @@ function mapMemberRow<T extends {
 	instruments: { instrument: string }[];
 	genres: { genre: string }[];
 	image?: string | null;
-	bandMembers?: { status: string; band: { name: string; slug: string } | null }[];
+	bandMembers?: {
+		status: string;
+		role?: string | null;
+		position?: string | null;
+		band: { name: string; slug: string; avatarKey: string | null } | null;
+	}[];
 }>(row: T) {
 	const { instruments, genres, bandMembers, image, ...rest } = row;
 	return {
@@ -90,23 +95,36 @@ function mapMemberRow<T extends {
 		genres: genres.map(r => r.genre),
 		bands: (bandMembers ?? [])
 			.filter(m => m.status === 'active' && m.band)
-			.map(m => ({ name: m.band!.name, slug: m.band!.slug })),
+			.map(m => ({
+				name: m.band!.name,
+				slug: m.band!.slug,
+				avatarUrl: resolveImageUrl(m.band!.avatarKey),
+				position: m.position ?? null,
+				role: m.role ?? null,
+			})),
 	};
 }
 
 const memberColumns = {
 	id: true,
 	name: true,
+	memberNumber: true,
 	pronouns: true,
 	image: true,
 	bio: true,
 	tagline: true,
+	hometown: true,
 	lookingForBand: true,
 	availableForHire: true,
 	teachesLessons: true,
 	directoryContact: true,
 	links: true,
 	createdAt: true,
+} as const;
+
+const memberBandsWith = {
+	columns: { status: true, role: true, position: true },
+	with: { band: { columns: { name: true, slug: true, avatarKey: true } } },
 } as const;
 
 /** Members-only directory — all active, non-opted-out members */
@@ -116,10 +134,7 @@ export async function listMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: {
-				columns: { status: true },
-				with: { band: { columns: { name: true, slug: true } } },
-			},
+			bandMembers: memberBandsWith,
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns,
@@ -134,10 +149,7 @@ export async function listPublicMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: {
-				columns: { status: true },
-				with: { band: { columns: { name: true, slug: true } } },
-			},
+			bandMembers: memberBandsWith,
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns,
@@ -166,10 +178,7 @@ export async function getMemberProfile(
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: {
-				columns: { status: true },
-				with: { band: { columns: { name: true, slug: true } } },
-			},
+			bandMembers: memberBandsWith,
 		},
 		columns: memberColumns,
 	});
@@ -232,6 +241,8 @@ const bandColumns = {
 	slug: true,
 	bio: true,
 	tagline: true,
+	hometown: true,
+	foundedYear: true,
 	avatarKey: true,
 	lookingForMembers: true,
 	directoryContact: true,

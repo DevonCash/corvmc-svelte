@@ -79,6 +79,7 @@ The band panel uses a per-band layout at `/band/[slug]/` with role-gated navigat
 | Email subscribe | — (new) | ✅ /subscribe + /subscribe/[slug] | Public opt-in for audiences with allowOptIn flag |
 | Email unsubscribe | — (new) | ✅ /unsubscribe/[token] | HMAC-signed one-click unsubscribe |
 | Member directory | MembersGrid Livewire | ✅ /directory + /member/directory | Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. |
+| Directory profile pages | — (redesign) | ✅ Unified component set | Member & band, public & authenticated profiles all compose one set of 9 parameterised components (`src/lib/components/shared/directory/profile/`): ProfileHeader, QuickFacts, ProseBlock, ListenStrip (switchable embed), ShowsBox (band own + member aggregated-across-bands, with past-show counts), CrossRefList (bands↔members, locked private rows in public), TagCloud, LinksBox (streaming ribbon + web rows), ContactBox. Avatar convention: member = round, band = square (`EntityAvatar`). Adds `user.memberNumber`/`hometown`, `band.hometown`/`foundedYear`. |
 
 ## Platform infrastructure
 

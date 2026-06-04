@@ -60,6 +60,8 @@ export const band = sqliteTable(
 
 		// directory profile
 		tagline: text('tagline'),
+		hometown: text('hometown'),
+		foundedYear: text('founded_year'),
 		lookingForMembers: integer('looking_for_members', { mode: 'boolean' }).notNull().default(false),
 		directoryVisibility: text('directory_visibility').notNull().default('public'),
 		directoryContact: text('directory_contact', { mode: 'json' }),

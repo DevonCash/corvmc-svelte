@@ -21,7 +21,14 @@ import {
 	setUserAvatar,
 	clearUserAvatar
 } from '$lib/server/directory/profile-service';
+import {
+	listBandEventsUpcoming,
+	countBandPastEvents,
+	listMemberUpcomingShows,
+	countMemberPastShows
+} from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { isMemberRowPrivate } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -80,70 +87,7 @@ export const getDirectoryMember = query(z.string(), async (userId) => {
 
 export const getDirectoryBand = query(z.string(), async (slug) => {
 	requireUser();
-	const [row] = await db
-		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			tagline: band.tagline,
-			avatarKey: band.avatarKey,
-			lookingForMembers: band.lookingForMembers,
-			directoryContact: band.directoryContact,
-			links: band.links,
-			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
-		})
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
-		.groupBy(band.id);
-
-	if (!row) throw error(404, 'Band not found');
-
-	const genres = await db
-		.select({ genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(eq(bandGenre.bandId, row.id));
-
-	const members = await db
-		.select({
-			id: bandMember.id,
-			userId: bandMember.userId,
-			role: bandMember.role,
-			position: bandMember.position,
-			userName: user.name,
-			userImage: user.image
-		})
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(and(eq(bandMember.bandId, row.id), eq(bandMember.status, 'active')))
-		.orderBy(
-			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
-			user.name
-		);
-
-	return {
-		band: {
-			id: row.id,
-			name: row.name,
-			slug: row.slug,
-			bio: row.bio,
-			tagline: row.tagline,
-			avatarUrl: resolveImageUrl(row.avatarKey),
-			memberCount: row.memberCount,
-			genres: genres.map((r) => r.genre),
-			lookingForMembers: row.lookingForMembers,
-			directoryContact: row.directoryContact as DirectoryContact | null,
-			links: (row.links as ProfileLink[] | null) ?? []
-		},
-		members: members.map((m) => ({
-			id: m.id,
-			role: m.role,
-			position: m.position,
-			userName: m.userName,
-			userImage: resolveImageUrl(m.userImage)
-		}))
-	};
+	return loadBandProfile(slug, 'members');
 });
 
 // ---------------------------------------------------------------------------
@@ -201,6 +145,16 @@ export const getPublicDirectory = query(publicFiltersSchema, async (filters) => 
 });
 
 export const getPublicBandProfile = query(z.string(), async (slug) => {
+	return loadBandProfile(slug, 'public');
+});
+
+/**
+ * Shared band-profile loader for the members and public views. In the public
+ * view, members whose own directory visibility isn't `public` are returned as
+ * locked, unlinked rows (`private: true`) — keeping the lineup count honest
+ * without exposing them.
+ */
+async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 	const [row] = await db
 		.select({
 			id: band.id,
@@ -208,6 +162,8 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			slug: band.slug,
 			bio: band.bio,
 			tagline: band.tagline,
+			hometown: band.hometown,
+			foundedYear: band.foundedYear,
 			avatarKey: band.avatarKey,
 			lookingForMembers: band.lookingForMembers,
 			directoryContact: band.directoryContact,
@@ -233,7 +189,8 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			role: bandMember.role,
 			position: bandMember.position,
 			userName: user.name,
-			userImage: user.image
+			userImage: user.image,
+			userVisibility: user.directoryVisibility
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
@@ -250,6 +207,8 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			slug: row.slug,
 			bio: row.bio,
 			tagline: row.tagline,
+			hometown: row.hometown,
+			foundedYear: row.foundedYear,
 			avatarUrl: resolveImageUrl(row.avatarKey),
 			memberCount: row.memberCount,
 			genres: genres.map((r) => r.genre),
@@ -257,15 +216,23 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 			directoryContact: row.directoryContact as DirectoryContact | null,
 			links: (row.links as ProfileLink[] | null) ?? []
 		},
-		members: members.map((m) => ({
-			id: m.id,
-			role: m.role,
-			position: m.position,
-			userName: m.userName,
-			userImage: resolveImageUrl(m.userImage)
-		}))
+		members: members.map((m) => {
+			// In public, a member who hasn't opted their own profile public is
+			// shown as a locked row (no name, no link) so the count stays honest.
+			const isPrivate = isMemberRowPrivate(visibility, m.userVisibility);
+			return {
+				id: m.id,
+				userId: m.userId,
+				role: m.role,
+				position: m.position,
+				// Withhold identifying details for private members in public.
+				userName: isPrivate ? null : m.userName,
+				userImage: isPrivate ? null : resolveImageUrl(m.userImage),
+				private: isPrivate
+			};
+		})
 	};
-});
+}
 
 export const getPublicMemberProfile = query(z.string(), async (id) => {
 	const member = await getMemberProfileService(id, 'public');
@@ -279,14 +246,57 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			image: resolveImageUrl(member.image),
 			bio: member.bio,
 			tagline: member.tagline,
+			hometown: member.hometown,
 			instruments: member.instruments,
 			genres: member.genres,
 			lookingForBand: member.lookingForBand,
 			availableForHire: member.availableForHire,
 			teachesLessons: member.teachesLessons,
 			directoryContact: member.directoryContact as DirectoryContact | null,
-			links: (member.links as ProfileLink[] | null) ?? []
+			links: (member.links as ProfileLink[] | null) ?? [],
+			bands: member.bands
 		}
+	};
+});
+
+// ---------------------------------------------------------------------------
+// Shows (ShowsBox) — band's own shows + member's aggregated shows
+// ---------------------------------------------------------------------------
+
+/** Upcoming + past-count for a band's own shows. Takes a band id. */
+export const getBandShows = query(z.string(), async (bandId) => {
+	const [upcoming, pastCount] = await Promise.all([
+		listBandEventsUpcoming(bandId),
+		countBandPastEvents(bandId)
+	]);
+	return {
+		pastCount,
+		upcoming: upcoming.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			location: e.location,
+			tags: e.tags
+		}))
+	};
+});
+
+/** Upcoming + past-count aggregated across a member's active bands. */
+export const getMemberShows = query(z.string(), async (userId) => {
+	const [upcoming, pastCount] = await Promise.all([
+		listMemberUpcomingShows(userId),
+		countMemberPastShows(userId)
+	]);
+	return {
+		pastCount,
+		upcoming: upcoming.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			location: e.location,
+			bandName: e.bandName,
+			bandSlug: e.bandSlug
+		}))
 	};
 });
 
@@ -341,6 +351,7 @@ export const removeMemberAvatar = form(z.object({}), async () => {
 const memberProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
 	bio: z.string().max(2000).optional().default(''),
+	hometown: z.string().max(150).optional().default(''),
 	instruments: z.string().transform((s) => {
 		try { return JSON.parse(s) as string[]; } catch { return []; }
 	}),
@@ -371,6 +382,7 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 	await updateMemberProfile(user.id, {
 		tagline: data.tagline || undefined,
 		bio: data.bio || undefined,
+		hometown: data.hometown || undefined,
 		instruments: data.instruments,
 		genres: data.genres,
 		lookingForBand: data.lookingForBand,
@@ -396,6 +408,8 @@ export const getBandProfile = query(z.void(), async () => {
 
 const bandProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
+	hometown: z.string().max(150).optional().default(''),
+	foundedYear: z.string().max(16).optional().default(''),
 	genres: z.string().transform((s) => {
 		try { return JSON.parse(s) as string[]; } catch { return []; }
 	}),
@@ -420,6 +434,8 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 
 	await updateBandProfile(band.id, user.id, {
 		tagline: data.tagline || undefined,
+		hometown: data.hometown || undefined,
+		foundedYear: data.foundedYear || undefined,
 		genres: data.genres,
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
