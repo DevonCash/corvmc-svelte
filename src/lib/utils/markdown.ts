@@ -1,5 +1,19 @@
 import { Marked } from 'marked';
-import DOMPurify from 'isomorphic-dompurify';
+import createDOMPurify, { type DOMPurify as DOMPurifyInstance } from 'dompurify';
+import { parseHTML } from 'linkedom';
+
+// `isomorphic-dompurify` bundles jsdom, which throws at import time on the
+// Cloudflare Workers runtime (no DOM globals) and crashed the whole worker.
+// Drive plain DOMPurify with linkedom's Workers-compatible DOM instead, and
+// initialise lazily so merely importing this module never touches the DOM.
+let _purify: DOMPurifyInstance | undefined;
+function purify(): DOMPurifyInstance {
+	if (!_purify) {
+		const { window } = parseHTML('<!DOCTYPE html><html><body></body></html>');
+		_purify = createDOMPurify(window as unknown as Window & typeof globalThis);
+	}
+	return _purify;
+}
 
 export interface Heading {
 	id: string;
@@ -32,7 +46,7 @@ const renderer = {
 const marked = new Marked({ renderer });
 
 export function sanitizeHtml(html: string): string {
-	return DOMPurify.sanitize(html);
+	return purify().sanitize(html);
 }
 
 /**
@@ -41,7 +55,7 @@ export function sanitizeHtml(html: string): string {
  */
 export function sanitizeBio(html: string | null | undefined): string {
 	if (!html) return '';
-	return DOMPurify.sanitize(html, {
+	return purify().sanitize(html, {
 		ALLOWED_TAGS: [
 			'p',
 			'br',
