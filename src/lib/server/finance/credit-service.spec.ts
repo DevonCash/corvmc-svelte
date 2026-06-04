@@ -123,7 +123,14 @@ describe('addCredits', () => {
 		selectResults = [[{ balance: 2 }]];
 		updateResults = [[{ balance: 5 }]]; // CAS succeeds
 
-		const result = await addCredits('user-1', 'free_hours', 3, 'admin_adjustment', undefined, 'Test add');
+		const result = await addCredits(
+			'user-1',
+			'free_hours',
+			3,
+			'admin_adjustment',
+			undefined,
+			'Test add'
+		);
 		expect(result).toBe(5);
 		expect(insertedRows).toHaveLength(1);
 		expect(insertedRows[0]).toMatchObject({
