@@ -19,7 +19,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',
-	'org.contactEmail': 'staff@corvmc.com',
+	'org.contactEmail': 'staff@corvmc.org',
 	'org.timezone': 'America/Los_Angeles',
 
 	'org.socialFacebook': '',

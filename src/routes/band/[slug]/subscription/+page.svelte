@@ -166,7 +166,7 @@
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Custom subdomain (yourband.corvmc.com)
+							Custom subdomain (yourband.corvmc.org)
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

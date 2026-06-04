@@ -147,8 +147,15 @@ type Auth = ReturnType<typeof createAuth>;
 let _auth: Auth | undefined;
 
 function createAuth() {
+	const baseURL = env.ORIGIN;
+	if (!baseURL) {
+		throw new Error(
+			'ORIGIN environment variable is required (used as better-auth baseURL). ' +
+				'Set it to the deployment origin, e.g. https://corvmc.devon-cash.workers.dev'
+		);
+	}
 	return betterAuth({
-		baseURL: env.ORIGIN || undefined,
+		baseURL,
 		secret: env.BETTER_AUTH_SECRET,
 		database: drizzleAdapter(db, {
 			provider: 'sqlite',

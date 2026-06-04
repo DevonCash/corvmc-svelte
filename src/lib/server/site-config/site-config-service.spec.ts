@@ -87,7 +87,7 @@ describe('getConfigsByPrefix', () => {
 		const result = await getConfigsByPrefix('org');
 		expect(result.name).toBe('Corvallis Music Collective');
 		expect(result.shortName).toBe('CorvMC');
-		expect(result.contactEmail).toBe('staff@corvmc.com');
+		expect(result.contactEmail).toBe('staff@corvmc.org');
 		expect(result.timezone).toBe('America/Los_Angeles');
 	});
 

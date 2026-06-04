@@ -1,7 +1,35 @@
 name = "corvmc"
-compatibility_date = "2025-05-15"
+compatibility_date = "2025-11-07"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".svelte-kit/cloudflare"
+main = ".svelte-kit/cloudflare/_worker.js"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+# ---------------------------------------------------------------------------
+# Default / dev target — deploys as `corvmc` (corvmc.devon-cash.workers.dev)
+# via `wrangler deploy`. NOTE: bindings and [vars] are non-inheritable keys —
+# once any environment overrides one (see [env.production] below), every
+# environment must re-declare the full set, so they are duplicated there.
+# ---------------------------------------------------------------------------
+
+[vars]
+# ORIGIN is required — better-auth uses it as baseURL and throws if unset
+# (src/lib/server/auth.ts). Differs per environment.
+ORIGIN = "https://corvmc.devon-cash.workers.dev"
+R2_PUBLIC_URL = "https://media.corvmc.org"
+# Canonical public site URLs (used for links in emails/notifications) + email
+# sender name. Non-secret config.
+PUBLIC_SITE_URL = "https://corvmc.org"
+PUBLIC_BASE_URL = "https://corvmc.org"
+EMAIL_FROM_NAME = "CorvMC"
+EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
+STAFF_CONTACT_EMAIL = "staff@corvmc.org"
+# Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
+# bcrypt password verification during the migration window; drops out after cutover.
+LARAVEL_URL = "https://corvmc.org"
+# Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
 
 [[d1_databases]]
 binding = "DB"
@@ -12,9 +40,6 @@ database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
 binding = "R2_BUCKET"
 bucket_name = "corvmc"
 
-[vars]
-R2_PUBLIC_URL = "https://media.corvmc.org"
-
 [[kv_namespaces]]
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
@@ -23,3 +48,63 @@ id = "fc85459046fe47f9bbfae4f343012041"
 # can tag events with a release. Auto-detected by @sentry/cloudflare >= 10.35.
 [version_metadata]
 binding = "CF_VERSION_METADATA"
+
+# Native Cloudflare automatic tracing (open beta). Exports OTel traces + logs to
+# Sentry over OTLP, adding platform-level spans (D1 queries, KV/R2 ops, subrequests)
+# that the Sentry SDK can't see. The destination names below must match the OTLP
+# destinations created in the Cloudflare dashboard (Workers & Pages > Observability
+# > Destinations). observability is inheritable, but it's repeated under
+# [env.production] for clarity so prod export is unambiguous.
+[observability.traces]
+enabled = true
+destinations = ["sentry-traces"]
+# head_sampling_rate = 1   # default 1 = trace every request; lower for high traffic
+# persist = false          # set false to export to Sentry only (skips CF storage billing)
+
+[observability.logs]
+enabled = true
+destinations = ["sentry-logs"]
+
+# ---------------------------------------------------------------------------
+# Production target — deploys as `corvmc-production` via
+# `wrangler deploy --env production`. All non-inheritable keys (bindings + vars)
+# must be re-declared here even though most match the defaults above.
+# ---------------------------------------------------------------------------
+
+[env.production.vars]
+# Final production origin. Not live until the cutover from the legacy Laravel
+# app — deploy prod with `wrangler deploy --env production` only after that.
+ORIGIN = "https://corvmc.org"
+R2_PUBLIC_URL = "https://media.corvmc.org"
+PUBLIC_SITE_URL = "https://corvmc.org"
+PUBLIC_BASE_URL = "https://corvmc.org"
+EMAIL_FROM_NAME = "CorvMC"
+EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
+STAFF_CONTACT_EMAIL = "staff@corvmc.org"
+# LARAVEL_URL intentionally omitted: by the time production deploys, the Laravel
+# app at corvmc.org is gone (this Worker replaces it), so password proxying is moot.
+# Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "corvmc-db"
+database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
+
+[[env.production.r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "corvmc"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "fc85459046fe47f9bbfae4f343012041"
+
+[env.production.version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[env.production.observability.traces]
+enabled = true
+destinations = ["sentry-traces"]
+
+[env.production.observability.logs]
+enabled = true
+destinations = ["sentry-logs"]

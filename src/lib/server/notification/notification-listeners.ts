@@ -12,7 +12,7 @@ import { env } from '$env/dynamic/private';
 // ---------------------------------------------------------------------------
 
 export function registerAllNotificationListeners(): void {
-	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.com';
+	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
 	// --- Ticket purchase confirmation ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
@@ -235,7 +235,7 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Equipment loan requested (notify staff) ---
 	domainEvents.on('equipment.loan_requested', async ({ data: event }) => {
-		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
+		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
 
 		const html = templates.loanRequestedStaffNotification({
 			userName: event.userName,
@@ -328,7 +328,7 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Contact form submission ---
 	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
-		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.com';
+		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
 
 		const html = templates.contactFormForward({
 			senderName: event.name,

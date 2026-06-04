@@ -22,6 +22,13 @@ db.sqlite
 !.env.example
 !.env.test
 
+# Filled-in secrets for `wrangler secret bulk` (only secrets.template.json is tracked)
+secrets.json
+secrets.*.json
+.secrets.json
+.secrets.*.json
+!secrets.template.json
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
