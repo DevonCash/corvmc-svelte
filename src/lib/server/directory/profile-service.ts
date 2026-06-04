@@ -55,6 +55,7 @@ function validateTags(tags: unknown): string[] {
 export type MemberProfileData = {
 	bio?: string;
 	tagline?: string;
+	hometown?: string;
 	instruments?: string[];
 	genres?: string[];
 	lookingForBand?: boolean;
@@ -83,6 +84,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 			.set({
 				bio: data.bio ? sanitizeBio(data.bio).slice(0, MAX_BIO) || null : null,
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
+				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
 				lookingForBand: data.lookingForBand ?? false,
 				availableForHire: data.availableForHire ?? false,
 				teachesLessons: data.teachesLessons ?? false,
@@ -122,6 +124,7 @@ export async function getMemberProfileForEdit(userId: string) {
 			name: user.name,
 			bio: user.bio,
 			tagline: user.tagline,
+			hometown: user.hometown,
 			image: user.image,
 			lookingForBand: user.lookingForBand,
 			availableForHire: user.availableForHire,
@@ -158,6 +161,8 @@ export async function getMemberProfileForEdit(userId: string) {
 
 export type BandProfileData = {
 	tagline?: string;
+	hometown?: string;
+	foundedYear?: string;
 	genres?: string[];
 	lookingForMembers?: boolean;
 	directoryVisibility?: DirectoryVisibility;
@@ -201,6 +206,8 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 			.update(band)
 			.set({
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
+				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
+				foundedYear: data.foundedYear?.slice(0, 16) || null,
 				lookingForMembers: data.lookingForMembers ?? false,
 				directoryVisibility: data.directoryVisibility ?? 'public',
 				directoryContact: mergedContact,
@@ -280,6 +287,8 @@ export async function getBandProfileForEdit(bandId: string) {
 	const [row] = await db
 		.select({
 			tagline: band.tagline,
+			hometown: band.hometown,
+			foundedYear: band.foundedYear,
 			lookingForMembers: band.lookingForMembers,
 			directoryVisibility: band.directoryVisibility,
 			directoryContact: band.directoryContact,

@@ -242,8 +242,10 @@ async function migrateUsers() {
 				creditEquipment: 0,
 				trialEndsAt: ts(u.trial_ends_at),
 				deletedAt: null,
+				memberNumber: Number.isInteger(Number(u.id)) ? Number(u.id) : null,
 				bio: u.bio,
 				tagline: null,
+				hometown: u.hometown ?? null,
 				lookingForBand: false,
 				directoryVisibility:
 					u.visibility === 'public' ? 'public' : u.visibility === 'private' ? 'hidden' : 'members',
@@ -452,6 +454,7 @@ async function migrateBands() {
 				updatedAt: ts(b.updated_at)!,
 				deletedAt: null,
 				tagline: null,
+				hometown: b.hometown ?? null,
 				lookingForMembers: false,
 				directoryVisibility:
 					b.visibility === 'public' ? 'public' : b.visibility === 'private' ? 'hidden' : 'members',

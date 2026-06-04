@@ -44,7 +44,7 @@ export const band = sqliteTable(
 		bio: text('bio'),
 		ownerId: text('owner_id')
 			.notNull()
-			.references(() => user.id, { onDelete: 'set null' }),
+			.references(() => user.id, { onDelete: 'restrict' }),
 		avatarKey: text('avatar_key'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -60,6 +60,8 @@ export const band = sqliteTable(
 
 		// directory profile
 		tagline: text('tagline'),
+		hometown: text('hometown'),
+		foundedYear: text('founded_year'),
 		lookingForMembers: integer('looking_for_members', { mode: 'boolean' }).notNull().default(false),
 		directoryVisibility: text('directory_visibility').notNull().default('public'),
 		directoryContact: text('directory_contact', { mode: 'json' }),

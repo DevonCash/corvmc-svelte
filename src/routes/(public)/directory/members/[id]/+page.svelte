@@ -1,16 +1,56 @@
 <script lang="ts">
-	import ProfileLinks from '$lib/components/shared/directory/ProfileLinks.svelte';
-	import ProfileEmbeds from '$lib/components/shared/directory/ProfileEmbeds.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { getPublicMemberProfile } from '$lib/remote/directory.remote';
-	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
+	import { getPublicMemberProfile, getMemberShows } from '$lib/remote/directory.remote';
+	import ProfileHeader, {
+		type ProfilePill
+	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '$lib/components/shared/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '$lib/components/shared/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '$lib/components/shared/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '$lib/components/shared/directory/profile/ShowsBox.svelte';
+	import CrossRefList, {
+		type CrossRef
+	} from '$lib/components/shared/directory/profile/CrossRefList.svelte';
+	import TagCloud from '$lib/components/shared/directory/profile/TagCloud.svelte';
+	import LinksBox from '$lib/components/shared/directory/profile/LinksBox.svelte';
+	import ContactBox from '$lib/components/shared/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '$lib/components/shared/directory/profile/ProfileGrid.svelte';
 
-	let data = $derived(await getPublicMemberProfile(page.params.id!));
+	const BANDS_BASE = '/directory/bands';
+
+	let id = $derived(page.params.id!);
+	let data = $derived(await getPublicMemberProfile(id));
+	let shows = $derived(await getMemberShows(id));
 	const member = $derived(data.member);
+
+	let subtitle = $derived(member.tagline || member.instruments?.join(' · ') || null);
+
+	let pills = $derived.by<ProfilePill[]>(() => {
+		const p: ProfilePill[] = [];
+		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
+		if (member.availableForHire) p.push({ label: 'Available for hire' });
+		if (member.teachesLessons) p.push({ label: 'Teaches lessons' });
+		return p;
+	});
+
+	let facts = $derived([
+		{ label: 'Pronouns', value: member.pronouns },
+		{ label: 'Based in', value: member.hometown },
+		{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+	]);
+
+	let bandRefs = $derived<CrossRef[]>(
+		member.bands.map((b) => ({
+			name: b.name,
+			sub: b.position ?? null,
+			href: `${BANDS_BASE}/${b.slug}`,
+			image: b.avatarUrl,
+			avatarShape: 'square'
+		}))
+	);
+
+	let tags = $derived([...(member.instruments ?? []), ...(member.genres ?? [])]);
 	const contact = $derived(member.directoryContact ?? {});
-	const hasContact = $derived(!!contact.email || !!contact.phone || !!contact.social);
 </script>
 
 <svelte:head>
@@ -26,92 +66,60 @@
 	/>
 </svelte:head>
 
-<div class="max-w-2xl mx-auto space-y-6 p-6">
-	<a href={resolve('/directory')} class="link text-sm opacity-60">&larr; Back to Directory</a>
+<div class="profile-page">
+	<a href="/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
 
-	<!-- Header -->
-	<div class="flex items-center gap-4">
-		<div class="avatar placeholder">
-			<div class="bg-neutral text-neutral-content w-20 rounded-full">
-				{#if member.image}
-					<img src={member.image} alt={member.name} class="rounded-full" />
-				{:else}
-					<span class="text-3xl">{member.name.charAt(0).toUpperCase()}</span>
-				{/if}
-			</div>
-		</div>
-		<div>
-			<h1 class="text-2xl font-bold">{member.name}</h1>
-			{#if member.tagline}
-				<p class="opacity-60">{member.tagline}</p>
-			{/if}
-			{#if member.pronouns}
-				<p class="text-sm opacity-50">{member.pronouns}</p>
-			{/if}
-			{#if member.lookingForBand}
-				<Badge variant="primary" class="mt-1">Looking for a band</Badge>
-			{/if}
-		</div>
-	</div>
+	<ProfileHeader
+		avatarShape="round"
+		name={member.name}
+		{subtitle}
+		image={member.image}
+		{pills}
+		primaryAction={contact.email
+			? { label: 'Email via CMC', href: `mailto:${contact.email}` }
+			: undefined}
+	/>
 
-	{#if member.bio}
-		<div class="prose prose-sm max-w-none text-base-content/80">
-			<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
-			{@html sanitizeBio(member.bio)}
-		</div>
-	{/if}
+	<QuickFacts {facts} />
 
-	{#if member.instruments?.length || member.genres?.length}
-		<div class="flex flex-wrap gap-4">
-			{#if member.instruments?.length}
-				<div>
-					<p class="text-xs font-medium opacity-60 mb-1">Instruments</p>
-					<div class="flex flex-wrap gap-1">
-						{#each member.instruments as inst (inst)}
-							<Badge variant="outline">{inst}</Badge>
-						{/each}
-					</div>
-				</div>
-			{/if}
-			{#if member.genres?.length}
-				<div>
-					<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
-					<div class="flex flex-wrap gap-1">
-						{#each member.genres as genre (genre)}
-							<Badge variant="ghost">{genre}</Badge>
-						{/each}
-					</div>
-				</div>
-			{/if}
-		</div>
-	{/if}
+	<ProfileGrid>
+		{#snippet main()}
+			<ProseBlock label="Bio" markdown={member.bio} />
+			<ListenStrip links={member.links} />
+			<ShowsBox upcoming={shows.upcoming} pastCount={shows.pastCount} bandHref={BANDS_BASE} />
+		{/snippet}
+		{#snippet side()}
+			<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
+			<TagCloud label="Plays · Genres" {tags} />
+			<LinksBox links={member.links} />
+			<ContactBox
+				label="Contact"
+				{contact}
+				cta={contact.email
+					? { label: 'Email via CMC', href: `mailto:${contact.email}` }
+					: { label: '', href: '' }}
+			/>
+		{/snippet}
+	</ProfileGrid>
 
-	{#if hasContact}
-		<div>
-			<h2 class="text-sm font-semibold mb-2">Contact</h2>
-			<dl class="grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
-				{#if contact.email}
-					<dt class="opacity-60">Email</dt>
-					<dd><a href="mailto:{contact.email}" class="link">{contact.email}</a></dd>
-				{/if}
-				{#if contact.phone}
-					<dt class="opacity-60">Phone</dt>
-					<dd>{contact.phone}</dd>
-				{/if}
-				{#if contact.social}
-					<dt class="opacity-60">Social</dt>
-					<dd>{contact.social}</dd>
-				{/if}
-			</dl>
-		</div>
-	{/if}
-
-	{#if member.links && member.links.length > 0}
-		<div>
-			<h2 class="text-sm font-semibold mb-2">Links</h2>
-			<ProfileLinks links={member.links} />
-		</div>
-
-		<ProfileEmbeds links={member.links} />
-	{/if}
+	<footer class="profile-page__footer">
+		<a href="/">Corvallis Music Collective</a>
+	</footer>
 </div>
+
+<style>
+	.profile-page {
+		max-width: 56rem;
+		margin: 0 auto;
+		padding: 24px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.profile-page__footer {
+		text-align: center;
+		padding: 16px 0;
+		font-size: 12px;
+		opacity: 0.4;
+	}
+</style>

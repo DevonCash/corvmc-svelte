@@ -1,5 +1,6 @@
 import { db, getRowCount } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
+import { band, bandMember } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eq, and, gt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
@@ -630,6 +631,62 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 /** All events for a band (all statuses), newest first. */
 export async function listBandEvents(bandId: string): Promise<EventRow[]> {
 	return db.select().from(event).where(eq(event.bandId, bandId)).orderBy(desc(event.startsAt));
+}
+
+/** Count of a band's published past shows — the legacy / veteran signal. */
+export async function countBandPastEvents(bandId: string): Promise<number> {
+	const [row] = await db
+		.select({ value: count() })
+		.from(event)
+		.where(
+			and(eq(event.bandId, bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+		);
+	return row?.value ?? 0;
+}
+
+export interface MemberShowRow extends EventRow {
+	bandName: string;
+	bandSlug: string;
+}
+
+/**
+ * Upcoming published shows aggregated across all of a member's *active* bands,
+ * each tagged with the band it belongs to. Soonest first.
+ */
+export async function listMemberUpcomingShows(userId: string): Promise<MemberShowRow[]> {
+	const rows = await db
+		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.innerJoin(band, eq(band.id, event.bandId))
+		.innerJoin(
+			bandMember,
+			and(
+				eq(bandMember.bandId, band.id),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		)
+		.where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
+		.orderBy(asc(event.startsAt));
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+/** Count of past published shows across a member's active bands. */
+export async function countMemberPastShows(userId: string): Promise<number> {
+	const [row] = await db
+		.select({ value: count() })
+		.from(event)
+		.innerJoin(
+			bandMember,
+			and(
+				eq(bandMember.bandId, event.bandId),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		)
+		.where(and(eq(event.status, 'published'), lte(event.startsAt, new Date())));
+	return row?.value ?? 0;
 }
 
 // ---------------------------------------------------------------------------

@@ -289,6 +289,16 @@ const TAGLINES = [
 	'Percussionist | World music enthusiast'
 ];
 
+const HOMETOWNS = [
+	'Corvallis, OR',
+	'Albany, OR',
+	'Philomath, OR',
+	'Eugene, OR',
+	'Salem, OR',
+	'Lebanon, OR',
+	'Portland, OR'
+];
+
 const MEMBER_BIOS = [
 	'Been playing since I was 12. Love jamming with new people.',
 	'Studied music at OSU. Currently in two bands but always looking for side projects.',
@@ -519,8 +529,10 @@ async function seedUsers(count: number): SeedUser[] {
 				phone: Math.random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
 				creditFreeHours: randomInt(0, 8),
 				creditEquipment: randomInt(0, 3),
+				memberNumber: 100 + i,
 				bio: hasProfile ? pick(MEMBER_BIOS) : null,
 				tagline: hasProfile ? pick(TAGLINES) : null,
+				hometown: hasProfile ? pick(HOMETOWNS) : null,
 				lookingForBand: hasProfile && Math.random() > 0.7,
 				directoryVisibility: visibility,
 				directoryContact: visibility === 'public' ? { email } : null,
@@ -997,8 +1009,11 @@ async function seedBands(users: SeedUser[]) {
 						}
 					: null,
 				tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
+				hometown: pick(HOMETOWNS),
+				foundedYear: String(randomInt(2015, 2024)),
 				lookingForMembers: Math.random() > 0.6,
 				directoryVisibility: bandVisibility,
+				directoryContact: { email: `booking+${slug}@example.com` },
 				links: bandLinks
 			})
 			.returning();
