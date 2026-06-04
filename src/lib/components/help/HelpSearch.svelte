@@ -48,13 +48,21 @@
 			class="input input-bordered w-full pl-9"
 			bind:value={query}
 			oninput={handleInput}
-			onfocus={() => { if (results.length > 0) open = true; }}
-			onblur={() => { setTimeout(() => { open = false; }, 200); }}
+			onfocus={() => {
+				if (results.length > 0) open = true;
+			}}
+			onblur={() => {
+				setTimeout(() => {
+					open = false;
+				}, 200);
+			}}
 		/>
 	</div>
 
 	{#if open}
-		<div class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto">
+		<div
+			class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto"
+		>
 			{#each results as result}
 				<button
 					type="button"

@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { IconCheck } from '@tabler/icons-svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import {
-		CashReceivedAction,
-		NoShowReservationAction
-	} from '$lib/components/shared/actions';
+	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/shared/actions';
 	import { invalidateAll } from '$app/navigation';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -69,19 +66,25 @@
 					<div class="card-body p-4">
 						<div class="flex justify-between mb-2">
 							<div>
-								<MemberLink member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole }} />
+								<MemberLink
+									member={{
+										name: r.memberName,
+										email: r.memberEmail,
+										pronouns: r.memberPronouns,
+										role: r.memberRole
+									}}
+								/>
 							</div>
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
 								<p class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</p>
-								<p class="text-sm opacity-60">{formatDurationAndAmount(r.startsAt, r.endsAt, hourlyRateCents)}</p>
+								<p class="text-sm opacity-60">
+									{formatDurationAndAmount(r.startsAt, r.endsAt, hourlyRateCents)}
+								</p>
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">
-							<CashReceivedAction
-								reservation={r}
-								onsuccess={() => markResolved(r.id)}
-							/>
+							<CashReceivedAction reservation={r} onsuccess={() => markResolved(r.id)} />
 							<NoShowReservationAction
 								reservation={r}
 								class="btn-error btn-outline btn-sm"

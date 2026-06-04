@@ -35,14 +35,21 @@
 	{:else}
 		<Form
 			remote={subscribeToAudience}
-			onsuccess={() => { success = true; }}
+			onsuccess={() => {
+				success = true;
+			}}
 			class="space-y-4"
 		>
 			<input {...fields.slug.as('hidden', selectedSlug)} />
 			<Field name="audience" label="Choose a list">
 				<div class="space-y-2">
 					{#each audiences as a (a.id)}
-						<label class="label cursor-pointer gap-3 border rounded-lg px-4 py-3 {selectedAudienceId === a.id ? 'border-primary bg-primary/10' : 'border-base-300'}">
+						<label
+							class="label cursor-pointer gap-3 border rounded-lg px-4 py-3 {selectedAudienceId ===
+							a.id
+								? 'border-primary bg-primary/10'
+								: 'border-base-300'}"
+						>
 							<input
 								type="radio"
 								name="audience"

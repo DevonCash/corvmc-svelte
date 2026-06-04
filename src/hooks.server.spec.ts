@@ -132,8 +132,6 @@ describe('hooks.server handle', () => {
 
 		await handle({ event: event as any, resolve });
 
-		expect(mockSvelteKitHandler).toHaveBeenCalledWith(
-			expect.objectContaining({ event, resolve })
-		);
+		expect(mockSvelteKitHandler).toHaveBeenCalledWith(expect.objectContaining({ event, resolve }));
 	});
 });

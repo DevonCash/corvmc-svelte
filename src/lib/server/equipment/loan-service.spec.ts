@@ -156,10 +156,7 @@ describe('LoanService lifecycle', () => {
 		it('creates a loan and returns it', async () => {
 			const loan = { id: 'loan-1', status: 'requested', userId: 'user-1' };
 			insertResult = [loan];
-			selectResultQueue = [
-				[{ name: 'Test User', email: 'test@example.com' }],
-				[{ name: 'SM58' }]
-			];
+			selectResultQueue = [[{ name: 'Test User', email: 'test@example.com' }], [{ name: 'SM58' }]];
 
 			const result = await requestLoan('user-1', {
 				equipmentId: 'eq-1',
@@ -198,9 +195,7 @@ describe('LoanService lifecycle', () => {
 
 	describe('scheduleLoan', () => {
 		it('transitions requested → scheduled', async () => {
-			selectResultQueue = [
-				[{ id: 'loan-1', status: 'requested', quantity: 1, userId: 'user-1' }]
-			];
+			selectResultQueue = [[{ id: 'loan-1', status: 'requested', quantity: 1, userId: 'user-1' }]];
 			const updated = { id: 'loan-1', status: 'scheduled' };
 			updateResult = [updated];
 			selectResultQueue.push(
@@ -270,15 +265,17 @@ describe('LoanService lifecycle', () => {
 		it('transitions checked_out → returned and calculates charge', async () => {
 			const checkedOutAt = new Date('2025-07-01T10:00:00Z');
 			selectResultQueue = [
-				[{
-					id: 'loan-1',
-					status: 'checked_out',
-					equipmentId: 'eq-1',
-					userId: 'user-1',
-					dailyRateCents: 500,
-					checkedOutAt,
-					staffNotes: null
-				}],
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						equipmentId: 'eq-1',
+						userId: 'user-1',
+						dailyRateCents: 500,
+						checkedOutAt,
+						staffNotes: null
+					}
+				],
 				[{ name: 'Test User', stripeId: 'cus_test' }]
 			];
 			const updated = {
@@ -296,9 +293,7 @@ describe('LoanService lifecycle', () => {
 		});
 
 		it('rejects transition from requested', async () => {
-			selectResultQueue = [
-				[{ id: 'loan-1', status: 'requested', userId: 'user-1' }]
-			];
+			selectResultQueue = [[{ id: 'loan-1', status: 'requested', userId: 'user-1' }]];
 
 			await expect(returnLoan('loan-1')).rejects.toThrow(InvalidLoanTransitionError);
 		});

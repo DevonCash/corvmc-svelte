@@ -13,7 +13,7 @@
 
 	let {
 		current,
-		others = [],
+		others = []
 	}: {
 		current: TimeSlot;
 		others?: TimeSlot[];
@@ -50,7 +50,9 @@
 
 <div class="relative h-6 rounded bg-base-200">
 	<!-- Hour labels -->
-	<div class="pointer-events-none absolute inset-0 -top-4 flex h-[1em] items-center justify-between px-1.5">
+	<div
+		class="pointer-events-none absolute inset-0 -top-4 flex h-[1em] items-center justify-between px-1.5"
+	>
 		<span class="text-[10px] opacity-40">9am</span>
 		<span class="text-[10px] opacity-40">12pm</span>
 		<span class="text-[10px] opacity-40">3pm</span>

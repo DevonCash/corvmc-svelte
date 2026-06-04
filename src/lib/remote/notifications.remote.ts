@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, command, getRequestEvent } from '$app/server';
-import { getForUser, getUnreadCount, markRead, markAllRead } from '$lib/server/notification/in-app-service';
+import {
+	getForUser,
+	getUnreadCount,
+	markRead,
+	markAllRead
+} from '$lib/server/notification/in-app-service';
 import { getAllPreferences, setPreference } from '$lib/server/notification/preference-service';
 import { NOTIFICATION_TYPES, getNotificationType } from '$lib/server/db/schema/notification';
 
@@ -20,13 +25,10 @@ export const getNotifications = query(async () => {
 	return { notifications, unreadCount };
 });
 
-export const markNotificationRead = command(
-	z.object({ id: z.string().min(1) }),
-	async ({ id }) => {
-		const user = requireUser();
-		await markRead(id, user.id);
-	}
-);
+export const markNotificationRead = command(z.object({ id: z.string().min(1) }), async ({ id }) => {
+	const user = requireUser();
+	await markRead(id, user.id);
+});
 
 export const markAllNotificationsRead = command(async () => {
 	const user = requireUser();
@@ -61,7 +63,8 @@ export const setNotificationPreference = command(
 		const user = requireUser();
 		const typeDef = getNotificationType(notificationType);
 		if (!typeDef) throw error(400, 'Unknown notification type');
-		if (typeDef.mandatory) throw error(400, 'Cannot change preferences for mandatory notifications');
+		if (typeDef.mandatory)
+			throw error(400, 'Cannot change preferences for mandatory notifications');
 
 		await setPreference(user.id, notificationType, { email, inApp, sms });
 		void getNotificationPreferences().refresh();

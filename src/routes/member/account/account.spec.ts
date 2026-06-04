@@ -119,7 +119,15 @@ import {
 } from '$lib/server/marketing/audience-service';
 import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
 
-const { updateProfile, changePassword, getMySubscriptions, getAvailableLists, subscribe, unsubscribe: unsubscribeFromList, deleteAccount } = await import('$lib/remote/account.remote') as any;
+const {
+	updateProfile,
+	changePassword,
+	getMySubscriptions,
+	getAvailableLists,
+	subscribe,
+	unsubscribe: unsubscribeFromList,
+	deleteAccount
+} = (await import('$lib/remote/account.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -216,7 +224,11 @@ describe('subscribe', () => {
 	it('finds or creates subscriber then adds to audience', async () => {
 		await subscribe({ audienceId: 'aud-99' });
 
-		expect(findOrCreateForUser).toHaveBeenCalledWith('user-1', mockLocals.user.email, mockLocals.user.name);
+		expect(findOrCreateForUser).toHaveBeenCalledWith(
+			'user-1',
+			mockLocals.user.email,
+			mockLocals.user.name
+		);
 		expect(addSubscriber).toHaveBeenCalledWith('aud-99', 'sub-1');
 	});
 });

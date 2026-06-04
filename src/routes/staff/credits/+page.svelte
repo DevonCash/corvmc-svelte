@@ -69,12 +69,26 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select class="select select-bordered select-sm" value={creditType} onchange={(e) => { creditType = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={creditType}
+			onchange={(e) => {
+				creditType = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All types</option>
 			<option value="free_hours">Free Hours</option>
 			<option value="equipment_credits">Equipment Credits</option>
 		</select>
-		<select class="select select-bordered select-sm" value={source} onchange={(e) => { source = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={source}
+			onchange={(e) => {
+				source = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All sources</option>
 			<option value="monthly_allocation">Monthly Allocation</option>
 			<option value="checkout">Checkout</option>
@@ -82,8 +96,22 @@
 			<option value="cancelled">Cancelled</option>
 			<option value="admin_adjustment">Admin Adjustment</option>
 		</select>
-		<input type="date" class="input input-bordered input-sm" bind:value={dateFrom} onchange={() => { page = 1; }} />
-		<input type="date" class="input input-bordered input-sm" bind:value={dateTo} onchange={() => { page = 1; }} />
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateFrom}
+			onchange={() => {
+				page = 1;
+			}}
+		/>
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateTo}
+			onchange={() => {
+				page = 1;
+			}}
+		/>
 		{#if hasActiveFilters()}
 			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
 		{/if}
@@ -115,11 +143,19 @@
 							<tr class="hover">
 								<td>{formatDateTime(new Date(t.createdAt))}</td>
 								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink member={{ name: t.userName ?? '', email: t.userEmail, userId: t.userId }} />
+									<MemberLink
+										member={{ name: t.userName ?? '', email: t.userEmail, userId: t.userId }}
+									/>
 								</td>
-								<td><StatusBadge status={t.creditType === 'free_hours' ? 'Free Hours' : 'Equipment'} /></td>
+								<td
+									><StatusBadge
+										status={t.creditType === 'free_hours' ? 'Free Hours' : 'Equipment'}
+									/></td
+								>
 								<td class="w-px">
-									<span class={t.amount > 0 ? 'text-success font-medium' : 'text-error font-medium'}>
+									<span
+										class={t.amount > 0 ? 'text-success font-medium' : 'text-error font-medium'}
+									>
 										{t.amount > 0 ? '+' : ''}{t.amount}
 									</span>
 								</td>
@@ -131,7 +167,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

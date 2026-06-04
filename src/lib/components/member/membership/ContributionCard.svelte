@@ -24,11 +24,13 @@
 	let editing = $state(untrack(() => showModifyForm));
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
-	const nextBilling = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric'
-	}));
+	const nextBilling = $derived(
+		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
+			month: 'long',
+			day: 'numeric',
+			year: 'numeric'
+		})
+	);
 </script>
 
 <div class="card bg-base-100 shadow-sm">
@@ -56,13 +58,11 @@
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
-			<Button class="btn-sm btn-outline" onclick={() => editing = !editing}>
+			<Button class="btn-sm btn-outline" onclick={() => (editing = !editing)}>
 				{editing ? 'Cancel' : 'Modify Amount'}
 			</Button>
 			{#if billingPortalUrl}
-				<Button href={billingPortalUrl} class="btn-sm btn-outline">
-					Manage Billing
-				</Button>
+				<Button href={billingPortalUrl} class="btn-sm btn-outline">Manage Billing</Button>
 			{/if}
 		</div>
 
@@ -73,7 +73,10 @@
 					currentAmount={amountPerMonth}
 					currentCoverFees={subscription.coveringFees}
 					remote={updateRemote}
-					onsuccess={() => { editing = false; toast.success('Contribution updated'); }}
+					onsuccess={() => {
+						editing = false;
+						toast.success('Contribution updated');
+					}}
 				/>
 			</div>
 		{/if}

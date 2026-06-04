@@ -24,7 +24,9 @@ export interface DispatchReplyParams {
 export async function dispatchReply(params: DispatchReplyParams): Promise<string | null> {
 	const enabled = await isChannelEnabled(params.channel);
 	if (!enabled) {
-		throw new Error(`Channel "${params.channel}" is not enabled. Enable it in Settings → Inbox Channels.`);
+		throw new Error(
+			`Channel "${params.channel}" is not enabled. Enable it in Settings → Inbox Channels.`
+		);
 	}
 
 	switch (params.channel) {
@@ -64,7 +66,9 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 	});
 
 	const subject = params.subject
-		? (params.subject.startsWith('Re:') ? params.subject : `Re: ${params.subject}`)
+		? params.subject.startsWith('Re:')
+			? params.subject
+			: `Re: ${params.subject}`
 		: 'Re: Your message to CorvMC';
 
 	const messageId = await sendInboxReply({

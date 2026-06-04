@@ -50,10 +50,7 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 				eq(recurringSeries.prototypeType, 'reservation'),
 				isNull(recurringSeries.cancelledAt),
 				isNull(recurringSeries.supersededBy),
-				or(
-					isNull(recurringSeries.endsAt),
-					gt(recurringSeries.endsAt, sql`(current_timestamp)`)
-				)
+				or(isNull(recurringSeries.endsAt), gt(recurringSeries.endsAt, sql`(current_timestamp)`))
 			)
 		);
 
@@ -124,18 +121,19 @@ async function processSeries(
 	const occurrences = getOccurrences(series.rrule, now, windowEnd);
 
 	// Batch-fetch all existing instances for this series in the window
-	const existingInstances = occurrences.length > 0
-		? await db
-				.select({ startsAt: reservation.startsAt })
-				.from(reservation)
-				.where(
-					and(
-						eq(reservation.recurringSeriesId, series.id),
-						gte(reservation.startsAt, occurrences[0]),
-						lte(reservation.startsAt, occurrences[occurrences.length - 1])
+	const existingInstances =
+		occurrences.length > 0
+			? await db
+					.select({ startsAt: reservation.startsAt })
+					.from(reservation)
+					.where(
+						and(
+							eq(reservation.recurringSeriesId, series.id),
+							gte(reservation.startsAt, occurrences[0]),
+							lte(reservation.startsAt, occurrences[occurrences.length - 1])
+						)
 					)
-				)
-		: [];
+			: [];
 
 	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
 
@@ -258,12 +256,7 @@ async function checkEventAndClosureConflict(
 	const closureConflicts = await db
 		.select({ reason: closure.reason })
 		.from(closure)
-		.where(
-			and(
-				lt(closure.startsAt, endsAt),
-				gt(closure.endsAt, startsAt)
-			)
-		)
+		.where(and(lt(closure.startsAt, endsAt), gt(closure.endsAt, startsAt)))
 		.limit(1);
 
 	if (closureConflicts.length > 0) {
@@ -290,10 +283,7 @@ async function checkReservationConflict(
 				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, endsAt),
 				gt(reservation.endsAt, startsAt),
-				or(
-					isNull(reservation.recurringSeriesId),
-					ne(reservation.recurringSeriesId, seriesId)
-				)
+				or(isNull(reservation.recurringSeriesId), ne(reservation.recurringSeriesId, seriesId))
 			)
 		)
 		.limit(1);

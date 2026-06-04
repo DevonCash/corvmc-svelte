@@ -25,16 +25,18 @@ const selectResults: unknown[][] = [];
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: () => buildChain(() => {
-			const result = selectResults[selectCallIndex] ?? [];
-			selectCallIndex++;
-			return result;
-		}),
+		select: () =>
+			buildChain(() => {
+				const result = selectResults[selectCallIndex] ?? [];
+				selectCallIndex++;
+				return result;
+			}),
 		insert: () => ({
 			values: (row: unknown) => {
 				insertResult.push(row);
 				return {
-					returning: () => Promise.resolve([{ id: 'inv-new', token: 'tok-abc', ...(row as object) }])
+					returning: () =>
+						Promise.resolve([{ id: 'inv-new', token: 'tok-abc', ...(row as object) }])
 				};
 			}
 		}),
@@ -47,16 +49,31 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/db/schema/platform-invite', () => ({
 	platformInvite: {
-		id: 'id', email: 'email', bandId: 'band_id', role: 'role',
-		position: 'position', status: 'status', token: 'token',
-		expiresAt: 'expires_at', createdAt: 'created_at',
-		invitedById: 'invited_by_id', acceptedAt: 'accepted_at'
+		id: 'id',
+		email: 'email',
+		bandId: 'band_id',
+		role: 'role',
+		position: 'position',
+		status: 'status',
+		token: 'token',
+		expiresAt: 'expires_at',
+		createdAt: 'created_at',
+		invitedById: 'invited_by_id',
+		acceptedAt: 'accepted_at'
 	}
 }));
 
 vi.mock('$lib/server/db/schema/band', () => ({
 	band: { id: 'id', name: 'name' },
-	bandMember: { id: 'id', bandId: 'band_id', userId: 'user_id', role: 'role', position: 'position', status: 'status', invitedById: 'invited_by_id' }
+	bandMember: {
+		id: 'id',
+		bandId: 'band_id',
+		userId: 'user_id',
+		role: 'role',
+		position: 'position',
+		status: 'status',
+		invitedById: 'invited_by_id'
+	}
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
@@ -80,13 +97,8 @@ vi.mock('$lib/server/events/event-bus', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 
-const {
-	createInvite,
-	resolvePendingInvites,
-	listForBand,
-	revoke,
-	getByToken
-} = await import('./platform-invite-service');
+const { createInvite, resolvePendingInvites, listForBand, revoke, getByToken } =
+	await import('./platform-invite-service');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -105,11 +117,23 @@ describe('createInvite', () => {
 		// select 1: user lookup — found
 		selectResults.push([{ id: 'user-existing' }]);
 
-		const result = await createInvite('Alice@Example.COM', 'band-1', 'member', 'Guitar', 'inviter-1');
+		const result = await createInvite(
+			'Alice@Example.COM',
+			'band-1',
+			'member',
+			'Guitar',
+			'inviter-1'
+		);
 
 		expect(result.type).toBe('existing_user');
 		expect(result.id).toBe('member-1');
-		expect(mockInvite).toHaveBeenCalledWith('band-1', 'user-existing', 'member', 'Guitar', 'inviter-1');
+		expect(mockInvite).toHaveBeenCalledWith(
+			'band-1',
+			'user-existing',
+			'member',
+			'Guitar',
+			'inviter-1'
+		);
 	});
 
 	it('refreshes expiry when pending invite already exists for same email+band', async () => {
@@ -170,12 +194,15 @@ describe('createInvite', () => {
 		// Event is fire-and-forget (Promise.resolve().then), flush microtasks
 		await new Promise((r) => setTimeout(r, 0));
 
-		expect(mockEmit).toHaveBeenCalledWith('platform_invite.created', expect.objectContaining({
-			email: 'new@test.com',
-			bandName: 'The Strokes',
-			invitedByName: 'Alice',
-			role: 'member'
-		}));
+		expect(mockEmit).toHaveBeenCalledWith(
+			'platform_invite.created',
+			expect.objectContaining({
+				email: 'new@test.com',
+				bandName: 'The Strokes',
+				invitedByName: 'Alice',
+				role: 'member'
+			})
+		);
 	});
 });
 
@@ -191,7 +218,13 @@ describe('resolvePendingInvites', () => {
 	it('creates band members and marks invites accepted', async () => {
 		// pending invites query
 		selectResults.push([
-			{ id: 'inv-1', bandId: 'band-1', role: 'member', position: 'Guitar', invitedById: 'inviter-1' },
+			{
+				id: 'inv-1',
+				bandId: 'band-1',
+				role: 'member',
+				position: 'Guitar',
+				invitedById: 'inviter-1'
+			},
 			{ id: 'inv-2', bandId: 'band-2', role: 'admin', position: null, invitedById: 'inviter-2' }
 		]);
 
@@ -225,7 +258,9 @@ describe('resolvePendingInvites', () => {
 		const dbMod = await import('$lib/server/db');
 		const origInsert = (dbMod.db as any).insert;
 		(dbMod.db as any).insert = () => ({
-			values: () => { throw new Error('UNIQUE constraint failed'); }
+			values: () => {
+				throw new Error('UNIQUE constraint failed');
+			}
 		});
 
 		const result = await resolvePendingInvites('user-1', 'alice@test.com');
@@ -238,7 +273,13 @@ describe('resolvePendingInvites', () => {
 
 	it('continues resolving if one invite fails with non-UNIQUE error', async () => {
 		selectResults.push([
-			{ id: 'inv-fail', bandId: 'band-1', role: 'member', position: null, invitedById: 'inviter-1' },
+			{
+				id: 'inv-fail',
+				bandId: 'band-1',
+				role: 'member',
+				position: null,
+				invitedById: 'inviter-1'
+			},
 			{ id: 'inv-ok', bandId: 'band-2', role: 'member', position: null, invitedById: 'inviter-2' }
 		]);
 
@@ -259,9 +300,7 @@ describe('resolvePendingInvites', () => {
 		const result = await resolvePendingInvites('user-1', 'alice@test.com');
 
 		expect(result).toBe(1); // only the second succeeded
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.any(Error)
-		);
+		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 
 		consoleSpy.mockRestore();
 		(dbMod.db as any).insert = origInsert;
@@ -293,14 +332,16 @@ describe('revoke', () => {
 describe('getByToken', () => {
 	it('returns invite metadata for valid token', async () => {
 		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([{
-			email: 'alice@test.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: futureDate,
-			bandName: 'The Strokes',
-			inviterName: 'Bob'
-		}]);
+		selectResults.push([
+			{
+				email: 'alice@test.com',
+				role: 'member',
+				status: 'pending',
+				expiresAt: futureDate,
+				bandName: 'The Strokes',
+				inviterName: 'Bob'
+			}
+		]);
 
 		const result = await getByToken('tok-abc');
 
@@ -322,14 +363,16 @@ describe('getByToken', () => {
 
 	it('returns null for expired invite', async () => {
 		const pastDate = new Date(Date.now() - 86400000);
-		selectResults.push([{
-			email: 'alice@test.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: pastDate,
-			bandName: 'The Strokes',
-			inviterName: 'Bob'
-		}]);
+		selectResults.push([
+			{
+				email: 'alice@test.com',
+				role: 'member',
+				status: 'pending',
+				expiresAt: pastDate,
+				bandName: 'The Strokes',
+				inviterName: 'Bob'
+			}
+		]);
 
 		const result = await getByToken('tok-expired');
 
@@ -338,14 +381,16 @@ describe('getByToken', () => {
 
 	it('returns null for non-pending invite', async () => {
 		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([{
-			email: 'alice@test.com',
-			role: 'member',
-			status: 'revoked',
-			expiresAt: futureDate,
-			bandName: 'The Strokes',
-			inviterName: 'Bob'
-		}]);
+		selectResults.push([
+			{
+				email: 'alice@test.com',
+				role: 'member',
+				status: 'revoked',
+				expiresAt: futureDate,
+				bandName: 'The Strokes',
+				inviterName: 'Bob'
+			}
+		]);
 
 		const result = await getByToken('tok-revoked');
 
@@ -354,14 +399,16 @@ describe('getByToken', () => {
 
 	it('returns "Someone" when inviter not found', async () => {
 		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([{
-			email: 'alice@test.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: futureDate,
-			bandName: 'The Strokes',
-			inviterName: null
-		}]);
+		selectResults.push([
+			{
+				email: 'alice@test.com',
+				role: 'member',
+				status: 'pending',
+				expiresAt: futureDate,
+				bandName: 'The Strokes',
+				inviterName: null
+			}
+		]);
 
 		const result = await getByToken('tok-abc');
 
@@ -372,8 +419,26 @@ describe('getByToken', () => {
 describe('listForBand', () => {
 	it('returns invites for the band', async () => {
 		const invites = [
-			{ id: 'inv-1', email: 'a@test.com', role: 'member', position: null, status: 'pending', expiresAt: new Date(), createdAt: new Date(), invitedByName: 'Alice' },
-			{ id: 'inv-2', email: 'b@test.com', role: 'admin', position: 'Bass', status: 'accepted', expiresAt: new Date(), createdAt: new Date(), invitedByName: 'Bob' }
+			{
+				id: 'inv-1',
+				email: 'a@test.com',
+				role: 'member',
+				position: null,
+				status: 'pending',
+				expiresAt: new Date(),
+				createdAt: new Date(),
+				invitedByName: 'Alice'
+			},
+			{
+				id: 'inv-2',
+				email: 'b@test.com',
+				role: 'admin',
+				position: 'Bass',
+				status: 'accepted',
+				expiresAt: new Date(),
+				createdAt: new Date(),
+				invitedByName: 'Bob'
+			}
 		];
 		selectResults.push(invites);
 

@@ -117,8 +117,7 @@
 		{:else}
 			<div class="space-y-2">
 				<div class="flex justify-between">
-					<span
-						>Room rental ({pricing.durationHours}hr × ${cents(pricing.hourlyRateCents)}/hr)</span
+					<span>Room rental ({pricing.durationHours}hr × ${cents(pricing.hourlyRateCents)}/hr)</span
 					>
 					<span>${cents(pricing.totalCents)}</span>
 				</div>
@@ -159,7 +158,9 @@
 					label=""
 					type="checkbox"
 					bind:value={coverFees}
-					checkboxLabel="Cover ${cents(calcFeeCents(pricing.remainingCents))} processing fee so the Collective receives 100%"
+					checkboxLabel="Cover ${cents(
+						calcFeeCents(pricing.remainingCents)
+					)} processing fee so the Collective receives 100%"
 				/>
 			{/if}
 

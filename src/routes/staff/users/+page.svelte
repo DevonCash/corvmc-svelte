@@ -4,7 +4,15 @@
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
-	import { IconUserCog, IconUserShield, IconUserHeart, IconDots, IconEye, IconCopy, IconUserUp } from '@tabler/icons-svelte';
+	import {
+		IconUserCog,
+		IconUserShield,
+		IconUserHeart,
+		IconDots,
+		IconEye,
+		IconCopy,
+		IconUserUp
+	} from '@tabler/icons-svelte';
 	import { getStaffUsers } from '$lib/remote/users.remote';
 	import { formatDate } from '$lib/utils/format';
 
@@ -86,7 +94,10 @@
 					</thead>
 					<tbody>
 						{#each users as row (row.id)}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/users/${row.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/users/${row.id}`)}
+							>
 								<td class="w-px">
 									{#if getTier(row)}
 										{@const tier = getTier(row)}
@@ -117,10 +128,21 @@
 											<IconDots size={16} />
 										</Button>
 										<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-										<ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow">
+										<ul
+											tabindex="0"
+											class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
+										>
 											<li><a href="/staff/users/{row.id}"><IconEye size={16} />View</a></li>
-											<li><button onclick={() => copyEmail(row.email)}><IconCopy size={16} />Copy email</button></li>
-											<li><a href="/staff/users/{row.id}/impersonate"><IconUserUp size={16} />Impersonate</a></li>
+											<li>
+												<button onclick={() => copyEmail(row.email)}
+													><IconCopy size={16} />Copy email</button
+												>
+											</li>
+											<li>
+												<a href="/staff/users/{row.id}/impersonate"
+													><IconUserUp size={16} />Impersonate</a
+												>
+											</li>
 										</ul>
 									</div>
 								</td>
@@ -129,7 +151,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

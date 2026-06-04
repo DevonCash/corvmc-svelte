@@ -4,7 +4,11 @@ import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
-import { type CreditType, type TransactionSource, creditTypes } from '$lib/server/db/schema/finance';
+import {
+	type CreditType,
+	type TransactionSource,
+	creditTypes
+} from '$lib/server/db/schema/finance';
 import { calculateTotalWithFeeCoverage } from './fees';
 import { getStripeProductId } from './product-config-service';
 
@@ -129,7 +133,10 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			if (applicableDiscount > 0) {
 				const unitsToUse = Math.ceil(applicableDiscount / eligible.unitValueCents);
 				// Cap cents so credit discount never exceeds remaining cart total
-				const actualCents = Math.min(unitsToUse * eligible.unitValueCents, cartTotalCents - creditsAppliedCents);
+				const actualCents = Math.min(
+					unitsToUse * eligible.unitValueCents,
+					cartTotalCents - creditsAppliedCents
+				);
 				creditDeductions.push({
 					type: eligible.type,
 					units: unitsToUse,
@@ -160,7 +167,12 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 				completedDeductions.push(deduction);
 			}
 		} catch (err) {
-			await reverseDeductions(userId, completedDeductions, metadata.checkout_ref, 'checkout_failed');
+			await reverseDeductions(
+				userId,
+				completedDeductions,
+				metadata.checkout_ref,
+				'checkout_failed'
+			);
 			throw err;
 		}
 	}
@@ -286,9 +298,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
  * Items with `price_data.unit_amount` are used directly.
  * Items with a `price` reference are fetched from Stripe.
  */
-async function resolveCartTotal(
-	lineItems: CheckoutLineItem[]
-): Promise<number> {
+async function resolveCartTotal(lineItems: CheckoutLineItem[]): Promise<number> {
 	let total = 0;
 
 	for (const item of lineItems) {
@@ -316,7 +326,9 @@ export interface CashPaymentOptions {
 	metadata?: Record<string, string>;
 }
 
-export async function recordCashPayment(options: CashPaymentOptions): Promise<{ paymentRecordId: string }> {
+export async function recordCashPayment(
+	options: CashPaymentOptions
+): Promise<{ paymentRecordId: string }> {
 	const { userId, stripeCustomerId, amountCents, metadata = {} } = options;
 
 	const now = Math.floor(Date.now() / 1000);
@@ -389,7 +401,10 @@ async function refundPaymentIntent(paymentIntentId: string, userId?: string): Pr
 	if (userId) {
 		const deductions = parseBreakdown(pi.metadata);
 		if (deductions.length === 0) {
-			const sessions = await stripe.checkout.sessions.list({ payment_intent: paymentIntentId, limit: 1 });
+			const sessions = await stripe.checkout.sessions.list({
+				payment_intent: paymentIntentId,
+				limit: 1
+			});
 			const session = sessions.data[0];
 			if (session) {
 				const sessionDeductions = parseBreakdown(session.metadata);

@@ -33,10 +33,19 @@
 		<Field field={fields.name} type="text" label="Name" />
 		<Field field={fields.description} type="textarea" label="Description" />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.categoryId} type="select" label="Category"
-				options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-			<Field field={fields.condition} type="select" label="Condition" value="good"
-				options={equipmentConditions.map((c) => ({ value: c, label: c }))} />
+			<Field
+				field={fields.categoryId}
+				type="select"
+				label="Category"
+				options={categories.map((c) => ({ value: c.id, label: c.name }))}
+			/>
+			<Field
+				field={fields.condition}
+				type="select"
+				label="Condition"
+				value="good"
+				options={equipmentConditions.map((c) => ({ value: c, label: c }))}
+			/>
 		</div>
 		<div class="grid grid-cols-2 gap-3">
 			<Field field={fields.totalQuantity} type="number" label="Total Quantity" value={1} />

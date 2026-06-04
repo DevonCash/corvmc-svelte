@@ -11,7 +11,12 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { createSubscription, updateAmount, resumeSubscription, getMemberMembership } from '$lib/remote/membership.remote';
+	import {
+		createSubscription,
+		updateAmount,
+		resumeSubscription,
+		getMemberMembership
+	} from '$lib/remote/membership.remote';
 
 	let data = $derived(await getMemberMembership());
 
@@ -28,10 +33,11 @@
 </script>
 
 {#snippet bottomCta(id?: string)}
-	<div id={id} class="rounded-xl bg-primary/5 p-8 text-center">
+	<div {id} class="rounded-xl bg-primary/5 p-8 text-center">
 		<h2 class="mb-4 text-3xl font-bold">Sounds Good?</h2>
 		<p class="mx-auto mb-6 max-w-2xl opacity-70">
-			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the amount — keeps the spaces open, the gear available, and the music going.
+			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the
+			amount — keeps the spaces open, the gear available, and the music going.
 		</p>
 		<div class="mx-auto max-w-md">
 			<SubscriptionForm mode="create" remote={createSubscription} />
@@ -47,12 +53,7 @@
 
 		<ContributionCard {subscription} {billingPortalUrl} updateRemote={updateAmount} />
 
-		<CreditBalanceCard
-			{credits}
-			{subscription}
-			{allocatedThisMonth}
-			{usedThisMonth}
-		/>
+		<CreditBalanceCard {credits} {subscription} {allocatedThisMonth} {usedThisMonth} />
 
 		<BenefitsGrid variant="compact" />
 

@@ -104,13 +104,9 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 			.where(eq(reservation.id, prototypeReservationId))
 	]);
 
-	const [series] = await db
-		.select()
-		.from(recurringSeries)
-		.where(eq(recurringSeries.id, seriesId));
+	const [series] = await db.select().from(recurringSeries).where(eq(recurringSeries.id, seriesId));
 	return series;
 }
-
 
 // ---------------------------------------------------------------------------
 // cancel() — stop a series from generating new instances
@@ -259,10 +255,7 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 // listAll() — all series including cancelled (staff view with filters)
 // ---------------------------------------------------------------------------
 
-export async function listAll(
-	opts?: { filter?: string },
-	pagination: PaginationInput = {}
-) {
+export async function listAll(opts?: { filter?: string }, pagination: PaginationInput = {}) {
 	const conditions = [
 		eq(recurringSeries.prototypeType, 'reservation'),
 		isNull(recurringSeries.supersededBy)
@@ -312,7 +305,6 @@ export async function listAll(
 		}))
 	};
 }
-
 
 // ---------------------------------------------------------------------------
 // getHistory() — follow the superseded_by chain for a series

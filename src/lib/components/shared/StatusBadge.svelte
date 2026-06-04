@@ -94,6 +94,6 @@
 	</span>
 {:else}
 	<span class="tooltip tooltip-right" data-tip={label}>
-		<variant.icon {size} class="{variant.color} {className}"/>
+		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/if}

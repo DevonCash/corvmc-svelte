@@ -124,16 +124,13 @@
 				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
 					<p class="text-sm opacity-70">
-						{format(confirmReservation.startsAt, 'p')} – {format(
-							confirmReservation.endsAt,
-							'p'
-						)}
+						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}
 					</p>
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-xs opacity-60">
-						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be
-						offered to someone else.
+						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be offered
+						to someone else.
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />

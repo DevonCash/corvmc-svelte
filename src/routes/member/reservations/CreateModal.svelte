@@ -25,7 +25,13 @@
 	class="btn-primary"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
-		const r = result as { reservationId?: string; paid?: boolean; confirmed?: boolean; waitlisted?: boolean; redirectUrl?: string };
+		const r = result as {
+			reservationId?: string;
+			paid?: boolean;
+			confirmed?: boolean;
+			waitlisted?: boolean;
+			redirectUrl?: string;
+		};
 		if (r?.redirectUrl) {
 			window.location.href = r.redirectUrl;
 		} else {

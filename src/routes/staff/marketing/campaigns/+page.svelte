@@ -10,9 +10,9 @@
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-	<PageHeader title="Campaigns" subtitle="Marketing">
-		<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
-	</PageHeader>
+<PageHeader title="Campaigns" subtitle="Marketing">
+	<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
+</PageHeader>
 <PageContent>
 	<div class="flex gap-2 mb-4">
 		<select class="select select-bordered select-sm" bind:value={statusFilter}>
@@ -41,7 +41,11 @@
 					{#each campaigns as c (c.id)}
 						<tr
 							class="hover cursor-pointer"
-							onclick={() => window.location.href = c.status === 'draft' ? `/staff/marketing/campaigns/${c.id}/edit` : `/staff/marketing/campaigns/${c.id}`}
+							onclick={() =>
+								(window.location.href =
+									c.status === 'draft'
+										? `/staff/marketing/campaigns/${c.id}/edit`
+										: `/staff/marketing/campaigns/${c.id}`)}
 						>
 							<td><span class="font-medium">{c.subject}</span></td>
 							<td class="w-px"><StatusBadge status={c.status} /></td>

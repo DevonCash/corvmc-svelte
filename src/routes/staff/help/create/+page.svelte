@@ -16,7 +16,12 @@
 	let contentValue = $state('');
 
 	function slugify(t: string) {
-		return t.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+		return t
+			.toLowerCase()
+			.replace(/[^\w\s-]/g, '')
+			.replace(/\s+/g, '-')
+			.replace(/-+/g, '-')
+			.trim();
 	}
 
 	let autoSlug = $derived(slugify(titleValue));
@@ -24,41 +29,58 @@
 
 <PageHeader title="New Article" subtitle="Help" backHref="/staff/help" />
 <PageContent width="3xl">
-	<Form
-		remote={createArticle}
-		guard
-		onsuccess={(result) => goto(`/staff/help/${result?.id}`)}
-	>
+	<Form remote={createArticle} guard onsuccess={(result) => goto(`/staff/help/${result?.id}`)}>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
 				<FormField name="title" label="Title">
-					<input name="title" type="text" class="input input-bordered w-full"
-						placeholder="Article title" bind:value={titleValue} />
+					<input
+						name="title"
+						type="text"
+						class="input input-bordered w-full"
+						placeholder="Article title"
+						bind:value={titleValue}
+					/>
 				</FormField>
 				<FormField name="slug" label="Slug">
-					<input name="slug" type="text" class="input input-bordered w-full"
-						placeholder={autoSlug || 'auto-generated'} />
+					<input
+						name="slug"
+						type="text"
+						class="input input-bordered w-full"
+						placeholder={autoSlug || 'auto-generated'}
+					/>
 				</FormField>
 			</div>
 
 			<div class="grid gap-4 sm:grid-cols-3">
-				<FormField name="categoryId" type="select" label="Category"
+				<FormField
+					name="categoryId"
+					type="select"
+					label="Category"
 					options={[
 						{ value: '', label: 'Select category...' },
 						...categories.map((c) => ({ value: c.id, label: c.name }))
-					]} />
-				<FormField name="minRole" type="select" label="Minimum Role" value="member"
+					]}
+				/>
+				<FormField
+					name="minRole"
+					type="select"
+					label="Minimum Role"
+					value="member"
 					options={[
 						{ value: 'member', label: 'Member' },
 						{ value: 'staff', label: 'Staff' },
 						{ value: 'admin', label: 'Admin' }
-					]} />
-				<FormField name="published" type="toggle" label="Status"
-					checkboxLabel="Published" />
+					]}
+				/>
+				<FormField name="published" type="toggle" label="Status" checkboxLabel="Published" />
 			</div>
 
-			<FormField name="summary" type="text" label="Summary"
-				placeholder="Brief description for listings" />
+			<FormField
+				name="summary"
+				type="text"
+				label="Summary"
+				placeholder="Brief description for listings"
+			/>
 
 			<FormField name="content" label="Content">
 				<input {...fields.content.as('hidden', contentValue)} />

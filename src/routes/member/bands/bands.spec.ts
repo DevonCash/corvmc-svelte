@@ -73,7 +73,8 @@ vi.mock('$app/server', () => {
 	};
 });
 
-const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands.remote') as any;
+const { createBand, acceptInvite, declineInvite } =
+	(await import('$lib/remote/bands.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

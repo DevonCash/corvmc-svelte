@@ -66,7 +66,7 @@ beforeEach(() => {
 
 describe('updateBand', () => {
 	it('updates name and bio', async () => {
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		const result = await updateBand({ name: 'New Name', bio: 'New bio' });
 
@@ -79,7 +79,7 @@ describe('updateBand', () => {
 	});
 
 	it('sends null bio when empty', async () => {
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await updateBand({ name: 'New Name', bio: '' });
 
@@ -91,14 +91,14 @@ describe('updateBand', () => {
 
 	it('rejects non-admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(updateBand({ name: 'X', bio: '' })).rejects.toThrow();
 	});
 
 	it('allows admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		const result = await updateBand({ name: 'New Name', bio: '' });
 		expect(result.success).toBe(true);

@@ -21,9 +21,7 @@
 		input.length >= 1
 			? suggestions
 					.filter(
-						(s) =>
-							s.toLowerCase().includes(input.toLowerCase()) &&
-							!value.includes(s.toLowerCase())
+						(s) => s.toLowerCase().includes(input.toLowerCase()) && !value.includes(s.toLowerCase())
 					)
 					.slice(0, 8)
 			: []
@@ -88,7 +86,10 @@
 						<button
 							type="button"
 							class="rounded-btn px-3 py-2"
-							onmousedown={(e: MouseEvent) => { e.preventDefault(); addTag(suggestion); }}
+							onmousedown={(e: MouseEvent) => {
+								e.preventDefault();
+								addTag(suggestion);
+							}}
 						>
 							{suggestion}
 						</button>

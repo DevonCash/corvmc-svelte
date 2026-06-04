@@ -70,10 +70,7 @@ export async function addCredits(
 	const col = creditColumn[creditType];
 
 	return db.transaction(async (tx) => {
-		const [row] = await tx
-			.select({ balance: col })
-			.from(user)
-			.where(eq(user.id, userId));
+		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
 
 		if (!row) throw new Error(`User ${userId} not found`);
 
@@ -164,10 +161,7 @@ export async function setBalance(
 	const col = creditColumn[creditType];
 
 	return db.transaction(async (tx) => {
-		const [row] = await tx
-			.select({ balance: col })
-			.from(user)
-			.where(eq(user.id, userId));
+		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
 
 		if (!row) throw new Error(`User ${userId} not found`);
 
@@ -197,14 +191,14 @@ export async function setBalance(
 // Monthly allocation helpers
 // ---------------------------------------------------------------------------
 
-export async function hasTransaction(source: TransactionSource, sourceId: string): Promise<boolean> {
+export async function hasTransaction(
+	source: TransactionSource,
+	sourceId: string
+): Promise<boolean> {
 	const [row] = await db
 		.select({ id: creditTransaction.id })
 		.from(creditTransaction)
-		.where(and(
-			eq(creditTransaction.source, source),
-			eq(creditTransaction.sourceId, sourceId)
-		))
+		.where(and(eq(creditTransaction.source, source), eq(creditTransaction.sourceId, sourceId)))
 		.limit(1);
 
 	return !!row;
@@ -268,12 +262,7 @@ function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 
 	if (filters.search) {
 		const escaped = escapeLike(filters.search);
-		conditions.push(
-			or(
-				like(user.name, `%${escaped}%`),
-				like(user.email, `%${escaped}%`)
-			)!
-		);
+		conditions.push(or(like(user.name, `%${escaped}%`), like(user.email, `%${escaped}%`))!);
 	}
 
 	if (filters.creditType) {

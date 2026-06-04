@@ -43,7 +43,11 @@
 
 				{#if info.subscription.cancelAtPeriodEnd}
 					<div class="alert alert-warning mt-4">
-						<p>Your subscription will end on {formatDate(new Date(info.subscription.currentPeriodEnd))}.</p>
+						<p>
+							Your subscription will end on {formatDate(
+								new Date(info.subscription.currentPeriodEnd)
+							)}.
+						</p>
 					</div>
 					{#if isOwner}
 						<form
@@ -88,8 +92,8 @@
 				<div class="card-body text-center">
 					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
 					<p class="mt-2 opacity-70">
-						Get a custom band page on your own subdomain with a block editor,
-						custom CSS, genre themes, and a full EPK.
+						Get a custom band page on your own subdomain with a block editor, custom CSS, genre
+						themes, and a full EPK.
 					</p>
 				</div>
 			</div>
@@ -99,7 +103,9 @@
 				<div class="card bg-base-100 shadow-sm border">
 					<div class="card-body items-center text-center">
 						<h3 class="text-lg font-bold">Monthly</h3>
-						<p class="text-3xl font-bold">$15<span class="text-sm font-normal opacity-60">/mo</span></p>
+						<p class="text-3xl font-bold">
+							$15<span class="text-sm font-normal opacity-60">/mo</span>
+						</p>
 						{#if isOwner}
 							<form
 								{...upgradeToPremium.enhance(async (form) => {
@@ -126,7 +132,9 @@
 					<div class="card-body items-center text-center">
 						<Badge variant="primary">2 months free</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>
-						<p class="text-3xl font-bold">$120<span class="text-sm font-normal opacity-60">/yr</span></p>
+						<p class="text-3xl font-bold">
+							$120<span class="text-sm font-normal opacity-60">/yr</span>
+						</p>
 						{#if isOwner}
 							<form
 								{...upgradeToPremium.enhance(async (form) => {

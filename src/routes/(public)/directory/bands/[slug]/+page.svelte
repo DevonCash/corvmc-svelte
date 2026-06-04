@@ -21,7 +21,10 @@
 	<title>{band.name} | Corvallis Music Collective</title>
 	<meta name="description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
 	<meta property="og:title" content={band.name} />
-	<meta property="og:description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
+	<meta
+		property="og:description"
+		content={band.tagline || `${band.name} on Corvallis Music Collective`}
+	/>
 	{#if band.avatarUrl}
 		<meta property="og:image" content={band.avatarUrl} />
 	{/if}
@@ -61,7 +64,9 @@
 		<!-- Bio -->
 		{#if band.bio}
 			<section>
-				<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(band.bio)}</div>
+				<div class="prose prose-sm max-w-none text-base-content/80">
+					{@html sanitizeBio(band.bio)}
+				</div>
 			</section>
 		{/if}
 

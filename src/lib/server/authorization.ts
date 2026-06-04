@@ -105,10 +105,7 @@ export async function assignRole(userId: string, roleName: string): Promise<void
 
 	if (!found) return;
 
-	await db
-		.insert(modelHasRole)
-		.values({ roleId: found.id, userId })
-		.onConflictDoNothing();
+	await db.insert(modelHasRole).values({ roleId: found.id, userId }).onConflictDoNothing();
 }
 
 /**
@@ -164,7 +161,9 @@ export async function requireStaffRole(userId: string | undefined): Promise<void
 /**
  * List all users with admin or staff roles.
  */
-export async function listStaffUsers(): Promise<Array<{ id: string; name: string; email: string }>> {
+export async function listStaffUsers(): Promise<
+	Array<{ id: string; name: string; email: string }>
+> {
 	const rows = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)

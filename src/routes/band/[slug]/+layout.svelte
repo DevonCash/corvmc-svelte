@@ -37,12 +37,7 @@
 	]);
 </script>
 
-<AppShell
-	drawerId="band-drawer"
-	user={layout.user}
-	{panels}
-	activePanel={layout.band.slug}
->
+<AppShell drawerId="band-drawer" user={layout.user} {panels} activePanel={layout.band.slug}>
 	{#snippet brand()}
 		<div class="flex items-center gap-2 px-6 py-5">
 			<span class="truncate text-xl font-bold">{layout.band.name}</span>

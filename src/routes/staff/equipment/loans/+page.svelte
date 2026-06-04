@@ -56,7 +56,14 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select class="select select-bordered select-sm" value={statusFilter} onchange={(e) => { statusFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={statusFilter}
+			onchange={(e) => {
+				statusFilter = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All statuses</option>
 			{#each loanStatuses as s}
 				<option value={s}>{s}</option>
@@ -89,7 +96,10 @@
 					</thead>
 					<tbody>
 						{#each loans as l (l.id)}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/equipment/loans/${l.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/equipment/loans/${l.id}`)}
+							>
 								<td>{l.userName}</td>
 								<td>{l.equipmentName ?? '(free-form request)'}</td>
 								<td class="w-px">
@@ -100,13 +110,19 @@
 								</td>
 								<td class="w-px">{formatDate(l.requestedPickupDate)}</td>
 								<td class="w-px">{l.dueDate ? formatDate(l.dueDate) : '—'}</td>
-								<td class="w-px">{l.totalChargeCents != null ? formatCents(l.totalChargeCents) : '—'}</td>
+								<td class="w-px"
+									>{l.totalChargeCents != null ? formatCents(l.totalChargeCents) : '—'}</td
+								>
 							</tr>
 						{/each}
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

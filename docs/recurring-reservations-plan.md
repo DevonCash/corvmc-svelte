@@ -42,6 +42,7 @@ Modify `validateBooking()` in `src/lib/server/reservation/conflict-service.ts` t
 Default to `MAX_ADVANCE_DAYS_ONEOFF` when the parameter is omitted so all existing callers get the one-off limit without changes.
 
 **Tests** (add to existing conflict service tests or new file):
+
 - One-off booking 13 days ahead → valid.
 - One-off booking 15 days ahead → invalid with "exceeds advance booking window" error.
 - Recurring booking 16 days ahead → valid.
@@ -70,6 +71,7 @@ Create `src/lib/server/reservation/rrule-helpers.ts` with:
 - `describeSchedule(rruleString)` — Human-readable description for display: "Every Tuesday", "Every other Wednesday", "Third Saturday of the month". Use `RRule.prototype.toText()` if the output is acceptable, otherwise format manually.
 
 **Tests** (`src/lib/server/reservation/rrule-helpers.spec.ts`):
+
 - Weekly: given a Tuesday date, RRULE contains `FREQ=WEEKLY;BYDAY=TU`.
 - Biweekly: RRULE contains `FREQ=WEEKLY;INTERVAL=2;BYDAY=WE` for a Wednesday.
 - Monthly: third Tuesday of month → `FREQ=MONTHLY;BYDAY=3TU`.
@@ -98,6 +100,7 @@ Create `src/lib/server/reservation/recurring-series-service.ts` with:
 - `getHistory(seriesId)` — Follows the `supersededBy` chain forward to build the edit history.
 
 **Tests** (`src/lib/server/reservation/recurring-series-service.spec.ts`):
+
 - `create` inserts series with correct RRULE, links prototype reservation.
 - `create` rejects non-sustaining members.
 - `edit` cancels old series, creates new one, sets `supersededBy`.
@@ -143,18 +146,19 @@ Add `RecurringSkippedEvent` interface and `'reservation.recurring_skipped'` to t
 
 ```typescript
 export interface RecurringSkippedEvent {
-  seriesId: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  reason: string; // e.g. "Event: Open Mic Night" or "Closure: Holiday"
+	seriesId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	reason: string; // e.g. "Event: Open Mic Night" or "Closure: Holiday"
 }
 ```
 
 **Tests** (`src/lib/server/reservation/generate-recurring-reservations.spec.ts`):
+
 - Active series with no existing instances → creates reservations for each occurrence in window.
 - Already-existing instance (any status including cancelled) → skipped, not recreated.
 - Event conflict → skipped, `recurring_skipped` event emitted.
@@ -179,6 +183,7 @@ Modify `handleSubscriptionDeleted()` in `src/lib/server/finance/webhook-handlers
 Alternatively, if you prefer keeping webhook handlers thin, emit a domain event from `handleSubscriptionDeleted` and add a listener in `register-listeners.ts`. But since the existing handler already does work inline (credit reset), adding the series cancellation inline is consistent.
 
 **Tests** (add to `webhook-handlers.spec.ts`):
+
 - `handleSubscriptionDeleted` cancels all active series for the user.
 - `handleSubscriptionDeleted` still resets credits (existing behavior preserved).
 

@@ -10,9 +10,7 @@
 	} = $props();
 
 	const display = $derived(
-		value.length > 16
-			? `${value.slice(0, 10)}...${value.slice(-4)}`
-			: value
+		value.length > 16 ? `${value.slice(0, 10)}...${value.slice(-4)}` : value
 	);
 </script>
 

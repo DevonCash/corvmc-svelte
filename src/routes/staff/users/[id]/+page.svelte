@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getUser, getAllRoles, getUserPayments, getUserCredits, updateUser } from '$lib/remote/users.remote';
+	import {
+		getUser,
+		getAllRoles,
+		getUserPayments,
+		getUserCredits,
+		updateUser
+	} from '$lib/remote/users.remote';
 	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -27,18 +33,18 @@
 	);
 </script>
 
-	<Form remote={updateUser} guard successToast="Changes saved">
-		<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
-			{#if member.deletedAt}
-				<Badge variant="error" size="md">Deleted</Badge>
-			{/if}
-			<SubmitButton shortcut="mod+s">
-				{#snippet icon()}
-					<IconDeviceFloppy size={20} />
-				{/snippet}
-			</SubmitButton>
-		</PageHeader>
-		<PageContent width="3xl">
+<Form remote={updateUser} guard successToast="Changes saved">
+	<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
+		{#if member.deletedAt}
+			<Badge variant="error" size="md">Deleted</Badge>
+		{/if}
+		<SubmitButton shortcut="mod+s">
+			{#snippet icon()}
+				<IconDeviceFloppy size={20} />
+			{/snippet}
+		</SubmitButton>
+	</PageHeader>
+	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Profile card -->
 			<InfoCard title="Account Info">
@@ -96,7 +102,7 @@
 			</InfoCard>
 		{/await}
 
-		<InfoCard title="Details" class='bg-base-200 shadow-none'>
+		<InfoCard title="Details" class="bg-base-200 shadow-none">
 			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
 				<dt class="opacity-60">User ID</dt>
 				<dd class="font-mono text-xs">{member.id}</dd>
@@ -113,10 +119,10 @@
 				{/if}
 			</dl>
 		</InfoCard>
-		</PageContent>
-	</Form>
+	</PageContent>
+</Form>
 
-	<PageContent width="3xl">
+<PageContent width="3xl">
 	{#await getUserPayments(id)}
 		<div class="flex items-center justify-center p-6">
 			<span class="loading loading-spinner loading-sm"></span>
@@ -139,14 +145,18 @@
 							{#each payments as p (p.id)}
 								<tr class="hover">
 									<td>{formatDateTime(new Date(p.paidAt))}</td>
-									<td class="w-px"><span class="font-medium">{formatCents(p.amountCents)}</span></td>
+									<td class="w-px"><span class="font-medium">{formatCents(p.amountCents)}</span></td
+									>
 									<td class="w-px"><Badge variant="outline">{p.paymentMethod}</Badge></td>
 									<td class="w-px"><StatusBadge status={p.status} /></td>
 									<td class="w-px">
 										<div class="flex items-center gap-2">
 											<CopyableId value={p.id} label="Stripe" />
 											{#if p.reservationId}
-												<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+												<Button
+													href="/staff/reservations/{p.reservationId}"
+													class="btn-ghost btn-xs"
+												>
 													View
 												</Button>
 											{/if}
@@ -162,4 +172,4 @@
 	{:catch}
 		<Alert type="warning">Could not load payment records.</Alert>
 	{/await}
-	</PageContent>
+</PageContent>

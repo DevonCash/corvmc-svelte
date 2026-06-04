@@ -13,8 +13,6 @@
 		children?: Snippet;
 		subtitle?: string;
 	} = $props();
-
-
 </script>
 
 <div

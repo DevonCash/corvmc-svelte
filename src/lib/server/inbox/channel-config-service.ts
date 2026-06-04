@@ -59,10 +59,7 @@ export async function getEnabledChannels(): Promise<InboxChannel[]> {
 	return configs.filter((c) => c.enabled).map((c) => c.channel);
 }
 
-export async function updateChannelConfig(
-	channel: InboxChannel,
-	enabled: boolean
-): Promise<void> {
+export async function updateChannelConfig(channel: InboxChannel, enabled: boolean): Promise<void> {
 	const [existing] = await db
 		.select()
 		.from(inboxChannelConfig)

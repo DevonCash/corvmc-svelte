@@ -43,10 +43,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
 	return result?.count ?? 0;
 }
 
-export async function getForUser(
-	userId: string,
-	opts: { limit?: number; offset?: number } = {}
-) {
+export async function getForUser(userId: string, opts: { limit?: number; offset?: number } = {}) {
 	const limit = opts.limit ?? 20;
 	const offset = opts.offset ?? 0;
 

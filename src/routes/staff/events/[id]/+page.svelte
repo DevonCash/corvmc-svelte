@@ -7,8 +7,18 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { PublishEventAction, UnpublishEventAction, CancelEventAction, CompTicketsAction } from '$lib/components/shared/actions';
-	import { getStaffEventDetail, updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
+	import {
+		PublishEventAction,
+		UnpublishEventAction,
+		CancelEventAction,
+		CompTicketsAction
+	} from '$lib/components/shared/actions';
+	import {
+		getStaffEventDetail,
+		updateEvent,
+		checkRebook,
+		checkConflicts
+	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -156,33 +166,36 @@
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
-		return tags.split(',').map((t) => t.trim()).filter(Boolean);
+		return tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
 	}
 </script>
 
 <PageHeader title={evt.title} backHref="/staff/events">
-		<div class="flex items-center gap-2">
-			{#if evt.ticketingEnabled}
-				<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
-			{/if}
+	<div class="flex items-center gap-2">
+		{#if evt.ticketingEnabled}
+			<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
+		{/if}
 
-			{#if evt.status !== 'cancelled' && !editing}
-				<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
-			{/if}
+		{#if evt.status !== 'cancelled' && !editing}
+			<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
+		{/if}
 
-			{#if evt.status === 'draft'}
-				<PublishEventAction eventId={evt.id} />
-			{/if}
+		{#if evt.status === 'draft'}
+			<PublishEventAction eventId={evt.id} />
+		{/if}
 
-			{#if evt.status === 'published'}
-				<UnpublishEventAction eventId={evt.id} />
-			{/if}
+		{#if evt.status === 'published'}
+			<UnpublishEventAction eventId={evt.id} />
+		{/if}
 
-			{#if evt.status !== 'cancelled'}
-				<CancelEventAction eventId={evt.id} />
-			{/if}
-		</div>
-	</PageHeader>
+		{#if evt.status !== 'cancelled'}
+			<CancelEventAction eventId={evt.id} />
+		{/if}
+	</div>
+</PageHeader>
 <PageContent width="3xl">
 	<!-- Status -->
 	<div class="flex items-center gap-2">
@@ -214,33 +227,83 @@
 
 						<div class="space-y-4">
 							<FormField label="Title" id="editTitle" issues={[]}>
-								<input id="editTitle" name="title" type="text" bind:value={editTitle} class="input input-bordered w-full" required />
+								<input
+									id="editTitle"
+									name="title"
+									type="text"
+									bind:value={editTitle}
+									class="input input-bordered w-full"
+									required
+								/>
 							</FormField>
 
 							<FormField label="Description" id="editDesc" issues={[]}>
-								<textarea id="editDesc" name="description" bind:value={editDescription} class="textarea textarea-bordered w-full" rows="4"></textarea>
+								<textarea
+									id="editDesc"
+									name="description"
+									bind:value={editDescription}
+									class="textarea textarea-bordered w-full"
+									rows="4"
+								></textarea>
 							</FormField>
 
 							<FormField label="Date" id="editDate" issues={[]}>
-								<input id="editDate" name="eventDate" type="date" bind:value={editDate} class="input input-bordered w-full" required onchange={checkForRebook} />
+								<input
+									id="editDate"
+									name="eventDate"
+									type="date"
+									bind:value={editDate}
+									class="input input-bordered w-full"
+									required
+									onchange={checkForRebook}
+								/>
 							</FormField>
 
 							<div class="grid grid-cols-2 gap-4">
 								<FormField label="Start time" id="editStartTime" issues={[]}>
-									<input id="editStartTime" name="eventStartTime" type="time" bind:value={editStartTime} class="input input-bordered w-full" required onchange={checkForRebook} />
+									<input
+										id="editStartTime"
+										name="eventStartTime"
+										type="time"
+										bind:value={editStartTime}
+										class="input input-bordered w-full"
+										required
+										onchange={checkForRebook}
+									/>
 								</FormField>
 
 								<FormField label="End time" id="editEndTime" issues={[]}>
-									<input id="editEndTime" name="eventEndTime" type="time" bind:value={editEndTime} class="input input-bordered w-full" required onchange={checkForRebook} />
+									<input
+										id="editEndTime"
+										name="eventEndTime"
+										type="time"
+										bind:value={editEndTime}
+										class="input input-bordered w-full"
+										required
+										onchange={checkForRebook}
+									/>
 								</FormField>
 							</div>
 
 							<FormField label="Doors time" id="editDoorsTime" issues={[]}>
-								<input id="editDoorsTime" name="doorsTime" type="time" bind:value={editDoorsTime} class="input input-bordered w-full" />
+								<input
+									id="editDoorsTime"
+									name="doorsTime"
+									type="time"
+									bind:value={editDoorsTime}
+									class="input input-bordered w-full"
+								/>
 							</FormField>
 
 							<FormField label="Tags" id="editTags" issues={[]}>
-								<input id="editTags" name="tags" type="text" bind:value={editTags} class="input input-bordered w-full" placeholder="e.g. open mic, workshop" />
+								<input
+									id="editTags"
+									name="tags"
+									type="text"
+									bind:value={editTags}
+									class="input input-bordered w-full"
+									placeholder="e.g. open mic, workshop"
+								/>
 							</FormField>
 
 							<!-- Ticketing -->
@@ -289,20 +352,39 @@
 								<div class="alert alert-warning">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
-										<p class="text-sm">{rebookReason}. The existing reservation will be cancelled and a new one created.</p>
+										<p class="text-sm">
+											{rebookReason}. The existing reservation will be cancelled and a new one
+											created.
+										</p>
 
 										<label class="label cursor-pointer justify-start gap-3">
-											<input type="checkbox" bind:checked={rebookConfirmed} class="checkbox checkbox-sm" />
+											<input
+												type="checkbox"
+												bind:checked={rebookConfirmed}
+												class="checkbox checkbox-sm"
+											/>
 											<span class="label-text">Confirm rebook</span>
 										</label>
 
 										{#if rebookConfirmed}
 											<div class="grid grid-cols-2 gap-4 mt-2">
 												<FormField label="Reservation start" id="editResStart" issues={[]}>
-													<input id="editResStart" name="reservationStartTime" type="time" bind:value={editReservationStartTime} class="input input-bordered w-full" />
+													<input
+														id="editResStart"
+														name="reservationStartTime"
+														type="time"
+														bind:value={editReservationStartTime}
+														class="input input-bordered w-full"
+													/>
 												</FormField>
 												<FormField label="Reservation end" id="editResEnd" issues={[]}>
-													<input id="editResEnd" name="reservationEndTime" type="time" bind:value={editReservationEndTime} class="input input-bordered w-full" />
+													<input
+														id="editResEnd"
+														name="reservationEndTime"
+														type="time"
+														bind:value={editReservationEndTime}
+														class="input input-bordered w-full"
+													/>
 												</FormField>
 											</div>
 
@@ -316,7 +398,11 @@
 											/>
 											{#if hasConflicts}
 												<label class="label cursor-pointer justify-start gap-3">
-													<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
+													<input
+														type="checkbox"
+														bind:checked={overrideConflicts}
+														class="checkbox checkbox-sm"
+													/>
 													<span class="label-text">Override conflicts</span>
 												</label>
 											{/if}
@@ -326,11 +412,10 @@
 							{/if}
 
 							<div class="flex justify-end gap-2 pt-2">
-								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}>Cancel</Button>
-								<SubmitButton
-									label="Save"
-									class="btn-primary btn-sm"
-								/>
+								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}
+									>Cancel</Button
+								>
+								<SubmitButton label="Save" class="btn-primary btn-sm" />
 							</div>
 						</div>
 					</Form>
@@ -466,7 +551,11 @@
 		<InfoCard title="Space Reservation">
 			<div class="flex items-center gap-3">
 				<StatusBadge status={data.linkedReservation.status} />
-				<span>{formatTime(data.linkedReservation.startsAt)} – {formatTime(data.linkedReservation.endsAt)}</span>
+				<span
+					>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
+						data.linkedReservation.endsAt
+					)}</span
+				>
 			</div>
 			<div class="mt-2">
 				<a href="/staff/reservations/{data.linkedReservation.id}" class="link link-primary text-sm">

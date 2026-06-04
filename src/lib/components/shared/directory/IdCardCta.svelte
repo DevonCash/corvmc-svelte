@@ -25,9 +25,7 @@
 		<div class="id-card__info">
 			<div class="id-card__name">Your name here</div>
 			<div class="id-card__role">Join the collective</div>
-			<div class="id-card__cta-arrow">
-				Get started &rarr;
-			</div>
+			<div class="id-card__cta-arrow">Get started &rarr;</div>
 		</div>
 	</div>
 	<div class="id-card__footer">

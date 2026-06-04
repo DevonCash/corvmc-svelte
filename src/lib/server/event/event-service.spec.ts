@@ -116,7 +116,10 @@ vi.mock('$lib/server/storage', () => ({
 }));
 
 import { create, publish, cancel, update, checkRebookNeeded } from './event-service';
-import { staffCreate, cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import {
+	staffCreate,
+	cancel as cancelReservation
+} from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 
@@ -243,9 +246,9 @@ describe('EventService', () => {
 		});
 
 		it('throws when ticketing is enabled but price is missing', async () => {
-			await expect(
-				create({ ...baseParams, ticketingEnabled: true })
-			).rejects.toThrow('Ticket price is required');
+			await expect(create({ ...baseParams, ticketingEnabled: true })).rejects.toThrow(
+				'Ticket price is required'
+			);
 		});
 
 		it('throws when ticketing is enabled but price is zero', async () => {
@@ -313,12 +316,9 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(cancelReservation).toHaveBeenCalledWith(
-				'res-1',
-				'staff-1',
-				'Event cancelled',
-				{ staffOverride: true }
-			);
+			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event cancelled', {
+				staffOverride: true
+			});
 		});
 
 		it('deletes poster from R2 when present', async () => {
@@ -371,10 +371,7 @@ describe('EventService', () => {
 
 		it('returns not needed when new times fit within reservation', async () => {
 			// First select: getById (event), second select: reservation row
-			selectResultQueue = [
-				[{ ...mockEventRow, reservationId: 'res-1' }],
-				[resRow]
-			];
+			selectResultQueue = [[{ ...mockEventRow, reservationId: 'res-1' }], [resRow]];
 
 			const result = await checkRebookNeeded(
 				'evt-1',
@@ -386,10 +383,7 @@ describe('EventService', () => {
 		});
 
 		it('returns needed when event starts earlier than reservation', async () => {
-			selectResultQueue = [
-				[{ ...mockEventRow, reservationId: 'res-1' }],
-				[resRow]
-			];
+			selectResultQueue = [[{ ...mockEventRow, reservationId: 'res-1' }], [resRow]];
 
 			const result = await checkRebookNeeded(
 				'evt-1',
@@ -402,10 +396,7 @@ describe('EventService', () => {
 		});
 
 		it('returns needed when event ends later than reservation', async () => {
-			selectResultQueue = [
-				[{ ...mockEventRow, reservationId: 'res-1' }],
-				[resRow]
-			];
+			selectResultQueue = [[{ ...mockEventRow, reservationId: 'res-1' }], [resRow]];
 
 			const result = await checkRebookNeeded(
 				'evt-1',
@@ -418,10 +409,7 @@ describe('EventService', () => {
 		});
 
 		it('returns needed with both reasons when extending both directions', async () => {
-			selectResultQueue = [
-				[{ ...mockEventRow, reservationId: 'res-1' }],
-				[resRow]
-			];
+			selectResultQueue = [[{ ...mockEventRow, reservationId: 'res-1' }], [resRow]];
 
 			const result = await checkRebookNeeded(
 				'evt-1',
@@ -435,10 +423,7 @@ describe('EventService', () => {
 		});
 
 		it('returns not needed when times match exactly', async () => {
-			selectResultQueue = [
-				[{ ...mockEventRow, reservationId: 'res-1' }],
-				[resRow]
-			];
+			selectResultQueue = [[{ ...mockEventRow, reservationId: 'res-1' }], [resRow]];
 
 			const result = await checkRebookNeeded(
 				'evt-1',
@@ -497,9 +482,7 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(staffCreate).toHaveBeenCalledWith(
-				expect.objectContaining({ status: 'scheduled' })
-			);
+			expect(staffCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'scheduled' }));
 		});
 
 		it('throws on conflict when override is false', async () => {
@@ -574,7 +557,15 @@ describe('EventService', () => {
 		});
 
 		it('clears price and quantity when disabling ticketing', async () => {
-			selectResult = [{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 100 }];
+			selectResult = [
+				{
+					...mockEventRow,
+					status: 'draft',
+					ticketingEnabled: true,
+					ticketPrice: 2000,
+					ticketQuantity: 100
+				}
+			];
 
 			await update('evt-1', {
 				ticketingEnabled: false
@@ -590,21 +581,23 @@ describe('EventService', () => {
 		it('throws when enabling ticketing without price', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
 
-			await expect(
-				update('evt-1', { ticketingEnabled: true })
-			).rejects.toThrow('Ticket price is required');
+			await expect(update('evt-1', { ticketingEnabled: true })).rejects.toThrow(
+				'Ticket price is required'
+			);
 		});
 
 		it('throws when enabling ticketing with zero price', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
 
-			await expect(
-				update('evt-1', { ticketingEnabled: true, ticketPrice: 0 })
-			).rejects.toThrow('Ticket price is required');
+			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 0 })).rejects.toThrow(
+				'Ticket price is required'
+			);
 		});
 
 		it('updates price independently when ticketingEnabled is not changed', async () => {
-			selectResult = [{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 1500 }];
+			selectResult = [
+				{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 1500 }
+			];
 
 			await update('evt-1', { ticketPrice: 2500 });
 
@@ -615,9 +608,9 @@ describe('EventService', () => {
 		it('rejects update on cancelled event', async () => {
 			selectResult = [{ ...mockEventRow, status: 'cancelled' }];
 
-			await expect(
-				update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })
-			).rejects.toThrow('Cannot update a cancelled event');
+			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })).rejects.toThrow(
+				'Cannot update a cancelled event'
+			);
 		});
 	});
 });

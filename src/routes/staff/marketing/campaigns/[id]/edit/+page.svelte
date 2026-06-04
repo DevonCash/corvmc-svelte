@@ -136,9 +136,9 @@
 	}
 </script>
 
-	<PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
-		<Button class="btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</Button>
-	</PageHeader>
+<PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
+	<Button class="btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</Button>
+</PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 		<!-- Editor pane -->
@@ -158,7 +158,13 @@
 				<p class="label text-sm font-medium">Audiences</p>
 				<div class="flex flex-wrap gap-2">
 					{#each audiences as a (a.id)}
-						<label class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(a.id) ? 'border-primary bg-primary/10' : 'border-base-300'}">
+						<label
+							class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(
+								a.id
+							)
+								? 'border-primary bg-primary/10'
+								: 'border-base-300'}"
+						>
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm checkbox-primary"
@@ -171,7 +177,9 @@
 					{/each}
 				</div>
 				{#if selectedAudienceIds.length > 0}
-					<p class="text-xs opacity-60 mt-1">~{totalSubscribers} recipients (before deduplication)</p>
+					<p class="text-xs opacity-60 mt-1">
+						~{totalSubscribers} recipients (before deduplication)
+					</p>
 				{/if}
 			</div>
 

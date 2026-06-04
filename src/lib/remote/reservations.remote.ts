@@ -3,9 +3,30 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
-import { reservation, type Reservation, reservationStatuses, type ReservationStatus } from '$lib/server/db/schema/reservation';
+import {
+	reservation,
+	type Reservation,
+	reservationStatuses,
+	type ReservationStatus
+} from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
-import { like, or, eq, ne, and, lt, gt, lte, inArray, notInArray, sql, isNull, asc, desc, count } from 'drizzle-orm';
+import {
+	like,
+	or,
+	eq,
+	ne,
+	and,
+	lt,
+	gt,
+	lte,
+	inArray,
+	notInArray,
+	sql,
+	isNull,
+	asc,
+	desc,
+	count
+} from 'drizzle-orm';
 import { getBySlug } from '$lib/server/band/band-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -61,11 +82,7 @@ import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '$lib/config';
 export const getReservationPayment = query(z.string(), async (id) => {
 	const currentUser = requireUser();
 
-	const [row] = await db
-		.select()
-		.from(reservation)
-		.where(eq(reservation.id, id))
-		.limit(1);
+	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
@@ -195,9 +212,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		)
 		.orderBy(asc(reservation.startsAt));
 
-	const isLastOfDay = sameDayReservations.filter(
-		(r) => r.startsAt.getTime() > row.startsAt.getTime()
-	).length === 0;
+	const isLastOfDay =
+		sameDayReservations.filter((r) => r.startsAt.getTime() > row.startsAt.getTime()).length === 0;
 
 	const [prevRow] = await db
 		.select({ id: reservation.id })
@@ -596,8 +612,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	}
 
 	if (filters.statusFilter && filters.statusFilter.length > 0) {
-		const valid = filters.statusFilter.filter(
-			(s): s is ReservationStatus => (reservationStatuses as readonly string[]).includes(s)
+		const valid = filters.statusFilter.filter((s): s is ReservationStatus =>
+			(reservationStatuses as readonly string[]).includes(s)
 		);
 		if (valid.length > 0) conditions.push(inArray(reservation.status, valid));
 	}

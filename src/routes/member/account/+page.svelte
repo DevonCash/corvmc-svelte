@@ -32,7 +32,6 @@
 
 <PageHeader title="Account Settings" />
 <PageContent width="2xl">
-
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">
 		<Form
@@ -251,8 +250,8 @@
 						{#snippet form({ close })}
 							<div class="alert alert-error">
 								<p>
-									This action is permanent. Deleting your account will cancel all of your current and
-									future reservations and end your subscription. This cannot be undone.
+									This action is permanent. Deleting your account will cancel all of your current
+									and future reservations and end your subscription. This cannot be undone.
 								</p>
 							</div>
 

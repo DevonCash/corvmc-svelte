@@ -3,7 +3,8 @@ export default {
 	meta: {
 		type: 'suggestion',
 		docs: {
-			description: 'Disallow raw <form> elements in route page files. Use the Form component instead.'
+			description:
+				'Disallow raw <form> elements in route page files. Use the Form component instead.'
 		},
 		messages: {
 			noRawForm:

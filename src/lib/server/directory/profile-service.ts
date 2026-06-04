@@ -5,7 +5,11 @@ import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
 import { sanitizeBio } from '$lib/utils/markdown';
 import type { BatchItem } from 'drizzle-orm/batch';
-import type { DirectoryContact, DirectoryVisibility, ProfileLink } from '$lib/server/db/schema/authentication';
+import type {
+	DirectoryContact,
+	DirectoryVisibility,
+	ProfileLink
+} from '$lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -104,9 +108,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 		queries.push(db.delete(userGenre).where(eq(userGenre.userId, userId)));
 		const tags = validateTags(data.genres);
 		if (tags.length > 0) {
-			queries.push(
-				db.insert(userGenre).values(tags.map((genre) => ({ userId, genre })))
-			);
+			queries.push(db.insert(userGenre).values(tags.map((genre) => ({ userId, genre }))));
 		}
 	}
 
@@ -180,11 +182,7 @@ async function requireBandAdmin(bandId: string, userId: string) {
 	}
 }
 
-export async function updateBandProfile(
-	bandId: string,
-	userId: string,
-	data: BandProfileData
-) {
+export async function updateBandProfile(bandId: string, userId: string, data: BandProfileData) {
 	await requireBandAdmin(bandId, userId);
 
 	let mergedContact: DirectoryContact | null = null;
@@ -216,9 +214,7 @@ export async function updateBandProfile(
 		queries.push(db.delete(bandGenre).where(eq(bandGenre.bandId, bandId)));
 		const tags = validateTags(data.genres);
 		if (tags.length > 0) {
-			queries.push(
-				db.insert(bandGenre).values(tags.map((genre) => ({ bandId, genre })))
-			);
+			queries.push(db.insert(bandGenre).values(tags.map((genre) => ({ bandId, genre }))));
 		}
 	}
 
@@ -237,7 +233,11 @@ const AVATAR_EXTENSIONS: Record<string, string> = {
 
 /** Upload a user's avatar to storage and persist its key on `user.image`. */
 export async function setUserAvatar(userId: string, buffer: ArrayBuffer, contentType: string) {
-	const [row] = await db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1);
+	const [row] = await db
+		.select({ image: user.image })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
 
 	// Only delete a previously-uploaded avatar key, not an external OAuth URL.
 	if (row?.image && !row.image.startsWith('http')) {
@@ -258,7 +258,11 @@ export async function setUserAvatar(userId: string, buffer: ArrayBuffer, content
 
 /** Remove a user's avatar from storage and clear `user.image`. */
 export async function clearUserAvatar(userId: string) {
-	const [row] = await db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1);
+	const [row] = await db
+		.select({ image: user.image })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
 
 	if (row?.image && !row.image.startsWith('http')) {
 		try {

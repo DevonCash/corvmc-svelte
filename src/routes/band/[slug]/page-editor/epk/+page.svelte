@@ -50,9 +50,7 @@
 	{#if !isPremium}
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
-			<p class="mt-2 opacity-70">
-				The EPK editor is available with a premium band subscription.
-			</p>
+			<p class="mt-2 opacity-70">The EPK editor is available with a premium band subscription.</p>
 			<Button href="../../../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
 		</EmptyState>
 	{:else}
@@ -88,7 +86,10 @@
 									placeholder="Name"
 									value={epk.bookingContact?.name ?? ''}
 									oninput={(e) => {
-										epk.bookingContact = { ...(epk.bookingContact ?? { name: '', email: '' }), name: e.currentTarget.value };
+										epk.bookingContact = {
+											...(epk.bookingContact ?? { name: '', email: '' }),
+											name: e.currentTarget.value
+										};
 									}}
 								/>
 								<input
@@ -97,7 +98,10 @@
 									placeholder="Email"
 									value={epk.bookingContact?.email ?? ''}
 									oninput={(e) => {
-										epk.bookingContact = { ...(epk.bookingContact ?? { name: '', email: '' }), email: e.currentTarget.value };
+										epk.bookingContact = {
+											...(epk.bookingContact ?? { name: '', email: '' }),
+											email: e.currentTarget.value
+										};
 									}}
 								/>
 								<input
@@ -106,7 +110,10 @@
 									placeholder="Phone (optional)"
 									value={epk.bookingContact?.phone ?? ''}
 									oninput={(e) => {
-										epk.bookingContact = { ...(epk.bookingContact ?? { name: '', email: '' }), phone: e.currentTarget.value || undefined };
+										epk.bookingContact = {
+											...(epk.bookingContact ?? { name: '', email: '' }),
+											phone: e.currentTarget.value || undefined
+										};
 									}}
 								/>
 							</div>
@@ -120,7 +127,10 @@
 									placeholder="Name"
 									value={epk.managementContact?.name ?? ''}
 									oninput={(e) => {
-										epk.managementContact = { ...(epk.managementContact ?? { name: '', email: '' }), name: e.currentTarget.value };
+										epk.managementContact = {
+											...(epk.managementContact ?? { name: '', email: '' }),
+											name: e.currentTarget.value
+										};
 									}}
 								/>
 								<input
@@ -129,7 +139,10 @@
 									placeholder="Email"
 									value={epk.managementContact?.email ?? ''}
 									oninput={(e) => {
-										epk.managementContact = { ...(epk.managementContact ?? { name: '', email: '' }), email: e.currentTarget.value };
+										epk.managementContact = {
+											...(epk.managementContact ?? { name: '', email: '' }),
+											email: e.currentTarget.value
+										};
 									}}
 								/>
 							</div>
@@ -143,7 +156,10 @@
 									placeholder="Name"
 									value={epk.prContact?.name ?? ''}
 									oninput={(e) => {
-										epk.prContact = { ...(epk.prContact ?? { name: '', email: '' }), name: e.currentTarget.value };
+										epk.prContact = {
+											...(epk.prContact ?? { name: '', email: '' }),
+											name: e.currentTarget.value
+										};
 									}}
 								/>
 								<input
@@ -152,7 +168,10 @@
 									placeholder="Email"
 									value={epk.prContact?.email ?? ''}
 									oninput={(e) => {
-										epk.prContact = { ...(epk.prContact ?? { name: '', email: '' }), email: e.currentTarget.value };
+										epk.prContact = {
+											...(epk.prContact ?? { name: '', email: '' }),
+											email: e.currentTarget.value
+										};
 									}}
 								/>
 							</div>
@@ -165,7 +184,9 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Press Quotes</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addPressQuote}>Add Quote</button>
+							<button type="button" class="btn btn-sm btn-primary" onclick={addPressQuote}
+								>Add Quote</button
+							>
 						</div>
 
 						{#if !epk.pressQuotes || epk.pressQuotes.length === 0}
@@ -180,7 +201,9 @@
 												rows="2"
 												placeholder="Quote text..."
 												value={quote.quote}
-												oninput={(e) => { epk.pressQuotes![i] = { ...quote, quote: e.currentTarget.value }; }}
+												oninput={(e) => {
+													epk.pressQuotes![i] = { ...quote, quote: e.currentTarget.value };
+												}}
 											></textarea>
 											<div class="grid grid-cols-2 gap-2">
 												<input
@@ -188,18 +211,29 @@
 													class="input input-bordered input-sm"
 													placeholder="Publication"
 													value={quote.publication}
-													oninput={(e) => { epk.pressQuotes![i] = { ...quote, publication: e.currentTarget.value }; }}
+													oninput={(e) => {
+														epk.pressQuotes![i] = { ...quote, publication: e.currentTarget.value };
+													}}
 												/>
 												<input
 													type="text"
 													class="input input-bordered input-sm"
 													placeholder="Date (optional)"
 													value={quote.date ?? ''}
-													oninput={(e) => { epk.pressQuotes![i] = { ...quote, date: e.currentTarget.value || undefined }; }}
+													oninput={(e) => {
+														epk.pressQuotes![i] = {
+															...quote,
+															date: e.currentTarget.value || undefined
+														};
+													}}
 												/>
 											</div>
 										</div>
-										<button type="button" class="btn btn-ghost btn-sm btn-square" onclick={() => removePressQuote(i)}>✕</button>
+										<button
+											type="button"
+											class="btn btn-ghost btn-sm btn-square"
+											onclick={() => removePressQuote(i)}>✕</button
+										>
 									</div>
 								{/each}
 							</div>
@@ -212,9 +246,13 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Achievements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addAchievement}>Add</button>
+							<button type="button" class="btn btn-sm btn-primary" onclick={addAchievement}
+								>Add</button
+							>
 						</div>
-						<p class="text-sm opacity-60">Awards, notable supports, festival appearances, streaming milestones.</p>
+						<p class="text-sm opacity-60">
+							Awards, notable supports, festival appearances, streaming milestones.
+						</p>
 
 						{#if !epk.achievements || epk.achievements.length === 0}
 							<p class="text-sm opacity-60 mt-2">No achievements yet.</p>
@@ -227,9 +265,15 @@
 											class="input input-bordered input-sm flex-1"
 											placeholder="e.g. Opened for The National (2024)"
 											value={achievement}
-											oninput={(e) => { epk.achievements![i] = e.currentTarget.value; }}
+											oninput={(e) => {
+												epk.achievements![i] = e.currentTarget.value;
+											}}
 										/>
-										<button type="button" class="btn btn-ghost btn-sm btn-square" onclick={() => removeAchievement(i)}>✕</button>
+										<button
+											type="button"
+											class="btn btn-ghost btn-sm btn-square"
+											onclick={() => removeAchievement(i)}>✕</button
+										>
 									</div>
 								{/each}
 							</div>
@@ -242,7 +286,9 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Backline Requirements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addBacklineItem}>Add Item</button>
+							<button type="button" class="btn btn-sm btn-primary" onclick={addBacklineItem}
+								>Add Item</button
+							>
 						</div>
 						<p class="text-sm opacity-60">Equipment you need from the venue vs. what you bring.</p>
 
@@ -268,30 +314,43 @@
 														class="input input-bordered input-sm w-full"
 														placeholder="e.g. Drums"
 														value={item.instrument}
-														oninput={(e) => { epk.backline![i] = { ...item, instrument: e.currentTarget.value }; }}
+														oninput={(e) => {
+															epk.backline![i] = { ...item, instrument: e.currentTarget.value };
+														}}
 													/>
 												</td>
 												<td>
 													<input
 														type="text"
 														class="input input-bordered input-sm w-full"
-														placeholder='e.g. 5-piece kit, 22" kick'
+														placeholder="e.g. 5-piece kit, 22&quot; kick"
 														value={item.details}
-														oninput={(e) => { epk.backline![i] = { ...item, details: e.currentTarget.value }; }}
+														oninput={(e) => {
+															epk.backline![i] = { ...item, details: e.currentTarget.value };
+														}}
 													/>
 												</td>
 												<td>
 													<select
 														class="select select-bordered select-sm"
 														value={item.provided ? 'band' : 'venue'}
-														onchange={(e) => { epk.backline![i] = { ...item, provided: e.currentTarget.value === 'band' }; }}
+														onchange={(e) => {
+															epk.backline![i] = {
+																...item,
+																provided: e.currentTarget.value === 'band'
+															};
+														}}
 													>
 														<option value="band">Band</option>
 														<option value="venue">Venue</option>
 													</select>
 												</td>
 												<td>
-													<button type="button" class="btn btn-ghost btn-sm btn-square" onclick={() => removeBacklineItem(i)}>✕</button>
+													<button
+														type="button"
+														class="btn btn-ghost btn-sm btn-square"
+														onclick={() => removeBacklineItem(i)}>✕</button
+													>
 												</td>
 											</tr>
 										{/each}

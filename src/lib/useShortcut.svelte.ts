@@ -6,10 +6,7 @@ import {
 	type ParsedShortcut
 } from '$lib/shortcuts';
 
-export function useShortcut(
-	getShortcut: () => string | undefined,
-	onTrigger: () => void
-) {
+export function useShortcut(getShortcut: () => string | undefined, onTrigger: () => void) {
 	let modHeld = $state(false);
 	let parsed = $derived(getShortcut() ? parseShortcut(getShortcut()!) : null);
 
@@ -45,8 +42,12 @@ export function useShortcut(
 	});
 
 	return {
-		get modHeld() { return modHeld; },
-		get parsed() { return parsed; }
+		get modHeld() {
+			return modHeld;
+		},
+		get parsed() {
+			return parsed;
+		}
 	};
 }
 

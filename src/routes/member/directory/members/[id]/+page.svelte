@@ -66,7 +66,9 @@
 				</div>
 
 				{#if member.bio}
-					<div class="profile-card__bio prose prose-sm max-w-none">{@html sanitizeBio(member.bio)}</div>
+					<div class="profile-card__bio prose prose-sm max-w-none">
+						{@html sanitizeBio(member.bio)}
+					</div>
 				{/if}
 
 				{#if member.instruments?.length || member.genres?.length}

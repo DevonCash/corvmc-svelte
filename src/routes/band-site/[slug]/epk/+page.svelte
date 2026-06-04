@@ -8,20 +8,32 @@
 	const epk = $derived(data.config?.epk);
 	const members = $derived(data.members);
 	const events = $derived(data.events);
-	const galleryMedia = $derived(data.media.filter(m => m.type === 'image'));
-	const stagePlot = $derived(data.media.find(m => m.type === 'stage_plot'));
-	const riderMedia = $derived(data.media.find(m => m.type === 'rider'));
+	const galleryMedia = $derived(data.media.filter((m) => m.type === 'image'));
+	const stagePlot = $derived(data.media.find((m) => m.type === 'stage_plot'));
+	const riderMedia = $derived(data.media.find((m) => m.type === 'rider'));
 </script>
 
 <svelte:head>
 	<title>EPK — {band.name}</title>
 	<style>
 		@media print {
-			.no-print { display: none !important; }
-			body { font-size: 11pt; }
-			.epk-page { padding: 0; max-width: 100%; }
-			.page-break { page-break-before: always; }
-			a { color: inherit; text-decoration: none; }
+			.no-print {
+				display: none !important;
+			}
+			body {
+				font-size: 11pt;
+			}
+			.epk-page {
+				padding: 0;
+				max-width: 100%;
+			}
+			.page-break {
+				page-break-before: always;
+			}
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
 		}
 	</style>
 </svelte:head>
@@ -31,12 +43,7 @@
 	<button class="btn btn-primary btn-sm" onclick={() => window.print()}>
 		Download / Print PDF
 	</button>
-	<a
-		href="/?__band_subdomain={band.slug}"
-		class="btn btn-ghost btn-sm"
-	>
-		&larr; Back
-	</a>
+	<a href="/?__band_subdomain={band.slug}" class="btn btn-ghost btn-sm"> &larr; Back </a>
 </div>
 
 <div class="epk-page max-w-3xl mx-auto px-8 py-12 bg-white text-gray-900 min-h-screen">
@@ -63,7 +70,9 @@
 	{#if band.bio}
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">About</h2>
-			<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">{@html sanitizeBio(band.bio)}</div>
+			<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+				{@html sanitizeBio(band.bio)}
+			</div>
 		</section>
 	{/if}
 
@@ -74,7 +83,9 @@
 			<div class="flex flex-wrap gap-x-6 gap-y-1">
 				{#each members as member}
 					<span class="text-gray-700">
-						{member.name}{#if member.position}<span class="text-gray-400"> — {member.position}</span>{/if}
+						{member.name}{#if member.position}<span class="text-gray-400">
+								— {member.position}</span
+							>{/if}
 					</span>
 				{/each}
 			</div>
@@ -153,10 +164,16 @@
 	<!-- Technical Requirements -->
 	{#if epk?.backline && epk.backline.length > 0}
 		<section class="mb-8 page-break">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Technical Requirements</h2>
+			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">
+				Technical Requirements
+			</h2>
 
 			{#if stagePlot?.url}
-				<img src={stagePlot.url} alt="Stage Plot" class="rounded mb-4 max-w-full max-h-64 object-contain" />
+				<img
+					src={stagePlot.url}
+					alt="Stage Plot"
+					class="rounded mb-4 max-w-full max-h-64 object-contain"
+				/>
 			{/if}
 
 			<table class="w-full text-sm">

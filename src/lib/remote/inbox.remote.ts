@@ -116,7 +116,10 @@ export const addThreadNote = form(noteSchema, async (data) => {
 
 const assignSchema = z.object({
 	threadId: z.string().min(1),
-	userId: z.string().optional().transform((v) => v || null)
+	userId: z
+		.string()
+		.optional()
+		.transform((v) => v || null)
 });
 
 export const assignThread = form(assignSchema, async (data) => {

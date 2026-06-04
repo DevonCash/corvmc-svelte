@@ -91,13 +91,13 @@ Confirmed ──→ Cancelled (triggers refund)
 
 ### Allowed transitions
 
-| From | To | Triggered by |
-|---|---|---|
+| From      | To        | Triggered by                                                                   |
+| --------- | --------- | ------------------------------------------------------------------------------ |
 | Scheduled | Confirmed | Payment completed (Stripe webhook, credits fully cover, or staff records cash) |
-| Scheduled | Cancelled | Member cancels, or staff cancels |
-| Confirmed | Completed | Staff marks complete via resolution queue |
-| Confirmed | NoShow | Staff marks no-show via resolution queue |
-| Confirmed | Cancelled | Member cancels (refund triggered), or staff cancels |
+| Scheduled | Cancelled | Member cancels, or staff cancels                                               |
+| Confirmed | Completed | Staff marks complete via resolution queue                                      |
+| Confirmed | NoShow    | Staff marks no-show via resolution queue                                       |
+| Confirmed | Cancelled | Member cancels (refund triggered), or staff cancels                            |
 
 ### Staff resolution queue
 
@@ -209,8 +209,8 @@ The reservation module stores the `stripePaymentRecordId` returned by the paymen
 
 ### Cross-module events
 
-| Event | Fired by | Consumed by |
-|---|---|---|
+| Event                        | Fired by             | Consumed by                                |
+| ---------------------------- | -------------------- | ------------------------------------------ |
 | `checkout.session.completed` | Stripe (via webhook) | Reservation module (scheduled → confirmed) |
 
 The reservation module registers a checkout listener that checks for `reservation_id` in the session metadata. If present, it transitions that reservation to confirmed and stores the payment record ID.
@@ -221,26 +221,28 @@ The reservation module registers a checkout listener that checks for `reservatio
 
 ### reservation
 
-| Column | Type | Constraints |
-|---|---|---|
-| id | uuid | PK, default gen_random_uuid() |
-| booker_type | text | NOT NULL, CHECK IN ('user', 'band', 'event', 'lesson') |
-| booker_id | text | NOT NULL |
-| created_by_user_id | text | NOT NULL, FK → user(id) |
-| status | text | NOT NULL, default 'scheduled', CHECK IN ('scheduled', 'confirmed', 'completed', 'no_show', 'cancelled') |
-| starts_at | timestamptz | NOT NULL |
-| ends_at | timestamptz | NOT NULL |
-| notes | text | |
-| cancellation_reason | text | |
-| stripe_payment_record_id | text | |
-| lock_access_id | text | |
-| created_at | timestamptz | NOT NULL, default now() |
-| updated_at | timestamptz | NOT NULL, default now() |
+| Column                   | Type        | Constraints                                                                                             |
+| ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------- |
+| id                       | uuid        | PK, default gen_random_uuid()                                                                           |
+| booker_type              | text        | NOT NULL, CHECK IN ('user', 'band', 'event', 'lesson')                                                  |
+| booker_id                | text        | NOT NULL                                                                                                |
+| created_by_user_id       | text        | NOT NULL, FK → user(id)                                                                                 |
+| status                   | text        | NOT NULL, default 'scheduled', CHECK IN ('scheduled', 'confirmed', 'completed', 'no_show', 'cancelled') |
+| starts_at                | timestamptz | NOT NULL                                                                                                |
+| ends_at                  | timestamptz | NOT NULL                                                                                                |
+| notes                    | text        |                                                                                                         |
+| cancellation_reason      | text        |                                                                                                         |
+| stripe_payment_record_id | text        |                                                                                                         |
+| lock_access_id           | text        |                                                                                                         |
+| created_at               | timestamptz | NOT NULL, default now()                                                                                 |
+| updated_at               | timestamptz | NOT NULL, default now()                                                                                 |
 
 **Constraints:**
+
 - `CHECK (ends_at > starts_at)`
 
 **Indexes:**
+
 - `idx_reservation_conflict` on (starts_at, ends_at) WHERE status != 'cancelled'
 - `idx_reservation_user` on (created_by_user_id, status)
 - `idx_reservation_booker` on (booker_type, booker_id)
@@ -248,33 +250,35 @@ The reservation module registers a checkout listener that checks for `reservatio
 
 ### closure
 
-| Column | Type | Constraints |
-|---|---|---|
-| id | uuid | PK, default gen_random_uuid() |
-| reason | text | NOT NULL |
-| starts_at | timestamptz | NOT NULL |
-| ends_at | timestamptz | NOT NULL |
-| created_at | timestamptz | NOT NULL, default now() |
+| Column     | Type        | Constraints                   |
+| ---------- | ----------- | ----------------------------- |
+| id         | uuid        | PK, default gen_random_uuid() |
+| reason     | text        | NOT NULL                      |
+| starts_at  | timestamptz | NOT NULL                      |
+| ends_at    | timestamptz | NOT NULL                      |
+| created_at | timestamptz | NOT NULL, default now()       |
 
 **Constraints:**
+
 - `CHECK (ends_at > starts_at)`
 
 **Indexes:**
+
 - `idx_closure_time` on (starts_at, ends_at)
 
 ---
 
 ## Configuration
 
-| Setting | Default | Description |
-|---|---|---|
-| `HOURLY_RATE_CENTS` | 1500 | Per-hour cost ($15.00) |
-| `TIME_SLOT_MINUTES` | 30 | Granularity of time slots |
-| `MIN_DURATION_HOURS` | 1 | Minimum reservation duration |
-| `MAX_DURATION_HOURS` | 8 | Maximum reservation duration |
-| `OPERATING_HOURS_START` | "09:00" | Earliest bookable time |
-| `OPERATING_HOURS_END` | "22:00" | Latest end time |
-| `BUFFER_MINUTES` | 0 | Required gap between back-to-back reservations |
+| Setting                 | Default | Description                                    |
+| ----------------------- | ------- | ---------------------------------------------- |
+| `HOURLY_RATE_CENTS`     | 1500    | Per-hour cost ($15.00)                         |
+| `TIME_SLOT_MINUTES`     | 30      | Granularity of time slots                      |
+| `MIN_DURATION_HOURS`    | 1       | Minimum reservation duration                   |
+| `MAX_DURATION_HOURS`    | 8       | Maximum reservation duration                   |
+| `OPERATING_HOURS_START` | "09:00" | Earliest bookable time                         |
+| `OPERATING_HOURS_END`   | "22:00" | Latest end time                                |
+| `BUFFER_MINUTES`        | 0       | Required gap between back-to-back reservations |
 
 ---
 
@@ -327,37 +331,37 @@ The reservation module registers a checkout listener that checks for `reservatio
 
 ## Permissions
 
-| Action | Who |
-|---|---|
-| Create reservation | Any authenticated member |
-| Cancel own reservation | The member who created it (`createdByUserId`) |
-| Pay for own reservation | The member who created it |
-| View own reservations | The member who created it |
-| Resolve reservations (complete, no-show, cash) | Staff |
-| Manage closures (create, delete) | Staff |
+| Action                                         | Who                                           |
+| ---------------------------------------------- | --------------------------------------------- |
+| Create reservation                             | Any authenticated member                      |
+| Cancel own reservation                         | The member who created it (`createdByUserId`) |
+| Pay for own reservation                        | The member who created it                     |
+| View own reservations                          | The member who created it                     |
+| Resolve reservations (complete, no-show, cash) | Staff                                         |
+| Manage closures (create, delete)               | Staff                                         |
 
 ---
 
 ## What changes
 
-| Area | Change |
-|---|---|
-| Database | New tables: `reservation`, `closure` |
-| Finance module | Reservation checkout listener registered via `onCheckoutComplete` |
-| Member layout | New nav item: Reservations |
-| Staff layout | New nav items: Resolution Queue, Closures |
-| Scheduled processes | Morning lock provisioning, next-day lock cleanup |
-| Environment | Ultraloc API credentials (client ID, secret, device ID) |
+| Area                | Change                                                            |
+| ------------------- | ----------------------------------------------------------------- |
+| Database            | New tables: `reservation`, `closure`                              |
+| Finance module      | Reservation checkout listener registered via `onCheckoutComplete` |
+| Member layout       | New nav item: Reservations                                        |
+| Staff layout        | New nav items: Resolution Queue, Closures                         |
+| Scheduled processes | Morning lock provisioning, next-day lock cleanup                  |
+| Environment         | Ultraloc API credentials (client ID, secret, device ID)           |
 
 ## What doesn't change
 
-| Area | Notes |
-|---|---|
-| Subscription/membership | Free hours already allocated monthly |
-| Credit system | `free_hours` wallet already exists, deduction logic unchanged |
-| Payment service | `checkout()`, `recordCashPayment()`, `refund()` used as-is |
-| Webhook route | Already dispatches to registered listeners |
-| Auth/authorization | No new roles needed |
+| Area                    | Notes                                                         |
+| ----------------------- | ------------------------------------------------------------- |
+| Subscription/membership | Free hours already allocated monthly                          |
+| Credit system           | `free_hours` wallet already exists, deduction logic unchanged |
+| Payment service         | `checkout()`, `recordCashPayment()`, `refund()` used as-is    |
+| Webhook route           | Already dispatches to registered listeners                    |
+| Auth/authorization      | No new roles needed                                           |
 
 ---
 

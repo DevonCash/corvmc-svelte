@@ -44,10 +44,7 @@ async function queryStats(): Promise<CommunityStats> {
 	const sustainingMemberCount = allocationStats?.memberCount ?? 0;
 	const totalFreeHoursAllocated = Number(allocationStats?.totalHours ?? 0);
 
-	const [userStats] = await db
-		.select({ total: count() })
-		.from(user)
-		.where(isNull(user.deletedAt));
+	const [userStats] = await db.select({ total: count() }).from(user).where(isNull(user.deletedAt));
 
 	const totalUsers = userStats?.total ?? 0;
 
@@ -64,9 +61,5 @@ async function queryStats(): Promise<CommunityStats> {
 function getMonthStart(): Date {
 	const TZ = DEFAULT_TIMEZONE;
 	const now = getPartsInTz(new Date(), TZ);
-	return buildDateInTz(
-		`${now.year}-${String(now.month).padStart(2, '0')}-01`,
-		'00:00',
-		TZ
-	);
+	return buildDateInTz(`${now.year}-${String(now.month).padStart(2, '0')}-01`, '00:00', TZ);
 }

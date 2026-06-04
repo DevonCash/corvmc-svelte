@@ -8,10 +8,10 @@ Paid reservations auto-complete after their end time. The resolve modal only sur
 
 ## Routes
 
-| Route | Purpose |
-|---|---|
-| `/staff/reservations` | Filterable list with resolve modal and create modal |
-| `/staff/reservations/[id]` | Detail view with actions |
+| Route                      | Purpose                                             |
+| -------------------------- | --------------------------------------------------- |
+| `/staff/reservations`      | Filterable list with resolve modal and create modal |
+| `/staff/reservations/[id]` | Detail view with actions                            |
 
 Add "Reservations" to the staff sidebar nav between "Users" and "Closures". Remove the "Resolve" link.
 
@@ -30,13 +30,13 @@ Each tab label shows its count as a badge.
 
 ### Table columns
 
-| Column | Source | Sortable | Notes |
-|---|---|---|---|
-| Status | `status` | no | `StatusBadge` component |
-| Time | `startsAt` / `endsAt` | yes (by `startsAt`) | Date on first line, time range on second. Format: "Mon, May 12" / "2:00 – 4:00 PM" |
-| Member | join on `user` | yes (by name) | Name as link to `/staff/users/{id}`, email below in `text-sm opacity-60` |
-| Payment | computed | no | Amount on first line (e.g. "$30.00"), payment status below as a small badge. See Payment Status below. |
-| Booker | `bookerType` | no | Badge: "user", "band", "event", "lesson" |
+| Column  | Source                | Sortable            | Notes                                                                                                  |
+| ------- | --------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Status  | `status`              | no                  | `StatusBadge` component                                                                                |
+| Time    | `startsAt` / `endsAt` | yes (by `startsAt`) | Date on first line, time range on second. Format: "Mon, May 12" / "2:00 – 4:00 PM"                     |
+| Member  | join on `user`        | yes (by name)       | Name as link to `/staff/users/{id}`, email below in `text-sm opacity-60`                               |
+| Payment | computed              | no                  | Amount on first line (e.g. "$30.00"), payment status below as a small badge. See Payment Status below. |
+| Booker  | `bookerType`          | no                  | Badge: "user", "band", "event", "lesson"                                                               |
 
 Rows are clickable links to the view page.
 
@@ -44,16 +44,16 @@ Rows are clickable links to the view page.
 
 Payment status is derived from reservation state + `stripePaymentRecordId`. Note that `confirmed` + paid is transient — the auto-complete cron moves these to `completed` within 15 minutes of their end time.
 
-| Reservation status | Has payment record? | Display |
-|---|---|---|
-| `scheduled` | no | badge-warning "Unpaid" |
-| `confirmed` | yes | badge-success "Paid" |
-| `confirmed` | no | badge-info "Comped" (confirmed without payment = staff override) |
-| `completed` | yes | badge-success "Paid" |
-| `completed` | no | badge-info "Comped" |
-| `cancelled` | yes | badge-error "Refunded" |
-| `cancelled` | no | badge-ghost "Cancelled" |
-| `no_show` | any | badge-error "No-show" |
+| Reservation status | Has payment record? | Display                                                          |
+| ------------------ | ------------------- | ---------------------------------------------------------------- |
+| `scheduled`        | no                  | badge-warning "Unpaid"                                           |
+| `confirmed`        | yes                 | badge-success "Paid"                                             |
+| `confirmed`        | no                  | badge-info "Comped" (confirmed without payment = staff override) |
+| `completed`        | yes                 | badge-success "Paid"                                             |
+| `completed`        | no                  | badge-info "Comped"                                              |
+| `cancelled`        | yes                 | badge-error "Refunded"                                           |
+| `cancelled`        | no                  | badge-ghost "Cancelled"                                          |
+| `no_show`          | any                 | badge-error "No-show"                                            |
 
 Amount is computed as `durationHours × HOURLY_RATE_CENTS`, formatted as currency. Shown on first line of the cell.
 
@@ -231,13 +231,13 @@ Uses `border-error` or a subtle red tint to visually distinguish.
 
 Shown in the `PageHeader` slot, right-aligned. Available actions depend on current status:
 
-| Current status | Available actions |
-|---|---|
-| `scheduled` | Confirm, Cash Received, Cancel, No-Show |
-| `confirmed` | Complete, Cancel, No-Show |
-| `completed` | — |
-| `no_show` | — |
-| `cancelled` | — |
+| Current status | Available actions                       |
+| -------------- | --------------------------------------- |
+| `scheduled`    | Confirm, Cash Received, Cancel, No-Show |
+| `confirmed`    | Complete, Cancel, No-Show               |
+| `completed`    | —                                       |
+| `no_show`      | —                                       |
+| `cancelled`    | —                                       |
 
 Button styles:
 
@@ -312,18 +312,18 @@ Add an `autoCompleteExpired()` function to `reservation-service.ts`:
 
 ```typescript
 export async function autoCompleteExpired(): Promise<number> {
-  const now = new Date();
-  const result = await db
-    .update(reservation)
-    .set({ status: 'completed', updatedAt: now })
-    .where(
-      and(
-        eq(reservation.status, 'confirmed'),
-        isNotNull(reservation.stripePaymentRecordId),
-        lt(reservation.endsAt, now)
-      )
-    );
-  return result.rowCount ?? 0;
+	const now = new Date();
+	const result = await db
+		.update(reservation)
+		.set({ status: 'completed', updatedAt: now })
+		.where(
+			and(
+				eq(reservation.status, 'confirmed'),
+				isNotNull(reservation.stripePaymentRecordId),
+				lt(reservation.endsAt, now)
+			)
+		);
+	return result.rowCount ?? 0;
 }
 ```
 
@@ -345,13 +345,13 @@ Also call `autoCompleteExpired()` at the top of the staff reservations list page
 
 ```typescript
 export interface StaffCreateReservationParams extends CreateReservationParams {
-  status?: ReservationStatus;  // defaults to 'confirmed'
+	status?: ReservationStatus; // defaults to 'confirmed'
 }
 
 export async function staffCreate(params: StaffCreateReservationParams): Promise<ReservationRow> {
-  // No validateBooking() call
-  // No hasConflict() call
-  // Insert directly with the given status
+	// No validateBooking() call
+	// No hasConflict() call
+	// Insert directly with the given status
 }
 ```
 
@@ -359,7 +359,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 
 ```typescript
 export async function confirm(reservationId: string): Promise<void> {
-  await updateStatus(reservationId, ['scheduled'], 'confirmed');
+	await updateStatus(reservationId, ['scheduled'], 'confirmed');
 }
 ```
 
@@ -367,11 +367,11 @@ export async function confirm(reservationId: string): Promise<void> {
 
 ```typescript
 export async function cancel(
-  reservationId: string,
-  userId: string,
-  reason?: string,
-  options?: { staffOverride?: boolean }
-): Promise<void>
+	reservationId: string,
+	userId: string,
+	reason?: string,
+	options?: { staffOverride?: boolean }
+): Promise<void>;
 ```
 
 ### conflict-service.ts
@@ -380,22 +380,19 @@ export async function cancel(
 
 ```typescript
 export interface ConflictDetail {
-  type: 'reservation' | 'closure';
-  startsAt: Date;
-  endsAt: Date;
-  label: string; // member name or closure reason
+	type: 'reservation' | 'closure';
+	startsAt: Date;
+	endsAt: Date;
+	label: string; // member name or closure reason
 }
 
-export async function getConflictDetails(
-  startsAt: Date,
-  endsAt: Date
-): Promise<ConflictDetail[]>
+export async function getConflictDetails(startsAt: Date, endsAt: Date): Promise<ConflictDetail[]>;
 ```
 
 **Add `getValidationWarnings()`** — returns human-readable warnings without throwing:
 
 ```typescript
-export function getValidationWarnings(startsAt: Date, endsAt: Date): string[]
+export function getValidationWarnings(startsAt: Date, endsAt: Date): string[];
 ```
 
 `getAvailableSlots()` already returns all slots with `available: boolean`. Staff create page uses the same data but renders unavailable slots as selectable.

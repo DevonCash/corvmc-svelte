@@ -8,7 +8,12 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { addCategory, editCategory, getEquipmentCategories, getStaffEquipmentList } from '$lib/remote/equipment.remote';
+	import {
+		addCategory,
+		editCategory,
+		getEquipmentCategories,
+		getStaffEquipmentList
+	} from '$lib/remote/equipment.remote';
 	import { equipmentStatuses, pricingTiers } from '$lib/config';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
@@ -70,10 +75,8 @@
 
 <PageHeader title="Equipment">
 	<div class="flex gap-2">
-		<Button class="btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>
-			Categories
-		</Button>
-		<AddEquipmentAction categories={categories} />
+		<Button class="btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
+		<AddEquipmentAction {categories} />
 	</div>
 </PageHeader>
 <PageContent>
@@ -85,13 +88,27 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select class="select select-bordered select-sm" value={categoryId} onchange={(e) => { categoryId = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={categoryId}
+			onchange={(e) => {
+				categoryId = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All categories</option>
 			{#each categories as c}
 				<option value={c.id}>{c.name}</option>
 			{/each}
 		</select>
-		<select class="select select-bordered select-sm" value={statusFilter} onchange={(e) => { statusFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={statusFilter}
+			onchange={(e) => {
+				statusFilter = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All statuses</option>
 			{#each equipmentStatuses as s}
 				<option value={s}>{s}</option>
@@ -124,7 +141,10 @@
 					</thead>
 					<tbody>
 						{#each equipment as e (e.id)}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/equipment/${e.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/equipment/${e.id}`)}
+							>
 								<td>{e.name}</td>
 								<td>{e.category.name}</td>
 								<td class="w-px"><StatusBadge status={e.status} /></td>
@@ -146,7 +166,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>
@@ -209,7 +233,7 @@
 			</button>
 		{:else}
 			<Form
-				remote={editingCategory.id ? editCategory as any : addCategory}
+				remote={editingCategory.id ? (editCategory as any) : addCategory}
 				successToast={editingCategory.id ? 'Category updated' : 'Category added'}
 				onsuccess={refreshCategories}
 				class="space-y-3"
@@ -218,12 +242,30 @@
 					<input {...editCategoryFields.id.as('hidden', editingCategory.id)} />
 				{/if}
 				<div class="grid grid-cols-3 gap-3">
-					<Field name="name" type="text" label="Name" class="col-span-2" value={editingCategory.name} />
-					<Field name="displayOrder" type="number" label="Order" value={editingCategory.displayOrder} />
+					<Field
+						name="name"
+						type="text"
+						label="Name"
+						class="col-span-2"
+						value={editingCategory.name}
+					/>
+					<Field
+						name="displayOrder"
+						type="number"
+						label="Order"
+						value={editingCategory.displayOrder}
+					/>
 				</div>
-				<Field name="pricingTier" type="select" label="Pricing Tier"
+				<Field
+					name="pricingTier"
+					type="select"
+					label="Pricing Tier"
 					value={editingCategory.pricingTier}
-					options={pricingTiers.map((t) => ({ value: t, label: `${t} (${t === 'major' ? '$5/day' : '$1/day'})` }))} />
+					options={pricingTiers.map((t) => ({
+						value: t,
+						label: `${t} (${t === 'major' ? '$5/day' : '$1/day'})`
+					}))}
+				/>
 				<div class="flex gap-2">
 					<button
 						type="button"

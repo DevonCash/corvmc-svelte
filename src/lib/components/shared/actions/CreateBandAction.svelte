@@ -34,11 +34,12 @@
 	maxWidth="max-w-md"
 	successToast="Band created"
 	class={className}
-	onsuccess={onsuccess ?? (async (result) => {
-		const r = result as { bandId?: string };
-		await invalidateAll();
-		if (r?.bandId) goto(`/staff/bands/${r.bandId}`);
-	})}
+	onsuccess={onsuccess ??
+		(async (result) => {
+			const r = result as { bandId?: string };
+			await invalidateAll();
+			if (r?.bandId) goto(`/staff/bands/${r.bandId}`);
+		})}
 	{...rest}
 >
 	{#snippet form({ close })}

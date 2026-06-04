@@ -232,7 +232,15 @@ export interface DirectoryResponse {
 export interface DirectoryBandResponse {
 	band: Pick<
 		Band,
-		'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'createdAt' | 'lookingForMembers' | 'directoryContact' | 'links'
+		| 'id'
+		| 'name'
+		| 'slug'
+		| 'bio'
+		| 'tagline'
+		| 'createdAt'
+		| 'lookingForMembers'
+		| 'directoryContact'
+		| 'links'
 	> & {
 		avatarUrl: string | null;
 		memberCount: number;
@@ -247,7 +255,15 @@ export interface DirectoryBandResponse {
 export interface DirectoryMemberResponse {
 	member: Pick<
 		User,
-		'id' | 'name' | 'pronouns' | 'image' | 'bio' | 'tagline' | 'lookingForBand' | 'directoryContact' | 'links'
+		| 'id'
+		| 'name'
+		| 'pronouns'
+		| 'image'
+		| 'bio'
+		| 'tagline'
+		| 'lookingForBand'
+		| 'directoryContact'
+		| 'links'
 	> & {
 		instruments: string[];
 		genres: string[];
@@ -261,7 +277,15 @@ export interface DirectoryMemberResponse {
 export interface EventsResponse {
 	events: (Pick<
 		Event,
-		'id' | 'title' | 'description' | 'startsAt' | 'endsAt' | 'doorsAt' | 'tags' | 'ticketingEnabled' | 'ticketPrice'
+		| 'id'
+		| 'title'
+		| 'description'
+		| 'startsAt'
+		| 'endsAt'
+		| 'doorsAt'
+		| 'tags'
+		| 'ticketingEnabled'
+		| 'ticketPrice'
 	> & {
 		posterUrl: string | null;
 	})[];

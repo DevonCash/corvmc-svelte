@@ -26,7 +26,9 @@ async function getConfig() {
 	const refreshToken = (dbConfig.refreshToken as string) || env.ULTRALOC_REFRESH_TOKEN;
 
 	if (!clientId || !clientSecret || !deviceId || !refreshToken) {
-		throw new Error('Ultraloc credentials not configured — set them in Staff Settings > Integrations or via environment variables');
+		throw new Error(
+			'Ultraloc credentials not configured — set them in Staff Settings > Integrations or via environment variables'
+		);
 	}
 
 	return { clientId, clientSecret, deviceId, refreshToken };
@@ -57,7 +59,11 @@ async function getAccessToken(): Promise<string> {
 	return data.access_token;
 }
 
-async function apiCall(namespace: string, name: string, payload: Record<string, unknown>): Promise<any> {
+async function apiCall(
+	namespace: string,
+	name: string,
+	payload: Record<string, unknown>
+): Promise<any> {
 	const token = await getAccessToken();
 
 	const res = await fetch(API_URL, {
@@ -81,10 +87,13 @@ async function apiCall(namespace: string, name: string, payload: Record<string, 
 		throw new Error(`Ultraloc API error: ${res.status} ${await res.text()}`);
 	}
 
-	const body: { payload: { error?: { code: string; message: string } } & Record<string, unknown> } = await res.json();
+	const body: { payload: { error?: { code: string; message: string } } & Record<string, unknown> } =
+		await res.json();
 
 	if (body.payload?.error) {
-		throw new Error(`Ultraloc API error: ${body.payload.error.code} — ${body.payload.error.message}`);
+		throw new Error(
+			`Ultraloc API error: ${body.payload.error.code} — ${body.payload.error.message}`
+		);
 	}
 
 	return body.payload;

@@ -7,16 +7,24 @@
 
 <svelte:head>
 	<title>Events | Corvallis Music Collective</title>
-	<meta name="description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
+	<meta
+		name="description"
+		content="Upcoming shows, jams, and meetups from the Corvallis Music Collective."
+	/>
 	<meta property="og:title" content="Events | Corvallis Music Collective" />
-	<meta property="og:description" content="Upcoming shows, jams, and meetups from the Corvallis Music Collective." />
+	<meta
+		property="og:description"
+		content="Upcoming shows, jams, and meetups from the Corvallis Music Collective."
+	/>
 </svelte:head>
 
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-10">
 			<h1 class="text-4xl font-bold tracking-tight mb-2" style="color: var(--cmc-navy)">Events</h1>
-			<p class="text-base" style="color: var(--fg-2)">Shows, jams, and meetups from the Collective</p>
+			<p class="text-base" style="color: var(--fg-2)">
+				Shows, jams, and meetups from the Collective
+			</p>
 		</div>
 
 		{#if upcoming.length > 0}

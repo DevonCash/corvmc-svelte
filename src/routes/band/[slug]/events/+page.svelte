@@ -33,12 +33,17 @@
 	{:else}
 		<div class="space-y-3">
 			{#each events as evt (evt.id)}
-				<a href="events/{evt.id}" class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block">
+				<a
+					href="events/{evt.id}"
+					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
+				>
 					<div class="card-body flex-row items-center justify-between py-4">
 						<div>
 							<p class="font-medium">{evt.title}</p>
 							<p class="text-sm opacity-70">
-								{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}–{formatTime(evt.endsAt)}
+								{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}–{formatTime(
+									evt.endsAt
+								)}
 							</p>
 							{#if evt.location}
 								<p class="text-xs opacity-60">{evt.location}</p>

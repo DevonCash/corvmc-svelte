@@ -130,10 +130,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		if (valid) {
 			const newHash = await pbkdf2Hash(password);
 
-			await db
-				.update(account)
-				.set({ password: newHash })
-				.where(eq(account.password, hash));
+			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
 		}
 
 		return valid;

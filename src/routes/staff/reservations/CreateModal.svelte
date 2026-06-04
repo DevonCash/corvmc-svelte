@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { searchMembers, getStaffSlots, checkConflicts, createReservation } from '$lib/remote/reservations.remote';
+	import {
+		searchMembers,
+		getStaffSlots,
+		checkConflicts,
+		createReservation
+	} from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';
@@ -123,11 +128,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">End time</legend>
-				<select
-					bind:value={endTime}
-					class="select-bordered select w-full"
-					disabled={!startTime}
-				>
+				<select bind:value={endTime} class="select-bordered select w-full" disabled={!startTime}>
 					<option value="">Select end time</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>

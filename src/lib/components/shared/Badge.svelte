@@ -8,18 +8,23 @@
 		class: className = '',
 		children
 	}: {
-		variant?: 'outline' | 'ghost' | 'primary' | 'success' | 'error' | 'warning' | 'info' | 'secondary';
+		variant?:
+			| 'outline'
+			| 'ghost'
+			| 'primary'
+			| 'success'
+			| 'error'
+			| 'warning'
+			| 'info'
+			| 'secondary';
 		size?: 'xs' | 'sm' | 'md' | 'lg';
 		class?: string;
 		children: Snippet;
 	} = $props();
 
-	const classes = $derived(clsx(
-		'badge',
-		variant && `badge-${variant}`,
-		size !== 'md' && `badge-${size}`,
-		className
-	));
+	const classes = $derived(
+		clsx('badge', variant && `badge-${variant}`, size !== 'md' && `badge-${size}`, className)
+	);
 </script>
 
 <span class={classes}>

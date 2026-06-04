@@ -64,12 +64,40 @@
 
 		{#if hasMultiple}
 			<div class="flex items-center gap-4">
-				<button type="button" class="btn btn-sm btn-circle btn-outline" aria-label="Previous ticket" onclick={() => (offset -= 1)}>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M15 6l-6 6 6 6"/></svg>
+				<button
+					type="button"
+					class="btn btn-sm btn-circle btn-outline"
+					aria-label="Previous ticket"
+					onclick={() => (offset -= 1)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						style="width:16px;height:16px"><path d="M15 6l-6 6 6 6" /></svg
+					>
 				</button>
 				<span class="text-sm opacity-70">{index + 1} of {total}</span>
-				<button type="button" class="btn btn-sm btn-circle btn-outline" aria-label="Next ticket" onclick={() => (offset += 1)}>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M9 6l6 6-6 6"/></svg>
+				<button
+					type="button"
+					class="btn btn-sm btn-circle btn-outline"
+					aria-label="Next ticket"
+					onclick={() => (offset += 1)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						style="width:16px;height:16px"><path d="M9 6l6 6-6 6" /></svg
+					>
 				</button>
 			</div>
 		{/if}

@@ -1,7 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { handlePostmarkInbound, type PostmarkInboundPayload } from '$lib/server/inbox/inbound-handlers';
+import {
+	handlePostmarkInbound,
+	type PostmarkInboundPayload
+} from '$lib/server/inbox/inbound-handlers';
 import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 

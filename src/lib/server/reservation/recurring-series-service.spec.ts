@@ -10,14 +10,14 @@ vi.mock('$lib/server/db', () => ({
 		return r?.meta?.changes ?? 0;
 	},
 	db: {
-			select: vi.fn(),
-			insert: vi.fn(),
-			update: vi.fn(() => ({
-				set: vi.fn(() => ({
-					where: vi.fn(() => Promise.resolve({ meta: { changes: 1 } }))
-				}))
-			})),
-			batch: vi.fn()
+		select: vi.fn(),
+		insert: vi.fn(),
+		update: vi.fn(() => ({
+			set: vi.fn(() => ({
+				where: vi.fn(() => Promise.resolve({ meta: { changes: 1 } }))
+			}))
+		})),
+		batch: vi.fn()
 	}
 }));
 
@@ -169,7 +169,6 @@ describe('recurring-series-service', () => {
 			expect(result).toMatchObject({ id: 'series-new', prototypeId: 'res-1' });
 		});
 	});
-
 
 	// -------------------------------------------------------------------------
 	// cancel()
@@ -487,7 +486,7 @@ describe('recurring-series-service', () => {
 			const current = { ...SERIES_ROW, id: 'series-solo', supersededBy: null };
 			setupHistorySelects([
 				[current], // first call: get current
-				[],        // second call: look for predecessor — none
+				[] // second call: look for predecessor — none
 				// no forward walk since supersededBy is null
 			]);
 
@@ -504,9 +503,9 @@ describe('recurring-series-service', () => {
 
 			setupHistorySelects([
 				[current], // get current
-				[predB],   // first backward step: find predecessor of series-c
-				[predA],   // second backward step: find predecessor of series-b
-				[],        // third backward step: no more predecessors
+				[predB], // first backward step: find predecessor of series-c
+				[predA], // second backward step: find predecessor of series-b
+				[] // third backward step: no more predecessors
 				// no forward walk since supersededBy is null
 			]);
 
@@ -525,9 +524,9 @@ describe('recurring-series-service', () => {
 
 			setupHistorySelects([
 				[current], // get current
-				[],        // backward walk: no predecessors
-				[succB],   // forward step 1: get series-b
-				[succC],   // forward step 2: get series-c
+				[], // backward walk: no predecessors
+				[succB], // forward step 1: get series-b
+				[succC] // forward step 2: get series-c
 				// forward stops because succC.supersededBy is null
 			]);
 

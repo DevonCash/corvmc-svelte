@@ -18,7 +18,9 @@ export function ticketConfirmation(vars: {
 	quantity: number;
 }): string {
 	const codeList = vars.ticketCodes
-		.map((code) => `<li style="font-family: monospace; font-size: 16px; margin: 4px 0;">${code}</li>`)
+		.map(
+			(code) => `<li style="font-family: monospace; font-size: 16px; margin: 4px 0;">${code}</li>`
+		)
 		.join('');
 
 	return compileEmail(
@@ -26,9 +28,7 @@ export function ticketConfirmation(vars: {
 			text(
 				`Hi {{attendeeName}}, thanks for purchasing ${vars.quantity === 1 ? 'a ticket' : `${vars.quantity} tickets`} for <strong>{{eventTitle}}</strong>.`
 			) +
-			text(
-				`<strong>Date:</strong> {{eventDate}}<br/><strong>Time:</strong> {{eventTime}}`
-			) +
+			text(`<strong>Date:</strong> {{eventDate}}<br/><strong>Time:</strong> {{eventTime}}`) +
 			text(`Your ticket ${vars.quantity === 1 ? 'code' : 'codes'}:`, { fontWeight: '600' }) +
 			text(`<ul style="list-style: none; padding: 0;">${codeList}</ul>`) +
 			text(
@@ -74,9 +74,7 @@ export function checkInReminder(vars: {
 			text(
 				`Hi {{attendeeName}}, just a reminder that <strong>{{eventTitle}}</strong> is coming up.`
 			) +
-			text(
-				`<strong>Date:</strong> {{eventDate}}<br/><strong>Time:</strong> {{eventTime}}`
-			) +
+			text(`<strong>Date:</strong> {{eventDate}}<br/><strong>Time:</strong> {{eventTime}}`) +
 			text(
 				`Your ticket code: <span style="font-family: monospace; font-size: 16px; font-weight: 600;">{{ticketCode}}</span>`
 			) +
@@ -232,16 +230,12 @@ export function loanRequestedStaffNotification(vars: {
 	const itemLine = vars.equipmentName
 		? `<strong>Item:</strong> {{equipmentName}}`
 		: `<strong>Free-form request</strong>`;
-	const notesRow = vars.memberNotes
-		? text('<strong>Notes:</strong> {{memberNotes}}')
-		: '';
+	const notesRow = vars.memberNotes ? text('<strong>Notes:</strong> {{memberNotes}}') : '';
 
 	return compileEmail(
 		text('New equipment loan request', { fontSize: '18px', fontWeight: '600' }) +
 			text('<strong>{{userName}}</strong> has requested to borrow equipment.') +
-			text(
-				`${itemLine}<br/><strong>Requested pickup:</strong> {{requestedPickupDate}}`
-			) +
+			text(`${itemLine}<br/><strong>Requested pickup:</strong> {{requestedPickupDate}}`) +
 			notesRow +
 			button('Review Request', '{{siteUrl}}/staff/equipment/loans/{{loanId}}'),
 		`Equipment request from ${vars.userName}`,
@@ -302,9 +296,7 @@ export function waitlistSlotAvailable(vars: {
 			text(
 				`Hi {{userName}}, the time slot on <strong>{{date}}</strong> from <strong>{{startTime}} – {{endTime}}</strong> is now available.`
 			) +
-			text(
-				'You have <strong>24 hours</strong> to confirm your reservation before it expires.'
-			) +
+			text('You have <strong>24 hours</strong> to confirm your reservation before it expires.') +
 			button('Confirm Reservation', '{{confirmUrl}}'),
 		`Slot available: ${vars.date} ${vars.startTime}`,
 		vars

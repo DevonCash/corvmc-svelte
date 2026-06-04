@@ -99,7 +99,8 @@ async function createEndpoint(stripe: Stripe) {
 
 	const endpoint = await stripe.webhookEndpoints.create({
 		url,
-		enabled_events: registeredEvents as unknown as Stripe.WebhookEndpointCreateParams.EnabledEvent[],
+		enabled_events:
+			registeredEvents as unknown as Stripe.WebhookEndpointCreateParams.EnabledEvent[],
 		description: 'corvmc-svelte webhook (managed by sync-webhooks script)'
 	});
 

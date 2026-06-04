@@ -37,7 +37,12 @@
 <ToggleGroup.Root type="single" value={active} onValueChange={handleValueChange}>
 	<ButtonGroup class={className}>
 		{#each tabs as tab (tab.key)}
-			<ToggleGroup.Item value={tab.key} class="join-item btn btn-sm {active === tab.key ? 'latched btn-primary depth-0' : 'depth-2'}">
+			<ToggleGroup.Item
+				value={tab.key}
+				class="join-item btn btn-sm {active === tab.key
+					? 'latched btn-primary depth-0'
+					: 'depth-2'}"
+			>
 				{tab.label}
 				{#if tab.badge != null}
 					<Badge class="ml-1">{tab.badge}</Badge>

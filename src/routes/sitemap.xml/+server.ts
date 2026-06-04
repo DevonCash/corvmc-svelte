@@ -19,10 +19,7 @@ const STATIC_ROUTES = [
 export const GET: RequestHandler = async ({ url }) => {
 	const origin = url.origin;
 
-	const [events, bands] = await Promise.all([
-		listUpcoming(),
-		listPublicBands()
-	]);
+	const [events, bands] = await Promise.all([listUpcoming(), listPublicBands()]);
 
 	const urls = [
 		...STATIC_ROUTES.map((path) => `<url><loc>${origin}${path}</loc></url>`),

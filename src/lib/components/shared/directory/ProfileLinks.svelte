@@ -37,7 +37,7 @@
 	<div class="flex flex-col gap-2">
 		{#each links as link}
 			{@const platform = detectPlatform(link.url)}
-			{@const IconComponent = platform ? iconMap[platform.icon] ?? IconLink : IconLink}
+			{@const IconComponent = platform ? (iconMap[platform.icon] ?? IconLink) : IconLink}
 			<a
 				href={link.url}
 				target="_blank"

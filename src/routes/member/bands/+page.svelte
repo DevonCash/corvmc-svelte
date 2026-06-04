@@ -10,7 +10,12 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { createBand, acceptInvite, declineInvite, getMemberBands } from '$lib/remote/bands.remote';
+	import {
+		createBand,
+		acceptInvite,
+		declineInvite,
+		getMemberBands
+	} from '$lib/remote/bands.remote';
 
 	let data = $derived(await getMemberBands());
 
@@ -21,10 +26,8 @@
 </script>
 
 <PageHeader title="My Bands" subtitle="Member">
-		<Button class="btn-sm" onclick={() => (showCreateModal = true)}>
-			Create Band
-		</Button>
-	</PageHeader>
+	<Button class="btn-sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
+</PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
 	{#if pending.length > 0}
@@ -47,18 +50,32 @@
 									<Form
 										remote={accept}
 										onfailure={() => toast.error('Failed to accept')}
-										onsuccess={() => { toast.success('Invitation accepted'); invalidateAll(); }}
+										onsuccess={() => {
+											toast.success('Invitation accepted');
+											invalidateAll();
+										}}
 									>
 										<input {...accept.fields.memberId.as('hidden', invite.id)} />
-										<SubmitButton label="Accept" successLabel="Accepted" class="btn-primary btn-sm" />
+										<SubmitButton
+											label="Accept"
+											successLabel="Accepted"
+											class="btn-primary btn-sm"
+										/>
 									</Form>
 									<Form
 										remote={decline}
 										onfailure={() => toast.error('Failed to decline')}
-										onsuccess={() => { toast.success('Invitation declined'); invalidateAll(); }}
+										onsuccess={() => {
+											toast.success('Invitation declined');
+											invalidateAll();
+										}}
 									>
 										<input {...decline.fields.memberId.as('hidden', invite.id)} />
-										<SubmitButton label="Decline" successLabel="Declined" class="btn-ghost btn-sm" />
+										<SubmitButton
+											label="Decline"
+											successLabel="Declined"
+											class="btn-ghost btn-sm"
+										/>
 									</Form>
 								</div>
 							</div>
@@ -78,12 +95,16 @@
 		{:else}
 			<div class="space-y-3">
 				{#each active as b (b.id)}
-					<a href="/band/{b.slug}" class="card bg-base-100 shadow hover:shadow-md transition-shadow">
+					<a
+						href="/band/{b.slug}"
+						class="card bg-base-100 shadow hover:shadow-md transition-shadow"
+					>
 						<div class="card-body py-4 flex-row items-center justify-between">
 							<div>
 								<p class="font-medium">{b.name}</p>
 								<p class="text-sm opacity-60">
-									{b.memberCount} {b.memberCount === 1 ? 'member' : 'members'}
+									{b.memberCount}
+									{b.memberCount === 1 ? 'member' : 'members'}
 								</p>
 							</div>
 							<StatusBadge status={b.role} />

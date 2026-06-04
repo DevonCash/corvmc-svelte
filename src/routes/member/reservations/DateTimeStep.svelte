@@ -155,12 +155,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Frequency</legend>
 				<div class="flex gap-1">
-					{#each [
-						{ value: '', label: 'One Time' },
-						{ value: 'weekly', label: 'Weekly' },
-						{ value: 'biweekly', label: 'Every 2 Weeks' },
-						{ value: 'monthly', label: 'Monthly' }
-					] as opt (opt.value)}
+					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Every 2 Weeks' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
 						<label class="btn btn-sm flex-1" class:btn-primary={frequency === opt.value}>
 							<input
 								type="radio"
@@ -186,14 +181,9 @@
 				/>
 			{/if}
 		{/if}
-
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton
-			label="Save"
-			continueLabel="Continue"
-			class="btn-primary"
-		/>
+		<Form.SubmitButton label="Save" continueLabel="Continue" class="btn-primary" />
 	</div>
 </Form.Step>

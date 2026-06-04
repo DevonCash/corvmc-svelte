@@ -18,7 +18,14 @@ export interface MerchItem {
 }
 
 export type Block =
-	| { id: string; type: 'hero'; imageKey: string; headline?: string; subtitle?: string; cssClass?: string }
+	| {
+			id: string;
+			type: 'hero';
+			imageKey: string;
+			headline?: string;
+			subtitle?: string;
+			cssClass?: string;
+	  }
 	| { id: string; type: 'bio'; content: string; cssClass?: string }
 	| { id: string; type: 'links'; style: 'buttons' | 'icons' | 'list'; cssClass?: string }
 	| { id: string; type: 'members'; showPositions: boolean; cssClass?: string }

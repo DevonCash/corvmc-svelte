@@ -12,7 +12,12 @@ import { getUserRoles } from '$lib/server/authorization';
 import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
-import { getAllBalances, addCredits, deductCredits, listTransactions } from '$lib/server/finance/credit-service';
+import {
+	getAllBalances,
+	addCredits,
+	deductCredits,
+	listTransactions
+} from '$lib/server/finance/credit-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -37,8 +42,11 @@ export const getStaffDashboard = query(async () => {
 			db.select({ value: count() }).from(role),
 			db.select({ value: count() }).from(permission),
 			db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
-			db.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
-				.from(user).orderBy(desc(user.createdAt)).limit(5)
+			db
+				.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+				.from(user)
+				.orderBy(desc(user.createdAt))
+				.limit(5)
 		]);
 
 	return {
@@ -68,7 +76,13 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	const where = searchCondition ? and(searchCondition, activeCondition) : activeCondition;
 
 	const dataQ = db
-		.select({ id: user.id, name: user.name, email: user.email, pronouns: user.pronouns, createdAt: user.createdAt })
+		.select({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			pronouns: user.pronouns,
+			createdAt: user.createdAt
+		})
 		.from(user)
 		.where(where)
 		.orderBy(desc(user.createdAt))
@@ -76,7 +90,10 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 
 	const countQ = db.select({ count: count() }).from(user).where(where);
 
-	const { rows: users, pagination } = await paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 20 });
+	const { rows: users, pagination } = await paginate(dataQ, countQ, {
+		page: filters.page ?? 1,
+		pageSize: 20
+	});
 
 	const userIds = users.map((u) => u.id);
 	let roleMap: Record<string, string[]> = {};
@@ -138,7 +155,8 @@ export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
 		{
 			search: filters.search || undefined,
 			creditType: (filters.creditType || undefined) as CreditType | undefined,
-			source: (filters.source || undefined) as import('$lib/server/finance/credit-service').CreditTransactionFilters['source'],
+			source: (filters.source ||
+				undefined) as import('$lib/server/finance/credit-service').CreditTransactionFilters['source'],
 			from: filters.from || undefined,
 			to: filters.to || undefined
 		},

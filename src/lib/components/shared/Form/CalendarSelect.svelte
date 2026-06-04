@@ -19,7 +19,20 @@
 
 	const tz = getLocalTimeZone();
 	const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	const monthNames = [
+		'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December'
+	];
 	const todayValue = today(tz);
 
 	/** Build the rows of DateValues from the Sunday of minValue's week through the Saturday of maxValue's week. */
@@ -80,10 +93,12 @@
 		const base =
 			'flex aspect-square w-full items-center justify-center rounded-md text-xs transition-colors';
 
-		if (selected) return `${base} cursor-pointer bg-primary text-primary-content border border-primary`;
+		if (selected)
+			return `${base} cursor-pointer bg-primary text-primary-content border border-primary`;
 		if (outOfRange) return `${base} opacity-30`;
 		if (unavailable) return `${base} text-error line-through opacity-40`;
-		if (isToday) return `${base} cursor-pointer border-2 border-primary font-semibold hover:bg-base-200`;
+		if (isToday)
+			return `${base} cursor-pointer border-2 border-primary font-semibold hover:bg-base-200`;
 		return `${base} cursor-pointer border border-base-300 hover:bg-base-200`;
 	}
 </script>
@@ -112,4 +127,4 @@
 		</div>
 	{/each}
 </div>
-<input type="date" {name} value={value} hidden />
+<input type="date" {name} {value} hidden />

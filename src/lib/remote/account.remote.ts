@@ -166,10 +166,7 @@ export const deleteAccount = form(
 		}
 
 		// Soft-delete the user
-		await db
-			.update(user)
-			.set({ deletedAt: new Date() })
-			.where(eq(user.id, currentUser.id));
+		await db.update(user).set({ deletedAt: new Date() }).where(eq(user.id, currentUser.id));
 
 		// Sign out
 		await auth.api.signOut({ headers: event.request.headers });

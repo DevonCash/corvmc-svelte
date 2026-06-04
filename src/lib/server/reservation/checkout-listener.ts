@@ -27,7 +27,9 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 
 	// The payment record ID comes from the session's payment_intent or the session ID itself
 	const paymentRecordId = session.payment_intent
-		? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id)
+		? typeof session.payment_intent === 'string'
+			? session.payment_intent
+			: session.payment_intent.id
 		: session.id;
 
 	await db

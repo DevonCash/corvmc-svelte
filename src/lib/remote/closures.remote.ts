@@ -12,10 +12,7 @@ import { desc, eq } from 'drizzle-orm';
 
 export const getClosures = query(z.void(), async () => {
 	await requireStaff();
-	const rows = await db
-		.select()
-		.from(closure)
-		.orderBy(desc(closure.startsAt));
+	const rows = await db.select().from(closure).orderBy(desc(closure.startsAt));
 
 	return rows.map((c) => ({
 		id: c.id,

@@ -109,16 +109,13 @@ export const getAudienceSubscribers = query(z.string(), async (audienceId) => {
 });
 
 /** List campaigns with optional status filter. */
-export const getCampaigns = query(
-	z.object({ status: z.string().optional() }),
-	async (filters) => {
-		await requireStaff();
-		const statusFilter = ['draft', 'scheduled', 'sending', 'sent'].includes(filters.status ?? '')
-			? (filters.status as CampaignStatus)
-			: undefined;
-		return listCampaigns(statusFilter);
-	}
-);
+export const getCampaigns = query(z.object({ status: z.string().optional() }), async (filters) => {
+	await requireStaff();
+	const statusFilter = ['draft', 'scheduled', 'sending', 'sent'].includes(filters.status ?? '')
+		? (filters.status as CampaignStatus)
+		: undefined;
+	return listCampaigns(statusFilter);
+});
 
 /** Single campaign detail (staff). */
 export const getCampaignDetail = query(z.string(), async (id) => {

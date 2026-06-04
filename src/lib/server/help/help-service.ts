@@ -26,11 +26,7 @@ export async function listCategories(userRole: string) {
 }
 
 export async function getCategoryBySlug(slug: string) {
-	const [cat] = await db
-		.select()
-		.from(helpCategory)
-		.where(eq(helpCategory.slug, slug))
-		.limit(1);
+	const [cat] = await db.select().from(helpCategory).where(eq(helpCategory.slug, slug)).limit(1);
 	return cat ?? null;
 }
 
@@ -98,7 +94,10 @@ export async function searchArticles(query: string, userRole: string) {
 				)
 			)
 		)
-		.orderBy(sql`case when ${helpArticle.title} like ${pattern} then 0 else 1 end`, asc(helpArticle.title))
+		.orderBy(
+			sql`case when ${helpArticle.title} like ${pattern} then 0 else 1 end`,
+			asc(helpArticle.title)
+		)
 		.limit(SEARCH_LIMIT);
 }
 
@@ -126,11 +125,7 @@ export async function listAllArticles() {
 }
 
 export async function getArticleById(id: string) {
-	const [article] = await db
-		.select()
-		.from(helpArticle)
-		.where(eq(helpArticle.id, id))
-		.limit(1);
+	const [article] = await db.select().from(helpArticle).where(eq(helpArticle.id, id)).limit(1);
 	return article ?? null;
 }
 

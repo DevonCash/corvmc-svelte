@@ -47,7 +47,13 @@
 <!-- Hidden input for form submission (JSON array to avoid duplicate key errors) -->
 <input type="hidden" {name} value={JSON.stringify(selected)} />
 
-<Combobox.Root type="multiple" bind:value={selected} onValueChange={handleValueChange} inputValue={query} {disabled}>
+<Combobox.Root
+	type="multiple"
+	bind:value={selected}
+	onValueChange={handleValueChange}
+	inputValue={query}
+	{disabled}
+>
 	<div class="space-y-2 rounded bg-base-200 p-2">
 		{#if selectedOptions.length > 0}
 			<div class="flex flex-wrap gap-1">

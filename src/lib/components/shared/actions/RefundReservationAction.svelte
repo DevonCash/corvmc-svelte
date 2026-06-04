@@ -31,6 +31,8 @@
 	{#snippet form({ close })}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Refund the payment for this reservation? This does not cancel the reservation.</p>
+		<p class="text-sm">
+			Refund the payment for this reservation? This does not cancel the reservation.
+		</p>
 	{/snippet}
 </Action>

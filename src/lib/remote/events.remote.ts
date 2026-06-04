@@ -2,10 +2,33 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { create, update, checkRebookNeeded, publish, unpublish, cancel, getById, listAll as listAllEvents, listUpcoming, listPast } from '$lib/server/event/event-service';
-import { getConflictDetails, getValidationWarnings } from '$lib/server/reservation/conflict-service';
+import {
+	create,
+	update,
+	checkRebookNeeded,
+	publish,
+	unpublish,
+	cancel,
+	getById,
+	listAll as listAllEvents,
+	listUpcoming,
+	listPast
+} from '$lib/server/event/event-service';
+import {
+	getConflictDetails,
+	getValidationWarnings
+} from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getTicketsRemaining, getTicketsSold, getEventTickets, getUserTickets, getTicketsByPurchase, createTickets, checkIn, cancelTicket as cancelTicketService } from '$lib/server/ticket/ticket-service';
+import {
+	getTicketsRemaining,
+	getTicketsSold,
+	getEventTickets,
+	getUserTickets,
+	getTicketsByPurchase,
+	createTickets,
+	checkIn,
+	cancelTicket as cancelTicketService
+} from '$lib/server/ticket/ticket-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
@@ -23,7 +46,8 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // Queries
 // ---------------------------------------------------------------------------
 
-export const getMemberEvents = query(async () => {	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+export const getMemberEvents = query(async () => {
+	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
 	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
@@ -51,7 +75,9 @@ export const getMemberTickets = query(async () => {
 			.from(event)
 			.where(inArray(event.id, eventIds));
 
-		eventMap = Object.fromEntries(events.map((e) => [e.id, { title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }]));
+		eventMap = Object.fromEntries(
+			events.map((e) => [e.id, { title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }])
+		);
 	}
 
 	return tickets.map((t) => {
@@ -74,9 +100,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
-	const isSustainingMember = locals.user
-		? await hasAnyRole(locals.user.id, ['sustaining'])
-		: false;
+	const isSustainingMember = locals.user ? await hasAnyRole(locals.user.id, ['sustaining']) : false;
 
 	return {
 		event: {
@@ -97,7 +121,8 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	};
 });
 
-export const getPublicEvents = query(async () => {	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
+export const getPublicEvents = query(async () => {
+	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
 	const mapEvent = (e: (typeof upcoming)[number]) => ({
 		id: e.id,
 		title: e.title,
@@ -182,10 +207,7 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
 
-	const [tickets, sold] = await Promise.all([
-		getEventTickets(id),
-		getTicketsSold(id)
-	]);
+	const [tickets, sold] = await Promise.all([getEventTickets(id), getTicketsSold(id)]);
 
 	const checkedIn = tickets.filter((t) => t.status === 'checked_in').length;
 
@@ -210,13 +232,10 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	};
 });
 
-export const getStaffEvents = query(
-	z.object({ page: z.number().optional() }),
-	async (filters) => {
-		await requireStaff();
-		return listAllEvents({ page: filters.page ?? 1, pageSize: 50 });
-	}
-);
+export const getStaffEvents = query(z.object({ page: z.number().optional() }), async (filters) => {
+	await requireStaff();
+	return listAllEvents({ page: filters.page ?? 1, pageSize: 50 });
+});
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();
@@ -248,7 +267,16 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	const posterUrl = resolveImageUrl(evt.posterKey);
 
 	let ticketStats: { sold: number; remaining: number | null } | null = null;
-	let tickets: { id: string; purchaseId: string | null; attendeeName: string; attendeeEmail: string; code: string; status: string; checkedInAt: Date | null; createdAt: Date }[] = [];
+	let tickets: {
+		id: string;
+		purchaseId: string | null;
+		attendeeName: string;
+		attendeeEmail: string;
+		code: string;
+		status: string;
+		checkedInAt: Date | null;
+		createdAt: Date;
+	}[] = [];
 
 	if (evt.ticketingEnabled) {
 		const [sold, remaining, allTickets] = await Promise.all([
@@ -328,11 +356,7 @@ export const checkRebook = query(
 	}),
 	async ({ eventId, newStartsAt, newEndsAt }) => {
 		await requireStaff();
-		const result = await checkRebookNeeded(
-			eventId,
-			new Date(newStartsAt),
-			new Date(newEndsAt)
-		);
+		const result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));
 		return {
 			needed: result.needed,
 			reason: result.reason,
@@ -386,13 +410,14 @@ export const createEvent = form(
 		const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
 		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
-		const reservation = reserveSpace && data.reservationStartTime && data.reservationEndTime
-			? {
-					startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-					endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
-					overrideConflicts
-				}
-			: undefined;
+		const reservation =
+			reserveSpace && data.reservationStartTime && data.reservationEndTime
+				? {
+						startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
+						endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+						overrideConflicts
+					}
+				: undefined;
 
 		const event = await create({
 			title: data.title,
@@ -434,7 +459,8 @@ export const updateEvent = form(
 		const staff = await requireStaff();
 		const tz = DEFAULT_TIMEZONE;
 
-		const ticketingEnabled = data.ticketingEnabled === 'on' ? true : data.ticketingEnabled === 'off' ? false : undefined;
+		const ticketingEnabled =
+			data.ticketingEnabled === 'on' ? true : data.ticketingEnabled === 'off' ? false : undefined;
 		const rebookReservation = data.rebookReservation === 'on';
 		const overrideConflicts = data.overrideConflicts === 'on';
 
@@ -458,13 +484,17 @@ export const updateEvent = form(
 		}
 
 		if (data.doorsTime !== undefined) {
-			updateParams.doorsAt = data.doorsTime && data.eventDate
-				? buildDateInTz(data.eventDate, data.doorsTime, tz)
-				: null;
+			updateParams.doorsAt =
+				data.doorsTime && data.eventDate ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
 		// Handle reservation rebooking
-		if (rebookReservation && data.eventDate && data.reservationStartTime && data.reservationEndTime) {
+		if (
+			rebookReservation &&
+			data.eventDate &&
+			data.reservationStartTime &&
+			data.reservationEndTime
+		) {
 			updateParams.rebook = {
 				userId: staff.id,
 				reservationStartsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
@@ -478,32 +508,23 @@ export const updateEvent = form(
 	}
 );
 
-export const publishEvent = form(
-	z.object({ id: z.string().min(1) }),
-	async (data) => {
-		await requireStaff();
-		await publish(data.id);
-		return { success: true };
-	}
-);
+export const publishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	await publish(data.id);
+	return { success: true };
+});
 
-export const unpublishEvent = form(
-	z.object({ id: z.string().min(1) }),
-	async (data) => {
-		await requireStaff();
-		await unpublish(data.id);
-		return { success: true };
-	}
-);
+export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	await unpublish(data.id);
+	return { success: true };
+});
 
-export const cancelEvent = form(
-	z.object({ id: z.string().min(1) }),
-	async (data) => {
-		const staff = await requireStaff();
-		await cancel(data.id, staff.id);
-		return { success: true };
-	}
-);
+export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const staff = await requireStaff();
+	await cancel(data.id, staff.id);
+	return { success: true };
+});
 
 export const compTickets = form(
 	z.object({
@@ -554,14 +575,11 @@ export const cancelTicket = form(
 	}
 );
 
-export const checkInTicket = form(
-	z.object({ ticketId: z.string().min(1) }),
-	async (data) => {
-		const staff = await requireStaff();
-		await checkIn(data.ticketId, staff.id);
-		return { success: true };
-	}
-);
+export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), async (data) => {
+	const staff = await requireStaff();
+	await checkIn(data.ticketId, staff.id);
+	return { success: true };
+});
 
 export const rsvpForEvent = form(
 	z.object({

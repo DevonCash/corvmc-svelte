@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { getReservationPricing, previewRecurringInstances } from '$lib/remote/reservations.remote';
+	import {
+		getReservationPricing,
+		previewRecurringInstances
+	} from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { fullDate, formatTimeRange, formatScheduleLabel, formatSlotTime } from '$lib/utils/format';
+	import {
+		fullDate,
+		formatTimeRange,
+		formatScheduleLabel,
+		formatSlotTime
+	} from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
@@ -197,12 +205,8 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
-			<Button type="button" class="btn-ghost" onclick={confirmWithoutPayment}>
-				Confirm
-			</Button>
-			<Button type="button" onclick={() => formCtx.next()}>
-				Pay Ahead
-			</Button>
+			<Button type="button" class="btn-ghost" onclick={confirmWithoutPayment}>Confirm</Button>
+			<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
 		</div>
 	</Form.Step>
 </div>

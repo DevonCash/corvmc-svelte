@@ -118,22 +118,22 @@ Add "Dashboard" as the first nav item in the member layout, pointing to `/member
 
 ## What changes
 
-| Area | Change |
-|---|---|
-| `src/routes/member/+page.svelte` | New file — dashboard page |
-| `src/routes/member/+page.server.ts` | New file — data loading |
-| `src/routes/member/+layout.svelte` | Add Dashboard nav item |
+| Area                                    | Change                                    |
+| --------------------------------------- | ----------------------------------------- |
+| `src/routes/member/+page.svelte`        | New file — dashboard page                 |
+| `src/routes/member/+page.server.ts`     | New file — data loading                   |
+| `src/routes/member/+layout.svelte`      | Add Dashboard nav item                    |
 | `src/lib/server/event/event-service.ts` | Add `limit` parameter to `listUpcoming()` |
 
 ## What doesn't change
 
-| Area | Notes |
-|---|---|
-| Reservation service | Reads only, no new operations |
-| Credit service | Uses existing `getAllBalances()` |
-| Subscription service | Uses existing `getSubscription()` |
-| Event service | Uses existing `listUpcoming()`, possibly with a limit param |
-| Database schema | No new tables or columns |
+| Area                 | Notes                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| Reservation service  | Reads only, no new operations                               |
+| Credit service       | Uses existing `getAllBalances()`                            |
+| Subscription service | Uses existing `getSubscription()`                           |
+| Event service        | Uses existing `listUpcoming()`, possibly with a limit param |
+| Database schema      | No new tables or columns                                    |
 
 ## Deferred
 

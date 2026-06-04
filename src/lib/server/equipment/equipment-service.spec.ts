@@ -95,9 +95,7 @@ describe('EquipmentService', () => {
 
 		it('throws CategoryNotFoundError when id does not exist', async () => {
 			updateResult = [];
-			await expect(updateCategory('bad-id', { name: 'X' })).rejects.toThrow(
-				CategoryNotFoundError
-			);
+			await expect(updateCategory('bad-id', { name: 'X' })).rejects.toThrow(CategoryNotFoundError);
 		});
 	});
 
@@ -136,7 +134,11 @@ describe('EquipmentService', () => {
 			};
 			insertResult = [item];
 
-			const result = await createEquipment({ name: 'SM58', categoryId: 'cat-1', condition: 'good' });
+			const result = await createEquipment({
+				name: 'SM58',
+				categoryId: 'cat-1',
+				condition: 'good'
+			});
 			expect(result).toEqual(item);
 		});
 	});

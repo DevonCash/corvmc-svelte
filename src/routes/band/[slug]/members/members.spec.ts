@@ -20,9 +20,7 @@ const mockBand = {
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'owner' as string | null),
-	searchMembers: vi.fn(async () => [
-		{ id: 'user-3', name: 'Lou Reed', email: 'lou@example.com' }
-	]),
+	searchMembers: vi.fn(async () => [{ id: 'user-3', name: 'Lou Reed', email: 'lou@example.com' }]),
 	getMembers: vi.fn(async () => []),
 	invite: vi.fn(async () => ({
 		id: 'member-new',
@@ -92,7 +90,15 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { inviteMember, removeMember, revokeInvitation, updateMemberRemote, transferOwner, leave, searchBandUsers: searchUsers } = await import('$lib/remote/bands.remote') as any;
+const {
+	inviteMember,
+	removeMember,
+	revokeInvitation,
+	updateMemberRemote,
+	transferOwner,
+	leave,
+	searchBandUsers: searchUsers
+} = (await import('$lib/remote/bands.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -113,7 +119,11 @@ describe('inviteMember', () => {
 		});
 
 		expect(bandServiceMock.invite).toHaveBeenCalledWith(
-			'band-1', 'user-3', 'member', 'Guitar', 'user-owner'
+			'band-1',
+			'user-3',
+			'member',
+			'Guitar',
+			'user-owner'
 		);
 		expect(result.success).toBe(true);
 	});
@@ -122,7 +132,11 @@ describe('inviteMember', () => {
 		await inviteMember({ userId: 'user-3', role: 'admin', position: '' });
 
 		expect(bandServiceMock.invite).toHaveBeenCalledWith(
-			'band-1', 'user-3', 'admin', null, 'user-owner'
+			'band-1',
+			'user-3',
+			'admin',
+			null,
+			'user-owner'
 		);
 	});
 });
@@ -166,7 +180,9 @@ describe('transferOwner', () => {
 		const result = await transferOwner({ newOwnerId: 'user-3' });
 
 		expect(bandServiceMock.transferOwnership).toHaveBeenCalledWith(
-			'band-1', 'user-3', 'user-owner'
+			'band-1',
+			'user-3',
+			'user-owner'
 		);
 		expect(result.success).toBe(true);
 	});
@@ -199,4 +215,3 @@ describe('searchUsers', () => {
 		expect(results).toHaveLength(0);
 	});
 });
-

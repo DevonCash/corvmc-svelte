@@ -9,7 +9,12 @@ import { resolveImageUrl } from '$lib/server/storage';
 export const getMe = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return null;
-	return { id: locals.user.id, name: locals.user.name, email: locals.user.email, image: resolveImageUrl(locals.user.image) };
+	return {
+		id: locals.user.id,
+		name: locals.user.name,
+		email: locals.user.email,
+		image: resolveImageUrl(locals.user.image)
+	};
 });
 
 export const getMemberLayout = query(async () => {

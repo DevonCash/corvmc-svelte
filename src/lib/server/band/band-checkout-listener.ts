@@ -8,9 +8,7 @@ import { stripe } from '$lib/server/stripe';
  * When a band owner completes checkout, Stripe creates the subscription.
  * We fetch it here and sync the band's tier + subscription JSON.
  */
-export async function handleBandPremiumCheckout(
-	session: Stripe.Checkout.Session
-): Promise<void> {
+export async function handleBandPremiumCheckout(session: Stripe.Checkout.Session): Promise<void> {
 	const metadata = session.metadata ?? {};
 
 	if (metadata.subscription_type !== 'band_premium') return;
@@ -20,9 +18,7 @@ export async function handleBandPremiumCheckout(
 	}
 
 	const subscriptionId =
-		typeof session.subscription === 'string'
-			? session.subscription
-			: session.subscription?.id;
+		typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
 
 	if (!subscriptionId) {
 		console.warn('band_premium checkout missing subscription ID');

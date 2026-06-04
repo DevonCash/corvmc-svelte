@@ -26,11 +26,11 @@
 	let subscribers = $derived(await getAudienceSubscribers(id));
 </script>
 
-	{#if audienceData}
-		<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
-			<DeleteAudienceAction audienceId={id} onsuccess={() => goto('/staff/marketing/audiences')} />
-		</PageHeader>
-		<PageContent width="3xl">
+{#if audienceData}
+	<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
+		<DeleteAudienceAction audienceId={id} onsuccess={() => goto('/staff/marketing/audiences')} />
+	</PageHeader>
+	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Details">
 				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
@@ -63,10 +63,7 @@
 				<div class="space-y-3">
 					<BulkAddMembersAction audienceId={id} />
 
-					<Form
-						remote={updateAudience}
-						successToast="Opt-in setting updated"
-					>
+					<Form remote={updateAudience} successToast="Opt-in setting updated">
 						<input {...fields.id.as('hidden', id)} />
 						<label class="label cursor-pointer justify-start gap-3">
 							<input
@@ -121,7 +118,11 @@
 									</td>
 									<td class="w-px">{formatDate(s.createdAt)}</td>
 									<td class="w-px" onclick={(e) => e.stopPropagation()}>
-										<RemoveSubscriberAction audienceId={id} subscriberId={s.subscriberId} email={s.email} />
+										<RemoveSubscriberAction
+											audienceId={id}
+											subscriberId={s.subscriberId}
+											email={s.email}
+										/>
 									</td>
 								</tr>
 							{/each}
@@ -130,7 +131,5 @@
 				</div>
 			{/if}
 		</InfoCard>
-		</PageContent>
-	{/if}
-
-
+	</PageContent>
+{/if}

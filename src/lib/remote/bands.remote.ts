@@ -91,12 +91,7 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(
-			and(
-				eq(reservation.bookerType, 'band'),
-				eq(reservation.bookerId, bandId)
-			)
-		)
+		.where(and(eq(reservation.bookerType, 'band'), eq(reservation.bookerId, bandId)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(10);
 });
@@ -399,14 +394,11 @@ export const updateBand = form(
 	}
 );
 
-export const deleteBand = form(
-	z.object({}),
-	async () => {
-		const { band } = await requireBandOwner();
-		await deleteBandService(band.id);
-		return { success: true };
-	}
-);
+export const deleteBand = form(z.object({}), async () => {
+	const { band } = await requireBandOwner();
+	await deleteBandService(band.id);
+	return { success: true };
+});
 
 export const inviteMember = form(
 	z.object({
@@ -416,13 +408,7 @@ export const inviteMember = form(
 	}),
 	async (data) => {
 		const { user, band } = await requireBandAdmin();
-		const member = await invite(
-			band.id,
-			data.userId,
-			data.role,
-			data.position || null,
-			user.id
-		);
+		const member = await invite(band.id, data.userId, data.role, data.position || null, user.id);
 		return { success: true, memberId: member.id };
 	}
 );
@@ -459,7 +445,7 @@ export const updateMemberRemote = form(
 		await requireBandAdmin();
 		await updateMember(data.memberId, {
 			role: data.role,
-			position: data.position !== undefined ? (data.position || null) : undefined
+			position: data.position !== undefined ? data.position || null : undefined
 		});
 		return { success: true };
 	}
@@ -476,15 +462,12 @@ export const transferOwner = form(
 	}
 );
 
-export const leave = form(
-	z.object({}),
-	async () => {
-		const user = requireUser();
-		const band = await requireBandBySlug();
-		await leaveBandService(band.id, user.id);
-		return { success: true };
-	}
-);
+export const leave = form(z.object({}), async () => {
+	const user = requireUser();
+	const band = await requireBandBySlug();
+	await leaveBandService(band.id, user.id);
+	return { success: true };
+});
 
 export const inviteByEmail = form(
 	z.object({
@@ -520,15 +503,12 @@ export const revokePlatformInviteRemote = form(
 // Forms — Band avatar (slug-based)
 // ===========================================================================
 
-export const uploadBandAvatar = form(
-	z.object({ file: z.instanceof(File) }),
-	async (data) => {
-		const { band } = await requireBandAdmin();
-		await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
-		void getBandLayout(band.slug).refresh();
-		return { success: true };
-	}
-);
+export const uploadBandAvatar = form(z.object({ file: z.instanceof(File) }), async (data) => {
+	const { band } = await requireBandAdmin();
+	await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
+	void getBandLayout(band.slug).refresh();
+	return { success: true };
+});
 
 export const removeBandAvatar = form(z.object({}), async () => {
 	const { band } = await requireBandAdmin();

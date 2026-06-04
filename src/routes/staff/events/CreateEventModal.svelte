@@ -92,7 +92,12 @@
 
 <Modal bind:open title="New Event" maxWidth="max-w-md" onclose={resetForm}>
 	<svelte:boundary>
-		<Form remote={createEvent} successToast="Event created" onsuccess={handleSuccess} class="space-y-4">
+		<Form
+			remote={createEvent}
+			successToast="Event created"
+			onsuccess={handleSuccess}
+			class="space-y-4"
+		>
 			<Field name="title" type="text" label="Title" bind:value={title} />
 			<Field name="description" type="textarea" label="Description" bind:value={description} />
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
@@ -113,26 +118,46 @@
 					class="file-input file-input-bordered w-full"
 				/>
 				{#if posterFile}
-					<p class="text-sm opacity-60 mt-1">{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)</p>
+					<p class="text-sm opacity-60 mt-1">
+						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
+					</p>
 				{/if}
 			</Field>
 
-			<Field name="ticketingEnabled" type="toggle" value={ticketingEnabled}
-				checkboxLabel="Enable ticketing" />
+			<Field
+				name="ticketingEnabled"
+				type="toggle"
+				value={ticketingEnabled}
+				checkboxLabel="Enable ticketing"
+			/>
 
 			{#if ticketingEnabled}
 				<div class="card bg-base-200 p-4 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
-						<Field name="ticketPriceDollars" type="number" label="Ticket price ($)" bind:value={ticketPriceDollars} />
+						<Field
+							name="ticketPriceDollars"
+							type="number"
+							label="Ticket price ($)"
+							bind:value={ticketPriceDollars}
+						/>
 						<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
-						<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
+						<Field
+							name="ticketQuantity"
+							type="number"
+							label="Capacity"
+							bind:value={ticketQuantity}
+						/>
 					</div>
 					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
 				</div>
 			{/if}
 
-			<Field name="reserveSpace" type="toggle" value={reserveSpace}
-				checkboxLabel="Reserve practice space" />
+			<Field
+				name="reserveSpace"
+				type="toggle"
+				value={reserveSpace}
+				checkboxLabel="Reserve practice space"
+			/>
 
 			{#if reserveSpace}
 				<div class="card bg-base-200 p-4 space-y-4">
@@ -141,8 +166,18 @@
 					</p>
 
 					<div class="grid grid-cols-2 gap-4">
-						<Field name="reservationStartTime" type="time" label="Reservation start" bind:value={reservationStartTime} />
-						<Field name="reservationEndTime" type="time" label="Reservation end" bind:value={reservationEndTime} />
+						<Field
+							name="reservationStartTime"
+							type="time"
+							label="Reservation start"
+							bind:value={reservationStartTime}
+						/>
+						<Field
+							name="reservationEndTime"
+							type="time"
+							label="Reservation end"
+							bind:value={reservationEndTime}
+						/>
 					</div>
 
 					{#if reserveSpace}

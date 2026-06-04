@@ -12,7 +12,16 @@
 	import CreateReservation from './CreateModal.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import { IconCheck, IconCircleCheck, IconClock, IconGift, IconArrowBackUp, IconUserX, IconCircleX, IconRepeat } from '@tabler/icons-svelte';
+	import {
+		IconCheck,
+		IconCircleCheck,
+		IconClock,
+		IconGift,
+		IconArrowBackUp,
+		IconUserX,
+		IconCircleX,
+		IconRepeat
+	} from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions } from '$lib/utils/reservation-actions';
@@ -65,17 +74,22 @@
 				? { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp }
 				: { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
 		}
-		if (r.status === 'scheduled') return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
+		if (r.status === 'scheduled')
+			return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
 		return r.stripePaymentRecordId
 			? { label: 'Paid', color: 'text-success', icon: IconCheck }
 			: { label: 'Comped', color: 'text-info', icon: IconGift };
 	}
 
 	function dayLabel(r: Reservation): string {
-		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
+		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', {
+			timeZone: DEFAULT_TIMEZONE
+		});
 		const now = new Date();
 		const today = now.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
-		const tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
+		const tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', {
+			timeZone: DEFAULT_TIMEZONE
+		});
 		const label = formatDate(r.startsAt);
 		if (localDate === today) return `${label} (Today)`;
 		if (localDate === tomorrow) return `${label} (Tomorrow)`;
@@ -121,7 +135,10 @@
 				{ key: 'all', label: 'All' }
 			]}
 			active={tab}
-			onchange={(key) => { tab = key as 'upcoming' | 'all'; page = 1; }}
+			onchange={(key) => {
+				tab = key as 'upcoming' | 'all';
+				page = 1;
+			}}
 		/>
 	{:then c}
 		<TabBar
@@ -130,7 +147,10 @@
 				{ key: 'all', label: 'All', badge: c.all }
 			]}
 			active={tab}
-			onchange={(key) => { tab = key as 'upcoming' | 'all'; page = 1; }}
+			onchange={(key) => {
+				tab = key as 'upcoming' | 'all';
+				page = 1;
+			}}
 		/>
 	{/await}
 
@@ -146,13 +166,17 @@
 			type="date"
 			class="input input-bordered input-sm"
 			bind:value={dateFrom}
-			onchange={() => { page = 1; }}
+			onchange={() => {
+				page = 1;
+			}}
 		/>
 		<input
 			type="date"
 			class="input input-bordered input-sm"
 			bind:value={dateTo}
-			onchange={() => { page = 1; }}
+			onchange={() => {
+				page = 1;
+			}}
 		/>
 		{#if hasActiveFilters()}
 			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
@@ -217,7 +241,17 @@
 												<BookerTypeIcon type={r.bookerType} size={16} />
 											</span>
 										{/if}
-										<MemberLink hideAvatar member={{ name: r.memberName, email: r.memberEmail, pronouns: r.memberPronouns, role: r.memberRole, userId: r.createdByUserId }} class="p-7 px-4 w-full" />
+										<MemberLink
+											hideAvatar
+											member={{
+												name: r.memberName,
+												email: r.memberEmail,
+												pronouns: r.memberPronouns,
+												role: r.memberRole,
+												userId: r.createdByUserId
+											}}
+											class="p-7 px-4 w-full"
+										/>
 									</div>
 								</td>
 								<td>
@@ -243,7 +277,10 @@
 											</ConfirmReservationAction>
 										{/if}
 										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
-											<CompleteReservationAction reservation={r} class="btn-ghost btn-xs btn-square">
+											<CompleteReservationAction
+												reservation={r}
+												class="btn-ghost btn-xs btn-square"
+											>
 												{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 											</CompleteReservationAction>
 										{/if}
@@ -254,15 +291,15 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>
 
 {#await Promise.all([unresolved, hourlyRate]) then [unresolvedData, rate]}
-	<ResolveModal
-		bind:open={resolveOpen}
-		unresolved={unresolvedData}
-		hourlyRateCents={rate}
-	/>
+	<ResolveModal bind:open={resolveOpen} unresolved={unresolvedData} hourlyRateCents={rate} />
 {/await}

@@ -8,10 +8,10 @@ Every page under a panel layout (staff, member, or band) follows this shape:
 
 ```svelte
 <PageHeader title="Page Title" subtitle="Panel">
-  <!-- optional right-side actions (SubmitButton, links, etc.) -->
+	<!-- optional right-side actions (SubmitButton, links, etc.) -->
 </PageHeader>
 <PageContent width="full">
-  <!-- page body -->
+	<!-- page body -->
 </PageContent>
 ```
 
@@ -26,6 +26,7 @@ import PageContent from '$lib/components/shared/PageContent.svelte';
 ```
 
 Props:
+
 - `width` — `'full'` (default), `'md'`, `'2xl'`, or `'3xl'`. Adds `max-w-*` + `mx-auto`.
 - `class` — extra classes on the wrapper div.
 
@@ -34,7 +35,7 @@ Props:
 ```svelte
 <PageHeader title="Users" subtitle="Staff" />
 <PageContent>
-  <DataTable ... />
+	<DataTable ... />
 </PageContent>
 ```
 
@@ -43,7 +44,7 @@ Props:
 ```svelte
 <PageHeader title={item.name} subtitle="Equipment" backHref="/staff/equipment" />
 <PageContent width="3xl">
-  <InfoCard title="Details">...</InfoCard>
+	<InfoCard title="Details">...</InfoCard>
 </PageContent>
 ```
 
@@ -53,19 +54,19 @@ When `<Form>` must wrap both the header (for SubmitButton) and the body fields, 
 
 ```svelte
 <Form remote={updateItem} successToast="Saved">
-  <PageHeader title={item.name}>
-    <SubmitButton />
-  </PageHeader>
-  <PageContent width="3xl">
-    <InfoCard title="Info">
-      <Field name="name" ... />
-    </InfoCard>
-  </PageContent>
+	<PageHeader title={item.name}>
+		<SubmitButton />
+	</PageHeader>
+	<PageContent width="3xl">
+		<InfoCard title="Info">
+			<Field name="name" ... />
+		</InfoCard>
+	</PageContent>
 </Form>
 
 <!-- Non-form content gets its own PageContent -->
 <PageContent width="3xl">
-  <InfoCard title="History">...</InfoCard>
+	<InfoCard title="History">...</InfoCard>
 </PageContent>
 ```
 
@@ -85,14 +86,14 @@ import { query, form, getRequestEvent } from '$app/server';
 
 // Read-only data
 export const getItems = query(z.string(), async (param) => {
-  // ...
-  return { items };
+	// ...
+	return { items };
 });
 
 // Mutations with validation
 export const saveItem = form(schema, async (data) => {
-  // getRequestEvent() for auth/params
-  // return result (client gets it via remote.result)
+	// getRequestEvent() for auth/params
+	// return result (client gets it via remote.result)
 });
 ```
 
@@ -112,18 +113,21 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 
 ```svelte
 <Form
-  remote={saveItem}
-  successToast="Saved"
-  errorToast="Save failed"
-  onsuccess={(result) => { /* navigate, refresh, etc. */ }}
+	remote={saveItem}
+	successToast="Saved"
+	errorToast="Save failed"
+	onsuccess={(result) => {
+		/* navigate, refresh, etc. */
+	}}
 >
-  <FormField name="name" type="text" value={item.name} />
-  <FormField name="email" type="email" value={item.email} />
-  <SubmitButton label="Save" class="btn-primary" />
+	<FormField name="name" type="text" value={item.name} />
+	<FormField name="email" type="email" value={item.email} />
+	<SubmitButton label="Save" class="btn-primary" />
 </Form>
 ```
 
 Props:
+
 - `remote` — a remote form from `data.remote.ts`
 - `guard` — enables unsaved-changes protection (blocks navigation when form is dirty)
 - `successToast` / `errorToast` — toast messages
@@ -156,7 +160,7 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 
 ```svelte
 <FormField name="startDate" label="Start date">
-  <MyDatePicker name="startDate" value={item.startDate} />
+	<MyDatePicker name="startDate" value={item.startDate} />
 </FormField>
 ```
 
@@ -177,12 +181,12 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 
 ```svelte
 <SubmitButton
-  label="Save"
-  successLabel="Saved"
-  errorLabel="Error"
-  class="btn-primary"
-  disabled={!isValid}
-  shortcut="mod+s"
+	label="Save"
+	successLabel="Saved"
+	errorLabel="Error"
+	class="btn-primary"
+	disabled={!isValid}
+	shortcut="mod+s"
 />
 ```
 
@@ -194,10 +198,10 @@ Same status feedback as SubmitButton but for standalone async actions that aren'
 
 ```svelte
 <AsyncButton
-  action={() => deleteItem(item.id)}
-  label="Delete"
-  successToast="Deleted"
-  class="btn-error btn-sm"
+	action={() => deleteItem(item.id)}
+	label="Delete"
+	successToast="Deleted"
+	class="btn-error btn-sm"
 />
 ```
 
@@ -219,11 +223,11 @@ When `confirm` is set (and no `body`), an alert dialog is shown before firing th
 
 ```svelte
 <Action
-  action={() => deleteItem(item.id)}
-  label="Delete"
-  class="btn-error btn-sm"
-  confirm="This will permanently delete the item. Are you sure?"
-  successToast="Deleted"
+	action={() => deleteItem(item.id)}
+	label="Delete"
+	class="btn-error btn-sm"
+	confirm="This will permanently delete the item. Are you sure?"
+	successToast="Deleted"
 />
 ```
 
@@ -233,17 +237,17 @@ When `action` is a callback and `body` is provided, clicking the button opens a 
 
 ```svelte
 <Action
-  action={() => createAudience({ name, slug, description })}
-  label="New Audience"
-  modalTitle="Create Audience"
-  canSubmit={!!name.trim()}
-  successToast="Created"
-  onsuccess={(result) => goto(`/staff/marketing/audiences/${result.id}`)}
+	action={() => createAudience({ name, slug, description })}
+	label="New Audience"
+	modalTitle="Create Audience"
+	canSubmit={!!name.trim()}
+	successToast="Created"
+	onsuccess={(result) => goto(`/staff/marketing/audiences/${result.id}`)}
 >
-  {#snippet body({ close })}
-    <FormField name="name" label="Name" type="text" bind:value={name} />
-    <FormField name="slug" label="Slug" type="text" bind:value={slug} />
-  {/snippet}
+	{#snippet body({ close })}
+		<FormField name="name" label="Name" type="text" bind:value={name} />
+		<FormField name="slug" label="Slug" type="text" bind:value={slug} />
+	{/snippet}
 </Action>
 ```
 
@@ -255,17 +259,17 @@ When `action` is a `RemoteForm` (from `form()` in `data.remote.ts`), clicking th
 
 ```svelte
 <Action
-  action={updateItem}
-  label="Edit"
-  class="btn-primary btn-sm"
-  modalTitle="Edit Item"
-  successToast="Updated"
-  onsuccess={() => invalidateAll()}
+	action={updateItem}
+	label="Edit"
+	class="btn-primary btn-sm"
+	modalTitle="Edit Item"
+	successToast="Updated"
+	onsuccess={() => invalidateAll()}
 >
-  {#snippet body({ close })}
-    <FormField name="name" type="text" value={item.name} />
-    <FormField name="description" type="textarea" value={item.description} />
-  {/snippet}
+	{#snippet body({ close })}
+		<FormField name="name" type="text" value={item.name} />
+		<FormField name="description" type="textarea" value={item.description} />
+	{/snippet}
 </Action>
 ```
 
@@ -273,22 +277,22 @@ For `.for()` instances (per-row actions in a list):
 
 ```svelte
 {#each items as item (item.id)}
-  <Action action={updateItem.for(item.id)} label="Edit" modalTitle="Edit {item.name}" ...>
-    {#snippet body({ close })}
-      <FormField name="name" type="text" value={item.name} />
-    {/snippet}
-  </Action>
+	<Action action={updateItem.for(item.id)} label="Edit" modalTitle="Edit {item.name}" ...>
+		{#snippet body({ close })}
+			<FormField name="name" type="text" value={item.name} />
+		{/snippet}
+	</Action>
 {/each}
 ```
 
 ### Mode detection
 
-| `action` type | `body` | `confirm` | Mode |
-|---|---|---|---|
-| callback | — | — | Direct action |
-| callback | — | string | Confirmation dialog |
-| callback | snippet | — | Callback modal |
-| RemoteForm | snippet | — | Form modal |
+| `action` type | `body`  | `confirm` | Mode                |
+| ------------- | ------- | --------- | ------------------- |
+| callback      | —       | —         | Direct action       |
+| callback      | —       | string    | Confirmation dialog |
+| callback      | snippet | —         | Callback modal      |
+| RemoteForm    | snippet | —         | Form modal          |
 
 ### Props
 
@@ -330,15 +334,15 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 
 <!-- With action button -->
 <Alert type="warning">
-  Member not found.
-  {#snippet action()}
-    <a href="/member/directory" class="btn btn-sm">Back to Directory</a>
-  {/snippet}
+	Member not found.
+	{#snippet action()}
+		<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+	{/snippet}
 </Alert>
 
 <!-- As a link -->
 <Alert type="info" href="/member/bands" class="shadow-sm">
-  You have 3 pending band invitations.
+	You have 3 pending band invitations.
 </Alert>
 
 <!-- With retry (used by layout boundary) -->
@@ -374,18 +378,21 @@ Tab navigation supporting both URL-driven (links) and client-state (buttons) mod
 ```svelte
 <!-- URL-driven -->
 <TabBar
-  tabs={[
-    { key: 'upcoming', label: 'Upcoming', badge: 12, href: '/reservations?tab=upcoming' },
-    { key: 'all', label: 'All', badge: 50, href: '/reservations?tab=all' }
-  ]}
-  active={data.tab}
+	tabs={[
+		{ key: 'upcoming', label: 'Upcoming', badge: 12, href: '/reservations?tab=upcoming' },
+		{ key: 'all', label: 'All', badge: 50, href: '/reservations?tab=all' }
+	]}
+	active={data.tab}
 />
 
 <!-- Client-state -->
 <TabBar
-  tabs={[{ key: 'upcoming', label: 'Upcoming' }, { key: 'past', label: 'Past' }]}
-  active={activeTab}
-  onchange={(key) => (activeTab = key)}
+	tabs={[
+		{ key: 'upcoming', label: 'Upcoming' },
+		{ key: 'past', label: 'Past' }
+	]}
+	active={activeTab}
+	onchange={(key) => (activeTab = key)}
 />
 ```
 
@@ -407,9 +414,9 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 ```svelte
 <RecordNav
-  prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
-  nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
-  endLabel="Last of the day"
+	prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
+	nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
+	endLabel="Last of the day"
 />
 ```
 
@@ -421,7 +428,7 @@ Card with a small label header and content body. Use for detail page sections (m
 
 ```svelte
 <InfoCard title="Payment">
-  <p class="text-2xl font-medium">$24.00</p>
+	<p class="text-2xl font-medium">$24.00</p>
 </InfoCard>
 ```
 
@@ -429,7 +436,7 @@ Pass extra classes on the outer card via `class`:
 
 ```svelte
 <InfoCard title="Cancelled" class="border-l-4 border-error">
-  <p>Reason: scheduling conflict</p>
+	<p>Reason: scheduling conflict</p>
 </InfoCard>
 ```
 
@@ -439,10 +446,17 @@ Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "cur
 
 ```svelte
 <DayTimeline
-  current={{ id: 'abc', startsAt: '...', endsAt: '...', bookerType: 'user' }}
-  others={[
-    { id: 'def', startsAt: '...', endsAt: '...', bookerType: 'event', label: 'Band Practice', href: '/staff/reservations/def' }
-  ]}
+	current={{ id: 'abc', startsAt: '...', endsAt: '...', bookerType: 'user' }}
+	others={[
+		{
+			id: 'def',
+			startsAt: '...',
+			endsAt: '...',
+			bookerType: 'event',
+			label: 'Band Practice',
+			href: '/staff/reservations/def'
+		}
+	]}
 />
 ```
 
@@ -454,7 +468,7 @@ Consistent empty-state message for lists and tables.
 
 ```svelte
 {#if items.length === 0}
-  <EmptyState message="No reservations found." />
+	<EmptyState message="No reservations found." />
 {/if}
 ```
 
@@ -463,13 +477,13 @@ Consistent empty-state message for lists and tables.
 Table with built-in sorting and client-side pagination. Define columns as child `<Column>` components in the markup — each column declares its header, data key, and optional cell rendering.
 
 ```svelte
-import DataTable from '$lib/components/shared/Table/DataTable.svelte';
-import Column from '$lib/components/shared/Table/Column.svelte';
+import DataTable from '$lib/components/shared/Table/DataTable.svelte'; import Column from
+'$lib/components/shared/Table/Column.svelte';
 
 <DataTable data={users} empty="No users found">
-  <Column key="name" header="Name" sortable />
-  <Column key="email" header="Email" />
-  <Column key="createdAt" header="Joined" sortable type="date" />
+	<Column key="name" header="Name" sortable />
+	<Column key="email" header="Email" />
+	<Column key="createdAt" header="Joined" sortable type="date" />
 </DataTable>
 ```
 
@@ -483,9 +497,9 @@ For complex cells (links, badges, compound elements), pass a `cell` snippet:
 
 ```svelte
 <Column key="status" header="Status">
-  {#snippet cell(value, row)}
-    <StatusBadge status={row.status} />
-  {/snippet}
+	{#snippet cell(value, row)}
+		<StatusBadge status={row.status} />
+	{/snippet}
 </Column>
 ```
 
@@ -507,7 +521,7 @@ Make rows clickable with `rowHref`:
 
 ```svelte
 <DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`}>
-  <!-- columns -->
+	<!-- columns -->
 </DataTable>
 ```
 
@@ -529,12 +543,19 @@ DataTable can host a filter bar via the `toolbar` snippet. It wraps the content 
 import * as Filter from '$lib/components/shared/Table/Filter';
 
 <DataTable data={bands} clearHref="/staff/bands" empty="No bands found">
-  {#snippet toolbar()}
-    <Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
-    <Filter.Select name="status" value={data.filters.status} placeholder="All statuses"
-      options={[['active', 'Active'], ['deactivated', 'Deactivated']]} />
-  {/snippet}
-  <Column key="name" header="Name" sortable />
+	{#snippet toolbar()}
+		<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
+		<Filter.Select
+			name="status"
+			value={data.filters.status}
+			placeholder="All statuses"
+			options={[
+				['active', 'Active'],
+				['deactivated', 'Deactivated']
+			]}
+		/>
+	{/snippet}
+	<Column key="name" header="Name" sortable />
 </DataTable>
 ```
 
@@ -544,10 +565,10 @@ For extra toolbar content that isn't a filter (hidden inputs, custom markup), pl
 
 ```svelte
 {#snippet toolbar()}
-  <input type="hidden" name="tab" value={data.tab} />
-  <Filter.Search name="q" value={data.search} />
-  <Filter.Date name="from" value={data.dateFrom ?? ''} />
-  <Filter.Date name="to" value={data.dateTo ?? ''} />
+	<input type="hidden" name="tab" value={data.tab} />
+	<Filter.Search name="q" value={data.search} />
+	<Filter.Date name="from" value={data.dateFrom ?? ''} />
+	<Filter.Date name="to" value={data.dateTo ?? ''} />
 {/snippet}
 ```
 
@@ -589,10 +610,10 @@ Multi-select combobox with search, badge display, and hidden `<select>` for form
 
 ```svelte
 <TagInput
-  options={roleOptions}
-  value={selectedRoleIds}
-  name="roles"
-  placeholder="Search roles..."
+	options={roleOptions}
+	value={selectedRoleIds}
+	name="roles"
+	placeholder="Search roles..."
 />
 ```
 
@@ -602,7 +623,7 @@ Page title with optional back button, subtitle, and right-side action slot.
 
 ```svelte
 <PageHeader title="Edit User" subtitle="Staff" backHref="/staff/users">
-  <SubmitButton shortcut="mod+s" />
+	<SubmitButton shortcut="mod+s" />
 </PageHeader>
 ```
 

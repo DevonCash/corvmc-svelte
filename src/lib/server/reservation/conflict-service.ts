@@ -45,12 +45,7 @@ export async function hasConflict(
 	const closureConflicts = await db
 		.select({ id: closure.id })
 		.from(closure)
-		.where(
-			and(
-				lt(closure.startsAt, endsAt),
-				gt(closure.endsAt, startsAt)
-			)
-		)
+		.where(and(lt(closure.startsAt, endsAt), gt(closure.endsAt, startsAt)))
 		.limit(1);
 
 	return closureConflicts.length > 0;
@@ -85,12 +80,7 @@ export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
 	const dayClosures = await db
 		.select({ startsAt: closure.startsAt, endsAt: closure.endsAt })
 		.from(closure)
-		.where(
-			and(
-				lt(closure.startsAt, dayEnd),
-				gt(closure.endsAt, dayStart)
-			)
-		);
+		.where(and(lt(closure.startsAt, dayEnd), gt(closure.endsAt, dayStart)));
 
 	// Generate slots
 	const slots: TimeSlot[] = [];
@@ -188,7 +178,9 @@ export async function validateBooking(
 	}
 
 	// Check advance booking window
-	const maxDays = options?.isRecurring ? config.maxAdvanceDaysRecurring : config.maxAdvanceDaysOneoff;
+	const maxDays = options?.isRecurring
+		? config.maxAdvanceDaysRecurring
+		: config.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		return {
@@ -211,10 +203,7 @@ export interface ConflictDetail {
 	label: string;
 }
 
-export async function getConflictDetails(
-	startsAt: Date,
-	endsAt: Date
-): Promise<ConflictDetail[]> {
+export async function getConflictDetails(startsAt: Date, endsAt: Date): Promise<ConflictDetail[]> {
 	const { bufferMinutes } = await getReservationConfig();
 	const bufferMs = bufferMinutes * 60 * 1000;
 	const bufferedStart = new Date(startsAt.getTime() - bufferMs);
@@ -243,12 +232,7 @@ export async function getConflictDetails(
 			reason: closure.reason
 		})
 		.from(closure)
-		.where(
-			and(
-				lt(closure.startsAt, endsAt),
-				gt(closure.endsAt, startsAt)
-			)
-		);
+		.where(and(lt(closure.startsAt, endsAt), gt(closure.endsAt, startsAt)));
 
 	const details: ConflictDetail[] = [];
 
@@ -312,10 +296,14 @@ export async function getValidationWarnings(
 	const endTime = formatTimeInTz(endsAt, tz);
 
 	if (startTime < config.operatingHoursStart || endTime > config.operatingHoursEnd) {
-		warnings.push(`Outside operating hours (${config.operatingHoursStart} – ${config.operatingHoursEnd})`);
+		warnings.push(
+			`Outside operating hours (${config.operatingHoursStart} – ${config.operatingHoursEnd})`
+		);
 	}
 
-	const maxDays = options?.isRecurring ? config.maxAdvanceDaysRecurring : config.maxAdvanceDaysOneoff;
+	const maxDays = options?.isRecurring
+		? config.maxAdvanceDaysRecurring
+		: config.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		warnings.push(`More than ${maxDays} days in advance`);

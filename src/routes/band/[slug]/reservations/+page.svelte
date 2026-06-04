@@ -25,8 +25,8 @@
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-		<Button href="reservations/new" class="btn-sm">Book a Session</Button>
-	</PageHeader>
+	<Button href="reservations/new" class="btn-sm">Book a Session</Button>
+</PageHeader>
 <PageContent width="2xl">
 	<TabBar
 		tabs={[
@@ -72,7 +72,10 @@
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
 									<Form
 										remote={cancel}
-										onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
+										onsuccess={() => {
+											toast.success('Reservation cancelled');
+											invalidateAll();
+										}}
 										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />

@@ -271,9 +271,21 @@ export async function invite(
 		// Emit domain event (fire-and-forget)
 		Promise.resolve().then(async () => {
 			try {
-				const [bandRow] = await db.select({ name: band.name }).from(band).where(eq(band.id, bandId)).limit(1);
-				const [invitedUser] = await db.select({ name: user.name, email: user.email }).from(user).where(eq(user.id, userId)).limit(1);
-				const [inviter] = await db.select({ name: user.name }).from(user).where(eq(user.id, invitedById)).limit(1);
+				const [bandRow] = await db
+					.select({ name: band.name })
+					.from(band)
+					.where(eq(band.id, bandId))
+					.limit(1);
+				const [invitedUser] = await db
+					.select({ name: user.name, email: user.email })
+					.from(user)
+					.where(eq(user.id, userId))
+					.limit(1);
+				const [inviter] = await db
+					.select({ name: user.name })
+					.from(user)
+					.where(eq(user.id, invitedById))
+					.limit(1);
 
 				if (bandRow && invitedUser && inviter) {
 					await domainEvents.emit('band.invitation_sent', {
@@ -318,8 +330,16 @@ export async function acceptInvitation(memberId: string, userId: string) {
 	// Emit domain event (fire-and-forget)
 	Promise.resolve().then(async () => {
 		try {
-			const [bandRow] = await db.select({ name: band.name }).from(band).where(eq(band.id, row.bandId)).limit(1);
-			const [acceptedUser] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+			const [bandRow] = await db
+				.select({ name: band.name })
+				.from(band)
+				.where(eq(band.id, row.bandId))
+				.limit(1);
+			const [acceptedUser] = await db
+				.select({ name: user.name })
+				.from(user)
+				.where(eq(user.id, userId))
+				.limit(1);
 
 			// Get band admins/owners to notify (single join query)
 			const adminUsers = await db
@@ -438,10 +458,7 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 					eq(bandMember.status, 'active')
 				)
 			),
-		db
-			.update(band)
-			.set({ ownerId: newOwnerId, updatedAt: new Date() })
-			.where(eq(band.id, bandId))
+		db.update(band).set({ ownerId: newOwnerId, updatedAt: new Date() }).where(eq(band.id, bandId))
 	]);
 }
 
@@ -610,7 +627,11 @@ const AVATAR_EXTENSIONS: Record<string, string> = {
 
 /** Upload a band avatar to storage and persist its key. */
 export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
-	const [row] = await db.select({ avatarKey: band.avatarKey }).from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db
+		.select({ avatarKey: band.avatarKey })
+		.from(band)
+		.where(eq(band.id, bandId))
+		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
 	if (row.avatarKey) {
@@ -631,7 +652,11 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 
 /** Remove a band's avatar from storage and clear its key. */
 export async function clearBandAvatar(bandId: string) {
-	const [row] = await db.select({ avatarKey: band.avatarKey }).from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db
+		.select({ avatarKey: band.avatarKey })
+		.from(band)
+		.where(eq(band.id, bandId))
+		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
 	if (row.avatarKey) {

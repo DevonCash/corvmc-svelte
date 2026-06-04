@@ -59,7 +59,12 @@
 						<div class="sm:col-span-2">
 							<dt class="text-xs font-medium uppercase opacity-60">Ticket Link</dt>
 							<dd>
-								<a href={evt.externalTicketUrl} target="_blank" rel="noopener" class="link link-primary">
+								<a
+									href={evt.externalTicketUrl}
+									target="_blank"
+									rel="noopener"
+									class="link link-primary"
+								>
 									{evt.externalTicketUrl}
 								</a>
 							</dd>
@@ -163,22 +168,41 @@
 
 						<div class="form-control">
 							<label class="label"><span class="label-text">Title</span></label>
-							<input {...updateBandEventForm.fields.title.as('text', evt.title)} class="input input-bordered w-full" maxlength="200" />
+							<input
+								{...updateBandEventForm.fields.title.as('text', evt.title)}
+								class="input input-bordered w-full"
+								maxlength="200"
+							/>
 						</div>
 
 						<div class="form-control">
 							<label class="label"><span class="label-text">Description</span></label>
-							<textarea {...updateBandEventForm.fields.description.as('text', evt.description ?? '')} class="textarea textarea-bordered w-full" rows="4" maxlength="5000"></textarea>
+							<textarea
+								{...updateBandEventForm.fields.description.as('text', evt.description ?? '')}
+								class="textarea textarea-bordered w-full"
+								rows="4"
+								maxlength="5000"
+							></textarea>
 						</div>
 
 						<div class="form-control">
 							<label class="label"><span class="label-text">Location</span></label>
-							<input {...updateBandEventForm.fields.location.as('text', evt.location ?? '')} class="input input-bordered w-full" maxlength="500" />
+							<input
+								{...updateBandEventForm.fields.location.as('text', evt.location ?? '')}
+								class="input input-bordered w-full"
+								maxlength="500"
+							/>
 						</div>
 
 						<div class="form-control">
 							<label class="label"><span class="label-text">Ticket Link</span></label>
-							<input {...updateBandEventForm.fields.externalTicketUrl.as('text', evt.externalTicketUrl ?? '')} class="input input-bordered w-full" />
+							<input
+								{...updateBandEventForm.fields.externalTicketUrl.as(
+									'text',
+									evt.externalTicketUrl ?? ''
+								)}
+								class="input input-bordered w-full"
+							/>
 						</div>
 
 						<div class="flex justify-end pt-2">

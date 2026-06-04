@@ -14,9 +14,15 @@
 
 <svelte:head>
 	<title>{member.name} | Corvallis Music Collective</title>
-	<meta name="description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		name="description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 	<meta property="og:title" content={member.name} />
-	<meta property="og:description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		property="og:description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 </svelte:head>
 
 <div class="max-w-2xl mx-auto space-y-6 p-6">
@@ -48,7 +54,9 @@
 	</div>
 
 	{#if member.bio}
-		<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(member.bio)}</div>
+		<div class="prose prose-sm max-w-none text-base-content/80">
+			{@html sanitizeBio(member.bio)}
+		</div>
 	{/if}
 
 	{#if member.instruments?.length || member.genres?.length}

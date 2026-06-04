@@ -86,27 +86,29 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
 		.orderBy(inboxMessage.createdAt);
 
-	const references = inboundIds
-		.map((m) => m.channelMessageId)
-		.filter(Boolean)
-		.join(' ') || null;
+	const references =
+		inboundIds
+			.map((m) => m.channelMessageId)
+			.filter(Boolean)
+			.join(' ') || null;
 
 	let channelMessageId: string | null = null;
 
 	try {
-		channelMessageId = (await dispatchReply({
-			channel: thread.channel,
-			threadId: thread.id,
-			body: params.body,
-			staffName: params.authorName,
-			contactName: thread.contactName,
-			contactEmail: thread.contactEmail,
-			contactPhone: thread.contactPhone,
-			contactExternalId: thread.contactExternalId,
-			subject: thread.subject,
-			lastInboundMessageId: lastInbound?.channelMessageId ?? null,
-			references
-		})) ?? null;
+		channelMessageId =
+			(await dispatchReply({
+				channel: thread.channel,
+				threadId: thread.id,
+				body: params.body,
+				staffName: params.authorName,
+				contactName: thread.contactName,
+				contactEmail: thread.contactEmail,
+				contactPhone: thread.contactPhone,
+				contactExternalId: thread.contactExternalId,
+				subject: thread.subject,
+				lastInboundMessageId: lastInbound?.channelMessageId ?? null,
+				references
+			})) ?? null;
 	} catch (err) {
 		console.error('[inbox] Failed to dispatch reply:', err);
 		throw err;

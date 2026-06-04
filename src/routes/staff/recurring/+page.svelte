@@ -6,7 +6,13 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconRepeat } from '@tabler/icons-svelte';
-	import { formatTimeRange, formatDuration, formatScheduleLabel, formatMonthDayYear, formatDate } from '$lib/utils/format';
+	import {
+		formatTimeRange,
+		formatDuration,
+		formatScheduleLabel,
+		formatMonthDayYear,
+		formatDate
+	} from '$lib/utils/format';
 	import { cancelStaffSeries, getStaffRecurring } from '$lib/remote/recurring.remote';
 	const { fields: cancelFields } = cancelStaffSeries;
 
@@ -24,7 +30,10 @@
 			class="btn btn-sm"
 			class:btn-primary={filter === 'active'}
 			class:btn-ghost={filter !== 'active'}
-			onclick={() => { filter = 'active'; page = 1; }}
+			onclick={() => {
+				filter = 'active';
+				page = 1;
+			}}
 		>
 			Active
 		</button>
@@ -32,7 +41,10 @@
 			class="btn btn-sm"
 			class:btn-primary={filter === 'cancelled'}
 			class:btn-ghost={filter !== 'cancelled'}
-			onclick={() => { filter = 'cancelled'; page = 1; }}
+			onclick={() => {
+				filter = 'cancelled';
+				page = 1;
+			}}
 		>
 			Cancelled
 		</button>
@@ -40,7 +52,10 @@
 			class="btn btn-sm"
 			class:btn-primary={filter === 'all'}
 			class:btn-ghost={filter !== 'all'}
-			onclick={() => { filter = 'all'; page = 1; }}
+			onclick={() => {
+				filter = 'all';
+				page = 1;
+			}}
 		>
 			All
 		</button>
@@ -68,9 +83,14 @@
 					</thead>
 					<tbody>
 						{#each series as s (s.id)}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/recurring/${s.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/recurring/${s.id}`)}
+							>
 								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }} />
+									<MemberLink
+										member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}
+									/>
 								</td>
 								<td>
 									<div class="flex items-center gap-1">
@@ -99,12 +119,16 @@
 											label="Cancel"
 											modalTitle="Confirm"
 											successToast="Series cancelled"
-											onsuccess={() => { void getStaffRecurring(filters).refresh(); }}
+											onsuccess={() => {
+												void getStaffRecurring(filters).refresh();
+											}}
 											class="btn-ghost btn-xs text-error"
 										>
 											{#snippet form({ close })}
 												<input {...cancelFields.seriesId.as('hidden', s.id)} />
-												<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
+												<p class="py-4">
+													Cancel this recurring series? Future reservations will not be created.
+												</p>
 											{/snippet}
 										</Action>
 									{/if}
@@ -114,7 +138,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

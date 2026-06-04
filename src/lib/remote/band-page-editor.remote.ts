@@ -95,10 +95,7 @@ export const saveBandPageConfig = form(
 			if (customCss !== undefined) updates.customCss = customCss;
 			if (blocks !== undefined) updates.blocks = blocks;
 
-			await db
-				.update(bandPageConfig)
-				.set(updates)
-				.where(eq(bandPageConfig.id, existing.id));
+			await db.update(bandPageConfig).set(updates).where(eq(bandPageConfig.id, existing.id));
 		} else {
 			await db.insert(bandPageConfig).values({
 				bandId: band.id,

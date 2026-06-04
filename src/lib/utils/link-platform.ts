@@ -18,8 +18,7 @@ const PLATFORM_MATCHERS: Array<{
 		name: 'YouTube',
 		icon: 'IconBrandYoutube',
 		pattern: /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/,
-		getEmbedUrl: (_url, match) =>
-			`https://www.youtube.com/embed/${match[1]}`
+		getEmbedUrl: (_url, match) => `https://www.youtube.com/embed/${match[1]}`
 	},
 	{
 		name: 'SoundCloud',
@@ -32,8 +31,7 @@ const PLATFORM_MATCHERS: Array<{
 		name: 'Spotify',
 		icon: 'IconBrandSpotify',
 		pattern: /open\.spotify\.com\/(track|album|artist|playlist)\/([\w]+)/,
-		getEmbedUrl: (_url, match) =>
-			`https://open.spotify.com/embed/${match[1]}/${match[2]}`
+		getEmbedUrl: (_url, match) => `https://open.spotify.com/embed/${match[1]}/${match[2]}`
 	},
 	{
 		name: 'Bandcamp',

@@ -52,11 +52,8 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	cancelAllForUser: vi.fn()
 }));
 
-const {
-	handleCheckoutCompleted,
-	handleInvoicePaid,
-	handleSubscriptionDeleted
-} = await import('./webhook-handlers');
+const { handleCheckoutCompleted, handleInvoicePaid, handleSubscriptionDeleted } =
+	await import('./webhook-handlers');
 
 // ---------------------------------------------------------------------------
 // handleCheckoutCompleted
@@ -68,7 +65,10 @@ describe('handleCheckoutCompleted', () => {
 	});
 
 	it('emits checkout.completed domain event with session data', async () => {
-		const session = { id: 'cs_123', metadata: { reservation_id: 'res-42' } } as unknown as Stripe.Checkout.Session;
+		const session = {
+			id: 'cs_123',
+			metadata: { reservation_id: 'res-42' }
+		} as unknown as Stripe.Checkout.Session;
 		await handleCheckoutCompleted(session);
 
 		expect(mockEmit).toHaveBeenCalledWith('checkout.completed', {
@@ -111,16 +111,18 @@ describe('handleInvoicePaid', () => {
 			customer: 'cus_123',
 			lines: {
 				data: [
-					{ parent: { subscription_item_details: { subscription_item: 'si_abc' } }, quantity: 5, amount: 2500 }
+					{
+						parent: { subscription_item_details: { subscription_item: 'si_abc' } },
+						quantity: 5,
+						amount: 2500
+					}
 				]
 			}
 		} as unknown as Stripe.Invoice;
 
 		await handleInvoicePaid(invoice);
 
-		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith(
-			'user-1', 5, 'inv_123'
-		);
+		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith('user-1', 5, 'inv_123');
 	});
 
 	it('handles customer as an object with id property', async () => {
@@ -135,7 +137,11 @@ describe('handleInvoicePaid', () => {
 			customer: { id: 'cus_456' },
 			lines: {
 				data: [
-					{ parent: { subscription_item_details: { subscription_item: 'si_obj' } }, quantity: 3, amount: 1500 }
+					{
+						parent: { subscription_item_details: { subscription_item: 'si_obj' } },
+						quantity: 3,
+						amount: 1500
+					}
 				]
 			}
 		} as unknown as Stripe.Invoice;
@@ -143,7 +149,9 @@ describe('handleInvoicePaid', () => {
 		await handleInvoicePaid(invoice);
 
 		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith(
-			'user-2', 3, 'inv_obj_cus'
+			'user-2',
+			3,
+			'inv_obj_cus'
 		);
 	});
 
@@ -170,9 +178,7 @@ describe('handleInvoicePaid', () => {
 			},
 			customer: 'cus_123',
 			lines: {
-				data: [
-					{ parent: { subscription_item_details: null }, quantity: 1, amount: 100 }
-				]
+				data: [{ parent: { subscription_item_details: null }, quantity: 1, amount: 100 }]
 			}
 		} as unknown as Stripe.Invoice;
 
@@ -192,7 +198,11 @@ describe('handleInvoicePaid', () => {
 				subscription_details: { subscription: 'sub_xyz' }
 			},
 			customer: 'cus_unknown',
-			lines: { data: [{ parent: { subscription_item_details: { subscription_item: 'si_xyz' } }, quantity: 3 }] }
+			lines: {
+				data: [
+					{ parent: { subscription_item_details: { subscription_item: 'si_xyz' } }, quantity: 3 }
+				]
+			}
 		} as unknown as Stripe.Invoice;
 
 		await handleInvoicePaid(invoice);

@@ -30,9 +30,7 @@
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<div class="alert alert-success">
-					Thanks for reaching out! We'll get back to you soon.
-				</div>
+				<div class="alert alert-success">Thanks for reaching out! We'll get back to you soon.</div>
 			{:else}
 				<form
 					{...rf.enhance(async ({ submit }) => {
@@ -48,7 +46,11 @@
 						</label>
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Email</span></div>
-							<input {...rf.fields.email.as('email')} class="input input-bordered w-full" required />
+							<input
+								{...rf.fields.email.as('email')}
+								class="input input-bordered w-full"
+								required
+							/>
 						</label>
 					</div>
 					<label class="form-control w-full">
@@ -61,7 +63,8 @@
 					</label>
 					<label class="form-control w-full">
 						<div class="label"><span class="label-text">Message</span></div>
-						<textarea name="message" class="textarea textarea-bordered w-full" rows="5" required></textarea>
+						<textarea name="message" class="textarea textarea-bordered w-full" rows="5" required
+						></textarea>
 					</label>
 					<button type="submit" class="btn btn-primary">Send Message</button>
 				</form>
@@ -92,21 +95,30 @@
 				<h3 class="font-semibold mb-2">Quick Answers</h3>
 				<div class="space-y-2 text-sm">
 					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0">How do I become a member?</summary>
+						<summary class="collapse-title font-medium py-2 min-h-0"
+							>How do I become a member?</summary
+						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							<a href="/login?redirect=/member" class="link">Create an account</a> to get started. Free memberships are available.
+							<a href="/login?redirect=/member" class="link">Create an account</a> to get started. Free
+							memberships are available.
 						</div>
 					</details>
 					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0">Can I use the practice space?</summary>
+						<summary class="collapse-title font-medium py-2 min-h-0"
+							>Can I use the practice space?</summary
+						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							The practice space is available to all members. Sign up for a free membership to book your first session.
+							The practice space is available to all members. Sign up for a free membership to book
+							your first session.
 						</div>
 					</details>
 					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0">How do I submit music for a show?</summary>
+						<summary class="collapse-title font-medium py-2 min-h-0"
+							>How do I submit music for a show?</summary
+						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							Use the contact form on this page with "Performance Inquiry" as the subject, and tell us about your act.
+							Use the contact form on this page with "Performance Inquiry" as the subject, and tell
+							us about your act.
 						</div>
 					</details>
 				</div>

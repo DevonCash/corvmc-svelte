@@ -134,7 +134,12 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getBandSlots: getSlots, bookBandReservation: bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('$lib/remote/reservations.remote') as any;
+const {
+	getBandSlots: getSlots,
+	bookBandReservation: bookReservation,
+	cancelBandReservation,
+	getBandMembershipStatus
+} = (await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -201,10 +206,7 @@ describe('cancelBandReservation', () => {
 	it('cancels the reservation', async () => {
 		const result = await cancelBandReservation({ reservationId: 'res-42' });
 
-		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
-			'res-42',
-			'user-owner'
-		);
+		expect(reservationServiceMock.cancel).toHaveBeenCalledWith('res-42', 'user-owner');
 		expect(result.success).toBe(true);
 	});
 });
@@ -230,9 +232,7 @@ describe('getBandMembershipStatus', () => {
 	});
 
 	it('returns hasSustainingMember false when no active members exist', async () => {
-		bandServiceMock.getMembers.mockResolvedValueOnce([
-			{ userId: 'user-1', status: 'inactive' }
-		]);
+		bandServiceMock.getMembers.mockResolvedValueOnce([{ userId: 'user-1', status: 'inactive' }]);
 
 		const result = await getBandMembershipStatus();
 
@@ -289,4 +289,3 @@ describe('bookReservation with recurring', () => {
 		expect(recurringSeriesServiceMock.create).not.toHaveBeenCalled();
 	});
 });
-

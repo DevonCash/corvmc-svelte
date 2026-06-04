@@ -52,7 +52,13 @@ export function estimateLoanCost(
 export const equipmentConditions = ['excellent', 'good', 'fair', 'poor'] as const;
 export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export const pricingTiers = ['major', 'accessory'] as const;
-export const loanStatuses = ['requested', 'scheduled', 'checked_out', 'returned', 'cancelled'] as const;
+export const loanStatuses = [
+	'requested',
+	'scheduled',
+	'checked_out',
+	'returned',
+	'cancelled'
+] as const;
 
 // ---------------------------------------------------------------------------
 // Inbox enum values

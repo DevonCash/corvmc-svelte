@@ -30,7 +30,11 @@ vi.mock('$lib/server/db', () => ({
 		update: () => {
 			const chain: any = new Proxy(() => chain, {
 				get(_, prop) {
-					if (prop === 'set') return (data: unknown) => { updatedData.push(data); return chain; };
+					if (prop === 'set')
+						return (data: unknown) => {
+							updatedData.push(data);
+							return chain;
+						};
 					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
 					return () => chain;
 				}
@@ -52,13 +56,30 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', bio: 'bio', tagline: 'tagline', lookingForBand: 'looking_for_band', directoryVisibility: 'directory_visibility', directoryContact: 'directory_contact', links: 'links', updatedAt: 'updated_at' },
+	user: {
+		id: 'id',
+		bio: 'bio',
+		tagline: 'tagline',
+		lookingForBand: 'looking_for_band',
+		directoryVisibility: 'directory_visibility',
+		directoryContact: 'directory_contact',
+		links: 'links',
+		updatedAt: 'updated_at'
+	},
 	userInstrument: { userId: 'user_id', instrument: 'instrument' },
 	userGenre: { userId: 'user_id', genre: 'genre' }
 }));
 
 vi.mock('$lib/server/db/schema/band', () => ({
-	band: { id: 'id', tagline: 'tagline', lookingForMembers: 'looking_for_members', directoryVisibility: 'directory_visibility', directoryContact: 'directory_contact', links: 'links', updatedAt: 'updated_at' },
+	band: {
+		id: 'id',
+		tagline: 'tagline',
+		lookingForMembers: 'looking_for_members',
+		directoryVisibility: 'directory_visibility',
+		directoryContact: 'directory_contact',
+		links: 'links',
+		updatedAt: 'updated_at'
+	},
 	bandMember: { bandId: 'band_id', userId: 'user_id', role: 'role', status: 'status' },
 	bandGenre: { bandId: 'band_id', genre: 'genre' }
 }));
@@ -160,7 +181,16 @@ describe('getMemberProfileForEdit', () => {
 	});
 
 	it('returns profile with instruments and genres', async () => {
-		selectResults.push([{ bio: 'Hi', tagline: 'Dev', lookingForBand: true, directoryVisibility: 'public', directoryContact: null, links: null }]);
+		selectResults.push([
+			{
+				bio: 'Hi',
+				tagline: 'Dev',
+				lookingForBand: true,
+				directoryVisibility: 'public',
+				directoryContact: null,
+				links: null
+			}
+		]);
 		selectResults.push([{ instrument: 'guitar' }, { instrument: 'drums' }]);
 		selectResults.push([{ genre: 'rock' }]);
 
@@ -180,9 +210,9 @@ describe('updateBandProfile', () => {
 		// requireBandAdmin select returns member role
 		selectResults.push([{ role: 'member' }]);
 
-		await expect(
-			updateBandProfile('band-1', 'user-1', { tagline: 'Great band' })
-		).rejects.toThrow('Not authorized');
+		await expect(updateBandProfile('band-1', 'user-1', { tagline: 'Great band' })).rejects.toThrow(
+			'Not authorized'
+		);
 	});
 
 	it('updates band profile when user is admin', async () => {
@@ -208,7 +238,11 @@ describe('setUserAvatar', () => {
 
 		const key = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
 
-		expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'users/avatars/user-1.png', 'image/png');
+		expect(uploadFile).toHaveBeenCalledWith(
+			expect.any(ArrayBuffer),
+			'users/avatars/user-1.png',
+			'image/png'
+		);
 		expect(key).toBe('users/avatars/user-1.png');
 	});
 
@@ -255,7 +289,15 @@ describe('getBandProfileForEdit', () => {
 	});
 
 	it('returns band profile with genres', async () => {
-		selectResults.push([{ tagline: 'NYC punk', lookingForMembers: true, directoryVisibility: 'public', directoryContact: null, links: null }]);
+		selectResults.push([
+			{
+				tagline: 'NYC punk',
+				lookingForMembers: true,
+				directoryVisibility: 'public',
+				directoryContact: null,
+				links: null
+			}
+		]);
 		selectResults.push([{ genre: 'punk' }, { genre: 'rock' }]);
 
 		const result = await getBandProfileForEdit('band-1');

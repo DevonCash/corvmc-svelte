@@ -16,9 +16,7 @@ function makeSelectChain(result: unknown[]) {
 	//   .from().where().limit()  (conflict checks)
 	const limit = vi.fn().mockResolvedValue(result);
 	// Make `where` thenable so `await .where()` works without `.limit()`
-	const where = vi.fn().mockReturnValue(
-		Object.assign(Promise.resolve(result), { limit })
-	);
+	const where = vi.fn().mockReturnValue(Object.assign(Promise.resolve(result), { limit }));
 	const from = vi.fn().mockReturnValue({ where, limit });
 	return { from };
 }
@@ -32,11 +30,29 @@ vi.mock('$lib/server/db', () => ({ db: dbMock }));
 
 // Schema refs — just need to be truthy objects used in eq/and calls
 vi.mock('$lib/server/db/schema/recurring', () => ({
-	recurringSeries: { id: 'id', prototypeId: 'prototypeId', rrule: 'rrule', prototypeType: 'prototypeType', endsAt: 'endsAt', cancelledAt: 'cancelledAt', supersededBy: 'supersededBy' }
+	recurringSeries: {
+		id: 'id',
+		prototypeId: 'prototypeId',
+		rrule: 'rrule',
+		prototypeType: 'prototypeType',
+		endsAt: 'endsAt',
+		cancelledAt: 'cancelledAt',
+		supersededBy: 'supersededBy'
+	}
 }));
 
 vi.mock('$lib/server/db/schema/reservation', () => ({
-	reservation: { id: 'id', bookerType: 'bookerType', bookerId: 'bookerId', createdByUserId: 'createdByUserId', startsAt: 'startsAt', endsAt: 'endsAt', notes: 'notes', recurringSeriesId: 'recurringSeriesId', status: 'status' },
+	reservation: {
+		id: 'id',
+		bookerType: 'bookerType',
+		bookerId: 'bookerId',
+		createdByUserId: 'createdByUserId',
+		startsAt: 'startsAt',
+		endsAt: 'endsAt',
+		notes: 'notes',
+		recurringSeriesId: 'recurringSeriesId',
+		status: 'status'
+	},
 	closure: { reason: 'reason', startsAt: 'startsAt', endsAt: 'endsAt' }
 }));
 
@@ -148,13 +164,13 @@ describe('generateRecurringReservations', () => {
 	it('creates reservation instances for occurrences with no conflicts', async () => {
 		// Selects: activeSeries, prototype, owner, existingInstances, eventConflict, closureConflict, reservationConflict
 		queueSelects(
-			[SERIES],        // 1. active series
-			[PROTOTYPE],     // 2. prototype reservation
-			[OWNER],         // 3. user/owner info
-			[],              // 4. existing instances in window (none)
-			[],              // 5. event conflict check (none)
-			[],              // 6. closure conflict check (none)
-			[]               // 7. regular reservation conflict check (none)
+			[SERIES], // 1. active series
+			[PROTOTYPE], // 2. prototype reservation
+			[OWNER], // 3. user/owner info
+			[], // 4. existing instances in window (none)
+			[], // 5. event conflict check (none)
+			[], // 6. closure conflict check (none)
+			[] // 7. regular reservation conflict check (none)
 		);
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -204,9 +220,9 @@ describe('generateRecurringReservations', () => {
 			[SERIES],
 			[PROTOTYPE],
 			[OWNER],
-			[],                      // 4. no existing instances
-			[{ id: 'event-1' }],     // 5. event conflict found
-			[]                       // closure check (not reached, but queue is safe)
+			[], // 4. no existing instances
+			[{ id: 'event-1' }], // 5. event conflict found
+			[] // closure check (not reached, but queue is safe)
 		);
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -236,9 +252,9 @@ describe('generateRecurringReservations', () => {
 			[SERIES],
 			[PROTOTYPE],
 			[OWNER],
-			[],                                       // 4. no existing instances
-			[],                                       // 5. no event conflict
-			[{ reason: 'Holiday closure' }]           // 6. closure conflict
+			[], // 4. no existing instances
+			[], // 5. no event conflict
+			[{ reason: 'Holiday closure' }] // 6. closure conflict
 		);
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -263,22 +279,21 @@ describe('generateRecurringReservations', () => {
 		const OCC2_END = new Date('2026-05-21T19:00:00Z');
 
 		queueSelects(
-			[SERIES, SERIES_2],  // 1. two active series
-			[],                  // 2. prototype for series-1 → missing → throws
+			[SERIES, SERIES_2], // 1. two active series
+			[], // 2. prototype for series-1 → missing → throws
 			// series-2 processing:
-			[PROTOTYPE],         // 3. prototype for series-2
-			[OWNER],             // 4. owner for series-2
-			[],                  // 5. no existing instances
-			[],                  // 6. no event conflict for OCC2
-			[],                  // 7. no closure conflict for OCC2
-			[]                   // 8. no regular reservation conflict for OCC2
+			[PROTOTYPE], // 3. prototype for series-2
+			[OWNER], // 4. owner for series-2
+			[], // 5. no existing instances
+			[], // 6. no event conflict for OCC2
+			[], // 7. no closure conflict for OCC2
+			[] // 8. no regular reservation conflict for OCC2
 		);
 		setupInsert();
 
 		// series-1 gets no occurrences because it throws before reaching getOccurrences
 		// series-2 gets one occurrence
-		mockGetOccurrences
-			.mockReturnValueOnce([OCC2]); // called only for series-2
+		mockGetOccurrences.mockReturnValueOnce([OCC2]); // called only for series-2
 
 		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
@@ -299,13 +314,13 @@ describe('generateRecurringReservations', () => {
 
 	it('creates waitlisted instances when regular reservation conflicts exist', async () => {
 		queueSelects(
-			[SERIES],            // 1. active series
-			[PROTOTYPE],         // 2. prototype reservation
-			[OWNER],             // 3. user/owner info
-			[],                  // 4. existing instances in window (none)
-			[],                  // 5. no event conflict
-			[],                  // 6. no closure conflict
-			[{ id: 'res-99' }]   // 7. regular reservation conflict found
+			[SERIES], // 1. active series
+			[PROTOTYPE], // 2. prototype reservation
+			[OWNER], // 3. user/owner info
+			[], // 4. existing instances in window (none)
+			[], // 5. no event conflict
+			[], // 6. no closure conflict
+			[{ id: 'res-99' }] // 7. regular reservation conflict found
 		);
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -345,8 +360,8 @@ describe('generateRecurringReservations', () => {
 
 	it('handles missing prototype gracefully (adds to errors)', async () => {
 		queueSelects(
-			[SERIES],  // 1. one active series
-			[]         // 2. prototype query → empty → throws
+			[SERIES], // 1. one active series
+			[] // 2. prototype query → empty → throws
 		);
 		setupInsert();
 		// getOccurrences should not be called; no need to configure it

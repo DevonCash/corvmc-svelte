@@ -26,7 +26,10 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/db/schema/reservation', () => ({
 	reservation: {
-		id: 'id', status: 'status', startsAt: 'starts_at', endsAt: 'ends_at',
+		id: 'id',
+		status: 'status',
+		startsAt: 'starts_at',
+		endsAt: 'ends_at',
 		createdByUserId: 'created_by_user_id'
 	}
 }));
@@ -36,14 +39,17 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 }));
 
 vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(), and: vi.fn(), gte: vi.fn(), lt: vi.fn()
+	eq: vi.fn(),
+	and: vi.fn(),
+	gte: vi.fn(),
+	lt: vi.fn()
 }));
 
 vi.mock('luxon', () => ({
 	DateTime: {
 		fromJSDate: () => ({
 			setZone: () => ({
-				toLocaleString: (fmt: any) => fmt === 'DATE_FULL' ? 'May 15, 2026' : '10:00 AM'
+				toLocaleString: (fmt: any) => (fmt === 'DATE_FULL' ? 'May 15, 2026' : '10:00 AM')
 			})
 		}),
 		DATE_FULL: 'DATE_FULL',
@@ -115,21 +121,27 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body.found).toBe(2);
 		expect(body.emitted).toBe(2);
 		expect(mockEmit).toHaveBeenCalledTimes(2);
-		expect(mockEmit).toHaveBeenCalledWith('reservation.reminder_due', expect.objectContaining({
-			reservationId: 'res-1',
-			userId: 'user-1',
-			userName: 'Alice',
-			userEmail: 'alice@example.com'
-		}));
-		expect(mockEmit).toHaveBeenCalledWith('reservation.reminder_due', expect.objectContaining({
-			reservationId: 'res-2',
-			userId: 'user-2'
-		}));
+		expect(mockEmit).toHaveBeenCalledWith(
+			'reservation.reminder_due',
+			expect.objectContaining({
+				reservationId: 'res-1',
+				userId: 'user-1',
+				userName: 'Alice',
+				userEmail: 'alice@example.com'
+			})
+		);
+		expect(mockEmit).toHaveBeenCalledWith(
+			'reservation.reminder_due',
+			expect.objectContaining({
+				reservationId: 'res-2',
+				userId: 'user-2'
+			})
+		);
 	});
 
 	it('returns zero when no reservations match', async () => {
@@ -144,7 +156,7 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body.found).toBe(0);
 		expect(body.emitted).toBe(0);
@@ -171,9 +183,7 @@ describe('POST /api/cron/reservation-reminders', () => {
 			}
 		];
 
-		mockEmit
-			.mockRejectedValueOnce(new Error('dispatch failed'))
-			.mockResolvedValueOnce(undefined);
+		mockEmit.mockRejectedValueOnce(new Error('dispatch failed')).mockResolvedValueOnce(undefined);
 
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -186,15 +196,12 @@ describe('POST /api/cron/reservation-reminders', () => {
 			})
 		} as any);
 
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body.found).toBe(2);
 		expect(body.emitted).toBe(1);
 		expect(mockEmit).toHaveBeenCalledTimes(2);
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.stringContaining('res-fail'),
-			expect.any(Error)
-		);
+		expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('res-fail'), expect.any(Error));
 
 		consoleSpy.mockRestore();
 	});

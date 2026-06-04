@@ -29,8 +29,12 @@
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-8">
-			<h1 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-navy)">Directory</h1>
-			<p class="text-base" style="color: var(--fg-2)">Musicians and bands in the Corvallis Music Collective</p>
+			<h1 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-navy)">
+				Directory
+			</h1>
+			<p class="text-base" style="color: var(--fg-2)">
+				Musicians and bands in the Corvallis Music Collective
+			</p>
 		</div>
 
 		<div class="flex justify-center mb-10">
@@ -65,7 +69,7 @@
 							memberSince={new Date(member.memberSince).getFullYear()}
 						/>
 					{/each}
-							{#if !user}<IdCardCta />{/if}
+					{#if !user}<IdCardCta />{/if}
 				</div>
 			{/if}
 		{/if}
@@ -87,7 +91,7 @@
 							color={bandColors[i % bandColors.length]}
 						/>
 					{/each}
-							{#if !user}<VinylCardCta />{/if}
+					{#if !user}<VinylCardCta />{/if}
 				</div>
 			{/if}
 		{/if}
@@ -95,7 +99,9 @@
 			<p class="text-center text-sm mt-10" style="color: var(--fg-3)">
 				Don't see your name? Your profile is set to
 				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
-				<a href="/member/directory" class="underline" style="color: var(--cmc-teal)">Update your visibility</a>
+				<a href="/member/directory" class="underline" style="color: var(--cmc-teal)"
+					>Update your visibility</a
+				>
 				to appear here.
 			</p>
 		{/if}

@@ -10,15 +10,19 @@
 	let audiences = $derived(await getAudiences());
 </script>
 
-	<PageHeader title="Audiences" subtitle="Marketing">
-		<CreateAudienceAction onsuccess={(result) => {
+<PageHeader title="Audiences" subtitle="Marketing">
+	<CreateAudienceAction
+		onsuccess={(result) => {
 			const r = result as { audienceId?: string };
 			if (r?.audienceId) goto(`/staff/marketing/audiences/${r.audienceId}`);
-		}} />
-	</PageHeader>
+		}}
+	/>
+</PageHeader>
 <PageContent>
 	{#if audiences.length === 0}
-		<p class="text-center opacity-60 py-8">No audiences yet. Create one to start building your email lists.</p>
+		<p class="text-center opacity-60 py-8">
+			No audiences yet. Create one to start building your email lists.
+		</p>
 	{:else}
 		<div class="overflow-x-auto">
 			<table class="table">
@@ -32,7 +36,10 @@
 				</thead>
 				<tbody>
 					{#each audiences as a (a.id)}
-						<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/marketing/audiences/${a.id}`}>
+						<tr
+							class="hover cursor-pointer"
+							onclick={() => (window.location.href = `/staff/marketing/audiences/${a.id}`)}
+						>
 							<td>
 								<div>
 									<p class="font-medium">{a.name}</p>

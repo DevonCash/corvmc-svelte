@@ -58,7 +58,10 @@
 		<select
 			class="select select-bordered select-sm"
 			value={status}
-			onchange={(e) => { status = (e.currentTarget as HTMLSelectElement).value as typeof status; page = 1; }}
+			onchange={(e) => {
+				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
+				page = 1;
+			}}
 		>
 			<option value="">All statuses</option>
 			<option value="active">Active</option>
@@ -90,7 +93,10 @@
 					</thead>
 					<tbody>
 						{#each bands as b (b.id)}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/bands/${b.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/bands/${b.id}`)}
+							>
 								<td class="w-px">
 									<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />
 								</td>
@@ -105,7 +111,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

@@ -197,10 +197,9 @@ describe('hasConflict', () => {
 describe('getAvailableSlots', () => {
 	// getAvailableSlots marks slots before `now + minAdvanceMinutes` as unavailable,
 	// so use a date several days in the future to keep the whole operating window valid.
-	const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(
-		'en-CA',
-		{ timeZone: 'America/Los_Angeles' }
-	);
+	const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', {
+		timeZone: 'America/Los_Angeles'
+	});
 
 	it('returns slots within operating hours when no reservations or closures', async () => {
 		selectResultQueue = [[], []]; // day reservations, day closures
@@ -265,10 +264,7 @@ describe('getConflictDetails', () => {
 	it('returns reservation conflict details', async () => {
 		const resStart = makeDate(date, '10:00');
 		const resEnd = makeDate(date, '11:00');
-		selectResultQueue = [
-			[{ startsAt: resStart, endsAt: resEnd, userName: 'Alice' }],
-			[]
-		];
+		selectResultQueue = [[{ startsAt: resStart, endsAt: resEnd, userName: 'Alice' }], []];
 		const details = await getConflictDetails(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(details).toHaveLength(1);
 		expect(details[0]).toEqual({

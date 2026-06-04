@@ -138,12 +138,7 @@ export async function expireWaitlisted(): Promise<{ expired: number; rePromoted:
 			endsAt: reservation.endsAt
 		})
 		.from(reservation)
-		.where(
-			and(
-				eq(reservation.status, 'waitlisted'),
-				lt(reservation.waitlistExpiresAt, now)
-			)
-		);
+		.where(and(eq(reservation.status, 'waitlisted'), lt(reservation.waitlistExpiresAt, now)));
 
 	let expiredCount = 0;
 	let rePromoted = 0;
@@ -159,12 +154,7 @@ export async function expireWaitlisted(): Promise<{ expired: number; rePromoted:
 				waitlistExpiresAt: null,
 				updatedAt: now
 			})
-			.where(
-				and(
-					eq(reservation.id, row.id),
-					eq(reservation.status, 'waitlisted')
-				)
-			);
+			.where(and(eq(reservation.id, row.id), eq(reservation.status, 'waitlisted')));
 
 		if (getRowCount(result) === 0) continue;
 		expiredCount++;

@@ -32,16 +32,16 @@
 	});
 </script>
 
-	<PageHeader
-		subtitle="Equipment Loan"
-		title={loan.equipmentName ?? 'Free-form Request'}
-		backHref="/staff/equipment/loans"
-	>
-		<StatusBadge status={loan.status} />
-		{#if loan.isOverdue}
-			<Badge variant="error" size="md">Overdue</Badge>
-		{/if}
-	</PageHeader>
+<PageHeader
+	subtitle="Equipment Loan"
+	title={loan.equipmentName ?? 'Free-form Request'}
+	backHref="/staff/equipment/loans"
+>
+	<StatusBadge status={loan.status} />
+	{#if loan.isOverdue}
+		<Badge variant="error" size="md">Overdue</Badge>
+	{/if}
+</PageHeader>
 <PageContent width="3xl">
 	<div class="grid gap-6 lg:grid-cols-2 mb-6">
 		<!-- Loan Details -->
@@ -51,7 +51,17 @@
 				<dd class="font-mono text-xs">{loan.id}</dd>
 
 				<dt class="opacity-60">Member</dt>
-				<dd><MemberLink member={{ name: loan.userName, email: loan.userEmail, pronouns: loan.userPronouns, role: loan.userRole, userId: loan.userId }} /></dd>
+				<dd>
+					<MemberLink
+						member={{
+							name: loan.userName,
+							email: loan.userEmail,
+							pronouns: loan.userPronouns,
+							role: loan.userRole,
+							userId: loan.userId
+						}}
+					/>
+				</dd>
 
 				<dt class="opacity-60">Equipment</dt>
 				<dd>
@@ -150,10 +160,13 @@
 					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
 						<SubmitButton label="Schedule" class="btn-primary btn-sm" />
-						<CancelLoanAction loanId={id} label="Cancel Request" confirm="Cancel this loan request?" />
+						<CancelLoanAction
+							loanId={id}
+							label="Cancel Request"
+							confirm="Cancel this loan request?"
+						/>
 					</div>
 				</Form>
-
 			{:else if loan.status === 'scheduled'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Checked Out</h4>
 				<Form remote={checkout} successToast="Checked out" class="space-y-3">
@@ -164,13 +177,17 @@
 						<CancelLoanAction loanId={id} />
 					</div>
 				</Form>
-
 			{:else if loan.status === 'checked_out'}
 				<h4 class="text-sm font-semibold mb-3">Mark as Returned</h4>
 
 				{#if chargePreview}
 					<div class="bg-base-200 rounded p-3 mb-3 text-sm">
-						<p><strong>Charge preview:</strong> {chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(loan.dailyRateCents ?? 0)}/day = <strong>{formatCents(chargePreview.total)}</strong></p>
+						<p>
+							<strong>Charge preview:</strong>
+							{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
+								loan.dailyRateCents ?? 0
+							)}/day = <strong>{formatCents(chargePreview.total)}</strong>
+						</p>
 					</div>
 				{/if}
 
@@ -180,7 +197,6 @@
 						? `Charge preview: ${chargePreview.days} day${chargePreview.days !== 1 ? 's' : ''} × ${formatCents(loan.dailyRateCents ?? 0)}/day = ${formatCents(chargePreview.total)}`
 						: undefined}
 				/>
-
 			{:else}
 				<p class="text-sm opacity-60">
 					This loan is <strong>{loan.status}</strong>. No actions available.

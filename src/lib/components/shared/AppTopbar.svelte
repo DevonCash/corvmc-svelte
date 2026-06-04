@@ -55,7 +55,9 @@
 			{#each primaryPanels as panel (panel.key)}
 				<a
 					href={panel.href}
-					class="join-item btn btn-sm {panel.key === activePanel ? 'latched btn-primary' : 'btn-ghost'}"
+					class="join-item btn btn-sm {panel.key === activePanel
+						? 'latched btn-primary'
+						: 'btn-ghost'}"
 				>
 					{panel.label}
 				</a>

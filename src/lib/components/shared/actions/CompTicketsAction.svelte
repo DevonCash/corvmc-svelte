@@ -41,7 +41,14 @@
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Quantity</span></div>
-				<input {...fields.quantity.as('text')} type="number" class="input input-bordered w-full" value="1" min="1" max="50" />
+				<input
+					{...fields.quantity.as('text')}
+					type="number"
+					class="input input-bordered w-full"
+					value="1"
+					min="1"
+					max="50"
+				/>
 			</label>
 		</div>
 	{/snippet}

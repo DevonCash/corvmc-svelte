@@ -49,10 +49,7 @@ async function main() {
 	}
 
 	// Assign admin role
-	await db
-		.insert(modelHasRole)
-		.values({ roleId, userId: found.id })
-		.onConflictDoNothing();
+	await db.insert(modelHasRole).values({ roleId, userId: found.id }).onConflictDoNothing();
 
 	console.log(`Assigned admin role to ${found.name} (${email})`);
 	await client.end();

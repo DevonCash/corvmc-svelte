@@ -25,7 +25,10 @@
 	let searching = $state(false);
 
 	async function handleMemberSearch() {
-		if (query.length < 2) { memberResults = []; return; }
+		if (query.length < 2) {
+			memberResults = [];
+			return;
+		}
 		searching = true;
 		try {
 			const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
@@ -50,7 +53,9 @@
 		}
 	}
 
-	$effect(() => { loadEquipmentOptions(); });
+	$effect(() => {
+		loadEquipmentOptions();
+	});
 </script>
 
 <Action
@@ -68,7 +73,14 @@
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
-					<Button type="button" class="btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</Button>
+					<Button
+						type="button"
+						class="btn-ghost btn-xs"
+						onclick={() => {
+							userId = '';
+							userName = '';
+						}}>Change</Button
+					>
 				</div>
 			{:else}
 				<label class="form-control w-full">
@@ -84,7 +96,11 @@
 				{#if memberResults.length > 0}
 					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
 						{#each memberResults as u}
-							<button type="button" class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm" onclick={() => selectMember(u)}>
+							<button
+								type="button"
+								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
+								onclick={() => selectMember(u)}
+							>
 								<span class="font-medium">{u.name}</span>
 								<span class="opacity-60 ml-1">{u.email}</span>
 							</button>

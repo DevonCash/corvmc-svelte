@@ -21,7 +21,9 @@
 	} as const;
 
 	const RoleIcon = $derived(
-		member.role && member.role in roleIcons ? roleIcons[member.role as keyof typeof roleIcons] : IconUser
+		member.role && member.role in roleIcons
+			? roleIcons[member.role as keyof typeof roleIcons]
+			: IconUser
 	);
 </script>
 

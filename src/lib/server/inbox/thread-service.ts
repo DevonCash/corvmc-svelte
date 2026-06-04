@@ -141,10 +141,7 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 		.orderBy(desc(inboxThread.lastMessageAt))
 		.$dynamic();
 
-	const countQuery = db
-		.select({ count: count() })
-		.from(inboxThread)
-		.where(where);
+	const countQuery = db.select({ count: count() }).from(inboxThread).where(where);
 
 	return paginate(dataQuery, countQuery, pagination);
 }

@@ -16,7 +16,6 @@
 	let history = $derived(await getSeriesHistory(id));
 
 	let isActive = $derived(!series.cancelledAt);
-
 </script>
 
 <PageHeader title="Recurring Series" backHref="/staff/recurring">
@@ -37,7 +36,6 @@
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
-
 	<div class="flex items-center gap-2 mb-4">
 		{#if series.cancelledAt}
 			<StatusBadge status="cancelled" />
@@ -72,7 +70,6 @@
 			{/if}
 		</dl>
 	</InfoCard>
-
 
 	<!-- History -->
 	{#if history.length > 1}

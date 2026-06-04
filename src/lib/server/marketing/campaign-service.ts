@@ -80,9 +80,12 @@ export async function updateCampaign(
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
 	if (status !== 'draft') throw new Error('Can only edit draft campaigns');
 
-	if (data.subject !== undefined && data.subject.length > 500) throw new Error('Subject too long (max 500)');
-	if (data.audienceIds !== undefined && data.audienceIds.length === 0) throw new Error('At least one audience is required');
-	if (data.audienceIds !== undefined && data.audienceIds.length > 20) throw new Error('Too many audiences (max 20)');
+	if (data.subject !== undefined && data.subject.length > 500)
+		throw new Error('Subject too long (max 500)');
+	if (data.audienceIds !== undefined && data.audienceIds.length === 0)
+		throw new Error('At least one audience is required');
+	if (data.audienceIds !== undefined && data.audienceIds.length > 20)
+		throw new Error('Too many audiences (max 20)');
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.subject !== undefined) updates.subject = data.subject;
@@ -91,11 +94,7 @@ export async function updateCampaign(
 		updates.htmlBody = renderCampaignPreview(data.markdownBody);
 	}
 
-	const [updated] = await db
-		.update(campaign)
-		.set(updates)
-		.where(eq(campaign.id, id))
-		.returning();
+	const [updated] = await db.update(campaign).set(updates).where(eq(campaign.id, id)).returning();
 
 	if (data.audienceIds !== undefined) {
 		await db.delete(campaignAudience).where(eq(campaignAudience.campaignId, id));
@@ -195,10 +194,7 @@ export async function scheduleCampaign(id: string, scheduledFor: Date) {
 	if (status !== 'draft') throw new Error('Can only schedule draft campaigns');
 	if (scheduledFor <= new Date()) throw new Error('Scheduled time must be in the future');
 
-	await db
-		.update(campaign)
-		.set({ scheduledFor, updatedAt: new Date() })
-		.where(eq(campaign.id, id));
+	await db.update(campaign).set({ scheduledFor, updatedAt: new Date() }).where(eq(campaign.id, id));
 }
 
 export async function unscheduleCampaign(id: string) {
@@ -257,10 +253,7 @@ export async function getRecipientsForCampaign(campaignId: string) {
 		.from(audienceMember)
 		.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.where(
-			and(
-				inArray(audienceMember.audienceId, audienceIds),
-				isNull(audienceMember.unsubscribedAt)
-			)
+			and(inArray(audienceMember.audienceId, audienceIds), isNull(audienceMember.unsubscribedAt))
 		);
 
 	return rows;
@@ -329,12 +322,7 @@ export async function processDueCampaigns(): Promise<number> {
 	const due = await db
 		.select({ id: campaign.id })
 		.from(campaign)
-		.where(
-			and(
-				lte(campaign.scheduledFor, new Date()),
-				isNull(campaign.sentAt)
-			)
-		);
+		.where(and(lte(campaign.scheduledFor, new Date()), isNull(campaign.sentAt)));
 
 	for (const row of due) {
 		try {
