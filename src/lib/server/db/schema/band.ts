@@ -44,7 +44,7 @@ export const band = sqliteTable(
 		bio: text('bio'),
 		ownerId: text('owner_id')
 			.notNull()
-			.references(() => user.id, { onDelete: 'set null' }),
+			.references(() => user.id, { onDelete: 'restrict' }),
 		avatarKey: text('avatar_key'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
