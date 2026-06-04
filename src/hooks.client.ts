@@ -1,8 +1,15 @@
 import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
+import { env } from '$env/dynamic/public';
+import { SENTRY_DSN } from '$lib/sentry-dsn';
 
 Sentry.init({
-	dsn: 'https://3b421fec8a5c7c5236b673d9ac5bdd9f@o4510014650384384.ingest.us.sentry.io/4511504553738240',
+	dsn: SENTRY_DSN,
+
+	environment: env.PUBLIC_SENTRY_ENVIRONMENT ?? 'production',
+
+	// Don't report from the Playwright/preview e2e run (set in playwright.config.ts)
+	enabled: env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci',
 
 	tracesSampleRate: 1.0,
 
