@@ -10,6 +10,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // unit test. Mock Sentry to no-ops, and mock `sequence` to delegate to the final
 // (business-logic) handler so these tests exercise handleBetterAuth as before.
 vi.mock('@sentry/sveltekit', () => ({
+	initCloudflareSentryHandle:
+		() =>
+		({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>
+			resolve(event),
 	sentryHandle:
 		() =>
 		({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>

@@ -55,7 +55,20 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-export const handle: Handle = sequence(Sentry.sentryHandle(), handleBetterAuth);
+// On Cloudflare Workers, Sentry must be initialised per-request via
+// initCloudflareSentryHandle. The Node-style `Sentry.init()` in an
+// instrumentation file pulls in Node/OpenTelemetry APIs the Workers runtime
+// can't bundle, which broke the Cloudflare Pages deploy.
+export const handle: Handle = sequence(
+	Sentry.initCloudflareSentryHandle({
+		dsn: 'https://3b421fec8a5c7c5236b673d9ac5bdd9f@o4510014650384384.ingest.us.sentry.io/4511504553738240',
+		sendDefaultPii: true,
+		tracesSampleRate: 1.0,
+		enableLogs: true
+	}),
+	Sentry.sentryHandle(),
+	handleBetterAuth
+);
 
 export const handleError: HandleServerError = Sentry.handleErrorWithSentry(
 	async ({ error, event, status, message }) => {
