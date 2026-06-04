@@ -249,3 +249,49 @@ Knowledge base with staff-managed articles for members. Staff can create and edi
 **Routes (staff):** `/staff/help`, `/staff/help/create`, `/staff/help/[id]`
 **Routes (member):** `/member/help`, `/member/help/[slug]`
 **API:** `/api/help`, `/api/help/search`, `/api/help/[slug]`
+
+---
+
+# Tech-Debt Initiatives
+
+Larger efforts surfaced by the 2026-06-04 tech-debt audit. Small/clear cleanups live in
+`CHORES.md`; these are multi-day or ongoing and worth scheduling deliberately.
+
+## Finish the pricing-config → KV migration
+
+**Priority: highest.** `src/lib/server/finance/product-config-service.ts` and the
+`product_config` table (`src/lib/server/db/schema/product-config.ts`) are both
+`@deprecated`. Only the `rehearsal` product moved to KV (`reservation.hourlyRateCents`);
+`contribution`, `fee_coverage`, `ticket`, and `band_premium` still read the deprecated
+table — two sources of truth for money. Move the remaining products into KV site config,
+update all readers, then delete the service, schema, and table. Revenue-critical — do
+with care and tests.
+
+## Add observability to fire-and-forget domain events
+
+The `Promise.resolve().then(async () => {...})` pattern in band/equipment/event/invite
+services (e.g. `band-service.ts:272`, `loan-service.ts:198`, `event-service.ts:406`,
+`platform-invite-service.ts:77`) emits domain events whose errors only reach Sentry, with
+no retry and no correlation to the parent request — if Sentry capture fails the error
+vanishes. A true queue isn't available in the Workers context yet, so wrap dispatch in a
+helper that guarantees logging and surfaces failures.
+
+## Test the remote-function + inbox surface
+
+All 20 `src/lib/remote/*.remote.ts` files (the entire client-facing RPC surface, incl.
+the 1,411-line `reservations.remote.ts`) have zero tests; the inbox domain (6 files incl.
+Twilio), notification email compilation/Postmark, and SSE streaming are also untested.
+Start with happy-path contract tests on the highest-traffic remotes (reservations,
+events, bands) and the inbox dispatcher. Once a baseline exists, consider a coverage
+threshold in `vite.config.ts`.
+
+## Build out the e2e suite
+
+Only `src/routes/demo/playwright/page.svelte.e2e.ts` exists (a 7-line h1 smoke check).
+There's no automated guard on reservation checkout, band signup, or payment flows. Add
+e2e coverage for the 2–3 revenue-critical journeys.
+
+## (Tracked elsewhere) Drizzle 1.0 stable upgrade
+
+`drizzle-orm`/`drizzle-kit` are pinned to `1.0.0-rc.3`. Upgrade to the final `1.0.0`
+release when it ships — low effort then, externally blocked until upstream stabilizes.
