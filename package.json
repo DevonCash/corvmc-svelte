@@ -16,6 +16,7 @@
 		"test:e2e": "playwright install && playwright test",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --check . && eslint .",
+		"lint:changed": "bash scripts/lint-changed.sh",
 		"format": "prettier --write .",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit push",
