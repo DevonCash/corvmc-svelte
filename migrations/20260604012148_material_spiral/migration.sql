@@ -7,7 +7,6 @@
 -- nulled. To preserve data we snapshot each child table, rebuild band, then
 -- restore. The DELETE-before-restore makes this correct whether or not D1
 -- actually fires the cascade (idempotent: empty-then-refill).
---> statement-breakpoint
 CREATE TABLE `_bk_band_member` AS SELECT * FROM `band_member`;--> statement-breakpoint
 CREATE TABLE `_bk_band_genre` AS SELECT * FROM `band_genre`;--> statement-breakpoint
 CREATE TABLE `_bk_band_media` AS SELECT * FROM `band_media`;--> statement-breakpoint
