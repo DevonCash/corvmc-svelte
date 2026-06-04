@@ -12,10 +12,7 @@
 		getFeatureFlags,
 		updateFeatureFlag
 	} from '$lib/remote/settings.remote';
-	import {
-		getInboxChannelConfigs,
-		updateInboxChannelConfig
-	} from '$lib/remote/inbox.remote';
+	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -58,19 +55,62 @@
 	];
 
 	const featureMeta: Record<string, { label: string; description: string }> = {
-		staffInbox: { label: 'Staff Inbox', description: 'Multi-channel unified inbox for email, SMS, and web messages' },
-		bandPremium: { label: 'Band Premium', description: 'Premium tier with page editor, EPK, and public band sites' },
-		emailMarketing: { label: 'Email Marketing', description: 'Audience management, campaigns, and broadcast emails' },
-		equipment: { label: 'Equipment', description: 'Equipment catalog, loan management, and equipment credits' },
-		helpArticles: { label: 'Help Articles', description: 'Knowledge base with staff-managed articles for members' }
+		staffInbox: {
+			label: 'Staff Inbox',
+			description: 'Multi-channel unified inbox for email, SMS, and web messages'
+		},
+		bandPremium: {
+			label: 'Band Premium',
+			description: 'Premium tier with page editor, EPK, and public band sites'
+		},
+		emailMarketing: {
+			label: 'Email Marketing',
+			description: 'Audience management, campaigns, and broadcast emails'
+		},
+		equipment: {
+			label: 'Equipment',
+			description: 'Equipment catalog, loan management, and equipment credits'
+		},
+		helpArticles: {
+			label: 'Help Articles',
+			description: 'Knowledge base with staff-managed articles for members'
+		}
 	};
 
-	const channelMeta: Record<string, { label: string; icon: typeof IconMail; description: string; envHint: string }> = {
-		email: { label: 'Email', icon: IconMail, description: 'Receive and reply to emails via Postmark', envHint: 'POSTMARK_SERVER_TOKEN, POSTMARK_INBOUND_TOKEN' },
-		sms: { label: 'SMS', icon: IconMessageCircle, description: 'Send and receive text messages via Twilio', envHint: 'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER' },
-		web: { label: 'Contact Form', icon: IconWorld, description: 'Receive messages from the public contact form', envHint: 'Always enabled' },
-		instagram: { label: 'Instagram DMs', icon: IconBrandInstagram, description: 'Receive and reply to Instagram direct messages', envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN' },
-		messenger: { label: 'Messenger', icon: IconBrandFacebook, description: 'Receive and reply to Facebook Messenger messages', envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN' }
+	const channelMeta: Record<
+		string,
+		{ label: string; icon: typeof IconMail; description: string; envHint: string }
+	> = {
+		email: {
+			label: 'Email',
+			icon: IconMail,
+			description: 'Receive and reply to emails via Postmark',
+			envHint: 'POSTMARK_SERVER_TOKEN, POSTMARK_INBOUND_TOKEN'
+		},
+		sms: {
+			label: 'SMS',
+			icon: IconMessageCircle,
+			description: 'Send and receive text messages via Twilio',
+			envHint: 'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER'
+		},
+		web: {
+			label: 'Contact Form',
+			icon: IconWorld,
+			description: 'Receive messages from the public contact form',
+			envHint: 'Always enabled'
+		},
+		instagram: {
+			label: 'Instagram DMs',
+			icon: IconBrandInstagram,
+			description: 'Receive and reply to Instagram direct messages',
+			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
+		},
+		messenger: {
+			label: 'Messenger',
+			icon: IconBrandFacebook,
+			description: 'Receive and reply to Facebook Messenger messages',
+			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
+		}
 	};
 
 	async function handleTestConnection() {
@@ -99,10 +139,7 @@
 			{#each products.filter((p) => p.key !== 'rehearsal') as product (product.key)}
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
-				<Form
-					remote={instance}
-					successToast="{product.name} updated"
-				>
+				<Form remote={instance} successToast="{product.name} updated">
 					<div class="card bg-base-100 shadow">
 						<div class="card-body">
 							<div class="flex items-center justify-between">
@@ -170,7 +207,12 @@
 												class="grow bg-transparent outline-none"
 											/>
 										</label>
-										<input {...instance.fields.unitAmountCents.as('hidden', String(product.unitAmountCents))} />
+										<input
+											{...instance.fields.unitAmountCents.as(
+												'hidden',
+												String(product.unitAmountCents)
+											)}
+										/>
 									</div>
 								{:else}
 									<input {...instance.fields.unitAmountCents.as('hidden', '0')} />
@@ -193,17 +235,13 @@
 					</div>
 				</Form>
 			{/each}
-
 		{:else if activeTab === 'reservations'}
 			<p class="text-sm opacity-70">
-				Configure operating hours, booking rules, and scheduling limits for practice room reservations.
+				Configure operating hours, booking rules, and scheduling limits for practice room
+				reservations.
 			</p>
 
-			<Form
-				remote={updateReservationSettings}
-				guard
-				successToast="Reservation settings updated"
-			>
+			<Form remote={updateReservationSettings} guard successToast="Reservation settings updated">
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<div class="flex items-center justify-between">
@@ -241,7 +279,12 @@
 										class="grow bg-transparent outline-none"
 									/>
 								</label>
-								<input {...reservationFields.hourlyRateCents.as('hidden', String(reservationSettings.hourlyRateCents ?? 1500))} />
+								<input
+									{...reservationFields.hourlyRateCents.as(
+										'hidden',
+										String(reservationSettings.hourlyRateCents ?? 1500)
+									)}
+								/>
 							</div>
 						</div>
 					</div>
@@ -337,17 +380,12 @@
 					</div>
 				</div>
 			</Form>
-
 		{:else if activeTab === 'organization'}
 			<p class="text-sm opacity-70">
 				Organization identity used in emails, branding, and member-facing content.
 			</p>
 
-			<Form
-				remote={updateOrgSettings}
-				guard
-				successToast="Organization settings updated"
-			>
+			<Form remote={updateOrgSettings} guard successToast="Organization settings updated">
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<div class="flex items-center justify-between">
@@ -422,17 +460,12 @@
 					</div>
 				</div>
 			</Form>
-
 		{:else if activeTab === 'integrations'}
 			<p class="text-sm opacity-70">
 				Manage credentials for third-party integrations. Changes take effect immediately.
 			</p>
 
-			<Form
-				remote={updateIntegrationSettings}
-				guard
-				successToast="U-tec credentials updated"
-			>
+			<Form remote={updateIntegrationSettings} guard successToast="U-tec credentials updated">
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<div class="flex items-center justify-between">
@@ -461,7 +494,11 @@
 						</div>
 
 						{#if connectionTestResult}
-							<div class="alert {connectionTestResult.ok ? 'alert-success' : 'alert-error'} py-2 text-sm">
+							<div
+								class="alert {connectionTestResult.ok
+									? 'alert-success'
+									: 'alert-error'} py-2 text-sm"
+							>
 								{#if connectionTestResult.ok}
 									Connection successful — token refresh verified.
 								{:else}
@@ -504,11 +541,10 @@
 					</div>
 				</div>
 			</Form>
-
 		{:else if activeTab === 'features'}
 			<p class="text-sm opacity-70">
-				Enable or disable feature modules. Disabled features are hidden from navigation and return 404
-				if accessed directly. Use this to control which features are available in production.
+				Enable or disable feature modules. Disabled features are hidden from navigation and return
+				404 if accessed directly. Use this to control which features are available in production.
 			</p>
 
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
@@ -537,7 +573,10 @@
 							>
 								<input {...toggleForm.fields.flag.as('hidden', flag)} />
 								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
-								<button type="submit" class="btn btn-sm {enabled ? 'btn-error btn-outline' : 'btn-success'}">
+								<button
+									type="submit"
+									class="btn btn-sm {enabled ? 'btn-error btn-outline' : 'btn-success'}"
+								>
 									{enabled ? 'Disable' : 'Enable'}
 								</button>
 							</form>
@@ -545,11 +584,11 @@
 					</div>
 				</div>
 			{/each}
-
 		{:else if activeTab === 'inbox'}
 			<p class="text-sm opacity-70">
-				Enable or disable communication channels for the staff inbox. Disabled channels won't receive
-				or send messages. Environment variables must be configured for each channel to function.
+				Enable or disable communication channels for the staff inbox. Disabled channels won't
+				receive or send messages. Environment variables must be configured for each channel to
+				function.
 			</p>
 
 			{#each channelConfigs as cfg (cfg.channel)}
@@ -578,8 +617,13 @@
 									})}
 								>
 									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
-									<input {...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')} />
-									<button type="submit" class="btn btn-sm {cfg.enabled ? 'btn-error btn-outline' : 'btn-success'}">
+									<input
+										{...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')}
+									/>
+									<button
+										type="submit"
+										class="btn btn-sm {cfg.enabled ? 'btn-error btn-outline' : 'btn-success'}"
+									>
 										{cfg.enabled ? 'Disable' : 'Enable'}
 									</button>
 								</form>

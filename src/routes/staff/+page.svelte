@@ -3,6 +3,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
+	import { resolve } from '$app/paths';
 	import { formatDate } from '$lib/utils/format';
 
 	let data = $derived(await getStaffDashboard());
@@ -33,7 +34,7 @@
 					{#each data.recentUsers as u (u.id)}
 						<tr>
 							<td>
-								<a href="/staff/users/{u.id}" class="link link-primary">{u.name}</a>
+								<a href={resolve(`/staff/users/${u.id}`)} class="link link-primary">{u.name}</a>
 							</td>
 							<td>{u.email}</td>
 							<td>{formatDate(u.createdAt)}</td>

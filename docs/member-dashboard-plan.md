@@ -16,11 +16,13 @@ Add an optional `limit` parameter to `listUpcoming()` so the dashboard can reque
 
 ```typescript
 export async function listUpcoming(limit?: number): Promise<EventRow[]> {
-  let query = db.select().from(event)
-    .where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
-    .orderBy(asc(event.startsAt));
-  if (limit) query = query.limit(limit);
-  return query;
+	let query = db
+		.select()
+		.from(event)
+		.where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
+		.orderBy(asc(event.startsAt));
+	if (limit) query = query.limit(limit);
+	return query;
 }
 ```
 
@@ -42,6 +44,7 @@ For sustaining members, compute `allocatedThisMonth` (subscription quantity) and
 Return all four plus the computed fields.
 
 **Key notes:**
+
 - Import `getPublicUrl` and `isConfigured` from storage module for poster URLs.
 - The week boundary calculation should use `startOfWeek` / `endOfWeek` in LA timezone. Use date-fns or manual calculation — check what the codebase already uses for date math.
 
@@ -64,7 +67,8 @@ Four sections, top to bottom:
 **This week's reservations** — wrapped in an `InfoCard` with title "This Week". Each reservation shows: day of week + date (e.g., "Wed, May 14"), time range, duration, status badge (using `StatusBadge`), and booker type icon (using `BookerTypeIcon`). If empty, show an `EmptyState` with message "No sessions booked this week" and a link to `/member/reservations/new`.
 
 **Credit balance widget** — wrapped in an `InfoCard` with title "Practice Credits".
-- Sustaining members: show free hours remaining, hours used this month, and total allocated. Use a daisyUI `progress` element to visualize usage (e.g., `<progress class="progress progress-primary" value={used} max={allocated}>`). 
+
+- Sustaining members: show free hours remaining, hours used this month, and total allocated. Use a daisyUI `progress` element to visualize usage (e.g., `<progress class="progress progress-primary" value={used} max={allocated}>`).
 - Non-sustaining members: show a brief prompt — "Become a sustaining member to get free practice hours each month" — with a `btn btn-primary btn-sm` link to `/member/membership`.
 
 **Upcoming events** — wrapped in an `InfoCard` with title "Upcoming Events". Show up to 4 events as compact horizontal cards: poster thumbnail (small, square, or a placeholder), title, date, and time. Each links to `/events`. If empty, show an `EmptyState` with message "No events on the horizon."
@@ -72,6 +76,7 @@ Four sections, top to bottom:
 **Layout:** Quick links span full width. Reservations and credits sit in a 2-column grid on desktop (`lg:grid-cols-2`, reservations in `lg:col-span-1`, credits in `lg:col-span-1`). On larger screens where reservations might have more content, consider giving reservations more space — but start equal and adjust after seeing real data. Events span full width below.
 
 **Key notes:**
+
 - Import formatters from `$lib/utils/format` — `formatDate`, `formatTime`, `formatDuration` (or `durationHours`).
 - No form actions or mutations — the dashboard is read-only.
 - Use `$derived` for computed values like `isSustaining`, `allocatedThisMonth`, etc.
@@ -95,6 +100,7 @@ Run the Svelte autofixer on the new `+page.svelte` and fix any issues.
 **Create:** `src/routes/member/+page.server.test.ts` (or appropriate test location matching project convention)
 
 Test the load function:
+
 - Returns `weekReservations` filtered to current week only (not past, not next week).
 - Excludes cancelled reservations.
 - Returns `upcomingEvents` limited to 4.

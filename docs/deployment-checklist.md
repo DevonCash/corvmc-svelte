@@ -90,6 +90,7 @@ DATABASE_URL="postgres://localhost/corvmc-migration" pnpm tsx scripts/migrate-fr
 ```
 
 The script:
+
 - Maps Laravel integer IDs to UUIDs (maintains a stable mapping file at `scripts/.id-map.json`)
 - Transforms snake_case columns to the D1 schema
 - Splits array columns into junction tables (instruments, genres)
@@ -134,6 +135,7 @@ APP_URL=https://corvmc.com STRIPE_SECRET_KEY=sk_live_xxx pnpm tsx scripts/sync-w
 ```
 
 The script outputs:
+
 - `STRIPE_WEBHOOK_SECRET` — the signing secret
 - `STRIPE_WEBHOOK_ID` — for future updates
 
@@ -178,6 +180,7 @@ bcrypt-ts silently fails on Cloudflare Workers (returns `false` in 0ms), so bcry
 4. Future logins use scrypt directly — no more Laravel calls
 
 **Secrets required on Cloudflare Pages:**
+
 - `LARAVEL_URL` — base URL of the Laravel app (e.g. `https://corvmc.org`)
 - `MIGRATION_SECRET` — shared secret matching `MIGRATION_SECRET` in Laravel's `.env`
 
@@ -196,6 +199,7 @@ bcrypt-ts silently fails on Cloudflare Workers (returns `false` in 0ms), so bcry
    - The Laravel app itself (if no longer needed)
 
 **Check remaining bcrypt hashes:**
+
 ```sql
 SELECT count(*) FROM account WHERE provider_id = 'credential' AND password LIKE '$2%';
 ```
@@ -237,6 +241,7 @@ wrangler rollback
 ```
 
 D1 migrations cannot be auto-reversed. If a migration needs to be undone:
+
 1. Write a new migration that reverses the changes
 2. `pnpm db:generate` won't help here — manually create a SQL file in `drizzle/`
 3. Apply: `wrangler d1 migrations apply corvmc-db --remote`

@@ -130,67 +130,67 @@ Existing npm packages that could accelerate building these features. Grouped by 
 
 ### Image Processing & Poster Compositing
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `sharp` | 66M | Server-side image compositing, watermarking, thumbnails, format conversion |
-| `@napi-rs/canvas` | 12M | Full Canvas 2D API in Node — rich text rendering, complex layouts for poster generation |
-| `satori` | 1.3M | HTML+CSS to SVG — template-driven poster design, pipe through sharp for raster output |
-| `photoswipe` | 510K | Client-side lightbox for photo galleries — lightweight, touch/gesture support |
+| Package           | Downloads/wk | Use                                                                                     |
+| ----------------- | ------------ | --------------------------------------------------------------------------------------- |
+| `sharp`           | 66M          | Server-side image compositing, watermarking, thumbnails, format conversion              |
+| `@napi-rs/canvas` | 12M          | Full Canvas 2D API in Node — rich text rendering, complex layouts for poster generation |
+| `satori`          | 1.3M         | HTML+CSS to SVG — template-driven poster design, pipe through sharp for raster output   |
+| `photoswipe`      | 510K         | Client-side lightbox for photo galleries — lightweight, touch/gesture support           |
 
 ### Calendar & Scheduling
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `ical-generator` | 468K | Generate .ics feeds for event syndication |
-| `node-ical` | 163K | Parse partner .ics feeds for import |
-| `feed` | 1.2M | Generate RSS/Atom feeds for event syndication |
-| `@event-calendar/core` | 23K | Svelte-native calendar display — day/week/month views, drag-and-drop |
-| `@schedule-x/svelte` | 121K | Calendar with official Svelte adapter — modern alternative |
+| Package                | Downloads/wk | Use                                                                  |
+| ---------------------- | ------------ | -------------------------------------------------------------------- |
+| `ical-generator`       | 468K         | Generate .ics feeds for event syndication                            |
+| `node-ical`            | 163K         | Parse partner .ics feeds for import                                  |
+| `feed`                 | 1.2M         | Generate RSS/Atom feeds for event syndication                        |
+| `@event-calendar/core` | 23K          | Svelte-native calendar display — day/week/month views, drag-and-drop |
+| `@schedule-x/svelte`   | 121K         | Calendar with official Svelte adapter — modern alternative           |
 
 ### Audio & Streaming
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `wavesurfer.js` | 881K | Waveform visualization + playback for music store |
-| `howler.js` | 777K | Cross-browser audio playback, playlists — simpler alternative to wavesurfer |
-| `music-metadata` | 1.9M | Server-side ID3/metadata extraction — feeds ASCAP/BMI compliance logs |
-| `hls.js` | 5.3M | HLS playback in browsers for web radio streaming |
+| Package          | Downloads/wk | Use                                                                         |
+| ---------------- | ------------ | --------------------------------------------------------------------------- |
+| `wavesurfer.js`  | 881K         | Waveform visualization + playback for music store                           |
+| `howler.js`      | 777K         | Cross-browser audio playback, playlists — simpler alternative to wavesurfer |
+| `music-metadata` | 1.9M         | Server-side ID3/metadata extraction — feeds ASCAP/BMI compliance logs       |
+| `hls.js`         | 5.3M         | HLS playback in browsers for web radio streaming                            |
 
 ### Forum & Content
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `marked` | 42M | Markdown to HTML for forum posts — fast, lightweight |
-| `rehype-sanitize` | 4.9M | Sanitize user-generated HTML — pair with marked |
-| `minisearch` | 1.2M | Client-side full-text search for forum/help articles |
+| Package           | Downloads/wk | Use                                                  |
+| ----------------- | ------------ | ---------------------------------------------------- |
+| `marked`          | 42M          | Markdown to HTML for forum posts — fast, lightweight |
+| `rehype-sanitize` | 4.9M         | Sanitize user-generated HTML — pair with marked      |
+| `minisearch`      | 1.2M         | Client-side full-text search for forum/help articles |
 
 ### PDF & Reporting
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `pdfkit` | 3.6M | Server-side PDF generation for annual reports |
-| `puppeteer` | 10M | Render styled HTML to PDF — most flexible for complex reports |
-| `chart.js` | 11.6M | Chart generation for report data visualization |
+| Package     | Downloads/wk | Use                                                           |
+| ----------- | ------------ | ------------------------------------------------------------- |
+| `pdfkit`    | 3.6M         | Server-side PDF generation for annual reports                 |
+| `puppeteer` | 10M          | Render styled HTML to PDF — most flexible for complex reports |
+| `chart.js`  | 11.6M        | Chart generation for report data visualization                |
 
 ### Stage Plot & Drawing
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `konva` | 1.7M | 2D canvas with drag-and-drop shapes — stage plot builder |
-| `fabric` | 796K | Canvas with object model + SVG export — heavier but more drawing features |
+| Package  | Downloads/wk | Use                                                                       |
+| -------- | ------------ | ------------------------------------------------------------------------- |
+| `konva`  | 1.7M         | 2D canvas with drag-and-drop shapes — stage plot builder                  |
+| `fabric` | 796K         | Canvas with object model + SVG export — heavier but more drawing features |
 
 ### Inventory & Scanning
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `html5-qrcode` | 1.1M | Camera-based barcode/QR scanning for inventory management |
-| `bwip-js` | 572K | Generate barcode/QR labels for printing |
+| Package        | Downloads/wk | Use                                                       |
+| -------------- | ------------ | --------------------------------------------------------- |
+| `html5-qrcode` | 1.1M         | Camera-based barcode/QR scanning for inventory management |
+| `bwip-js`      | 572K         | Generate barcode/QR labels for printing                   |
 
 ### Drag & Drop / Pipeline UI
 
-| Package | Downloads/wk | Use |
-|---------|-------------|-----|
-| `svelte-dnd-action` | 134K | Svelte-native DnD — kanban boards for booking pipeline, grant tracker |
+| Package             | Downloads/wk | Use                                                                   |
+| ------------------- | ------------ | --------------------------------------------------------------------- |
+| `svelte-dnd-action` | 134K         | Svelte-native DnD — kanban boards for booking pipeline, grant tracker |
 
 ### No Good Library Found (yet)
 

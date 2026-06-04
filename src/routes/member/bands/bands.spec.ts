@@ -58,7 +58,7 @@ vi.mock('$app/server', () => {
 	// (schema, handler) forms. Detect: if the first arg is a function and
 	// there's no second arg, treat it as the handler.
 	const wrap = (type: string) => (a: unknown, b?: unknown) => {
-		const handler = (typeof a === 'function' && b === undefined ? a : b) as Function;
+		const handler = (typeof a === 'function' && b === undefined ? a : b) as (...args: any[]) => any;
 		(handler as any).__ = { type };
 		return handler;
 	};
@@ -73,7 +73,8 @@ vi.mock('$app/server', () => {
 	};
 });
 
-const { createBand, acceptInvite, declineInvite } = await import('$lib/remote/bands.remote') as any;
+const { createBand, acceptInvite, declineInvite } =
+	(await import('$lib/remote/bands.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -15,70 +15,70 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 
 ## Staff panel
 
-| Feature | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Dashboard | StaffDashboard page | ✅ +page.svelte | Basic stats in both |
-| Users list + detail | UserResource + pages | ✅ Full CRUD | List, detail with role/note editing |
-| Reservations list + detail | SpaceManagement resource | ✅ Full CRUD | Create, resolve, confirm, cancel, no-show, cash-received, day-grouped table |
-| Events list + detail | EventResource | ✅ Full CRUD | List, create, detail with edit form, poster upload, rebook detection, ticketing config |
-| Ticket check-in | TicketCheckIn page | ✅ Staff check-in | Search + check in tickets at the door |
-| Space closures | SpaceClosures resource | ✅ List + create + delete | Parity |
-| Settings | ManageOrganizationSettings | ✅ Settings page | Hourly rate, buffer, hours; Laravel has more org settings |
-| Payments view | OrderResource, TicketOrders | ✅ /staff/payments | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
-| Recurring reservations | RecurringReservations resource | ✅ /staff/recurring | List active/cancelled series, cancel action. Member UI in reservations page |
-| Bands | BandResource (via tenancy) | ✅ /staff/bands | List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation |
-| Email marketing | — (new) | ✅ Full flow | Audiences, campaigns (draft/schedule/send), markdown editor with live preview, broadcast via Postmark |
-| Equipment | Equipment resource | ✅ Full flow | Catalog, categories, loans (request/schedule/checkout/return/cancel), equipment credits, seed data |
-| Volunteering | VolunteerReportPage, PendingHourLogs | — | Not started |
-| Sponsors | Sponsors resource | — | Not started |
-| Site pages / CMS | SitePages with block builder | — | Not started |
-| Venues | Venues resource | — | Not started |
-| Kiosk devices | KioskDevices resource | — | Not started |
-| Activity log | ActivityLog resource | — | Not started |
-| Reports | Reports resource | — | Not started |
-| Bylaws | Bylaws resource | — | Not started |
-| Revisions | Revisions resource | — | Not started |
+| Feature                    | Laravel                              | Svelte                    | Notes                                                                                                       |
+| -------------------------- | ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Dashboard                  | StaffDashboard page                  | ✅ +page.svelte           | Basic stats in both                                                                                         |
+| Users list + detail        | UserResource + pages                 | ✅ Full CRUD              | List, detail with role/note editing                                                                         |
+| Reservations list + detail | SpaceManagement resource             | ✅ Full CRUD              | Create, resolve, confirm, cancel, no-show, cash-received, day-grouped table                                 |
+| Events list + detail       | EventResource                        | ✅ Full CRUD              | List, create, detail with edit form, poster upload, rebook detection, ticketing config                      |
+| Ticket check-in            | TicketCheckIn page                   | ✅ Staff check-in         | Search + check in tickets at the door                                                                       |
+| Space closures             | SpaceClosures resource               | ✅ List + create + delete | Parity                                                                                                      |
+| Settings                   | ManageOrganizationSettings           | ✅ Settings page          | Hourly rate, buffer, hours; Laravel has more org settings                                                   |
+| Payments view              | OrderResource, TicketOrders          | ✅ /staff/payments        | Cached Stripe Payment Records (cash + credit-covered). Filterable list + per-user table on user detail page |
+| Recurring reservations     | RecurringReservations resource       | ✅ /staff/recurring       | List active/cancelled series, cancel action. Member UI in reservations page                                 |
+| Bands                      | BandResource (via tenancy)           | ✅ /staff/bands           | List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation       |
+| Email marketing            | — (new)                              | ✅ Full flow              | Audiences, campaigns (draft/schedule/send), markdown editor with live preview, broadcast via Postmark       |
+| Equipment                  | Equipment resource                   | ✅ Full flow              | Catalog, categories, loans (request/schedule/checkout/return/cancel), equipment credits, seed data          |
+| Volunteering               | VolunteerReportPage, PendingHourLogs | —                         | Not started                                                                                                 |
+| Sponsors                   | Sponsors resource                    | —                         | Not started                                                                                                 |
+| Site pages / CMS           | SitePages with block builder         | —                         | Not started                                                                                                 |
+| Venues                     | Venues resource                      | —                         | Not started                                                                                                 |
+| Kiosk devices              | KioskDevices resource                | —                         | Not started                                                                                                 |
+| Activity log               | ActivityLog resource                 | —                         | Not started                                                                                                 |
+| Reports                    | Reports resource                     | —                         | Not started                                                                                                 |
+| Bylaws                     | Bylaws resource                      | —                         | Not started                                                                                                 |
+| Revisions                  | Revisions resource                   | —                         | Not started                                                                                                 |
 
 ## Member panel
 
-| Feature | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Dashboard | MemberDashboard | ✅ +page.svelte | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner |
-| Membership / subscription | MyMembership page | ✅ Full flow | Sliding scale, Stripe checkout, credit balance, benefits grid |
-| Reservations | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout |
-| Account settings | MyProfile, MyAccount pages | ✅ Full flow | Profile editing, password change (modal), account deletion with password confirmation, email list subscriptions |
-| My orders | MyOrders page | — | May become "payment history" pulling from Stripe |
-| My tickets | MyTickets page + Livewire | ✅ Full flow | Upcoming/past split, ticket codes, status badges |
-| Equipment loans | Equipment resource (nested) | ✅ Full flow | Browse catalog, request loans (specific + free-form), my loans with cancel |
-| Bands | Bands resource | ✅ Full flow | My Bands list, create band, accept/decline invitations |
-| Volunteer hours | SubmitHoursPage, VolunteerPage | — | Not started |
+| Feature                   | Laravel                         | Svelte               | Notes                                                                                                                      |
+| ------------------------- | ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard                 | MemberDashboard                 | ✅ +page.svelte      | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner |
+| Membership / subscription | MyMembership page               | ✅ Full flow         | Sliding scale, Stripe checkout, credit balance, benefits grid                                                              |
+| Reservations              | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout                                                               |
+| Account settings          | MyProfile, MyAccount pages      | ✅ Full flow         | Profile editing, password change (modal), account deletion with password confirmation, email list subscriptions            |
+| My orders                 | MyOrders page                   | —                    | May become "payment history" pulling from Stripe                                                                           |
+| My tickets                | MyTickets page + Livewire       | ✅ Full flow         | Upcoming/past split, ticket codes, status badges                                                                           |
+| Equipment loans           | Equipment resource (nested)     | ✅ Full flow         | Browse catalog, request loans (specific + free-form), my loans with cancel                                                 |
+| Bands                     | Bands resource                  | ✅ Full flow         | My Bands list, create band, accept/decline invitations                                                                     |
+| Volunteer hours           | SubmitHoursPage, VolunteerPage  | —                    | Not started                                                                                                                |
 
 ## Band panel
 
 The band panel uses a per-band layout at `/band/[slug]/` with role-gated navigation. Laravel uses Filament tenancy; Svelte uses a layout-level auth check with `getUserRole` + `hasAnyRole` for staff bypass.
 
-| Feature | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Band dashboard | BandDashboard | ✅ +page.svelte | Stat cards, upcoming reservations list |
-| Band members | BandMembers resource | ✅ Full flow | Invite (user search), remove, revoke, update role/position, transfer ownership, leave band |
-| Band reservations | BandReservations resource | ✅ Full flow | List (upcoming/past tabs), book session (reuses slot/conflict system), cancel |
-| Band profile editing | EditBandProfile page | ✅ Full flow | Name, bio, avatar upload/remove via REST endpoint + R2 storage |
-| Band settings | — | ✅ Settings page | Owner-only, delete band with confirmation (cascades reservations + avatar) |
-| Band creation | RegisterBand tenancy page | ✅ Modal on My Bands | Create band from member panel |
-| Invitations | AcceptInvitationPage | ✅ On My Bands page | Accept/decline with `.for()` pattern |
+| Feature              | Laravel                   | Svelte               | Notes                                                                                      |
+| -------------------- | ------------------------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| Band dashboard       | BandDashboard             | ✅ +page.svelte      | Stat cards, upcoming reservations list                                                     |
+| Band members         | BandMembers resource      | ✅ Full flow         | Invite (user search), remove, revoke, update role/position, transfer ownership, leave band |
+| Band reservations    | BandReservations resource | ✅ Full flow         | List (upcoming/past tabs), book session (reuses slot/conflict system), cancel              |
+| Band profile editing | EditBandProfile page      | ✅ Full flow         | Name, bio, avatar upload/remove via REST endpoint + R2 storage                             |
+| Band settings        | —                         | ✅ Settings page     | Owner-only, delete band with confirmation (cascades reservations + avatar)                 |
+| Band creation        | RegisterBand tenancy page | ✅ Modal on My Bands | Create band from member panel                                                              |
+| Invitations          | AcceptInvitationPage      | ✅ On My Bands page  | Accept/decline with `.for()` pattern                                                       |
 
 ## Public pages
 
-| Feature | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Home | web.php route | ✅ +page.svelte | Parity |
-| Events listing | EventsGrid Livewire | ✅ +page.svelte | Parity |
-| About | web.php route | — | Not started |
-| Contact form | ContactForm Livewire | — | Not started |
-| Ticket purchase | TicketPurchaseWidget | ✅ Full flow | Purchase page, Stripe checkout, sustaining member discount, success page with ticket codes |
-| Email subscribe | — (new) | ✅ /subscribe + /subscribe/[slug] | Public opt-in for audiences with allowOptIn flag |
-| Email unsubscribe | — (new) | ✅ /unsubscribe/[token] | HMAC-signed one-click unsubscribe |
-| Member directory | MembersGrid Livewire | ✅ /directory + /member/directory | Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. |
+| Feature           | Laravel              | Svelte                            | Notes                                                                                                                                                                                                                                                                              |
+| ----------------- | -------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home              | web.php route        | ✅ +page.svelte                   | Parity                                                                                                                                                                                                                                                                             |
+| Events listing    | EventsGrid Livewire  | ✅ +page.svelte                   | Parity                                                                                                                                                                                                                                                                             |
+| About             | web.php route        | —                                 | Not started                                                                                                                                                                                                                                                                        |
+| Contact form      | ContactForm Livewire | —                                 | Not started                                                                                                                                                                                                                                                                        |
+| Ticket purchase   | TicketPurchaseWidget | ✅ Full flow                      | Purchase page, Stripe checkout, sustaining member discount, success page with ticket codes                                                                                                                                                                                         |
+| Email subscribe   | — (new)              | ✅ /subscribe + /subscribe/[slug] | Public opt-in for audiences with allowOptIn flag                                                                                                                                                                                                                                   |
+| Email unsubscribe | — (new)              | ✅ /unsubscribe/[token]           | HMAC-signed one-click unsubscribe                                                                                                                                                                                                                                                  |
+| Member directory  | MembersGrid Livewire | ✅ /directory + /member/directory | Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. |
 
 ## Platform infrastructure
 
@@ -88,15 +88,15 @@ Cross-cutting concerns that Laravel provides out of the box and the Svelte app n
 
 The Svelte app uses two channels — Postmark for email and a database-backed in-app notification system with bell dropdown + SSE real-time delivery. Members configure which notification types reach them via email/in-app toggles in account settings. SMS (Twilio) is deferred — can be added as a third channel later. This replaces Laravel's 43 notification classes (of which only ~13 were actually wired; the rest were dead code).
 
-| Concern | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Email transport | Laravel Mail (SMTP/SES) | ✅ Postmark | Direct Postmark API via `postmark` SDK, MJML templates |
-| SMS | — (not implemented) | — | Deferred; channel architecture supports adding Twilio later |
-| In-app notifications | Database channel + Filament bell | ✅ Bell + SSE | Persistent `notification` table, bell dropdown in sidebar, SSE real-time push |
-| User preferences | — | ✅ notification_preference table | Per-user, per-notification-type channel toggles on account page |
-| Domain event bus | `event()` dispatcher + 40 event classes | ✅ emittery | Typed event map, async listeners, replaces old callback registry |
-| Auth emails | Fortify (verification, password reset) | Via better-auth | better-auth handles these natively |
-| Ticket emails | — | ✅ Via notification system | Confirmation, cancellation, reminder — routed through dispatcher |
+| Concern              | Laravel                                 | Svelte                           | Notes                                                                         |
+| -------------------- | --------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| Email transport      | Laravel Mail (SMTP/SES)                 | ✅ Postmark                      | Direct Postmark API via `postmark` SDK, MJML templates                        |
+| SMS                  | — (not implemented)                     | —                                | Deferred; channel architecture supports adding Twilio later                   |
+| In-app notifications | Database channel + Filament bell        | ✅ Bell + SSE                    | Persistent `notification` table, bell dropdown in sidebar, SSE real-time push |
+| User preferences     | —                                       | ✅ notification_preference table | Per-user, per-notification-type channel toggles on account page               |
+| Domain event bus     | `event()` dispatcher + 40 event classes | ✅ emittery                      | Typed event map, async listeners, replaces old callback registry              |
+| Auth emails          | Fortify (verification, password reset)  | Via better-auth                  | better-auth handles these natively                                            |
+| Ticket emails        | —                                       | ✅ Via notification system       | Confirmation, cancellation, reminder — routed through dispatcher              |
 
 #### Laravel notification audit
 
@@ -133,17 +133,17 @@ Of 43 notification classes in the Laravel app, only ~13 were actually wired and 
 
 Individual `/api/cron/*` routes, each hit by the hosting platform's cron scheduler. No in-app scheduler or job table — Sentry Crons handles pass/fail tracking and missed-run alerts.
 
-| Job | Schedule | Svelte | Notes |
-|-----|---------|--------|-------|
-| Auto-complete reservations | Every few min | ✅ /api/cron/auto-complete | |
-| Lock code provisioning | Daily | ✅ /api/cron/lock-access | |
-| Confirmation reminders | Daily 09:00 | ✅ /api/cron/confirmation-reminders | Emits `reservation.confirmation_reminder_due` for unconfirmed (scheduled) reservations starting in next 24h |
-| Reservation reminders | Daily 10:00 | ✅ /api/cron/reservation-reminders | Emits `reservation.reminder_due` for confirmed reservations starting in next 24h |
-| Daily reservation digest | Daily 20:00 | — | Could become a dashboard widget |
-| Rehearsal reminders | Daily 09:30 | — | Depends on notification system + band rehearsals |
-| Recurring reservation generation | Daily 00:00 | ✅ /api/cron/generate-recurring-reservations | Expands active recurring series into scheduled reservations within 2.5-week window |
-| Send scheduled campaigns | Every few min | ✅ /api/cron/send-campaigns | Finds due campaigns (scheduledFor ≤ now, sentAt IS NULL) and executes send |
-| Volunteer shift reminders | Daily 09:00 | — | Deferred until volunteering module is built |
+| Job                              | Schedule      | Svelte                                       | Notes                                                                                                       |
+| -------------------------------- | ------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Auto-complete reservations       | Every few min | ✅ /api/cron/auto-complete                   |                                                                                                             |
+| Lock code provisioning           | Daily         | ✅ /api/cron/lock-access                     |                                                                                                             |
+| Confirmation reminders           | Daily 09:00   | ✅ /api/cron/confirmation-reminders          | Emits `reservation.confirmation_reminder_due` for unconfirmed (scheduled) reservations starting in next 24h |
+| Reservation reminders            | Daily 10:00   | ✅ /api/cron/reservation-reminders           | Emits `reservation.reminder_due` for confirmed reservations starting in next 24h                            |
+| Daily reservation digest         | Daily 20:00   | —                                            | Could become a dashboard widget                                                                             |
+| Rehearsal reminders              | Daily 09:30   | —                                            | Depends on notification system + band rehearsals                                                            |
+| Recurring reservation generation | Daily 00:00   | ✅ /api/cron/generate-recurring-reservations | Expands active recurring series into scheduled reservations within 2.5-week window                          |
+| Send scheduled campaigns         | Every few min | ✅ /api/cron/send-campaigns                  | Finds due campaigns (scheduledFor ≤ now, sentAt IS NULL) and executes send                                  |
+| Volunteer shift reminders        | Daily 09:00   | —                                            | Deferred until volunteering module is built                                                                 |
 
 **Removed from Laravel's list:**
 
@@ -157,13 +157,13 @@ Individual `/api/cron/*` routes, each hit by the hosting platform's cron schedul
 
 Services fire typed domain events via Node's built-in `EventEmitter`. Listeners handle side effects (notifications, activity logging, cross-module reactions). Wiring is explicit in a registration file. This replaces Laravel's 40 event classes + 15 listener classes with a lighter-weight equivalent — typed event payloads instead of event classes, listener functions instead of listener classes.
 
-| Concern | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Event bus | `event()` dispatcher + 40 event classes | ✅ `emittery` | Typed event map, async-native, single emitter instance, listeners registered at startup in hooks.server.ts |
-| Checkout fan-out | Part of event/listener system | ✅ Via emittery | Migrated from callback registry to domain event bus |
-| Notification dispatch | Listeners call `$user->notify()` | ✅ Dispatcher + listeners | Listeners check user preferences, route to email (Postmark) and in-app channels |
-| Activity logging | 6 activity-log listeners via spatie/activitylog | — | Not started; lower priority |
-| Lock code management | Queued listeners on reservation confirm/cancel | ✅ Cron-based | Different approach — cron provisions daily instead of per-event |
+| Concern               | Laravel                                         | Svelte                    | Notes                                                                                                      |
+| --------------------- | ----------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Event bus             | `event()` dispatcher + 40 event classes         | ✅ `emittery`             | Typed event map, async-native, single emitter instance, listeners registered at startup in hooks.server.ts |
+| Checkout fan-out      | Part of event/listener system                   | ✅ Via emittery           | Migrated from callback registry to domain event bus                                                        |
+| Notification dispatch | Listeners call `$user->notify()`                | ✅ Dispatcher + listeners | Listeners check user preferences, route to email (Postmark) and in-app channels                            |
+| Activity logging      | 6 activity-log listeners via spatie/activitylog | —                         | Not started; lower priority                                                                                |
+| Lock code management  | Queued listeners on reservation confirm/cancel  | ✅ Cron-based             | Different approach — cron provisions daily instead of per-event                                            |
 
 ### Background processing
 
@@ -173,12 +173,12 @@ Event listeners that call external APIs (Postmark, Twilio) should not block the 
 
 ### Authorization
 
-| Concern | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Role/permission tables | spatie/laravel-permission (polymorphic) | ✅ Drizzle schema | Simplified from morph to direct user FK |
-| Role checking | `$user->hasRole()`, middleware | ✅ hasRole/hasAnyRole/requireStaff | Utility functions in authorization.ts |
-| Policies | 20 policy classes in app/Policies | — | No formal policy layer; checks are inline in route handlers |
-| Route-level guards | Filament panel auth + middleware | Ad-hoc | Each route calls requireStaff() or checks roles manually |
+| Concern                | Laravel                                 | Svelte                             | Notes                                                       |
+| ---------------------- | --------------------------------------- | ---------------------------------- | ----------------------------------------------------------- |
+| Role/permission tables | spatie/laravel-permission (polymorphic) | ✅ Drizzle schema                  | Simplified from morph to direct user FK                     |
+| Role checking          | `$user->hasRole()`, middleware          | ✅ hasRole/hasAnyRole/requireStaff | Utility functions in authorization.ts                       |
+| Policies               | 20 policy classes in app/Policies       | —                                  | No formal policy layer; checks are inline in route handlers |
+| Route-level guards     | Filament panel auth + middleware        | Ad-hoc                             | Each route calls requireStaff() or checks roles manually    |
 
 ### Observers / model hooks
 
@@ -186,13 +186,13 @@ Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling c
 
 ## API / background
 
-| Feature | Laravel | Svelte | Notes |
-|---------|---------|--------|-------|
-| Stripe webhooks | Cashier + custom handlers | ✅ /api/stripe/webhook | checkout.session.completed, invoice.paid, subscription.deleted |
-| Auto-complete reservations | Scheduled command | ✅ /api/cron/auto-complete | |
-| Lock access | Kiosk module | ✅ /api/cron/lock-access | |
-| Event poster serving | Media library | ✅ /api/events/[id]/poster | |
-| Band avatar upload | Media library | ✅ /api/bands/[id]/avatar | |
+| Feature                    | Laravel                   | Svelte                     | Notes                                                          |
+| -------------------------- | ------------------------- | -------------------------- | -------------------------------------------------------------- |
+| Stripe webhooks            | Cashier + custom handlers | ✅ /api/stripe/webhook     | checkout.session.completed, invoice.paid, subscription.deleted |
+| Auto-complete reservations | Scheduled command         | ✅ /api/cron/auto-complete |                                                                |
+| Lock access                | Kiosk module              | ✅ /api/cron/lock-access   |                                                                |
+| Event poster serving       | Media library             | ✅ /api/events/[id]/poster |                                                                |
+| Band avatar upload         | Media library             | ✅ /api/bands/[id]/avatar  |                                                                |
 
 ## Database schema
 
@@ -204,18 +204,18 @@ Tables that would need to be added for missing features: volunteer_hour_log, spo
 
 Chosen libraries for platform concerns. Preference is for small, focused packages over frameworks.
 
-| Concern | Library | Why |
-|---------|---------|-----|
-| Email transport | `postmark` | Official SDK, well-typed, direct integration |
-| Email templates | MJML or Maizzle | MJML is battle-tested; Maizzle uses Tailwind (matches existing tooling). Decide when building. Both compile to static HTML for Postmark |
-| SMS | `twilio` | Official SDK, reliable, overkill for SMS-only but actively maintained |
-| Domain event bus | `emittery` | Async-native (listeners can do I/O without blocking), strong TypeScript generics, ESM-only (fine for SvelteKit) |
-| Recurrence rules | `rrule` | RFC 5545 RRULE parsing/generation with timezone support via luxon. Used for recurring reservation scheduling |
-| Error tracking | `@sentry/sveltekit` | First-class SvelteKit integration, auto-instruments load functions and routes. Also provides Sentry Crons for scheduled job monitoring |
-| Image crop/resize | `svelte-easy-crop` (client-side) | Browser-based crop UI + canvas resize before upload. User selects and frames the image, client resizes to target dimensions, uploads the processed result. No server-side image processing needed |
-| File uploads | `@aws-sdk/client-s3` (existing) | Hand-rolled R2 integration is sufficient. Add `@aws-sdk/s3-request-presigner` if client-direct uploads are needed later |
-| In-app notifications | Hand-rolled | Postgres `notification` table via Drizzle, SSE from SvelteKit `+server.ts` for real-time delivery. Novu/Knock are overkill and have React-only client components |
-| Background work | Detached promises | Fire-and-forget with `.catch()` piped to Sentry. Add `p-queue` if concurrency control is needed later. No Redis/BullMQ |
+| Concern              | Library                          | Why                                                                                                                                                                                               |
+| -------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email transport      | `postmark`                       | Official SDK, well-typed, direct integration                                                                                                                                                      |
+| Email templates      | MJML or Maizzle                  | MJML is battle-tested; Maizzle uses Tailwind (matches existing tooling). Decide when building. Both compile to static HTML for Postmark                                                           |
+| SMS                  | `twilio`                         | Official SDK, reliable, overkill for SMS-only but actively maintained                                                                                                                             |
+| Domain event bus     | `emittery`                       | Async-native (listeners can do I/O without blocking), strong TypeScript generics, ESM-only (fine for SvelteKit)                                                                                   |
+| Recurrence rules     | `rrule`                          | RFC 5545 RRULE parsing/generation with timezone support via luxon. Used for recurring reservation scheduling                                                                                      |
+| Error tracking       | `@sentry/sveltekit`              | First-class SvelteKit integration, auto-instruments load functions and routes. Also provides Sentry Crons for scheduled job monitoring                                                            |
+| Image crop/resize    | `svelte-easy-crop` (client-side) | Browser-based crop UI + canvas resize before upload. User selects and frames the image, client resizes to target dimensions, uploads the processed result. No server-side image processing needed |
+| File uploads         | `@aws-sdk/client-s3` (existing)  | Hand-rolled R2 integration is sufficient. Add `@aws-sdk/s3-request-presigner` if client-direct uploads are needed later                                                                           |
+| In-app notifications | Hand-rolled                      | Postgres `notification` table via Drizzle, SSE from SvelteKit `+server.ts` for real-time delivery. Novu/Knock are overkill and have React-only client components                                  |
+| Background work      | Detached promises                | Fire-and-forget with `.catch()` piped to Sentry. Add `p-queue` if concurrency control is needed later. No Redis/BullMQ                                                                            |
 
 **Not using:**
 
@@ -230,13 +230,13 @@ Chosen libraries for platform concerns. Preference is for small, focused package
 
 Features that exist in the Svelte app but not in the Laravel production app are gated behind KV-backed feature flags. All flags default to **off** and can be toggled from Staff Settings > Features.
 
-| Flag | Feature | Routes gated |
-|------|---------|--------------|
-| `staffInbox` | Multi-channel unified inbox | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio` |
-| `bandPremium` | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
-| `emailMarketing` | Audiences, campaigns, broadcasts | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns` |
-| `equipment` | Equipment catalog, loans, credits | `/staff/equipment/**`, `/member/equipment/**` |
-| `helpArticles` | Help center for staff and members | `/staff/help/**`, `/member/help/**`, `/api/help/**` |
+| Flag             | Feature                                    | Routes gated                                                             |
+| ---------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `staffInbox`     | Multi-channel unified inbox                | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
+| `bandPremium`    | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
+| `emailMarketing` | Audiences, campaigns, broadcasts           | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
+| `equipment`      | Equipment catalog, loans, credits          | `/staff/equipment/**`, `/member/equipment/**`                            |
+| `helpArticles`   | Help center for staff and members          | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
 
 Implementation: `src/lib/server/feature-flags.ts` reads `feature.*` keys from the site config KV store. Navigation items are conditionally rendered in panel layouts. Route data queries call `requireFeature()` which throws 404 when disabled.
 
@@ -246,11 +246,11 @@ Features are grouped by dependency. The notification system is foundational — 
 
 1. ~~**Notification system**~~ — ✅ Complete. Postmark email + in-app (database + bell + SSE). emittery domain event bus. User preference UI in account settings. Ticket, event, band, and contact form notifications wired. SMS channel deferred.
 2. ~~**Reminder cron jobs**~~ — ✅ Complete. Two cron endpoints: `/api/cron/reservation-reminders` (confirmed, daily 10:00) and `/api/cron/confirmation-reminders` (scheduled/unconfirmed, daily 09:00). Both query next-24h reservations, emit domain events, and have full test coverage.
-4. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_cache` table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
-5. ~~**Recurring reservations**~~ — ✅ Complete. `recurring_series` table with prototype pattern, `rrule` npm package for RFC 5545 scheduling. Generation cron expands series into concrete reservations within 2.5-week window. Sustaining member exclusive. Subscription lapse auto-cancels active series. Staff list page + member booking integration with recurring tab.
-6. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
-7. ~~**Equipment module**~~ — ✅ Complete. Three tables (equipment_category, equipment, equipment_loan). Staff catalog + category management, loan lifecycle (request/schedule/checkout/return/cancel), member catalog browsing + loan requests (specific + free-form), equipment credits (1:1 with subscription, deducted on return), pricing tiers (major $5/day, accessory $1/day, sustaining members get free accessories).
-8. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
+3. ~~**Stripe payments view**~~ — ✅ Complete. Local `payment_cache` table, populated on cash/credit payment creation. Staff list page with filters + per-user table on user detail. Stripe Payment Record IDs link to dashboard.
+4. ~~**Recurring reservations**~~ — ✅ Complete. `recurring_series` table with prototype pattern, `rrule` npm package for RFC 5545 scheduling. Generation cron expands series into concrete reservations within 2.5-week window. Sustaining member exclusive. Subscription lapse auto-cancels active series. Staff list page + member booking integration with recurring tab.
+5. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
+6. ~~**Equipment module**~~ — ✅ Complete. Three tables (equipment_category, equipment, equipment_loan). Staff catalog + category management, loan lifecycle (request/schedule/checkout/return/cancel), member catalog browsing + loan requests (specific + free-form), equipment credits (1:1 with subscription, deducted on return), pricing tiers (major $5/day, accessory $1/day, sustaining members get free accessories).
+7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
 8. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.
 9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
 10. **Everything else** — Sponsors, CMS, venues, kiosk, activity log, reports, bylaws.

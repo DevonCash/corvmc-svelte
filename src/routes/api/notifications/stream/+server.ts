@@ -49,12 +49,18 @@ export const GET: RequestHandler = async ({ locals, request }) => {
 
 			// Send initial unread count
 			const unreadCount = await getUnreadCount(userId);
-			writer.write(encoder.encode(`event: init\ndata: ${JSON.stringify({ unreadCount })}\n\n`)).catch(() => {});
+			writer
+				.write(encoder.encode(`event: init\ndata: ${JSON.stringify({ unreadCount })}\n\n`))
+				.catch(() => {});
 
 			// Clean up when client disconnects
 			request.signal.addEventListener('abort', () => {
 				cleanup();
-				try { controller.close(); } catch {}
+				try {
+					controller.close();
+				} catch {
+					/* already closed */
+				}
 			});
 		}
 	});

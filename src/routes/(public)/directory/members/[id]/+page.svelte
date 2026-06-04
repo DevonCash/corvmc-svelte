@@ -5,6 +5,7 @@
 	import { getPublicMemberProfile } from '$lib/remote/directory.remote';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getPublicMemberProfile(page.params.id!));
 	const member = $derived(data.member);
@@ -14,13 +15,19 @@
 
 <svelte:head>
 	<title>{member.name} | Corvallis Music Collective</title>
-	<meta name="description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		name="description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 	<meta property="og:title" content={member.name} />
-	<meta property="og:description" content={member.tagline || `${member.name} on Corvallis Music Collective`} />
+	<meta
+		property="og:description"
+		content={member.tagline || `${member.name} on Corvallis Music Collective`}
+	/>
 </svelte:head>
 
 <div class="max-w-2xl mx-auto space-y-6 p-6">
-	<a href="/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
+	<a href={resolve('/directory')} class="link text-sm opacity-60">&larr; Back to Directory</a>
 
 	<!-- Header -->
 	<div class="flex items-center gap-4">
@@ -48,7 +55,10 @@
 	</div>
 
 	{#if member.bio}
-		<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(member.bio)}</div>
+		<div class="prose prose-sm max-w-none text-base-content/80">
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
+			{@html sanitizeBio(member.bio)}
+		</div>
 	{/if}
 
 	{#if member.instruments?.length || member.genres?.length}
@@ -57,7 +67,7 @@
 				<div>
 					<p class="text-xs font-medium opacity-60 mb-1">Instruments</p>
 					<div class="flex flex-wrap gap-1">
-						{#each member.instruments as inst}
+						{#each member.instruments as inst (inst)}
 							<Badge variant="outline">{inst}</Badge>
 						{/each}
 					</div>
@@ -67,7 +77,7 @@
 				<div>
 					<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
 					<div class="flex flex-wrap gap-1">
-						{#each member.genres as genre}
+						{#each member.genres as genre (genre)}
 							<Badge variant="ghost">{genre}</Badge>
 						{/each}
 					</div>

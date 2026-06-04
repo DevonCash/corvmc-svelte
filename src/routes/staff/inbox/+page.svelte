@@ -48,8 +48,8 @@
 
 	let filters = $derived({
 		search: searchDebounced || undefined,
-		status: (statusFilter || undefined) as typeof inboxThreadStatuses[number] | undefined,
-		channel: (channelFilter || undefined) as typeof inboxChannels[number] | undefined,
+		status: (statusFilter || undefined) as (typeof inboxThreadStatuses)[number] | undefined,
+		channel: (channelFilter || undefined) as (typeof inboxChannels)[number] | undefined,
 		page
 	});
 
@@ -80,16 +80,30 @@
 			oninput={onSearchInput}
 		/>
 		{#await enabledChannels then channels}
-		<select class="select select-bordered select-sm" value={channelFilter} onchange={(e) => { channelFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
-			<option value="">All channels</option>
-			{#each channels as ch}
-				<option value={ch}>{channelLabels[ch]}</option>
-			{/each}
-		</select>
+			<select
+				class="select select-bordered select-sm"
+				value={channelFilter}
+				onchange={(e) => {
+					channelFilter = (e.currentTarget as HTMLSelectElement).value;
+					page = 1;
+				}}
+			>
+				<option value="">All channels</option>
+				{#each channels as ch (ch)}
+					<option value={ch}>{channelLabels[ch]}</option>
+				{/each}
+			</select>
 		{/await}
-		<select class="select select-bordered select-sm" value={statusFilter} onchange={(e) => { statusFilter = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={statusFilter}
+			onchange={(e) => {
+				statusFilter = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All statuses</option>
-			{#each inboxThreadStatuses as s}
+			{#each inboxThreadStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
 		</select>
@@ -121,14 +135,19 @@
 					<tbody>
 						{#each threads as t (t.id)}
 							{@const ChannelIcon = channelIcons[t.channel] ?? IconWorld}
-							<tr class="hover cursor-pointer" onclick={() => window.location.href = `/staff/inbox/${t.id}`}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => (window.location.href = `/staff/inbox/${t.id}`)}
+							>
 								<td class="w-px">
 									<span class="tooltip" data-tip={channelLabels[t.channel]}>
 										<ChannelIcon size={18} />
 									</span>
 								</td>
 								<td>
-									<div class="font-medium">{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}</div>
+									<div class="font-medium">
+										{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
+									</div>
 									{#if t.contactEmail && t.contactName}
 										<div class="text-xs opacity-60">{t.contactEmail}</div>
 									{/if}
@@ -151,7 +170,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

@@ -34,5 +34,4 @@
 	<ul class="menu w-full flex-1 gap-1">
 		{@render navigation?.()}
 	</ul>
-
 </aside>

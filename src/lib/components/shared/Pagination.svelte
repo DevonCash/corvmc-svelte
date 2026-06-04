@@ -20,10 +20,7 @@
 			{/if}
 
 			{#each Array.from({ length: totalPages }, (_, i) => i + 1) as p (p)}
-				<Button
-					onclick={() => onpage(p)}
-					class="join-item {p === page ? 'btn-active' : ''}"
-				>
+				<Button onclick={() => onpage(p)} class="join-item {p === page ? 'btn-active' : ''}">
 					{p}
 				</Button>
 			{/each}

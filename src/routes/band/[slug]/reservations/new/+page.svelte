@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getBandSlots, getBandMembershipStatus, bookBandReservation } from '$lib/remote/reservations.remote';
+	import { resolve } from '$app/paths';
+	import {
+		getBandSlots,
+		getBandMembershipStatus,
+		bookBandReservation
+	} from '$lib/remote/reservations.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -70,7 +75,7 @@
 		const input = e.target as HTMLInputElement;
 		selectedStart = '';
 		selectedEnd = '';
-		goto(`?date=${input.value}`);
+		goto(resolve(`/band/${page.params.slug}/reservations/new?date=${input.value}`));
 	}
 
 	function onStartChange() {
@@ -88,142 +93,137 @@
 	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
 </script>
 
-	<PageHeader title="Book a Session" subtitle={band.name} />
-	<PageContent width="md">
+<PageHeader title="Book a Session" subtitle={band.name} />
+<PageContent width="md">
+	<!-- Date picker is a navigation control, lives outside the Form -->
+	<div class="form-control">
+		<label class="label" for="date">
+			<span class="label-text">Date</span>
+		</label>
+		<input
+			id="date"
+			type="date"
+			value={currentDate}
+			onchange={onDateChange}
+			class="input-bordered input"
+		/>
+	</div>
 
-		<!-- Date picker is a navigation control, lives outside the Form -->
+	<Form
+		remote={bookBandReservation}
+		{initial}
+		onsuccess={() => {
+			goto(resolve(`/band/${band.slug}/reservations`));
+		}}
+		onfailure={() => toast.error('Booking failed')}
+	>
+		<input {...fields.date.as('hidden', currentDate)} />
+
 		<div class="form-control">
-			<label class="label" for="date">
-				<span class="label-text">Date</span>
+			<label class="label" for="startTime">
+				<span class="label-text">Start time</span>
 			</label>
-			<input
-				id="date"
-				type="date"
-				value={currentDate}
-				onchange={onDateChange}
-				class="input-bordered input"
-			/>
+			{#each bookBandReservation.fields.startTime.issues() ?? [] as issue, i (i)}
+				<p class="text-sm text-error">{issue.message}</p>
+			{/each}
+			<select
+				id="startTime"
+				name="startTime"
+				class="select-bordered select"
+				bind:value={selectedStart}
+				onchange={onStartChange}
+				disabled={startTimeOptions.length === 0}
+			>
+				<option value="" disabled>
+					{startTimeOptions.length === 0 ? 'No times available' : 'Select a start time'}
+				</option>
+				{#each startTimeOptions as time (time)}
+					<option value={time}>{formatSlotTime(time)}</option>
+				{/each}
+			</select>
 		</div>
 
-		<Form
-			remote={bookBandReservation}
-			{initial}
-			onsuccess={() => {
-				goto(`reservations`);
-			}}
-			onfailure={() => toast.error('Booking failed')}
-		>
-			<input {...fields.date.as('hidden', currentDate)} />
-
-			<div class="form-control">
-				<label class="label" for="startTime">
-					<span class="label-text">Start time</span>
-				</label>
-				{#each bookBandReservation.fields.startTime.issues() ?? [] as issue}
-					<p class="text-sm text-error">{issue.message}</p>
-				{/each}
-				<select
-					id="startTime"
-					name="startTime"
-					class="select-bordered select"
-					bind:value={selectedStart}
-					onchange={onStartChange}
-					disabled={startTimeOptions.length === 0}
-				>
-					<option value="" disabled>
-						{startTimeOptions.length === 0 ? 'No times available' : 'Select a start time'}
-					</option>
-					{#each startTimeOptions as time}
-						<option value={time}>{formatSlotTime(time)}</option>
-					{/each}
-				</select>
-			</div>
-
-			<div class="form-control mt-4">
-				<label class="label" for="endTime">
-					<span class="label-text">End time</span>
-				</label>
-				{#each bookBandReservation.fields.endTime.issues() ?? [] as issue}
-					<p class="text-sm text-error">{issue.message}</p>
-				{/each}
-				<select
-					id="endTime"
-					name="endTime"
-					class="select-bordered select"
-					bind:value={selectedEnd}
-					disabled={endTimeOptions.length === 0}
-				>
-					<option value="" disabled>
-						{#if !selectedStart}
-							Select a start time first
-						{:else if endTimeOptions.length === 0}
-							No end times available
-						{:else}
-							Select an end time
-						{/if}
-					</option>
-					{#each endTimeOptions as time}
-						<option value={time}>{formatSlotTime(time)}</option>
-					{/each}
-				</select>
-			</div>
-
-			{#if durationHours > 0}
-				<p class="mt-2 text-sm font-medium text-primary">
-					{durationHours} hour{durationHours === 1 ? '' : 's'} — ${(
-						(durationHours * config.hourlyRateCents) /
-						100
-					).toFixed(2)}
-				</p>
-			{/if}
-
-			<div class="form-control mt-4">
-				<label class="label" for="notes">
-					<span class="label-text">Notes (optional)</span>
-				</label>
-				<textarea
-					id="notes"
-					name="notes"
-					class="textarea-bordered textarea"
-					rows="2"
-					placeholder="What are you working on?"
-				></textarea>
-			</div>
-
-			{#if hasSustainingMember}
-				<div class="form-control mt-4">
-					<label class="label" for="recurring">
-						<span class="label-text">Repeat this reservation</span>
-					</label>
-					<select
-						id="recurring"
-						name="recurring"
-						class="select select-bordered"
-						bind:value={recurring}
-					>
-						<option value="">Don't repeat (one-time)</option>
-						<option value="weekly">Weekly</option>
-						<option value="biweekly">Every 2 weeks</option>
-						<option value="monthly">Monthly</option>
-					</select>
-					{#if recurring}
-						<p class="text-sm mt-1 opacity-60">
-							Future instances will be generated automatically.
-						</p>
+		<div class="form-control mt-4">
+			<label class="label" for="endTime">
+				<span class="label-text">End time</span>
+			</label>
+			{#each bookBandReservation.fields.endTime.issues() ?? [] as issue, i (i)}
+				<p class="text-sm text-error">{issue.message}</p>
+			{/each}
+			<select
+				id="endTime"
+				name="endTime"
+				class="select-bordered select"
+				bind:value={selectedEnd}
+				disabled={endTimeOptions.length === 0}
+			>
+				<option value="" disabled>
+					{#if !selectedStart}
+						Select a start time first
+					{:else if endTimeOptions.length === 0}
+						No end times available
+					{:else}
+						Select an end time
 					{/if}
-				</div>
-			{/if}
+				</option>
+				{#each endTimeOptions as time (time)}
+					<option value={time}>{formatSlotTime(time)}</option>
+				{/each}
+			</select>
+		</div>
 
-			<div class="mt-6">
-				<SubmitButton
-					label={recurring ? 'Book & Start Series' : 'Book Session'}
-					successLabel="Booked!"
-					errorLabel="Booking failed"
-					disabled={!selectedStart || !selectedEnd}
-					class="w-full btn-primary"
-				/>
+		{#if durationHours > 0}
+			<p class="mt-2 text-sm font-medium text-primary">
+				{durationHours} hour{durationHours === 1 ? '' : 's'} — ${(
+					(durationHours * config.hourlyRateCents) /
+					100
+				).toFixed(2)}
+			</p>
+		{/if}
+
+		<div class="form-control mt-4">
+			<label class="label" for="notes">
+				<span class="label-text">Notes (optional)</span>
+			</label>
+			<textarea
+				id="notes"
+				name="notes"
+				class="textarea-bordered textarea"
+				rows="2"
+				placeholder="What are you working on?"
+			></textarea>
+		</div>
+
+		{#if hasSustainingMember}
+			<div class="form-control mt-4">
+				<label class="label" for="recurring">
+					<span class="label-text">Repeat this reservation</span>
+				</label>
+				<select
+					id="recurring"
+					name="recurring"
+					class="select select-bordered"
+					bind:value={recurring}
+				>
+					<option value="">Don't repeat (one-time)</option>
+					<option value="weekly">Weekly</option>
+					<option value="biweekly">Every 2 weeks</option>
+					<option value="monthly">Monthly</option>
+				</select>
+				{#if recurring}
+					<p class="text-sm mt-1 opacity-60">Future instances will be generated automatically.</p>
+				{/if}
 			</div>
-		</Form>
-	</PageContent>
+		{/if}
 
-
+		<div class="mt-6">
+			<SubmitButton
+				label={recurring ? 'Book & Start Series' : 'Book Session'}
+				successLabel="Booked!"
+				errorLabel="Booking failed"
+				disabled={!selectedStart || !selectedEnd}
+				class="w-full btn-primary"
+			/>
+		</div>
+	</Form>
+</PageContent>

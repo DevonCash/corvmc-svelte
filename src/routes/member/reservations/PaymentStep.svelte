@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
@@ -117,8 +117,7 @@
 		{:else}
 			<div class="space-y-2">
 				<div class="flex justify-between">
-					<span
-						>Room rental ({pricing.durationHours}hr × ${cents(pricing.hourlyRateCents)}/hr)</span
+					<span>Room rental ({pricing.durationHours}hr × ${cents(pricing.hourlyRateCents)}/hr)</span
 					>
 					<span>${cents(pricing.totalCents)}</span>
 				</div>
@@ -159,14 +158,17 @@
 					label=""
 					type="checkbox"
 					bind:value={coverFees}
-					checkboxLabel="Cover ${cents(calcFeeCents(pricing.remainingCents))} processing fee so the Collective receives 100%"
+					checkboxLabel="Cover ${cents(
+						calcFeeCents(pricing.remainingCents)
+					)} processing fee so the Collective receives 100%"
 				/>
 			{/if}
 
 			{#if !pricing.isSustainingMember}
 				<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
 					Sustaining members get free rehearsal hours every month.
-					<a href="{base}/member/membership" target="_blank" class="link link-primary">Learn more</a
+					<a href={resolve('/member/membership')} target="_blank" class="link link-primary"
+						>Learn more</a
 					>
 				</div>
 			{/if}

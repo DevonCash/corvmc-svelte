@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, desc, and, gte, lte, like, or, sql, count, type SQL } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -33,7 +33,7 @@ export interface PaymentCacheFilters {
 	method?: string;
 	status?: string;
 	from?: string; // YYYY-MM-DD
-	to?: string;   // YYYY-MM-DD
+	to?: string; // YYYY-MM-DD
 }
 
 // ---------------------------------------------------------------------------
@@ -66,12 +66,7 @@ function buildFilters(filters: PaymentCacheFilters): SQL[] {
 
 	if (filters.search) {
 		const escaped = escapeLike(filters.search);
-		conditions.push(
-			or(
-				like(user.name, `%${escaped}%`),
-				like(user.email, `%${escaped}%`)
-			)!
-		);
+		conditions.push(or(like(user.name, `%${escaped}%`), like(user.email, `%${escaped}%`))!);
 	}
 
 	if (filters.method) {

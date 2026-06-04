@@ -21,11 +21,7 @@ function markdownToHtml(markdown: string): string {
 	return marked.parse(markdown, { async: false }) as string;
 }
 
-function renderWithLayout(
-	htmlContent: string,
-	previewText: string,
-	footerHtml: string
-): string {
+function renderWithLayout(htmlContent: string, previewText: string, footerHtml: string): string {
 	return CAMPAIGN_LAYOUT.replace('{{CONTENT}}', htmlContent)
 		.replace('{{PREVIEW_TEXT}}', escapeHtml(previewText))
 		.replace('{{FOOTER}}', footerHtml);
@@ -42,7 +38,10 @@ export function renderCampaignPreview(markdown: string): string {
 	html = html.replaceAll('{{subscriber_name}}', 'there');
 	html = html.replaceAll('{{unsubscribe_url}}', '#');
 
-	const previewText = markdown.slice(0, 100).replace(/[#*_\n]/g, '').trim();
+	const previewText = markdown
+		.slice(0, 100)
+		.replace(/[#*_\n]/g, '')
+		.trim();
 	const footerHtml = '<a href="#">Unsubscribe from this list</a>';
 
 	return renderWithLayout(html, previewText, footerHtml);
@@ -62,7 +61,10 @@ export function renderCampaignForSend(
 	html = html.replaceAll('{{subscriber_name}}', escapeHtml(subscriberName || 'there'));
 	html = html.replaceAll('{{unsubscribe_url}}', escapeHtml(unsubscribeUrl));
 
-	const previewText = markdown.slice(0, 100).replace(/[#*_\n]/g, '').trim();
+	const previewText = markdown
+		.slice(0, 100)
+		.replace(/[#*_\n]/g, '')
+		.trim();
 	const footerHtml = `<a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from this list</a>`;
 
 	return renderWithLayout(html, previewText, footerHtml);

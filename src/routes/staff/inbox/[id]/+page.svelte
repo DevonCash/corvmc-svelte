@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -67,7 +68,8 @@
 				{#each t.messages as msg (msg.id)}
 					<div class="chat {msg.direction === 'inbound' ? 'chat-start' : 'chat-end'}">
 						<div class="chat-header mb-1">
-							{msg.authorName ?? (msg.direction === 'inbound' ? t.contactName ?? 'Contact' : 'Staff')}
+							{msg.authorName ??
+								(msg.direction === 'inbound' ? (t.contactName ?? 'Contact') : 'Staff')}
 							<time class="text-xs opacity-50 ml-2">{formatDateTime(msg.createdAt)}</time>
 						</div>
 						<div class="chat-bubble {msg.direction === 'outbound' ? 'chat-bubble-primary' : ''}">
@@ -118,7 +120,8 @@
 					{:else}
 						<div class="alert alert-warning text-sm">
 							The {channelLabels[t.channel]} channel is disabled. Enable it in
-							<a href="/staff/settings" class="link">Settings → Inbox Channels</a> to send replies.
+							<a href={resolve('/staff/settings')} class="link">Settings → Inbox Channels</a> to send
+							replies.
 						</div>
 					{/if}
 				{/await}
@@ -147,12 +150,16 @@
 							required
 						></textarea>
 						<div class="flex justify-end gap-2">
-							<button type="button" class="btn btn-ghost btn-sm" onclick={() => showNoteForm = false}>Cancel</button>
+							<button
+								type="button"
+								class="btn btn-ghost btn-sm"
+								onclick={() => (showNoteForm = false)}>Cancel</button
+							>
 							<button type="submit" class="btn btn-sm">Add Note</button>
 						</div>
 					</form>
 				{:else}
-					<button class="btn btn-ghost btn-sm" onclick={() => showNoteForm = true}>
+					<button class="btn btn-ghost btn-sm" onclick={() => (showNoteForm = true)}>
 						<IconNote size={16} /> Add Note
 					</button>
 				{/if}
@@ -182,20 +189,23 @@
 
 						{#if t.contactPhone}
 							<div class="text-sm">
-								<span class="opacity-60">Phone:</span> {t.contactPhone}
+								<span class="opacity-60">Phone:</span>
+								{t.contactPhone}
 							</div>
 						{/if}
 
 						{#if t.assignedToName}
 							<div class="text-sm">
-								<span class="opacity-60">Assigned:</span> {t.assignedToName}
+								<span class="opacity-60">Assigned:</span>
+								{t.assignedToName}
 							</div>
 						{:else}
 							<div class="text-sm opacity-60">Unassigned</div>
 						{/if}
 
 						<div class="text-sm">
-							<span class="opacity-60">Messages:</span> {t.messageCount}
+							<span class="opacity-60">Messages:</span>
+							{t.messageCount}
 						</div>
 
 						<div class="text-xs opacity-50">
@@ -222,7 +232,7 @@
 								class="select select-bordered select-sm w-full"
 								value={t.status}
 							>
-								{#each inboxThreadStatuses as s}
+								{#each inboxThreadStatuses as s (s)}
 									<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 								{/each}
 							</select>

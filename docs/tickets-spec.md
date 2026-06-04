@@ -118,6 +118,7 @@ cancelled      cancelled
 ### Guest (no account)
 
 Same flow, but:
+
 - User provides name and email before checkout.
 - `userId` is null on the tickets.
 - No Stripe customer ID — Stripe creates a guest checkout session.
@@ -127,6 +128,7 @@ Same flow, but:
 ### Cancellation
 
 If the user abandons Stripe Checkout (clicks "back" or closes the tab):
+
 - Pending tickets remain in the database.
 - A cleanup job (or lazy cleanup on next page load) can cancel stale pending
   tickets after a timeout (e.g., 30 minutes). This is a deferrable concern.
@@ -251,6 +253,7 @@ validation and service checks).
 ### Event detail page (extended)
 
 When an event has `ticketingEnabled`:
+
 - Show ticket stats: sold count, remaining (or "unlimited"), revenue link to
   Stripe.
 - Show ticket purchases grouped by `purchaseId` — each group shows attendee
@@ -267,6 +270,7 @@ When an event has `ticketingEnabled`:
 ### Check-in page
 
 Dedicated page at `/staff/events/[id]/check-in`:
+
 - List of all tickets for the event (valid and checked-in).
 - Search/filter by code or attendee name.
 - "Check In" button on each valid ticket.
@@ -280,6 +284,7 @@ Dedicated page at `/staff/events/[id]/check-in`:
 ### My Tickets page
 
 New page at `/member/tickets`:
+
 - Lists ticket purchases for the authenticated user.
 - Grouped by event, showing event name, date, and individual ticket codes
   with status.
@@ -288,6 +293,7 @@ New page at `/member/tickets`:
 ### Event page (public, extended)
 
 When viewing a ticketed event:
+
 - Shows price (and discounted price if sustaining member).
 - Shows availability ("X tickets remaining" or "Tickets available").
 - Purchase form: quantity selector, fee coverage checkbox.
@@ -326,27 +332,27 @@ split.
 
 ## What changes
 
-| Area | Change |
-|------|--------|
-| `event` schema | Add `ticketingEnabled`, `ticketPrice`, `ticketQuantity` columns |
-| `event` create/edit forms | Add ticketing toggle, price, quantity fields |
-| Event detail page (staff) | Add ticket purchases section, refund action |
-| New schema | `ticket` table |
-| New service | `ticket-service.ts` |
-| New webhook listener | Ticket checkout listener (registers via `onCheckoutComplete`) |
-| New routes | Public purchase page, checkout success/cancel, staff check-in, member My Tickets |
-| Member nav | Add "My Tickets" link |
+| Area                      | Change                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `event` schema            | Add `ticketingEnabled`, `ticketPrice`, `ticketQuantity` columns                  |
+| `event` create/edit forms | Add ticketing toggle, price, quantity fields                                     |
+| Event detail page (staff) | Add ticket purchases section, refund action                                      |
+| New schema                | `ticket` table                                                                   |
+| New service               | `ticket-service.ts`                                                              |
+| New webhook listener      | Ticket checkout listener (registers via `onCheckoutComplete`)                    |
+| New routes                | Public purchase page, checkout success/cancel, staff check-in, member My Tickets |
+| Member nav                | Add "My Tickets" link                                                            |
 
 ## What doesn't change
 
-| Area | Notes |
-|------|-------|
-| Payment service | Used as-is — `checkout()`, `refund()`, `cancel()` |
+| Area                   | Notes                                                    |
+| ---------------------- | -------------------------------------------------------- |
+| Payment service        | Used as-is — `checkout()`, `refund()`, `cancel()`        |
 | Webhook infrastructure | Listener pattern already exists, just register a new one |
-| Subscription service | Read-only usage to check sustaining member status |
-| Reservation system | No interaction |
-| Bands module | No interaction |
-| Credit system | Tickets are not eligible for credit discounts |
+| Subscription service   | Read-only usage to check sustaining member status        |
+| Reservation system     | No interaction                                           |
+| Bands module           | No interaction                                           |
+| Credit system          | Tickets are not eligible for credit discounts            |
 
 ---
 

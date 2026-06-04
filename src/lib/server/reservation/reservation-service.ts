@@ -1,7 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, lt, ne, gt, isNotNull, inArray, notInArray, sql } from 'drizzle-orm';
-import { hasConflict, validateBooking } from './conflict-service';
+import { eq, and, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
+import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
@@ -136,7 +136,8 @@ export interface StaffCreateReservationParams extends CreateReservationParams {
 export async function staffCreate(params: StaffCreateReservationParams): Promise<ReservationRow> {
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes, status = 'confirmed' } = params;
 
-	if (startsAt >= endsAt) throw new ReservationValidationError('Reservation must end after it starts');
+	if (startsAt >= endsAt)
+		throw new ReservationValidationError('Reservation must end after it starts');
 
 	const [row] = await db
 		.insert(reservation)
@@ -202,12 +203,7 @@ export async function cancel(
 			cancellationReason: reason ?? null,
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				inArray(reservation.status, cancellable)
-			)
-		);
+		.where(and(eq(reservation.id, reservationId), inArray(reservation.status, cancellable)));
 
 	if (getRowCount(result) === 0) {
 		throw new Error('Reservation status changed concurrently');
@@ -274,12 +270,7 @@ export async function recordCashAndComplete(
 			paidAt: new Date(),
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				eq(reservation.status, 'scheduled')
-			)
-		);
+		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'scheduled')));
 
 	if (getRowCount(result) === 0) {
 		const [row] = await db
@@ -325,12 +316,7 @@ async function updateStatus(
 	const result = await db
 		.update(reservation)
 		.set({ status: newStatus, updatedAt: new Date() })
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				inArray(reservation.status, expectedStatuses)
-			)
-		);
+		.where(and(eq(reservation.id, reservationId), inArray(reservation.status, expectedStatuses)));
 
 	if (getRowCount(result) === 0) {
 		// Determine whether it's "not found" or "wrong status"

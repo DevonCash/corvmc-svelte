@@ -45,6 +45,7 @@
 	</div>
 
 	{#if band.bio}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 		<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(band.bio)}</div>
 	{/if}
 
@@ -52,7 +53,7 @@
 		<div>
 			<p class="text-xs font-medium opacity-60 mb-1">Genres</p>
 			<div class="flex flex-wrap gap-1">
-				{#each band.genres as genre}
+				{#each band.genres as genre (genre)}
 					<Badge variant="ghost">{genre}</Badge>
 				{/each}
 			</div>

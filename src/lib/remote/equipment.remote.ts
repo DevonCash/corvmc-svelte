@@ -26,13 +26,7 @@ import {
 	listLoans,
 	listUserLoans
 } from '$lib/server/equipment/loan-service';
-import {
-	createCategorySchema,
-	updateCategorySchema,
-	createEquipmentSchema,
-	scheduleLoanSchema,
-	checkoutLoanSchema
-} from '$lib/server/db/schema/equipment';
+import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/equipment';
 import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -83,7 +77,9 @@ export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters
 		{
 			search: filters.search || undefined,
 			categoryId: filters.categoryId || undefined,
-			status: (filters.status || undefined) as import('$lib/server/db/schema/equipment').EquipmentStatus | undefined
+			status: (filters.status || undefined) as
+				| import('$lib/server/db/schema/equipment').EquipmentStatus
+				| undefined
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
@@ -100,7 +96,9 @@ export const getStaffLoans = query(staffLoansFilters, async (filters) => {
 	return listLoans(
 		{
 			search: filters.search || undefined,
-			status: (filters.status || undefined) as import('$lib/server/db/schema/equipment').LoanStatus | undefined
+			status: (filters.status || undefined) as
+				| import('$lib/server/db/schema/equipment').LoanStatus
+				| undefined
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
@@ -117,7 +115,7 @@ const memberEquipmentFilters = z.object({
 
 export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
 	await requireFeature('equipment');
-	const currentUser = requireUser();
+	requireUser();
 	const { rows } = await listEquipment({
 		search: filters.search || undefined,
 		categoryId: filters.categoryId || undefined,
@@ -188,23 +186,18 @@ const editEquipmentSchema = z.object({
 	notes: z.string().max(2000).optional()
 });
 
-export const editEquipment = form(
-	editEquipmentSchema.extend({ id: z.string() }),
-	async (raw) => {
-		await requireStaff();
-		const data = raw as z.infer<typeof editEquipmentSchema> & { id: string };
-		const id = data.id;
-		await updateEquipment(id, {
-			...data,
-			totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : undefined,
-			outOfOrderQuantity: data.outOfOrderQuantity
-				? parseInt(data.outOfOrderQuantity, 10)
-				: undefined
-		});
-		void getEquipment(id).refresh();
-		return { success: true };
-	}
-);
+export const editEquipment = form(editEquipmentSchema.extend({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as z.infer<typeof editEquipmentSchema> & { id: string };
+	const id = data.id;
+	await updateEquipment(id, {
+		...data,
+		totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : undefined,
+		outOfOrderQuantity: data.outOfOrderQuantity ? parseInt(data.outOfOrderQuantity, 10) : undefined
+	});
+	void getEquipment(id).refresh();
+	return { success: true };
+});
 
 export const createEquipment = form(
 	z.object({
@@ -237,9 +230,7 @@ export const createEquipment = form(
 			categoryId: data.categoryId,
 			condition: data.condition as (typeof equipmentConditions)[number],
 			totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : 1,
-			outOfOrderQuantity: data.outOfOrderQuantity
-				? parseInt(data.outOfOrderQuantity, 10)
-				: 0,
+			outOfOrderQuantity: data.outOfOrderQuantity ? parseInt(data.outOfOrderQuantity, 10) : 0,
 			serialNumber: data.serialNumber,
 			resourceId: data.resourceId,
 			notes: data.notes
@@ -248,25 +239,19 @@ export const createEquipment = form(
 	}
 );
 
-export const deactivateEquipment = form(
-	z.object({ id: z.string() }),
-	async (data) => {
-		await requireStaff();
-		await softDeleteEquipment(data.id as string);
-		void getEquipment(data.id as string).refresh();
-		return { success: true };
-	}
-);
+export const deactivateEquipment = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await softDeleteEquipment(data.id as string);
+	void getEquipment(data.id as string).refresh();
+	return { success: true };
+});
 
-export const reactivateEquipment = form(
-	z.object({ id: z.string() }),
-	async (data) => {
-		await requireStaff();
-		await restoreEquipment(data.id as string);
-		void getEquipment(data.id as string).refresh();
-		return { success: true };
-	}
-);
+export const reactivateEquipment = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await restoreEquipment(data.id as string);
+	void getEquipment(data.id as string).refresh();
+	return { success: true };
+});
 
 // ---------------------------------------------------------------------------
 // Forms — Categories
@@ -317,15 +302,12 @@ export const editCategory = form(
 	}
 );
 
-export const removeCategory = form(
-	z.object({ id: z.string() }),
-	async (data) => {
-		await requireStaff();
-		await deleteCategory(data.id as string);
-		void getEquipmentCategories().refresh();
-		return { success: true };
-	}
-);
+export const removeCategory = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await deleteCategory(data.id as string);
+	void getEquipmentCategories().refresh();
+	return { success: true };
+});
 
 // ---------------------------------------------------------------------------
 // Forms — Loans
@@ -430,29 +412,26 @@ export const submitLoanRequest = form(
 	}
 );
 
-export const cancelLoan = form(
-	z.object({ id: z.string() }),
-	async (data) => {
-		const { locals } = getRequestEvent();
-		if (!locals.user) throw error(401, 'Not authenticated');
+export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
 
-		const loanId = data.id as string;
-		const loan = await getLoanById(loanId);
-		if (!loan) throw error(404, 'Loan not found');
+	const loanId = data.id as string;
+	const loan = await getLoanById(loanId);
+	if (!loan) throw error(404, 'Loan not found');
 
-		const staff = await isStaff(locals.user.id);
-		if (!staff) {
-			if (loan.userId !== locals.user.id) throw error(403, 'Not authorized');
-			if (loan.status !== 'requested' && loan.status !== 'scheduled') {
-				throw error(400, 'Cannot cancel a loan that has been checked out');
-			}
+	const staff = await isStaff(locals.user.id);
+	if (!staff) {
+		if (loan.userId !== locals.user.id) throw error(403, 'Not authorized');
+		if (loan.status !== 'requested' && loan.status !== 'scheduled') {
+			throw error(400, 'Cannot cancel a loan that has been checked out');
 		}
-
-		await cancelLoanService(loanId);
-		void getLoan(loanId).refresh();
-		return { success: true };
 	}
-);
+
+	await cancelLoanService(loanId);
+	void getLoan(loanId).refresh();
+	return { success: true };
+});
 
 export const returnLoan = form(
 	z.object({

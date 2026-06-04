@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -15,7 +16,11 @@
 	import VisibilityField from '$lib/components/shared/Form/VisibilityField.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import { updateBand, uploadBandAvatar, removeBandAvatar } from '$lib/remote/bands.remote';
-	import { getBandProfile, getGenreSuggestions, saveBandProfile } from '$lib/remote/directory.remote';
+	import {
+		getBandProfile,
+		getGenreSuggestions,
+		saveBandProfile
+	} from '$lib/remote/directory.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
 
@@ -29,16 +34,12 @@
 	const profileFields = saveBandProfile.fields;
 
 	// Basics
-	let bioHtml = $state('');
+	let bioHtml = $derived(band.bio ?? '');
 	// Directory
 	let genres = $state<string[]>([]);
 	let links = $state<ProfileLink[]>([]);
 	let lookingForMembers = $state(false);
 	let directoryVisibility = $state<string>('public');
-
-	$effect(() => {
-		bioHtml = band.bio ?? '';
-	});
 
 	$effect(() => {
 		if (profile) {
@@ -73,7 +74,7 @@
 				toast.success('Profile updated');
 				const newSlug = updateBand.result?.slug;
 				if (newSlug && newSlug !== band.slug) {
-					goto(`/band/${newSlug}/edit`);
+					goto(resolve(`/band/${newSlug}/edit`));
 				} else {
 					invalidateAll();
 				}
@@ -81,7 +82,13 @@
 			onfailure={() => toast.error('Failed to update')}
 		>
 			<div class="space-y-4">
-				<FormField field={bandFields.name} type="text" label="Band Name" value={band.name} required />
+				<FormField
+					field={bandFields.name}
+					type="text"
+					label="Band Name"
+					value={band.name}
+					required
+				/>
 
 				<FormField field={bandFields.bio} label="Bio">
 					<input {...bandFields.bio.as('hidden', bioHtml)} />
@@ -114,10 +121,19 @@
 					/>
 
 					<FormField field={profileFields.genres} label="Genres">
-						<FreeformTagInput bind:value={genres} suggestions={genreSuggestions} placeholder="e.g. jazz, funk, rock..." />
+						<FreeformTagInput
+							bind:value={genres}
+							suggestions={genreSuggestions}
+							placeholder="e.g. jazz, funk, rock..."
+						/>
 					</FormField>
 
-					<FormField field={profileFields.lookingForMembers} type="toggle" value={lookingForMembers} checkboxLabel="We're looking for members" />
+					<FormField
+						field={profileFields.lookingForMembers}
+						type="toggle"
+						value={lookingForMembers}
+						checkboxLabel="We're looking for members"
+					/>
 				</div>
 			</InfoCard>
 
@@ -131,11 +147,30 @@
 
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Directory Contact Info">
-				<p class="mb-3 text-sm opacity-60">Optional contact details shown on your directory listing.</p>
+				<p class="mb-3 text-sm opacity-60">
+					Optional contact details shown on your directory listing.
+				</p>
 				<div class="space-y-3">
-					<FormField field={profileFields.contactEmail} label="Display email" type="email" value={contact.email ?? ''} placeholder="band@example.com" />
-					<FormField field={profileFields.contactPhone} label="Phone" type="tel" value={contact.phone ?? ''} />
-					<FormField field={profileFields.contactSocial} label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
+					<FormField
+						field={profileFields.contactEmail}
+						label="Display email"
+						type="email"
+						value={contact.email ?? ''}
+						placeholder="band@example.com"
+					/>
+					<FormField
+						field={profileFields.contactPhone}
+						label="Phone"
+						type="tel"
+						value={contact.phone ?? ''}
+					/>
+					<FormField
+						field={profileFields.contactSocial}
+						label="Social handle"
+						type="text"
+						value={contact.social ?? ''}
+						placeholder="@handle or URL"
+					/>
 				</div>
 			</InfoCard>
 

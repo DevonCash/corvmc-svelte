@@ -5,7 +5,7 @@ description: How the Corvallis Music Collective handles your personal informatio
 
 # Privacy Policy
 
-*Last updated: May 2026*
+_Last updated: May 2026_
 
 The Corvallis Music Collective ("CMC", "we", "us") respects your privacy. This policy describes what information we collect, how we use it, and your rights regarding that information.
 

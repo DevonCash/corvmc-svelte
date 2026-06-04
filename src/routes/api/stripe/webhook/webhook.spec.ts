@@ -70,7 +70,7 @@ describe('POST /api/stripe/webhook', () => {
 
 		const { POST } = await import('./+server');
 		const response = await POST(req());
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body).toEqual({ received: true });
 		expect(mockHandler).toHaveBeenCalledWith(mockDataObject);
@@ -85,7 +85,7 @@ describe('POST /api/stripe/webhook', () => {
 
 		const { POST } = await import('./+server');
 		const response = await POST(req());
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body).toEqual({ received: true });
 		expect(mockHandler).not.toHaveBeenCalled();
@@ -105,7 +105,7 @@ describe('POST /api/stripe/webhook', () => {
 
 		const { POST } = await import('./+server');
 		const response = await POST(req());
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 
 		expect(body).toEqual({ received: true });
 		consoleSpy.mockRestore();

@@ -49,7 +49,7 @@
 	}}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<Field name="name" type="text" label="Name" bind:value={name} />
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Slug</legend>
@@ -64,7 +64,12 @@
 			<p class="text-xs opacity-60 mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
 		</fieldset>
 		<Field name="description" type="textarea" label="Description" bind:value={description} />
-		<Field name="allowOptIn" type="checkbox" value={allowOptIn}
-			checkboxLabel="Allow public opt-in" description="Show on public subscribe page and member account" />
+		<Field
+			name="allowOptIn"
+			type="checkbox"
+			value={allowOptIn}
+			checkboxLabel="Allow public opt-in"
+			description="Show on public subscribe page and member account"
+		/>
 	{/snippet}
 </Action>

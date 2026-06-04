@@ -115,12 +115,12 @@ On profile detail pages, links to recognized platforms render as embedded player
 
 ### Supported platforms (v1)
 
-| Platform   | URL pattern                          | Embed format                         |
-|------------|--------------------------------------|--------------------------------------|
-| YouTube    | youtube.com/watch, youtu.be          | iframe with youtube.com/embed/{id}   |
-| SoundCloud | soundcloud.com/{user}/{track}        | iframe via SoundCloud oEmbed widget  |
-| Spotify    | open.spotify.com/track\|album\|artist | iframe with open.spotify.com/embed/  |
-| Bandcamp   | {artist}.bandcamp.com/track\|album   | iframe via Bandcamp embed            |
+| Platform   | URL pattern                           | Embed format                        |
+| ---------- | ------------------------------------- | ----------------------------------- |
+| YouTube    | youtube.com/watch, youtu.be           | iframe with youtube.com/embed/{id}  |
+| SoundCloud | soundcloud.com/{user}/{track}         | iframe via SoundCloud oEmbed widget |
+| Spotify    | open.spotify.com/track\|album\|artist | iframe with open.spotify.com/embed/ |
+| Bandcamp   | {artist}.bandcamp.com/track\|album    | iframe via Bandcamp embed           |
 
 Links to unrecognized platforms render as regular links with a platform-detected icon (favicon or known icon) or a generic link icon.
 
@@ -134,20 +134,20 @@ Pattern-match the hostname to render the right icon. Covers: YouTube, SoundCloud
 
 ### New routes
 
-| Route                              | Auth       | Purpose                              |
-|--------------------------------------|------------|---------------------------------------|
-| `/member/profile`                    | Member     | Edit own profile                      |
-| `/member/directory`                  | Member     | Members-only directory (browse/filter)|
-| `/member/directory/members/[id]`     | Member     | Member profile detail (members-only)  |
-| `/band/[slug]/profile`              | Band admin | Edit band profile                     |
-| `/directory/members/[id]`            | Public     | Public member profile detail          |
+| Route                            | Auth       | Purpose                                |
+| -------------------------------- | ---------- | -------------------------------------- |
+| `/member/profile`                | Member     | Edit own profile                       |
+| `/member/directory`              | Member     | Members-only directory (browse/filter) |
+| `/member/directory/members/[id]` | Member     | Member profile detail (members-only)   |
+| `/band/[slug]/profile`           | Band admin | Edit band profile                      |
+| `/directory/members/[id]`        | Public     | Public member profile detail           |
 
 ### Modified routes
 
-| Route                       | Change                                                    |
-|-----------------------------|-----------------------------------------------------------|
-| `/directory`                | Add profile fields to cards, add filtering, add member profile links |
-| `/directory/bands/[slug]`   | Add tagline, genres, links, embeds, contact info          |
+| Route                     | Change                                                               |
+| ------------------------- | -------------------------------------------------------------------- |
+| `/directory`              | Add profile fields to cards, add filtering, add member profile links |
+| `/directory/bands/[slug]` | Add tagline, genres, links, embeds, contact info                     |
 
 ---
 
@@ -194,9 +194,9 @@ CREATE INDEX idx_user_public ON "user" ("name") WHERE "deleted_at" IS NULL AND "
 
 ```typescript
 type DirectoryContact = {
-  email?: string;    // display email (separate from account email)
-  phone?: string;
-  social?: string;   // freeform — could be @handle, URL, etc.
+	email?: string; // display email (separate from account email)
+	phone?: string;
+	social?: string; // freeform — could be @handle, URL, etc.
 };
 ```
 
@@ -204,8 +204,8 @@ type DirectoryContact = {
 
 ```typescript
 type ProfileLink = {
-  label: string;     // user-provided label, e.g. "My SoundCloud"
-  url: string;       // full URL
+	label: string; // user-provided label, e.g. "My SoundCloud"
+	url: string; // full URL
 };
 
 // stored as ProfileLink[] — ordered array, max ~20 entries enforced in validation
@@ -326,15 +326,15 @@ Extend the existing page to show: tagline, genres, "looking for members" badge, 
 
 ## Permissions
 
-| Action                          | Who                              |
-|----------------------------------|----------------------------------|
-| Edit own member profile          | Any active member                |
-| Edit band profile                | Band owner or admin              |
-| Browse member directory          | Any active member                |
-| View member profile (members)    | Any active member                |
-| Browse public directory           | Anyone (no auth)                 |
-| View member profile (public)     | Anyone (if visibility = 'public') |
-| View band profile (public)       | Anyone (band not deactivated)    |
+| Action                        | Who                               |
+| ----------------------------- | --------------------------------- |
+| Edit own member profile       | Any active member                 |
+| Edit band profile             | Band owner or admin               |
+| Browse member directory       | Any active member                 |
+| View member profile (members) | Any active member                 |
+| Browse public directory       | Anyone (no auth)                  |
+| View member profile (public)  | Anyone (if visibility = 'public') |
+| View band profile (public)    | Anyone (band not deactivated)     |
 
 Staff can view any profile through the existing staff user/band detail pages. No special staff directory features needed for v1.
 
@@ -342,25 +342,25 @@ Staff can view any profile through the existing staff user/band detail pages. No
 
 ## What changes
 
-| Area                          | Change                                                          |
-|-------------------------------|-----------------------------------------------------------------|
-| `user` schema                 | Add 8 columns (bio, tagline, instruments, genres, lookingForBand, directoryVisibility, directoryContact, links) |
-| `band` schema                 | Add 6 columns (tagline, genres, lookingForMembers, directoryVisibility, directoryContact, links) |
-| `/directory` page             | Enhanced cards with profile data, filtering, member profile links |
-| `/directory/bands/[slug]`     | Enhanced with tagline, genres, links, embeds, contact info       |
-| Member sidebar nav            | Fix `/member/directory` link (currently points to non-existent route), add `/member/profile` |
-| Band nav                      | Add Profile tab                                                  |
-| Seeder                        | Add profile data to seeded users and bands                       |
+| Area                      | Change                                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `user` schema             | Add 8 columns (bio, tagline, instruments, genres, lookingForBand, directoryVisibility, directoryContact, links) |
+| `band` schema             | Add 6 columns (tagline, genres, lookingForMembers, directoryVisibility, directoryContact, links)                |
+| `/directory` page         | Enhanced cards with profile data, filtering, member profile links                                               |
+| `/directory/bands/[slug]` | Enhanced with tagline, genres, links, embeds, contact info                                                      |
+| Member sidebar nav        | Fix `/member/directory` link (currently points to non-existent route), add `/member/profile`                    |
+| Band nav                  | Add Profile tab                                                                                                 |
+| Seeder                    | Add profile data to seeded users and bands                                                                      |
 
 ## What doesn't change
 
-| Area                          | Notes                                                            |
-|-------------------------------|------------------------------------------------------------------|
-| Account page                  | No profile fields added here — they live on `/member/profile`    |
-| Band edit page                | Existing name/bio editing stays. Profile fields are on a new page |
-| Staff user/band detail        | No changes needed — staff already sees all user/band data        |
-| Reservation/booking flow      | No interaction with profile data                                 |
-| Authentication                | No changes                                                       |
+| Area                     | Notes                                                             |
+| ------------------------ | ----------------------------------------------------------------- |
+| Account page             | No profile fields added here — they live on `/member/profile`     |
+| Band edit page           | Existing name/bio editing stays. Profile fields are on a new page |
+| Staff user/band detail   | No changes needed — staff already sees all user/band data         |
+| Reservation/booking flow | No interaction with profile data                                  |
+| Authentication           | No changes                                                        |
 
 ---
 

@@ -2,7 +2,11 @@ import { db } from '$lib/server/db';
 import { equipment, equipmentCategory, equipmentLoan } from '$lib/server/db/schema/equipment';
 import { eq, and, sql, like, isNull, or, inArray, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import type { PricingTier, EquipmentCondition, EquipmentStatus } from '$lib/server/db/schema/equipment';
+import type {
+	PricingTier,
+	EquipmentCondition,
+	EquipmentStatus
+} from '$lib/server/db/schema/equipment';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -77,10 +81,7 @@ export async function deleteCategory(id: string) {
 
 	if (hasEquipment) throw new CategoryHasEquipmentError();
 
-	const [row] = await db
-		.delete(equipmentCategory)
-		.where(eq(equipmentCategory.id, id))
-		.returning();
+	const [row] = await db.delete(equipmentCategory).where(eq(equipmentCategory.id, id)).returning();
 
 	if (!row) throw new CategoryNotFoundError();
 	return row;
@@ -138,10 +139,7 @@ export async function createEquipment(data: CreateEquipmentData) {
 	return row;
 }
 
-export async function updateEquipment(
-	id: string,
-	data: Partial<CreateEquipmentData>
-) {
+export async function updateEquipment(id: string, data: Partial<CreateEquipmentData>) {
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.name !== undefined) updates.name = data.name;
 	if (data.description !== undefined) updates.description = data.description || null;
@@ -234,7 +232,10 @@ export interface ListEquipmentOptions {
 	includeDeleted?: boolean;
 }
 
-export async function listEquipment(opts: ListEquipmentOptions = {}, pagination: PaginationInput = {}) {
+export async function listEquipment(
+	opts: ListEquipmentOptions = {},
+	pagination: PaginationInput = {}
+) {
 	const conditions = [];
 
 	if (!opts.includeDeleted) {
@@ -272,10 +273,7 @@ export async function listEquipment(opts: ListEquipmentOptions = {}, pagination:
 		.orderBy(equipmentCategory.displayOrder, equipment.name)
 		.$dynamic();
 
-	const countQ = db
-		.select({ count: count() })
-		.from(equipment)
-		.where(where);
+	const countQ = db.select({ count: count() }).from(equipment).where(where);
 
 	const result = await paginate(dataQ, countQ, pagination);
 	return {

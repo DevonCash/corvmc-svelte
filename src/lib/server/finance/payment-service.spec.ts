@@ -155,7 +155,12 @@ describe('checkout', () => {
 
 		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_456' });
 		expect(mockCreditService.deductCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'checkout', undefined, expect.any(String)
+			'user-1',
+			'free_hours',
+			2,
+			'checkout',
+			undefined,
+			expect.any(String)
 		);
 		expect(mockStripe.coupons.create).toHaveBeenCalledWith(
 			expect.objectContaining({ amount_off: 2000, currency: 'usd', max_redemptions: 1 })
@@ -180,7 +185,12 @@ describe('checkout', () => {
 
 		expect(result).toEqual({ paid: true, stripePaymentRecordId: 'pr_credits_only' });
 		expect(mockCreditService.deductCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 3, 'checkout', undefined, expect.any(String)
+			'user-1',
+			'free_hours',
+			3,
+			'checkout',
+			undefined,
+			expect.any(String)
 		);
 		expect(mockStripe.paymentRecords.reportPayment).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -197,7 +207,9 @@ describe('checkout', () => {
 
 		const result = await checkout({
 			mode: 'payment',
-			lineItems: [{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 2000 }, quantity: 1 }],
+			lineItems: [
+				{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 2000 }, quantity: 1 }
+			],
 			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }],
 			successUrl: 'https://example.com/success',
 			cancelUrl: 'https://example.com/cancel'
@@ -274,9 +286,7 @@ describe('checkout', () => {
 		});
 
 		const call = mockStripe.checkout.sessions.create.mock.calls[0][0];
-		const feeItem = call.line_items.find(
-			(item: any) => item.price_data?.product === 'prod_fee'
-		);
+		const feeItem = call.line_items.find((item: any) => item.price_data?.product === 'prod_fee');
 		expect(feeItem.price_data.recurring).toEqual({ interval: 'month' });
 	});
 
@@ -314,43 +324,56 @@ describe('checkout', () => {
 	});
 
 	it('throws when lineItems is empty', async () => {
-		await expect(checkout({
-			...baseOptions,
-			lineItems: []
-		})).rejects.toThrow('Cart must have at least one line item');
+		await expect(
+			checkout({
+				...baseOptions,
+				lineItems: []
+			})
+		).rejects.toThrow('Cart must have at least one line item');
 	});
 
 	it('throws when subscription mode has no customer', async () => {
-		await expect(checkout({
-			mode: 'subscription',
-			lineItems: [{ price: 'price_abc', quantity: 1 }],
-			successUrl: 'https://example.com/success',
-			cancelUrl: 'https://example.com/cancel'
-		})).rejects.toThrow('Subscription checkouts require a Stripe customer');
+		await expect(
+			checkout({
+				mode: 'subscription',
+				lineItems: [{ price: 'price_abc', quantity: 1 }],
+				successUrl: 'https://example.com/success',
+				cancelUrl: 'https://example.com/cancel'
+			})
+		).rejects.toThrow('Subscription checkouts require a Stripe customer');
 	});
 
 	it('reverses completed deductions if a subsequent one fails', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 5000 });
 		mockCreditService.getBalance
-			.mockResolvedValueOnce(2)  // free_hours
+			.mockResolvedValueOnce(2) // free_hours
 			.mockResolvedValueOnce(1); // equipment_credits
 		mockCreditService.deductCredits
-			.mockResolvedValueOnce(0)  // free_hours succeeds
+			.mockResolvedValueOnce(0) // free_hours succeeds
 			.mockRejectedValueOnce(new Error('DB error')); // equipment_credits fails
 		mockCreditService.addCredits.mockResolvedValue(2);
 
-		await expect(checkout({
-			...baseOptions,
-			lineItems: [{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 5000 }, quantity: 1 }],
-			eligibleCredits: [
-				{ type: 'free_hours', unitValueCents: 1000 },
-				{ type: 'equipment_credits', unitValueCents: 500 }
-			]
-		})).rejects.toThrow('DB error');
+		await expect(
+			checkout({
+				...baseOptions,
+				lineItems: [
+					{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 5000 }, quantity: 1 }
+				],
+				eligibleCredits: [
+					{ type: 'free_hours', unitValueCents: 1000 },
+					{ type: 'equipment_credits', unitValueCents: 500 }
+				]
+			})
+		).rejects.toThrow('DB error');
 
 		// The successful free_hours deduction should be reversed
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'checkout_failed', undefined, expect.any(String)
+			'user-1',
+			'free_hours',
+			2,
+			'checkout_failed',
+			undefined,
+			expect.any(String)
 		);
 	});
 
@@ -436,7 +459,12 @@ describe('refund', () => {
 			expect.objectContaining({ amount: { value: 1000, currency: 'usd' } })
 		);
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'refund', 'pr_123', expect.any(String)
+			'user-1',
+			'free_hours',
+			2,
+			'refund',
+			'pr_123',
+			expect.any(String)
 		);
 	});
 
@@ -457,7 +485,12 @@ describe('refund', () => {
 
 		expect(mockStripe.paymentRecords.reportRefund).not.toHaveBeenCalled();
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 3, 'refund', 'pr_456', expect.any(String)
+			'user-1',
+			'free_hours',
+			3,
+			'refund',
+			'pr_456',
+			expect.any(String)
 		);
 	});
 
@@ -513,7 +546,12 @@ describe('refund', () => {
 		expect(mockStripe.refunds.create).toHaveBeenCalledWith({ payment_intent: 'pi_abc123' });
 		expect(mockStripe.paymentRecords.retrieve).not.toHaveBeenCalled();
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 1, 'refund', 'pi_abc123', expect.any(String)
+			'user-1',
+			'free_hours',
+			1,
+			'refund',
+			'pi_abc123',
+			expect.any(String)
 		);
 	});
 
@@ -525,11 +563,13 @@ describe('refund', () => {
 		});
 		mockStripe.refunds.create.mockResolvedValue({});
 		mockStripe.checkout.sessions.list.mockResolvedValue({
-			data: [{
-				metadata: {
-					credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 2, cents: 2000 }])
+			data: [
+				{
+					metadata: {
+						credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 2, cents: 2000 }])
+					}
 				}
-			}]
+			]
 		});
 		mockCreditService.addCredits.mockResolvedValue(2);
 
@@ -543,7 +583,12 @@ describe('refund', () => {
 			limit: 1
 		});
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 2, 'refund', 'pi_no_meta', expect.any(String)
+			'user-1',
+			'free_hours',
+			2,
+			'refund',
+			'pi_no_meta',
+			expect.any(String)
 		);
 	});
 
@@ -585,7 +630,12 @@ describe('cancel', () => {
 		});
 
 		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
-			'user-1', 'free_hours', 1, 'cancelled', 'cs_abandoned', expect.any(String)
+			'user-1',
+			'free_hours',
+			1,
+			'cancelled',
+			'cs_abandoned',
+			expect.any(String)
 		);
 	});
 

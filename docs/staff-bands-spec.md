@@ -85,8 +85,8 @@ Bands are a core booking entity — they hold reservations and have multiple mem
 
 ### band (existing table — add column)
 
-| Column | Type | Change |
-|---|---|---|
+| Column     | Type                       | Change                                               |
+| ---------- | -------------------------- | ---------------------------------------------------- |
 | deleted_at | `timestamp with time zone` | **NEW.** Nullable. Null = active, set = deactivated. |
 
 No new tables. No new indexes needed — the column is only filtered in queries, and the table is small enough that a seq scan on `deleted_at IS NULL` is fine.
@@ -140,6 +140,7 @@ Filter bar: search input + status select (All / Active / Deactivated).
 ### /staff/bands/CreateBandModal.svelte
 
 Modal with:
+
 - Name field (required)
 - Bio field (textarea, optional)
 - Owner search (user search input, required) — reuses the same search pattern as band member invite
@@ -151,10 +152,12 @@ Detail page using `data.remote.ts` pattern (not +page.server.ts load).
 ### /staff/bands/[id]/data.remote.ts
 
 Queries:
+
 - `getBand(id)` — Calls `getByIdWithDetails`, returns band + members + recent reservations
 - `getMembers(id)` — Calls `getMembers` from band-service
 
 Forms:
+
 - `updateBand` — Validates name/bio, calls `band-service.update`
 - `removeMember` — Calls `band-service.removeMember`
 - `transferOwnership` — Calls `band-service.transferOwnership`
@@ -178,25 +181,25 @@ Position: after Events, before Payments.
 
 ## What changes
 
-| Area | Change |
-|---|---|
-| `band` schema | Add `deletedAt` column |
-| `band-service.ts` | Add `listAll`, `getByIdWithDetails`, `deactivate`, `reactivate`. Filter `listForUser` and `getBySlug` by `deletedAt IS NULL`. |
-| `/staff/+layout.svelte` | Add Bands nav item |
-| `/staff/bands/` | New list page + create modal |
-| `/staff/bands/[id]/` | New detail page with remote functions |
-| Migration | Add `deleted_at` to `band` table |
-| Seed script | Optionally: add a deactivated band for dev |
+| Area                    | Change                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `band` schema           | Add `deletedAt` column                                                                                                        |
+| `band-service.ts`       | Add `listAll`, `getByIdWithDetails`, `deactivate`, `reactivate`. Filter `listForUser` and `getBySlug` by `deletedAt IS NULL`. |
+| `/staff/+layout.svelte` | Add Bands nav item                                                                                                            |
+| `/staff/bands/`         | New list page + create modal                                                                                                  |
+| `/staff/bands/[id]/`    | New detail page with remote functions                                                                                         |
+| Migration               | Add `deleted_at` to `band` table                                                                                              |
+| Seed script             | Optionally: add a deactivated band for dev                                                                                    |
 
 ## What doesn't change
 
-| Area | Notes |
-|---|---|
-| `/band/[slug]/*` routes | Untouched. Staff accesses band detail via `/staff/bands/[id]`, not the shared slug routes. |
-| Member band creation/invite | Unchanged. `create`, `invite`, `acceptInvitation` all work as before. |
-| Band reservations | Booking logic unchanged. Deactivated bands just can't book because members can't see them. |
-| Notifications | No new notification types for band moderation. |
-| `bandMember` schema | No changes. |
+| Area                        | Notes                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `/band/[slug]/*` routes     | Untouched. Staff accesses band detail via `/staff/bands/[id]`, not the shared slug routes. |
+| Member band creation/invite | Unchanged. `create`, `invite`, `acceptInvitation` all work as before.                      |
+| Band reservations           | Booking logic unchanged. Deactivated bands just can't book because members can't see them. |
+| Notifications               | No new notification types for band moderation.                                             |
+| `bandMember` schema         | No changes.                                                                                |
 
 ## Deferred
 

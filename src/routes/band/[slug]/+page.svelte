@@ -7,14 +7,13 @@
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const band = $derived(layout.band);
-	const isOwnerOrAdmin = $derived(
-		layout.userRole === 'owner' || layout.userRole === 'admin'
-	);
+	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	let upcoming = $derived(getBandUpcoming(band.id));
 </script>
@@ -46,7 +45,7 @@
 		<section>
 			<div class="flex items-center justify-between mb-3">
 				<h2 class="text-lg font-semibold">Upcoming Sessions</h2>
-				<a href="/band/{band.slug}/reservations" class="link link-primary text-sm">
+				<a href={resolve(`/band/${band.slug}/reservations`)} class="link link-primary text-sm">
 					View all
 				</a>
 			</div>
@@ -60,7 +59,9 @@
 							<div class="card-body py-4 flex-row items-center justify-between">
 								<div>
 									<p class="font-medium">
-										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(res.endsAt)}
+										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
+											res.endsAt
+										)}
 									</p>
 									<p class="text-sm opacity-60">
 										{formatDuration(res.startsAt, res.endsAt)}
@@ -82,13 +83,9 @@
 
 		<!-- Quick links -->
 		<div class="flex gap-3">
-			<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">
-				Manage Members
-			</Button>
+			<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">Manage Members</Button>
 			{#if isOwnerOrAdmin}
-				<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">
-					Edit Band Profile
-				</Button>
+				<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">Edit Band Profile</Button>
 			{/if}
 		</div>
 	{/await}

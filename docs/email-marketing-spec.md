@@ -100,12 +100,12 @@ campaign_audience
 
 Campaign status is derived from timestamps — no status column.
 
-| State     | Condition                                        | Editable? |
-|-----------|--------------------------------------------------|-----------|
-| Draft     | `scheduledFor` is null, `sentAt` is null         | Yes       |
-| Scheduled | `scheduledFor` is set and in the future          | No (cancel back to draft by clearing `scheduledFor`) |
-| Sending   | `scheduledFor` is past, `sentAt` is null         | No        |
-| Sent      | `sentAt` is set                                  | No        |
+| State     | Condition                                | Editable?                                            |
+| --------- | ---------------------------------------- | ---------------------------------------------------- |
+| Draft     | `scheduledFor` is null, `sentAt` is null | Yes                                                  |
+| Scheduled | `scheduledFor` is set and in the future  | No (cancel back to draft by clearing `scheduledFor`) |
+| Sending   | `scheduledFor` is past, `sentAt` is null | No                                                   |
+| Sent      | `sentAt` is set                          | No                                                   |
 
 The cron job picks up campaigns where `scheduledFor <= now()` and `sentAt` is null. For "send now," staff sets `scheduledFor` to the current time, which the cron picks up immediately (or a direct send function handles it inline).
 
@@ -118,6 +118,7 @@ The cron job picks up campaigns where `scheduledFor <= now()` and `sentAt` is nu
 **Direct audience link** (`/subscribe/[audience-slug]`): Shows a single audience's signup form. Only works if the audience has `allowOptIn` set to true; returns 404 otherwise.
 
 On submit:
+
 1. Server finds or creates a `subscriber` record by email
 2. Creates an `audience_member` row. If one already exists with `unsubscribedAt` set, clears it.
 3. Shows a confirmation message
@@ -156,6 +157,7 @@ No email confirmation for v1 — the form submits and the subscriber is immediat
 The campaign editor uses a split-pane layout: markdown on the left, rendered HTML preview on the right.
 
 **Render pipeline:**
+
 1. Parse markdown to HTML (using `marked` or similar)
 2. Wrap in MJML base template (same branding as transactional emails)
 3. Compile MJML to responsive HTML
@@ -164,6 +166,7 @@ The campaign editor uses a split-pane layout: markdown on the left, rendered HTM
 The preview renders client-side on keystroke (debounced). The final send renders server-side to ensure consistency.
 
 **Template variables** available in markdown:
+
 - `{{subscriber_name}}` — subscriber's name (or "there" if blank)
 - `{{unsubscribe_url}}` — auto-injected in footer, but available for custom placement
 
@@ -182,6 +185,7 @@ List of all audiences with name, subscriber count, and created date.
 ### Audience detail (`/staff/marketing/audiences/[id]`)
 
 Shows audience name, description, subscriber count, and a table of subscribers (email, name, joined date). Staff can:
+
 - Add a subscriber by email (creates subscriber record if needed)
 - Remove a subscriber from the audience
 - See unsubscribed subscribers (grayed out, `unsubscribedAt` is set)
@@ -193,10 +197,12 @@ Table of all campaigns: subject, status badge, target audiences, recipient count
 ### Campaign composer (`/staff/marketing/campaigns/new`, `/staff/marketing/campaigns/[id]/edit`)
 
 Split pane:
+
 - **Left:** subject input, audience multi-select, markdown textarea (monospace, generous height)
 - **Right:** live HTML preview rendered in an iframe or sandboxed div
 
 Action buttons:
+
 - **Save draft** — saves without sending
 - **Send now** — confirms ("Send to ~N recipients?"), then sends
 - **Schedule** — datetime picker, then schedules
@@ -246,62 +252,62 @@ This queries `audience_member` via the `subscriber` record linked to their `user
 
 ### subscriber
 
-| Column    | Type      | Constraints                     |
-|-----------|-----------|---------------------------------|
-| id        | uuid      | PK, default random              |
-| email     | text      | NOT NULL, UNIQUE                |
-| name      | text      | nullable                        |
+| Column    | Type      | Constraints                             |
+| --------- | --------- | --------------------------------------- |
+| id        | uuid      | PK, default random                      |
+| email     | text      | NOT NULL, UNIQUE                        |
+| name      | text      | nullable                                |
 | userId    | text      | FK → user, nullable, on delete set null |
-| createdAt | timestamp | NOT NULL, default now()         |
+| createdAt | timestamp | NOT NULL, default now()                 |
 
 Indexes: unique on `email`, index on `userId`.
 
 ### audience
 
-| Column      | Type      | Constraints              |
-|-------------|-----------|--------------------------|
-| id          | uuid      | PK, default random       |
-| name        | text      | NOT NULL                 |
-| slug        | text      | NOT NULL, UNIQUE         |
-| description | text      | nullable                 |
-| allowOptIn  | boolean   | NOT NULL, default false  |
-| createdAt   | timestamp | NOT NULL, default now()  |
+| Column      | Type      | Constraints             |
+| ----------- | --------- | ----------------------- |
+| id          | uuid      | PK, default random      |
+| name        | text      | NOT NULL                |
+| slug        | text      | NOT NULL, UNIQUE        |
+| description | text      | nullable                |
+| allowOptIn  | boolean   | NOT NULL, default false |
+| createdAt   | timestamp | NOT NULL, default now() |
 
 Indexes: unique on `slug`.
 
 ### audience_member
 
-| Column         | Type      | Constraints                       |
-|----------------|-----------|-----------------------------------|
-| id             | uuid      | PK, default random                |
+| Column         | Type      | Constraints                        |
+| -------------- | --------- | ---------------------------------- |
+| id             | uuid      | PK, default random                 |
 | subscriberId   | uuid      | FK → subscriber, NOT NULL, cascade |
-| audienceId     | uuid      | FK → audience, NOT NULL, cascade  |
+| audienceId     | uuid      | FK → audience, NOT NULL, cascade   |
 | unsubscribedAt | timestamp | nullable (null = active)           |
-| createdAt      | timestamp | NOT NULL, default now()           |
+| createdAt      | timestamp | NOT NULL, default now()            |
 
 Indexes: unique on `(subscriberId, audienceId)`, partial index on `audienceId` where `unsubscribedAt` is null for recipient resolution.
 
 ### campaign
 
-| Column         | Type      | Constraints                        |
-|----------------|-----------|------------------------------------|
-| id             | uuid      | PK, default random                 |
-| subject        | text      | NOT NULL                           |
-| markdownBody   | text      | NOT NULL                           |
-| htmlBody       | text      | NOT NULL                           |
-| scheduledFor   | timestamp | nullable (null = draft)             |
-| sentAt         | timestamp | nullable                           |
-| sentById       | text      | FK → user, NOT NULL                |
-| recipientCount | int       | nullable                           |
-| createdAt      | timestamp | NOT NULL, default now()            |
-| updatedAt      | timestamp | NOT NULL, default now()            |
+| Column         | Type      | Constraints             |
+| -------------- | --------- | ----------------------- |
+| id             | uuid      | PK, default random      |
+| subject        | text      | NOT NULL                |
+| markdownBody   | text      | NOT NULL                |
+| htmlBody       | text      | NOT NULL                |
+| scheduledFor   | timestamp | nullable (null = draft) |
+| sentAt         | timestamp | nullable                |
+| sentById       | text      | FK → user, NOT NULL     |
+| recipientCount | int       | nullable                |
+| createdAt      | timestamp | NOT NULL, default now() |
+| updatedAt      | timestamp | NOT NULL, default now() |
 
 Indexes: partial index on `scheduledFor` where `sentAt` is null (for cron pickup), index on `sentById`.
 
 ### campaign_audience
 
 | Column     | Type | Constraints                      |
-|------------|------|----------------------------------|
+| ---------- | ---- | -------------------------------- |
 | campaignId | uuid | FK → campaign, NOT NULL, cascade |
 | audienceId | uuid | FK → audience, NOT NULL, cascade |
 
@@ -318,7 +324,7 @@ No in-app notifications for campaigns. Campaigns are email-only by design.
 ## Permissions
 
 | Action                        | Who                  |
-|-------------------------------|----------------------|
+| ----------------------------- | -------------------- |
 | Create/edit/delete audience   | Staff                |
 | Add/remove audience members   | Staff                |
 | Bulk-add members to audience  | Staff                |
@@ -332,24 +338,24 @@ No in-app notifications for campaigns. Campaigns are email-only by design.
 
 ## What changes
 
-| Area                    | Change                                                        |
-|-------------------------|---------------------------------------------------------------|
-| Schema                  | Add 5 tables: subscriber, audience, audience_member, campaign, campaign_audience |
-| Staff nav               | Add "Marketing" section with Campaigns and Audiences links    |
-| Staff routes            | New `/staff/marketing/*` routes                               |
-| Public routes           | New `/subscribe/[slug]` and `/unsubscribe/[token]` routes     |
-| Member account page     | Add "Subscriptions" section                                   |
-| Postmark config         | Set up broadcast message stream (separate from transactional) |
-| Dependencies            | Add markdown parser (`marked` or similar)                     |
+| Area                | Change                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Schema              | Add 5 tables: subscriber, audience, audience_member, campaign, campaign_audience |
+| Staff nav           | Add "Marketing" section with Campaigns and Audiences links                       |
+| Staff routes        | New `/staff/marketing/*` routes                                                  |
+| Public routes       | New `/subscribe/[slug]` and `/unsubscribe/[token]` routes                        |
+| Member account page | Add "Subscriptions" section                                                      |
+| Postmark config     | Set up broadcast message stream (separate from transactional)                    |
+| Dependencies        | Add markdown parser (`marked` or similar)                                        |
 
 ## What doesn't change
 
-| Area                     | Notes                                                    |
-|--------------------------|----------------------------------------------------------|
+| Area                     | Notes                                                          |
+| ------------------------ | -------------------------------------------------------------- |
 | Notification system      | Campaigns are a separate path from transactional notifications |
-| Notification preferences | No overlap — campaign subscriptions are per-audience     |
-| Existing email templates | Transactional templates untouched                        |
-| Member profile/directory | No changes                                               |
+| Notification preferences | No overlap — campaign subscriptions are per-audience           |
+| Existing email templates | Transactional templates untouched                              |
+| Member profile/directory | No changes                                                     |
 
 ---
 

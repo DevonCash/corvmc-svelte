@@ -17,6 +17,7 @@
 	{@render children()}
 
 	{#if data.config?.customCss}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin custom CSS) -->
 		{@html `<style>.band-site-container { ${data.config.customCss} }</style>`}
 	{/if}
 </div>

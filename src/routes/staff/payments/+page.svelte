@@ -64,18 +64,46 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select class="select select-bordered select-sm" value={method} onchange={(e) => { method = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={method}
+			onchange={(e) => {
+				method = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All methods</option>
 			<option value="Cash">Cash</option>
 			<option value="Credits">Credits</option>
 		</select>
-		<select class="select select-bordered select-sm" value={status} onchange={(e) => { status = (e.currentTarget as HTMLSelectElement).value; page = 1; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={status}
+			onchange={(e) => {
+				status = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
 			<option value="">All statuses</option>
 			<option value="completed">Completed</option>
 			<option value="refunded">Refunded</option>
 		</select>
-		<input type="date" class="input input-bordered input-sm" bind:value={dateFrom} onchange={() => { page = 1; }} />
-		<input type="date" class="input input-bordered input-sm" bind:value={dateTo} onchange={() => { page = 1; }} />
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateFrom}
+			onchange={() => {
+				page = 1;
+			}}
+		/>
+		<input
+			type="date"
+			class="input input-bordered input-sm"
+			bind:value={dateTo}
+			onchange={() => {
+				page = 1;
+			}}
+		/>
 		{#if hasActiveFilters()}
 			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
 		{/if}
@@ -106,7 +134,9 @@
 							<tr class="hover">
 								<td>{formatDateTime(new Date(p.paidAt))}</td>
 								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }} />
+									<MemberLink
+										member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }}
+									/>
 								</td>
 								<td><span class="font-medium">{formatCents(p.amountCents)}</span></td>
 								<td class="w-px"><PaymentMethodIcon method={p.paymentMethod} /></td>
@@ -126,7 +156,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

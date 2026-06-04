@@ -65,7 +65,10 @@ export function registerAllNotificationListeners(): void {
 					});
 				}
 			} catch (err) {
-				console.error(`[notification] Failed to notify ticket holder ${holder.attendeeEmail}:`, err);
+				console.error(
+					`[notification] Failed to notify ticket holder ${holder.attendeeEmail}:`,
+					err
+				);
 			}
 		}
 	});

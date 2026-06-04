@@ -27,7 +27,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', seriesId)} />
 		<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
 	{/snippet}

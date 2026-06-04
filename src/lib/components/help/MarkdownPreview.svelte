@@ -7,5 +7,6 @@
 </script>
 
 <div class="prose prose-sm max-w-none">
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown render) -->
 	{@html html}
 </div>

@@ -6,7 +6,14 @@
 		member,
 		class: className = ''
 	}: {
-		reservation: { startsAt: Date; endsAt: Date; notes?: string | null; price?: number; status?: string; paidAt?: Date | null; refundedAt?: Date | null };
+		reservation: {
+			startsAt: Date;
+			endsAt: Date;
+			price?: number;
+			status?: string;
+			paidAt?: Date | null;
+			refundedAt?: Date | null;
+		};
 		member?: { name: string };
 		class?: string;
 	} = $props();

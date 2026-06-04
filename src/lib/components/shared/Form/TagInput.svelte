@@ -19,13 +19,9 @@
 		disabled?: boolean;
 	} = $props();
 
-	let selected = $state<string[]>([]);
+	// Working copy synced from the prop; resets whenever `value` changes (e.g. after a save).
+	let selected = $derived([...value]);
 	let query = $state('');
-
-	// Sync internal state from the prop (initial mount + after a save refreshes the query)
-	$effect(() => {
-		selected = [...value];
-	});
 
 	let filtered = $derived(
 		query ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase())) : options
@@ -47,7 +43,13 @@
 <!-- Hidden input for form submission (JSON array to avoid duplicate key errors) -->
 <input type="hidden" {name} value={JSON.stringify(selected)} />
 
-<Combobox.Root type="multiple" bind:value={selected} onValueChange={handleValueChange} inputValue={query} {disabled}>
+<Combobox.Root
+	type="multiple"
+	bind:value={selected}
+	onValueChange={handleValueChange}
+	inputValue={query}
+	{disabled}
+>
 	<div class="space-y-2 rounded bg-base-200 p-2">
 		{#if selectedOptions.length > 0}
 			<div class="flex flex-wrap gap-1">

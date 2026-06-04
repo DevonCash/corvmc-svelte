@@ -59,14 +59,10 @@
 					<IconPlus size={14} />
 				</Button>
 			{/snippet}
-			{#each layout.userBands as band}
+			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
-						<Avatar
-							class="size-8"
-							src={band.avatarUrl ?? undefined}
-							name={band.name}
-						/>
+						<Avatar class="size-8" src={band.avatarUrl ?? undefined} name={band.name} />
 					{/snippet}
 				</Nav.Item>
 			{/each}

@@ -29,7 +29,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', categoryId)} />
 		<p class="py-4">Delete "{name}"? Category must have no equipment.</p>
 	{/snippet}

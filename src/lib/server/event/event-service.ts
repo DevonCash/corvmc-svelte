@@ -1,6 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eq, and, gt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
@@ -96,6 +95,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	}
 
 	// Insert event + optional reservation in a transaction
+	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
 	const row = await db.transaction(async (tx) => {
 		// Insert the event first to get the ID
 		const [newEvent] = await tx
@@ -282,7 +282,11 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 
 		// Create new reservation
 		if (!overrideConflicts) {
-			const conflict = await hasConflict(reservationStartsAt, reservationEndsAt, existing.reservationId);
+			const conflict = await hasConflict(
+				reservationStartsAt,
+				reservationEndsAt,
+				existing.reservationId
+			);
 			if (conflict) {
 				throw new ReservationConflictError();
 			}
@@ -311,11 +315,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.posterKey = key;
 	}
 
-	const [updated] = await db
-		.update(event)
-		.set(updates)
-		.where(eq(event.id, eventId))
-		.returning();
+	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
 
 	return updated;
 }
@@ -372,12 +372,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	const result = await db
 		.update(event)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(
-			and(
-				eq(event.id, eventId),
-				ne(event.status, 'cancelled')
-			)
-		);
+		.where(and(eq(event.id, eventId), ne(event.status, 'cancelled')));
 
 	if (getRowCount(result) === 0) throw new Error('Event status changed concurrently');
 
@@ -407,12 +402,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 					userId: ticket.userId
 				})
 				.from(ticket)
-				.where(
-					and(
-						eq(ticket.eventId, eventId),
-						inArray(ticket.status, ['valid', 'pending'])
-					)
-				)
+				.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'pending'])))
 				.limit(5000);
 
 			// Deduplicate by email (one notification per buyer)
@@ -447,11 +437,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getById(eventId: string): Promise<EventRow | null> {
-	const [row] = await db
-		.select()
-		.from(event)
-		.where(eq(event.id, eventId))
-		.limit(1);
+	const [row] = await db.select().from(event).where(eq(event.id, eventId)).limit(1);
 
 	return row ?? null;
 }
@@ -462,11 +448,7 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 		.select()
 		.from(event)
 		.where(
-			and(
-				eq(event.status, 'published'),
-				eq(event.source, 'cmc'),
-				gt(event.startsAt, new Date())
-			)
+			and(eq(event.status, 'published'), eq(event.source, 'cmc'), gt(event.startsAt, new Date()))
 		)
 		.orderBy(asc(event.startsAt));
 
@@ -480,11 +462,7 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
 		.select()
 		.from(event)
 		.where(
-			and(
-				eq(event.status, 'published'),
-				eq(event.source, 'cmc'),
-				lte(event.startsAt, new Date())
-			)
+			and(eq(event.status, 'published'), eq(event.source, 'cmc'), lte(event.startsAt, new Date()))
 		)
 		.orderBy(desc(event.startsAt));
 
@@ -614,11 +592,7 @@ export async function updateBandEvent(
 		updates.posterKey = key;
 	}
 
-	const [updated] = await db
-		.update(event)
-		.set(updates)
-		.where(eq(event.id, eventId))
-		.returning();
+	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
 
 	return updated;
 }
@@ -645,11 +619,7 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 		.select()
 		.from(event)
 		.where(
-			and(
-				eq(event.bandId, bandId),
-				eq(event.status, 'published'),
-				gt(event.startsAt, new Date())
-			)
+			and(eq(event.bandId, bandId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
 		)
 		.orderBy(asc(event.startsAt));
 
@@ -659,11 +629,7 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 
 /** All events for a band (all statuses), newest first. */
 export async function listBandEvents(bandId: string): Promise<EventRow[]> {
-	return db
-		.select()
-		.from(event)
-		.where(eq(event.bandId, bandId))
-		.orderBy(desc(event.startsAt));
+	return db.select().from(event).where(eq(event.bandId, bandId)).orderBy(desc(event.startsAt));
 }
 
 // ---------------------------------------------------------------------------

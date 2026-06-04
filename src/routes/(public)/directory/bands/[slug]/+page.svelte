@@ -7,6 +7,7 @@
 	import { getBandEventsPublic } from '$lib/remote/band-events.remote';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getPublicBandProfile(page.params.slug!));
 	let events = $derived(await getBandEventsPublic(data.band.id));
@@ -21,7 +22,10 @@
 	<title>{band.name} | Corvallis Music Collective</title>
 	<meta name="description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
 	<meta property="og:title" content={band.name} />
-	<meta property="og:description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
+	<meta
+		property="og:description"
+		content={band.tagline || `${band.name} on Corvallis Music Collective`}
+	/>
 	{#if band.avatarUrl}
 		<meta property="og:image" content={band.avatarUrl} />
 	{/if}
@@ -48,7 +52,7 @@
 
 				{#if band.genres?.length}
 					<div class="flex flex-wrap justify-center gap-1 mt-3">
-						{#each band.genres as genre}
+						{#each band.genres as genre (genre)}
 							<Badge variant="ghost">{genre}</Badge>
 						{/each}
 					</div>
@@ -61,7 +65,10 @@
 		<!-- Bio -->
 		{#if band.bio}
 			<section>
-				<div class="prose prose-sm max-w-none text-base-content/80">{@html sanitizeBio(band.bio)}</div>
+				<div class="prose prose-sm max-w-none text-base-content/80">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
+					{@html sanitizeBio(band.bio)}
+				</div>
 			</section>
 		{/if}
 
@@ -99,7 +106,7 @@
 										<a
 											href={evt.externalTicketUrl}
 											target="_blank"
-											rel="noopener"
+											rel="noopener external"
 											class="btn btn-primary btn-sm"
 										>
 											Tickets
@@ -163,6 +170,6 @@
 
 	<!-- Minimal footer -->
 	<footer class="text-center py-6 text-xs opacity-40">
-		<a href="/" class="hover:opacity-70">Corvallis Music Collective</a>
+		<a href={resolve('/')} class="hover:opacity-70">Corvallis Music Collective</a>
 	</footer>
 </div>

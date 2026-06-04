@@ -61,10 +61,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	await uploadFile(buffer, key, file.type);
 
-	await db
-		.update(band)
-		.set({ avatarKey: key, updatedAt: new Date() })
-		.where(eq(band.id, bandId));
+	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));
 
 	return json({ success: true, avatarKey: key });
 };
@@ -90,10 +87,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		}
 	}
 
-	await db
-		.update(band)
-		.set({ avatarKey: null, updatedAt: new Date() })
-		.where(eq(band.id, bandId));
+	await db.update(band).set({ avatarKey: null, updatedAt: new Date() }).where(eq(band.id, bandId));
 
 	return json({ success: true });
 };

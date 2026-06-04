@@ -1,4 +1,4 @@
-import { sqliteTable, text, index,  integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { event } from './event';
@@ -9,7 +9,9 @@ export type TicketStatus = (typeof ticketStatuses)[number];
 export const ticket = sqliteTable(
 	'ticket',
 	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
 			.references(() => event.id, { onDelete: 'cascade' }),
@@ -23,8 +25,12 @@ export const ticket = sqliteTable(
 		checkedInByUserId: text('checked_in_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		index('idx_ticket_event').on(t.eventId),

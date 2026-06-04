@@ -35,7 +35,11 @@ vi.mock('$lib/server/db', () => ({
 		update: () => {
 			const chain: any = new Proxy(() => chain, {
 				get(_, prop) {
-					if (prop === 'set') return (data: unknown) => { updateCalls.push(data); return chain; };
+					if (prop === 'set')
+						return (data: unknown) => {
+							updateCalls.push(data);
+							return chain;
+						};
 					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
 					return () => chain;
 				}
@@ -47,8 +51,13 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/db/schema/reservation', () => ({
 	reservation: {
-		id: 'id', status: 'status', startsAt: 'starts_at', endsAt: 'ends_at',
-		createdByUserId: 'created_by_user_id', lockAccessId: 'lock_access_id', updatedAt: 'updated_at'
+		id: 'id',
+		status: 'status',
+		startsAt: 'starts_at',
+		endsAt: 'ends_at',
+		createdByUserId: 'created_by_user_id',
+		lockAccessId: 'lock_access_id',
+		updatedAt: 'updated_at'
 	},
 	closure: { id: 'id', startsAt: 'starts_at', endsAt: 'ends_at', reason: 'reason' }
 }));
@@ -58,7 +67,12 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 }));
 
 vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(), and: vi.fn(), isNull: vi.fn(), isNotNull: vi.fn(), gte: vi.fn(), lt: vi.fn()
+	eq: vi.fn(),
+	and: vi.fn(),
+	isNull: vi.fn(),
+	isNotNull: vi.fn(),
+	gte: vi.fn(),
+	lt: vi.fn()
 }));
 
 vi.mock('$lib/server/reservation/timezone', () => ({
@@ -105,20 +119,24 @@ describe('runDailyLockJob', () => {
 		// cleanup: no yesterday reservations
 		selectResults.push([]);
 		// provision: one confirmed reservation
-		selectResults.push([{
-			id: 'res-1',
-			startsAt: new Date(),
-			endsAt: new Date(Date.now() + 3600000),
-			createdByUserId: 'user-1',
-			memberName: 'Alice'
-		}]);
+		selectResults.push([
+			{
+				id: 'res-1',
+				startsAt: new Date(),
+				endsAt: new Date(Date.now() + 3600000),
+				createdByUserId: 'user-1',
+				memberName: 'Alice'
+			}
+		]);
 
 		const result = await runDailyLockJob();
 
 		expect(result.provisioned).toBe(1);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(expect.objectContaining({
-			name: 'Alice'
-		}));
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				name: 'Alice'
+			})
+		);
 	});
 
 	it('cleans up lock access from yesterday', async () => {
@@ -136,8 +154,20 @@ describe('runDailyLockJob', () => {
 	it('handles provision errors gracefully and continues', async () => {
 		selectResults.push([]);
 		selectResults.push([
-			{ id: 'res-fail', startsAt: new Date(), endsAt: new Date(), createdByUserId: 'u1', memberName: 'Bob' },
-			{ id: 'res-ok', startsAt: new Date(), endsAt: new Date(), createdByUserId: 'u2', memberName: 'Carol' }
+			{
+				id: 'res-fail',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				createdByUserId: 'u1',
+				memberName: 'Bob'
+			},
+			{
+				id: 'res-ok',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				createdByUserId: 'u2',
+				memberName: 'Carol'
+			}
 		]);
 
 		mockCreateTemporaryUser

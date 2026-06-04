@@ -17,7 +17,6 @@
 		IconInboxOff,
 		IconAlarmSnooze
 	} from '@tabler/icons-svelte';
-	import { Tooltip } from 'bits-ui';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;
@@ -94,6 +93,6 @@
 	</span>
 {:else}
 	<span class="tooltip tooltip-right" data-tip={label}>
-		<variant.icon {size} class="{variant.color} {className}"/>
+		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/if}

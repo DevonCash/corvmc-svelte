@@ -119,11 +119,11 @@ Generated instances use the existing reservation state machine — `scheduled �
 
 From the member's selection, the system builds an RRULE string:
 
-| Frequency | RRULE |
-|---|---|
-| Weekly | `FREQ=WEEKLY;BYDAY=TU` (day derived from selected date) |
-| Biweekly | `FREQ=WEEKLY;INTERVAL=2;BYDAY=TU` |
-| Monthly | `FREQ=MONTHLY;BYDAY=3TU` (nth weekday of month, derived from selected date) |
+| Frequency | RRULE                                                                       |
+| --------- | --------------------------------------------------------------------------- |
+| Weekly    | `FREQ=WEEKLY;BYDAY=TU` (day derived from selected date)                     |
+| Biweekly  | `FREQ=WEEKLY;INTERVAL=2;BYDAY=TU`                                           |
+| Monthly   | `FREQ=MONTHLY;BYDAY=3TU` (nth weekday of month, derived from selected date) |
 
 The `DTSTART` is set to the selected date/time in `America/Los_Angeles`. The `rrule` library handles DST transitions from there.
 
@@ -244,20 +244,20 @@ Staff resource matching the Laravel `RecurringReservations` resource:
 
 ### Integration points
 
-| Concern | Integration |
-|---|---|
+| Concern                    | Integration                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------- |
 | Subscription check (setup) | `getSubscription()` from finance module — series creation requires active subscription |
-| Subscription lapse | New listener on `customer.subscription.deleted` webhook cancels active series |
-| Notifications | New `reservation.recurring_skipped` event for skipped occurrences |
-| Confirmation reminders | No change — existing cron already handles all `scheduled` reservations |
-| One-off booking limit | New `MAX_ADVANCE_DAYS_ONEOFF` config value, enforced in `validateBooking()` |
+| Subscription lapse         | New listener on `customer.subscription.deleted` webhook cancels active series          |
+| Notifications              | New `reservation.recurring_skipped` event for skipped occurrences                      |
+| Confirmation reminders     | No change — existing cron already handles all `scheduled` reservations                 |
+| One-off booking limit      | New `MAX_ADVANCE_DAYS_ONEOFF` config value, enforced in `validateBooking()`            |
 
 ### Cross-module events
 
-| Event | Fired by | Consumed by |
-|---|---|---|
-| `reservation.recurring_skipped` | Generation job | Notification dispatcher (email + in-app to series owner) |
-| `customer.subscription.deleted` (existing) | Stripe webhook | New listener: cancel user's active series |
+| Event                                      | Fired by       | Consumed by                                              |
+| ------------------------------------------ | -------------- | -------------------------------------------------------- |
+| `reservation.recurring_skipped`            | Generation job | Notification dispatcher (email + in-app to series owner) |
+| `customer.subscription.deleted` (existing) | Stripe webhook | New listener: cancel user's active series                |
 
 ---
 
@@ -265,15 +265,15 @@ Staff resource matching the Laravel `RecurringReservations` resource:
 
 ### recurring_series
 
-| Column | Type | Constraints |
-|---|---|---|
-| id | uuid | PK, default gen_random_uuid() |
-| superseded_by | uuid | FK → recurring_series(id) ON DELETE SET NULL |
-| prototype_type | text | NOT NULL |
-| prototype_id | text | NOT NULL |
-| rrule | text | NOT NULL |
-| created_at | timestamptz | NOT NULL, default now() |
-| cancelled_at | timestamptz | |
+| Column         | Type        | Constraints                                  |
+| -------------- | ----------- | -------------------------------------------- |
+| id             | uuid        | PK, default gen_random_uuid()                |
+| superseded_by  | uuid        | FK → recurring_series(id) ON DELETE SET NULL |
+| prototype_type | text        | NOT NULL                                     |
+| prototype_id   | text        | NOT NULL                                     |
+| rrule          | text        | NOT NULL                                     |
+| created_at     | timestamptz | NOT NULL, default now()                      |
+| cancelled_at   | timestamptz |                                              |
 
 **Indexes:**
 
@@ -282,8 +282,8 @@ Staff resource matching the Laravel `RecurringReservations` resource:
 
 ### reservation (modified)
 
-| Column | Type | Constraints |
-|---|---|---|
+| Column              | Type | Constraints                                  |
+| ------------------- | ---- | -------------------------------------------- |
 | recurring_series_id | uuid | FK → recurring_series(id) ON DELETE SET NULL |
 
 **New index:**
@@ -298,18 +298,18 @@ This index supports the generation job's "does an instance already exist for thi
 
 New config values in `config.ts`:
 
-| Setting | Default | Description |
-|---|---|---|
-| `MAX_ADVANCE_DAYS_ONEOFF` | 14 | Maximum days ahead for one-off reservations |
-| `MAX_ADVANCE_DAYS_RECURRING` | 17.5 | Generation window for recurring series (2.5 weeks) |
-| `RECURRING_FREQUENCIES` | `['weekly', 'biweekly', 'monthly']` | Allowed recurrence frequencies |
+| Setting                      | Default                             | Description                                        |
+| ---------------------------- | ----------------------------------- | -------------------------------------------------- |
+| `MAX_ADVANCE_DAYS_ONEOFF`    | 14                                  | Maximum days ahead for one-off reservations        |
+| `MAX_ADVANCE_DAYS_RECURRING` | 17.5                                | Generation window for recurring series (2.5 weeks) |
+| `RECURRING_FREQUENCIES`      | `['weekly', 'biweekly', 'monthly']` | Allowed recurrence frequencies                     |
 
 ---
 
 ## Notifications
 
-| Event | Channel | Recipient | Content |
-|---|---|---|---|
+| Event                           | Channel        | Recipient    | Content                                                                                              |
+| ------------------------------- | -------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `reservation.recurring_skipped` | Email + in-app | Series owner | "Your recurring [day] [time] reservation was skipped this week due to [event name / closure reason]" |
 
 Confirmation reminders for generated instances are handled by the existing `confirmation-reminders` cron — no changes needed there.
@@ -318,42 +318,42 @@ Confirmation reminders for generated instances are handled by the existing `conf
 
 ## Permissions
 
-| Action | Who |
-|---|---|
-| Create recurring series | Sustaining members only (active subscription required) |
-| Edit own series (change schedule) | Series owner |
-| Cancel own series | Series owner |
-| View own series | Series owner |
-| Manage any series (edit, cancel) | Staff |
-| View all series | Staff |
+| Action                            | Who                                                    |
+| --------------------------------- | ------------------------------------------------------ |
+| Create recurring series           | Sustaining members only (active subscription required) |
+| Edit own series (change schedule) | Series owner                                           |
+| Cancel own series                 | Series owner                                           |
+| View own series                   | Series owner                                           |
+| Manage any series (edit, cancel)  | Staff                                                  |
+| View all series                   | Staff                                                  |
 
 ---
 
 ## What changes
 
-| Area | Change |
-|---|---|
-| Database | New table: `recurring_series`. New column on `reservation`: `recurring_series_id` |
-| Dependencies | Add `rrule` npm package |
-| Reservation config | New `MAX_ADVANCE_DAYS_ONEOFF` and `MAX_ADVANCE_DAYS_RECURRING` values |
-| Conflict service | `validateBooking()` enforces max advance days (new check) |
-| Booking UI | "Make this recurring" option for sustaining members |
-| Member reservations UI | Recurring badge on instances, series management view, edit schedule |
-| Staff layout | New nav item: Recurring Reservations |
-| Cron jobs | New `/api/cron/generate-recurring-reservations` endpoint |
-| Event bus | New `reservation.recurring_skipped` event type + payload |
-| Notification types | New `recurring_skipped` notification type registered in dispatcher |
-| Webhook listener | `customer.subscription.deleted` gains a recurring-series cancellation listener |
+| Area                   | Change                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| Database               | New table: `recurring_series`. New column on `reservation`: `recurring_series_id` |
+| Dependencies           | Add `rrule` npm package                                                           |
+| Reservation config     | New `MAX_ADVANCE_DAYS_ONEOFF` and `MAX_ADVANCE_DAYS_RECURRING` values             |
+| Conflict service       | `validateBooking()` enforces max advance days (new check)                         |
+| Booking UI             | "Make this recurring" option for sustaining members                               |
+| Member reservations UI | Recurring badge on instances, series management view, edit schedule               |
+| Staff layout           | New nav item: Recurring Reservations                                              |
+| Cron jobs              | New `/api/cron/generate-recurring-reservations` endpoint                          |
+| Event bus              | New `reservation.recurring_skipped` event type + payload                          |
+| Notification types     | New `recurring_skipped` notification type registered in dispatcher                |
+| Webhook listener       | `customer.subscription.deleted` gains a recurring-series cancellation listener    |
 
 ## What doesn't change
 
-| Area | Notes |
-|---|---|
-| Reservation state machine | Generated instances use the existing scheduled → confirmed → completed flow |
-| Payment service | No changes — members pay for each instance through normal checkout/cash/credits |
-| Confirmation reminders | Existing cron already picks up all `scheduled` reservations |
-| Lock provisioning | Already handles all `confirmed` reservations regardless of origin |
-| Resolution queue | Staff resolves recurring instances the same as one-offs |
+| Area                      | Notes                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| Reservation state machine | Generated instances use the existing scheduled → confirmed → completed flow     |
+| Payment service           | No changes — members pay for each instance through normal checkout/cash/credits |
+| Confirmation reminders    | Existing cron already picks up all `scheduled` reservations                     |
+| Lock provisioning         | Already handles all `confirmed` reservations regardless of origin               |
+| Resolution queue          | Staff resolves recurring instances the same as one-offs                         |
 
 ---
 

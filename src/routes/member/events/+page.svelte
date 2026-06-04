@@ -22,22 +22,21 @@
 		posterUrl: string | null;
 	}
 
-	let { upcoming, past }: { upcoming: EventItem[]; past: EventItem[] } = $derived(await getMemberEvents());
+	let { upcoming, past }: { upcoming: EventItem[]; past: EventItem[] } = $derived(
+		await getMemberEvents()
+	);
 	let tickets = $derived(await getMemberTickets());
 
 	const activeTickets = $derived(
-		tickets.filter(
-			(t) => t.event && t.event.startsAt > new Date() && t.status !== 'cancelled'
-		)
+		tickets.filter((t) => t.event && t.event.startsAt > new Date() && t.status !== 'cancelled')
 	);
 
 	const ticketedEventIds = $derived(new Set(activeTickets.map((t) => t.eventId)));
 
-	const eventTagMap = $derived(
-		new Map(upcoming.map((e) => [e.id, e.tags]))
-	);
+	const eventTagMap = $derived(new Map(upcoming.map((e) => [e.id, e.tags])));
 
 	const allTags = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local accumulator within a pure $derived, not reactive state
 		const tags = new Set<string>();
 		for (const evt of upcoming) {
 			if (evt.tags) {
@@ -76,7 +75,6 @@
 
 <PageHeader title="Events" />
 <PageContent>
-
 	{#if activeTickets.length > 0}
 		<section>
 			<SectionLabel label="My Tickets" count={activeTickets.length} />
@@ -175,8 +173,7 @@
 		</section>
 	{/if}
 
-{#if selectedTickets.length > 0}
-	<TicketQRModal bind:open={qrOpen} tickets={selectedTickets} initialIndex={selectedIndex} />
-{/if}
-
+	{#if selectedTickets.length > 0}
+		<TicketQRModal bind:open={qrOpen} tickets={selectedTickets} initialIndex={selectedIndex} />
+	{/if}
 </PageContent>

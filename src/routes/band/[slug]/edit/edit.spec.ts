@@ -41,7 +41,7 @@ vi.mock('$app/server', () => ({
 		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
-	form: (_schema: unknown, handler: Function) => {
+	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
@@ -49,7 +49,7 @@ vi.mock('$app/server', () => ({
 	},
 	query: (...args: unknown[]) => {
 		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as Function;
+		const fn = handler as (...args: any[]) => any;
 		(fn as any).__ = { type: 'query' };
 		return fn;
 	}
@@ -66,7 +66,7 @@ beforeEach(() => {
 
 describe('updateBand', () => {
 	it('updates name and bio', async () => {
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		const result = await updateBand({ name: 'New Name', bio: 'New bio' });
 
@@ -79,7 +79,7 @@ describe('updateBand', () => {
 	});
 
 	it('sends null bio when empty', async () => {
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await updateBand({ name: 'New Name', bio: '' });
 
@@ -91,14 +91,14 @@ describe('updateBand', () => {
 
 	it('rejects non-admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(updateBand({ name: 'X', bio: '' })).rejects.toThrow();
 	});
 
 	it('allows admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { updateBand } = await import('$lib/remote/bands.remote') as any;
+		const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		const result = await updateBand({ name: 'New Name', bio: '' });
 		expect(result.success).toBe(true);

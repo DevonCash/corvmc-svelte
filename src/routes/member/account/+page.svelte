@@ -7,6 +7,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { SubscribeAction, UnsubscribeAction } from '$lib/components/shared/actions';
@@ -32,7 +33,6 @@
 
 <PageHeader title="Account Settings" />
 <PageContent width="2xl">
-
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">
 		<Form
@@ -205,7 +205,7 @@
 					onfailure={() => toast.error('Password change failed')}
 					class="btn-outline btn-sm"
 				>
-					{#snippet form({ close })}
+					{#snippet form()}
 						<FormField
 							name="currentPassword"
 							type="password"
@@ -245,14 +245,14 @@
 						class="btn-error btn-sm"
 						onsuccess={() => {
 							toast.success('Account deleted');
-							goto('/login');
+							goto(resolve('/login'));
 						}}
 					>
-						{#snippet form({ close })}
+						{#snippet form()}
 							<div class="alert alert-error">
 								<p>
-									This action is permanent. Deleting your account will cancel all of your current and
-									future reservations and end your subscription. This cannot be undone.
+									This action is permanent. Deleting your account will cancel all of your current
+									and future reservations and end your subscription. This cannot be undone.
 								</p>
 							</div>
 

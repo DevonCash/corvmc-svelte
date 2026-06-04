@@ -90,9 +90,7 @@ describe('storage', () => {
 			(env as any).R2_TRANSFORM_URL = 'https://img.example.com';
 
 			const url = getPublicUrl('events/posters/evt-1.jpg');
-			expect(url).toBe(
-				'https://img.example.com/width=1200,format=webp/events/posters/evt-1.jpg'
-			);
+			expect(url).toBe('https://img.example.com/width=1200,format=webp/events/posters/evt-1.jpg');
 
 			(env as any).R2_TRANSFORM_URL = '';
 		});

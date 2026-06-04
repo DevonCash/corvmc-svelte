@@ -6,6 +6,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
@@ -38,7 +39,11 @@
 		{ type: 'press', label: 'Press', description: 'Press quotes from EPK' },
 		{ type: 'achievements', label: 'Achievements', description: 'Highlights from EPK' },
 		{ type: 'contact', label: 'Contact', description: 'Booking/management contacts from EPK' },
-		{ type: 'tech_rider', label: 'Tech Rider', description: 'Stage plot and backline requirements' },
+		{
+			type: 'tech_rider',
+			label: 'Tech Rider',
+			description: 'Stage plot and backline requirements'
+		},
 		{ type: 'merch', label: 'Merch', description: 'Merchandise links' },
 		{ type: 'spacer', label: 'Spacer', description: 'Vertical spacing between blocks' },
 		{ type: 'custom_html', label: 'Custom HTML', description: 'Custom HTML content (sanitized)' }
@@ -117,12 +122,18 @@
 	// Block label helper
 	function blockLabel(block: Block): string {
 		switch (block.type) {
-			case 'bio': return block.content.slice(0, 40) || 'Empty bio';
-			case 'embed': return block.url || 'No URL set';
-			case 'hero': return block.headline ?? 'Hero image';
-			case 'spacer': return `${block.height} spacer`;
-			case 'custom_html': return block.content.slice(0, 40) || 'Empty HTML';
-			default: return `${block.type} block`;
+			case 'bio':
+				return block.content.slice(0, 40) || 'Empty bio';
+			case 'embed':
+				return block.url || 'No URL set';
+			case 'hero':
+				return block.headline ?? 'Hero image';
+			case 'spacer':
+				return `${block.height} spacer`;
+			case 'custom_html':
+				return block.content.slice(0, 40) || 'Empty HTML';
+			default:
+				return `${block.type} block`;
 		}
 	}
 </script>
@@ -137,8 +148,8 @@
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
 			<p class="mt-2 opacity-70">
-				The page editor is available with a premium band subscription.
-				Build a custom band page with drag-and-drop blocks, genre themes, and custom CSS.
+				The page editor is available with a premium band subscription. Build a custom band page with
+				drag-and-drop blocks, genre themes, and custom CSS.
 			</p>
 			<Button href="../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
 		</EmptyState>
@@ -166,11 +177,15 @@
 				<div class="card-body">
 					<h2 class="card-title text-lg">Theme</h2>
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-						{#each BAND_THEMES as theme}
+						{#each BAND_THEMES as theme (theme)}
 							<button
 								type="button"
-								class="btn btn-sm capitalize {selectedTheme === theme ? 'btn-primary' : 'btn-outline'}"
-								onclick={() => { selectedTheme = theme; }}
+								class="btn btn-sm capitalize {selectedTheme === theme
+									? 'btn-primary'
+									: 'btn-outline'}"
+								onclick={() => {
+									selectedTheme = theme;
+								}}
 							>
 								{theme}
 							</button>
@@ -187,7 +202,9 @@
 						<button
 							type="button"
 							class="btn btn-sm btn-primary"
-							onclick={() => { showBlockPicker = !showBlockPicker; }}
+							onclick={() => {
+								showBlockPicker = !showBlockPicker;
+							}}
 						>
 							{showBlockPicker ? 'Cancel' : 'Add Block'}
 						</button>
@@ -196,7 +213,7 @@
 					<!-- Block type picker -->
 					{#if showBlockPicker}
 						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 p-4 bg-base-200 rounded-lg">
-							{#each BLOCK_TYPES as bt}
+							{#each BLOCK_TYPES as bt (bt.type)}
 								<button
 									type="button"
 									class="btn btn-sm btn-ghost justify-start text-left h-auto py-2"
@@ -213,8 +230,8 @@
 
 					{#if blocks.length === 0}
 						<p class="text-sm opacity-60 mt-4">
-							No blocks configured yet. Add blocks to build your custom page.
-							Your page will show a default layout until you add blocks.
+							No blocks configured yet. Add blocks to build your custom page. Your page will show a
+							default layout until you add blocks.
 						</p>
 					{:else}
 						<div class="mt-4 space-y-2">
@@ -230,26 +247,28 @@
 												type="button"
 												class="btn btn-xs btn-ghost"
 												onclick={() => moveBlock(i, 'up')}
-												disabled={i === 0}
-											>&uarr;</button>
+												disabled={i === 0}>&uarr;</button
+											>
 											<button
 												type="button"
 												class="btn btn-xs btn-ghost"
 												onclick={() => moveBlock(i, 'down')}
-												disabled={i === blocks.length - 1}
-											>&darr;</button>
+												disabled={i === blocks.length - 1}>&darr;</button
+											>
 											<button
 												type="button"
 												class="btn btn-xs btn-ghost"
-												onclick={() => { editingBlockId = editingBlockId === block.id ? null : block.id; }}
+												onclick={() => {
+													editingBlockId = editingBlockId === block.id ? null : block.id;
+												}}
 											>
 												{editingBlockId === block.id ? 'Close' : 'Edit'}
 											</button>
 											<button
 												type="button"
 												class="btn btn-xs btn-ghost text-error"
-												onclick={() => removeBlock(i)}
-											>&times;</button>
+												onclick={() => removeBlock(i)}>&times;</button
+											>
 										</div>
 									</div>
 
@@ -263,7 +282,9 @@
 														type="text"
 														class="input input-bordered input-sm w-full"
 														value={block.imageKey}
-														oninput={(e) => { block.imageKey = e.currentTarget.value; }}
+														oninput={(e) => {
+															block.imageKey = e.currentTarget.value;
+														}}
 													/>
 												</label>
 												<label class="form-control">
@@ -272,7 +293,9 @@
 														type="text"
 														class="input input-bordered input-sm w-full"
 														value={block.headline ?? ''}
-														oninput={(e) => { block.headline = e.currentTarget.value || undefined; }}
+														oninput={(e) => {
+															block.headline = e.currentTarget.value || undefined;
+														}}
 													/>
 												</label>
 												<label class="form-control">
@@ -281,10 +304,11 @@
 														type="text"
 														class="input input-bordered input-sm w-full"
 														value={block.subtitle ?? ''}
-														oninput={(e) => { block.subtitle = e.currentTarget.value || undefined; }}
+														oninput={(e) => {
+															block.subtitle = e.currentTarget.value || undefined;
+														}}
 													/>
 												</label>
-
 											{:else if block.type === 'bio'}
 												<label class="form-control">
 													<span class="label-text text-xs">Content (HTML/Markdown)</span>
@@ -292,35 +316,38 @@
 														class="textarea textarea-bordered w-full text-sm"
 														rows="5"
 														value={block.content}
-														oninput={(e) => { block.content = e.currentTarget.value; }}
+														oninput={(e) => {
+															block.content = e.currentTarget.value;
+														}}
 													></textarea>
 												</label>
-
 											{:else if block.type === 'links'}
 												<label class="form-control">
 													<span class="label-text text-xs">Style</span>
 													<select
 														class="select select-bordered select-sm w-full"
 														value={block.style}
-														onchange={(e) => { block.style = e.currentTarget.value as 'buttons' | 'icons' | 'list'; }}
+														onchange={(e) => {
+															block.style = e.currentTarget.value as 'buttons' | 'icons' | 'list';
+														}}
 													>
 														<option value="buttons">Buttons</option>
 														<option value="icons">Icons</option>
 														<option value="list">List</option>
 													</select>
 												</label>
-
 											{:else if block.type === 'members'}
 												<label class="flex items-center gap-2">
 													<input
 														type="checkbox"
 														class="checkbox checkbox-sm"
 														checked={block.showPositions}
-														onchange={(e) => { block.showPositions = e.currentTarget.checked; }}
+														onchange={(e) => {
+															block.showPositions = e.currentTarget.checked;
+														}}
 													/>
 													<span class="text-sm">Show member positions</span>
 												</label>
-
 											{:else if block.type === 'events'}
 												<label class="form-control">
 													<span class="label-text text-xs">Max events to show</span>
@@ -330,25 +357,27 @@
 														min="1"
 														max="20"
 														value={block.limit ?? 5}
-														oninput={(e) => { block.limit = parseInt(e.currentTarget.value) || 5; }}
+														oninput={(e) => {
+															block.limit = parseInt(e.currentTarget.value) || 5;
+														}}
 													/>
 												</label>
-
 											{:else if block.type === 'gallery'}
 												<label class="flex items-center gap-2">
 													<input
 														type="checkbox"
 														class="checkbox checkbox-sm"
 														checked={block.downloadable ?? false}
-														onchange={(e) => { block.downloadable = e.currentTarget.checked; }}
+														onchange={(e) => {
+															block.downloadable = e.currentTarget.checked;
+														}}
 													/>
 													<span class="text-sm">Allow downloads (press-quality)</span>
 												</label>
 												<p class="text-xs opacity-60">
-													Gallery images are pulled from your uploaded media.
-													Use the media section below to upload images.
+													Gallery images are pulled from your uploaded media. Use the media section
+													below to upload images.
 												</p>
-
 											{:else if block.type === 'embed'}
 												<label class="form-control">
 													<span class="label-text text-xs">Platform</span>
@@ -357,7 +386,9 @@
 														class="input input-bordered input-sm w-full"
 														placeholder="spotify, youtube, soundcloud"
 														value={block.platform}
-														oninput={(e) => { block.platform = e.currentTarget.value; }}
+														oninput={(e) => {
+															block.platform = e.currentTarget.value;
+														}}
 													/>
 												</label>
 												<label class="form-control">
@@ -367,24 +398,26 @@
 														class="input input-bordered input-sm w-full"
 														placeholder="https://open.spotify.com/track/..."
 														value={block.url}
-														oninput={(e) => { block.url = e.currentTarget.value; }}
+														oninput={(e) => {
+															block.url = e.currentTarget.value;
+														}}
 													/>
 												</label>
-
 											{:else if block.type === 'spacer'}
 												<label class="form-control">
 													<span class="label-text text-xs">Height</span>
 													<select
 														class="select select-bordered select-sm w-full"
 														value={block.height}
-														onchange={(e) => { block.height = e.currentTarget.value as 'sm' | 'md' | 'lg'; }}
+														onchange={(e) => {
+															block.height = e.currentTarget.value as 'sm' | 'md' | 'lg';
+														}}
 													>
 														<option value="sm">Small</option>
 														<option value="md">Medium</option>
 														<option value="lg">Large</option>
 													</select>
 												</label>
-
 											{:else if block.type === 'custom_html'}
 												<label class="form-control">
 													<span class="label-text text-xs">HTML Content (sanitized on save)</span>
@@ -392,53 +425,67 @@
 														class="textarea textarea-bordered w-full font-mono text-sm"
 														rows="6"
 														value={block.content}
-														oninput={(e) => { block.content = e.currentTarget.value; }}
+														oninput={(e) => {
+															block.content = e.currentTarget.value;
+														}}
 													></textarea>
 												</label>
-
 											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'contact' || block.type === 'tech_rider'}
 												<p class="text-sm opacity-60">
 													This block renders data from your EPK.
-													<a href="page-editor/epk" class="link">Edit EPK data &rarr;</a>
+													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
+														>Edit EPK data &rarr;</a
+													>
 												</p>
-
 											{:else if block.type === 'merch'}
-												<p class="text-xs opacity-60 mb-2">Add merchandise items with links to your store.</p>
-												{#each block.items as item, mi}
+												<p class="text-xs opacity-60 mb-2">
+													Add merchandise items with links to your store.
+												</p>
+												{#each block.items as item, mi (mi)}
 													<div class="flex gap-2 items-start">
 														<input
 															type="text"
 															class="input input-bordered input-sm flex-1"
 															placeholder="Title"
 															value={item.title}
-															oninput={(e) => { item.title = e.currentTarget.value; }}
+															oninput={(e) => {
+																item.title = e.currentTarget.value;
+															}}
 														/>
 														<input
 															type="url"
 															class="input input-bordered input-sm flex-1"
 															placeholder="URL"
 															value={item.url}
-															oninput={(e) => { item.url = e.currentTarget.value; }}
+															oninput={(e) => {
+																item.url = e.currentTarget.value;
+															}}
 														/>
 														<input
 															type="text"
 															class="input input-bordered input-sm w-20"
 															placeholder="$25"
 															value={item.price ?? ''}
-															oninput={(e) => { item.price = e.currentTarget.value || undefined; }}
+															oninput={(e) => {
+																item.price = e.currentTarget.value || undefined;
+															}}
 														/>
 														<button
 															type="button"
 															class="btn btn-xs btn-ghost text-error"
-															onclick={() => { block.items = block.items.filter((_, j) => j !== mi); }}
-														>&times;</button>
+															onclick={() => {
+																block.items = block.items.filter((_, j) => j !== mi);
+															}}>&times;</button
+														>
 													</div>
 												{/each}
 												<button
 													type="button"
 													class="btn btn-xs btn-ghost mt-1"
-													onclick={() => { block.items = [...block.items, { title: '', url: '' }]; }}
-												>+ Add item</button>
+													onclick={() => {
+														block.items = [...block.items, { title: '', url: '' }];
+													}}>+ Add item</button
+												>
 											{/if}
 
 											<!-- CSS class (all blocks) -->
@@ -449,7 +496,9 @@
 													class="input input-bordered input-sm w-full"
 													placeholder="custom-class"
 													value={block.cssClass ?? ''}
-													oninput={(e) => { (block as any).cssClass = e.currentTarget.value || undefined; }}
+													oninput={(e) => {
+														(block as any).cssClass = e.currentTarget.value || undefined;
+													}}
 												/>
 											</label>
 										</div>
@@ -473,16 +522,20 @@
 						rows="8"
 						placeholder={`.band-site-container {\n  /* your styles here */\n}`}
 						value={customCss}
-						oninput={(e) => { customCss = e.currentTarget.value; }}
+						oninput={(e) => {
+							customCss = e.currentTarget.value;
+						}}
 					></textarea>
-					<p class="text-xs opacity-40 mt-1">Max 50KB. External imports and scripts are stripped.</p>
+					<p class="text-xs opacity-40 mt-1">
+						Max 50KB. External imports and scripts are stripped.
+					</p>
 				</div>
 			</div>
 
 			<!-- Save -->
 			<div class="flex justify-between items-center">
 				<a
-					href="/?__band_subdomain={band.slug}"
+					href={resolve(`/?__band_subdomain=${band.slug}`)}
 					target="_blank"
 					rel="noopener"
 					class="link text-sm"
@@ -498,8 +551,8 @@
 			<div class="card-body">
 				<h2 class="card-title text-lg">Media</h2>
 				<p class="text-sm opacity-60">
-					Upload images for your gallery, hero sections, and tech rider.
-					Supported formats: JPEG, PNG, WebP, GIF. Max 10MB per file.
+					Upload images for your gallery, hero sections, and tech rider. Supported formats: JPEG,
+					PNG, WebP, GIF. Max 10MB per file.
 				</p>
 				<div class="mt-4 grid grid-cols-2 gap-4">
 					<div>
@@ -516,12 +569,15 @@
 									const formData = new FormData();
 									formData.set('type', 'image');
 									for (const f of files) formData.append('file', f);
-									const res = await fetch(`/api/bands/${band.id}/media`, { method: 'POST', body: formData });
+									const res = await fetch(`/api/bands/${band.id}/media`, {
+										method: 'POST',
+										body: formData
+									});
 									if (res.ok) {
 										toast.success(`Uploaded ${files.length} image(s)`);
 										invalidateAll();
 									} else {
-										const err = await res.json() as { message?: string };
+										const err = (await res.json()) as { message?: string };
 										toast.error(err.message || 'Upload failed');
 									}
 									e.currentTarget.value = '';
@@ -542,12 +598,15 @@
 									const formData = new FormData();
 									formData.set('type', 'hero');
 									formData.append('file', file);
-									const res = await fetch(`/api/bands/${band.id}/media`, { method: 'POST', body: formData });
+									const res = await fetch(`/api/bands/${band.id}/media`, {
+										method: 'POST',
+										body: formData
+									});
 									if (res.ok) {
 										toast.success('Hero image uploaded');
 										invalidateAll();
 									} else {
-										const err = await res.json() as { message?: string };
+										const err = (await res.json()) as { message?: string };
 										toast.error(err.message || 'Upload failed');
 									}
 									e.currentTarget.value = '';
@@ -568,12 +627,15 @@
 									const formData = new FormData();
 									formData.set('type', 'stage_plot');
 									formData.append('file', file);
-									const res = await fetch(`/api/bands/${band.id}/media`, { method: 'POST', body: formData });
+									const res = await fetch(`/api/bands/${band.id}/media`, {
+										method: 'POST',
+										body: formData
+									});
 									if (res.ok) {
 										toast.success('Stage plot uploaded');
 										invalidateAll();
 									} else {
-										const err = await res.json() as { message?: string };
+										const err = (await res.json()) as { message?: string };
 										toast.error(err.message || 'Upload failed');
 									}
 									e.currentTarget.value = '';
@@ -594,12 +656,15 @@
 									const formData = new FormData();
 									formData.set('type', 'rider');
 									formData.append('file', file);
-									const res = await fetch(`/api/bands/${band.id}/media`, { method: 'POST', body: formData });
+									const res = await fetch(`/api/bands/${band.id}/media`, {
+										method: 'POST',
+										body: formData
+									});
 									if (res.ok) {
 										toast.success('Tech rider uploaded');
 										invalidateAll();
 									} else {
-										const err = await res.json() as { message?: string };
+										const err = (await res.json()) as { message?: string };
 										toast.error(err.message || 'Upload failed');
 									}
 									e.currentTarget.value = '';
@@ -621,7 +686,9 @@
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<a href="page-editor/epk" class="btn btn-sm btn-outline">Edit EPK</a>
+					<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="btn btn-sm btn-outline"
+						>Edit EPK</a
+					>
 				</div>
 			</div>
 		</div>

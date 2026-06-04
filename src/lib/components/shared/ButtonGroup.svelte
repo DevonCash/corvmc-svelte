@@ -16,12 +16,7 @@
 	} = $props();
 </script>
 
-<div
-	class="join button-group {className}"
-	class:join-vertical={vertical}
-	class:wrap
-	{style}
->
+<div class="join button-group {className}" class:join-vertical={vertical} class:wrap {style}>
 	{@render children()}
 </div>
 

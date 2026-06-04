@@ -107,15 +107,13 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		await uploadFile(buffer, key, file.type);
 
-		await db
-			.insert(bandMedia)
-			.values({
-				bandId,
-				key,
-				type: mediaType,
-				caption: files.length === 1 ? (caption ?? undefined) : undefined,
-				sortOrder: sortOrder++
-			});
+		await db.insert(bandMedia).values({
+			bandId,
+			key,
+			type: mediaType,
+			caption: files.length === 1 ? (caption ?? undefined) : undefined,
+			sortOrder: sortOrder++
+		});
 
 		uploaded.push({ id: fileId, key, sortOrder: sortOrder - 1 });
 	}

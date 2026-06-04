@@ -10,7 +10,10 @@
 	--bs-accent: #3b82f6;
 	--bs-surface: #f5f5f5;
 	--bs-muted: #6b7280;
-	font-family: system-ui, -apple-system, sans-serif;
+	font-family:
+		system-ui,
+		-apple-system,
+		sans-serif;
 	background-color: var(--bs-bg);
 	color: var(--bs-text);
 }

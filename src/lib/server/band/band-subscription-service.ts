@@ -3,7 +3,10 @@ import { band } from '$lib/server/db/schema/band';
 import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/band';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from '$lib/server/finance/payment-service';
-import { buildSubscriptionLineItem, getProductConfig } from '$lib/server/finance/product-config-service';
+import {
+	buildSubscriptionLineItem,
+	getProductConfig
+} from '$lib/server/finance/product-config-service';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -92,8 +95,7 @@ export async function syncFromWebhook(
 
 	// Determine billing interval from subscription items
 	const interval = firstItem?.price?.recurring?.interval;
-	const billingInterval: 'monthly' | 'yearly' =
-		interval === 'year' ? 'yearly' : 'monthly';
+	const billingInterval: 'monthly' | 'yearly' = interval === 'year' ? 'yearly' : 'monthly';
 
 	if (status === 'active' || status === 'past_due') {
 		const subscription: BandSubscription = {

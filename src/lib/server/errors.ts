@@ -1,11 +1,27 @@
 import { error } from '@sveltejs/kit';
 
 // Domain error imports — grouped by service module
-import { BandNotFoundError, BandMemberExistsError, CannotRemoveOwnerError, OwnerCannotLeaveError } from './band/band-service';
-import { ReservationConflictError, ReservationValidationError } from './reservation/reservation-service';
+import {
+	BandNotFoundError,
+	BandMemberExistsError,
+	CannotRemoveOwnerError,
+	OwnerCannotLeaveError
+} from './band/band-service';
+import {
+	ReservationConflictError,
+	ReservationValidationError
+} from './reservation/reservation-service';
 import { RecurringSeriesError } from './reservation/recurring-series-service';
-import { EquipmentNotFoundError, CategoryNotFoundError, CategoryHasEquipmentError } from './equipment/equipment-service';
-import { LoanNotFoundError, InvalidLoanTransitionError, InsufficientQuantityError } from './equipment/loan-service';
+import {
+	EquipmentNotFoundError,
+	CategoryNotFoundError,
+	CategoryHasEquipmentError
+} from './equipment/equipment-service';
+import {
+	LoanNotFoundError,
+	InvalidLoanTransitionError,
+	InsufficientQuantityError
+} from './equipment/loan-service';
 import { InsufficientCreditsError } from './finance/credit-service';
 
 // ---------------------------------------------------------------------------
@@ -63,10 +79,7 @@ export function mapDomainError(err: unknown): never {
 	}
 
 	// --- 409 Conflict ---
-	if (
-		err instanceof ReservationConflictError ||
-		err instanceof BandMemberExistsError
-	) {
+	if (err instanceof ReservationConflictError || err instanceof BandMemberExistsError) {
 		error(409, (err as Error).message);
 	}
 

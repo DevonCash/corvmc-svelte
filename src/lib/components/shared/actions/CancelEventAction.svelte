@@ -27,7 +27,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">Cancel this event? This cannot be undone.</p>
 	{/snippet}

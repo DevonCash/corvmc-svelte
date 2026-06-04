@@ -13,9 +13,11 @@ Set up Cloudflare R2 as a generic file storage layer. This comes first because t
 Install `@aws-sdk/client-s3`. Add R2 env vars to `.env.example`.
 
 **Platform bindings (wrangler.toml):**
+
 - `R2_BUCKET` — R2 bucket binding, accessed via `platform.env.R2_BUCKET`
 
 **Env vars (secrets):**
+
 - `R2_PUBLIC_URL` — the public access base URL for the bucket (direct, no transforms)
 - `R2_TRANSFORM_URL` — optional, Cloudflare Image Transformations base URL. When set, `getPublicUrl()` serves images through the transform pipeline (resized, webp). When unset, serves originals directly from `R2_PUBLIC_URL`.
 
@@ -82,21 +84,21 @@ Generate and apply the drizzle migration: `pnpm drizzle-kit generate` then `pnpm
 
 ```typescript
 interface CreateEventParams {
-  title: string;
-  description?: string;
-  startsAt: Date;
-  endsAt: Date;
-  doorsAt?: Date;
-  tags?: string;
-  createdByUserId: string;
-  // Optional reservation linkage
-  reservation?: {
-    startsAt: Date;
-    endsAt: Date;
-    overrideConflicts: boolean;
-  };
-  // Optional poster
-  posterFile?: { buffer: ArrayBuffer; contentType: string };
+	title: string;
+	description?: string;
+	startsAt: Date;
+	endsAt: Date;
+	doorsAt?: Date;
+	tags?: string;
+	createdByUserId: string;
+	// Optional reservation linkage
+	reservation?: {
+		startsAt: Date;
+		endsAt: Date;
+		overrideConflicts: boolean;
+	};
+	// Optional poster
+	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 ```
 
@@ -117,6 +119,7 @@ interface CreateEventParams {
 - `listAll(): Promise<EventRow[]>` — all non-cancelled events for staff, ordered by startsAt desc.
 
 **Key notes:**
+
 - The `create` function must create the event first (to get the ID for `bookerId`), then create the reservation, then update the event with the `reservationId`. All in one transaction.
 - `cancel` must handle the case where the linked reservation is already cancelled (reservation-service.cancel will throw — catch and ignore).
 
@@ -131,6 +134,7 @@ Staff CRUD pages for managing events. Depends on Epic 2.
 ### 3.1 Staff events list page
 
 **Files:**
+
 - `src/routes/staff/events/+page.server.ts` — loads all events via `listAll()`
 - `src/routes/staff/events/+page.svelte` — DataTable with columns: title, date/time, status (StatusBadge), tags, actions
 
@@ -141,10 +145,12 @@ Add "Events" to the sidebar nav in `src/lib/components/staff/Sidebar.svelte` (or
 ### 3.2 Create event page
 
 **Files:**
+
 - `src/routes/staff/events/new/+page.svelte` — form page
 - `src/routes/staff/events/new/data.remote.ts` — `createEvent` form handler
 
 **Form fields:**
+
 - Title (text, required)
 - Description (textarea, optional)
 - Event date (date picker)
@@ -164,17 +170,20 @@ Auth: `requireStaff()` in the form handler and the conflict check query.
 ### 3.3 Event detail/edit page
 
 **Files:**
+
 - `src/routes/staff/events/[id]/+page.server.ts` — loads event by ID with creator info and linked reservation details
 - `src/routes/staff/events/[id]/+page.svelte` — detail view with edit capability
 - `src/routes/staff/events/[id]/data.remote.ts` — `updateEvent`, `publishEvent`, `cancelEvent` command handlers
 
 **Detail view shows:**
+
 - Event info (title, description, times, status, tags)
 - Poster image preview (if present)
 - Linked reservation card (if present) with link to reservation detail page
 - Creator info
 
 **Actions:**
+
 - Edit button → inline edit mode or edit modal for title/description/times/tags/poster
 - Publish button (visible when status is draft)
 - Cancel button with confirmation (visible when not cancelled)
@@ -194,6 +203,7 @@ A public page showing upcoming published events. No auth required.
 ### 4.1 Public events page
 
 **Files:**
+
 - `src/routes/events/+page.server.ts` — loads upcoming published events via `listUpcoming()`, maps posterKey to public URL via `getPublicUrl()`
 - `src/routes/events/+page.svelte` — card grid of upcoming events
 

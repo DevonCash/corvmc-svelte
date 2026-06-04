@@ -25,9 +25,13 @@ import postgres from 'postgres';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
-import { hashPassword } from 'better-auth/crypto';
 
-import { user, account, userInstrument, userGenre } from '../src/lib/server/db/schema/authentication';
+import {
+	user,
+	account,
+	userInstrument,
+	userGenre
+} from '../src/lib/server/db/schema/authentication';
 import { band, bandGenre, bandMember } from '../src/lib/server/db/schema/band';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
@@ -68,9 +72,7 @@ console.log();
 
 type IdMap = Record<string, Record<string, string>>;
 
-let idMap: IdMap = existsSync(ID_MAP_PATH)
-	? JSON.parse(readFileSync(ID_MAP_PATH, 'utf-8'))
-	: {};
+const idMap: IdMap = existsSync(ID_MAP_PATH) ? JSON.parse(readFileSync(ID_MAP_PATH, 'utf-8')) : {};
 
 function mapId(table: string, oldId: number | string): string {
 	const key = String(oldId);
@@ -106,8 +108,12 @@ if (COMMIT) {
 	if (REMOTE) {
 		// For remote, use wrangler d1 execute via subprocess
 		// This is handled differently — we'll batch SQL statements
-		console.error('--remote mode requires using wrangler d1 execute. Use local mode and then push.');
-		console.error('Alternative: remove --remote and migrate to local D1, then use wrangler d1 export/import.');
+		console.error(
+			'--remote mode requires using wrangler d1 execute. Use local mode and then push.'
+		);
+		console.error(
+			'Alternative: remove --remote and migrate to local D1, then use wrangler d1 export/import.'
+		);
 		process.exit(1);
 	}
 	const proxy = await getPlatformProxy();
@@ -127,11 +133,6 @@ function ts(val: Date | string | null): Date | null {
 	if (!val) return null;
 	if (val instanceof Date) return val;
 	return new Date(val);
-}
-
-async function count(table: string): Promise<number> {
-	const [row] = await pg`SELECT count(*)::int as n FROM ${pg(table)}`;
-	return row.n;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,9 +168,15 @@ async function migrateUsers() {
 		const userId = profileToUser[String(tag.user_id)];
 		if (!userId) continue;
 		if (!tagsByProfile[userId]) tagsByProfile[userId] = { instruments: [], genres: [] };
-		const raw = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		const raw =
+			typeof tag.name === 'object' && tag.name !== null
+				? (tag.name.en ?? Object.values(tag.name)[0] ?? '')
+				: String(tag.name);
 		if (!raw) continue;
-		const names = raw.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+		const names = raw
+			.split(',')
+			.map((s: string) => s.trim().toLowerCase())
+			.filter(Boolean);
 		for (const name of names) {
 			if (tag.type === 'skill') tagsByProfile[userId].instruments.push(name);
 			if (tag.type === 'genre') tagsByProfile[userId].genres.push(name);
@@ -183,8 +190,16 @@ async function migrateUsers() {
 
 	for (const u of users) {
 		const id = mapId('users', u.id);
-		const contactData = u.contact ? (typeof u.contact === 'string' ? JSON.parse(u.contact) : u.contact) : null;
-		const linksData = u.links ? (typeof u.links === 'string' ? JSON.parse(u.links) : u.links) : null;
+		const contactData = u.contact
+			? typeof u.contact === 'string'
+				? JSON.parse(u.contact)
+				: u.contact
+			: null;
+		const linksData = u.links
+			? typeof u.links === 'string'
+				? JSON.parse(u.links)
+				: u.links
+			: null;
 
 		// Normalize: Laravel uses "name", Svelte uses "label"
 		const normalizedLinks = Array.isArray(linksData)
@@ -203,52 +218,66 @@ async function migrateUsers() {
 			}
 		}
 
-		await db.insert(user).values({
-			id,
-			name: u.name,
-			email: u.email,
-			emailVerified: !!u.email_verified_at,
-			image: null,
-			createdAt: ts(u.created_at)!,
-			updatedAt: ts(u.updated_at)!,
-			pronouns: u.pronouns,
-			phone: u.phone ?? null,
-			settings: u.settings ? (typeof u.settings === 'string' ? JSON.parse(u.settings) : u.settings) : null,
-			stripeId: u.stripe_id,
-			pmType: u.pm_type,
-			pmLastFour: u.pm_last_four,
-			creditFreeHours: 0,
-			creditEquipment: 0,
-			trialEndsAt: ts(u.trial_ends_at),
-			deletedAt: null,
-			bio: u.bio,
-			tagline: null,
-			lookingForBand: false,
-			directoryVisibility: u.visibility === 'public' ? 'public' : u.visibility === 'private' ? 'hidden' : 'members',
-			directoryContact: contactData ?? null,
-			links: normalizedLinks ?? null
-		}).onConflictDoNothing();
+		await db
+			.insert(user)
+			.values({
+				id,
+				name: u.name,
+				email: u.email,
+				emailVerified: !!u.email_verified_at,
+				image: null,
+				createdAt: ts(u.created_at)!,
+				updatedAt: ts(u.updated_at)!,
+				pronouns: u.pronouns,
+				phone: u.phone ?? null,
+				settings: u.settings
+					? typeof u.settings === 'string'
+						? JSON.parse(u.settings)
+						: u.settings
+					: null,
+				stripeId: u.stripe_id,
+				pmType: u.pm_type,
+				pmLastFour: u.pm_last_four,
+				creditFreeHours: 0,
+				creditEquipment: 0,
+				trialEndsAt: ts(u.trial_ends_at),
+				deletedAt: null,
+				bio: u.bio,
+				tagline: null,
+				lookingForBand: false,
+				directoryVisibility:
+					u.visibility === 'public' ? 'public' : u.visibility === 'private' ? 'hidden' : 'members',
+				directoryContact: contactData ?? null,
+				links: normalizedLinks ?? null
+			})
+			.onConflictDoNothing();
 
 		if (hasSmsOk) {
-			await db.insert(notificationPreference).values({
-				userId: id,
-				notificationType: 'reservation_reminder',
-				emailEnabled: true,
-				inAppEnabled: true,
-				smsEnabled: true
-			}).onConflictDoNothing();
+			await db
+				.insert(notificationPreference)
+				.values({
+					userId: id,
+					notificationType: 'reservation_reminder',
+					emailEnabled: true,
+					inAppEnabled: true,
+					smsEnabled: true
+				})
+				.onConflictDoNothing();
 		}
 
 		// Create account record for better-auth (credential provider)
-		await db.insert(account).values({
-			id: mapId('accounts', u.id),
-			accountId: id,
-			providerId: 'credential',
-			userId: id,
-			password: u.password, // Laravel bcrypt is compatible with better-auth
-			createdAt: ts(u.created_at)!,
-			updatedAt: ts(u.updated_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(account)
+			.values({
+				id: mapId('accounts', u.id),
+				accountId: id,
+				providerId: 'credential',
+				userId: id,
+				password: u.password, // Laravel bcrypt is compatible with better-auth
+				createdAt: ts(u.created_at)!,
+				updatedAt: ts(u.updated_at)!
+			})
+			.onConflictDoNothing();
 
 		// Insert instruments/genres
 		const userTags = tagsByProfile[String(u.id)];
@@ -269,9 +298,15 @@ async function migrateUsers() {
 		if (!userId) continue;
 		const creditType = c.type ?? c.credit_type;
 		if (creditType === 'free_hours') {
-			await db.update(user).set({ creditFreeHours: c.balance }).where(sql`id = ${userId}`);
+			await db
+				.update(user)
+				.set({ creditFreeHours: c.balance })
+				.where(sql`id = ${userId}`);
 		} else if (creditType === 'equipment') {
-			await db.update(user).set({ creditEquipment: c.balance }).where(sql`id = ${userId}`);
+			await db
+				.update(user)
+				.set({ creditEquipment: c.balance })
+				.where(sql`id = ${userId}`);
 		}
 	}
 
@@ -286,53 +321,70 @@ async function migrateRoles() {
 	const modelRoles = await pg`SELECT * FROM model_has_roles`;
 	const modelPerms = await pg`SELECT * FROM model_has_permissions`;
 
-	console.log(`  Source: ${roles.length} roles, ${permissions.length} permissions, ${modelRoles.length} user-role assignments`);
+	console.log(
+		`  Source: ${roles.length} roles, ${permissions.length} permissions, ${modelRoles.length} user-role assignments`
+	);
 
 	if (!COMMIT) return;
 
 	for (const r of roles) {
-		await db.insert(role).values({
-			id: r.id,
-			name: r.name,
-			guardName: r.guard_name,
-			createdAt: ts(r.created_at),
-			updatedAt: ts(r.updated_at)
-		}).onConflictDoNothing();
+		await db
+			.insert(role)
+			.values({
+				id: r.id,
+				name: r.name,
+				guardName: r.guard_name,
+				createdAt: ts(r.created_at),
+				updatedAt: ts(r.updated_at)
+			})
+			.onConflictDoNothing();
 	}
 
 	for (const p of permissions) {
-		await db.insert(permission).values({
-			id: p.id,
-			name: p.name,
-			guardName: p.guard_name,
-			createdAt: ts(p.created_at),
-			updatedAt: ts(p.updated_at)
-		}).onConflictDoNothing();
+		await db
+			.insert(permission)
+			.values({
+				id: p.id,
+				name: p.name,
+				guardName: p.guard_name,
+				createdAt: ts(p.created_at),
+				updatedAt: ts(p.updated_at)
+			})
+			.onConflictDoNothing();
 	}
 
 	for (const rp of rolePerms) {
-		await db.insert(roleHasPermission).values({
-			permissionId: rp.permission_id,
-			roleId: rp.role_id
-		}).onConflictDoNothing();
+		await db
+			.insert(roleHasPermission)
+			.values({
+				permissionId: rp.permission_id,
+				roleId: rp.role_id
+			})
+			.onConflictDoNothing();
 	}
 
 	for (const mr of modelRoles) {
 		const userId = lookupId('users', mr.model_id);
 		if (!userId) continue;
-		await db.insert(modelHasRole).values({
-			roleId: mr.role_id,
-			userId
-		}).onConflictDoNothing();
+		await db
+			.insert(modelHasRole)
+			.values({
+				roleId: mr.role_id,
+				userId
+			})
+			.onConflictDoNothing();
 	}
 
 	for (const mp of modelPerms) {
 		const userId = lookupId('users', mp.model_id);
 		if (!userId) continue;
-		await db.insert(modelHasPermission).values({
-			permissionId: mp.permission_id,
-			userId
-		}).onConflictDoNothing();
+		await db
+			.insert(modelHasPermission)
+			.values({
+				permissionId: mp.permission_id,
+				userId
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated roles/permissions`);
@@ -360,8 +412,16 @@ async function migrateBands() {
 		const ownerId = lookupId('users', b.owner_id);
 		if (!ownerId) continue;
 
-		const contactData = b.contact ? (typeof b.contact === 'string' ? JSON.parse(b.contact) : b.contact) : null;
-		const linksData = b.links ? (typeof b.links === 'string' ? JSON.parse(b.links) : b.links) : null;
+		const contactData = b.contact
+			? typeof b.contact === 'string'
+				? JSON.parse(b.contact)
+				: b.contact
+			: null;
+		const linksData = b.links
+			? typeof b.links === 'string'
+				? JSON.parse(b.links)
+				: b.links
+			: null;
 
 		// Normalize: Laravel uses "name", Svelte uses "label"
 		const normalizedLinks = Array.isArray(linksData)
@@ -379,31 +439,41 @@ async function migrateBands() {
 			}
 		}
 
-		await db.insert(band).values({
-			id,
-			name: b.name,
-			slug: b.slug || b.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-			bio: b.bio,
-			ownerId,
-			avatarKey: null,
-			createdAt: ts(b.created_at)!,
-			updatedAt: ts(b.updated_at)!,
-			deletedAt: null,
-			tagline: null,
-			lookingForMembers: false,
-			directoryVisibility: b.visibility === 'public' ? 'public' : b.visibility === 'private' ? 'hidden' : 'members',
-			directoryContact: contactData ?? null,
-			links: normalizedLinks ?? null
-		}).onConflictDoNothing();
+		await db
+			.insert(band)
+			.values({
+				id,
+				name: b.name,
+				slug: b.slug || b.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+				bio: b.bio,
+				ownerId,
+				avatarKey: null,
+				createdAt: ts(b.created_at)!,
+				updatedAt: ts(b.updated_at)!,
+				deletedAt: null,
+				tagline: null,
+				lookingForMembers: false,
+				directoryVisibility:
+					b.visibility === 'public' ? 'public' : b.visibility === 'private' ? 'hidden' : 'members',
+				directoryContact: contactData ?? null,
+				links: normalizedLinks ?? null
+			})
+			.onConflictDoNothing();
 	}
 
 	// Band genres
 	for (const tag of bandTags) {
 		const bandId = lookupId('band_profiles', tag.band_id);
 		if (!bandId) continue;
-		const raw = typeof tag.name === 'object' && tag.name !== null ? (tag.name.en ?? Object.values(tag.name)[0] ?? '') : String(tag.name);
+		const raw =
+			typeof tag.name === 'object' && tag.name !== null
+				? (tag.name.en ?? Object.values(tag.name)[0] ?? '')
+				: String(tag.name);
 		if (!raw) continue;
-		const genres = raw.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+		const genres = raw
+			.split(',')
+			.map((s: string) => s.trim().toLowerCase())
+			.filter(Boolean);
 		for (const genre of genres) {
 			await db.insert(bandGenre).values({ bandId, genre }).onConflictDoNothing();
 		}
@@ -415,16 +485,19 @@ async function migrateBands() {
 		const userId = lookupId('users', m.user_id);
 		if (!bandId || !userId) continue;
 
-		await db.insert(bandMember).values({
-			id: mapId('band_members', m.id),
-			bandId,
-			userId,
-			role: m.role || 'member',
-			position: m.position,
-			status: 'active',
-			invitedById: null,
-			createdAt: ts(m.created_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(bandMember)
+			.values({
+				id: mapId('band_members', m.id),
+				bandId,
+				userId,
+				role: m.role || 'member',
+				position: m.position,
+				status: 'active',
+				invitedById: null,
+				createdAt: ts(m.created_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${bands.length} bands, ${members.length} members`);
@@ -435,7 +508,9 @@ async function migrateBands() {
  * Example input: "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU"
  */
 function convertRruleToJson(rruleStr: string, startDate: Date | string | null): string {
-	const startDt = startDate ? new Date(startDate instanceof Date ? startDate : startDate) : new Date();
+	const startDt = startDate
+		? new Date(startDate instanceof Date ? startDate : startDate)
+		: new Date();
 
 	// Parse RRULE parts
 	const parts: Record<string, string> = {};
@@ -446,24 +521,36 @@ function convertRruleToJson(rruleStr: string, startDate: Date | string | null): 
 
 	const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 	const interval = Number(parts.INTERVAL ?? 1);
-	const freq = parts.FREQ === 'MONTHLY' ? 'monthly' as const : 'weekly' as const;
+	const freq = parts.FREQ === 'MONTHLY' ? ('monthly' as const) : ('weekly' as const);
 	const byDay = parts.BYDAY ?? '';
 	const weekday = dayMap[byDay.replace(/[^A-Z]/g, '')] ?? startDt.getDay();
 	const nthWeek = freq === 'monthly' ? Math.ceil(startDt.getDate() / 7) : undefined;
 
 	const tz = 'America/Los_Angeles';
 	const formatter = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
-		hour: 'numeric', minute: 'numeric', hour12: false
+		timeZone: tz,
+		year: 'numeric',
+		month: 'numeric',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: 'numeric',
+		hour12: false
 	});
 	const dateParts = formatter.formatToParts(startDt);
-	const get = (type: Intl.DateTimeFormatPartTypes) => Number(dateParts.find(p => p.type === type)?.value ?? 0);
+	const get = (type: Intl.DateTimeFormatPartTypes) =>
+		Number(dateParts.find((p) => p.type === type)?.value ?? 0);
 
 	return JSON.stringify({
 		freq,
 		interval,
 		tz,
-		start: { year: get('year'), month: get('month'), day: get('day'), hour: get('hour'), minute: get('minute') },
+		start: {
+			year: get('year'),
+			month: get('month'),
+			day: get('day'),
+			hour: get('hour'),
+			minute: get('minute')
+		},
 		weekday,
 		...(nthWeek !== undefined ? { nthWeek } : {})
 	});
@@ -488,16 +575,19 @@ async function migrateRecurringSeries() {
 			s.start_date ?? s.created_at
 		);
 
-		await db.insert(recurringSeries).values({
-			id,
-			supersededBy: null,
-			prototypeType: protoType,
-			prototypeId: userId,
-			rrule: rruleJson,
-			createdBy: userId,
-			createdAt: ts(s.created_at)!,
-			cancelledAt: s.status === 'cancelled' ? ts(s.updated_at) : null
-		}).onConflictDoNothing();
+		await db
+			.insert(recurringSeries)
+			.values({
+				id,
+				supersededBy: null,
+				prototypeType: protoType,
+				prototypeId: userId,
+				rrule: rruleJson,
+				createdBy: userId,
+				createdAt: ts(s.created_at)!,
+				cancelledAt: s.status === 'cancelled' ? ts(s.updated_at) : null
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${series.length} recurring series`);
@@ -543,24 +633,29 @@ async function migrateReservations() {
 		else if (rawStatus.includes('complet')) status = 'completed';
 		else if (rawStatus === 'pending') status = 'scheduled';
 
-		const recurringId = r.recurring_series_id ? lookupId('recurring_series', r.recurring_series_id) : null;
+		const recurringId = r.recurring_series_id
+			? lookupId('recurring_series', r.recurring_series_id)
+			: null;
 
-		await db.insert(reservation).values({
-			id,
-			bookerType,
-			bookerId,
-			createdByUserId: bookerId,
-			status,
-			startsAt: ts(r.reserved_at)!,
-			endsAt: ts(r.reserved_until)!,
-			notes: r.notes,
-			cancellationReason: r.cancellation_reason ?? null,
-			stripePaymentRecordId: r.stripe_payment_intent ?? null,
-			lockAccessId: null,
-			recurringSeriesId: recurringId,
-			createdAt: ts(r.created_at)!,
-			updatedAt: ts(r.updated_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(reservation)
+			.values({
+				id,
+				bookerType,
+				bookerId,
+				createdByUserId: bookerId,
+				status,
+				startsAt: ts(r.reserved_at)!,
+				endsAt: ts(r.reserved_until)!,
+				notes: r.notes,
+				cancellationReason: r.cancellation_reason ?? null,
+				stripePaymentRecordId: r.stripe_payment_intent ?? null,
+				lockAccessId: null,
+				recurringSeriesId: recurringId,
+				createdAt: ts(r.created_at)!,
+				updatedAt: ts(r.updated_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${reservations.length} reservations`);
@@ -574,13 +669,16 @@ async function migrateClosures() {
 	if (!COMMIT) return;
 
 	for (const c of closures) {
-		await db.insert(closure).values({
-			id: mapId('closures', c.id),
-			reason: c.reason || 'Closed',
-			startsAt: ts(c.starts_at ?? c.start_date)!,
-			endsAt: ts(c.ends_at ?? c.end_date)!,
-			createdAt: ts(c.created_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(closure)
+			.values({
+				id: mapId('closures', c.id),
+				reason: c.reason || 'Closed',
+				startsAt: ts(c.starts_at ?? c.start_date)!,
+				endsAt: ts(c.ends_at ?? c.end_date)!,
+				createdAt: ts(c.created_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${closures.length} closures`);
@@ -612,25 +710,28 @@ async function migrateEvents() {
 		if (endsAt < startsAt) [startsAt, endsAt] = [endsAt, startsAt];
 
 		try {
-			await db.insert(event).values({
-				id,
-				title: e.title || 'Untitled Event',
-				description: e.description,
-				startsAt,
-				endsAt,
-				doorsAt: ts(e.doors_datetime),
-				status,
-				publishedAt: ts(e.published_at),
-				reservationId: null,
-				posterKey: null,
-				tags: e.event_type,
-				ticketingEnabled: !!e.ticket_price,
-				ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
-				ticketQuantity: null,
-				createdByUserId,
-				createdAt: ts(e.created_at)!,
-				updatedAt: ts(e.updated_at)!
-			}).onConflictDoNothing();
+			await db
+				.insert(event)
+				.values({
+					id,
+					title: e.title || 'Untitled Event',
+					description: e.description,
+					startsAt,
+					endsAt,
+					doorsAt: ts(e.doors_datetime),
+					status,
+					publishedAt: ts(e.published_at),
+					reservationId: null,
+					posterKey: null,
+					tags: e.event_type,
+					ticketingEnabled: !!e.ticket_price,
+					ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
+					ticketQuantity: null,
+					createdByUserId,
+					createdAt: ts(e.created_at)!,
+					updatedAt: ts(e.updated_at)!
+				})
+				.onConflictDoNothing();
 		} catch (err) {
 			console.warn(`  ⚠ Skipped event ${e.id} (${e.title}): ${(err as Error).message}`);
 		}
@@ -667,20 +768,23 @@ async function migrateTickets() {
 		const userId = t.user_id ? lookupId('users', t.user_id) : null;
 
 		try {
-			await db.insert(ticket).values({
-				id: mapId('tickets', t.id),
-				eventId,
-				purchaseId: t.order_uuid ?? mapId('ticket_purchases', t.id),
-				userId,
-				attendeeName: t.attendee_name ?? 'Unknown',
-				attendeeEmail: t.attendee_email ?? '',
-				code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
-				status: t.status === 'confirmed' ? 'valid' : (t.status ?? 'valid'),
-				checkedInAt: ts(t.checked_in_at),
-				checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
-				createdAt: ts(t.created_at)!,
-				updatedAt: ts(t.updated_at)!
-			}).onConflictDoNothing();
+			await db
+				.insert(ticket)
+				.values({
+					id: mapId('tickets', t.id),
+					eventId,
+					purchaseId: t.order_uuid ?? mapId('ticket_purchases', t.id),
+					userId,
+					attendeeName: t.attendee_name ?? 'Unknown',
+					attendeeEmail: t.attendee_email ?? '',
+					code: t.code ?? mapId('ticket_codes', t.id).slice(0, 8),
+					status: t.status === 'confirmed' ? 'valid' : (t.status ?? 'valid'),
+					checkedInAt: ts(t.checked_in_at),
+					checkedInByUserId: t.checked_in_by ? lookupId('users', t.checked_in_by) : null,
+					createdAt: ts(t.created_at)!,
+					updatedAt: ts(t.updated_at)!
+				})
+				.onConflictDoNothing();
 		} catch (err) {
 			console.warn(`  ⚠ Skipped ticket ${t.id}: ${(err as Error).message}`);
 		}
@@ -700,18 +804,25 @@ async function migrateCreditTransactions() {
 		const userId = lookupId('users', t.user_id);
 		if (!userId) continue;
 
-		await db.insert(creditTransaction).values({
-			id: t.id,
-			userId,
-			creditType: t.credit_type ?? t.type ?? 'free_hours',
-			amount: t.amount,
-			balanceAfter: t.balance_after ?? 0,
-			source: t.source ?? 'legacy',
-			sourceId: t.source_id ? String(t.source_id) : null,
-			description: t.description ?? 'Migrated from legacy system',
-			metadata: t.metadata ? (typeof t.metadata === 'string' ? JSON.parse(t.metadata) : t.metadata) : {},
-			createdAt: ts(t.created_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(creditTransaction)
+			.values({
+				id: t.id,
+				userId,
+				creditType: t.credit_type ?? t.type ?? 'free_hours',
+				amount: t.amount,
+				balanceAfter: t.balance_after ?? 0,
+				source: t.source ?? 'legacy',
+				sourceId: t.source_id ? String(t.source_id) : null,
+				description: t.description ?? 'Migrated from legacy system',
+				metadata: t.metadata
+					? typeof t.metadata === 'string'
+						? JSON.parse(t.metadata)
+						: t.metadata
+					: {},
+				createdAt: ts(t.created_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${txns.length} credit transactions`);
@@ -741,14 +852,17 @@ async function migrateEquipment() {
 		if (!categories.has(cat)) {
 			const catId = mapId('equipment_categories', cat);
 			categories.set(cat, catId);
-			await db.insert(equipmentCategory).values({
-				id: catId,
-				name: cat,
-				displayOrder: categories.size,
-				pricingTier: 'standard',
-				createdAt: ts(item.created_at)!,
-				updatedAt: ts(item.updated_at)!
-			}).onConflictDoNothing();
+			await db
+				.insert(equipmentCategory)
+				.values({
+					id: catId,
+					name: cat,
+					displayOrder: categories.size,
+					pricingTier: 'standard',
+					createdAt: ts(item.created_at)!,
+					updatedAt: ts(item.updated_at)!
+				})
+				.onConflictDoNothing();
 		}
 	}
 
@@ -756,23 +870,26 @@ async function migrateEquipment() {
 		const id = mapId('equipment', item.id);
 		const categoryId = categories.get(item.category ?? 'General')!;
 
-		await db.insert(equipment).values({
-			id,
-			name: item.name,
-			description: item.description,
-			categoryId,
-			totalQuantity: item.total_quantity ?? item.quantity ?? 1,
-			outOfOrderQuantity: 0,
-			serialNumber: item.serial_number,
-			resourceId: null,
-			condition: item.condition ?? 'good',
-			status: item.status ?? 'available',
-			notes: item.notes,
-			imageUrl: null,
-			createdAt: ts(item.created_at)!,
-			updatedAt: ts(item.updated_at)!,
-			deletedAt: null
-		}).onConflictDoNothing();
+		await db
+			.insert(equipment)
+			.values({
+				id,
+				name: item.name,
+				description: item.description,
+				categoryId,
+				totalQuantity: item.total_quantity ?? item.quantity ?? 1,
+				outOfOrderQuantity: 0,
+				serialNumber: item.serial_number,
+				resourceId: null,
+				condition: item.condition ?? 'good',
+				status: item.status ?? 'available',
+				notes: item.notes,
+				imageUrl: null,
+				createdAt: ts(item.created_at)!,
+				updatedAt: ts(item.updated_at)!,
+				deletedAt: null
+			})
+			.onConflictDoNothing();
 	}
 
 	for (const loan of loans) {
@@ -780,26 +897,29 @@ async function migrateEquipment() {
 		const userId = lookupId('users', loan.user_id);
 		if (!userId) continue;
 
-		await db.insert(equipmentLoan).values({
-			id: mapId('equipment_loans', loan.id),
-			equipmentId,
-			userId,
-			quantity: loan.quantity ?? 1,
-			requestedPickupDate: ts(loan.requested_pickup_date ?? loan.created_at)!,
-			scheduledPickupDate: ts(loan.scheduled_pickup_date),
-			dueDate: ts(loan.due_date),
-			checkedOutAt: ts(loan.checked_out_at),
-			returnedAt: ts(loan.returned_at),
-			status: loan.status ?? 'requested',
-			dailyRateCents: loan.daily_rate_cents,
-			totalChargeCents: loan.total_charge_cents,
-			creditsCents: loan.credits_cents,
-			cashCents: loan.cash_cents,
-			memberNotes: loan.member_notes,
-			staffNotes: loan.staff_notes,
-			createdAt: ts(loan.created_at)!,
-			updatedAt: ts(loan.updated_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(equipmentLoan)
+			.values({
+				id: mapId('equipment_loans', loan.id),
+				equipmentId,
+				userId,
+				quantity: loan.quantity ?? 1,
+				requestedPickupDate: ts(loan.requested_pickup_date ?? loan.created_at)!,
+				scheduledPickupDate: ts(loan.scheduled_pickup_date),
+				dueDate: ts(loan.due_date),
+				checkedOutAt: ts(loan.checked_out_at),
+				returnedAt: ts(loan.returned_at),
+				status: loan.status ?? 'requested',
+				dailyRateCents: loan.daily_rate_cents,
+				totalChargeCents: loan.total_charge_cents,
+				creditsCents: loan.credits_cents,
+				cashCents: loan.cash_cents,
+				memberNotes: loan.member_notes,
+				staffNotes: loan.staff_notes,
+				createdAt: ts(loan.created_at)!,
+				updatedAt: ts(loan.updated_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${items.length} equipment items, ${loans.length} loans`);
@@ -823,17 +943,20 @@ async function migrateNotifications() {
 
 		const data = n.data ? (typeof n.data === 'string' ? JSON.parse(n.data) : n.data) : {};
 
-		await db.insert(notification).values({
-			id: n.id ?? mapId('notifications', n.id ?? userId + n.created_at),
-			userId,
-			type: n.type?.split('\\').pop() ?? 'general',
-			title: data.title ?? data.subject ?? n.type?.split('\\').pop() ?? 'Notification',
-			body: data.body ?? data.message ?? null,
-			href: data.action_url ?? data.url ?? null,
-			data: data,
-			readAt: ts(n.read_at),
-			createdAt: ts(n.created_at)!
-		}).onConflictDoNothing();
+		await db
+			.insert(notification)
+			.values({
+				id: n.id ?? mapId('notifications', n.id ?? userId + n.created_at),
+				userId,
+				type: n.type?.split('\\').pop() ?? 'general',
+				title: data.title ?? data.subject ?? n.type?.split('\\').pop() ?? 'Notification',
+				body: data.body ?? data.message ?? null,
+				href: data.action_url ?? data.url ?? null,
+				data: data,
+				readAt: ts(n.read_at),
+				createdAt: ts(n.created_at)!
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${notifications.length} notifications`);
@@ -863,19 +986,22 @@ async function migrateInvitations() {
 		const invitedById = lookupId('users', inv.inviter_id);
 		if (!bandId || !invitedById) continue;
 
-		await db.insert(platformInvite).values({
-			id: mapId('platform_invites', inv.id),
-			email: inv.email,
-			token: inv.token ?? mapId('invite_tokens', inv.id),
-			bandId,
-			role: 'member',
-			position: null,
-			invitedById,
-			status: 'pending',
-			expiresAt: ts(inv.expires_at) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-			createdAt: ts(inv.created_at)!,
-			acceptedAt: null
-		}).onConflictDoNothing();
+		await db
+			.insert(platformInvite)
+			.values({
+				id: mapId('platform_invites', inv.id),
+				email: inv.email,
+				token: inv.token ?? mapId('invite_tokens', inv.id),
+				bandId,
+				role: 'member',
+				position: null,
+				invitedById,
+				status: 'pending',
+				expiresAt: ts(inv.expires_at) ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+				createdAt: ts(inv.created_at)!,
+				acceptedAt: null
+			})
+			.onConflictDoNothing();
 	}
 
 	console.log(`  ✓ Migrated ${invitations.length} invitations`);
@@ -897,16 +1023,16 @@ async function exportCashPayments() {
 		const raw = Number(c.amount);
 		const amountCents = raw > 10000 ? Math.round(raw / 100) : raw;
 		return {
-		stripeCustomerId: c.stripe_id ?? null,
-		userName: c.user_name,
-		userEmail: c.user_email,
-		amountCents,
-		paymentMethod: c.payment_method,
-		paidAt: ts(c.paid_at)!,
-		notes: c.notes,
-		reservationId: c.chargeable_id ? lookupId('reservations', c.chargeable_id) : null,
-		legacyChargeId: c.id
-	};
+			stripeCustomerId: c.stripe_id ?? null,
+			userName: c.user_name,
+			userEmail: c.user_email,
+			amountCents,
+			paymentMethod: c.payment_method,
+			paidAt: ts(c.paid_at)!,
+			notes: c.notes,
+			reservationId: c.chargeable_id ? lookupId('reservations', c.chargeable_id) : null,
+			legacyChargeId: c.id
+		};
 	});
 
 	const outPath = resolve(import.meta.dirname!, 'cash-payments.json');
@@ -944,13 +1070,19 @@ async function migrateMedia() {
 		if (m.model_type === 'band') {
 			const bandId = lookupId('band_profiles', resolvedId);
 			if (bandId) {
-				await db.update(band).set({ avatarKey: r2Key }).where(sql`id = ${bandId}`);
+				await db
+					.update(band)
+					.set({ avatarKey: r2Key })
+					.where(sql`id = ${bandId}`);
 				updated++;
 			}
 		} else if (m.model_type === 'event') {
 			const eventId = lookupId('events', resolvedId);
 			if (eventId) {
-				await db.update(event).set({ posterKey: r2Key }).where(sql`id = ${eventId}`);
+				await db
+					.update(event)
+					.set({ posterKey: r2Key })
+					.where(sql`id = ${eventId}`);
 				updated++;
 			}
 		} else if (m.model_type === 'member_profile' || m.model_type === 'staff_profile') {
@@ -958,7 +1090,10 @@ async function migrateMedia() {
 			seenUsers.add(resolvedId);
 			const userId = lookupId('users', resolvedId);
 			if (userId) {
-				await db.update(user).set({ image: r2Key }).where(sql`id = ${userId}`);
+				await db
+					.update(user)
+					.set({ image: r2Key })
+					.where(sql`id = ${userId}`);
 				updated++;
 			}
 		}

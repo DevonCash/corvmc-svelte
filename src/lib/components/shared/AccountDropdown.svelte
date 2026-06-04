@@ -2,6 +2,7 @@
 	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from './Avatar.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
+	import { resolve } from '$app/paths';
 
 	let me = $derived(await getMe());
 	let open = $state(false);
@@ -40,19 +41,19 @@
 
 			<ul class="menu menu-sm p-2">
 				<li>
-					<a href="/member/profile" onclick={() => (open = false)}>
+					<a href={resolve('/member/profile')} onclick={() => (open = false)}>
 						<IconUser size={16} />
 						Profile
 					</a>
 				</li>
 				<li>
-					<a href="/member/account" onclick={() => (open = false)}>
+					<a href={resolve('/member/account')} onclick={() => (open = false)}>
 						<IconSettings size={16} />
 						Account
 					</a>
 				</li>
 				<li>
-					<a href="/member/membership" onclick={() => (open = false)}>
+					<a href={resolve('/member/membership')} onclick={() => (open = false)}>
 						<IconStar size={16} />
 						Membership
 					</a>

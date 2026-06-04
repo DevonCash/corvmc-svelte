@@ -16,7 +16,6 @@
 	let history = $derived(await getSeriesHistory(id));
 
 	let isActive = $derived(!series.cancelledAt);
-
 </script>
 
 <PageHeader title="Recurring Series" backHref="/staff/recurring">
@@ -29,7 +28,7 @@
 			class="btn-error btn-outline btn-sm"
 			onsuccess={() => invalidateAll()}
 		>
-			{#snippet form({ close })}
+			{#snippet form()}
 				<input {...cancelFields.seriesId.as('hidden', id)} />
 				<p class="py-4">Cancel this recurring series? No new reservations will be generated.</p>
 			{/snippet}
@@ -37,7 +36,6 @@
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
-
 	<div class="flex items-center gap-2 mb-4">
 		{#if series.cancelledAt}
 			<StatusBadge status="cancelled" />
@@ -73,12 +71,11 @@
 		</dl>
 	</InfoCard>
 
-
 	<!-- History -->
 	{#if history.length > 1}
 		<InfoCard title="Supersession History">
 			<div class="space-y-2">
-				{#each history as h, i}
+				{#each history as h, i (h.id)}
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
 						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
 						<span class="font-mono text-xs flex-1">{h.rrule}</span>

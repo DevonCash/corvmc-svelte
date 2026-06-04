@@ -27,14 +27,14 @@ The load function in `+page.server.ts` returns:
 
 ```typescript
 interface MembershipPageData {
-  subscription: SubscriptionInfo | null;
-  credits: Credits;
-  billingPortalUrl: string | null;
-  communityStats: {
-    sustainingMemberCount: number;
-    totalFreeHoursAllocated: number;
-    participationPercent: number;
-  };
+	subscription: SubscriptionInfo | null;
+	credits: Credits;
+	billingPortalUrl: string | null;
+	communityStats: {
+		sustainingMemberCount: number;
+		totalFreeHoursAllocated: number;
+		participationPercent: number;
+	};
 }
 ```
 
@@ -61,10 +61,10 @@ let cached: { stats: CommunityStats; expiresAt: number } | null = null;
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function getCommunityStats(): Promise<CommunityStats> {
-  if (cached && Date.now() < cached.expiresAt) return cached.stats;
-  const stats = await queryStats();
-  cached = { stats, expiresAt: Date.now() + TTL_MS };
-  return stats;
+	if (cached && Date.now() < cached.expiresAt) return cached.stats;
+	const stats = await queryStats();
+	cached = { stats, expiresAt: Date.now() + TTL_MS };
+	return stats;
 }
 ```
 
@@ -143,6 +143,7 @@ Full marketing page. Sections in order:
 ### 2. Cancelled-but-active (subscription with `cancelAtPeriodEnd: true`)
 
 Banner at the top showing:
+
 - "Your benefits continue until [currentPeriodEnd date]"
 - Resume button + Manage Billing link
 - Current contribution amount and remaining hours
@@ -166,6 +167,7 @@ Dashboard view. Sections in order:
 Shared between the "create" and "modify" flows. Renders inline on the page (not a modal).
 
 Fields:
+
 - **Contribution amount** — input in dollars, minimum $10, step $5. Displays the equivalent free hours as the user types (`$X/month = Y free hours`). The form converts dollars to quantity units by dividing by 5 before submitting.
 - **Cover processing fees** — checkbox. Shows the calculated fee amount when checked (from `calculateTotalWithFeeCoverage`). Copy: "Cover processing fees so the Collective receives 100% of your contribution"
 
@@ -223,10 +225,10 @@ Half-price tickets to every Collective event and show, first dibs on workshops, 
 
 **Tiers:**
 
-| Amount | Hours |
-|--------|-------|
-| $10/month | 2 free hours |
-| $25/month | 5 free hours |
+| Amount    | Hours         |
+| --------- | ------------- |
+| $10/month | 2 free hours  |
+| $25/month | 5 free hours  |
 | $50/month | 10 free hours |
 | $60/month | 12 free hours |
 
@@ -314,9 +316,9 @@ This calculation is done in the load function, not in a component.
 
 ```typescript
 export const load: LayoutServerLoad = async (event) => {
-  const user = event.locals.user;
-  if (!user) redirect(302, '/demo/login');
-  return { user };
+	const user = event.locals.user;
+	if (!user) redirect(302, '/demo/login');
+	return { user };
 };
 ```
 
@@ -327,9 +329,7 @@ No role check — any authenticated user can see the member portal.
 Mirrors the staff layout: daisyUI drawer with `Sidebar` and `Topbar` components. The sidebar nav items start with:
 
 ```typescript
-const navItems = [
-  { href: '/member/membership', label: 'Membership', icon: starIcon }
-];
+const navItems = [{ href: '/member/membership', label: 'Membership', icon: starIcon }];
 ```
 
 Reuses the existing `Sidebar`, `Topbar`, and `UserFooter` components from `$lib/components/staff/`. If those components have staff-specific assumptions (colors, titles), they should be parameterized. Otherwise they can be used directly.
@@ -338,23 +338,23 @@ Reuses the existing `Sidebar`, `Topbar`, and `UserFooter` components from `$lib/
 
 ## What changes
 
-| Area | Change |
-|------|--------|
-| Routes | New `/member/` route group with layout and membership page |
-| Components | New `member/membership/` component directory |
-| Stripe | New billing portal session creation in page server |
+| Area       | Change                                                               |
+| ---------- | -------------------------------------------------------------------- |
+| Routes     | New `/member/` route group with layout and membership page           |
+| Components | New `member/membership/` component directory                         |
+| Stripe     | New billing portal session creation in page server                   |
 | DB queries | New community stats aggregation queries against `credit_transaction` |
 
 ## What doesn't change
 
-| Area | Notes |
-|------|-------|
-| subscription-service | Used as-is — no changes to the API |
-| credit-service | Used as-is — `getAllBalances()` and `getBalance()` already exist |
-| payment-service | Used as-is — `checkout()` called via subscription-service |
-| webhook handlers | No changes — existing handlers cover the subscription lifecycle |
-| credit_transaction schema | No schema changes — queries use existing columns and indexes |
-| Staff portal | No changes to existing staff routes or layout |
+| Area                      | Notes                                                            |
+| ------------------------- | ---------------------------------------------------------------- |
+| subscription-service      | Used as-is — no changes to the API                               |
+| credit-service            | Used as-is — `getAllBalances()` and `getBalance()` already exist |
+| payment-service           | Used as-is — `checkout()` called via subscription-service        |
+| webhook handlers          | No changes — existing handlers cover the subscription lifecycle  |
+| credit_transaction schema | No schema changes — queries use existing columns and indexes     |
+| Staff portal              | No changes to existing staff routes or layout                    |
 
 ## Deferred
 

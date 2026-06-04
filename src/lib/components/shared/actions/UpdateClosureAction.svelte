@@ -32,7 +32,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', closureId)} />
 		<input {...fields.reason.as('hidden', reason)} />
 		<input {...fields.startsAt.as('hidden', startsAt)} />

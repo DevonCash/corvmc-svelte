@@ -35,9 +35,14 @@ describe('dispatch', () => {
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<typeof vi.fn>;
-		createNotification = (await import('./in-app-service')).createNotification as unknown as ReturnType<typeof vi.fn>;
-		getPreference = (await import('./preference-service')).getPreference as unknown as ReturnType<typeof vi.fn>;
+		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<
+			typeof vi.fn
+		>;
+		createNotification = (await import('./in-app-service'))
+			.createNotification as unknown as ReturnType<typeof vi.fn>;
+		getPreference = (await import('./preference-service')).getPreference as unknown as ReturnType<
+			typeof vi.fn
+		>;
 		pushToUser = (await import('./sse')).pushToUser as unknown as ReturnType<typeof vi.fn>;
 		dispatch = (await import('./dispatcher')).dispatch as any;
 
@@ -119,9 +124,7 @@ describe('dispatch', () => {
 			dispatch({ ...BASE_PARAMS, emailSubject: undefined, emailHtml: undefined })
 		).resolves.toBeUndefined();
 
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.any(Error)
-		);
+		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
 	});
 
@@ -132,9 +135,7 @@ describe('dispatch', () => {
 
 		await expect(dispatch(BASE_PARAMS)).resolves.toBeUndefined();
 
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.any(Error)
-		);
+		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
 	});
 });
@@ -146,7 +147,9 @@ describe('dispatchEmailOnly', () => {
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<typeof vi.fn>;
+		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<
+			typeof vi.fn
+		>;
 		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
 	});
 
@@ -181,9 +184,7 @@ describe('dispatchEmailOnly', () => {
 			})
 		).resolves.toBeUndefined();
 
-		expect(consoleSpy).toHaveBeenCalledWith(
-			expect.any(Error)
-		);
+		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
 	});
 });

@@ -112,7 +112,10 @@ const createArticleSchema = z.object({
 	summary: z.string().trim().max(500).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
-	published: z.string().optional().transform((v) => v === 'on')
+	published: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on')
 });
 
 export const createArticle = form(createArticleSchema, async (data) => {
@@ -133,7 +136,10 @@ const updateArticleSchema = z.object({
 	summary: z.string().trim().max(500).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
-	published: z.string().optional().transform((v) => v === 'on')
+	published: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on')
 });
 
 export const updateArticle = form(updateArticleSchema, async (data) => {
@@ -143,14 +149,11 @@ export const updateArticle = form(updateArticleSchema, async (data) => {
 	return { success: true };
 });
 
-export const deleteArticle = form(
-	z.object({ id: z.string().min(1) }),
-	async (data) => {
-		await requireStaff();
-		await deleteArticleSvc(data.id);
-		return { success: true };
-	}
-);
+export const deleteArticle = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	await deleteArticleSvc(data.id);
+	return { success: true };
+});
 
 // ---------------------------------------------------------------------------
 // Category Forms
@@ -161,7 +164,11 @@ const createCategorySchema = z.object({
 	slug: z.string().trim().max(100).optional().default(''),
 	description: z.string().trim().max(500).optional(),
 	icon: z.string().max(50).optional(),
-	sortOrder: z.string().optional().default('0').transform((v) => parseInt(v, 10)),
+	sortOrder: z
+		.string()
+		.optional()
+		.default('0')
+		.transform((v) => parseInt(v, 10)),
 	minRole: z.string().default('member')
 });
 
@@ -180,7 +187,10 @@ const updateCategorySchema = z.object({
 	slug: z.string().trim().min(1).max(100).optional(),
 	description: z.string().trim().max(500).optional(),
 	icon: z.string().max(50).optional(),
-	sortOrder: z.string().optional().transform((v) => (v != null ? parseInt(v, 10) : undefined)),
+	sortOrder: z
+		.string()
+		.optional()
+		.transform((v) => (v != null ? parseInt(v, 10) : undefined)),
 	minRole: z.string().optional()
 });
 
@@ -191,11 +201,8 @@ export const updateCategory = form(updateCategorySchema, async (data) => {
 	return { success: true };
 });
 
-export const deleteCategory = form(
-	z.object({ id: z.string().min(1) }),
-	async (data) => {
-		await requireStaff();
-		await deleteCategorySvc(data.id);
-		return { success: true };
-	}
-);
+export const deleteCategory = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	await deleteCategorySvc(data.id);
+	return { success: true };
+});

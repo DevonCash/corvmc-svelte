@@ -31,8 +31,12 @@ describe('domainEvents', () => {
 
 	it('supports multiple listeners on the same event', async () => {
 		let callCount = 0;
-		domainEvents.on('contact.form_submitted', () => { callCount++; });
-		domainEvents.on('contact.form_submitted', () => { callCount++; });
+		domainEvents.on('contact.form_submitted', () => {
+			callCount++;
+		});
+		domainEvents.on('contact.form_submitted', () => {
+			callCount++;
+		});
 
 		await domainEvents.emit('contact.form_submitted', {
 			name: 'Bob',

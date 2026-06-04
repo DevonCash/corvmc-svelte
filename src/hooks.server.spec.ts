@@ -4,6 +4,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
+// `handle` is `sequence(Sentry.sentryHandle(), handleBetterAuth)`. Both the real
+// `sentryHandle()` and SvelteKit's real `sequence()` reach for the request
+// async-context store, which isn't set up when calling `handle` directly in a
+// unit test. Mock Sentry to no-ops, and mock `sequence` to delegate to the final
+// (business-logic) handler so these tests exercise handleBetterAuth as before.
+vi.mock('@sentry/sveltekit', () => ({
+	sentryHandle:
+		() =>
+		({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>
+			resolve(event),
+	handleErrorWithSentry: <T>(handler: T) => handler
+}));
+
+vi.mock('@sveltejs/kit/hooks', () => ({
+	sequence: (...handlers: unknown[]) => handlers[handlers.length - 1]
+}));
+
 const mockRegisterListeners = vi.fn();
 vi.mock('$lib/server/events/register-listeners', () => ({
 	registerListeners: (...args: unknown[]) => mockRegisterListeners(...args)
@@ -132,8 +149,6 @@ describe('hooks.server handle', () => {
 
 		await handle({ event: event as any, resolve });
 
-		expect(mockSvelteKitHandler).toHaveBeenCalledWith(
-			expect.objectContaining({ event, resolve })
-		);
+		expect(mockSvelteKitHandler).toHaveBeenCalledWith(expect.objectContaining({ event, resolve }));
 	});
 });

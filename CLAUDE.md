@@ -132,4 +132,3 @@ This site provides documentation in a format optimized for Large Language Models
 - [Without Child Documentation](https://bits-ui.com/docs/type-helpers/without-child/llms.txt): Detailed documentation for Without Child
 - [Without Children Or Child Documentation](https://bits-ui.com/docs/type-helpers/without-children-or-child/llms.txt): Detailed documentation for Without Children Or Child
 - [Without Children Documentation](https://bits-ui.com/docs/type-helpers/without-children/llms.txt): Detailed documentation for Without Children
-

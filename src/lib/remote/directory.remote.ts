@@ -9,7 +9,6 @@ import {
 	listPublicMembers,
 	listPublicBands,
 	getMemberProfile as getMemberProfileService,
-	getBandProfile as getBandProfileService,
 	suggestInstruments,
 	suggestGenres
 } from '$lib/server/directory/directory-service';
@@ -34,18 +33,44 @@ import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authen
 
 const filtersSchema = z.object({
 	search: z.string().optional(),
-	instruments: z.string().optional().transform((s) => {
-		if (!s) return undefined;
-		try { return JSON.parse(s) as string[]; } catch { return undefined; }
-	}),
-	genres: z.string().optional().transform((s) => {
-		if (!s) return undefined;
-		try { return JSON.parse(s) as string[]; } catch { return undefined; }
-	}),
-	lookingForBand: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	availableForHire: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	teachesLessons: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	lookingForMembers: z.string().optional().transform((v) => v === 'true' ? true : undefined)
+	instruments: z
+		.string()
+		.optional()
+		.transform((s) => {
+			if (!s) return undefined;
+			try {
+				return JSON.parse(s) as string[];
+			} catch {
+				return undefined;
+			}
+		}),
+	genres: z
+		.string()
+		.optional()
+		.transform((s) => {
+			if (!s) return undefined;
+			try {
+				return JSON.parse(s) as string[];
+			} catch {
+				return undefined;
+			}
+		}),
+	lookingForBand: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	availableForHire: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	teachesLessons: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	lookingForMembers: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined))
 });
 
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
@@ -152,23 +177,61 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 
 const publicFiltersSchema = z.object({
 	search: z.string().optional(),
-	instruments: z.string().optional().transform((s) => {
-		if (!s) return undefined;
-		try { return JSON.parse(s) as string[]; } catch { return undefined; }
-	}),
-	genres: z.string().optional().transform((s) => {
-		if (!s) return undefined;
-		try { return JSON.parse(s) as string[]; } catch { return undefined; }
-	}),
-	lookingForBand: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	availableForHire: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	teachesLessons: z.string().optional().transform((v) => v === 'true' ? true : undefined),
-	lookingForMembers: z.string().optional().transform((v) => v === 'true' ? true : undefined)
+	instruments: z
+		.string()
+		.optional()
+		.transform((s) => {
+			if (!s) return undefined;
+			try {
+				return JSON.parse(s) as string[];
+			} catch {
+				return undefined;
+			}
+		}),
+	genres: z
+		.string()
+		.optional()
+		.transform((s) => {
+			if (!s) return undefined;
+			try {
+				return JSON.parse(s) as string[];
+			} catch {
+				return undefined;
+			}
+		}),
+	lookingForBand: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	availableForHire: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	teachesLessons: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	lookingForMembers: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined))
 });
 
-export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {	const [members, bands] = await Promise.all([
-		listPublicMembers({ search: filters.search, instruments: filters.instruments, genres: filters.genres, lookingForBand: filters.lookingForBand, availableForHire: filters.availableForHire, teachesLessons: filters.teachesLessons }),
-		listPublicBands({ search: filters.search, genres: filters.genres, lookingForMembers: filters.lookingForMembers })
+export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {
+	const [members, bands] = await Promise.all([
+		listPublicMembers({
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons
+		}),
+		listPublicBands({
+			search: filters.search,
+			genres: filters.genres,
+			lookingForMembers: filters.lookingForMembers
+		})
 	]);
 
 	return {
@@ -321,15 +384,12 @@ export const getMemberProfile = query(z.void(), async () => {
 	return { ...profile, avatarUrl: resolveImageUrl(profile.image) };
 });
 
-export const uploadMemberAvatar = form(
-	z.object({ file: z.instanceof(File) }),
-	async (data) => {
-		const user = requireUser();
-		await setUserAvatar(user.id, await data.file.arrayBuffer(), data.file.type);
-		void getMemberProfile().refresh();
-		return { success: true };
-	}
-);
+export const uploadMemberAvatar = form(z.object({ file: z.instanceof(File) }), async (data) => {
+	const user = requireUser();
+	await setUserAvatar(user.id, await data.file.arrayBuffer(), data.file.type);
+	void getMemberProfile().refresh();
+	return { success: true };
+});
 
 export const removeMemberAvatar = form(z.object({}), async () => {
 	const user = requireUser();
@@ -342,20 +402,41 @@ const memberProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
 	bio: z.string().max(2000).optional().default(''),
 	instruments: z.string().transform((s) => {
-		try { return JSON.parse(s) as string[]; } catch { return []; }
+		try {
+			return JSON.parse(s) as string[];
+		} catch {
+			return [];
+		}
 	}),
 	genres: z.string().transform((s) => {
-		try { return JSON.parse(s) as string[]; } catch { return []; }
+		try {
+			return JSON.parse(s) as string[];
+		} catch {
+			return [];
+		}
 	}),
-	lookingForBand: z.string().optional().transform((v) => v === 'on'),
-	availableForHire: z.string().optional().transform((v) => v === 'on'),
-	teachesLessons: z.string().optional().transform((v) => v === 'on'),
+	lookingForBand: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on'),
+	availableForHire: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on'),
+	teachesLessons: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on'),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('members'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
 	links: z.string().transform((s) => {
-		try { return JSON.parse(s) as Array<{ label: string; url: string }>; } catch { return []; }
+		try {
+			return JSON.parse(s) as Array<{ label: string; url: string }>;
+		} catch {
+			return [];
+		}
 	})
 });
 
@@ -397,15 +478,26 @@ export const getBandProfile = query(z.void(), async () => {
 const bandProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
 	genres: z.string().transform((s) => {
-		try { return JSON.parse(s) as string[]; } catch { return []; }
+		try {
+			return JSON.parse(s) as string[];
+		} catch {
+			return [];
+		}
 	}),
-	lookingForMembers: z.string().optional().transform((v) => v === 'on'),
+	lookingForMembers: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on'),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('public'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
 	links: z.string().transform((s) => {
-		try { return JSON.parse(s) as Array<{ label: string; url: string }>; } catch { return []; }
+		try {
+			return JSON.parse(s) as Array<{ label: string; url: string }>;
+		} catch {
+			return [];
+		}
 	})
 });
 

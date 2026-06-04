@@ -71,7 +71,7 @@ Functions:
 - **`listSubscribers(audienceId)`** — Return all audience_member rows joined with subscriber, including unsubscribed ones. Ordered by createdAt desc.
 - **`getSubscriptionsForUser(userId)`** — Return all audiences where this user's subscriber record is an active member. For the member account page.
 - **`getOptInAudiences()`** — Return all audiences where `allowOptIn` is true. Used by the public subscribe page and member account opt-in UI.
-- **`getOptInAudiencesForUser(userId)`** — Return opt-in audiences the user is *not* currently subscribed to. For the member account "available lists" section.
+- **`getOptInAudiencesForUser(userId)`** — Return opt-in audiences the user is _not_ currently subscribed to. For the member account "available lists" section.
 - **`unsubscribe(subscriberId, audienceId)`** — Set unsubscribedAt = now() on the audience_member row.
 
 ### 2.3 Create `src/lib/server/marketing/unsubscribe.ts`
@@ -103,12 +103,14 @@ The rendering pipeline:
 4. Pass through the existing `compileEmail()` from `notification/email/compile-template.ts` — but with a **campaign-specific footer** that says "Unsubscribe from this list" instead of the transactional footer
 
 This means either:
+
 - Make `compileEmail` accept an optional footer override, or
 - Create a `compileCampaignEmail(content, previewText, footerHtml)` variant
 
 The second is cleaner — campaigns have different footer needs than transactional emails.
 
 Functions:
+
 - **`renderCampaignPreview(markdown)`** — For the live editor preview. Returns HTML string. Uses placeholder values for template variables.
 - **`renderCampaignForSend(markdown, subscriberName, unsubscribeUrl)`** — For actual send. Returns full HTML email with real variable values.
 
@@ -220,6 +222,7 @@ Wire up the staff navigation and build the public-facing subscribe/unsubscribe p
 ### 6.1 Add Marketing section to staff layout
 
 In `src/routes/staff/+layout.svelte`, add a "Marketing" nav group with:
+
 - "Campaigns" → `/staff/marketing/campaigns`
 - "Audiences" → `/staff/marketing/audiences`
 
@@ -253,7 +256,7 @@ Public unsubscribe page (no auth required):
 In the existing member account page (`/member/account`), add two parts:
 
 1. **Current subscriptions:** All audiences the member is subscribed to, each with an unsubscribe toggle. Query via `getSubscriptionsForUser(userId)`.
-2. **Available lists:** All opt-in audiences the member is *not* subscribed to, each with a "Subscribe" button. Query via `getOptInAudiencesForUser(userId)`.
+2. **Available lists:** All opt-in audiences the member is _not_ subscribed to, each with a "Subscribe" button. Query via `getOptInAudiencesForUser(userId)`.
 
 This requires finding the member's subscriber record by userId (creating one if it doesn't exist), then querying their audience memberships against the opt-in audience list.
 

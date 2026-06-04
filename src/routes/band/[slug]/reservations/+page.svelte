@@ -5,9 +5,10 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Form, { Field } from '$lib/components/shared/Form';
+	import Form from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation, getBandReservations } from '$lib/remote/reservations.remote';
@@ -25,8 +26,8 @@
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-		<Button href="reservations/new" class="btn-sm">Book a Session</Button>
-	</PageHeader>
+	<Button href="reservations/new" class="btn-sm">Book a Session</Button>
+</PageHeader>
 <PageContent width="2xl">
 	<TabBar
 		tabs={[
@@ -41,7 +42,10 @@
 		{#if upcoming.length === 0}
 			<EmptyState>
 				<p>No upcoming reservations</p>
-				<a href="reservations/new" class="mt-2 inline-block link link-primary">
+				<a
+					href={resolve(`/band/${band.slug}/reservations/new`)}
+					class="mt-2 inline-block link link-primary"
+				>
 					Book your first session
 				</a>
 			</EmptyState>
@@ -72,7 +76,10 @@
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
 									<Form
 										remote={cancel}
-										onsuccess={() => { toast.success('Reservation cancelled'); invalidateAll(); }}
+										onsuccess={() => {
+											toast.success('Reservation cancelled');
+											invalidateAll();
+										}}
 										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />

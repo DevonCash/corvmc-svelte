@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/schema/equipment';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, like, inArray, or, desc, count } from 'drizzle-orm';
+import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -47,7 +47,11 @@ export function calculateDailyRate(pricingTier: PricingTier, isSustainingMember:
 	return pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
 }
 
-export function calculateLoanCharge(dailyRateCents: number, checkedOutAt: Date, returnedAt: Date): number {
+export function calculateLoanCharge(
+	dailyRateCents: number,
+	checkedOutAt: Date,
+	returnedAt: Date
+): number {
 	const ms = returnedAt.getTime() - checkedOutAt.getTime();
 	const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 	return dailyRateCents * days;
@@ -420,11 +424,7 @@ export async function cancelLoan(loanId: string) {
 // ---------------------------------------------------------------------------
 
 async function getLoanRaw(id: string) {
-	const [row] = await db
-		.select()
-		.from(equipmentLoan)
-		.where(eq(equipmentLoan.id, id))
-		.limit(1);
+	const [row] = await db.select().from(equipmentLoan).where(eq(equipmentLoan.id, id)).limit(1);
 	return row ?? null;
 }
 
@@ -459,9 +459,7 @@ export async function getLoanById(id: string) {
 		userPronouns: row.userPronouns,
 		userRole: row.userRole,
 		isOverdue:
-			row.loan.status === 'checked_out' &&
-			row.loan.dueDate != null &&
-			row.loan.dueDate < new Date()
+			row.loan.status === 'checked_out' && row.loan.dueDate != null && row.loan.dueDate < new Date()
 	};
 }
 
@@ -479,9 +477,7 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 	if (opts.userId) conditions.push(eq(equipmentLoan.userId, opts.userId));
 	if (opts.equipmentId) conditions.push(eq(equipmentLoan.equipmentId, opts.equipmentId));
 	if (opts.search) {
-		conditions.push(
-			or(like(user.name, `%${opts.search}%`), like(user.email, `%${opts.search}%`))
-		);
+		conditions.push(or(like(user.name, `%${opts.search}%`), like(user.email, `%${opts.search}%`)));
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;

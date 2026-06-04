@@ -6,7 +6,6 @@
 	const { fields } = revokeBandInvite;
 
 	let {
-		bandId,
 		memberId,
 		name,
 		class: className = 'btn-ghost btn-xs text-warning',
@@ -31,7 +30,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.memberId.as('hidden', memberId)} />
 		<p class="py-4">Revoke invitation for {name}?</p>
 	{/snippet}

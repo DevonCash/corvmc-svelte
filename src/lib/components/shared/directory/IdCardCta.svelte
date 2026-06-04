@@ -1,13 +1,15 @@
 <script lang="ts">
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		href?: string;
 	}
 
-	let { href = '/login?register' }: Props = $props();
+	let { href = `${resolve('/login')}?register` }: Props = $props();
 </script>
 
+<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href defaults to a resolve()d internal path with a query string; the rule can't trace it through the prop default -->
 <a {href} class="id-card id-card--cta">
 	<div class="id-card__header">
 		<div class="id-card__brand">
@@ -25,9 +27,7 @@
 		<div class="id-card__info">
 			<div class="id-card__name">Your name here</div>
 			<div class="id-card__role">Join the collective</div>
-			<div class="id-card__cta-arrow">
-				Get started &rarr;
-			</div>
+			<div class="id-card__cta-arrow">Get started &rarr;</div>
 		</div>
 	</div>
 	<div class="id-card__footer">

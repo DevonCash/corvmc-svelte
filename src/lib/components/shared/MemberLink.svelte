@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MemberSummary } from '$lib/server/db/schema/api';
+	import { resolve } from '$app/paths';
 	import Avatar from './Avatar.svelte';
 	import { IconUser, IconUserCog, IconUserShield, IconUserHeart } from '@tabler/icons-svelte';
 
@@ -21,12 +22,14 @@
 	} as const;
 
 	const RoleIcon = $derived(
-		member.role && member.role in roleIcons ? roleIcons[member.role as keyof typeof roleIcons] : IconUser
+		member.role && member.role in roleIcons
+			? roleIcons[member.role as keyof typeof roleIcons]
+			: IconUser
 	);
 </script>
 
 <a
-	href={member.userId ? `/staff/users/${member.userId}` : '#'}
+	href={member.userId ? resolve(`/staff/users/${member.userId}`) : '#'}
 	class="flat btn inline-flex items-center justify-start gap-3 text-left btn-ghost {extraClass}"
 >
 	{#if member.avatarUrl && !hideAvatar}

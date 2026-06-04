@@ -16,11 +16,13 @@
 		resumeAction: RemoteForm<any, any>;
 	} = $props();
 
-	const endDate = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric'
-	}));
+	const endDate = $derived(
+		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
+			month: 'long',
+			day: 'numeric',
+			year: 'numeric'
+		})
+	);
 	const freeHours = $derived(subscription.quantity);
 </script>
 
@@ -29,7 +31,11 @@
 
 	<div>
 		<p>
-			Your sustaining membership has been cancelled, but your benefits — including <strong>{freeHours} free practice hours</strong> — are still active until <strong>{endDate}</strong>. You can pick it back up anytime before then.
+			Your sustaining membership has been cancelled, but your benefits — including <strong
+				>{freeHours} free practice hours</strong
+			>
+			— are still active until <strong>{endDate}</strong>. You can pick it back up anytime before
+			then.
 		</p>
 
 		<div class="mt-3 flex flex-wrap gap-2">
@@ -40,7 +46,7 @@
 				class="btn-sm btn-primary"
 				onsuccess={() => toast.success('Membership resumed')}
 			>
-				{#snippet form({ close })}
+				{#snippet form()}
 					<p class="py-4">Resume your sustaining membership?</p>
 				{/snippet}
 			</Action>

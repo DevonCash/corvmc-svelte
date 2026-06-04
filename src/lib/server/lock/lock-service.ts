@@ -13,7 +13,11 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 /**
  * Run the daily lock job: clean up yesterday's access, then provision today's.
  */
-export async function runDailyLockJob(): Promise<{ provisioned: number; cleaned: number; errors: string[] }> {
+export async function runDailyLockJob(): Promise<{
+	provisioned: number;
+	cleaned: number;
+	errors: string[];
+}> {
 	const errors: string[] = [];
 
 	const cleaned = await cleanupPreviousDayAccess(errors);
@@ -131,4 +135,3 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 
 	return count;
 }
-

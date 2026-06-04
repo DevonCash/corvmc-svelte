@@ -31,7 +31,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', loanId)} />
 		<p class="py-4">{confirmText}</p>
 	{/snippet}

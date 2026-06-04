@@ -165,9 +165,7 @@ export const updateBandEventForm = form(
 		}
 
 		if (data.doorsTime !== undefined && data.eventDate) {
-			params.doorsAt = data.doorsTime
-				? buildDateInTz(data.eventDate, data.doorsTime, tz)
-				: null;
+			params.doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
 		await updateBandEvent(data.eventId, band.id, params);

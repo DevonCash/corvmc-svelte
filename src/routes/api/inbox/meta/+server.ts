@@ -17,7 +17,11 @@ async function verifySignature(body: string, signature: string): Promise<boolean
 	);
 
 	const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
-	const expected = 'sha256=' + Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+	const expected =
+		'sha256=' +
+		Array.from(new Uint8Array(sig))
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('');
 
 	return expected === signature;
 }

@@ -53,8 +53,13 @@ vi.mock('$lib/server/db', () => ({
 		update: () => {
 			const chain: any = new Proxy(() => chain, {
 				get(_, prop) {
-					if (prop === 'set') return (data: unknown) => { updateData.push(data); return chain; };
-					if (prop === 'returning') return () => Promise.resolve([{ key: 'rehearsal', name: 'Updated' }]);
+					if (prop === 'set')
+						return (data: unknown) => {
+							updateData.push(data);
+							return chain;
+						};
+					if (prop === 'returning')
+						return () => Promise.resolve([{ key: 'rehearsal', name: 'Updated' }]);
 					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
 					return () => chain;
 				}
@@ -65,7 +70,14 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/product-config', () => ({
-	productConfig: { key: 'key', stripeProductId: 'stripe_product_id', name: 'name', description: 'description', unitAmountCents: 'unit_amount_cents', unitLabel: 'unit_label' }
+	productConfig: {
+		key: 'key',
+		stripeProductId: 'stripe_product_id',
+		name: 'name',
+		description: 'description',
+		unitAmountCents: 'unit_amount_cents',
+		unitLabel: 'unit_label'
+	}
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -88,7 +100,6 @@ vi.mock('$lib/server/stripe', () => ({
 
 const {
 	getProductConfig,
-	getAllProductConfigs,
 	getStripeProductId,
 	updateProductConfig,
 	buildLineItem,
@@ -109,7 +120,14 @@ beforeEach(() => {
 
 describe('getProductConfig', () => {
 	it('returns existing row from database', async () => {
-		const row = { key: 'rehearsal', stripeProductId: 'prod_123', name: 'Practice Room', description: 'Hourly', unitAmountCents: 1500, unitLabel: 'per hour' };
+		const row = {
+			key: 'rehearsal',
+			stripeProductId: 'prod_123',
+			name: 'Practice Room',
+			description: 'Hourly',
+			unitAmountCents: 1500,
+			unitLabel: 'per hour'
+		};
 		selectResults.push([row]);
 
 		const result = await getProductConfig('rehearsal');
@@ -121,7 +139,16 @@ describe('getProductConfig', () => {
 		// First select: no row
 		selectResults.push([]);
 		// insert.onConflictDoNothing.returning: returns created row
-		selectResults.push([{ key: 'rehearsal', stripeProductId: null, name: 'Practice Room Rental', description: 'Hourly practice room rental at the Corvallis Music Collective', unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: null,
+				name: 'Practice Room Rental',
+				description: 'Hourly practice room rental at the Corvallis Music Collective',
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		const result = await getProductConfig('rehearsal');
 
@@ -132,7 +159,16 @@ describe('getProductConfig', () => {
 
 describe('getStripeProductId', () => {
 	it('returns existing stripe product ID', async () => {
-		selectResults.push([{ key: 'rehearsal', stripeProductId: 'prod_existing', name: 'Practice Room', description: null, unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: 'prod_existing',
+				name: 'Practice Room',
+				description: null,
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		const result = await getStripeProductId('rehearsal');
 
@@ -141,22 +177,42 @@ describe('getStripeProductId', () => {
 	});
 
 	it('creates Stripe product when none exists', async () => {
-		selectResults.push([{ key: 'rehearsal', stripeProductId: null, name: 'Practice Room', description: 'Hourly rental', unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: null,
+				name: 'Practice Room',
+				description: 'Hourly rental',
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		const result = await getStripeProductId('rehearsal');
 
 		expect(result).toBe('prod_new_123');
-		expect(mockStripeProducts.create).toHaveBeenCalledWith(expect.objectContaining({
-			name: 'Practice Room',
-			description: 'Hourly rental',
-			metadata: { corvmc_key: 'rehearsal' }
-		}));
+		expect(mockStripeProducts.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				name: 'Practice Room',
+				description: 'Hourly rental',
+				metadata: { corvmc_key: 'rehearsal' }
+			})
+		);
 	});
 });
 
 describe('updateProductConfig', () => {
 	it('updates local config and syncs to Stripe when product exists', async () => {
-		selectResults.push([{ key: 'rehearsal', stripeProductId: 'prod_123', name: 'Old Name', description: 'Old desc', unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: 'prod_123',
+				name: 'Old Name',
+				description: 'Old desc',
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		await updateProductConfig('rehearsal', { name: 'New Name', description: 'New desc' });
 
@@ -168,7 +224,16 @@ describe('updateProductConfig', () => {
 	});
 
 	it('skips Stripe sync when no Stripe product exists', async () => {
-		selectResults.push([{ key: 'rehearsal', stripeProductId: null, name: 'Old', description: null, unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: null,
+				name: 'Old',
+				description: null,
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		await updateProductConfig('rehearsal', { name: 'Updated' });
 
@@ -176,7 +241,16 @@ describe('updateProductConfig', () => {
 	});
 
 	it('skips Stripe sync when name/description unchanged', async () => {
-		selectResults.push([{ key: 'rehearsal', stripeProductId: 'prod_123', name: 'Same', description: 'Same', unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: 'prod_123',
+				name: 'Same',
+				description: 'Same',
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		await updateProductConfig('rehearsal', { unitAmountCents: 2000 });
 
@@ -187,7 +261,16 @@ describe('updateProductConfig', () => {
 describe('buildLineItem', () => {
 	it('returns a line item with price_data', async () => {
 		// getStripeProductId -> getProductConfig
-		selectResults.push([{ key: 'rehearsal', stripeProductId: 'prod_123', name: 'Room', description: null, unitAmountCents: 1500, unitLabel: 'per hour' }]);
+		selectResults.push([
+			{
+				key: 'rehearsal',
+				stripeProductId: 'prod_123',
+				name: 'Room',
+				description: null,
+				unitAmountCents: 1500,
+				unitLabel: 'per hour'
+			}
+		]);
 
 		const item = await buildLineItem('rehearsal', 1500, 2);
 
@@ -204,7 +287,16 @@ describe('buildLineItem', () => {
 
 describe('buildSubscriptionLineItem', () => {
 	it('includes recurring interval in price_data', async () => {
-		selectResults.push([{ key: 'contribution', stripeProductId: 'prod_sub', name: 'Monthly', description: null, unitAmountCents: 500, unitLabel: 'per month' }]);
+		selectResults.push([
+			{
+				key: 'contribution',
+				stripeProductId: 'prod_sub',
+				name: 'Monthly',
+				description: null,
+				unitAmountCents: 500,
+				unitLabel: 'per month'
+			}
+		]);
 
 		const item = await buildSubscriptionLineItem('contribution', 500, 1, 'month');
 

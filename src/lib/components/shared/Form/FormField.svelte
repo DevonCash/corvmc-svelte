@@ -7,7 +7,22 @@
 	import { getFormContext } from './Form.svelte';
 	import { IconPencilOff } from '@tabler/icons-svelte';
 
-	type InputType = 'text' | 'email' | 'tel' | 'number' | 'password' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'tags' | 'checkbox' | 'toggle' | 'file' | 'calendar';
+	type InputType =
+		| 'text'
+		| 'email'
+		| 'tel'
+		| 'number'
+		| 'password'
+		| 'date'
+		| 'time'
+		| 'datetime-local'
+		| 'textarea'
+		| 'select'
+		| 'tags'
+		| 'checkbox'
+		| 'toggle'
+		| 'file'
+		| 'calendar';
 
 	let {
 		label,
@@ -50,18 +65,29 @@
 	const uid = Math.random().toString(16).slice(2, 8);
 	let _name = $derived(name ?? propId ?? '');
 	let _id = $derived(propId ?? `form-field-${_name}-${uid}`);
-	let _label = $derived.by(() => label ?? (_name ? _name.slice(0, 1).toUpperCase() + _name.slice(1) : ''));
+	let _label = $derived.by(
+		() => label ?? (_name ? _name.slice(0, 1).toUpperCase() + _name.slice(1) : '')
+	);
 
 	// Resolve field attributes from SvelteKit field definition when provided
 	let fieldAttrs = $derived.by(() => {
 		if (!field) return null;
-		const asType = type === 'textarea' || type === 'tags' || type === 'calendar' || type === 'toggle' || type === 'file' ? 'text' : type ?? 'text';
+		const asType =
+			type === 'textarea' ||
+			type === 'tags' ||
+			type === 'calendar' ||
+			type === 'toggle' ||
+			type === 'file'
+				? 'text'
+				: (type ?? 'text');
 		return field.as(asType as any);
 	});
 
 	// When field is provided, derive name/id from it
 	let resolvedName = $derived(fieldAttrs?.name ?? _name);
-	let resolvedId = $derived(propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id));
+	let resolvedId = $derived(
+		propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id)
+	);
 
 	// Issues: field.issues() > propIssues > form context
 	let issues = $derived.by(() => {
@@ -81,7 +107,11 @@
 	});
 </script>
 
-<fieldset class="fieldset {className}" oninput={() => form?.changed()} onchange={() => form?.changed()}>
+<fieldset
+	class="fieldset {className}"
+	oninput={() => form?.changed()}
+	onchange={() => form?.changed()}
+>
 	<legend class="fieldset-legend">
 		{_label}
 	</legend>
@@ -102,7 +132,11 @@
 			<IconPencilOff class="size-5 opacity-20" />
 		</p>
 	{:else if type === 'textarea'}
-		<textarea class="textarea-bordered textarea w-full" class:ghost={readonly} {...inputProps} bind:value
+		<textarea
+			class="textarea-bordered textarea w-full"
+			class:ghost={readonly}
+			{...inputProps}
+			bind:value
 		></textarea>
 	{:else if type === 'tags'}
 		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
@@ -110,18 +144,43 @@
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer gap-2 items-center">
-			<input type="checkbox" class="checkbox shrink-0" bind:checked={value} disabled={pending || readonly} id={resolvedId} name={resolvedName} />
+			<input
+				type="checkbox"
+				class="checkbox shrink-0"
+				bind:checked={value}
+				disabled={pending || readonly}
+				id={resolvedId}
+				name={resolvedName}
+			/>
 			{#if rest.checkboxLabel}<span class="text-wrap">{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'toggle'}
 		<label class="label cursor-pointer gap-2">
-			<input type="checkbox" class="toggle" bind:checked={value} disabled={pending || readonly} id={resolvedId} name={resolvedName} />
+			<input
+				type="checkbox"
+				class="toggle"
+				bind:checked={value}
+				disabled={pending || readonly}
+				id={resolvedId}
+				name={resolvedName}
+			/>
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
 	{:else if type === 'file' && upload}
-		<FileUpload name={resolvedName} {upload} {accept} {value} {src} disabled={pending || readonly} />
+		<FileUpload
+			name={resolvedName}
+			{upload}
+			{accept}
+			{value}
+			{src}
+			disabled={pending || readonly}
+		/>
 	{:else if type === 'select' && rest.multiple}
-		<input type="hidden" name={resolvedName} value={JSON.stringify(Array.isArray(value) ? value : [])} />
+		<input
+			type="hidden"
+			name={resolvedName}
+			value={JSON.stringify(Array.isArray(value) ? value : [])}
+		/>
 		<select
 			class="select-bordered select w-full"
 			class:ghost={readonly}
@@ -136,7 +195,10 @@
 			}}
 		>
 			{#each rest.options as option (option.value)}
-				<option value={option.value} selected={Array.isArray(value) && value.includes(option.value)}>
+				<option
+					value={option.value}
+					selected={Array.isArray(value) && value.includes(option.value)}
+				>
 					{option.label}
 				</option>
 			{/each}
@@ -151,8 +213,21 @@
 			{/each}
 		</select>
 	{:else if field && fieldAttrs}
-		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...fieldAttrs} id={resolvedId} disabled={pending || readonly} />
+		<input
+			class="input-bordered input w-full"
+			class:ghost={readonly}
+			{...rest}
+			{...fieldAttrs}
+			id={resolvedId}
+			disabled={pending || readonly}
+		/>
 	{:else}
-		<input class="input-bordered input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
+		<input
+			class="input-bordered input w-full"
+			class:ghost={readonly}
+			{...rest}
+			{...inputProps}
+			bind:value
+		/>
 	{/if}
 </fieldset>

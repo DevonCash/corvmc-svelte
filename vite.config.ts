@@ -1,5 +1,4 @@
 import { sentrySvelteKit } from '@sentry/sveltekit';
-/// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';

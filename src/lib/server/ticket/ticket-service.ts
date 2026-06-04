@@ -60,7 +60,15 @@ async function generateUniqueCodes(count: number): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 export async function createTickets(options: CreateTicketsOptions) {
-	const { eventId, purchaseId, quantity, userId, attendeeName, attendeeEmail, status = 'pending' } = options;
+	const {
+		eventId,
+		purchaseId,
+		quantity,
+		userId,
+		attendeeName,
+		attendeeEmail,
+		status = 'pending'
+	} = options;
 
 	const codes = await generateUniqueCodes(quantity);
 
@@ -100,12 +108,7 @@ export async function cancelPurchase(purchaseId: string): Promise<number> {
 	const rows = await db
 		.update(ticket)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(
-			and(
-				eq(ticket.purchaseId, purchaseId),
-				inArray(ticket.status, ['pending', 'valid'])
-			)
-		)
+		.where(and(eq(ticket.purchaseId, purchaseId), inArray(ticket.status, ['pending', 'valid'])))
 		.returning({ id: ticket.id });
 
 	return rows.length;
@@ -201,12 +204,7 @@ export async function getTicketsSold(eventId: string): Promise<number> {
 	const [result] = await db
 		.select({ count: sql<number>`cast(count(*) as integer)` })
 		.from(ticket)
-		.where(
-			and(
-				eq(ticket.eventId, eventId),
-				inArray(ticket.status, ['valid', 'checked_in'])
-			)
-		);
+		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'checked_in'])));
 
 	return result?.count ?? 0;
 }

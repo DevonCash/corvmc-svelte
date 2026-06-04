@@ -10,6 +10,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getMemberDashboard());
 
@@ -20,7 +21,6 @@
 
 <PageHeader title="Dashboard" />
 <PageContent>
-
 	{#if pendingInvites > 0}
 		<Alert type="info" href="/member/bands" class="shadow-sm">
 			You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
@@ -29,10 +29,7 @@
 
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<Button
-			href="/member/reservations"
-			class="card bg-base-100 h-auto"
-		>
+		<Button href="/member/reservations" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
@@ -126,7 +123,10 @@
 		{:else}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a href="/member/events/{evt.id}" class="card bg-base-200 transition-shadow hover:shadow-md">
+					<a
+						href={resolve(`/member/events/${evt.id}`)}
+						class="card bg-base-200 transition-shadow hover:shadow-md"
+					>
 						{#if evt.posterUrl}
 							<figure>
 								<img src={evt.posterUrl} alt={evt.title} class="h-32 w-full object-cover" />

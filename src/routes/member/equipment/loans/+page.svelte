@@ -6,7 +6,13 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { CancelLoanAction } from '$lib/components/shared/actions';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconHash, IconCalendar, IconCalendarCheck, IconClock, IconCoin } from '@tabler/icons-svelte';
+	import {
+		IconHash,
+		IconCalendar,
+		IconCalendarCheck,
+		IconClock,
+		IconCoin
+	} from '@tabler/icons-svelte';
 	import { getMemberEquipmentLoans } from '$lib/remote/equipment.remote';
 
 	let data = $derived(await getMemberEquipmentLoans());
@@ -15,8 +21,8 @@
 </script>
 
 <PageHeader title="My Equipment Loans">
-		<Button href="/member/equipment" class="btn-ghost btn-sm">Browse Catalog</Button>
-	</PageHeader>
+	<Button href="/member/equipment" class="btn-ghost btn-sm">Browse Catalog</Button>
+</PageHeader>
 <PageContent>
 	<!-- Tabs -->
 	<div role="tablist" class="tabs-bordered tabs">
@@ -56,7 +62,11 @@
 							</div>
 						</div>
 						{#if loan.status === 'requested' || loan.status === 'scheduled'}
-							<CancelLoanAction loanId={loan.id} label="Cancel" confirm="Cancel this loan request?" />
+							<CancelLoanAction
+								loanId={loan.id}
+								label="Cancel"
+								confirm="Cancel this loan request?"
+							/>
 						{/if}
 					</div>
 
@@ -81,7 +91,9 @@
 							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Estimated cost">
 								<IconCoin size={14} /><span class="hidden sm:inline">Est. Cost</span>
 							</dt>
-							<dd>{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}</dd>
+							<dd>
+								{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}
+							</dd>
 						{/if}
 						{#if loan.scheduledPickupDate}
 							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Confirmed pickup">
