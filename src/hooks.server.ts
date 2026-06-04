@@ -10,6 +10,7 @@ import { initStorage } from '$lib/server/storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 import { captureException } from '$lib/server/sentry';
+import { SENTRY_DSN } from '$lib/sentry-dsn';
 
 const resolvedSessions = new Set<string>();
 
@@ -61,7 +62,10 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 // can't bundle, which broke the Cloudflare Pages deploy.
 export const handle: Handle = sequence(
 	Sentry.initCloudflareSentryHandle({
-		dsn: 'https://3b421fec8a5c7c5236b673d9ac5bdd9f@o4510014650384384.ingest.us.sentry.io/4511504553738240',
+		dsn: SENTRY_DSN,
+		environment: process.env.SENTRY_ENVIRONMENT ?? 'production',
+		// Don't report from the Playwright/preview e2e run (set in playwright.config.ts)
+		enabled: process.env.SENTRY_ENVIRONMENT !== 'ci',
 		sendDefaultPii: true,
 		tracesSampleRate: 1.0,
 		enableLogs: true
