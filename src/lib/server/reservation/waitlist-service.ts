@@ -99,7 +99,7 @@ export async function promoteNextWaitlisted(
 		.limit(1);
 
 	if (owner) {
-		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.com';
+		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 		const confirmUrl = `${siteUrl}/member/reservations?confirm=${candidate.id}`;
 
 		await domainEvents.emit('reservation.waitlist_slot_available', {

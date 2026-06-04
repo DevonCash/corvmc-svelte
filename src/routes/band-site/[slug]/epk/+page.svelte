@@ -143,7 +143,7 @@
 			</div>
 			{#if galleryMedia.length > 6}
 				<p class="text-xs text-gray-400 mt-2">
-					{galleryMedia.length - 6} more photos available at {band.slug}.corvmc.com
+					{galleryMedia.length - 6} more photos available at {band.slug}.corvmc.org
 				</p>
 			{/if}
 		</section>
@@ -254,6 +254,6 @@
 
 	<!-- Footer -->
 	<footer class="mt-12 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
-		{band.name} &middot; {band.slug}.corvmc.com
+		{band.name} &middot; {band.slug}.corvmc.org
 	</footer>
 </div>

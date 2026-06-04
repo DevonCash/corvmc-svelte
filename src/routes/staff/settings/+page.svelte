@@ -416,7 +416,7 @@
 								name="contactEmail"
 								label="Staff contact email"
 								type="email"
-								value={String(orgSettings.contactEmail ?? 'staff@corvmc.com')}
+								value={String(orgSettings.contactEmail ?? 'staff@corvmc.org')}
 							/>
 							<FormField
 								name="timezone"

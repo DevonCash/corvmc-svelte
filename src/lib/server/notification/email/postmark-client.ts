@@ -53,7 +53,7 @@ const BATCH_SIZE = 500;
 export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<void> {
 	if (messages.length === 0) return;
 
-	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
 
@@ -84,7 +84,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
-	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 
 	try {
@@ -124,7 +124,7 @@ export interface SendInboxReplyParams {
 }
 
 export async function sendInboxReply(params: SendInboxReplyParams): Promise<string> {
-	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.com';
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 
 	const headers: Array<{ Name: string; Value: string }> = [];

@@ -281,7 +281,7 @@ export async function executeSend(campaignId: string): Promise<number> {
 		return 0;
 	}
 
-	const baseUrl = env.PUBLIC_BASE_URL ?? 'https://corvmc.com';
+	const baseUrl = env.PUBLIC_BASE_URL ?? 'https://corvmc.org';
 
 	const messages: BroadcastMessage[] = recipients.map((r) => {
 		const unsubscribeUrl = `${baseUrl}/unsubscribe/${signUnsubscribeToken(r.subscriberId, r.audienceId)}`;

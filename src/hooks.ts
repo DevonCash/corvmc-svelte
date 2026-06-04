@@ -2,7 +2,7 @@ import type { Reroute } from '@sveltejs/kit';
 
 /**
  * Reroute subdomain requests to the band-site route group.
- * e.g. the-neons.corvmc.com/events → /band-site/the-neons/events
+ * e.g. the-neons.corvmc.org/events → /band-site/the-neons/events
  */
 export const reroute: Reroute = ({ url }) => {
 	const hostname = url.hostname;
@@ -15,8 +15,8 @@ export const reroute: Reroute = ({ url }) => {
 	}
 
 	// Production: detect band subdomains
-	// BASE_DOMAIN should match the production domain (e.g. corvmc.com)
-	const BASE_DOMAIN = 'corvmc.com';
+	// BASE_DOMAIN should match the production domain (e.g. corvmc.org)
+	const BASE_DOMAIN = 'corvmc.org';
 
 	if (
 		hostname !== BASE_DOMAIN &&
@@ -24,8 +24,8 @@ export const reroute: Reroute = ({ url }) => {
 		hostname.endsWith(`.${BASE_DOMAIN}`)
 	) {
 		const slug = hostname.replace(`.${BASE_DOMAIN}`, '');
-		// Don't reroute known system subdomains
-		if (['www', 'api', 'mail', 'staging'].includes(slug)) {
+		// Don't reroute known system subdomains (media = R2 public bucket)
+		if (['www', 'api', 'mail', 'staging', 'media'].includes(slug)) {
 			return url.pathname;
 		}
 		return `/band-site/${slug}${url.pathname}`;
