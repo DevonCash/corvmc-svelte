@@ -10,7 +10,8 @@ export function initStorage(bucket: R2Bucket) {
 }
 
 function getBucket(): R2Bucket {
-	if (!_bucket) throw new Error('Storage not initialized — call initStorage() in hooks.server.ts first');
+	if (!_bucket)
+		throw new Error('Storage not initialized — call initStorage() in hooks.server.ts first');
 	return _bucket;
 }
 
@@ -20,11 +21,15 @@ export async function uploadFile(
 	contentType: string
 ): Promise<string> {
 	if (!ALLOWED_TYPES.includes(contentType)) {
-		throw new Error(`File type "${contentType}" is not allowed. Accepted: ${ALLOWED_TYPES.join(', ')}`);
+		throw new Error(
+			`File type "${contentType}" is not allowed. Accepted: ${ALLOWED_TYPES.join(', ')}`
+		);
 	}
 
 	if (buffer.byteLength > MAX_SIZE_BYTES) {
-		throw new Error(`File size ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB exceeds the 5MB limit`);
+		throw new Error(
+			`File size ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB exceeds the 5MB limit`
+		);
 	}
 
 	await getBucket().put(key, buffer, {

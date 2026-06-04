@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { createBandApi } from '$lib/remote/bands.remote';
 	import { Field } from '../Form';
 	import SearchSelect from '../Form/SearchSelect.svelte';
@@ -34,14 +35,15 @@
 	maxWidth="max-w-md"
 	successToast="Band created"
 	class={className}
-	onsuccess={onsuccess ?? (async (result) => {
-		const r = result as { bandId?: string };
-		await invalidateAll();
-		if (r?.bandId) goto(`/staff/bands/${r.bandId}`);
-	})}
+	onsuccess={onsuccess ??
+		(async (result) => {
+			const r = result as { bandId?: string };
+			await invalidateAll();
+			if (r?.bandId) goto(resolve(`/staff/bands/${r.bandId}`));
+		})}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		{#if selectedOwner}
 			<input {...fields.ownerId.as('hidden', selectedOwner.id)} />
 		{/if}

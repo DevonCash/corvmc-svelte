@@ -14,7 +14,7 @@
 
 {#if embeddableLinks.length > 0}
 	<div class="flex flex-col gap-4">
-		{#each embeddableLinks as link}
+		{#each embeddableLinks as link (link.url)}
 			<div class="rounded-lg overflow-hidden">
 				{#if link.label}
 					<p class="text-sm font-medium mb-1">{link.label}</p>

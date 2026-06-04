@@ -51,6 +51,7 @@ Create `src/lib/server/ticket/ticket-service.ts` with these functions:
 - `getUserTickets(userId)` — Return tickets for a user, joined with event data, ordered by event `startsAt` descending. Used for "My Tickets" page.
 
 **Tests** (`src/lib/server/ticket/ticket-service.spec.ts`):
+
 - `generateCode` returns 8-char string, excludes ambiguous chars (0, O, I, L, 1).
 - `createTickets` inserts N rows with unique codes, correct purchaseId and status.
 - `fulfillPurchase` transitions pending → valid, no-ops on already-valid.
@@ -71,6 +72,7 @@ Create `src/lib/server/ticket/checkout-listener.ts` following the pattern in `sr
 Register this listener in the app's startup. Check where `registerReservationCheckoutListener()` is called and add the ticket listener alongside it.
 
 **Tests** (add to `ticket-service.spec.ts` or a separate `checkout-listener.spec.ts`):
+
 - Listener calls fulfillPurchase when session metadata has `type: 'ticket'` and `purchase_id`.
 - Listener ignores sessions without ticket metadata.
 - Listener is idempotent — calling twice doesn't error.
@@ -90,6 +92,7 @@ Modify `src/lib/server/event/event-service.ts`:
 - When `ticketingEnabled` is false, clear `ticketPrice` and `ticketQuantity` (set to null).
 
 **Tests** (add to existing `event-service.spec.ts`):
+
 - Create event with ticketing enabled — stores price and quantity.
 - Create event with ticketing disabled — ticketPrice and ticketQuantity are null.
 - Update event to enable ticketing — requires price.
@@ -122,12 +125,14 @@ Depends on: Epic 1, Epic 2. The public-facing ticket purchase flow.
 Create `src/routes/events/[id]/tickets/+page.server.ts` and `+page.svelte`:
 
 **Load function:**
+
 - Fetch the event by ID. Throw 404 if not found, 400 if ticketing not enabled.
 - Get tickets remaining via `getTicketsRemaining()`.
 - If the user is logged in, check sustaining member status via `getSubscription()` from the subscription service. Calculate discounted price (50% off) if sustaining.
 - Return event info, price, discounted price (if applicable), remaining count, and whether the user is a sustaining member.
 
 **Page UI:**
+
 - Event name, date, venue info at the top.
 - Price display: base price, and discounted price with "Sustaining member discount" label if applicable.
 - Quantity selector (1–10, capped by remaining capacity). If sold out, show "Sold Out" message and disable the form.
@@ -144,6 +149,7 @@ Create `src/routes/events/[id]/tickets/data.remote.ts` with a `purchaseTickets` 
 **Schema:** `{ quantity: number (1–10), coverFees: boolean, attendeeName?: string, attendeeEmail?: string }`
 
 **Handler logic:**
+
 1. Fetch the event, validate ticketing is enabled.
 2. Check capacity — if limited, verify `quantity ≤ remaining`.
 3. Generate a `purchaseId` UUID (`crypto.randomUUID()`).
@@ -157,6 +163,7 @@ Create `src/routes/events/[id]/tickets/data.remote.ts` with a `purchaseTickets` 
 **Note:** This handler needs to support both authenticated and guest callers. For guests, skip `userId`, `stripeCustomerId`, and credit application.
 
 **Tests** (`src/routes/events/[id]/tickets/tickets.spec.ts`):
+
 - Purchase handler creates pending tickets with correct purchaseId and attendee info.
 - Purchase handler rejects when ticketing not enabled on event.
 - Purchase handler rejects when quantity exceeds remaining capacity.
@@ -167,11 +174,13 @@ Create `src/routes/events/[id]/tickets/data.remote.ts` with a `purchaseTickets` 
 ### 3.3 Create checkout success/cancel pages
 
 **Success page** at `src/routes/events/[id]/tickets/success/+page.server.ts` and `+page.svelte`:
+
 - Accept `purchaseId` as a query parameter.
 - Load tickets by `purchaseId`. Show event name, ticket codes, attendee info.
 - If no valid tickets found (pending still), show a "Payment processing" message.
 
 **Cancel handling:**
+
 - The cancel URL passed to Stripe points back to the purchase page.
 - Pending tickets from the abandoned checkout remain in the database (stale cleanup is deferred).
 
@@ -190,10 +199,12 @@ Depends on: Epic 1, Epic 3. Staff views for ticket purchases and check-in.
 Modify `src/routes/staff/events/[id]/+page.server.ts` and `+page.svelte`:
 
 **Data loading:**
+
 - Query tickets for the event, grouped by `purchaseId`. For each group, return: `purchaseId`, `attendeeName`, `attendeeEmail`, `quantity` (count), ticket statuses, `userId`, `createdAt`.
 - Include summary stats: total sold, total checked in, remaining.
 
 **UI additions:**
+
 - Stats row: "X sold · Y checked in · Z remaining" (or "unlimited").
 - Ticket purchases section: list of purchases grouped by `purchaseId`. Each card shows attendee name/email, quantity, status badges for each ticket, and created date.
 - "Refund" button on each purchase group (only for groups with valid/checked_in tickets).
@@ -205,6 +216,7 @@ Add a `refundPurchase` form handler to `src/routes/staff/events/[id]/data.remote
 **Schema:** `{ purchaseId: string }`
 
 **Handler logic:**
+
 1. Require staff auth.
 2. Load tickets by `purchaseId`. Verify they exist and belong to this event.
 3. Find the Stripe checkout session for this purchase. Search Stripe sessions by metadata `purchase_id`. Get the payment intent or payment record from the session.
@@ -214,6 +226,7 @@ Add a `refundPurchase` form handler to `src/routes/staff/events/[id]/data.remote
 **Implementation note:** Finding the Stripe session by metadata requires `stripe.checkout.sessions.list()` with a metadata filter, or storing the Stripe session ID on the tickets. Consider adding a `stripeSessionId` column to the ticket table if Stripe metadata search proves unreliable. Evaluate during implementation.
 
 **Tests** (add to refund handler or `check-in.spec.ts`):
+
 - Refund handler cancels all tickets in purchase group.
 - Refund handler rejects when purchaseId doesn't belong to event.
 
@@ -222,10 +235,12 @@ Add a `refundPurchase` form handler to `src/routes/staff/events/[id]/data.remote
 Create `src/routes/staff/events/[id]/check-in/+page.server.ts` and `+page.svelte`:
 
 **Load function:**
+
 - Fetch event by ID.
 - Fetch all tickets with status `valid` or `checked_in`, joined with user for checked-in-by name.
 
 **Page UI:**
+
 - Event name and date at top.
 - Stats: "X of Y checked in."
 - Search/filter input (filters by code or attendee name, client-side).
@@ -239,10 +254,12 @@ Add a `checkInTicket` form handler (in check-in page's `data.remote.ts` or the e
 **Schema:** `{ ticketId: string }`
 
 **Handler logic:**
+
 1. Require staff auth.
 2. Call `ticketService.checkIn(ticketId, locals.user.id)`.
 
 **Tests** (`src/routes/staff/events/[id]/check-in/check-in.spec.ts`):
+
 - Check-in handler transitions valid ticket to checked_in with staff user and timestamp.
 - Check-in handler rejects non-valid ticket (pending, cancelled, already checked_in).
 - Check-in page load returns tickets for the event with correct statuses.
@@ -258,16 +275,19 @@ Depends on: Epic 1. The member-facing ticket history.
 Create `src/routes/member/tickets/+page.server.ts` and `+page.svelte`:
 
 **Load function:**
+
 - Require auth.
 - Call `ticketService.getUserTickets(userId)`. Join with event table for event name, date, status.
 - Split into upcoming (event `startsAt` > now) and past.
 
 **Page UI:**
+
 - TabBar with "Upcoming" and "Past" tabs.
 - Group tickets by event. Each event group shows: event name, date, and a list of ticket codes with status badges.
 - EmptyState when no tickets.
 
 **Tests** (`src/routes/member/tickets/tickets.spec.ts`):
+
 - Page load returns user's tickets joined with event info.
 - Page load excludes other users' tickets.
 - Tickets are split into upcoming vs past by event startsAt.

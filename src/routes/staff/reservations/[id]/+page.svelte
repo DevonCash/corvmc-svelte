@@ -15,7 +15,6 @@
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import {
 		fullDate,
 		formatTime,
@@ -24,7 +23,7 @@
 	} from '$lib/utils/format';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
+	import { IconMail, IconPhone } from '@tabler/icons-svelte';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
@@ -116,13 +115,13 @@
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.createdByUserId}
-						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm"> View Profile </Button>
+						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm">View Profile</Button>
 					{/if}
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
 				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
-				<h3 class='text-lg'>{r.memberName}</h3>
+				<h3 class="text-lg">{r.memberName}</h3>
 				{#if r.memberPronouns}
 					<p class="text-xs text-muted">{r.memberPronouns}</p>
 				{/if}
@@ -165,7 +164,10 @@
 							<CompReservationAction reservation={r} class="btn-outline btn-sm btn-info flex-1" />
 						{/if}
 						{#if actions.has('refund')}
-							<RefundReservationAction reservation={r} class="btn-outline btn-sm btn-error flex-1" />
+							<RefundReservationAction
+								reservation={r}
+								class="btn-outline btn-sm btn-error flex-1"
+							/>
 						{/if}
 					</div>
 				{/if}

@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { getDirectoryMembers, getDirectoryBands, getInstrumentSuggestions, getGenreSuggestions } from '$lib/remote/directory.remote';
+	import {
+		getDirectoryMembers,
+		getDirectoryBands,
+		getInstrumentSuggestions,
+		getGenreSuggestions
+	} from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';

@@ -95,7 +95,7 @@ export const changePassword = form(
 			path: ['confirmPassword']
 		}),
 	async (data) => {
-		const currentUser = requireUser();
+		requireUser();
 		const event = getRequestEvent();
 
 		// Use better-auth's change-password endpoint via internal API
@@ -166,10 +166,7 @@ export const deleteAccount = form(
 		}
 
 		// Soft-delete the user
-		await db
-			.update(user)
-			.set({ deletedAt: new Date() })
-			.where(eq(user.id, currentUser.id));
+		await db.update(user).set({ deletedAt: new Date() }).where(eq(user.id, currentUser.id));
 
 		// Sign out
 		await auth.api.signOut({ headers: event.request.headers });

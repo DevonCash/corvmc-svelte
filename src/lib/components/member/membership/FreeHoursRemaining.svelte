@@ -25,9 +25,7 @@
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
-					Resets to {membership.hoursPerReset} on {formatDate(
-						new Date(membership.creditsResetAt)
-					)}
+					Resets to {membership.hoursPerReset} on {formatDate(new Date(membership.creditsResetAt))}
 				</span>
 			{/if}
 		{:else}

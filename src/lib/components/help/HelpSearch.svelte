@@ -48,14 +48,22 @@
 			class="input input-bordered w-full pl-9"
 			bind:value={query}
 			oninput={handleInput}
-			onfocus={() => { if (results.length > 0) open = true; }}
-			onblur={() => { setTimeout(() => { open = false; }, 200); }}
+			onfocus={() => {
+				if (results.length > 0) open = true;
+			}}
+			onblur={() => {
+				setTimeout(() => {
+					open = false;
+				}, 200);
+			}}
 		/>
 	</div>
 
 	{#if open}
-		<div class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto">
-			{#each results as result}
+		<div
+			class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto"
+		>
+			{#each results as result (result.slug)}
 				<button
 					type="button"
 					class="w-full text-left px-4 py-2 hover:bg-base-200 transition-colors"

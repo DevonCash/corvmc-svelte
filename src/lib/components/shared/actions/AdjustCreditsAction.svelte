@@ -32,12 +32,16 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.userId.as('hidden', userId)} />
 		<div class="space-y-3">
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Credit Type</span></div>
-				<select class="select select-bordered w-full" {...fields.creditType.as('select')} bind:value={creditType}>
+				<select
+					class="select select-bordered w-full"
+					{...fields.creditType.as('select')}
+					bind:value={creditType}
+				>
 					<option value="free_hours">Free Hours</option>
 					<option value="equipment_credits">Equipment Credits</option>
 				</select>

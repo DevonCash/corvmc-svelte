@@ -1,17 +1,8 @@
-import {
-	parseShortcut,
-	matchesShortcut,
-	isModifierKey,
-	shortcutLabel,
-	type ParsedShortcut
-} from '$lib/shortcuts';
+import { parseShortcut, matchesShortcut, isModifierKey, shortcutLabel } from '$lib/shortcuts';
 
-export function useShortcut(
-	getShortcut: () => string | undefined,
-	onTrigger: () => void
-) {
+export function useShortcut(getShortcut: () => string | undefined, onTrigger: () => void) {
 	let modHeld = $state(false);
-	let parsed = $derived(getShortcut() ? parseShortcut(getShortcut()!) : null);
+	const parsed = $derived(getShortcut() ? parseShortcut(getShortcut()!) : null);
 
 	$effect(() => {
 		if (!parsed) return;
@@ -45,8 +36,12 @@ export function useShortcut(
 	});
 
 	return {
-		get modHeld() { return modHeld; },
-		get parsed() { return parsed; }
+		get modHeld() {
+			return modHeld;
+		},
+		get parsed() {
+			return parsed;
+		}
 	};
 }
 

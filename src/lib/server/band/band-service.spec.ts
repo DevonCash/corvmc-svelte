@@ -47,28 +47,6 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-const txMock = {
-	insert: vi.fn(() => ({
-		values: vi.fn(() => ({
-			returning: vi.fn(() => {
-				if (insertError) return Promise.reject(insertError);
-				return Promise.resolve([{ ...mockBand }]);
-			})
-		}))
-	})),
-	update: vi.fn(() => ({
-		set: vi.fn(() => ({
-			where: vi.fn(() => ({
-				returning: vi.fn(() => Promise.resolve([{ ...mockBand }]))
-			}))
-		}))
-	})),
-	select: vi.fn(() => chainable()),
-	delete: vi.fn(() => ({
-		where: vi.fn(() => Promise.resolve(deleteResult))
-	}))
-};
-
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chainable(),
@@ -149,7 +127,10 @@ describe('BandService', () => {
 		it('creates a band and owner membership via batch', async () => {
 			selectResult = [{ ...mockBand }];
 			const { db } = await import('$lib/server/db');
-			const result = await create('user-owner', { name: 'The Velvet Underground', bio: 'NYC band' });
+			const result = await create('user-owner', {
+				name: 'The Velvet Underground',
+				bio: 'NYC band'
+			});
 
 			expect(generateSlug).toHaveBeenCalledWith('The Velvet Underground');
 			expect(ensureUniqueSlug).toHaveBeenCalled();
@@ -239,9 +220,9 @@ describe('BandService', () => {
 		it('throws BandMemberExistsError on unique constraint violation', async () => {
 			insertError = new Error('unique constraint violated');
 
-			await expect(
-				invite('band-1', 'user-2', 'member', null, 'user-owner')
-			).rejects.toThrow(BandMemberExistsError);
+			await expect(invite('band-1', 'user-2', 'member', null, 'user-owner')).rejects.toThrow(
+				BandMemberExistsError
+			);
 		});
 	});
 
@@ -342,9 +323,9 @@ describe('BandService', () => {
 		it('throws CannotRemoveOwnerError when updating owner', async () => {
 			selectResult = [{ role: 'owner' }];
 
-			await expect(
-				updateMember('member-1', { role: 'member' })
-			).rejects.toThrow(CannotRemoveOwnerError);
+			await expect(updateMember('member-1', { role: 'member' })).rejects.toThrow(
+				CannotRemoveOwnerError
+			);
 		});
 	});
 
@@ -363,16 +344,16 @@ describe('BandService', () => {
 
 		it('throws when new owner is not an active member', async () => {
 			selectResult = [{ status: 'pending' }];
-			await expect(
-				transferOwnership('band-1', 'user-2', 'user-owner')
-			).rejects.toThrow('New owner must be an active band member');
+			await expect(transferOwnership('band-1', 'user-2', 'user-owner')).rejects.toThrow(
+				'New owner must be an active band member'
+			);
 		});
 
 		it('throws when new owner is not a band member', async () => {
 			selectResult = [];
-			await expect(
-				transferOwnership('band-1', 'user-2', 'user-owner')
-			).rejects.toThrow('New owner must be an active band member');
+			await expect(transferOwnership('band-1', 'user-2', 'user-owner')).rejects.toThrow(
+				'New owner must be an active band member'
+			);
 		});
 	});
 
@@ -428,7 +409,11 @@ describe('BandService', () => {
 
 			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
 
-			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'bands/avatars/band-1.png', 'image/png');
+			expect(uploadFile).toHaveBeenCalledWith(
+				expect.any(ArrayBuffer),
+				'bands/avatars/band-1.png',
+				'image/png'
+			);
 			expect(key).toBe('bands/avatars/band-1.png');
 		});
 
@@ -438,13 +423,19 @@ describe('BandService', () => {
 			await setBandAvatar('band-1', new ArrayBuffer(8), 'image/webp');
 
 			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
-			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), 'bands/avatars/band-1.webp', 'image/webp');
+			expect(uploadFile).toHaveBeenCalledWith(
+				expect.any(ArrayBuffer),
+				'bands/avatars/band-1.webp',
+				'image/webp'
+			);
 		});
 
 		it('throws when the band does not exist', async () => {
 			selectResult = [];
 
-			await expect(setBandAvatar('nope', new ArrayBuffer(8), 'image/png')).rejects.toThrow(BandNotFoundError);
+			await expect(setBandAvatar('nope', new ArrayBuffer(8), 'image/png')).rejects.toThrow(
+				BandNotFoundError
+			);
 		});
 	});
 

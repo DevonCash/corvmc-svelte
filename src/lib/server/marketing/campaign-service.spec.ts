@@ -5,18 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/server/db', () => {
-	function makeChainable(resolveFn: () => unknown[]) {
-		const proxy: any = new Proxy(() => proxy, {
-			get(_, prop) {
-				if (prop === 'then') {
-					return (resolve: (v: unknown[]) => void) => resolve(resolveFn());
-				}
-				return () => proxy;
-			}
-		});
-		return proxy;
-	}
-
 	const db = {
 		select: vi.fn(),
 		selectDistinct: vi.fn(),
@@ -148,7 +136,7 @@ function makeChainable() {
  * `.returning()` from the next selectResults slot.
  */
 function makeInsertChain(insertedRows: unknown[][]) {
-	return vi.fn((table: unknown) => ({
+	return vi.fn((_table: unknown) => ({
 		values: vi.fn((vals: unknown) => {
 			insertedRows.push(Array.isArray(vals) ? vals : [vals]);
 			return {
@@ -313,47 +301,47 @@ describe('campaign-service', () => {
 		it('throws when campaign is not found', async () => {
 			selectResults = [[]];
 
-			await expect(
-				updateCampaign('camp-999', { subject: 'New Subject' })
-			).rejects.toThrow('Campaign not found');
+			await expect(updateCampaign('camp-999', { subject: 'New Subject' })).rejects.toThrow(
+				'Campaign not found'
+			);
 		});
 
 		it('throws when campaign is sent (non-draft)', async () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 
-			await expect(
-				updateCampaign('camp-1', { subject: 'New Subject' })
-			).rejects.toThrow('Can only edit draft campaigns');
+			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
+				'Can only edit draft campaigns'
+			);
 		});
 
 		it('throws when campaign is scheduled (non-draft)', async () => {
 			selectResults = [[{ ...mockCampaign, scheduledFor: new Date(Date.now() + 60_000) }]];
 
-			await expect(
-				updateCampaign('camp-1', { subject: 'New Subject' })
-			).rejects.toThrow('Can only edit draft campaigns');
+			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
+				'Can only edit draft campaigns'
+			);
 		});
 
 		it('validates subject length on update', async () => {
 			selectResults = [[{ ...mockCampaign }]];
 
-			await expect(
-				updateCampaign('camp-1', { subject: 'x'.repeat(501) })
-			).rejects.toThrow('Subject too long (max 500)');
+			await expect(updateCampaign('camp-1', { subject: 'x'.repeat(501) })).rejects.toThrow(
+				'Subject too long (max 500)'
+			);
 		});
 
 		it('validates audienceIds not empty on update', async () => {
 			selectResults = [[{ ...mockCampaign }]];
 
-			await expect(
-				updateCampaign('camp-1', { audienceIds: [] })
-			).rejects.toThrow('At least one audience is required');
+			await expect(updateCampaign('camp-1', { audienceIds: [] })).rejects.toThrow(
+				'At least one audience is required'
+			);
 		});
 
 		it('replaces audience links when audienceIds are provided', async () => {
 			selectResults = [
 				[{ ...mockCampaign }], // getCampaignRaw
-				[{ ...mockCampaign }]  // update().returning()
+				[{ ...mockCampaign }] // update().returning()
 			];
 
 			await updateCampaign('camp-1', { audienceIds: ['aud-3'] });
@@ -442,7 +430,7 @@ describe('campaign-service', () => {
 			selectResults = [
 				[{ ...mockCampaign }], // sendNow getCampaignRaw
 				[{ ...mockCampaign }], // executeSend getCampaignRaw
-				[]                     // getRecipientsForCampaign audienceIds (empty → early return)
+				[] // getRecipientsForCampaign audienceIds (empty → early return)
 			];
 
 			await sendNow('camp-1');
@@ -473,7 +461,7 @@ describe('campaign-service', () => {
 		it('returns 0 and marks campaign sent with recipientCount 0 when no recipients', async () => {
 			selectResults = [
 				[{ ...mockCampaign }], // getCampaignRaw
-				[]                     // getRecipientsForCampaign → audienceIds select (empty)
+				[] // getRecipientsForCampaign → audienceIds select (empty)
 			];
 
 			const count = await executeSend('camp-1');
@@ -487,9 +475,9 @@ describe('campaign-service', () => {
 
 		it('calls sendBroadcastBatch with one message per recipient', async () => {
 			selectResults = [
-				[{ ...mockCampaign }],         // getCampaignRaw
-				[{ audienceId: 'aud-1' }],     // getRecipientsForCampaign → audienceIds
-				[mockRecipient]                // getRecipientsForCampaign → selectDistinct subscribers
+				[{ ...mockCampaign }], // getCampaignRaw
+				[{ audienceId: 'aud-1' }], // getRecipientsForCampaign → audienceIds
+				[mockRecipient] // getRecipientsForCampaign → selectDistinct subscribers
 			];
 
 			const count = await executeSend('camp-1');
@@ -504,11 +492,7 @@ describe('campaign-service', () => {
 		});
 
 		it('marks campaign as sent with correct recipient count after sending', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
 
 			await executeSend('camp-1');
 
@@ -518,11 +502,7 @@ describe('campaign-service', () => {
 		});
 
 		it('builds unsubscribe URL from env.PUBLIC_BASE_URL and renders per-recipient HTML', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
 
 			await executeSend('camp-1');
 

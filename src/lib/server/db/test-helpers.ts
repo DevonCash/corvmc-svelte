@@ -12,7 +12,7 @@ export function mockRequestEvent(opts?: {
 	const urlStr = opts?.url ?? 'http://localhost/test';
 	const headers = new Headers(opts?.headers);
 
-	let requestInit: RequestInit = { method, headers };
+	const requestInit: RequestInit = { method, headers };
 
 	if (opts?.body instanceof FormData) {
 		requestInit.body = opts.body;

@@ -71,7 +71,6 @@ describe('ensureUniqueSlug', () => {
 	it('appends -2 when slug already exists', async () => {
 		// First call returns 1 (exists), second returns 0 (available)
 		let callCount = 0;
-		const origChainable = chainable;
 		vi.spyOn(await import('$lib/server/db'), 'db', 'get').mockReturnValue({
 			select: () => {
 				const proxy: any = new Proxy(() => proxy, {

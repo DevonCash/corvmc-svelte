@@ -35,7 +35,7 @@
 	}}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<div>
 			<label for="sub-email" class="text-xs opacity-60">Email</label>

@@ -54,8 +54,12 @@
 		trackEl.scrollTo({ left: step * index, behavior: 'smooth' });
 	}
 
-	function prev() { scrollTo(Math.max(0, currentIndex - 1)); }
-	function next() { scrollTo(Math.min(maxIndex, currentIndex + 1)); }
+	function prev() {
+		scrollTo(Math.max(0, currentIndex - 1));
+	}
+	function next() {
+		scrollTo(Math.min(maxIndex, currentIndex + 1));
+	}
 </script>
 
 <div class="carousel-wrap {className}">
@@ -65,11 +69,23 @@
 
 	{#if maxIndex > 0}
 		<div class="carousel__ctrls">
-			<button class="carousel__nav" onclick={prev} disabled={currentIndex === 0} aria-label="Previous">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+			<button
+				class="carousel__nav"
+				onclick={prev}
+				disabled={currentIndex === 0}
+				aria-label="Previous"
+			>
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M15 6l-6 6 6 6" /></svg
+				>
 			</button>
 			<div class="carousel__dots">
-				{#each Array(maxIndex + 1) as _, i}
+				{#each Array(maxIndex + 1) as _, i (i)}
 					<button
 						class="carousel__dot"
 						class:is-active={i === currentIndex}
@@ -78,8 +94,20 @@
 					></button>
 				{/each}
 			</div>
-			<button class="carousel__nav" onclick={next} disabled={currentIndex >= maxIndex} aria-label="Next">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+			<button
+				class="carousel__nav"
+				onclick={next}
+				disabled={currentIndex >= maxIndex}
+				aria-label="Next"
+			>
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg
+				>
 			</button>
 		</div>
 	{/if}

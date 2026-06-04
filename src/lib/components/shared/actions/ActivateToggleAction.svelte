@@ -28,11 +28,15 @@
 	const action = $derived(isDeactivated ? reactivateAction : deactivateAction);
 	const fields = $derived(action.fields);
 	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
-	const resolvedClass = $derived(className ?? (isDeactivated ? 'btn-success btn-sm' : 'btn-error btn-sm'));
+	const resolvedClass = $derived(
+		className ?? (isDeactivated ? 'btn-success btn-sm' : 'btn-error btn-sm')
+	);
 	const confirmText = $derived(
 		isDeactivated ? undefined : (deactivateWarning ?? `Deactivate this ${entityLabel}?`)
 	);
-	const toast = $derived(isDeactivated ? `${entityLabel} reactivated` : `${entityLabel} deactivated`);
+	const toast = $derived(
+		isDeactivated ? `${entityLabel} reactivated` : `${entityLabel} deactivated`
+	);
 </script>
 
 <Action
@@ -44,7 +48,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', entityId)} />
 		{#if confirmText}
 			<p class="py-4">{confirmText}</p>

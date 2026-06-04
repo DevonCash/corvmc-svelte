@@ -27,7 +27,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">Revert this event to draft? It will no longer be visible to the public.</p>
 	{/snippet}

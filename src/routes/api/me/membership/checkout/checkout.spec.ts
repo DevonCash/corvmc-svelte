@@ -28,10 +28,7 @@ beforeEach(() => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function req(opts?: {
-	user?: Record<string, unknown> | null;
-	fields?: Record<string, string>;
-}) {
+function req(opts?: { user?: Record<string, unknown> | null; fields?: Record<string, string> }) {
 	const fd = new FormData();
 	if (opts?.fields) {
 		for (const [k, v] of Object.entries(opts.fields)) {
@@ -41,12 +38,15 @@ function req(opts?: {
 
 	return {
 		locals: {
-			user: opts?.user === null ? null : (opts?.user ?? {
-				id: 'user-1',
-				stripeId: 'cus_123',
-				email: 'test@example.com',
-				name: 'Test User'
-			})
+			user:
+				opts?.user === null
+					? null
+					: (opts?.user ?? {
+							id: 'user-1',
+							stripeId: 'cus_123',
+							email: 'test@example.com',
+							name: 'Test User'
+						})
 		},
 		request: new Request('http://localhost/api/me/membership/checkout', {
 			method: 'POST',
@@ -71,10 +71,12 @@ describe('POST /api/me/membership/checkout', () => {
 		mockCreateCheckoutSession.mockResolvedValue('https://checkout.stripe.com/s');
 
 		const { POST } = await import('./+server');
-		const response = await POST(req({
-			user: { id: 'user-1', stripeId: null, email: 'test@example.com', name: 'Test' },
-			fields: { amount: '10' }
-		}));
+		const response = await POST(
+			req({
+				user: { id: 'user-1', stripeId: null, email: 'test@example.com', name: 'Test' },
+				fields: { amount: '10' }
+			})
+		);
 
 		expect(response.status).toBe(200);
 		expect(mockEnsureStripeCustomer).toHaveBeenCalledWith('user-1', 'test@example.com', 'Test');
@@ -85,7 +87,7 @@ describe('POST /api/me/membership/checkout', () => {
 		const response = await POST(req({ fields: { amount: '5' } }));
 
 		expect(response.status).toBe(400);
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 		expect(body.error).toContain('at least');
 	});
 
@@ -94,7 +96,7 @@ describe('POST /api/me/membership/checkout', () => {
 		const response = await POST(req({ fields: { amount: '12' } }));
 
 		expect(response.status).toBe(400);
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 		expect(body.error).toContain('multiple');
 	});
 
@@ -127,7 +129,7 @@ describe('POST /api/me/membership/checkout', () => {
 		const { POST } = await import('./+server');
 		const response = await POST(req({ fields: { amount: '15' } }));
 
-		const body = await response.json() as any;
+		const body = (await response.json()) as any;
 		expect(body.redirectUrl).toBe('https://checkout.stripe.com/session_2');
 	});
 

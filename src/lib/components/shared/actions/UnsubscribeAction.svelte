@@ -29,7 +29,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<p class="py-4">Unsubscribe from {name}?</p>
 	{/snippet}

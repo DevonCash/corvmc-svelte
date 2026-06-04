@@ -17,11 +17,12 @@
 		if (form.status === 'dirty') {
 			cancel();
 			if (!willUnload && to?.url) {
-				const href = to.url.href;
+				const url = to.url;
 				pendingNavigation = () => {
 					bypassing = true;
 					form.reset();
-					goto(href);
+					// eslint-disable-next-line svelte/no-navigation-without-resolve -- `url` is the already-resolved navigation target supplied by SvelteKit's beforeNavigate
+					goto(url);
 				};
 				confirmModal?.showModal();
 			}
@@ -42,9 +43,7 @@
 		<h3 class="text-lg font-bold">Unsaved changes</h3>
 		<p class="py-4">You have unsaved changes. Are you sure you want to leave?</p>
 		<div class="modal-action">
-			<Button type="button" class="" onclick={() => confirmModal?.close()}>
-				Keep editing
-			</Button>
+			<Button type="button" class="" onclick={() => confirmModal?.close()}>Keep editing</Button>
 			<Button
 				type="button"
 				class="btn-error"

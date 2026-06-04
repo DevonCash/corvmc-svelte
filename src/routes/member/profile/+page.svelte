@@ -75,10 +75,20 @@
 			<!-- Identity & About -->
 			<InfoCard title="About You">
 				<div class="space-y-4">
-					<FormField field={fields.tagline} label="Tagline" type="text" value={profile?.tagline ?? ''} placeholder="e.g. Drummer | Jazz & Funk" description="A short one-liner shown on your directory card" />
+					<FormField
+						field={fields.tagline}
+						label="Tagline"
+						type="text"
+						value={profile?.tagline ?? ''}
+						placeholder="e.g. Drummer | Jazz & Funk"
+						description="A short one-liner shown on your directory card"
+					/>
 					<FormField field={fields.bio} label="Bio">
 						<input {...fields.bio.as('hidden', bioHtml)} />
-						<RichTextEditor bind:value={bioHtml} placeholder="Tell other members about yourself..." />
+						<RichTextEditor
+							bind:value={bioHtml}
+							placeholder="Tell other members about yourself..."
+						/>
 					</FormField>
 				</div>
 			</InfoCard>
@@ -87,16 +97,39 @@
 			<InfoCard title="Music">
 				<div class="space-y-4">
 					<FormField field={fields.instruments} label="Instruments">
-						<FreeformTagInput bind:value={instruments} suggestions={instrumentSuggestions} placeholder="e.g. guitar, vocals, drums..." />
+						<FreeformTagInput
+							bind:value={instruments}
+							suggestions={instrumentSuggestions}
+							placeholder="e.g. guitar, vocals, drums..."
+						/>
 					</FormField>
 
 					<FormField field={fields.genres} label="Genres">
-						<FreeformTagInput bind:value={genres} suggestions={genreSuggestions} placeholder="e.g. jazz, funk, rock..." />
+						<FreeformTagInput
+							bind:value={genres}
+							suggestions={genreSuggestions}
+							placeholder="e.g. jazz, funk, rock..."
+						/>
 					</FormField>
 
-					<FormField field={fields.lookingForBand} type="toggle" value={lookingForBand} checkboxLabel="I'm looking for a band" />
-					<FormField field={fields.availableForHire} type="toggle" value={availableForHire} checkboxLabel="I'm available for hire" />
-					<FormField field={fields.teachesLessons} type="toggle" value={teachesLessons} checkboxLabel="I teach lessons" />
+					<FormField
+						field={fields.lookingForBand}
+						type="toggle"
+						value={lookingForBand}
+						checkboxLabel="I'm looking for a band"
+					/>
+					<FormField
+						field={fields.availableForHire}
+						type="toggle"
+						value={availableForHire}
+						checkboxLabel="I'm available for hire"
+					/>
+					<FormField
+						field={fields.teachesLessons}
+						type="toggle"
+						value={teachesLessons}
+						checkboxLabel="I teach lessons"
+					/>
 				</div>
 			</InfoCard>
 		</div>
@@ -105,8 +138,8 @@
 			<!-- Links -->
 			<InfoCard title="Links">
 				<p class="mb-3 text-sm opacity-60">
-					Add links to your music, social media, or personal site. SoundCloud, YouTube,
-					and Spotify links will show as embedded players on your profile.
+					Add links to your music, social media, or personal site. SoundCloud, YouTube, and Spotify
+					links will show as embedded players on your profile.
 				</p>
 				<LinkListEditor bind:value={links} field={fields.links} />
 			</InfoCard>
@@ -115,13 +148,30 @@
 			<div class="space-y-6">
 				<InfoCard title="Directory Contact Info">
 					<p class="mb-3 text-sm opacity-60">
-						Optional contact details shown on your directory profile.
-						Leave blank to keep private.
+						Optional contact details shown on your directory profile. Leave blank to keep private.
 					</p>
 					<div class="space-y-3">
-						<FormField field={fields.contactEmail} label="Display email" type="email" value={contact.email ?? ''} placeholder="you@example.com" />
-						<FormField field={fields.contactPhone} label="Phone" type="tel" value={contact.phone ?? ''} placeholder="Optional" />
-						<FormField field={fields.contactSocial} label="Social handle" type="text" value={contact.social ?? ''} placeholder="@handle or URL" />
+						<FormField
+							field={fields.contactEmail}
+							label="Display email"
+							type="email"
+							value={contact.email ?? ''}
+							placeholder="you@example.com"
+						/>
+						<FormField
+							field={fields.contactPhone}
+							label="Phone"
+							type="tel"
+							value={contact.phone ?? ''}
+							placeholder="Optional"
+						/>
+						<FormField
+							field={fields.contactSocial}
+							label="Social handle"
+							type="text"
+							value={contact.social ?? ''}
+							placeholder="@handle or URL"
+						/>
 					</div>
 				</InfoCard>
 

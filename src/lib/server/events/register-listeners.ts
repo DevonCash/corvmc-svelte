@@ -38,13 +38,9 @@ export function registerListeners(): void {
 // ---------------------------------------------------------------------------
 
 async function registerCheckoutListeners(): Promise<void> {
-	const { handleReservationCheckout } = await import(
-		'$lib/server/reservation/checkout-listener'
-	);
+	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
-	const { handleBandPremiumCheckout } = await import(
-		'$lib/server/band/band-checkout-listener'
-	);
+	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -67,9 +63,8 @@ async function registerCheckoutListeners(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function registerNotificationListeners(): Promise<void> {
-	const { registerAllNotificationListeners } = await import(
-		'$lib/server/notification/notification-listeners'
-	);
+	const { registerAllNotificationListeners } =
+		await import('$lib/server/notification/notification-listeners');
 	registerAllNotificationListeners();
 }
 
@@ -112,9 +107,7 @@ async function registerInboxListeners(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function registerWaitlistListeners(): Promise<void> {
-	const { promoteNextWaitlisted } = await import(
-		'$lib/server/reservation/waitlist-service'
-	);
+	const { promoteNextWaitlisted } = await import('$lib/server/reservation/waitlist-service');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Parse the original reservation's time range to find waitlisted candidates

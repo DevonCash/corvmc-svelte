@@ -7,7 +7,6 @@
 // ---------------------------------------------------------------------------
 
 const FONT = "font-family:system-ui, -apple-system, 'Segoe UI', sans-serif";
-const BASE_STYLE = `${FONT};font-size:15px;line-height:1.6;text-align:left;color:#374151`;
 
 interface TextOptions {
 	fontSize?: string;

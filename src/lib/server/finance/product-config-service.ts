@@ -71,11 +71,7 @@ export interface ProductConfigRow {
  * Get a product config row, creating it from defaults if it doesn't exist.
  */
 export async function getProductConfig(key: ProductKey): Promise<ProductConfigRow> {
-	const [row] = await db
-		.select()
-		.from(productConfig)
-		.where(eq(productConfig.key, key))
-		.limit(1);
+	const [row] = await db.select().from(productConfig).where(eq(productConfig.key, key)).limit(1);
 
 	if (row) return row;
 
@@ -110,7 +106,13 @@ export async function getProductConfig(key: ProductKey): Promise<ProductConfigRo
  * Get all product configs, seeding any missing ones from defaults.
  */
 export async function getAllProductConfigs(): Promise<ProductConfigRow[]> {
-	const keys: ProductKey[] = ['contribution', 'rehearsal', 'fee_coverage', 'ticket', 'band_premium'];
+	const keys: ProductKey[] = [
+		'contribution',
+		'rehearsal',
+		'fee_coverage',
+		'ticket',
+		'band_premium'
+	];
 	const configs: ProductConfigRow[] = [];
 
 	for (const key of keys) {

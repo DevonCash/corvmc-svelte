@@ -18,7 +18,10 @@
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
-		return tags.split(',').map((t) => t.trim()).filter(Boolean);
+		return tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
 	}
 
 	function dayLabel(e: Event): string {
@@ -57,7 +60,10 @@
 							{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
 							{#if label !== prevLabel}
 								<tr>
-									<td colspan="5" class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60">
+									<td
+										colspan="5"
+										class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+									>
 										{label}
 									</td>
 								</tr>
@@ -91,7 +97,11 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={(p) => page = p} />
+			<Pagination
+				page={pagination.page}
+				totalPages={pagination.totalPages}
+				onpage={(p) => (page = p)}
+			/>
 		{/if}
 	{/await}
 </PageContent>

@@ -27,6 +27,7 @@
 
 	const minEndsAt = $derived.by(() => {
 		if (!date) return '';
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Date for one-off computation within a $derived, not reactive state
 		const d = new Date(date + 'T00:00:00');
 		d.setDate(d.getDate() + 7);
 		return d.toISOString().split('T')[0];
@@ -155,12 +156,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Frequency</legend>
 				<div class="flex gap-1">
-					{#each [
-						{ value: '', label: 'One Time' },
-						{ value: 'weekly', label: 'Weekly' },
-						{ value: 'biweekly', label: 'Every 2 Weeks' },
-						{ value: 'monthly', label: 'Monthly' }
-					] as opt (opt.value)}
+					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Every 2 Weeks' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
 						<label class="btn btn-sm flex-1" class:btn-primary={frequency === opt.value}>
 							<input
 								type="radio"
@@ -186,14 +182,9 @@
 				/>
 			{/if}
 		{/if}
-
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton
-			label="Save"
-			continueLabel="Continue"
-			class="btn-primary"
-		/>
+		<Form.SubmitButton label="Save" continueLabel="Continue" class="btn-primary" />
 	</div>
 </Form.Step>

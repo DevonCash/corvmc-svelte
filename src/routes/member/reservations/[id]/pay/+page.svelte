@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DOLLARS_PER_UNIT, DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -53,11 +53,15 @@
 
 <PageHeader title="Pay for Your Session" />
 <PageContent width="md">
-
 	<div class="card bg-base-100 shadow-sm">
 		<div class="card-body">
 			<p class="font-medium">{formatDate(res.startsAt)}</p>
-			<p>{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours === 1 ? '' : 's'})</p>
+			<p>
+				{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours ===
+				1
+					? ''
+					: 's'})
+			</p>
 			{#if res.notes}
 				<p class="text-sm opacity-60">{res.notes}</p>
 			{/if}
@@ -110,9 +114,7 @@
 						bind:checked={coverFees}
 						class="checkbox checkbox-sm"
 					/>
-					<span class="label-text">
-						Cover processing fees so the Collective receives 100%
-					</span>
+					<span class="label-text"> Cover processing fees so the Collective receives 100% </span>
 				</label>
 			</div>
 		{/if}

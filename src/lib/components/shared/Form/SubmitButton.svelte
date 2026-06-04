@@ -32,16 +32,18 @@
 	const isLastStep = $derived(!ctx.hasSteps || ctx.currentStep === ctx.totalSteps - 1);
 	const activeLabel = $derived(isLastStep ? label : continueLabel);
 	const isDisabled = $derived(
-		disabled || !ctx.currentStepValid || ctx.status !== 'idle' && ctx.status !== 'dirty'
+		disabled || !ctx.currentStepValid || (ctx.status !== 'idle' && ctx.status !== 'dirty')
 	);
 
-	let keys = useShortcut(() => shortcut, () => {
-		if (ctx.status !== 'pending' && !disabled) {
-			if (isLastStep) ctx.submit();
-			else ctx.next();
+	let keys = useShortcut(
+		() => shortcut,
+		() => {
+			if (ctx.status !== 'pending' && !disabled) {
+				if (isLastStep) ctx.submit();
+				else ctx.next();
+			}
 		}
-	});
-
+	);
 </script>
 
 <div class="flex items-center gap-2">
@@ -50,7 +52,9 @@
 	{/if}
 	<button
 		type={isLastStep ? 'submit' : 'button'}
-		class="btn {className} {ctx.status === 'success' ? 'btn-success' : ''} {ctx.status === 'error' ? 'btn-error' : ''}"
+		class="btn {className} {ctx.status === 'success' ? 'btn-success' : ''} {ctx.status === 'error'
+			? 'btn-error'
+			: ''}"
 		disabled={isDisabled}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}

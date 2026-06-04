@@ -95,12 +95,18 @@ const reservationSettingsSchema = z.object({
 	operatingHoursStart: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
 	operatingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
 	timeSlotMinutes: z.string().regex(/^\d+$/).transform(Number),
-	minDurationHours: z.string().regex(/^\d+(\.\d+)?$/).transform(Number),
+	minDurationHours: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/)
+		.transform(Number),
 	maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
 	bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
 	minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
 	maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
-	maxAdvanceDaysRecurring: z.string().regex(/^\d+(\.\d+)?$/).transform(Number),
+	maxAdvanceDaysRecurring: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/)
+		.transform(Number),
 	hourlyRateCents: z.string().regex(/^\d+$/).transform(Number)
 });
 
@@ -175,7 +181,13 @@ export const getFeatureFlags = query(async () => {
 	return getAllFeatureFlags();
 });
 
-const VALID_FLAGS: FeatureFlag[] = ['staffInbox', 'bandPremium', 'emailMarketing', 'equipment', 'helpArticles'];
+const VALID_FLAGS: FeatureFlag[] = [
+	'staffInbox',
+	'bandPremium',
+	'emailMarketing',
+	'equipment',
+	'helpArticles'
+];
 
 export const updateFeatureFlag = form(
 	z.object({

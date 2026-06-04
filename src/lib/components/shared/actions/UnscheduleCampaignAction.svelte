@@ -26,7 +26,7 @@
 	{onsuccess}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.campaignId.as('hidden', campaignId)} />
 		<p class="py-4">Cancel the scheduled send and return this campaign to draft?</p>
 	{/snippet}

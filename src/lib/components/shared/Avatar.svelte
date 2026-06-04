@@ -16,10 +16,7 @@
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 </script>
 
-<Avatar.Root
-	{...rest}
-	class="avatar relative overflow-hidden rounded-full {rest.class}"
->
+<Avatar.Root {...rest} class="avatar relative overflow-hidden rounded-full {rest.class}">
 	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>

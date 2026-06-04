@@ -7,6 +7,7 @@ CorvMC is 7 days old with 40 server load functions, 13 form actions, and a clean
 ## How it works
 
 SvelteKit's `fetch` in universal load functions (`+page.ts`) has special behavior:
+
 - **During SSR**: calls to your own API routes resolve internally — no HTTP roundtrip, cookies pass through automatically
 - **During CSR/SPA**: same calls go over the network as real HTTP requests
 
@@ -30,27 +31,30 @@ Kiosk build: `adapter-static` with fallback → SPA, real HTTP fetch
 ## Migration per route (mechanical)
 
 **Before** — `src/routes/member/reservations/+page.server.ts`:
+
 ```ts
 export const load = async ({ locals }) => {
-  const upcoming = await reservationService.listUpcoming(locals.user.id);
-  return { upcoming };
+	const upcoming = await reservationService.listUpcoming(locals.user.id);
+	return { upcoming };
 };
 ```
 
 **After** — `src/routes/api/reservations/+server.ts`:
+
 ```ts
 export const GET = async ({ locals, url }) => {
-  if (!locals.user) return error(401);
-  const upcoming = await reservationService.listUpcoming(locals.user.id);
-  return json({ upcoming });
+	if (!locals.user) return error(401);
+	const upcoming = await reservationService.listUpcoming(locals.user.id);
+	return json({ upcoming });
 };
 ```
 
 **After** — `src/routes/member/reservations/+page.ts`:
+
 ```ts
 export const load = async ({ fetch }) => {
-  const res = await fetch('/api/reservations');
-  return await res.json();
+	const res = await fetch('/api/reservations');
+	return await res.json();
 };
 ```
 
@@ -58,13 +62,13 @@ The `.svelte` files don't change at all.
 
 ## Scope
 
-| Category | Count | Migration effort |
-|----------|-------|-----------------|
-| Page load functions | 40 | Mechanical — extract query to API route, replace load with fetch |
-| Form actions | 13 | Convert to `POST /api/<resource>/<action>` endpoints |
-| Existing API routes | 13 | Already done — no changes needed |
-| Service layer | 25+ functions | No changes — API routes call them directly |
-| Svelte components | all | No changes |
+| Category            | Count         | Migration effort                                                 |
+| ------------------- | ------------- | ---------------------------------------------------------------- |
+| Page load functions | 40            | Mechanical — extract query to API route, replace load with fetch |
+| Form actions        | 13            | Convert to `POST /api/<resource>/<action>` endpoints             |
+| Existing API routes | 13            | Already done — no changes needed                                 |
+| Service layer       | 25+ functions | No changes — API routes call them directly                       |
+| Svelte components   | all           | No changes                                                       |
 
 ## Auth strategy
 
@@ -75,6 +79,7 @@ The `.svelte` files don't change at all.
 ## Form actions → API mutations
 
 SvelteKit form actions (`+page.server.ts` `actions`) only work with SSR. Replace with:
+
 - `POST /api/<resource>/<action>` endpoints
 - Client-side form submission via fetch (the app already uses a `Form` component from `docs/ui-patterns.md` that can be adapted)
 

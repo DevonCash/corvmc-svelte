@@ -74,17 +74,17 @@
 			{/if}
 			{#if instruments.length || genres.length}
 				<div class="id-card__badges">
-					{#each instruments as inst}
+					{#each instruments as inst (inst)}
 						<span class="id-tag id-tag--teal">{inst}</span>
 					{/each}
-					{#each genres as genre}
+					{#each genres as genre (genre)}
 						<span class="id-tag id-tag--genre">{genre}</span>
 					{/each}
 				</div>
 			{/if}
 			{#if bands.length}
 				<div class="id-card__bands">
-					{#each bands as b}
+					{#each bands as b (b.name)}
 						<span class="id-tag id-tag--band">{b.name}</span>
 					{/each}
 				</div>

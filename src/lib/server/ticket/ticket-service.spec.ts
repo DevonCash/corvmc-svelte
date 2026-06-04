@@ -51,11 +51,15 @@ const mockDb = {
 		set: vi.fn(() => ({
 			where: vi.fn(() => {
 				const whereResult = Promise.resolve(updateResult);
-				(whereResult as any).returning = vi.fn(() => Promise.resolve(
-					typeof (updateResult as any).rowCount === 'number'
-						? Array.from({ length: (updateResult as any).rowCount }, (_, i) => ({ id: `id-${i}` }))
-						: updateResult
-				));
+				(whereResult as any).returning = vi.fn(() =>
+					Promise.resolve(
+						typeof (updateResult as any).rowCount === 'number'
+							? Array.from({ length: (updateResult as any).rowCount }, (_, i) => ({
+									id: `id-${i}`
+								}))
+							: updateResult
+					)
+				);
 				return whereResult;
 			})
 		}))
@@ -106,8 +110,19 @@ vi.mock('drizzle-orm', () => ({
 	desc: vi.fn((col: unknown) => ['desc', col])
 }));
 
-const { generateCodeString, createTickets, fulfillPurchase, cancelPurchase, cancelTicket, checkIn, getTicketsSold, getTicketsRemaining, getTicketsByPurchase, getEventTickets, getUserTickets } =
-	await import('./ticket-service');
+const {
+	generateCodeString,
+	createTickets,
+	fulfillPurchase,
+	cancelPurchase,
+	cancelTicket,
+	checkIn,
+	getTicketsSold,
+	getTicketsRemaining,
+	getTicketsByPurchase,
+	getEventTickets,
+	getUserTickets
+} = await import('./ticket-service');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -234,17 +249,23 @@ describe('checkIn', () => {
 
 	it('throws when ticket is not valid', async () => {
 		selectResult = [{ status: 'pending' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "pending"');
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
+			'Cannot check in ticket with status "pending"'
+		);
 	});
 
 	it('throws when ticket is already checked in', async () => {
 		selectResult = [{ status: 'checked_in' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "checked_in"');
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
+			'Cannot check in ticket with status "checked_in"'
+		);
 	});
 
 	it('throws when ticket is cancelled', async () => {
 		selectResult = [{ status: 'cancelled' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow('Cannot check in ticket with status "cancelled"');
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
+			'Cannot check in ticket with status "cancelled"'
+		);
 	});
 
 	it('updates the ticket when valid', async () => {
@@ -310,12 +331,16 @@ describe('cancelTicket', () => {
 
 	it('throws when ticket is already cancelled', async () => {
 		selectResult = [{ status: 'cancelled' }];
-		await expect(cancelTicket('ticket-1')).rejects.toThrow('Cannot cancel ticket with status "cancelled"');
+		await expect(cancelTicket('ticket-1')).rejects.toThrow(
+			'Cannot cancel ticket with status "cancelled"'
+		);
 	});
 
 	it('throws when ticket is already checked in', async () => {
 		selectResult = [{ status: 'checked_in' }];
-		await expect(cancelTicket('ticket-1')).rejects.toThrow('Cannot cancel ticket with status "checked_in"');
+		await expect(cancelTicket('ticket-1')).rejects.toThrow(
+			'Cannot cancel ticket with status "checked_in"'
+		);
 	});
 
 	it('cancels a pending ticket', async () => {
@@ -370,7 +395,12 @@ describe('getEventTickets', () => {
 
 describe('getUserTickets', () => {
 	it('queries tickets for a user', async () => {
-		const userTicket = { ...mockTicket, eventTitle: 'Concert', eventStartsAt: new Date(), eventEndsAt: new Date() };
+		const userTicket = {
+			...mockTicket,
+			eventTitle: 'Concert',
+			eventStartsAt: new Date(),
+			eventEndsAt: new Date()
+		};
 		selectResult = [userTicket];
 		const result = await getUserTickets('user-1');
 		expect(result).toEqual([userTicket]);
@@ -383,4 +413,3 @@ describe('getUserTickets', () => {
 		expect(result).toEqual([]);
 	});
 });
-

@@ -22,17 +22,14 @@
 	let userName = $state('');
 	let equipmentOptions = $state<{ id: string; name: string }[]>([]);
 	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
-	let searching = $state(false);
 
 	async function handleMemberSearch() {
-		if (query.length < 2) { memberResults = []; return; }
-		searching = true;
-		try {
-			const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-			memberResults = await res.json();
-		} finally {
-			searching = false;
+		if (query.length < 2) {
+			memberResults = [];
+			return;
 		}
+		const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+		memberResults = await res.json();
 	}
 
 	function selectMember(u: { id: string; name: string }) {
@@ -50,7 +47,9 @@
 		}
 	}
 
-	$effect(() => { loadEquipmentOptions(); });
+	$effect(() => {
+		loadEquipmentOptions();
+	});
 </script>
 
 <Action
@@ -62,13 +61,20 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<div class="space-y-3">
 			<input {...fields.userId.as('hidden', userId)} />
 			{#if userId}
 				<div class="flex items-center justify-between bg-base-200 rounded p-2">
 					<span class="font-medium">{userName}</span>
-					<Button type="button" class="btn-ghost btn-xs" onclick={() => { userId = ''; userName = ''; }}>Change</Button>
+					<Button
+						type="button"
+						class="btn-ghost btn-xs"
+						onclick={() => {
+							userId = '';
+							userName = '';
+						}}>Change</Button
+					>
 				</div>
 			{:else}
 				<label class="form-control w-full">
@@ -83,8 +89,12 @@
 				</label>
 				{#if memberResults.length > 0}
 					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
-						{#each memberResults as u}
-							<button type="button" class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm" onclick={() => selectMember(u)}>
+						{#each memberResults as u (u.id)}
+							<button
+								type="button"
+								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
+								onclick={() => selectMember(u)}
+							>
 								<span class="font-medium">{u.name}</span>
 								<span class="opacity-60 ml-1">{u.email}</span>
 							</button>
@@ -94,7 +104,7 @@
 			{/if}
 			<Field field={fields.equipmentId} type="select" label="Equipment">
 				<option value="">-- Select equipment --</option>
-				{#each equipmentOptions as eq}
+				{#each equipmentOptions as eq (eq.id)}
 					<option value={eq.id}>{eq.name}</option>
 				{/each}
 			</Field>

@@ -3,11 +3,11 @@
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { sanitizeBio } from '$lib/utils/markdown';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 
 	interface BandData {
-		id: string;
 		name: string;
-		slug: string;
 		bio: string | null;
 		tagline: string | null;
 		avatarUrl: string | null;
@@ -76,7 +76,9 @@
 			{#if block.type === 'hero'}
 				<div class="band-site-hero relative h-64 md:h-96 overflow-hidden">
 					<img src={block.imageKey} alt="" class="absolute inset-0 w-full h-full object-cover" />
-					<div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4">
+					<div
+						class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4"
+					>
 						{#if block.headline}
 							<h1 class="text-4xl md:text-6xl font-bold">{block.headline}</h1>
 						{/if}
@@ -85,24 +87,23 @@
 						{/if}
 					</div>
 				</div>
-
 			{:else if block.type === 'bio'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<div class="prose prose-lg">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (bio block) -->
 						{@html block.content}
 					</div>
 				</div>
-
 			{:else if block.type === 'links'}
 				{#if band.links && band.links.length > 0}
 					<div class="max-w-md mx-auto px-6 py-8">
 						<div class="flex flex-col gap-3">
-							{#each band.links as link}
+							{#each band.links as link (link.url)}
 								{@const platform = detectPlatform(link.url)}
 								<a
 									href={link.url}
 									target="_blank"
-									rel="noopener"
+									rel="external noopener"
 									class="btn btn-outline w-full justify-start gap-3"
 								>
 									{#if platform}
@@ -114,7 +115,6 @@
 						</div>
 					</div>
 				{/if}
-
 			{:else if block.type === 'members'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<h2 class="text-2xl font-bold mb-4">Members</h2>
@@ -138,7 +138,6 @@
 						{/each}
 					</div>
 				</div>
-
 			{:else if block.type === 'events'}
 				{#if events.length > 0}
 					<div class="max-w-3xl mx-auto px-6 py-8">
@@ -156,7 +155,12 @@
 										{/if}
 									</div>
 									{#if evt.externalTicketUrl}
-										<a href={evt.externalTicketUrl} target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+										<a
+											href={evt.externalTicketUrl}
+											target="_blank"
+											rel="external noopener"
+											class="btn btn-primary btn-sm"
+										>
 											Tickets
 										</a>
 									{/if}
@@ -165,11 +169,10 @@
 						</div>
 					</div>
 				{/if}
-
 			{:else if block.type === 'gallery'}
 				<div class="max-w-4xl mx-auto px-6 py-8">
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-						{#each media.filter(m => m.type === 'image') as img (img.id)}
+						{#each media.filter((m) => m.type === 'image') as img (img.id)}
 							{#if img.url}
 								<div class="aspect-square overflow-hidden rounded-lg">
 									<img src={img.url} alt={img.caption ?? ''} class="w-full h-full object-cover" />
@@ -178,7 +181,6 @@
 						{/each}
 					</div>
 				</div>
-
 			{:else if block.type === 'embed'}
 				{@const embedUrl = getEmbedUrl(block.url)}
 				{#if embedUrl}
@@ -196,13 +198,12 @@
 						></iframe>
 					</div>
 				{/if}
-
 			{:else if block.type === 'press'}
 				{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
 					<div class="max-w-3xl mx-auto px-6 py-8">
 						<h2 class="text-2xl font-bold mb-4">Press</h2>
 						<div class="space-y-4">
-							{#each epk.pressQuotes as quote}
+							{#each epk.pressQuotes as quote (quote.quote)}
 								<blockquote class="border-l-4 border-primary pl-4">
 									<p class="italic">"{quote.quote}"</p>
 									<footer class="mt-1 text-sm opacity-70">
@@ -216,13 +217,12 @@
 						</div>
 					</div>
 				{/if}
-
 			{:else if block.type === 'achievements'}
 				{#if epk?.achievements && epk.achievements.length > 0}
 					<div class="max-w-3xl mx-auto px-6 py-8">
 						<h2 class="text-2xl font-bold mb-4">Highlights</h2>
 						<ul class="space-y-2">
-							{#each epk.achievements as achievement}
+							{#each epk.achievements as achievement (achievement)}
 								<li class="flex items-start gap-2">
 									<span class="text-primary">&#9733;</span>
 									<span>{achievement}</span>
@@ -231,7 +231,6 @@
 						</ul>
 					</div>
 				{/if}
-
 			{:else if block.type === 'contact'}
 				{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
 					<div class="max-w-3xl mx-auto px-6 py-8">
@@ -241,7 +240,9 @@
 								<div>
 									<h3 class="font-semibold text-sm uppercase opacity-60">Booking</h3>
 									<p class="font-medium">{epk.bookingContact.name}</p>
-									<a href="mailto:{epk.bookingContact.email}" class="link text-sm">{epk.bookingContact.email}</a>
+									<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
+										>{epk.bookingContact.email}</a
+									>
 									{#if epk.bookingContact.phone}
 										<p class="text-sm opacity-70">{epk.bookingContact.phone}</p>
 									{/if}
@@ -251,25 +252,28 @@
 								<div>
 									<h3 class="font-semibold text-sm uppercase opacity-60">Management</h3>
 									<p class="font-medium">{epk.managementContact.name}</p>
-									<a href="mailto:{epk.managementContact.email}" class="link text-sm">{epk.managementContact.email}</a>
+									<a href="mailto:{epk.managementContact.email}" class="link text-sm"
+										>{epk.managementContact.email}</a
+									>
 								</div>
 							{/if}
 							{#if epk.prContact}
 								<div>
 									<h3 class="font-semibold text-sm uppercase opacity-60">Press</h3>
 									<p class="font-medium">{epk.prContact.name}</p>
-									<a href="mailto:{epk.prContact.email}" class="link text-sm">{epk.prContact.email}</a>
+									<a href="mailto:{epk.prContact.email}" class="link text-sm"
+										>{epk.prContact.email}</a
+									>
 								</div>
 							{/if}
 						</div>
 					</div>
 				{/if}
-
 			{:else if block.type === 'tech_rider'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<h2 class="text-2xl font-bold mb-4">Technical Requirements</h2>
 					{#if epk?.stagePlotKey}
-						{@const stageMedia = media.find(m => m.type === 'stage_plot')}
+						{@const stageMedia = media.find((m) => m.type === 'stage_plot')}
 						{#if stageMedia?.url}
 							<img src={stageMedia.url} alt="Stage Plot" class="rounded-lg mb-4 max-w-full" />
 						{/if}
@@ -286,7 +290,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each epk.backline as item}
+									{#each epk.backline as item (item.instrument)}
 										<tr>
 											<td class="font-medium">{item.instrument}</td>
 											<td>{item.details}</td>
@@ -298,29 +302,37 @@
 						</div>
 					{/if}
 					{#if epk?.technicalRiderKey}
-						{@const riderMedia = media.find(m => m.type === 'rider')}
+						{@const riderMedia = media.find((m) => m.type === 'rider')}
 						{#if riderMedia?.url}
-							<a href={riderMedia.url} target="_blank" rel="noopener" class="btn btn-outline btn-sm mt-4">
+							<a
+								href={riderMedia.url}
+								target="_blank"
+								rel="external noopener"
+								class="btn btn-outline btn-sm mt-4"
+							>
 								Download Full Tech Rider (PDF)
 							</a>
 						{/if}
 					{/if}
 				</div>
-
 			{:else if block.type === 'custom_html'}
 				<div class="max-w-4xl mx-auto px-6 py-8">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin custom_html block) -->
 					{@html block.content}
 				</div>
-
 			{:else if block.type === 'merch'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<h2 class="text-2xl font-bold mb-4">Merch</h2>
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-						{#each block.items as item}
-							<a href={item.url} target="_blank" rel="noopener" class="block group">
+						{#each block.items as item (item.url)}
+							<a href={item.url} target="_blank" rel="external noopener" class="block group">
 								{#if item.imageKey}
 									<div class="aspect-square overflow-hidden rounded-lg mb-2">
-										<img src={item.imageKey} alt={item.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+										<img
+											src={item.imageKey}
+											alt={item.title}
+											class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+										/>
 									</div>
 								{/if}
 								<p class="font-medium group-hover:text-primary transition-colors">{item.title}</p>
@@ -331,7 +343,6 @@
 						{/each}
 					</div>
 				</div>
-
 			{:else if block.type === 'spacer'}
 				<div class={block.height === 'sm' ? 'h-8' : block.height === 'md' ? 'h-16' : 'h-32'}></div>
 			{/if}
@@ -342,7 +353,11 @@
 	<div class="max-w-3xl mx-auto px-6 py-12">
 		<div class="text-center mb-8">
 			{#if band.avatarUrl}
-				<img src={band.avatarUrl} alt={band.name} class="w-24 h-24 rounded-full mx-auto mb-4 object-cover" />
+				<img
+					src={band.avatarUrl}
+					alt={band.name}
+					class="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
+				/>
 			{/if}
 			<h1 class="text-4xl font-bold">{band.name}</h1>
 			{#if band.tagline}
@@ -354,12 +369,15 @@
 		</div>
 
 		{#if band.bio}
-			<div class="prose prose-sm max-w-none text-center text-base-content/80 mb-8">{@html sanitizeBio(band.bio)}</div>
+			<div class="prose prose-sm max-w-none text-center text-base-content/80 mb-8">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
+				{@html sanitizeBio(band.bio)}
+			</div>
 		{/if}
 
 		{#if band.links && band.links.length > 0}
 			<div class="max-w-sm mx-auto space-y-3 mb-8">
-				{#each band.links as link}
+				{#each band.links as link (link.url)}
 					{@const embedUrl = link.embed !== false ? getEmbedUrl(link.url) : null}
 					{#if embedUrl}
 						<iframe
@@ -375,7 +393,12 @@
 						></iframe>
 					{:else}
 						{@const platform = detectPlatform(link.url)}
-						<a href={link.url} target="_blank" rel="noopener" class="btn btn-outline w-full">
+						<a
+							href={link.url}
+							target="_blank"
+							rel="external noopener"
+							class="btn btn-outline w-full"
+						>
 							{link.label || platform?.name || 'Link'}
 						</a>
 					{/if}
@@ -388,9 +411,15 @@
 <!-- Navigation footer -->
 <nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
 	{#if events.length > 0}
-		<a href="events" class="hover:opacity-100 transition-opacity">All Events</a>
+		<a
+			href={resolve('/band-site/[slug]/events', { slug: page.params.slug! })}
+			class="hover:opacity-100 transition-opacity">All Events</a
+		>
 	{/if}
 	{#if epk}
-		<a href="epk" class="hover:opacity-100 transition-opacity">Press Kit</a>
+		<a
+			href={resolve('/band-site/[slug]/epk', { slug: page.params.slug! })}
+			class="hover:opacity-100 transition-opacity">Press Kit</a
+		>
 	{/if}
 </nav>

@@ -53,11 +53,11 @@ band_member
 
 Three roles within a band, checked at the service level (no global permission table entries):
 
-| Role | Can invite | Can remove members | Can edit profile | Can book | Can delete band | Can transfer ownership |
-|------|-----------|-------------------|-----------------|---------|----------------|----------------------|
-| owner | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| admin | ✅ | ✅ (not owner) | ✅ | ✅ | ❌ | ❌ |
-| member | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Role   | Can invite | Can remove members | Can edit profile | Can book | Can delete band | Can transfer ownership |
+| ------ | ---------- | ------------------ | ---------------- | -------- | --------------- | ---------------------- |
+| owner  | ✅         | ✅                 | ✅               | ✅       | ✅              | ✅                     |
+| admin  | ✅         | ✅ (not owner)     | ✅               | ✅       | ❌              | ❌                     |
+| member | ❌         | ❌                 | ❌               | ✅       | ❌              | ❌                     |
 
 Staff with the `admin` or `staff` role can manage any band (edit, delete, remove members) from the staff panel.
 
@@ -139,30 +139,30 @@ Staff with the `admin` or `staff` role can manage any band (edit, delete, remove
 
 All routes under `/band/{slug}/` require the user to be an active member of that band. A layout load function resolves the band by slug and verifies membership.
 
-| Route | Page | Access |
-|-------|------|--------|
-| `/band/{slug}/` | Dashboard — band name, member count, upcoming reservations | all members |
-| `/band/{slug}/members` | Members list, invite form, pending invitations | all members (actions gated by role) |
-| `/band/{slug}/reservations` | Band's reservations list | all members |
-| `/band/{slug}/reservations/new` | New reservation flow (band as booker) | all members |
-| `/band/{slug}/edit` | Edit band profile (name, bio, avatar) | owner, admin |
-| `/band/{slug}/settings` | Delete band, transfer ownership | owner |
+| Route                           | Page                                                       | Access                              |
+| ------------------------------- | ---------------------------------------------------------- | ----------------------------------- |
+| `/band/{slug}/`                 | Dashboard — band name, member count, upcoming reservations | all members                         |
+| `/band/{slug}/members`          | Members list, invite form, pending invitations             | all members (actions gated by role) |
+| `/band/{slug}/reservations`     | Band's reservations list                                   | all members                         |
+| `/band/{slug}/reservations/new` | New reservation flow (band as booker)                      | all members                         |
+| `/band/{slug}/edit`             | Edit band profile (name, bio, avatar)                      | owner, admin                        |
+| `/band/{slug}/settings`         | Delete band, transfer ownership                            | owner                               |
 
 ### Member panel additions
 
-| Route | Page |
-|-------|------|
-| `/member/bands` | My Bands — list of bands the user belongs to + pending invitations |
-| `/member/bands/new` | Create Band form |
+| Route               | Page                                                               |
+| ------------------- | ------------------------------------------------------------------ |
+| `/member/bands`     | My Bands — list of bands the user belongs to + pending invitations |
+| `/member/bands/new` | Create Band form                                                   |
 
 Add a "Bands" section to the member nav with links to My Bands and Create Band.
 
 ### Public directory
 
-| Route | Page |
-|-------|------|
-| `/directory` | Tabbed page: Members tab (grid of member cards) and Bands tab (grid of band cards) |
-| `/directory/bands/{slug}` | Public band profile — name, bio, avatar, member list |
+| Route                     | Page                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `/directory`              | Tabbed page: Members tab (grid of member cards) and Bands tab (grid of band cards) |
+| `/directory/bands/{slug}` | Public band profile — name, bio, avatar, member list                               |
 
 ### Staff panel additions
 
@@ -170,10 +170,10 @@ Bands don't need a full staff resource initially. Staff can manage bands through
 
 ### API
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/bands/[id]/avatar` | `POST` | Upload band avatar (multipart, same pattern as event poster) |
-| `/api/bands/[id]/avatar` | `DELETE` | Remove band avatar |
+| Route                    | Method   | Purpose                                                      |
+| ------------------------ | -------- | ------------------------------------------------------------ |
+| `/api/bands/[id]/avatar` | `POST`   | Upload band avatar (multipart, same pattern as event poster) |
+| `/api/bands/[id]/avatar` | `DELETE` | Remove band avatar                                           |
 
 ---
 
@@ -181,31 +181,31 @@ Bands don't need a full staff resource initially. Staff can manage bands through
 
 ### `band` table
 
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | text | PK, cuid |
-| name | text | not null, unique |
-| slug | text | not null, unique |
-| bio | text | nullable |
-| ownerId | text | not null, FK → user(id) on delete set null |
-| avatarKey | text | nullable |
-| createdAt | timestamp | not null, default now() |
-| updatedAt | timestamp | not null, default now() |
+| Column    | Type      | Constraints                                |
+| --------- | --------- | ------------------------------------------ |
+| id        | text      | PK, cuid                                   |
+| name      | text      | not null, unique                           |
+| slug      | text      | not null, unique                           |
+| bio       | text      | nullable                                   |
+| ownerId   | text      | not null, FK → user(id) on delete set null |
+| avatarKey | text      | nullable                                   |
+| createdAt | timestamp | not null, default now()                    |
+| updatedAt | timestamp | not null, default now()                    |
 
 Indexes: `unique(name)`, `unique(slug)`.
 
 ### `band_member` table
 
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | text | PK, cuid |
-| bandId | text | not null, FK → band(id) on delete cascade |
-| userId | text | not null, FK → user(id) on delete cascade |
-| role | text | not null, check in ('owner', 'admin', 'member') |
-| position | text | nullable |
-| status | text | not null, check in ('pending', 'active') |
-| invitedById | text | nullable, FK → user(id) on delete set null |
-| createdAt | timestamp | not null, default now() |
+| Column      | Type      | Constraints                                     |
+| ----------- | --------- | ----------------------------------------------- |
+| id          | text      | PK, cuid                                        |
+| bandId      | text      | not null, FK → band(id) on delete cascade       |
+| userId      | text      | not null, FK → user(id) on delete cascade       |
+| role        | text      | not null, check in ('owner', 'admin', 'member') |
+| position    | text      | nullable                                        |
+| status      | text      | not null, check in ('pending', 'active')        |
+| invitedById | text      | nullable, FK → user(id) on delete set null      |
+| createdAt   | timestamp | not null, default now()                         |
 
 Indexes: `unique(bandId, userId)`, index on `userId` (for "my bands" queries), index on `status` (for filtering pending invitations).
 
@@ -215,23 +215,23 @@ Indexes: `unique(bandId, userId)`, index on `userId` (for "my bands" queries), i
 
 Functions:
 
-| Function | Description |
-|----------|-------------|
-| `create(ownerId, data)` | Create band + owner band_member row. Generate slug from name. |
-| `update(bandId, data)` | Update name/bio. Regenerate slug if name changes. |
-| `delete(bandId, actorId)` | Delete band, cancel future band reservations, delete avatar from R2. |
-| `getBySlug(slug)` | Look up band by slug, include member count. |
-| `listForUser(userId)` | All bands where user has a band_member row (any status). |
-| `getMembers(bandId)` | All band_member rows with user info, ordered by role then name. |
-| `searchMembers(query)` | Search CMC members by name or email for the invite flow. |
-| `invite(bandId, userId, role, position, invitedById)` | Create pending band_member row. |
-| `acceptInvitation(bandMemberId, userId)` | Flip status to active. Verify userId matches. |
-| `declineInvitation(bandMemberId, userId)` | Delete the pending row. Verify userId matches. |
-| `revokeInvitation(bandMemberId)` | Delete the pending row. |
-| `removeMember(bandMemberId)` | Delete an active row. Cannot remove owner. |
-| `updateMember(bandMemberId, data)` | Update role/position. Cannot demote owner. |
-| `transferOwnership(bandId, newOwnerId, actorId)` | Swap roles, update band.ownerId. |
-| `leaveband(bandId, userId)` | Remove self. Cannot leave if owner. |
+| Function                                              | Description                                                          |
+| ----------------------------------------------------- | -------------------------------------------------------------------- |
+| `create(ownerId, data)`                               | Create band + owner band_member row. Generate slug from name.        |
+| `update(bandId, data)`                                | Update name/bio. Regenerate slug if name changes.                    |
+| `delete(bandId, actorId)`                             | Delete band, cancel future band reservations, delete avatar from R2. |
+| `getBySlug(slug)`                                     | Look up band by slug, include member count.                          |
+| `listForUser(userId)`                                 | All bands where user has a band_member row (any status).             |
+| `getMembers(bandId)`                                  | All band_member rows with user info, ordered by role then name.      |
+| `searchMembers(query)`                                | Search CMC members by name or email for the invite flow.             |
+| `invite(bandId, userId, role, position, invitedById)` | Create pending band_member row.                                      |
+| `acceptInvitation(bandMemberId, userId)`              | Flip status to active. Verify userId matches.                        |
+| `declineInvitation(bandMemberId, userId)`             | Delete the pending row. Verify userId matches.                       |
+| `revokeInvitation(bandMemberId)`                      | Delete the pending row.                                              |
+| `removeMember(bandMemberId)`                          | Delete an active row. Cannot remove owner.                           |
+| `updateMember(bandMemberId, data)`                    | Update role/position. Cannot demote owner.                           |
+| `transferOwnership(bandId, newOwnerId, actorId)`      | Swap roles, update band.ownerId.                                     |
+| `leaveband(bandId, userId)`                           | Remove self. Cannot leave if owner.                                  |
 
 Slug generation: lowercase, replace non-alphanumeric with hyphens, collapse consecutive hyphens, trim. If the slug already exists, append `-2`, `-3`, etc.
 
@@ -247,24 +247,24 @@ The dashboard should also show pending band invitations as a small notification 
 
 ## What changes
 
-| Area | Change |
-|------|--------|
-| Database | New `band` and `band_member` tables |
-| Member nav | Add "Bands" section with My Bands and Create Band |
-| Member dashboard | Show band reservations in "This Week", show pending invitations |
-| Reservation service | No changes needed — already supports `bookerType = 'band'` |
-| Storage module | No changes — reuse existing upload/delete functions |
-| Public routes | New `/directory` page with member and band tabs |
+| Area                | Change                                                          |
+| ------------------- | --------------------------------------------------------------- |
+| Database            | New `band` and `band_member` tables                             |
+| Member nav          | Add "Bands" section with My Bands and Create Band               |
+| Member dashboard    | Show band reservations in "This Week", show pending invitations |
+| Reservation service | No changes needed — already supports `bookerType = 'band'`      |
+| Storage module      | No changes — reuse existing upload/delete functions             |
+| Public routes       | New `/directory` page with member and band tabs                 |
 
 ## What doesn't change
 
-| Area | Notes |
-|------|-------|
+| Area               | Notes                                           |
+| ------------------ | ----------------------------------------------- |
 | Reservation schema | `bookerType` + `bookerId` already handles bands |
-| Auth / session | No changes |
-| Finance / payments | Band reservations use the same payment flow |
-| Staff panel | No new staff pages in initial build |
-| Event module | No band-event association in initial build |
+| Auth / session     | No changes                                      |
+| Finance / payments | Band reservations use the same payment flow     |
+| Staff panel        | No new staff pages in initial build             |
+| Event module       | No band-event association in initial build      |
 
 ---
 

@@ -64,26 +64,88 @@ export const bandMedia = sqliteTable(
 	(t) => [index('idx_band_media_band_type').on(t.bandId, t.type, t.sortOrder)]
 );
 
-
 // ---------------------------------------------------------------------------
 // Zod schemas for validation
 // ---------------------------------------------------------------------------
 
 export const blockSchema = z.discriminatedUnion('type', [
-	z.object({ id: z.string(), type: z.literal('hero'), imageKey: z.string(), headline: z.string().optional(), subtitle: z.string().optional(), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('bio'), content: z.string().max(10000), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('links'), style: z.enum(['buttons', 'icons', 'list']), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('members'), showPositions: z.boolean(), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('events'), limit: z.number().optional(), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('gallery'), imageKeys: z.array(z.string()), downloadable: z.boolean().optional(), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('embed'), platform: z.string(), url: z.string().url(), cssClass: z.string().optional() }),
+	z.object({
+		id: z.string(),
+		type: z.literal('hero'),
+		imageKey: z.string(),
+		headline: z.string().optional(),
+		subtitle: z.string().optional(),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('bio'),
+		content: z.string().max(10000),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('links'),
+		style: z.enum(['buttons', 'icons', 'list']),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('members'),
+		showPositions: z.boolean(),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('events'),
+		limit: z.number().optional(),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('gallery'),
+		imageKeys: z.array(z.string()),
+		downloadable: z.boolean().optional(),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('embed'),
+		platform: z.string(),
+		url: z.string().url(),
+		cssClass: z.string().optional()
+	}),
 	z.object({ id: z.string(), type: z.literal('press'), cssClass: z.string().optional() }),
 	z.object({ id: z.string(), type: z.literal('achievements'), cssClass: z.string().optional() }),
 	z.object({ id: z.string(), type: z.literal('contact'), cssClass: z.string().optional() }),
 	z.object({ id: z.string(), type: z.literal('tech_rider'), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('custom_html'), content: z.string().max(50000), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('merch'), items: z.array(z.object({ title: z.string(), url: z.string(), imageKey: z.string().optional(), price: z.string().optional() })).max(50), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('spacer'), height: z.enum(['sm', 'md', 'lg']), cssClass: z.string().optional() })
+	z.object({
+		id: z.string(),
+		type: z.literal('custom_html'),
+		content: z.string().max(50000),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('merch'),
+		items: z
+			.array(
+				z.object({
+					title: z.string(),
+					url: z.string(),
+					imageKey: z.string().optional(),
+					price: z.string().optional()
+				})
+			)
+			.max(50),
+		cssClass: z.string().optional()
+	}),
+	z.object({
+		id: z.string(),
+		type: z.literal('spacer'),
+		height: z.enum(['sm', 'md', 'lg']),
+		cssClass: z.string().optional()
+	})
 ]);
 
 export const bandPageConfigSchema = z.object({

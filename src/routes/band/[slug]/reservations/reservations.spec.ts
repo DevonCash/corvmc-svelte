@@ -120,7 +120,7 @@ vi.mock('$app/server', () => ({
 		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
-	form: (_schema: unknown, handler: Function) => {
+	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
@@ -128,13 +128,18 @@ vi.mock('$app/server', () => ({
 	},
 	query: (...args: unknown[]) => {
 		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as Function;
+		const fn = handler as (...args: any[]) => any;
 		(fn as any).__ = { type: 'query' };
 		return fn;
 	}
 }));
 
-const { getBandSlots: getSlots, bookBandReservation: bookReservation, cancelBandReservation, getBandMembershipStatus } = await import('$lib/remote/reservations.remote') as any;
+const {
+	getBandSlots: getSlots,
+	bookBandReservation: bookReservation,
+	cancelBandReservation,
+	getBandMembershipStatus
+} = (await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -201,10 +206,7 @@ describe('cancelBandReservation', () => {
 	it('cancels the reservation', async () => {
 		const result = await cancelBandReservation({ reservationId: 'res-42' });
 
-		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
-			'res-42',
-			'user-owner'
-		);
+		expect(reservationServiceMock.cancel).toHaveBeenCalledWith('res-42', 'user-owner');
 		expect(result.success).toBe(true);
 	});
 });
@@ -230,9 +232,7 @@ describe('getBandMembershipStatus', () => {
 	});
 
 	it('returns hasSustainingMember false when no active members exist', async () => {
-		bandServiceMock.getMembers.mockResolvedValueOnce([
-			{ userId: 'user-1', status: 'inactive' }
-		]);
+		bandServiceMock.getMembers.mockResolvedValueOnce([{ userId: 'user-1', status: 'inactive' }]);
 
 		const result = await getBandMembershipStatus();
 
@@ -289,4 +289,3 @@ describe('bookReservation with recurring', () => {
 		expect(recurringSeriesServiceMock.create).not.toHaveBeenCalled();
 	});
 });
-

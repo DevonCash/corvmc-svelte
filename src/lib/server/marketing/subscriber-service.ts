@@ -42,10 +42,7 @@ export async function findOrCreateByEmail(
  * Link a subscriber record to a user account.
  */
 export async function linkToUser(subscriberId: string, userId: string): Promise<void> {
-	await db
-		.update(subscriber)
-		.set({ userId })
-		.where(eq(subscriber.id, subscriberId));
+	await db.update(subscriber).set({ userId }).where(eq(subscriber.id, subscriberId));
 }
 
 /**
@@ -53,11 +50,7 @@ export async function linkToUser(subscriberId: string, userId: string): Promise<
  */
 export async function findByEmail(email: string) {
 	const normalized = email.toLowerCase().trim();
-	const [row] = await db
-		.select()
-		.from(subscriber)
-		.where(eq(subscriber.email, normalized))
-		.limit(1);
+	const [row] = await db.select().from(subscriber).where(eq(subscriber.email, normalized)).limit(1);
 	return row ?? null;
 }
 
@@ -65,11 +58,7 @@ export async function findByEmail(email: string) {
  * Find a subscriber by linked user account.
  */
 export async function findByUserId(userId: string) {
-	const [row] = await db
-		.select()
-		.from(subscriber)
-		.where(eq(subscriber.userId, userId))
-		.limit(1);
+	const [row] = await db.select().from(subscriber).where(eq(subscriber.userId, userId)).limit(1);
 	return row ?? null;
 }
 

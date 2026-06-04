@@ -29,7 +29,6 @@
 
 <PageHeader title="Check-in: {data.event.title}" backHref="/staff/events/{data.event.id}" />
 <PageContent width="3xl">
-
 	<!-- Stats -->
 	<div class="flex gap-6">
 		<div class="stat bg-base-100 shadow rounded-box p-4">
@@ -67,11 +66,20 @@
 						{:else if ticket.status === 'cancelled'}
 							<StatusBadge status="cancelled" />
 						{:else}
-							<Form remote={checkInTicket.for(ticket.id)} successToast="Checked in" onsuccess={() => invalidateAll()} class="inline">
+							<Form
+								remote={checkInTicket.for(ticket.id)}
+								successToast="Checked in"
+								onsuccess={() => invalidateAll()}
+								class="inline"
+							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<SubmitButton label="Check In" class="btn-primary btn-sm" />
 							</Form>
-							<CancelTicketAction eventId={data.event.id} ticketId={ticket.id} attendeeName={ticket.attendeeName} />
+							<CancelTicketAction
+								eventId={data.event.id}
+								ticketId={ticket.id}
+								attendeeName={ticket.attendeeName}
+							/>
 						{/if}
 					</div>
 				</div>

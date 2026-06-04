@@ -17,7 +17,8 @@ export function getRowCount(result: unknown): number {
 
 export const db = new Proxy({} as Database, {
 	get(_target, prop, receiver) {
-		if (!_db) throw new Error('Database not initialized — call initDb(d1) in hooks.server.ts first');
+		if (!_db)
+			throw new Error('Database not initialized — call initDb(d1) in hooks.server.ts first');
 		return Reflect.get(_db, prop, receiver);
 	}
 });

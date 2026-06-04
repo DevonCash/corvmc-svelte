@@ -165,12 +165,15 @@ export async function updateQuantity(
 
 	const items: Array<{
 		id?: string;
-		price_data?: { currency: string; product: string; unit_amount: number; recurring: { interval: string } };
+		price_data?: {
+			currency: string;
+			product: string;
+			unit_amount: number;
+			recurring: { interval: string };
+		};
 		quantity?: number;
 		deleted?: boolean;
-	}> = [
-		{ id: contributionItem.id, quantity: newQuantity }
-	];
+	}> = [{ id: contributionItem.id, quantity: newQuantity }];
 
 	if (coverFees) {
 		const contributionCents = newQuantity * contributionConfig.unitAmountCents;

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteForm } from '@sveltejs/kit';
 	import { toast } from 'svelte-sonner';
-	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';
 	import Form from './Form/Form.svelte';
@@ -23,7 +22,6 @@
 
 	let {
 		action,
-		shortcut,
 		label = 'Run',
 		icon,
 		successLabel = 'Done',
@@ -35,7 +33,6 @@
 		trigger,
 		submitLabel,
 		submitClass,
-		canSubmit = true,
 		noFooter = false,
 		successToast,
 		maxWidth = 'max-w-lg',
@@ -47,7 +44,6 @@
 		...rest
 	}: {
 		action: (() => Promise<unknown>) | RemoteForm<any, any>;
-		shortcut?: string;
 		label?: string;
 		icon?: Snippet;
 		successLabel?: string;
@@ -59,7 +55,6 @@
 		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
 		submitClass?: string;
-		canSubmit?: boolean;
 		noFooter?: boolean;
 		maxWidth?: string;
 		successToast?: string;
@@ -70,8 +65,6 @@
 		onfailure?: (error?: unknown) => void;
 		[key: string]: unknown;
 	} = $props();
-
-	const errorBoundary = getErrorBoundary();
 
 	// ---------------------------------------------------------------------------
 	// Mode detection
@@ -122,7 +115,8 @@
 	}
 
 	function handleClick() {
-		hasModal ? (dialogOpen = true) : run();
+		if (hasModal) dialogOpen = true;
+		else run();
 	}
 
 	function handleFormSuccess(result?: unknown) {

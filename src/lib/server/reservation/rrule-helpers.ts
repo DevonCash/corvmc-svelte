@@ -1,4 +1,4 @@
-import { addWeeks, addDays } from 'date-fns';
+import { addWeeks } from 'date-fns';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { getReservationConfig } from './config';
 import { getPartsInTz } from './timezone';
@@ -15,9 +15,6 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 const TZ = DEFAULT_TIMEZONE;
-
-/** Weekday names for display */
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /** Serialized recurrence rule */
 interface RecurrenceRule {
@@ -77,11 +74,7 @@ export function parseRRule(rruleString: string): RecurrenceRule {
  * @param before       Window end (exclusive)
  * @returns            Array of occurrence start times
  */
-export function getOccurrences(
-	rruleString: string,
-	after: Date,
-	before: Date
-): Date[] {
+export function getOccurrences(rruleString: string, after: Date, before: Date): Date[] {
 	const rule = parseRRule(rruleString);
 	const occurrences: Date[] = [];
 
@@ -189,7 +182,9 @@ function buildDateFromParts(
 	tz: string
 ): Date {
 	// Create approximate UTC date, then adjust for timezone offset
-	const approx = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0));
+	const approx = new Date(
+		Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0)
+	);
 	const offset = getUtcOffsetMinutes(approx, tz);
 	const corrected = new Date(approx.getTime() + offset * 60_000);
 

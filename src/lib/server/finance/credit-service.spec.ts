@@ -156,7 +156,14 @@ describe('addCredits', () => {
 	it('increases balance and creates a transaction', async () => {
 		selectResult = [{ balance: 2 }];
 
-		const result = await addCredits('user-1', 'free_hours', 3, 'admin_adjustment', undefined, 'Test add');
+		const result = await addCredits(
+			'user-1',
+			'free_hours',
+			3,
+			'admin_adjustment',
+			undefined,
+			'Test add'
+		);
 		expect(result).toBe(5);
 		expect(insertedRows).toHaveLength(1);
 		expect(insertedRows[0]).toMatchObject({
@@ -192,13 +199,19 @@ describe('addCredits', () => {
 	});
 
 	it('throws when amount is not positive', async () => {
-		await expect(addCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
-		await expect(addCredits('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
+		await expect(addCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow(
+			'Amount must be positive'
+		);
+		await expect(addCredits('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow(
+			'Amount must be positive'
+		);
 	});
 
 	it('throws when user not found', async () => {
 		selectResult = [];
-		await expect(addCredits('missing', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow('User missing not found');
+		await expect(addCredits('missing', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow(
+			'User missing not found'
+		);
 	});
 });
 
@@ -228,12 +241,15 @@ describe('deductCredits', () => {
 		updateResult = [];
 		selectResult = [{ free_hours: 1, equipment_credits: 0 }];
 
-		await expect(deductCredits('user-1', 'free_hours', 5, 'checkout'))
-			.rejects.toBeInstanceOf(InsufficientCreditsError);
+		await expect(deductCredits('user-1', 'free_hours', 5, 'checkout')).rejects.toBeInstanceOf(
+			InsufficientCreditsError
+		);
 	});
 
 	it('throws when amount is not positive', async () => {
-		await expect(deductCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow('Amount must be positive');
+		await expect(deductCredits('user-1', 'free_hours', 0, 'admin_adjustment')).rejects.toThrow(
+			'Amount must be positive'
+		);
 	});
 });
 
@@ -268,12 +284,16 @@ describe('setBalance', () => {
 	});
 
 	it('throws for negative balance', async () => {
-		await expect(setBalance('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow('Balance cannot be negative');
+		await expect(setBalance('user-1', 'free_hours', -1, 'admin_adjustment')).rejects.toThrow(
+			'Balance cannot be negative'
+		);
 	});
 
 	it('throws when user not found', async () => {
 		selectResult = [];
-		await expect(setBalance('missing', 'free_hours', 5, 'admin_adjustment')).rejects.toThrow('User missing not found');
+		await expect(setBalance('missing', 'free_hours', 5, 'admin_adjustment')).rejects.toThrow(
+			'User missing not found'
+		);
 	});
 });
 
@@ -303,16 +323,14 @@ describe('allocateMonthlyCredits', () => {
 		// hasTransaction uses db.select, setBalance uses tx.select
 		// Both use selectResult — sequence: [] for hasTransaction, then { balance: 3 } for setBalance
 		const results = [[] as unknown[], [{ balance: 3 }]];
-		let callIdx = 0;
-		const origSelectResult = selectResult;
 		Object.defineProperty(globalThis, '__selectResult', { value: results, configurable: true });
 
 		// Override to return sequential results
 		selectResult = [];
-		const origBuildSelect = buildSelectChain;
-		const patchedTxSelect = () => buildSelectChain(() => {
-			return [{ balance: 3 }];
-		});
+		const patchedTxSelect = () =>
+			buildSelectChain(() => {
+				return [{ balance: 3 }];
+			});
 		txMock.select = patchedTxSelect;
 
 		const result = await allocateMonthlyCredits('user-1', 5, 'inv_abc');
@@ -329,7 +347,7 @@ describe('allocateMonthlyCredits', () => {
 	it('skips allocation when invoice was already processed', async () => {
 		selectResult = [{ id: 99 }]; // hasTransaction returns true (found existing)
 
-		const result = await allocateMonthlyCredits('user-1', 5, 'inv_dup');
+		await allocateMonthlyCredits('user-1', 5, 'inv_dup');
 		// Returns getBalance which also uses selectResult — will find the same row
 		// But getBalance expects { free_hours, equipment_credits } format
 		// Let's just verify no inserts happened

@@ -42,7 +42,21 @@ export function sanitizeHtml(html: string): string {
 export function sanitizeBio(html: string | null | undefined): string {
 	if (!html) return '';
 	return DOMPurify.sanitize(html, {
-		ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li', 'h3', 'h4', 'blockquote'],
+		ALLOWED_TAGS: [
+			'p',
+			'br',
+			'strong',
+			'em',
+			'u',
+			's',
+			'a',
+			'ul',
+			'ol',
+			'li',
+			'h3',
+			'h4',
+			'blockquote'
+		],
 		ALLOWED_ATTR: ['href', 'target', 'rel']
 	});
 }

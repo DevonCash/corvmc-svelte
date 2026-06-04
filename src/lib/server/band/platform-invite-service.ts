@@ -76,8 +76,16 @@ export async function createInvite(
 	// Emit event for email notification (fire-and-forget)
 	Promise.resolve().then(async () => {
 		try {
-			const [bandRow] = await db.select({ name: band.name }).from(band).where(eq(band.id, bandId)).limit(1);
-			const [inviter] = await db.select({ name: user.name }).from(user).where(eq(user.id, invitedById)).limit(1);
+			const [bandRow] = await db
+				.select({ name: band.name })
+				.from(band)
+				.where(eq(band.id, bandId))
+				.limit(1);
+			const [inviter] = await db
+				.select({ name: user.name })
+				.from(user)
+				.where(eq(user.id, invitedById))
+				.limit(1);
 
 			if (bandRow && inviter) {
 				await domainEvents.emit('platform_invite.created', {
@@ -124,16 +132,14 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 	for (const inv of pending) {
 		try {
 			// Create band member row (auto-accepted)
-			await db
-				.insert(bandMember)
-				.values({
-					bandId: inv.bandId,
-					userId,
-					role: inv.role,
-					position: inv.position,
-					status: 'active',
-					invitedById: inv.invitedById
-				});
+			await db.insert(bandMember).values({
+				bandId: inv.bandId,
+				userId,
+				role: inv.role,
+				position: inv.position,
+				status: 'active',
+				invitedById: inv.invitedById
+			});
 
 			// Mark invite as accepted
 			await db
@@ -188,10 +194,7 @@ export async function revoke(inviteId: string): Promise<void> {
 	if (!row) throw new Error('Invite not found');
 	if (row.status !== 'pending') throw new Error('Can only revoke pending invites');
 
-	await db
-		.update(platformInvite)
-		.set({ status: 'revoked' })
-		.where(eq(platformInvite.id, inviteId));
+	await db.update(platformInvite).set({ status: 'revoked' }).where(eq(platformInvite.id, inviteId));
 }
 
 export async function getByToken(token: string): Promise<{

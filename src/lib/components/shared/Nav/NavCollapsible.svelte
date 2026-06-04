@@ -17,7 +17,7 @@
 	} = $props();
 
 	let isOpen = $derived(childHrefs.some((href) => page.url.pathname.startsWith(href)));
-	let active = $derived(page.url.pathname === href );
+	let active = $derived(page.url.pathname === href);
 </script>
 
 <li>

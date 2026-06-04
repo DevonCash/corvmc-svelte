@@ -44,8 +44,20 @@ beforeEach(() => {
 describe('handleTicketCheckout', () => {
 	it('calls fulfillPurchase when session has ticket metadata', async () => {
 		mockFulfillPurchase.mockResolvedValue([
-			{ id: 't1', eventId: 'event-1', code: 'ABC', attendeeName: 'Jo', attendeeEmail: 'jo@test.com' },
-			{ id: 't2', eventId: 'event-1', code: 'DEF', attendeeName: 'Jo', attendeeEmail: 'jo@test.com' }
+			{
+				id: 't1',
+				eventId: 'event-1',
+				code: 'ABC',
+				attendeeName: 'Jo',
+				attendeeEmail: 'jo@test.com'
+			},
+			{
+				id: 't2',
+				eventId: 'event-1',
+				code: 'DEF',
+				attendeeName: 'Jo',
+				attendeeEmail: 'jo@test.com'
+			}
 		]);
 
 		await handleTicketCheckout({

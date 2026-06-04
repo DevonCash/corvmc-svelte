@@ -710,14 +710,32 @@ p {
 	pointer-events: none;
 	white-space: nowrap;
 }
-.polaroid__tape--orange { background: var(--cmc-orange); color: #fff; }
-.polaroid__tape--red    { background: var(--cmc-red-orange); color: #fff; }
-.polaroid__tape--teal   { background: var(--cmc-teal); color: #fff; }
-.polaroid__tape--navy   { background: var(--cmc-navy); color: #fff; }
+.polaroid__tape--orange {
+	background: var(--cmc-orange);
+	color: #fff;
+}
+.polaroid__tape--red {
+	background: var(--cmc-red-orange);
+	color: #fff;
+}
+.polaroid__tape--teal {
+	background: var(--cmc-teal);
+	color: #fff;
+}
+.polaroid__tape--navy {
+	background: var(--cmc-navy);
+	color: #fff;
+}
 
-.pgrid > *:nth-child(2n) .polaroid__tape   { transform: translateX(-50%) rotate(2deg); }
-.pgrid > *:nth-child(3n) .polaroid__tape   { transform: translateX(-50%) rotate(-2deg); }
-.pgrid > *:nth-child(4n+1) .polaroid__tape { transform: translateX(-50%) rotate(1deg); }
+.pgrid > *:nth-child(2n) .polaroid__tape {
+	transform: translateX(-50%) rotate(2deg);
+}
+.pgrid > *:nth-child(3n) .polaroid__tape {
+	transform: translateX(-50%) rotate(-2deg);
+}
+.pgrid > *:nth-child(4n + 1) .polaroid__tape {
+	transform: translateX(-50%) rotate(1deg);
+}
 
 /* ---------------------------------------------------------------------------
    Generative Poster Art — CSS-only pattern fills for events without posters
@@ -765,11 +783,11 @@ p {
 .poster-gen--blobs {
 	background:
 		radial-gradient(circle at 20% 30%, var(--cmc-orange) 0 60px, transparent 80px),
-		radial-gradient(circle at 80% 70%, var(--cmc-teal) 0 60px, transparent 80px),
-		var(--cmc-cream);
+		radial-gradient(circle at 80% 70%, var(--cmc-teal) 0 60px, transparent 80px), var(--cmc-cream);
 }
 .poster-gen--zigzag {
-	background: linear-gradient(135deg, var(--cmc-orange) 25%, transparent 25%) -14px 0/28px 28px,
+	background:
+		linear-gradient(135deg, var(--cmc-orange) 25%, transparent 25%) -14px 0/28px 28px,
 		linear-gradient(225deg, var(--cmc-orange) 25%, transparent 25%) -14px 0/28px 28px,
 		linear-gradient(315deg, var(--cmc-orange) 25%, transparent 25%) 0 0/28px 28px,
 		linear-gradient(45deg, var(--cmc-orange) 25%, transparent 25%) 0 0/28px 28px,
@@ -777,14 +795,42 @@ p {
 }
 .poster-gen--diamonds {
 	background:
-		linear-gradient(45deg, var(--cmc-goldenrod) 25%, transparent 25%, transparent 75%, var(--cmc-goldenrod) 75%) 0 0/30px 30px,
-		linear-gradient(45deg, var(--cmc-goldenrod) 25%, transparent 25%, transparent 75%, var(--cmc-goldenrod) 75%) 15px 15px/30px 30px,
+		linear-gradient(
+				45deg,
+				var(--cmc-goldenrod) 25%,
+				transparent 25%,
+				transparent 75%,
+				var(--cmc-goldenrod) 75%
+			)
+			0 0/30px 30px,
+		linear-gradient(
+				45deg,
+				var(--cmc-goldenrod) 25%,
+				transparent 25%,
+				transparent 75%,
+				var(--cmc-goldenrod) 75%
+			)
+			15px 15px/30px 30px,
 		var(--cmc-orange);
 }
 .poster-gen--waves {
 	background:
-		radial-gradient(ellipse at 50% 0%, transparent 60%, var(--cmc-teal) 61%, var(--cmc-teal) 65%, transparent 66%) 0 0/40px 20px,
-		radial-gradient(ellipse at 50% 100%, transparent 60%, var(--cmc-teal) 61%, var(--cmc-teal) 65%, transparent 66%) 20px 10px/40px 20px,
+		radial-gradient(
+				ellipse at 50% 0%,
+				transparent 60%,
+				var(--cmc-teal) 61%,
+				var(--cmc-teal) 65%,
+				transparent 66%
+			)
+			0 0/40px 20px,
+		radial-gradient(
+				ellipse at 50% 100%,
+				transparent 60%,
+				var(--cmc-teal) 61%,
+				var(--cmc-teal) 65%,
+				transparent 66%
+			)
+			20px 10px/40px 20px,
 		var(--cmc-navy);
 }
 .poster-gen--cross {
@@ -803,8 +849,22 @@ p {
 }
 .poster-gen--scales {
 	background:
-		radial-gradient(circle at 50% 0%, transparent 48%, var(--cmc-navy) 49%, var(--cmc-navy) 52%, transparent 53%) 0 0/26px 26px,
-		radial-gradient(circle at 50% 0%, transparent 48%, var(--cmc-navy) 49%, var(--cmc-navy) 52%, transparent 53%) 13px 13px/26px 26px,
+		radial-gradient(
+				circle at 50% 0%,
+				transparent 48%,
+				var(--cmc-navy) 49%,
+				var(--cmc-navy) 52%,
+				transparent 53%
+			)
+			0 0/26px 26px,
+		radial-gradient(
+				circle at 50% 0%,
+				transparent 48%,
+				var(--cmc-navy) 49%,
+				var(--cmc-navy) 52%,
+				transparent 53%
+			)
+			13px 13px/26px 26px,
 		var(--cmc-teal);
 }
 .poster-gen--dots-lg {
@@ -827,31 +887,46 @@ p {
 		var(--cmc-cream);
 }
 .poster-gen--concentric {
-	background:
-		repeating-radial-gradient(circle at 50% 50%, var(--cmc-orange) 0 8px, var(--cmc-goldenrod) 8px 16px, var(--cmc-red-orange) 16px 24px, var(--cmc-orange) 24px 32px);
+	background: repeating-radial-gradient(
+		circle at 50% 50%,
+		var(--cmc-orange) 0 8px,
+		var(--cmc-goldenrod) 8px 16px,
+		var(--cmc-red-orange) 16px 24px,
+		var(--cmc-orange) 24px 32px
+	);
 }
 .poster-gen--horizon {
-	background:
-		linear-gradient(180deg,
-			var(--cmc-orange) 0 20%,
-			var(--cmc-goldenrod) 20% 40%,
-			var(--cmc-red-orange) 40% 55%,
-			var(--cmc-teal) 55% 70%,
-			var(--cmc-navy) 70% 100%
-		);
+	background: linear-gradient(
+		180deg,
+		var(--cmc-orange) 0 20%,
+		var(--cmc-goldenrod) 20% 40%,
+		var(--cmc-red-orange) 40% 55%,
+		var(--cmc-teal) 55% 70%,
+		var(--cmc-navy) 70% 100%
+	);
 }
 .poster-gen--argyle {
 	background:
-		linear-gradient(45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px 40px,
-		linear-gradient(-45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px 40px,
-		linear-gradient(45deg, var(--cmc-navy) 25%, transparent 25%, transparent 75%, var(--cmc-navy) 75%) 0 0/40px 40px,
+		linear-gradient(45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px
+			40px,
+		linear-gradient(-45deg, transparent 48%, var(--cmc-goldenrod) 48% 52%, transparent 52%) 0 0/40px
+			40px,
+		linear-gradient(
+				45deg,
+				var(--cmc-navy) 25%,
+				transparent 25%,
+				transparent 75%,
+				var(--cmc-navy) 75%
+			)
+			0 0/40px 40px,
 		var(--cmc-teal);
 }
 .poster-gen--bricks {
 	background:
 		linear-gradient(transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
 		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
-		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 24px 12px/48px 24px,
+		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 24px
+			12px/48px 24px,
 		var(--cmc-orange);
 }
 .poster-gen--polka {
@@ -884,8 +959,13 @@ p {
 	text-wrap: balance;
 	z-index: 1;
 }
-.poster-gen__title--dark { color: #000; -webkit-text-stroke-color: #fff; }
-.poster-gen__spacer { flex: 1; }
+.poster-gen__title--dark {
+	color: #000;
+	-webkit-text-stroke-color: #fff;
+}
+.poster-gen__spacer {
+	flex: 1;
+}
 .poster-gen__date {
 	font-weight: 700;
 	font-size: 11px;
@@ -902,8 +982,12 @@ p {
 /* ---------------------------------------------------------------------------
    Polaroid State Modifiers
    --------------------------------------------------------------------------- */
-.polaroid--past { opacity: 0.85; }
-.polaroid--past .poster-card__figure img { filter: grayscale(0.45) sepia(0.18); }
+.polaroid--past {
+	opacity: 0.85;
+}
+.polaroid--past .poster-card__figure img {
+	filter: grayscale(0.45) sepia(0.18);
+}
 .polaroid--soldout .poster-card__figure::after {
 	content: 'SOLD OUT';
 	position: absolute;
@@ -929,7 +1013,9 @@ p {
 	border: 2.5px solid var(--cmc-brown);
 	color: var(--color-secondary);
 	cursor: pointer;
-	transition: transform 180ms ease, box-shadow 180ms ease;
+	transition:
+		transform 180ms ease,
+		box-shadow 180ms ease;
 	overflow: hidden;
 	isolation: isolate;
 	text-decoration: none;
@@ -941,8 +1027,14 @@ p {
 	outline: 2px solid var(--cmc-orange);
 	outline-offset: 2px;
 }
-.stub:hover  { transform: translateY(-3px); box-shadow: 0 6px 0 var(--cmc-brown); }
-.stub:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--cmc-brown); }
+.stub:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 6px 0 var(--cmc-brown);
+}
+.stub:active {
+	transform: translateY(2px);
+	box-shadow: 0 2px 0 var(--cmc-brown);
+}
 .stub__main {
 	flex: 1;
 	padding: 14px 16px;
@@ -1021,14 +1113,30 @@ p {
 	margin-top: 6px;
 }
 
-.stub--orange .stub__stub { background: var(--cmc-orange); }
-.stub--orange .stub__eyebrow { color: var(--cmc-orange); }
-.stub--teal .stub__stub { background: var(--cmc-teal); }
-.stub--teal .stub__eyebrow { color: var(--cmc-teal); }
-.stub--red .stub__stub { background: var(--cmc-red-orange); }
-.stub--red .stub__eyebrow { color: var(--cmc-red-orange); }
-.stub--navy .stub__stub { background: var(--cmc-navy); }
-.stub--navy .stub__eyebrow { color: var(--color-secondary); }
+.stub--orange .stub__stub {
+	background: var(--cmc-orange);
+}
+.stub--orange .stub__eyebrow {
+	color: var(--cmc-orange);
+}
+.stub--teal .stub__stub {
+	background: var(--cmc-teal);
+}
+.stub--teal .stub__eyebrow {
+	color: var(--cmc-teal);
+}
+.stub--red .stub__stub {
+	background: var(--cmc-red-orange);
+}
+.stub--red .stub__eyebrow {
+	color: var(--cmc-red-orange);
+}
+.stub--navy .stub__stub {
+	background: var(--cmc-navy);
+}
+.stub--navy .stub__eyebrow {
+	color: var(--color-secondary);
+}
 
 /* ---------------------------------------------------------------------------
    Section Label — uppercase header with trailing hairline
@@ -1076,7 +1184,10 @@ p {
 	box-shadow: 0 3px 0 var(--cmc-brown);
 	cursor: pointer;
 	line-height: 1.2;
-	transition: transform 100ms ease, box-shadow 100ms ease, background 100ms ease;
+	transition:
+		transform 100ms ease,
+		box-shadow 100ms ease,
+		background 100ms ease;
 }
 .btn--latch:hover:not(.is-latched) {
 	transform: translateY(-1px);
@@ -1121,7 +1232,11 @@ p {
 	padding-top: 2px;
 	min-width: 0;
 }
-.edet__tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.edet__tags {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
 .edet__title {
 	font-size: 32px;
 	font-weight: 700;
@@ -1147,7 +1262,9 @@ p {
 	border-right: 2.5px solid var(--cmc-brown);
 	min-width: 0;
 }
-.edet__fact:last-child { border-right: 0; }
+.edet__fact:last-child {
+	border-right: 0;
+}
 .edet__fact-label {
 	font-size: 10px;
 	font-weight: 700;
@@ -1191,15 +1308,21 @@ p {
 	.edet__poster {
 		justify-self: center;
 	}
-	.edet__title { font-size: 26px; }
+	.edet__title {
+		font-size: 26px;
+	}
 }
 @media (max-width: 640px) {
-	.edet__facts { grid-template-columns: 1fr; }
+	.edet__facts {
+		grid-template-columns: 1fr;
+	}
 	.edet__fact {
 		border-right: 0;
 		border-bottom: 2.5px solid var(--cmc-brown);
 	}
-	.edet__fact:last-child { border-bottom: 0; }
+	.edet__fact:last-child {
+		border-bottom: 0;
+	}
 }
 
 /* ---------------------------------------------------------------------------
@@ -1216,7 +1339,9 @@ p {
 	margin-bottom: 20px;
 	max-width: 720px;
 	cursor: pointer;
-	transition: transform 180ms ease, box-shadow 180ms ease;
+	transition:
+		transform 180ms ease,
+		box-shadow 180ms ease;
 	text-decoration: none;
 	color: inherit;
 	font: inherit;
@@ -1226,8 +1351,14 @@ p {
 	outline: 2px solid var(--cmc-orange);
 	outline-offset: 2px;
 }
-.tixbanner:hover  { transform: translateY(-3px); box-shadow: 0 6px 0 var(--cmc-brown); }
-.tixbanner:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--cmc-brown); }
+.tixbanner:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 6px 0 var(--cmc-brown);
+}
+.tixbanner:active {
+	transform: translateY(2px);
+	box-shadow: 0 2px 0 var(--cmc-brown);
+}
 .tixbanner__icon {
 	width: 36px;
 	height: 36px;
@@ -1240,7 +1371,10 @@ p {
 	flex-shrink: 0;
 	color: var(--cmc-brown);
 }
-.tixbanner__text { flex: 1; min-width: 0; }
+.tixbanner__text {
+	flex: 1;
+	min-width: 0;
+}
 .tixbanner__text strong {
 	display: block;
 	font-weight: 700;
@@ -1268,7 +1402,10 @@ p {
 /* ---------------------------------------------------------------------------
    Carousel — horizontal snap scroll with nav controls
    --------------------------------------------------------------------------- */
-.carousel-wrap { position: relative; margin: 8px -8px 4px; }
+.carousel-wrap {
+	position: relative;
+	margin: 8px -8px 4px;
+}
 .carousel__track {
 	display: flex;
 	gap: 18px;
@@ -1279,7 +1416,9 @@ p {
 	padding: 8px 4px 14px;
 	scrollbar-width: none;
 }
-.carousel__track::-webkit-scrollbar { display: none; }
+.carousel__track::-webkit-scrollbar {
+	display: none;
+}
 .carousel__track > * {
 	flex-shrink: 0;
 	scroll-snap-align: start;
@@ -1290,8 +1429,12 @@ p {
 	align-items: center;
 	padding: 4px 0 6px;
 }
-.carousel__ctrls > .carousel__nav:first-child { justify-self: start; }
-.carousel__ctrls > .carousel__nav:last-child  { justify-self: end; }
+.carousel__ctrls > .carousel__nav:first-child {
+	justify-self: start;
+}
+.carousel__ctrls > .carousel__nav:last-child {
+	justify-self: end;
+}
 .carousel__dots {
 	display: flex;
 	align-items: center;
@@ -1311,7 +1454,9 @@ p {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
-	transition: transform 100ms ease, box-shadow 100ms ease;
+	transition:
+		transform 100ms ease,
+		box-shadow 100ms ease;
 }
 .carousel__nav:not(:disabled):hover {
 	transform: translateY(-1px);
@@ -1327,7 +1472,10 @@ p {
 	box-shadow: none;
 	transform: translateY(3px);
 }
-.carousel__nav svg { width: 16px; height: 16px; }
+.carousel__nav svg {
+	width: 16px;
+	height: 16px;
+}
 .carousel__dot {
 	width: 8px;
 	height: 8px;
@@ -1338,7 +1486,9 @@ p {
 	cursor: pointer;
 	transition: background 120ms ease;
 }
-.carousel__dot.is-active { background: var(--cmc-brown); }
+.carousel__dot.is-active {
+	background: var(--cmc-brown);
+}
 .carousel__dot:hover:not(.is-active) {
 	background: color-mix(in oklch, var(--cmc-brown) 18%, transparent);
 }
@@ -1358,8 +1508,23 @@ p {
 	border: 2px solid var(--cmc-brown);
 	border-radius: 4px;
 }
-.sticker--orange { background: var(--cmc-orange); color: #fff; }
-.sticker--red    { background: var(--cmc-red-orange); color: #fff; }
-.sticker--teal   { background: var(--cmc-teal); color: #fff; }
-.sticker--navy   { background: var(--cmc-navy); color: #fff; }
-.sticker--cream  { background: var(--cmc-cream); color: var(--cmc-teal); }
+.sticker--orange {
+	background: var(--cmc-orange);
+	color: #fff;
+}
+.sticker--red {
+	background: var(--cmc-red-orange);
+	color: #fff;
+}
+.sticker--teal {
+	background: var(--cmc-teal);
+	color: #fff;
+}
+.sticker--navy {
+	background: var(--cmc-navy);
+	color: #fff;
+}
+.sticker--cream {
+	background: var(--cmc-cream);
+	color: var(--cmc-teal);
+}

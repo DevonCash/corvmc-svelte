@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -14,17 +15,20 @@
 	let campaign = $derived(await getCampaignDetail(id));
 </script>
 
-	{#if campaign}
-		<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
-			<StatusBadge status={campaign.status} />
-			{#if campaign.status === 'draft'}
-				<Button href="/staff/marketing/campaigns/{id}/edit" class="btn-sm">Edit</Button>
-			{/if}
-			{#if campaign.status === 'scheduled'}
-				<UnscheduleCampaignAction campaignId={id} onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)} />
-			{/if}
-		</PageHeader>
-		<PageContent width="3xl">
+{#if campaign}
+	<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
+		<StatusBadge status={campaign.status} />
+		{#if campaign.status === 'draft'}
+			<Button href="/staff/marketing/campaigns/{id}/edit" class="btn-sm">Edit</Button>
+		{/if}
+		{#if campaign.status === 'scheduled'}
+			<UnscheduleCampaignAction
+				campaignId={id}
+				onsuccess={() => goto(resolve(`/staff/marketing/campaigns/${id}/edit`))}
+			/>
+		{/if}
+	</PageHeader>
+	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Details">
 				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
@@ -55,16 +59,16 @@
 			</InfoCard>
 
 			<InfoCard title="Markdown Source">
-				<pre class="text-xs font-mono bg-base-200 p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">{campaign.markdownBody}</pre>
+				<pre
+					class="text-xs font-mono bg-base-200 p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">{campaign.markdownBody}</pre>
 			</InfoCard>
 		</div>
 
 		<InfoCard title="Rendered Preview">
 			<div class="border rounded-lg bg-white overflow-hidden">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML) -->
 				{@html sanitizeHtml(campaign.htmlBody)}
 			</div>
 		</InfoCard>
-		</PageContent>
-	{/if}
-
-
+	</PageContent>
+{/if}

@@ -24,10 +24,27 @@
 	<circle cx="55" cy="14" r="3" fill="#0d0f12" />
 
 	<!-- Room number -->
-	<text x="55" y="88" text-anchor="middle" font-weight="700" font-size="52" letter-spacing="-1.5" fill="#f4ead8">03</text>
+	<text
+		x="55"
+		y="88"
+		text-anchor="middle"
+		font-weight="700"
+		font-size="52"
+		letter-spacing="-1.5"
+		fill="#f4ead8">03</text
+	>
 
 	<!-- Label -->
-	<text x="55" y="108" text-anchor="middle" font-size="11" letter-spacing="0.5" fill="#f4ead8" style="font-family: var(--font-chalk); text-transform: uppercase;" transform="rotate(-1, 55, 108)">
+	<text
+		x="55"
+		y="108"
+		text-anchor="middle"
+		font-size="11"
+		letter-spacing="0.5"
+		fill="#f4ead8"
+		style="font-family: var(--font-chalk); text-transform: uppercase;"
+		transform="rotate(-1, 55, 108)"
+	>
 		<tspan x="55" dy="0">Practice Room</tspan>
 	</text>
 
@@ -37,7 +54,16 @@
 	<rect y="126" width="110" height="3" fill="#f84d13" />
 
 	<!-- Hours -->
-	<text x="55" y="155" text-anchor="middle" font-weight="700" font-size="13" letter-spacing="1" fill="#c4cfde" style="font-family: 'Courier New', ui-monospace, monospace;">10a — 10p</text>
+	<text
+		x="55"
+		y="155"
+		text-anchor="middle"
+		font-weight="700"
+		font-size="13"
+		letter-spacing="1"
+		fill="#c4cfde"
+		style="font-family: 'Courier New', ui-monospace, monospace;">10a — 10p</text
+	>
 </svg>
 
 <style>

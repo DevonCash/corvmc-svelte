@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import { getAudienceOptions, getPreview, createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
+	import {
+		getAudienceOptions,
+		getPreview,
+		createDraft,
+		createAndSend,
+		createAndSchedule
+	} from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');
@@ -39,7 +46,7 @@
 				audienceIds: selectedAudienceIds
 			});
 			toast.success('Draft saved');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}/edit`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}/edit`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to save');
 		} finally {
@@ -58,7 +65,7 @@
 				audienceIds: selectedAudienceIds
 			});
 			toast.success('Campaign sent');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to send');
 		} finally {
@@ -77,7 +84,7 @@
 				scheduledFor: scheduleDate
 			});
 			toast.success('Campaign scheduled');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
 		} finally {
@@ -90,7 +97,7 @@
 	}
 </script>
 
-	<PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
+<PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
 <PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 		<!-- Editor pane -->
@@ -110,7 +117,13 @@
 				<p class="label text-sm font-medium">Audiences</p>
 				<div class="flex flex-wrap gap-2">
 					{#each audiences as a (a.id)}
-						<label class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(a.id) ? 'border-primary bg-primary/10' : 'border-base-300'}">
+						<label
+							class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(
+								a.id
+							)
+								? 'border-primary bg-primary/10'
+								: 'border-base-300'}"
+						>
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm checkbox-primary"
@@ -123,7 +136,9 @@
 					{/each}
 				</div>
 				{#if selectedAudienceIds.length > 0}
-					<p class="text-xs opacity-60 mt-1">~{totalSubscribers} recipients (before deduplication)</p>
+					<p class="text-xs opacity-60 mt-1">
+						~{totalSubscribers} recipients (before deduplication)
+					</p>
 				{/if}
 			</div>
 
@@ -200,6 +215,7 @@
 			<p class="label text-sm font-medium">Preview</p>
 			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
 				{#if previewHtml}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
 					{@html previewHtml}
 				{:else}
 					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">

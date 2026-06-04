@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getStaffArticle, getStaffCategories, updateArticle, deleteArticle } from '$lib/remote/help.remote';
+	import { resolve } from '$app/paths';
+	import {
+		getStaffArticle,
+		getStaffCategories,
+		updateArticle,
+		deleteArticle
+	} from '$lib/remote/help.remote';
 	const { fields: deleteFields } = deleteArticle;
 	const { fields: updateFields } = updateArticle;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -23,8 +29,6 @@
 	$effect(() => {
 		if (article) contentValue = article.content;
 	});
-
-
 </script>
 
 <PageHeader title="Edit Article" subtitle="Help" backHref="/staff/help">
@@ -32,10 +36,10 @@
 		action={deleteArticle}
 		modalTitle="Confirm"
 		successToast="Article deleted"
-		onsuccess={() => goto('/staff/help')}
+		onsuccess={() => goto(resolve('/staff/help'))}
 		class="btn-error btn-sm btn-outline"
 	>
-		{#snippet form({ close })}
+		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
 			<p class="py-4">Permanently delete "{article?.title}"?</p>
 		{/snippet}
@@ -44,11 +48,7 @@
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
-		<Form
-			remote={updateArticle}
-			guard
-			successToast="Article updated"
-		>
+		<Form remote={updateArticle} guard successToast="Article updated">
 			<input {...updateFields.id.as('hidden', article.id)} />
 
 			<div class="space-y-4">
@@ -58,20 +58,40 @@
 				</div>
 
 				<div class="grid gap-4 sm:grid-cols-3">
-					<FormField name="categoryId" type="select" label="Category" value={article.categoryId}
-						options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-					<FormField name="minRole" type="select" label="Minimum Role" value={article.minRole}
+					<FormField
+						name="categoryId"
+						type="select"
+						label="Category"
+						value={article.categoryId}
+						options={categories.map((c) => ({ value: c.id, label: c.name }))}
+					/>
+					<FormField
+						name="minRole"
+						type="select"
+						label="Minimum Role"
+						value={article.minRole}
 						options={[
 							{ value: 'member', label: 'Member' },
 							{ value: 'staff', label: 'Staff' },
 							{ value: 'admin', label: 'Admin' }
-						]} />
-					<FormField name="published" type="toggle" label="Status" value={article.published}
-						checkboxLabel="Published" />
+						]}
+					/>
+					<FormField
+						name="published"
+						type="toggle"
+						label="Status"
+						value={article.published}
+						checkboxLabel="Published"
+					/>
 				</div>
 
-				<FormField name="summary" type="text" label="Summary" value={article.summary ?? ''}
-					placeholder="Brief description" />
+				<FormField
+					name="summary"
+					type="text"
+					label="Summary"
+					value={article.summary ?? ''}
+					placeholder="Brief description"
+				/>
 
 				<FormField name="content" label="Content">
 					<input {...updateFields.content.as('hidden', contentValue)} />
@@ -80,7 +100,8 @@
 
 				{#if article.source === 'static'}
 					<div class="alert alert-info text-sm">
-						This article is synced from a markdown file. Edits here will be overwritten on the next sync.
+						This article is synced from a markdown file. Edits here will be overwritten on the next
+						sync.
 					</div>
 				{/if}
 

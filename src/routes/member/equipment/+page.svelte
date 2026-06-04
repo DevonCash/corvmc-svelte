@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
-	import { submitLoanRequest as submitRequest, getMemberEquipment, getMemberEquipmentMeta } from '$lib/remote/equipment.remote';
+	import {
+		submitLoanRequest as submitRequest,
+		getMemberEquipment,
+		getMemberEquipmentMeta
+	} from '$lib/remote/equipment.remote';
 
 	const { fields } = submitRequest;
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -107,9 +112,15 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select class="select select-bordered select-sm" value={categoryId} onchange={(e) => { categoryId = (e.currentTarget as HTMLSelectElement).value; }}>
+		<select
+			class="select select-bordered select-sm"
+			value={categoryId}
+			onchange={(e) => {
+				categoryId = (e.currentTarget as HTMLSelectElement).value;
+			}}
+		>
 			<option value="">All categories</option>
-			{#each meta.categories as cat}
+			{#each meta.categories as cat (cat.id)}
 				<option value={cat.id}>{cat.name}</option>
 			{/each}
 		</select>
@@ -131,7 +142,7 @@
 				(acc[key] ??= []).push(eq);
 				return acc;
 			}, {})}
-			{#each Object.entries(groups) as [groupName, items]}
+			{#each Object.entries(groups) as [groupName, items] (groupName)}
 				<div class="mb-6">
 					<h3 class="text-sm font-semibold opacity-60 mb-2">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -177,30 +188,38 @@
 
 	<div class="border-t pt-4">
 		<p class="text-sm opacity-70 mb-2">Can't find what you need?</p>
-		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>
-			Describe Your Request
-		</Button>
+		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>Describe Your Request</Button>
 	</div>
 </PageContent>
 
-<Modal bind:open={showRequestModal} title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`} maxWidth="max-w-md">
+<Modal
+	bind:open={showRequestModal}
+	title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`}
+	maxWidth="max-w-md"
+>
 	<Form
 		remote={submitRequest}
 		onsuccess={() => {
 			toast.success('Request submitted! Staff will confirm your pickup.');
 			showRequestModal = false;
-			goto('/member/equipment/loans');
+			goto(resolve('/member/equipment/loans'));
 		}}
 	>
 		{#if !isFreeForm}
 			<input {...fields.equipmentId.as('hidden', selectedEquipmentId!)} />
 		{/if}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div oninput={(e: Event) => { pickupDateValue = (e.target as HTMLInputElement).value; }}>
+		<div
+			oninput={(e: Event) => {
+				pickupDateValue = (e.target as HTMLInputElement).value;
+			}}
+		>
 			<Field name="requestedPickupDate" type="date" label="Preferred Pickup Date" required />
 		</div>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div oninput={(e: Event) => { returnDateValue = (e.target as HTMLInputElement).value; }}>
+		<div
+			oninput={(e: Event) => {
+				returnDateValue = (e.target as HTMLInputElement).value;
+			}}
+		>
 			<Field name="estimatedReturnDate" type="date" label="Estimated Return Date" required />
 		</div>
 		{#if !isFreeForm}
@@ -219,9 +238,16 @@
 				Cost will be determined when equipment is assigned
 			</div>
 		{/if}
-		<Field name="memberNotes" type="textarea" label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'} required={isFreeForm} />
+		<Field
+			name="memberNotes"
+			type="textarea"
+			label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'}
+			required={isFreeForm}
+		/>
 		<div class="modal-action">
-			<Button type="button" class="btn-ghost" onclick={() => (showRequestModal = false)}>Cancel</Button>
+			<Button type="button" class="btn-ghost" onclick={() => (showRequestModal = false)}
+				>Cancel</Button
+			>
 			<SubmitButton label="Submit Request" />
 		</div>
 	</Form>

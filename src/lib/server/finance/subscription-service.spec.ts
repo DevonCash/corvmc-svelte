@@ -26,8 +26,9 @@ vi.mock('./product-config-service', () => ({
 		unitAmountCents: 500,
 		unitLabel: null
 	}),
-	buildSubscriptionLineItem: vi.fn().mockImplementation(
-		(_key: string, unitAmount: number, quantity: number) =>
+	buildSubscriptionLineItem: vi
+		.fn()
+		.mockImplementation((_key: string, unitAmount: number, quantity: number) =>
 			Promise.resolve({
 				price_data: {
 					currency: 'usd',
@@ -37,7 +38,7 @@ vi.mock('./product-config-service', () => ({
 				},
 				quantity
 			})
-	)
+		)
 }));
 
 // ---------------------------------------------------------------------------
@@ -105,14 +106,16 @@ describe('createCheckoutSession', () => {
 				userId: 'user-1',
 				stripeCustomerId: 'cus_123',
 				mode: 'subscription',
-				lineItems: [expect.objectContaining({
-					price_data: expect.objectContaining({
-						currency: 'usd',
-						product: 'prod_contribution',
-						recurring: { interval: 'month' }
-					}),
-					quantity: 5
-				})],
+				lineItems: [
+					expect.objectContaining({
+						price_data: expect.objectContaining({
+							currency: 'usd',
+							product: 'prod_contribution',
+							recurring: { interval: 'month' }
+						}),
+						quantity: 5
+					})
+				],
 				coverFees: false,
 				metadata: expect.objectContaining({
 					subscription_type: 'contribution'
@@ -138,33 +141,35 @@ describe('createCheckoutSession', () => {
 			cancelUrl: 'https://example.com/cancel'
 		});
 
-		expect(mockCheckout).toHaveBeenCalledWith(
-			expect.objectContaining({ coverFees: true })
-		);
+		expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ coverFees: true }));
 	});
 
 	it('throws when quantity is less than 1', async () => {
-		await expect(createCheckoutSession({
-			userId: 'user-1',
-			stripeCustomerId: 'cus_123',
-			quantity: 0,
-			coverFees: false,
-			successUrl: 'https://example.com/success',
-			cancelUrl: 'https://example.com/cancel'
-		})).rejects.toThrow('Quantity must be at least 1');
+		await expect(
+			createCheckoutSession({
+				userId: 'user-1',
+				stripeCustomerId: 'cus_123',
+				quantity: 0,
+				coverFees: false,
+				successUrl: 'https://example.com/success',
+				cancelUrl: 'https://example.com/cancel'
+			})
+		).rejects.toThrow('Quantity must be at least 1');
 	});
 
 	it('throws when checkout returns no URL', async () => {
 		mockCheckout.mockResolvedValue({ paid: true });
 
-		await expect(createCheckoutSession({
-			userId: 'user-1',
-			stripeCustomerId: 'cus_123',
-			quantity: 5,
-			coverFees: false,
-			successUrl: 'https://example.com/success',
-			cancelUrl: 'https://example.com/cancel'
-		})).rejects.toThrow('Stripe did not return a checkout URL');
+		await expect(
+			createCheckoutSession({
+				userId: 'user-1',
+				stripeCustomerId: 'cus_123',
+				quantity: 5,
+				coverFees: false,
+				successUrl: 'https://example.com/success',
+				cancelUrl: 'https://example.com/cancel'
+			})
+		).rejects.toThrow('Stripe did not return a checkout URL');
 	});
 });
 
@@ -178,17 +183,27 @@ describe('getSubscription', () => {
 
 	it('returns subscription info with fee coverage', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
-			data: [{
-				id: 'sub_abc',
-				status: 'active',
-				cancel_at_period_end: false,
-				items: {
-					data: [
-						{ price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5, current_period_end: 1700000000 },
-						{ price: { id: 'price_auto_fee', product: 'prod_fee' }, quantity: 1, current_period_end: 1700000000 }
-					]
+			data: [
+				{
+					id: 'sub_abc',
+					status: 'active',
+					cancel_at_period_end: false,
+					items: {
+						data: [
+							{
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 5,
+								current_period_end: 1700000000
+							},
+							{
+								price: { id: 'price_auto_fee', product: 'prod_fee' },
+								quantity: 1,
+								current_period_end: 1700000000
+							}
+						]
+					}
 				}
-			}]
+			]
 		});
 
 		const info = await getSubscription('cus_123');
@@ -205,16 +220,22 @@ describe('getSubscription', () => {
 
 	it('returns subscription info without fee coverage', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
-			data: [{
-				id: 'sub_no_fee',
-				status: 'active',
-				cancel_at_period_end: true,
-				items: {
-					data: [
-						{ price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 3, current_period_end: 1700000000 }
-					]
+			data: [
+				{
+					id: 'sub_no_fee',
+					status: 'active',
+					cancel_at_period_end: true,
+					items: {
+						data: [
+							{
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 3,
+								current_period_end: 1700000000
+							}
+						]
+					}
 				}
-			}]
+			]
 		});
 
 		const info = await getSubscription('cus_123');
@@ -242,14 +263,20 @@ describe('updateQuantity', () => {
 
 	it('updates contribution quantity and adds fee item via price_data', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
-			data: [{
-				id: 'sub_upd',
-				items: {
-					data: [
-						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 3 }
-					]
+			data: [
+				{
+					id: 'sub_upd',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 3
+							}
+						]
+					}
 				}
-			}]
+			]
 		});
 
 		await updateQuantity('cus_123', 7, true);
@@ -276,15 +303,21 @@ describe('updateQuantity', () => {
 
 	it('removes existing fee item before adding new one', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
-			data: [{
-				id: 'sub_replace_fee',
-				items: {
-					data: [
-						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5 },
-						{ id: 'si_old_fee', price: { id: 'price_old_fee', product: 'prod_fee' }, quantity: 1 }
-					]
+			data: [
+				{
+					id: 'sub_replace_fee',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 5
+							},
+							{ id: 'si_old_fee', price: { id: 'price_old_fee', product: 'prod_fee' }, quantity: 1 }
+						]
+					}
 				}
-			}]
+			]
 		});
 
 		await updateQuantity('cus_123', 10, true);
@@ -299,15 +332,25 @@ describe('updateQuantity', () => {
 
 	it('removes fee item when coverFees is false', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
-			data: [{
-				id: 'sub_rm_fee',
-				items: {
-					data: [
-						{ id: 'si_contrib', price: { id: 'price_contribution', product: 'prod_contribution' }, quantity: 5 },
-						{ id: 'si_fee', price: { id: 'price_fee_coverage', product: 'prod_fee' }, quantity: 1 }
-					]
+			data: [
+				{
+					id: 'sub_rm_fee',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 5
+							},
+							{
+								id: 'si_fee',
+								price: { id: 'price_fee_coverage', product: 'prod_fee' },
+								quantity: 1
+							}
+						]
+					}
 				}
-			}]
+			]
 		});
 
 		await updateQuantity('cus_123', 5, false);
@@ -322,11 +365,15 @@ describe('updateQuantity', () => {
 
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
-		await expect(updateQuantity('cus_ghost', 3, false)).rejects.toThrow('No active subscription found');
+		await expect(updateQuantity('cus_ghost', 3, false)).rejects.toThrow(
+			'No active subscription found'
+		);
 	});
 
 	it('throws when quantity is less than 1', async () => {
-		await expect(updateQuantity('cus_123', 0, false)).rejects.toThrow('Quantity must be at least 1');
+		await expect(updateQuantity('cus_123', 0, false)).rejects.toThrow(
+			'Quantity must be at least 1'
+		);
 	});
 });
 

@@ -6,11 +6,15 @@
 	<defs>
 		<!-- Main zigzag right edge -->
 		<clipPath id="tk-main-clip">
-			<path d="M0,0 L226,0 L223,5 L226,10 L223,15 L226,20 L223,25 L226,30 L223,35 L226,40 L223,45 L226,50 L223,55 L226,60 L223,65 L226,70 L223,75 L226,80 L223,85 L226,90 L223,95 L226,100 L223,105 L226,110 L0,110 Z" />
+			<path
+				d="M0,0 L226,0 L223,5 L226,10 L223,15 L226,20 L223,25 L226,30 L223,35 L226,40 L223,45 L226,50 L223,55 L226,60 L223,65 L226,70 L223,75 L226,80 L223,85 L226,90 L223,95 L226,100 L223,105 L226,110 L0,110 Z"
+			/>
 		</clipPath>
 		<!-- Stub zigzag left edge -->
 		<clipPath id="tk-stub-clip">
-			<path d="M232,0 L282,0 L282,110 L232,110 L235,105 L232,100 L235,95 L232,90 L235,85 L232,80 L235,75 L232,70 L235,65 L232,60 L235,55 L232,50 L235,45 L232,40 L235,35 L232,30 L235,25 L232,20 L235,15 L232,10 L235,5 Z" />
+			<path
+				d="M232,0 L282,0 L282,110 L232,110 L235,105 L232,100 L235,95 L232,90 L235,85 L232,80 L235,75 L232,70 L235,65 L232,60 L235,55 L232,50 L235,45 L232,40 L235,35 L232,30 L235,25 L232,20 L235,15 L232,10 L235,5 Z"
+			/>
 		</clipPath>
 	</defs>
 
@@ -18,31 +22,107 @@
 	<rect x="0" y="0" width="226" height="110" rx="3" fill="#edc46a" clip-path="url(#tk-main-clip)" />
 
 	<!-- Eyebrow -->
-	<text x="14" y="18" font-weight="700" font-size="8" letter-spacing="1.8" fill="#c63015" style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;">Corvallis Music Collective</text>
+	<text
+		x="14"
+		y="18"
+		font-weight="700"
+		font-size="8"
+		letter-spacing="1.8"
+		fill="#c63015"
+		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
+		>Corvallis Music Collective</text
+	>
 
 	<!-- Title -->
-	<text x="14" y="42" font-size="19" fill="#1a1410" style="font-family: var(--font-chalk);">Showcase Night</text>
+	<text x="14" y="42" font-size="19" fill="#1a1410" style="font-family: var(--font-chalk);"
+		>Showcase Night</text
+	>
 
 	<!-- When -->
-	<text x="14" y="60" font-weight="700" font-size="15" fill="#1a1410" style="font-family: var(--font-script);">Fri Dec 13 · 7 PM</text>
+	<text
+		x="14"
+		y="60"
+		font-weight="700"
+		font-size="15"
+		fill="#1a1410"
+		style="font-family: var(--font-script);">Fri Dec 13 · 7 PM</text
+	>
 
 	<!-- Where -->
-	<text x="14" y="75" font-size="12" fill="rgba(26,20,16,0.72)" style="font-family: var(--font-script);">6775 SW Philomath Blvd</text>
+	<text
+		x="14"
+		y="75"
+		font-size="12"
+		fill="rgba(26,20,16,0.72)"
+		style="font-family: var(--font-script);">6775 SW Philomath Blvd</text
+	>
 
 	<!-- Dashed line -->
-	<line x1="14" y1="86" x2="216" y2="86" stroke="rgba(26,20,16,0.4)" stroke-width="1.5" stroke-dasharray="4,3" />
+	<line
+		x1="14"
+		y1="86"
+		x2="216"
+		y2="86"
+		stroke="rgba(26,20,16,0.4)"
+		stroke-width="1.5"
+		stroke-dasharray="4,3"
+	/>
 
 	<!-- Price -->
-	<text x="14" y="100" font-weight="700" font-size="9" letter-spacing="1.1" fill="#c63015" style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;">$5 NOTAFLOF</text>
-	<text x="216" y="100" text-anchor="end" font-weight="700" font-size="9" letter-spacing="1.1" fill="rgba(26,20,16,0.55)" style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;">Doors 6:30</text>
+	<text
+		x="14"
+		y="100"
+		font-weight="700"
+		font-size="9"
+		letter-spacing="1.1"
+		fill="#c63015"
+		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
+		>$5 NOTAFLOF</text
+	>
+	<text
+		x="216"
+		y="100"
+		text-anchor="end"
+		font-weight="700"
+		font-size="9"
+		letter-spacing="1.1"
+		fill="rgba(26,20,16,0.55)"
+		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;">Doors 6:30</text
+	>
 
 	<!-- Perforation -->
-	<line class="ticket-perf" x1="228" y1="0" x2="228" y2="110" stroke="rgba(26,20,16,0.55)" stroke-width="1.5" stroke-dasharray="3,3" />
+	<line
+		class="ticket-perf"
+		x1="228"
+		y1="0"
+		x2="228"
+		y2="110"
+		stroke="rgba(26,20,16,0.55)"
+		stroke-width="1.5"
+		stroke-dasharray="3,3"
+	/>
 
 	<!-- Stub -->
 	<g class="ticket-stub">
-		<rect x="232" y="0" width="50" height="110" rx="3" fill="#dfb04f" clip-path="url(#tk-stub-clip)" />
-		<text x="257" y="90" font-weight="700" font-size="11" letter-spacing="2.8" fill="#c63015" transform="rotate(-90, 257, 55)" style="text-transform: uppercase;">Admit One</text>
+		<rect
+			x="232"
+			y="0"
+			width="50"
+			height="110"
+			rx="3"
+			fill="#dfb04f"
+			clip-path="url(#tk-stub-clip)"
+		/>
+		<text
+			x="257"
+			y="90"
+			font-weight="700"
+			font-size="11"
+			letter-spacing="2.8"
+			fill="#c63015"
+			transform="rotate(-90, 257, 55)"
+			style="text-transform: uppercase;">Admit One</text
+		>
 	</g>
 </svg>
 

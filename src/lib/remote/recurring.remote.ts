@@ -43,44 +43,35 @@ export const getStaffRecurring = query(staffRecurringFilters, async (filters) =>
 // ---------------------------------------------------------------------------
 
 /** Cancel from staff list page (takes seriesId in form data) */
-export const cancelStaffSeries = form(
-	z.object({ seriesId: z.string() }),
-	async (data) => {
-		await requireStaff();
-		await cancel(data.seriesId as string);
-		return { success: true };
-	}
-);
+export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async (data) => {
+	await requireStaff();
+	await cancel(data.seriesId as string);
+	return { success: true };
+});
 
 /** Cancel from detail page (takes seriesId in form data) */
-export const cancelDetailSeries = form(
-	z.object({ seriesId: z.string() }),
-	async (data) => {
-		await requireStaff();
-		const seriesId = data.seriesId as string;
-		await cancel(seriesId);
-		void getSeries(seriesId).refresh();
-		return { success: true };
-	}
-);
+export const cancelDetailSeries = form(z.object({ seriesId: z.string() }), async (data) => {
+	await requireStaff();
+	const seriesId = data.seriesId as string;
+	await cancel(seriesId);
+	void getSeries(seriesId).refresh();
+	return { success: true };
+});
 
 /** Cancel from member page / CancelSeriesAction (owner or staff) */
-export const cancelRecurringSeries = form(
-	z.object({ id: z.string() }),
-	async (data) => {
-		const { locals } = getRequestEvent();
-		if (!locals.user) throw error(401, 'Not authenticated');
+export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (data) => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
 
-		const id = data.id as string;
-		const series = await get(id);
-		if (!series) throw error(404, 'Series not found');
+	const id = data.id as string;
+	const series = await get(id);
+	if (!series) throw error(404, 'Series not found');
 
-		const staff = await isStaff(locals.user.id);
-		if (!staff && series.prototypeCreatedByUserId !== locals.user.id) {
-			throw error(403, 'Not authorized');
-		}
-
-		await cancel(id);
-		return { success: true };
+	const staff = await isStaff(locals.user.id);
+	if (!staff && series.prototypeCreatedByUserId !== locals.user.id) {
+		throw error(403, 'Not authorized');
 	}
-);
+
+	await cancel(id);
+	return { success: true };
+});

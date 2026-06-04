@@ -1,5 +1,4 @@
 <script lang="ts" generics="T extends Record<string, any>">
-	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
 	import Button from '$lib/components/shared/Button.svelte';
 

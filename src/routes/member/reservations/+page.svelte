@@ -4,6 +4,7 @@
 	import FreeHoursRemaining from '$lib/components/member/membership/FreeHoursRemaining.svelte';
 
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
 		confirmWaitlisted,
@@ -22,7 +23,7 @@
 	import ReservationCard from './ReservationCard.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
-	import { format, formatDistanceStrict } from 'date-fns';
+	import { format } from 'date-fns';
 
 	let activeTab = $state<'active' | 'all'>('active');
 
@@ -54,7 +55,7 @@
 	function closeConfirmModal() {
 		confirmModalOpen = false;
 		confirmReservation = null;
-		goto('/member/reservations', { replaceState: true });
+		goto(resolve('/member/reservations'), { replaceState: true });
 	}
 </script>
 
@@ -124,16 +125,13 @@
 				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
 					<p class="text-sm opacity-70">
-						{format(confirmReservation.startsAt, 'p')} – {format(
-							confirmReservation.endsAt,
-							'p'
-						)}
+						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}
 					</p>
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-xs opacity-60">
-						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be
-						offered to someone else.
+						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be offered
+						to someone else.
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />

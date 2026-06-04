@@ -26,7 +26,7 @@
 	{onsuccess}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', audienceId)} />
 		<p class="py-4">Delete this audience? All subscribers will be removed.</p>
 	{/snippet}

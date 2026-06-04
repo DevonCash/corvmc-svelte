@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
@@ -7,13 +8,22 @@
 
 	let me = $derived(await getMe());
 	$effect(() => {
-		if (me) goto('/member');
+		if (me) goto(resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
-	let inviteMeta = $state<{ bandName: string; inviterName: string; role: string; email: string } | null>(null);
+	let inviteMeta = $state<{
+		bandName: string;
+		inviterName: string;
+		role: string;
+		email: string;
+	} | null>(null);
 
-	let mode = $state<'login' | 'register'>(page.url.searchParams.has('invite') || page.url.searchParams.has('register') ? 'register' : 'login');
+	let mode = $state<'login' | 'register'>(
+		page.url.searchParams.has('invite') || page.url.searchParams.has('register')
+			? 'register'
+			: 'login'
+	);
 	let error = $state('');
 	let showPassword = $state(false);
 
@@ -22,15 +32,15 @@
 			mode = 'register';
 			fetch(`/api/invites/${inviteToken}`)
 				.then((r) => (r.ok ? r.json() : null))
-				.then((data) => { inviteMeta = data as typeof inviteMeta; });
+				.then((data) => {
+					inviteMeta = data as typeof inviteMeta;
+				});
 		}
 	});
 
 	async function handleSubmit(data: FormData) {
 		error = '';
-		const endpoint = mode === 'login'
-			? '/api/auth/sign-in/email'
-			: '/api/auth/sign-up/email';
+		const endpoint = mode === 'login' ? '/api/auth/sign-in/email' : '/api/auth/sign-up/email';
 
 		const body: Record<string, string> = {
 			email: data.get('email') as string,
@@ -45,10 +55,11 @@
 		});
 
 		if (!res.ok) {
-			const body = await res.json().catch(() => null) as { message?: string } | null;
-			error = mode === 'login'
-				? 'Invalid email or password.'
-				: body?.message ?? 'Registration failed. Please try again.';
+			const body = (await res.json().catch(() => null)) as { message?: string } | null;
+			error =
+				mode === 'login'
+					? 'Invalid email or password.'
+					: (body?.message ?? 'Registration failed. Please try again.');
 			throw new Error(error);
 		}
 
@@ -63,11 +74,17 @@
 
 <div class="flex items-center justify-center py-16 px-4">
 	<div class="w-full max-w-sm">
-		<div class="card shadow-xl" style="background: var(--surface); border: 1px solid var(--surface-border)">
+		<div
+			class="card shadow-xl"
+			style="background: var(--surface); border: 1px solid var(--surface-border)"
+		>
 			<div class="card-body gap-4">
 				{#if inviteMeta}
 					<div class="alert alert-info text-sm">
-						<span><strong>{inviteMeta.inviterName}</strong> invited you to join <strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span>
+						<span
+							><strong>{inviteMeta.inviterName}</strong> invited you to join
+							<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
+						>
 					</div>
 				{/if}
 
@@ -86,8 +103,12 @@
 						<Field name="name" type="text" label="Name" />
 					{/if}
 					<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
-					<Field name="password" type={showPassword ? 'text' : 'password'} label="Password"
-						minlength={mode === 'register' ? 8 : undefined}>
+					<Field
+						name="password"
+						type={showPassword ? 'text' : 'password'}
+						label="Password"
+						minlength={mode === 'register' ? 8 : undefined}
+					>
 						{#snippet input(id)}
 							<div class="relative">
 								<input
@@ -122,7 +143,10 @@
 
 				<button
 					class="btn btn-ghost btn-sm"
-					onclick={() => { mode = mode === 'login' ? 'register' : 'login'; error = ''; }}
+					onclick={() => {
+						mode = mode === 'login' ? 'register' : 'login';
+						error = '';
+					}}
 				>
 					{mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
 				</button>

@@ -47,7 +47,10 @@ export const upgradeToPremium = form(
 		}
 
 		if (!user.stripeId) {
-			throw error(400, 'Payment method required. Please set up billing in your membership settings first.');
+			throw error(
+				400,
+				'Payment method required. Please set up billing in your membership settings first.'
+			);
 		}
 
 		const { url } = getRequestEvent();
@@ -63,20 +66,14 @@ export const upgradeToPremium = form(
 	}
 );
 
-export const cancelPremium = form(
-	z.object({ slug: z.string().min(1) }),
-	async () => {
-		const { band } = await requireBandOwner();
-		await cancelBandSubscription(band.id);
-		return { success: true };
-	}
-);
+export const cancelPremium = form(z.object({ slug: z.string().min(1) }), async () => {
+	const { band } = await requireBandOwner();
+	await cancelBandSubscription(band.id);
+	return { success: true };
+});
 
-export const resumePremium = form(
-	z.object({ slug: z.string().min(1) }),
-	async () => {
-		const { band } = await requireBandOwner();
-		await resumeBandSubscription(band.id);
-		return { success: true };
-	}
-);
+export const resumePremium = form(z.object({ slug: z.string().min(1) }), async () => {
+	const { band } = await requireBandOwner();
+	await resumeBandSubscription(band.id);
+	return { success: true };
+});

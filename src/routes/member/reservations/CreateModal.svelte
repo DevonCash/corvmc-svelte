@@ -25,7 +25,13 @@
 	class="btn-primary"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
-		const r = result as { reservationId?: string; paid?: boolean; confirmed?: boolean; waitlisted?: boolean; redirectUrl?: string };
+		const r = result as {
+			reservationId?: string;
+			paid?: boolean;
+			confirmed?: boolean;
+			waitlisted?: boolean;
+			redirectUrl?: string;
+		};
 		if (r?.redirectUrl) {
 			window.location.href = r.redirectUrl;
 		} else {
@@ -37,7 +43,7 @@
 	}}
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
-	{#snippet form({ close })}
+	{#snippet form()}
 		<DateTimeStep {isSustaining} />
 		<ConfirmStep fields={{ skipPayment: fields.skipPayment }} />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />

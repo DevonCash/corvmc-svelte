@@ -40,9 +40,7 @@ export const webhookHandlerMap: Record<RegisteredEvent, WebhookHandlerFn> = {
 // checkout.session.completed
 // ---------------------------------------------------------------------------
 
-export async function handleCheckoutCompleted(
-	session: Stripe.Checkout.Session
-): Promise<void> {
+export async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
 	await domainEvents.emit('checkout.completed', {
 		sessionId: session.id,
 		metadata: (session.metadata as Record<string, string>) ?? {},
@@ -59,9 +57,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	const subDetails = invoice.parent?.subscription_details;
 	if (!subDetails) return;
 
-	const customerId = typeof invoice.customer === 'string'
-		? invoice.customer
-		: invoice.customer?.id;
+	const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
 
 	if (!customerId) return;
 
@@ -76,7 +72,8 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	// The subscription uses $5/unit pricing — quantity = free hours.
 	const lines = invoice.lines?.data ?? [];
 	const contributionLine = lines.find(
-		(line) => line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
+		(line) =>
+			line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
 	);
 
 	if (!contributionLine || !contributionLine.quantity) {
@@ -105,25 +102,22 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	const existingSub = existing?.subscription as Subscription | null;
 	const subscription: Subscription = {
 		startedAt: existingSub?.startedAt ?? new Date().toISOString(),
-		stripeSubscriptionId: typeof subDetails.subscription === 'string'
-			? subDetails.subscription
-			: subDetails.subscription?.id ?? '',
+		stripeSubscriptionId:
+			typeof subDetails.subscription === 'string'
+				? subDetails.subscription
+				: (subDetails.subscription?.id ?? ''),
 		hoursPerReset: freeHours,
-		creditsResetAt: nextReset,
+		creditsResetAt: nextReset
 	};
 
-	await db.update(user)
-		.set({ subscription })
-		.where(eq(user.id, member.id));
+	await db.update(user).set({ subscription }).where(eq(user.id, member.id));
 }
 
 // ---------------------------------------------------------------------------
 // customer.subscription.updated — sync band premium or member subscription
 // ---------------------------------------------------------------------------
 
-export async function handleSubscriptionUpdated(
-	subscription: Stripe.Subscription
-): Promise<void> {
+export async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
 	const metadata = subscription.metadata ?? {};
 
 	// Band premium subscription
@@ -140,9 +134,7 @@ export async function handleSubscriptionUpdated(
 // customer.subscription.deleted — reset credits or downgrade band
 // ---------------------------------------------------------------------------
 
-export async function handleSubscriptionDeleted(
-	subscription: Stripe.Subscription
-): Promise<void> {
+export async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
 	const metadata = subscription.metadata ?? {};
 
 	// Band premium subscription deleted
@@ -152,9 +144,8 @@ export async function handleSubscriptionDeleted(
 	}
 
 	// User subscription deleted — reset credits
-	const customerId = typeof subscription.customer === 'string'
-		? subscription.customer
-		: subscription.customer.id;
+	const customerId =
+		typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
 	const member = await findUserByStripeId(customerId);
 	if (!member) {
@@ -183,9 +174,7 @@ export async function handleSubscriptionDeleted(
 	// Cancel all active recurring series for this user
 	await cancelAllForUser(member.id);
 
-	await db.update(user)
-		.set({ subscription: null })
-		.where(eq(user.id, member.id));
+	await db.update(user).set({ subscription: null }).where(eq(user.id, member.id));
 }
 
 // ---------------------------------------------------------------------------

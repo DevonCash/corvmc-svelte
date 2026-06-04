@@ -1,11 +1,7 @@
 import { db } from '$lib/server/db';
-import {
-	audience,
-	audienceMember,
-	subscriber
-} from '$lib/server/db/schema/marketing';
+import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 
 // ---------------------------------------------------------------------------
@@ -26,7 +22,8 @@ export async function createAudience(data: {
 }) {
 	if (data.name.length > 255) throw new Error('Audience name too long (max 255)');
 	if (data.slug.length > 100) throw new Error('Audience slug too long (max 100)');
-	if (!/^[a-z0-9-]+$/.test(data.slug)) throw new Error('Slug must be lowercase alphanumeric with hyphens');
+	if (!/^[a-z0-9-]+$/.test(data.slug))
+		throw new Error('Slug must be lowercase alphanumeric with hyphens');
 
 	const [created] = await db
 		.insert(audience)
@@ -45,15 +42,14 @@ export async function updateAudience(
 	id: string,
 	data: { name?: string; slug?: string; description?: string; allowOptIn?: boolean }
 ) {
-	if (data.name !== undefined && data.name.length > 255) throw new Error('Audience name too long (max 255)');
-	if (data.slug !== undefined && data.slug.length > 100) throw new Error('Audience slug too long (max 100)');
-	if (data.slug !== undefined && !/^[a-z0-9-]+$/.test(data.slug)) throw new Error('Slug must be lowercase alphanumeric with hyphens');
+	if (data.name !== undefined && data.name.length > 255)
+		throw new Error('Audience name too long (max 255)');
+	if (data.slug !== undefined && data.slug.length > 100)
+		throw new Error('Audience slug too long (max 100)');
+	if (data.slug !== undefined && !/^[a-z0-9-]+$/.test(data.slug))
+		throw new Error('Slug must be lowercase alphanumeric with hyphens');
 
-	const [updated] = await db
-		.update(audience)
-		.set(data)
-		.where(eq(audience.id, id))
-		.returning();
+	const [updated] = await db.update(audience).set(data).where(eq(audience.id, id)).returning();
 
 	return updated ?? null;
 }
@@ -128,10 +124,7 @@ export async function addSubscriber(audienceId: string, subscriberId: string) {
 		.select({ id: audienceMember.id, unsubscribedAt: audienceMember.unsubscribedAt })
 		.from(audienceMember)
 		.where(
-			and(
-				eq(audienceMember.audienceId, audienceId),
-				eq(audienceMember.subscriberId, subscriberId)
-			)
+			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
 		)
 		.limit(1);
 
@@ -157,10 +150,7 @@ export async function removeSubscriber(audienceId: string, subscriberId: string)
 	await db
 		.delete(audienceMember)
 		.where(
-			and(
-				eq(audienceMember.audienceId, audienceId),
-				eq(audienceMember.subscriberId, subscriberId)
-			)
+			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
 		);
 }
 
@@ -204,10 +194,7 @@ export async function bulkAddMembers(audienceId: string): Promise<number> {
 			.select({ id: audienceMember.id, unsubscribedAt: audienceMember.unsubscribedAt })
 			.from(audienceMember)
 			.where(
-				and(
-					eq(audienceMember.audienceId, audienceId),
-					eq(audienceMember.subscriberId, sub.id)
-				)
+				and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, sub.id))
 			)
 			.limit(1);
 
@@ -264,12 +251,7 @@ export async function getSubscriptionsForUser(userId: string) {
 		.from(audienceMember)
 		.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.innerJoin(audience, eq(audience.id, audienceMember.audienceId))
-		.where(
-			and(
-				eq(subscriber.userId, userId),
-				isNull(audienceMember.unsubscribedAt)
-			)
-		)
+		.where(and(eq(subscriber.userId, userId), isNull(audienceMember.unsubscribedAt)))
 		.orderBy(audience.name);
 }
 

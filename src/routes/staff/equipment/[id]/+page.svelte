@@ -20,6 +20,7 @@
 	import { ActivateToggleAction } from '$lib/components/shared/actions';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
@@ -33,37 +34,37 @@
 	let isDeactivated = $derived(!!item.deletedAt);
 </script>
 
-	<Form remote={editEquipment} guard successToast="Equipment updated">
-		<input {...fields.id.as('hidden', id)} />
-		<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
-			{#if isDeactivated}
-				<Badge variant="error" size="md">Deactivated</Badge>
-			{/if}
-			<SubmitButton shortcut="mod+s">
-				{#snippet icon()}
-					<IconDeviceFloppy size={20} />
-				{/snippet}
-			</SubmitButton>
-		</PageHeader>
-		<PageContent width="3xl">
+<Form remote={editEquipment} guard successToast="Equipment updated">
+	<input {...fields.id.as('hidden', id)} />
+	<PageHeader subtitle="Equipment" title={item.name} backHref="/staff/equipment">
+		{#if isDeactivated}
+			<Badge variant="error" size="md">Deactivated</Badge>
+		{/if}
+		<SubmitButton shortcut="mod+s">
+			{#snippet icon()}
+				<IconDeviceFloppy size={20} />
+			{/snippet}
+		</SubmitButton>
+	</PageHeader>
+	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Equipment Info">
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field field={fields.name} type="text" value={item.name} />
 					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
 					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
-						{#each categories as cat}
+						{#each categories as cat (cat.id)}
 							<option value={cat.id}>{cat.name}</option>
 						{/each}
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
 						<Field field={fields.condition} type="select" value={item.condition}>
-							{#each equipmentConditions as c}
+							{#each equipmentConditions as c (c)}
 								<option value={c}>{c}</option>
 							{/each}
 						</Field>
 						<Field field={fields.status} type="select" value={item.status}>
-							{#each equipmentStatuses as s}
+							{#each equipmentStatuses as s (s)}
 								<option value={s}>{s}</option>
 							{/each}
 						</Field>
@@ -78,7 +79,10 @@
 					<dd class="font-mono text-xs">{item.id}</dd>
 
 					<dt class="opacity-60">Category</dt>
-					<dd>{item.category.name} <Badge variant="outline" size="xs" class="ml-1">{item.category.pricingTier}</Badge></dd>
+					<dd>
+						{item.category.name}
+						<Badge variant="outline" size="xs" class="ml-1">{item.category.pricingTier}</Badge>
+					</dd>
 
 					<dt class="opacity-60">Available</dt>
 					<dd class:text-error={item.availableQuantity <= 0}>
@@ -93,12 +97,32 @@
 				</dl>
 
 				<div class="grid grid-cols-2 gap-3 mt-4">
-					<Field field={fields.totalQuantity} type="number" value={item.totalQuantity} label="Total Qty" />
-					<Field field={fields.outOfOrderQuantity} type="number" value={item.outOfOrderQuantity} label="Out of Order" />
+					<Field
+						field={fields.totalQuantity}
+						type="number"
+						value={item.totalQuantity}
+						label="Total Qty"
+					/>
+					<Field
+						field={fields.outOfOrderQuantity}
+						type="number"
+						value={item.outOfOrderQuantity}
+						label="Out of Order"
+					/>
 				</div>
 				<div class="grid grid-cols-2 gap-3">
-					<Field field={fields.serialNumber} type="text" value={item.serialNumber ?? ''} label="Serial Number" />
-					<Field field={fields.resourceId} type="text" value={item.resourceId ?? ''} label="Resource ID" />
+					<Field
+						field={fields.serialNumber}
+						type="text"
+						value={item.serialNumber ?? ''}
+						label="Serial Number"
+					/>
+					<Field
+						field={fields.resourceId}
+						type="text"
+						value={item.resourceId ?? ''}
+						label="Resource ID"
+					/>
 				</div>
 
 				<div class="mt-4 flex gap-2">
@@ -112,10 +136,10 @@
 				</div>
 			</InfoCard>
 		</div>
-		</PageContent>
-	</Form>
+	</PageContent>
+</Form>
 
-	<PageContent width="3xl">
+<PageContent width="3xl">
 	<InfoCard title="Loan History">
 		{#if loanHistory.length === 0}
 			<p class="text-center opacity-60 py-8">No loan history</p>
@@ -133,9 +157,20 @@
 					</thead>
 					<tbody>
 						{#each loanHistory as loan (loan.id)}
-							<tr class="hover cursor-pointer" onclick={() => goto(`/staff/equipment/loans/${loan.id}`)}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => goto(resolve(`/staff/equipment/loans/${loan.id}`))}
+							>
 								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink member={{ name: loan.userName, email: loan.userEmail, pronouns: loan.userPronouns, role: loan.userRole, userId: loan.userId }} />
+									<MemberLink
+										member={{
+											name: loan.userName,
+											email: loan.userEmail,
+											pronouns: loan.userPronouns,
+											role: loan.userRole,
+											userId: loan.userId
+										}}
+									/>
 								</td>
 								<td class="w-px">
 									<StatusBadge status={loan.status} />
@@ -145,7 +180,9 @@
 								</td>
 								<td class="w-px">{formatDate(loan.requestedPickupDate)}</td>
 								<td class="w-px">{loan.dueDate ? formatDate(loan.dueDate) : '—'}</td>
-								<td class="w-px">{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}</td>
+								<td class="w-px"
+									>{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}</td
+								>
 							</tr>
 						{/each}
 					</tbody>
@@ -153,4 +190,4 @@
 			</div>
 		{/if}
 	</InfoCard>
-	</PageContent>
+</PageContent>

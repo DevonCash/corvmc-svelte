@@ -107,7 +107,9 @@ describe('getConfigsByPrefix', () => {
 describe('updateSiteConfig', () => {
 	it('stores value in KV', async () => {
 		await updateSiteConfig('reservation.operatingHoursStart', '08:00');
-		expect(kvStore.get('site-config:reservation.operatingHoursStart')).toBe(JSON.stringify('08:00'));
+		expect(kvStore.get('site-config:reservation.operatingHoursStart')).toBe(
+			JSON.stringify('08:00')
+		);
 	});
 
 	it('handles numeric values', async () => {

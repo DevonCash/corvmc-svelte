@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { searchMembers, getStaffSlots, checkConflicts, createReservation } from '$lib/remote/reservations.remote';
+	import { resolve } from '$app/paths';
+	import {
+		searchMembers,
+		getStaffSlots,
+		checkConflicts,
+		createReservation
+	} from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { toast } from 'svelte-sonner';
 	import { Field } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
@@ -83,10 +88,10 @@
 		resetForm();
 		const r = result as { reservationId?: string };
 		await invalidateAll();
-		if (r?.reservationId) goto(`/staff/reservations/${r.reservationId}`);
+		if (r?.reservationId) goto(resolve(`/staff/reservations/${r.reservationId}`));
 	}}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<svelte:boundary>
 			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
 			<input {...fields.date.as('hidden', date)} />
@@ -123,11 +128,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">End time</legend>
-				<select
-					bind:value={endTime}
-					class="select-bordered select w-full"
-					disabled={!startTime}
-				>
+				<select bind:value={endTime} class="select-bordered select w-full" disabled={!startTime}>
 					<option value="">Select end time</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>

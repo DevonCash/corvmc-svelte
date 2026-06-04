@@ -18,7 +18,8 @@
 						<path id="arc-bot-cta" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
 					</defs>
 					<text>
-						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle">Your Band</textPath>
+						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle">Your Band</textPath
+						>
 					</text>
 					<text>
 						<textPath href="#arc-bot-cta" startOffset="50%" text-anchor="middle"

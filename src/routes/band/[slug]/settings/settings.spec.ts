@@ -37,7 +37,7 @@ vi.mock('$app/server', () => ({
 		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
-	form: (_schema: unknown, handler: Function) => {
+	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
@@ -45,7 +45,7 @@ vi.mock('$app/server', () => ({
 	},
 	query: (...args: unknown[]) => {
 		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as Function;
+		const fn = handler as (...args: any[]) => any;
 		(fn as any).__ = { type: 'query' };
 		return fn;
 	}
@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe('deleteBand', () => {
 	it('deletes the band', async () => {
-		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
+		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		const result = await deleteBand({});
 
@@ -72,14 +72,14 @@ describe('deleteBand', () => {
 
 	it('rejects non-owner users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
+		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { deleteBand } = await import('$lib/remote/bands.remote') as any;
+		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});

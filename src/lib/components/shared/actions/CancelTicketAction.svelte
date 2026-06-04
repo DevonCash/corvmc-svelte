@@ -6,14 +6,12 @@
 	const { fields } = cancelTicket;
 
 	let {
-		eventId,
 		ticketId,
 		attendeeName,
 		class: className = 'btn-ghost btn-sm text-error',
 		onsuccess,
 		...rest
 	}: {
-		eventId: string;
 		ticketId: string;
 		attendeeName: string;
 		class?: string;
@@ -31,7 +29,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.ticketId.as('hidden', ticketId)} />
 		<p class="py-2">Cancel ticket for {attendeeName}?</p>
 	{/snippet}

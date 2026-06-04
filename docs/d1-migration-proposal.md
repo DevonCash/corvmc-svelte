@@ -26,14 +26,14 @@ Most of the schema and query layer translates cleanly:
 
 Every schema file (13 files) uses `pgTable`. These become `sqliteTable` with SQLite column types.
 
-| Postgres | SQLite equivalent | Files affected |
-|----------|------------------|----------------|
-| `pgTable` | `sqliteTable` | all 13 schema files |
-| `uuid().defaultRandom()` | `text().primaryKey().$defaultFn(() => crypto.randomUUID())` | 15+ tables |
-| `bigserial` / `serial` | `integer({ mode: 'number' }).primaryKey({ autoIncrement: true })` | 3 tables |
-| `timestamp().defaultNow()` | `text().default(sql\`(current_timestamp)\`)` | widespread |
-| `jsonb()` | `text({ mode: 'json' })` | 10 columns across 5 tables |
-| `text('col').array()` | see "Array columns" below | 3 columns |
+| Postgres                   | SQLite equivalent                                                 | Files affected             |
+| -------------------------- | ----------------------------------------------------------------- | -------------------------- |
+| `pgTable`                  | `sqliteTable`                                                     | all 13 schema files        |
+| `uuid().defaultRandom()`   | `text().primaryKey().$defaultFn(() => crypto.randomUUID())`       | 15+ tables                 |
+| `bigserial` / `serial`     | `integer({ mode: 'number' }).primaryKey({ autoIncrement: true })` | 3 tables                   |
+| `timestamp().defaultNow()` | `text().default(sql\`(current_timestamp)\`)`                      | widespread                 |
+| `jsonb()`                  | `text({ mode: 'json' })`                                          | 10 columns across 5 tables |
+| `text('col').array()`      | see "Array columns" below                                         | 3 columns                  |
 
 Effort: mechanical find-and-replace per file, ~1 day.
 
@@ -46,6 +46,7 @@ Three columns use PostgreSQL `text[]` arrays with GIN indexes and the `&&` (over
 - `band.genres` — e.g. `['punk', 'metal']`
 
 **Current queries** (in `directory-service.ts`):
+
 - Array overlap: `WHERE instruments && ARRAY['guitar','bass']::text[]`
 - Distinct values: `SELECT DISTINCT unnest(instruments) FROM "user"`
 
@@ -70,6 +71,7 @@ Two categories:
 **a) Simple JSONB storage** (settings, directoryContact, links, notification data, creditTransaction metadata) — these are just stored and retrieved whole, never queried with JSON operators. Drizzle's `text({ mode: 'json' })` handles serialization/deserialization transparently. **No query changes needed.**
 
 **b) Atomic JSONB mutations** (credit-service.ts) — this is the hard one. Three functions use:
+
 - `jsonb_set()` to update a nested value
 - `->>` to extract and cast
 - `::int` for type casting
@@ -146,16 +148,16 @@ The 17 existing Postgres migrations are discarded. Run `drizzle-kit generate` ag
 
 ## Trade-offs vs Hyperdrive + Postgres
 
-| | D1 (SQLite) | Hyperdrive (Postgres) |
-|---|---|---|
-| **Code changes** | ~2 days of migration | ~0 (just config) |
-| **Latency** | Co-located, sub-ms | Remote DB, 10-50ms |
-| **Concurrency** | Single-writer (serialized) | Full MVCC |
-| **Max DB size** | 10 GB per database | Unlimited |
-| **JSON operations** | Basic (json_extract) | Full JSONB |
-| **Full-text search** | SQLite FTS5 (good) | Postgres tsvector (better) |
-| **Vendor lock-in** | Cloudflare D1 | Any Postgres host |
-| **Local dev** | wrangler dev (offline) | Needs running Postgres |
+|                      | D1 (SQLite)                | Hyperdrive (Postgres)      |
+| -------------------- | -------------------------- | -------------------------- |
+| **Code changes**     | ~2 days of migration       | ~0 (just config)           |
+| **Latency**          | Co-located, sub-ms         | Remote DB, 10-50ms         |
+| **Concurrency**      | Single-writer (serialized) | Full MVCC                  |
+| **Max DB size**      | 10 GB per database         | Unlimited                  |
+| **JSON operations**  | Basic (json_extract)       | Full JSONB                 |
+| **Full-text search** | SQLite FTS5 (good)         | Postgres tsvector (better) |
+| **Vendor lock-in**   | Cloudflare D1              | Any Postgres host          |
+| **Local dev**        | wrangler dev (offline)     | Needs running Postgres     |
 
 The main risk is **write concurrency**. D1 serializes all writes to a single database. For CorvMC's expected load (community music space, not high-traffic SaaS), this is unlikely to be a bottleneck. If it ever becomes one, D1 supports read replicas.
 

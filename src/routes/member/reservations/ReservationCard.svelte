@@ -86,7 +86,7 @@
 	}
 
 	.reservation-status {
-		@apply absolute top-2 right-2 text-xs font-bold uppercase opacity-50 tracking-wide ;
+		@apply absolute top-2 right-2 text-xs font-bold tracking-wide uppercase opacity-50;
 		font-family: var(--font-mono);
 	}
 </style>

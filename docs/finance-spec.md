@@ -40,8 +40,8 @@ A JSONB column on the `user` table holds the running total per credit type:
 
 ```json
 {
-  "free_hours": { "balance": 4, "maxBalance": null },
-  "equipment_credits": { "balance": 12, "maxBalance": 250 }
+	"free_hours": { "balance": 4, "maxBalance": null },
+	"equipment_credits": { "balance": 12, "maxBalance": 250 }
 }
 ```
 
@@ -273,24 +273,24 @@ The app doesn't use a domain event bus. The payment service returns results to i
 
 ### New tables (finance module)
 
-| Table | Purpose |
-|---|---|
+| Table                | Purpose                                   |
+| -------------------- | ----------------------------------------- |
 | `credit_transaction` | Immutable audit log of all credit changes |
 
 ### Modified tables
 
-| Table | New columns |
-|---|---|
-| `user` | `credits` (jsonb, default '{}') — running credit balances |
-| Each purchasable table (reservations, tickets, equipment_loans) | `stripe_payment_record_id` (text, nullable) |
+| Table                                                           | New columns                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| `user`                                                          | `credits` (jsonb, default '{}') — running credit balances |
+| Each purchasable table (reservations, tickets, equipment_loans) | `stripe_payment_record_id` (text, nullable)               |
 
 ### Removed (vs. Laravel app)
 
-| Table | Reason |
-|---|---|
-| `orders` | Stripe is the ledger |
-| `transactions` | Stripe is the ledger |
-| `line_items` | Stripe Checkout Session line items serve this purpose |
+| Table          | Reason                                                |
+| -------------- | ----------------------------------------------------- |
+| `orders`       | Stripe is the ledger                                  |
+| `transactions` | Stripe is the ledger                                  |
+| `line_items`   | Stripe Checkout Session line items serve this purpose |
 
 ---
 
@@ -298,23 +298,23 @@ The app doesn't use a domain event bus. The payment service returns results to i
 
 ### Products (created in Stripe dashboard or via seed script)
 
-| Product | Metadata |
-|---|---|
-| Rehearsal Space | `eligible_wallets: "free_hours"` |
-| Event Ticket | `eligible_wallets: ""` (no credits apply) |
-| Equipment Loan | `eligible_wallets: "equipment_credits"` |
-| Membership (subscription) | N/A — not a one-time purchase |
+| Product                   | Metadata                                  |
+| ------------------------- | ----------------------------------------- |
+| Rehearsal Space           | `eligible_wallets: "free_hours"`          |
+| Event Ticket              | `eligible_wallets: ""` (no credits apply) |
+| Equipment Loan            | `eligible_wallets: "equipment_credits"`   |
+| Membership (subscription) | N/A — not a one-time purchase             |
 
 Each Product has one or more Prices (hourly rate, per-ticket, per-day, etc.).
 
 ### Webhooks
 
-| Event | Handler |
-|---|---|
-| `checkout.session.completed` | `onCheckoutComplete()` — links Payment Record to purchasable |
-| `invoice.paid` | Allocate monthly credits based on subscription amount |
-| `customer.subscription.updated` | Update local subscription state if cached |
-| `customer.subscription.deleted` | Revoke sustaining member role, reset free hours balance |
+| Event                           | Handler                                                      |
+| ------------------------------- | ------------------------------------------------------------ |
+| `checkout.session.completed`    | `onCheckoutComplete()` — links Payment Record to purchasable |
+| `invoice.paid`                  | Allocate monthly credits based on subscription amount        |
+| `customer.subscription.updated` | Update local subscription state if cached                    |
+| `customer.subscription.deleted` | Revoke sustaining member role, reset free hours balance      |
 
 ---
 

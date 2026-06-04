@@ -31,13 +31,20 @@ vi.mock('$lib/server/db', () => ({
 		insert: () => ({
 			values: (row: unknown) => {
 				insertedRows.push(row);
-				return { returning: () => Promise.resolve([{ id: 'aud-new', ...(typeof row === 'object' ? row : {}) }]) };
+				return {
+					returning: () =>
+						Promise.resolve([{ id: 'aud-new', ...(typeof row === 'object' ? row : {}) }])
+				};
 			}
 		}),
 		update: () => {
 			const chain: any = new Proxy(() => chain, {
 				get(_, prop) {
-					if (prop === 'set') return (data: unknown) => { updateData.push(data); return chain; };
+					if (prop === 'set')
+						return (data: unknown) => {
+							updateData.push(data);
+							return chain;
+						};
 					if (prop === 'returning') return () => Promise.resolve([{ id: 'aud-1' }]);
 					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
 					return () => chain;
@@ -53,8 +60,21 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/marketing', () => ({
-	audience: { id: 'id', name: 'name', slug: 'slug', description: 'description', allowOptIn: 'allow_opt_in', createdAt: 'created_at' },
-	audienceMember: { id: 'id', audienceId: 'audience_id', subscriberId: 'subscriber_id', unsubscribedAt: 'unsubscribed_at', createdAt: 'created_at' },
+	audience: {
+		id: 'id',
+		name: 'name',
+		slug: 'slug',
+		description: 'description',
+		allowOptIn: 'allow_opt_in',
+		createdAt: 'created_at'
+	},
+	audienceMember: {
+		id: 'id',
+		audienceId: 'audience_id',
+		subscriberId: 'subscriber_id',
+		unsubscribedAt: 'unsubscribed_at',
+		createdAt: 'created_at'
+	},
 	subscriber: { id: 'id', email: 'email', name: 'name', userId: 'user_id' }
 }));
 
@@ -63,12 +83,20 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 }));
 
 vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(), and: vi.fn(), sql: vi.fn(), isNull: vi.fn(), isNotNull: vi.fn(), notInArray: vi.fn()
+	eq: vi.fn(),
+	and: vi.fn(),
+	sql: vi.fn(),
+	isNull: vi.fn(),
+	isNotNull: vi.fn(),
+	notInArray: vi.fn()
 }));
 
 vi.mock('./subscriber-service', () => ({
 	findOrCreateByEmail: vi.fn(async (email: string, name: string) => ({
-		id: 'sub-1', email, name, userId: null
+		id: 'sub-1',
+		email,
+		name,
+		userId: null
 	})),
 	linkToUser: vi.fn()
 }));
@@ -110,21 +138,21 @@ describe('createAudience', () => {
 	});
 
 	it('throws when name is too long', async () => {
-		await expect(
-			createAudience({ name: 'x'.repeat(256), slug: 'test' })
-		).rejects.toThrow('name too long');
+		await expect(createAudience({ name: 'x'.repeat(256), slug: 'test' })).rejects.toThrow(
+			'name too long'
+		);
 	});
 
 	it('throws when slug is too long', async () => {
-		await expect(
-			createAudience({ name: 'OK', slug: 'x'.repeat(101) })
-		).rejects.toThrow('slug too long');
+		await expect(createAudience({ name: 'OK', slug: 'x'.repeat(101) })).rejects.toThrow(
+			'slug too long'
+		);
 	});
 
 	it('throws when slug has invalid characters', async () => {
-		await expect(
-			createAudience({ name: 'OK', slug: 'Bad Slug!' })
-		).rejects.toThrow('lowercase alphanumeric');
+		await expect(createAudience({ name: 'OK', slug: 'Bad Slug!' })).rejects.toThrow(
+			'lowercase alphanumeric'
+		);
 	});
 });
 
@@ -137,9 +165,9 @@ describe('updateAudience', () => {
 	});
 
 	it('validates slug format on update', async () => {
-		await expect(
-			updateAudience('aud-1', { slug: 'INVALID!' })
-		).rejects.toThrow('lowercase alphanumeric');
+		await expect(updateAudience('aud-1', { slug: 'INVALID!' })).rejects.toThrow(
+			'lowercase alphanumeric'
+		);
 	});
 });
 
@@ -199,7 +227,15 @@ describe('unsubscribe', () => {
 describe('listAudiences', () => {
 	it('returns audiences with subscriber counts', async () => {
 		selectResults.push([
-			{ id: 'aud-1', name: 'Newsletter', slug: 'newsletter', description: null, allowOptIn: true, createdAt: new Date(), subscriberCount: 42 }
+			{
+				id: 'aud-1',
+				name: 'Newsletter',
+				slug: 'newsletter',
+				description: null,
+				allowOptIn: true,
+				createdAt: new Date(),
+				subscriberCount: 42
+			}
 		]);
 
 		const result = await listAudiences();
@@ -215,7 +251,17 @@ describe('getAudience', () => {
 	});
 
 	it('returns audience with subscriber count', async () => {
-		selectResults.push([{ id: 'aud-1', name: 'Events', slug: 'events', description: 'Event updates', allowOptIn: true, createdAt: new Date(), subscriberCount: 10 }]);
+		selectResults.push([
+			{
+				id: 'aud-1',
+				name: 'Events',
+				slug: 'events',
+				description: 'Event updates',
+				allowOptIn: true,
+				createdAt: new Date(),
+				subscriberCount: 10
+			}
+		]);
 
 		const result = await getAudience('aud-1');
 		expect(result!.name).toBe('Events');

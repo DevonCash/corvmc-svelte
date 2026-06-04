@@ -2,7 +2,6 @@
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 
@@ -34,7 +33,9 @@
 	const freeHours = $derived(Math.floor(amount / DOLLARS_PER_UNIT));
 	const feeCents = $derived(coverFees ? calcFeeCents(amount * 100) : 0);
 	const feeDisplay = $derived((feeCents / 100).toFixed(2));
-	const totalDisplay = $derived(coverFees ? ((amount * 100 + feeCents) / 100).toFixed(2) : amount.toFixed(2));
+	const totalDisplay = $derived(
+		coverFees ? ((amount * 100 + feeCents) / 100).toFixed(2) : amount.toFixed(2)
+	);
 </script>
 
 <Form {remote} {onsuccess} class="card bg-base-100 shadow-sm">

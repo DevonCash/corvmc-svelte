@@ -74,11 +74,7 @@
 	{#if preview}
 		{@render preview({ file: selectedFile, src: previewUrl ?? src ?? null })}
 	{:else if previewUrl || src}
-		<img
-			src={previewUrl ?? src}
-			alt=""
-			class="h-24 w-24 rounded object-cover"
-		/>
+		<img src={previewUrl ?? src} alt="" class="h-24 w-24 rounded object-cover" />
 	{/if}
 
 	<div class="flex flex-col gap-1">
@@ -90,13 +86,7 @@
 		{:else if hasPreview}
 			<label class="btn btn-sm btn-outline" class:btn-disabled={disabled}>
 				Replace
-				<input
-					type="file"
-					{accept}
-					onchange={handleFileChange}
-					{disabled}
-					class="hidden"
-				/>
+				<input type="file" {accept} onchange={handleFileChange} {disabled} class="hidden" />
 			</label>
 		{:else}
 			<input

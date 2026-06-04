@@ -9,7 +9,10 @@
 <div>
 	<div class="mb-6 text-center">
 		<h2 class="text-3xl font-bold">Pick What Works for You</h2>
-		<p class="mt-2 opacity-70">There's no wrong number here. Every dollar goes to the Collective, and every $5 earns you another hour of practice time.</p>
+		<p class="mt-2 opacity-70">
+			There's no wrong number here. Every dollar goes to the Collective, and every $5 earns you
+			another hour of practice time.
+		</p>
 	</div>
 
 	<div class="card mx-auto max-w-3xl bg-base-100 shadow-sm">
@@ -19,7 +22,7 @@
 			</div>
 
 			<div class="mb-8 space-y-3">
-				{#each tiers as tier}
+				{#each tiers as tier (tier.amount)}
 					<div class="flex items-center justify-between rounded-lg bg-base-200/50 p-4">
 						<span class="font-medium">{tier.amount}</span>
 						<span class="opacity-50">→</span>
@@ -33,7 +36,8 @@
 					Why sliding scale?
 				</div>
 				<p class="text-center opacity-70">
-					Music shouldn't be gated by budget. Every tier gets the same benefits — the only difference is how many practice hours you walk away with. Contribute what feels right.
+					Music shouldn't be gated by budget. Every tier gets the same benefits — the only
+					difference is how many practice hours you walk away with. Contribute what feels right.
 				</p>
 			</div>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import Logo from '$lib/components/shared/Logo.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 
@@ -20,10 +21,16 @@
 </script>
 
 <header>
-	<nav class="px-4 py-3" style="background: var(--bg-page); border-bottom: 1px solid var(--surface-border)">
-		<div class="max-w-6xl mx-auto grid items-end gap-x-4 gap-y-1" style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto">
+	<nav
+		class="px-4 py-3"
+		style="background: var(--bg-page); border-bottom: 1px solid var(--surface-border)"
+	>
+		<div
+			class="max-w-6xl mx-auto grid items-end gap-x-4 gap-y-1"
+			style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto"
+		>
 			<!-- Logo -->
-			<a href="/" class="row-span-2 flex items-center" style="height: 72px">
+			<a href={resolve('/')} class="row-span-2 flex items-center" style="height: 72px">
 				<Logo soundLines={false} class="h-full w-auto" />
 			</a>
 
@@ -33,7 +40,7 @@
 			</div>
 
 			<!-- Actions -->
-			<div class="flex items-center gap-2 " style="grid-row: 1 / 3; grid-column: 3">
+			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
 					<Button href="/member" class="btn-sm">My Account</Button>
 				{:else}
@@ -44,15 +51,26 @@
 					onclick={() => (menuOpen = !menuOpen)}
 					aria-label="Toggle menu"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-5 w-5"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 6h16M4 12h16M4 18h16"
+						/>
 					</svg>
 				</Button>
 			</div>
 
 			<!-- Nav -->
 			<nav class="hidden lg:flex items-center gap-1 -ml-3" style="grid-row: 2; grid-column: 2">
-				{#each links as link}
+				{#each links as link (link.href)}
 					<a
 						href={link.href}
 						class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -65,7 +83,7 @@
 					</a>
 				{/each}
 				<a
-					href="/contribute"
+					href={resolve('/contribute')}
 					class="btn btn-sm btn-outline ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
@@ -76,9 +94,12 @@
 	</nav>
 
 	{#if menuOpen}
-		<div class="lg:hidden" style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)">
+		<div
+			class="lg:hidden"
+			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
+		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: '/contribute', label: 'Contribute' }, { href: '/contact', label: 'Contact' }] as link}
+				{#each [...links, { href: '/contribute', label: 'Contribute' }, { href: '/contact', label: 'Contact' }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

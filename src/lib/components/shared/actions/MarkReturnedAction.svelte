@@ -30,7 +30,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', loanId)} />
 		{#if chargeMessage}
 			<div class="bg-base-200 rounded p-3 mb-3 text-sm">

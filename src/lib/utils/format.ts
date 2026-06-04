@@ -2,11 +2,7 @@
  * Shared date, time, and currency formatting utilities.
  */
 
-import {
-	format,
-	differenceInCalendarDays,
-	getDate
-} from 'date-fns';
+import { format, differenceInCalendarDays, getDate } from 'date-fns';
 
 // ---------------------------------------------------------------------------
 // Date formatting
@@ -130,14 +126,22 @@ export function formatDollars(cents: number): string {
 }
 
 /** Calculate amount from duration and rate, formatted: "$30.00" */
-export function formatDurationAmount(startsAt: Date, endsAt: Date, hourlyRateCents: number): string {
+export function formatDurationAmount(
+	startsAt: Date,
+	endsAt: Date,
+	hourlyRateCents: number
+): string {
 	const hours = durationHours(startsAt, endsAt);
 	const cents = Math.round(hours * hourlyRateCents);
 	return formatCents(cents);
 }
 
 /** "2 hrs · $24.50" */
-export function formatDurationAndAmount(startsAt: Date, endsAt: Date, hourlyRateCents: number): string {
+export function formatDurationAndAmount(
+	startsAt: Date,
+	endsAt: Date,
+	hourlyRateCents: number
+): string {
 	const h = durationHours(startsAt, endsAt);
 	const label = h === 1 ? '1 hr' : `${h} hrs`;
 	return `${label} · ${formatDurationAmount(startsAt, endsAt, hourlyRateCents)}`;

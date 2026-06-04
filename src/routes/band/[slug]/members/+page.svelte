@@ -8,6 +8,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -102,12 +103,10 @@
 </script>
 
 <PageHeader title="Members" subtitle={layout.band.name}>
-		{#if isOwner || isAdmin}
-			<Button class="btn-sm" onclick={() => (showInviteModal = true)}>
-				Invite Member
-			</Button>
-		{/if}
-	</PageHeader>
+	{#if isOwner || isAdmin}
+		<Button class="btn-sm" onclick={() => (showInviteModal = true)}>Invite Member</Button>
+	{/if}
+</PageHeader>
 <PageContent width="2xl">
 	{#await membersResult}
 		<div class="flex justify-center py-12">
@@ -146,7 +145,10 @@
 										{@const remove = removeMember.for(member.id)}
 										<Form
 											remote={remove}
-											onsuccess={() => { toast.success('Member removed'); refreshMembers(); }}
+											onsuccess={() => {
+												toast.success('Member removed');
+												refreshMembers();
+											}}
 											onfailure={() => toast.error('Failed to remove')}
 										>
 											<input {...removeFields.memberId.as('hidden', member.id)} />
@@ -193,7 +195,10 @@
 									{@const revoke = revokeInvitation.for(invite.id)}
 									<Form
 										remote={revoke}
-										onsuccess={() => { toast.success('Invitation revoked'); refreshMembers(); }}
+										onsuccess={() => {
+											toast.success('Invitation revoked');
+											refreshMembers();
+										}}
 										onfailure={() => toast.error('Failed to revoke')}
 									>
 										<input {...revokeFields.memberId.as('hidden', invite.id)} />
@@ -293,10 +298,7 @@
 			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
-				<Field
-					label="Search by name or email"
-					id="user-search"
-				>
+				<Field label="Search by name or email" id="user-search">
 					<input
 						id="user-search"
 						type="text"
@@ -365,9 +367,15 @@
 		>
 			<div class="space-y-4">
 				<p class="text-sm opacity-70">
-					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a signup link and be automatically added to your band.
+					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
+					signup link and be automatically added to your band.
 				</p>
-				<Field name="email" type="email" label="Email address" value={looksLikeEmail ? searchQuery : ''} />
+				<Field
+					name="email"
+					type="email"
+					label="Email address"
+					value={looksLikeEmail ? searchQuery : ''}
+				/>
 				<div class="grid grid-cols-2 gap-4">
 					<Field label="Role" name="role" type="select" value="member" options={roleOptions} />
 					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
@@ -413,13 +421,16 @@
 <Modal title="Leave Band" bind:open={showLeaveModal}>
 	<Form
 		remote={leave}
-		onsuccess={() => { toast.success('You have left the band'); goto('/member/bands'); }}
+		onsuccess={() => {
+			toast.success('You have left the band');
+			goto(resolve('/member/bands'));
+		}}
 		onfailure={() => toast.error('Failed to leave')}
 	>
 		<div class="space-y-4">
 			<p>
-				Are you sure you want to leave <strong>{layout.band.name}</strong>? You will need to be re-invited
-				to rejoin.
+				Are you sure you want to leave <strong>{layout.band.name}</strong>? You will need to be
+				re-invited to rejoin.
 			</p>
 			<div class="flex justify-end pt-2">
 				<SubmitButton label="Leave Band" successLabel="Left" class="btn-error" />

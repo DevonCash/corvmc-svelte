@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getMemberCategories } from '$lib/remote/help.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -30,7 +31,7 @@
 	};
 
 	function handleSelect(slug: string) {
-		goto(`/member/help/${slug}`);
+		goto(resolve(`/member/help/${slug}`));
 	}
 </script>
 
@@ -42,7 +43,7 @@
 		<EmptyState message="No help articles available yet." />
 	{:else}
 		<div class="grid gap-4 sm:grid-cols-2">
-			{#each categories as category}
+			{#each categories as category (category.id)}
 				{@const Icon = iconMap[category.icon ?? ''] ?? IconBook}
 				<div class="card border border-base-300 bg-base-100">
 					<div class="card-body p-4">
@@ -59,10 +60,10 @@
 						</div>
 						{#if category.articles.length > 0}
 							<ul class="mt-3 space-y-1">
-								{#each category.articles as article}
+								{#each category.articles as article (article.slug)}
 									<li>
 										<a
-											href="/member/help/{article.slug}"
+											href={resolve(`/member/help/${article.slug}`)}
 											class="text-sm hover:text-primary transition-colors"
 										>
 											{article.title}

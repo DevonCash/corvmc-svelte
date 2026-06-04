@@ -15,10 +15,12 @@
 	} = $props();
 
 	const remaining = $derived(credits.free_hours ?? 0);
-	const refreshDate = $derived(subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-		month: 'long',
-		day: 'numeric'
-	}));
+	const refreshDate = $derived(
+		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
+			month: 'long',
+			day: 'numeric'
+		})
+	);
 </script>
 
 <div class="card bg-base-100 shadow-sm">
@@ -39,7 +41,13 @@
 				<div class="text-sm opacity-60">Total This Month</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
-				<div class="text-3xl font-bold" class:text-success={remaining > 0} class:text-warning={remaining === 0}>{remaining}</div>
+				<div
+					class="text-3xl font-bold"
+					class:text-success={remaining > 0}
+					class:text-warning={remaining === 0}
+				>
+					{remaining}
+				</div>
 				<div class="text-sm opacity-60">Remaining</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">

@@ -42,7 +42,9 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		bufferMinutes: Number(raw.bufferMinutes ?? DEFAULT_BUFFER_MINUTES),
 		minAdvanceMinutes: Number(raw.minAdvanceMinutes ?? DEFAULT_MIN_ADVANCE_MINUTES),
 		maxAdvanceDaysOneoff: Number(raw.maxAdvanceDaysOneoff ?? DEFAULT_MAX_ADVANCE_DAYS_ONEOFF),
-		maxAdvanceDaysRecurring: Number(raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING),
+		maxAdvanceDaysRecurring: Number(
+			raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING
+		),
 		hourlyRateCents: Number(raw.hourlyRateCents ?? 1500)
 	};
 }

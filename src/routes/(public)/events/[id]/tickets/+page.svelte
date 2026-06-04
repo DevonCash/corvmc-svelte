@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -23,14 +24,10 @@
 	const evt = $derived(data.event);
 	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
 	const unitPrice = $derived(evt.ticketPrice ?? 0);
-	const discountedPrice = $derived(
-		data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice
-	);
+	const discountedPrice = $derived(data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice);
 	const subtotal = $derived(discountedPrice * quantity);
 	const soldOut = $derived(data.remaining === 0);
-	const maxQuantity = $derived(
-		data.remaining !== null ? Math.min(data.remaining, 10) : 10
-	);
+	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
 	async function handleSuccess(result?: { redirectUrl?: string }) {
 		if (result?.redirectUrl) {
@@ -96,11 +93,7 @@
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of spots" name="quantity">
-						<select
-							name="quantity"
-							bind:value={quantity}
-							class="select select-bordered w-full"
-						>
+						<select name="quantity" bind:value={quantity} class="select select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
@@ -111,7 +104,10 @@
 
 					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 
-					<SubmitButton label="RSVP{quantity > 1 ? ` for ${quantity}` : ''}" class="btn-primary w-full" />
+					<SubmitButton
+						label="RSVP{quantity > 1 ? ` for ${quantity}` : ''}"
+						class="btn-primary w-full"
+					/>
 				</div>
 			</div>
 		</Form>
@@ -125,11 +121,7 @@
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of tickets" name="quantity">
-						<select
-							name="quantity"
-							bind:value={quantity}
-							class="select select-bordered w-full"
-						>
+						<select name="quantity" bind:value={quantity} class="select select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
@@ -140,8 +132,12 @@
 
 					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 
-					<Field name="coverFees" type="checkbox" value={coverFees}
-						checkboxLabel="Cover processing fees so the collective receives the full amount" />
+					<Field
+						name="coverFees"
+						type="checkbox"
+						value={coverFees}
+						checkboxLabel="Cover processing fees so the collective receives the full amount"
+					/>
 
 					<div class="border-t border-base-200 pt-4">
 						<div class="flex justify-between text-lg font-medium">
@@ -153,11 +149,14 @@
 						{/if}
 					</div>
 
-					<SubmitButton label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}" class="btn-primary w-full" />
+					<SubmitButton
+						label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
+						class="btn-primary w-full"
+					/>
 
 					{#if !data.isAuthenticated}
 						<p class="text-sm text-center opacity-60">
-							<a href="/login" class="link">Sign in</a> for member discounts
+							<a href={resolve('/login')} class="link">Sign in</a> for member discounts
 						</p>
 					{/if}
 				</div>
