@@ -10,6 +10,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getMemberDashboard());
 
@@ -123,7 +124,7 @@
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
 					<a
-						href="/member/events/{evt.id}"
+						href={resolve(`/member/events/${evt.id}`)}
 						class="card bg-base-200 transition-shadow hover:shadow-md"
 					>
 						{#if evt.posterUrl}

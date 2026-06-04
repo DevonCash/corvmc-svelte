@@ -2,7 +2,6 @@ import { db } from '$lib/server/db';
 import {
 	campaign,
 	campaignAudience,
-	audience,
 	audienceMember,
 	subscriber
 } from '$lib/server/db/schema/marketing';

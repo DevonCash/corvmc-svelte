@@ -157,7 +157,7 @@ describe('EventService', () => {
 		});
 
 		it('creates linked reservation when reservation params provided', async () => {
-			const result = await create({
+			await create({
 				...baseParams,
 				reservation: {
 					startsAt: new Date('2025-07-15T01:00:00Z'),

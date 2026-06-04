@@ -23,6 +23,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -47,10 +48,7 @@
 
 	let isDeactivated = $derived(!!band.deletedAt);
 
-	let bioHtml = $state('');
-	$effect(() => {
-		bioHtml = band.bio ?? '';
-	});
+	let bioHtml = $derived(band.bio ?? '');
 </script>
 
 <Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
@@ -120,7 +118,7 @@
 								void getBand(id).refresh();
 							}}
 						>
-							{#snippet form({ close })}
+							{#snippet form()}
 								<input {...reactivateFields.id.as('hidden', id)} />
 								<p class="py-4">Reactivate this band?</p>
 							{/snippet}
@@ -135,7 +133,7 @@
 								void getBand(id).refresh();
 							}}
 						>
-							{#snippet form({ close })}
+							{#snippet form()}
 								<input {...deactivateFields.id.as('hidden', id)} />
 								<p class="py-4">Deactivate this band? All future reservations will be cancelled.</p>
 							{/snippet}
@@ -292,7 +290,10 @@
 					</thead>
 					<tbody>
 						{#each reservations as r (r.id)}
-							<tr class="hover cursor-pointer" onclick={() => goto(`/staff/reservations/${r.id}`)}>
+							<tr
+								class="hover cursor-pointer"
+								onclick={() => goto(resolve(`/staff/reservations/${r.id}`))}
+							>
 								<td>{formatDate(r.startsAt)}</td>
 								<td><span class="text-sm">{formatTimeRange(r.startsAt, r.endsAt)}</span></td>
 								<td class="w-px"><StatusBadge status={r.status} /></td>

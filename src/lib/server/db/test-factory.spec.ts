@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mockUser, mockRole, mockStandardRoles, factory } from './test-factory';
-import { UserSchema, RoleSchema } from './test-schemas';
+import { UserSchema } from './test-schemas';
 import { z } from 'zod';
 
 describe('mockUser', () => {

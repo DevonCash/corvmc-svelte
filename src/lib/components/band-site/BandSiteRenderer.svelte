@@ -3,11 +3,11 @@
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { sanitizeBio } from '$lib/utils/markdown';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 
 	interface BandData {
-		id: string;
 		name: string;
-		slug: string;
 		bio: string | null;
 		tagline: string | null;
 		avatarUrl: string | null;
@@ -90,6 +90,7 @@
 			{:else if block.type === 'bio'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<div class="prose prose-lg">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (bio block) -->
 						{@html block.content}
 					</div>
 				</div>
@@ -97,12 +98,12 @@
 				{#if band.links && band.links.length > 0}
 					<div class="max-w-md mx-auto px-6 py-8">
 						<div class="flex flex-col gap-3">
-							{#each band.links as link}
+							{#each band.links as link (link.url)}
 								{@const platform = detectPlatform(link.url)}
 								<a
 									href={link.url}
 									target="_blank"
-									rel="noopener"
+									rel="external noopener"
 									class="btn btn-outline w-full justify-start gap-3"
 								>
 									{#if platform}
@@ -157,7 +158,7 @@
 										<a
 											href={evt.externalTicketUrl}
 											target="_blank"
-											rel="noopener"
+											rel="external noopener"
 											class="btn btn-primary btn-sm"
 										>
 											Tickets
@@ -202,7 +203,7 @@
 					<div class="max-w-3xl mx-auto px-6 py-8">
 						<h2 class="text-2xl font-bold mb-4">Press</h2>
 						<div class="space-y-4">
-							{#each epk.pressQuotes as quote}
+							{#each epk.pressQuotes as quote (quote.quote)}
 								<blockquote class="border-l-4 border-primary pl-4">
 									<p class="italic">"{quote.quote}"</p>
 									<footer class="mt-1 text-sm opacity-70">
@@ -221,7 +222,7 @@
 					<div class="max-w-3xl mx-auto px-6 py-8">
 						<h2 class="text-2xl font-bold mb-4">Highlights</h2>
 						<ul class="space-y-2">
-							{#each epk.achievements as achievement}
+							{#each epk.achievements as achievement (achievement)}
 								<li class="flex items-start gap-2">
 									<span class="text-primary">&#9733;</span>
 									<span>{achievement}</span>
@@ -289,7 +290,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each epk.backline as item}
+									{#each epk.backline as item (item.instrument)}
 										<tr>
 											<td class="font-medium">{item.instrument}</td>
 											<td>{item.details}</td>
@@ -306,7 +307,7 @@
 							<a
 								href={riderMedia.url}
 								target="_blank"
-								rel="noopener"
+								rel="external noopener"
 								class="btn btn-outline btn-sm mt-4"
 							>
 								Download Full Tech Rider (PDF)
@@ -316,14 +317,15 @@
 				</div>
 			{:else if block.type === 'custom_html'}
 				<div class="max-w-4xl mx-auto px-6 py-8">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin custom_html block) -->
 					{@html block.content}
 				</div>
 			{:else if block.type === 'merch'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<h2 class="text-2xl font-bold mb-4">Merch</h2>
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-						{#each block.items as item}
-							<a href={item.url} target="_blank" rel="noopener" class="block group">
+						{#each block.items as item (item.url)}
+							<a href={item.url} target="_blank" rel="external noopener" class="block group">
 								{#if item.imageKey}
 									<div class="aspect-square overflow-hidden rounded-lg mb-2">
 										<img
@@ -368,13 +370,14 @@
 
 		{#if band.bio}
 			<div class="prose prose-sm max-w-none text-center text-base-content/80 mb-8">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 				{@html sanitizeBio(band.bio)}
 			</div>
 		{/if}
 
 		{#if band.links && band.links.length > 0}
 			<div class="max-w-sm mx-auto space-y-3 mb-8">
-				{#each band.links as link}
+				{#each band.links as link (link.url)}
 					{@const embedUrl = link.embed !== false ? getEmbedUrl(link.url) : null}
 					{#if embedUrl}
 						<iframe
@@ -390,7 +393,12 @@
 						></iframe>
 					{:else}
 						{@const platform = detectPlatform(link.url)}
-						<a href={link.url} target="_blank" rel="noopener" class="btn btn-outline w-full">
+						<a
+							href={link.url}
+							target="_blank"
+							rel="external noopener"
+							class="btn btn-outline w-full"
+						>
 							{link.label || platform?.name || 'Link'}
 						</a>
 					{/if}
@@ -403,9 +411,15 @@
 <!-- Navigation footer -->
 <nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
 	{#if events.length > 0}
-		<a href="events" class="hover:opacity-100 transition-opacity">All Events</a>
+		<a
+			href={resolve('/band-site/[slug]/events', { slug: page.params.slug! })}
+			class="hover:opacity-100 transition-opacity">All Events</a
+		>
 	{/if}
 	{#if epk}
-		<a href="epk" class="hover:opacity-100 transition-opacity">Press Kit</a>
+		<a
+			href={resolve('/band-site/[slug]/epk', { slug: page.params.slug! })}
+			class="hover:opacity-100 transition-opacity">Press Kit</a
+		>
 	{/if}
 </nav>

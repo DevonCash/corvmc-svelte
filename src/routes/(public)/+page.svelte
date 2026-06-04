@@ -76,7 +76,7 @@
 			</p>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-			{#each features as item}
+			{#each features as item (item.title)}
 				<div
 					class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
 					style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"

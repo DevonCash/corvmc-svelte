@@ -84,8 +84,7 @@ import {
 	InsufficientQuantityError
 } from './loan-service';
 import { getAvailableQuantity } from './equipment-service';
-import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { getBalance } from '$lib/server/finance/credit-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions

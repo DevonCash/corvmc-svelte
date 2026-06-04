@@ -8,7 +8,6 @@
 		getUserCredits,
 		updateUser
 	} from '$lib/remote/users.remote';
-	import { invalidateAll } from '$app/navigation';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';

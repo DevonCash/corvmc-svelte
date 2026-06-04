@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
+	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { toast } from 'svelte-sonner';
 
@@ -56,7 +57,7 @@
 					<label class="form-control w-full">
 						<div class="label"><span class="label-text">Subject</span></div>
 						<select {...rf.fields.subject.as('select')} class="select select-bordered w-full">
-							{#each subjects as s}
+							{#each subjects as s (s)}
 								<option value={s}>{s}</option>
 							{/each}
 						</select>
@@ -99,8 +100,8 @@
 							>How do I become a member?</summary
 						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							<a href="/login?redirect=/member" class="link">Create an account</a> to get started. Free
-							memberships are available.
+							<a href={resolve('/login?redirect=/member')} class="link">Create an account</a> to get started.
+							Free memberships are available.
 						</div>
 					</details>
 					<details class="collapse collapse-arrow bg-base-200">

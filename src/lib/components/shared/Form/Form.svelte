@@ -33,7 +33,8 @@
 		setContext(FORM_KEY, ctx);
 	}
 
-	// Re-export for convenience
+	// Re-export for convenience (consumed by the membership form components).
+	// eslint-disable-next-line no-import-assign -- type-only re-export of an imported type, not a runtime reassignment (rule false-positives on `export type {}` in a Svelte module script)
 	export type { RemoteForm };
 </script>
 

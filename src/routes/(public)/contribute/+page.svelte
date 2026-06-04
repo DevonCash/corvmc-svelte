@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { IconGuitarPick, IconHeartHandshake, IconMicrophone } from '@tabler/icons-svelte';
+	import { resolve } from '$app/paths';
 
 	const tiers = [
 		{
@@ -69,7 +70,7 @@
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-			{#each tiers as tier}
+			{#each tiers as tier (tier.label)}
 				<div
 					class="rounded-lg p-8 text-center flex flex-col items-center"
 					style={tier.featured
@@ -93,7 +94,7 @@
 						{tier.body}
 					</p>
 					<a
-						href="/login?redirect=/member"
+						href={resolve('/login?redirect=/member')}
 						class="btn btn-sm btn-wide mt-auto"
 						style={tier.featured
 							? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'
@@ -114,7 +115,7 @@
 			<h2 class="text-4xl font-bold tracking-tight mb-3">Other Ways to Contribute</h2>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-			{#each otherWays as item}
+			{#each otherWays as item (item.title)}
 				<div
 					class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
 					style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"

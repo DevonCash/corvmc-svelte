@@ -33,10 +33,10 @@ vi.mock('$env/dynamic/private', () => ({
 }));
 
 // Capture event handlers
-const handlers: Record<string, Function> = {};
+const handlers: Record<string, (...args: any[]) => any> = {};
 vi.mock('$lib/server/events/event-bus', () => ({
 	domainEvents: {
-		on: (event: string, handler: Function) => {
+		on: (event: string, handler: (...args: any[]) => any) => {
 			handlers[event] = handler;
 		},
 		emit: vi.fn()

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -40,7 +41,7 @@
 	// Redirect if not a draft
 	$effect(() => {
 		if (campaignData && campaignData.status !== 'draft') {
-			goto(`/staff/marketing/campaigns/${id}`);
+			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		}
 	});
 
@@ -97,7 +98,7 @@
 			}
 			await sendCampaignNow({});
 			toast.success('Campaign sent');
-			goto(`/staff/marketing/campaigns/${id}`);
+			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to send');
 		} finally {
@@ -116,7 +117,7 @@
 			});
 			await scheduleCampaign({ scheduledFor: scheduleDate });
 			toast.success('Campaign scheduled');
-			goto(`/staff/marketing/campaigns/${id}`);
+			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
 		} finally {
@@ -129,7 +130,7 @@
 		try {
 			await deleteCampaign({});
 			toast.success('Campaign deleted');
-			goto('/staff/marketing/campaigns');
+			goto(resolve('/staff/marketing/campaigns'));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to delete');
 		}
@@ -255,6 +256,7 @@
 			<p class="label text-sm font-medium">Preview</p>
 			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
 				{#if previewHtml}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
 					{@html previewHtml}
 				{:else}
 					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">

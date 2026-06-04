@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { createBandEventForm } from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
@@ -19,7 +20,7 @@
 				if (await form.submit()) {
 					const result = createBandEventForm.result;
 					toast.success('Event created');
-					if (result?.eventId) goto(`/band/${band.slug}/events/${result.eventId}`);
+					if (result?.eventId) goto(resolve(`/band/${band.slug}/events/${result.eventId}`));
 				}
 			} catch {
 				toast.error('Failed to create event');
@@ -38,7 +39,7 @@
 				maxlength="200"
 				id="title"
 			/>
-			{#each createBandEventForm.fields.title.issues() as issue}
+			{#each createBandEventForm.fields.title.issues() as issue, i (i)}
 				<p class="text-error text-sm mt-1">{issue.message}</p>
 			{/each}
 		</div>

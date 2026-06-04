@@ -1,6 +1,6 @@
 <script lang="ts">
-	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
+	import { resolve } from '$app/paths';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { page } from '$app/state';
 
@@ -14,7 +14,7 @@
 
 <div class="max-w-3xl mx-auto px-6 py-12">
 	<a
-		href="/{page.params.slug ? `?__band_subdomain=${page.params.slug}` : ''}"
+		href={`/${page.params.slug ? `?__band_subdomain=${page.params.slug}` : ''}`}
 		class="link text-sm opacity-60 mb-6 block"
 	>
 		&larr; Back to {data.band.name}
@@ -54,7 +54,7 @@
 						<a
 							href={evt.externalTicketUrl}
 							target="_blank"
-							rel="noopener"
+							rel="noopener external"
 							class="btn btn-primary btn-sm shrink-0 ml-4"
 						>
 							Tickets
@@ -68,5 +68,5 @@
 
 <!-- Minimal footer -->
 <footer class="text-center py-6 text-xs opacity-40">
-	<a href="/" class="hover:opacity-70">Corvallis Music Collective</a>
+	<a href={resolve('/')} class="hover:opacity-70">Corvallis Music Collective</a>
 </footer>

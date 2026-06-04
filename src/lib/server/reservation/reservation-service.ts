@@ -1,7 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, lt, ne, gt, isNotNull, inArray, notInArray, sql } from 'drizzle-orm';
-import { hasConflict, validateBooking } from './conflict-service';
+import { eq, and, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
+import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';

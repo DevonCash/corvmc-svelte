@@ -95,7 +95,7 @@ export const changePassword = form(
 			path: ['confirmPassword']
 		}),
 	async (data) => {
-		const currentUser = requireUser();
+		requireUser();
 		const event = getRequestEvent();
 
 		// Use better-auth's change-password endpoint via internal API

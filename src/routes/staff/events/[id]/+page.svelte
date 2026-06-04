@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -25,7 +26,6 @@
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
@@ -107,9 +107,8 @@
 			return;
 		}
 
-		const tz = DEFAULT_TIMEZONE;
-		const newStartsAt = buildISOFromLocal(editDate, editStartTime, tz);
-		const newEndsAt = buildISOFromLocal(editDate, editEndTime, tz);
+		const newStartsAt = buildISOFromLocal(editDate, editStartTime);
+		const newEndsAt = buildISOFromLocal(editDate, editEndTime);
 
 		const result = await checkRebook({
 			eventId: evt.id,
@@ -158,7 +157,7 @@
 
 	// ── Helpers ───────────────────────────────────────────────────────────
 
-	function buildISOFromLocal(date: string, time: string, _tz: string): string {
+	function buildISOFromLocal(date: string, time: string): string {
 		// Build a rough ISO string for the rebook check query
 		// The server will parse with proper timezone handling
 		return new Date(`${date}T${time}:00`).toISOString();
@@ -484,7 +483,11 @@
 
 			{#if evt.status === 'published'}
 				<div class="mt-3">
-					<a href="/events/{evt.id}/tickets" class="link link-primary text-sm" target="_blank">
+					<a
+						href={resolve(`/events/${evt.id}/tickets`)}
+						class="link link-primary text-sm"
+						target="_blank"
+					>
 						View purchase page →
 					</a>
 				</div>
@@ -558,7 +561,10 @@
 				>
 			</div>
 			<div class="mt-2">
-				<a href="/staff/reservations/{data.linkedReservation.id}" class="link link-primary text-sm">
+				<a
+					href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
+					class="link link-primary text-sm"
+				>
 					View reservation →
 				</a>
 			</div>

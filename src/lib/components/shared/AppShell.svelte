@@ -5,16 +5,16 @@
 	import AppTopbar from './AppTopbar.svelte';
 	import type { PanelTab } from './AppTopbar.svelte';
 	import Sidebar from './Sidebar.svelte';
-	import { IconMenu2, IconWorld } from '@tabler/icons-svelte';
+	import { IconWorld } from '@tabler/icons-svelte';
 	import logo from '$lib/assets/cmc-compact-logo.svg';
 	import Button from './Button.svelte';
 
+	// eslint-disable-next-line svelte/no-unused-props -- `brand` is accepted for caller API compatibility; the sidebar renders its own brand
 	let {
 		drawerId,
 		user,
 		panels,
 		activePanel,
-		brand: brandSnippet,
 		navigation: navSnippet,
 		children
 	}: {
@@ -22,6 +22,7 @@
 		user: { name: string; email: string };
 		panels: PanelTab[];
 		activePanel: string;
+		/** Accepted for caller compatibility; the sidebar renders its own brand. */
 		brand?: Snippet;
 		navigation: Snippet;
 		children: Snippet;

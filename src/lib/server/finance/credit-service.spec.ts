@@ -323,13 +323,10 @@ describe('allocateMonthlyCredits', () => {
 		// hasTransaction uses db.select, setBalance uses tx.select
 		// Both use selectResult — sequence: [] for hasTransaction, then { balance: 3 } for setBalance
 		const results = [[] as unknown[], [{ balance: 3 }]];
-		let callIdx = 0;
-		const origSelectResult = selectResult;
 		Object.defineProperty(globalThis, '__selectResult', { value: results, configurable: true });
 
 		// Override to return sequential results
 		selectResult = [];
-		const origBuildSelect = buildSelectChain;
 		const patchedTxSelect = () =>
 			buildSelectChain(() => {
 				return [{ balance: 3 }];
@@ -350,7 +347,7 @@ describe('allocateMonthlyCredits', () => {
 	it('skips allocation when invoice was already processed', async () => {
 		selectResult = [{ id: 99 }]; // hasTransaction returns true (found existing)
 
-		const result = await allocateMonthlyCredits('user-1', 5, 'inv_dup');
+		await allocateMonthlyCredits('user-1', 5, 'inv_dup');
 		// Returns getBalance which also uses selectResult — will find the same row
 		// But getBalance expects { free_hours, equipment_credits } format
 		// Let's just verify no inserts happened

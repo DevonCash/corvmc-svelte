@@ -2,6 +2,7 @@
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const band = $derived(data.band);
@@ -10,7 +11,6 @@
 	const events = $derived(data.events);
 	const galleryMedia = $derived(data.media.filter((m) => m.type === 'image'));
 	const stagePlot = $derived(data.media.find((m) => m.type === 'stage_plot'));
-	const riderMedia = $derived(data.media.find((m) => m.type === 'rider'));
 </script>
 
 <svelte:head>
@@ -43,7 +43,9 @@
 	<button class="btn btn-primary btn-sm" onclick={() => window.print()}>
 		Download / Print PDF
 	</button>
-	<a href="/?__band_subdomain={band.slug}" class="btn btn-ghost btn-sm"> &larr; Back </a>
+	<a href={resolve(`/?__band_subdomain=${band.slug}`)} class="btn btn-ghost btn-sm">
+		&larr; Back
+	</a>
 </div>
 
 <div class="epk-page max-w-3xl mx-auto px-8 py-12 bg-white text-gray-900 min-h-screen">
@@ -71,6 +73,7 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">About</h2>
 			<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 				{@html sanitizeBio(band.bio)}
 			</div>
 		</section>
@@ -81,7 +84,7 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Members</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1">
-				{#each members as member}
+				{#each members as member (member.id)}
 					<span class="text-gray-700">
 						{member.name}{#if member.position}<span class="text-gray-400">
 								— {member.position}</span
@@ -97,7 +100,7 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Press</h2>
 			<div class="space-y-3">
-				{#each epk.pressQuotes as quote}
+				{#each epk.pressQuotes as quote (quote.quote)}
 					<blockquote class="border-l-2 border-gray-300 pl-4">
 						<p class="text-gray-700 italic">"{quote.quote}"</p>
 						<p class="text-sm text-gray-500 mt-1">
@@ -115,7 +118,7 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Highlights</h2>
 			<ul class="space-y-1">
-				{#each epk.achievements as achievement}
+				{#each epk.achievements as achievement (achievement)}
 					<li class="text-gray-700 flex items-start gap-2">
 						<span class="text-gray-400">•</span>
 						{achievement}
@@ -151,7 +154,7 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Upcoming Shows</h2>
 			<div class="space-y-1">
-				{#each events.slice(0, 5) as evt}
+				{#each events.slice(0, 5) as evt (evt.id)}
 					<div class="flex justify-between text-sm">
 						<span class="text-gray-700 font-medium">{evt.title}</span>
 						<span class="text-gray-500">{evt.location ?? ''}</span>
@@ -185,7 +188,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each epk.backline as item}
+					{#each epk.backline as item (item.instrument)}
 						<tr class="border-b border-gray-100">
 							<td class="py-1 text-gray-700">{item.instrument}</td>
 							<td class="py-1 text-gray-700">{item.details}</td>
@@ -202,8 +205,13 @@
 		<section class="mb-8">
 			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Links</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-				{#each band.links as link}
-					<a href={link.url} target="_blank" rel="noopener" class="text-blue-600 hover:underline">
+				{#each band.links as link (link.url)}
+					<a
+						href={link.url}
+						target="_blank"
+						rel="noopener external"
+						class="text-blue-600 hover:underline"
+					>
 						{link.label || link.url}
 					</a>
 				{/each}

@@ -20,6 +20,7 @@
 	import { ActivateToggleAction } from '$lib/components/shared/actions';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
@@ -52,18 +53,18 @@
 					<Field field={fields.name} type="text" value={item.name} />
 					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
 					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
-						{#each categories as cat}
+						{#each categories as cat (cat.id)}
 							<option value={cat.id}>{cat.name}</option>
 						{/each}
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
 						<Field field={fields.condition} type="select" value={item.condition}>
-							{#each equipmentConditions as c}
+							{#each equipmentConditions as c (c)}
 								<option value={c}>{c}</option>
 							{/each}
 						</Field>
 						<Field field={fields.status} type="select" value={item.status}>
-							{#each equipmentStatuses as s}
+							{#each equipmentStatuses as s (s)}
 								<option value={s}>{s}</option>
 							{/each}
 						</Field>
@@ -158,7 +159,7 @@
 						{#each loanHistory as loan (loan.id)}
 							<tr
 								class="hover cursor-pointer"
-								onclick={() => goto(`/staff/equipment/loans/${loan.id}`)}
+								onclick={() => goto(resolve(`/staff/equipment/loans/${loan.id}`))}
 							>
 								<td onclick={(e) => e.stopPropagation()}>
 									<MemberLink

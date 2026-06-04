@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -28,7 +29,10 @@
 
 {#if audienceData}
 	<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
-		<DeleteAudienceAction audienceId={id} onsuccess={() => goto('/staff/marketing/audiences')} />
+		<DeleteAudienceAction
+			audienceId={id}
+			onsuccess={() => goto(resolve('/staff/marketing/audiences'))}
+		/>
 	</PageHeader>
 	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">

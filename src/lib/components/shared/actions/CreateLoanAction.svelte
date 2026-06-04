@@ -22,20 +22,14 @@
 	let userName = $state('');
 	let equipmentOptions = $state<{ id: string; name: string }[]>([]);
 	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
-	let searching = $state(false);
 
 	async function handleMemberSearch() {
 		if (query.length < 2) {
 			memberResults = [];
 			return;
 		}
-		searching = true;
-		try {
-			const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-			memberResults = await res.json();
-		} finally {
-			searching = false;
-		}
+		const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+		memberResults = await res.json();
 	}
 
 	function selectMember(u: { id: string; name: string }) {
@@ -67,7 +61,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<div class="space-y-3">
 			<input {...fields.userId.as('hidden', userId)} />
 			{#if userId}
@@ -95,7 +89,7 @@
 				</label>
 				{#if memberResults.length > 0}
 					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
-						{#each memberResults as u}
+						{#each memberResults as u (u.id)}
 							<button
 								type="button"
 								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
@@ -110,7 +104,7 @@
 			{/if}
 			<Field field={fields.equipmentId} type="select" label="Equipment">
 				<option value="">-- Select equipment --</option>
-				{#each equipmentOptions as eq}
+				{#each equipmentOptions as eq (eq.id)}
 					<option value={eq.id}>{eq.name}</option>
 				{/each}
 			</Field>

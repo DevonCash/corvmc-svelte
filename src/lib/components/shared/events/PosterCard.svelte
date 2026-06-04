@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import Logo from '$lib/components/shared/Logo.svelte';
 	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
 
 	interface Props {

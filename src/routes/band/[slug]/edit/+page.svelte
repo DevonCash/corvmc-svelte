@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -33,16 +34,12 @@
 	const profileFields = saveBandProfile.fields;
 
 	// Basics
-	let bioHtml = $state('');
+	let bioHtml = $derived(band.bio ?? '');
 	// Directory
 	let genres = $state<string[]>([]);
 	let links = $state<ProfileLink[]>([]);
 	let lookingForMembers = $state(false);
 	let directoryVisibility = $state<string>('public');
-
-	$effect(() => {
-		bioHtml = band.bio ?? '';
-	});
 
 	$effect(() => {
 		if (profile) {
@@ -77,7 +74,7 @@
 				toast.success('Profile updated');
 				const newSlug = updateBand.result?.slug;
 				if (newSlug && newSlug !== band.slug) {
-					goto(`/band/${newSlug}/edit`);
+					goto(resolve(`/band/${newSlug}/edit`));
 				} else {
 					invalidateAll();
 				}

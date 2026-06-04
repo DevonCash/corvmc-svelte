@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
 	const { fields } = createArticle;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -29,7 +30,11 @@
 
 <PageHeader title="New Article" subtitle="Help" backHref="/staff/help" />
 <PageContent width="3xl">
-	<Form remote={createArticle} guard onsuccess={(result) => goto(`/staff/help/${result?.id}`)}>
+	<Form
+		remote={createArticle}
+		guard
+		onsuccess={(result) => goto(resolve(`/staff/help/${result?.id}`))}
+	>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
 				<FormField name="title" label="Title">

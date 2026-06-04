@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		getBandSlots,
 		getBandMembershipStatus,
@@ -74,7 +75,7 @@
 		const input = e.target as HTMLInputElement;
 		selectedStart = '';
 		selectedEnd = '';
-		goto(`?date=${input.value}`);
+		goto(resolve(`/band/${page.params.slug}/reservations/new?date=${input.value}`));
 	}
 
 	function onStartChange() {
@@ -112,7 +113,7 @@
 		remote={bookBandReservation}
 		{initial}
 		onsuccess={() => {
-			goto(`reservations`);
+			goto(resolve(`/band/${band.slug}/reservations`));
 		}}
 		onfailure={() => toast.error('Booking failed')}
 	>
@@ -122,7 +123,7 @@
 			<label class="label" for="startTime">
 				<span class="label-text">Start time</span>
 			</label>
-			{#each bookBandReservation.fields.startTime.issues() ?? [] as issue}
+			{#each bookBandReservation.fields.startTime.issues() ?? [] as issue, i (i)}
 				<p class="text-sm text-error">{issue.message}</p>
 			{/each}
 			<select
@@ -136,7 +137,7 @@
 				<option value="" disabled>
 					{startTimeOptions.length === 0 ? 'No times available' : 'Select a start time'}
 				</option>
-				{#each startTimeOptions as time}
+				{#each startTimeOptions as time (time)}
 					<option value={time}>{formatSlotTime(time)}</option>
 				{/each}
 			</select>
@@ -146,7 +147,7 @@
 			<label class="label" for="endTime">
 				<span class="label-text">End time</span>
 			</label>
-			{#each bookBandReservation.fields.endTime.issues() ?? [] as issue}
+			{#each bookBandReservation.fields.endTime.issues() ?? [] as issue, i (i)}
 				<p class="text-sm text-error">{issue.message}</p>
 			{/each}
 			<select
@@ -165,7 +166,7 @@
 						Select an end time
 					{/if}
 				</option>
-				{#each endTimeOptions as time}
+				{#each endTimeOptions as time (time)}
 					<option value={time}>{formatSlotTime(time)}</option>
 				{/each}
 			</select>

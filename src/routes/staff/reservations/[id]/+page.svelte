@@ -15,7 +15,6 @@
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import {
 		fullDate,
 		formatTime,
@@ -24,7 +23,7 @@
 	} from '$lib/utils/format';
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconLink, IconMail, IconPhone } from '@tabler/icons-svelte';
+	import { IconMail, IconPhone } from '@tabler/icons-svelte';
 	import { visibleActions } from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';

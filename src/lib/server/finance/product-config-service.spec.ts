@@ -100,7 +100,6 @@ vi.mock('$lib/server/stripe', () => ({
 
 const {
 	getProductConfig,
-	getAllProductConfigs,
 	getStripeProductId,
 	updateProductConfig,
 	buildLineItem,

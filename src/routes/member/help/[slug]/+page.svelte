@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { getMemberArticle, getMemberCategories } from '$lib/remote/help.remote';
 	import { extractHeadings } from '$lib/utils/markdown';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -19,7 +20,7 @@
 <PageContent width="3xl">
 	<div class="text-sm breadcrumbs mb-4">
 		<ul>
-			<li><a href="/member/help">Help</a></li>
+			<li><a href={resolve('/member/help')}>Help</a></li>
 			{#if category}
 				<li>{category.name}</li>
 			{/if}

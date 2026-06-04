@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import Logo from '$lib/components/shared/Logo.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 
@@ -29,7 +30,7 @@
 			style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto"
 		>
 			<!-- Logo -->
-			<a href="/" class="row-span-2 flex items-center" style="height: 72px">
+			<a href={resolve('/')} class="row-span-2 flex items-center" style="height: 72px">
 				<Logo soundLines={false} class="h-full w-auto" />
 			</a>
 
@@ -69,7 +70,7 @@
 
 			<!-- Nav -->
 			<nav class="hidden lg:flex items-center gap-1 -ml-3" style="grid-row: 2; grid-column: 2">
-				{#each links as link}
+				{#each links as link (link.href)}
 					<a
 						href={link.href}
 						class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -82,7 +83,7 @@
 					</a>
 				{/each}
 				<a
-					href="/contribute"
+					href={resolve('/contribute')}
 					class="btn btn-sm btn-outline ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
@@ -98,7 +99,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: '/contribute', label: 'Contribute' }, { href: '/contact', label: 'Contact' }] as link}
+				{#each [...links, { href: '/contribute', label: 'Contribute' }, { href: '/contact', label: 'Contact' }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

@@ -92,7 +92,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			.filter(Boolean)
 			.join(' ') || null;
 
-	let channelMessageId: string | null = null;
+	let channelMessageId: string | null;
 
 	try {
 		channelMessageId =

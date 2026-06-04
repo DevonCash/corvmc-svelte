@@ -6,6 +6,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
@@ -42,7 +43,7 @@
 		remote={deleteBandForm}
 		onsuccess={() => {
 			toast.success('Band deleted');
-			goto('/member/bands');
+			goto(resolve('/member/bands'));
 		}}
 		onfailure={() => toast.error('Failed to delete band')}
 	>

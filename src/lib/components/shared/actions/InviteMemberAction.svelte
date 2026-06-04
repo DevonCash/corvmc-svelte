@@ -22,20 +22,14 @@
 	let userId = $state('');
 	let userName = $state('');
 	let searchResults = $state<{ id: string; name: string; email: string }[]>([]);
-	let searching = $state(false);
 
 	async function handleSearch() {
 		if (query.length < 2) {
 			searchResults = [];
 			return;
 		}
-		searching = true;
-		try {
-			const res = await fetch(`/api/bands/${bandId}/search-members?q=${encodeURIComponent(query)}`);
-			searchResults = await res.json();
-		} finally {
-			searching = false;
-		}
+		const res = await fetch(`/api/bands/${bandId}/search-members?q=${encodeURIComponent(query)}`);
+		searchResults = await res.json();
 	}
 
 	function selectUser(u: { id: string; name: string }) {
@@ -56,7 +50,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<input {...fields.userId.as('hidden', userId)} />
 		<div class="space-y-3">
@@ -85,7 +79,7 @@
 				</label>
 				{#if searchResults.length > 0}
 					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
-						{#each searchResults as u}
+						{#each searchResults as u (u.id)}
 							<button
 								type="button"
 								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"

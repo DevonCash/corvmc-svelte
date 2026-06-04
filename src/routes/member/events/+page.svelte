@@ -36,6 +36,7 @@
 	const eventTagMap = $derived(new Map(upcoming.map((e) => [e.id, e.tags])));
 
 	const allTags = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local accumulator within a pure $derived, not reactive state
 		const tags = new Set<string>();
 		for (const evt of upcoming) {
 			if (evt.tags) {

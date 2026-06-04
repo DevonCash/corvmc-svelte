@@ -63,7 +63,7 @@
 		<div
 			class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto"
 		>
-			{#each results as result}
+			{#each results as result (result.slug)}
 				<button
 					type="button"
 					class="w-full text-left px-4 py-2 hover:bg-base-200 transition-colors"

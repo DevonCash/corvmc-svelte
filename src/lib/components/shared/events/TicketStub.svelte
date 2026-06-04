@@ -3,13 +3,7 @@
 	import { tagToColor } from '$lib/utils/tag-colors';
 
 	interface TicketData {
-		id: string;
-		eventId: string;
 		code: string;
-		status: string;
-		attendeeName: string;
-		checkedInAt: Date | null;
-		createdAt: Date;
 		event: { title: string; startsAt: Date; endsAt: Date } | null;
 	}
 

@@ -66,14 +66,12 @@
 				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
 			>
 				{#snippet icon()}<IconClipboardCheck />{/snippet}
-				{#snippet children()}
-					<Nav.Item href="/staff/recurring" label="Recurring">
-						{#snippet icon()}<IconRepeat />{/snippet}
-					</Nav.Item>
-					<Nav.Item href="/staff/closures" label="Closures">
-						{#snippet icon()}<IconBan />{/snippet}
-					</Nav.Item>
-				{/snippet}
+				<Nav.Item href="/staff/recurring" label="Recurring">
+					{#snippet icon()}<IconRepeat />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/closures" label="Closures">
+					{#snippet icon()}<IconBan />{/snippet}
+				</Nav.Item>
 			</Nav.Collapsible>
 			<Nav.Item href="/staff/events" label="Events">
 				{#snippet icon()}<IconCalendarEvent />{/snippet}
@@ -88,11 +86,9 @@
 					childHrefs={['/staff/equipment/loans', '/staff/equipment']}
 				>
 					{#snippet icon()}<IconTool />{/snippet}
-					{#snippet children()}
-						<Nav.Item href="/staff/equipment" label="Inventory">
-							{#snippet icon()}<IconPackage />{/snippet}
-						</Nav.Item>
-					{/snippet}
+					<Nav.Item href="/staff/equipment" label="Inventory">
+						{#snippet icon()}<IconPackage />{/snippet}
+					</Nav.Item>
 				</Nav.Collapsible>
 			{/if}
 		</Nav.Group>

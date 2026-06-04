@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -23,7 +24,7 @@
 		{#if campaign.status === 'scheduled'}
 			<UnscheduleCampaignAction
 				campaignId={id}
-				onsuccess={() => goto(`/staff/marketing/campaigns/${id}/edit`)}
+				onsuccess={() => goto(resolve(`/staff/marketing/campaigns/${id}/edit`))}
 			/>
 		{/if}
 	</PageHeader>
@@ -65,6 +66,7 @@
 
 		<InfoCard title="Rendered Preview">
 			<div class="border rounded-lg bg-white overflow-hidden">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML) -->
 				{@html sanitizeHtml(campaign.htmlBody)}
 			</div>
 		</InfoCard>

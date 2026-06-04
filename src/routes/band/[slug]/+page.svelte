@@ -7,6 +7,7 @@
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
@@ -44,7 +45,9 @@
 		<section>
 			<div class="flex items-center justify-between mb-3">
 				<h2 class="text-lg font-semibold">Upcoming Sessions</h2>
-				<a href="/band/{band.slug}/reservations" class="link link-primary text-sm"> View all </a>
+				<a href={resolve(`/band/${band.slug}/reservations`)} class="link link-primary text-sm">
+					View all
+				</a>
 			</div>
 
 			{#if sessions.length === 0}

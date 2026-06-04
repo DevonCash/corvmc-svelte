@@ -27,7 +27,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.id.as('hidden', closureId)} />
 		<p class="py-4">Delete this closure?</p>
 	{/snippet}

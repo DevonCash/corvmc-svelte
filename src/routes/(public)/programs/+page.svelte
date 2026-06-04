@@ -10,6 +10,7 @@
 	import Ticket from '$lib/components/illustrations/Ticket.svelte';
 	import Setlist from '$lib/components/illustrations/Setlist.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { resolve } from '$app/paths';
 </script>
 
 <svelte:head>
@@ -80,7 +81,7 @@
 				<div class="text-sm mt-1" style="color: var(--fg-2)">All equipment included</div>
 			</div>
 			<a
-				href="/login?redirect=/member"
+				href={resolve('/login?redirect=/member')}
 				class="program-block__cta rounded-lg p-6 text-center"
 				style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
 			>
@@ -200,7 +201,7 @@
 						everything music-related.
 					</p>
 					<a
-						href="/events"
+						href={resolve('/events')}
 						class="program-block__cta sticker-badge sticker-badge--orange sticker-badge--sm"
 						>Last Thursday &middot; 6:30 PM</a
 					>
@@ -221,7 +222,7 @@
 			</p>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-			{#each [{ num: '1', title: 'Join CMC', desc: 'Become a member to access all programs.', badge: 'sticker-badge--teal' }, { num: '2', title: 'Choose Your Path', desc: 'Practice, perform, or join our clubs.', badge: 'sticker-badge--orange' }, { num: '3', title: 'Make Music', desc: 'Connect and create with the community.', badge: '' }] as step}
+			{#each [{ num: '1', title: 'Join CMC', desc: 'Become a member to access all programs.', badge: 'sticker-badge--teal' }, { num: '2', title: 'Choose Your Path', desc: 'Practice, perform, or join our clubs.', badge: 'sticker-badge--orange' }, { num: '3', title: 'Make Music', desc: 'Connect and create with the community.', badge: '' }] as step (step.num)}
 				<div class="text-center flex flex-col items-center gap-3">
 					<span
 						class="sticker-badge {step.badge}"

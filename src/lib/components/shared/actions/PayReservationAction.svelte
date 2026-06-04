@@ -38,7 +38,7 @@
 	}}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<ReservationSummary {reservation} />
 		<PaymentStep
 			{reservation}

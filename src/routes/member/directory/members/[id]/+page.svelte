@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { getDirectoryMember } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -67,6 +68,7 @@
 
 				{#if member.bio}
 					<div class="profile-card__bio prose prose-sm max-w-none">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 						{@html sanitizeBio(member.bio)}
 					</div>
 				{/if}
@@ -77,7 +79,7 @@
 							<div>
 								<p class="sl">Instruments</p>
 								<div class="profile-card__badge-row">
-									{#each member.instruments as inst}
+									{#each member.instruments as inst (inst)}
 										<span class="sticker-badge sticker-badge--teal sticker-badge--sm">{inst}</span>
 									{/each}
 								</div>
@@ -87,7 +89,7 @@
 							<div>
 								<p class="sl">Genres</p>
 								<div class="profile-card__badge-row">
-									{#each member.genres as genre}
+									{#each member.genres as genre (genre)}
 										<span class="sticker-badge sticker-badge--sm">{genre}</span>
 									{/each}
 								</div>
@@ -100,9 +102,9 @@
 					<div>
 						<p class="sl">Bands</p>
 						<div class="profile-card__badge-row">
-							{#each member.bands as b}
+							{#each member.bands as b (b.slug)}
 								<a
-									href="/member/directory/bands/{b.slug}"
+									href={resolve('/member/directory/bands/[slug]', { slug: b.slug })}
 									class="sticker-badge sticker-badge--orange sticker-badge--sm">{b.name}</a
 								>
 							{/each}

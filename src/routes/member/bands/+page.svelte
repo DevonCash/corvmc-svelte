@@ -8,6 +8,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
@@ -96,7 +97,7 @@
 			<div class="space-y-3">
 				{#each active as b (b.id)}
 					<a
-						href="/band/{b.slug}"
+						href={resolve(`/band/${b.slug}`)}
 						class="card bg-base-100 shadow hover:shadow-md transition-shadow"
 					>
 						<div class="card-body py-4 flex-row items-center justify-between">
@@ -124,7 +125,7 @@
 		onsuccess={(result) => {
 			toast.success('Band created');
 			showCreateModal = false;
-			if (result?.slug) goto(`/band/${result.slug}`);
+			if (result?.slug) goto(resolve(`/band/${result.slug}`));
 		}}
 	>
 		<div class="space-y-4">

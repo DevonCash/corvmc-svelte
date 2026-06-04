@@ -53,8 +53,6 @@ import {
 	createCategory,
 	updateCategory,
 	deleteCategory,
-	listCategories,
-	getCategoryById,
 	createEquipment,
 	updateEquipment,
 	softDeleteEquipment,

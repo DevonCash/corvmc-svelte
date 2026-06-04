@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
@@ -99,7 +100,7 @@
 			<p class="text-center text-sm mt-10" style="color: var(--fg-3)">
 				Don't see your name? Your profile is set to
 				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
-				<a href="/member/directory" class="underline" style="color: var(--cmc-teal)"
+				<a href={resolve('/member/directory')} class="underline" style="color: var(--cmc-teal)"
 					>Update your visibility</a
 				>
 				to appear here.

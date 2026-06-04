@@ -29,7 +29,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<Field field={fields.name} type="text" label="Name" />
 		<Field field={fields.description} type="textarea" label="Description" />
 		<div class="grid grid-cols-2 gap-3">

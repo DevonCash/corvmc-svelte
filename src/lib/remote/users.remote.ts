@@ -22,9 +22,7 @@ import { getSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { startOfWeek, endOfWeek } from 'date-fns';
-import { getPartsInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import type { CreditType } from '$lib/server/db/schema/finance';
-import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -96,7 +94,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	});
 
 	const userIds = users.map((u) => u.id);
-	let roleMap: Record<string, string[]> = {};
+	const roleMap: Record<string, string[]> = {};
 
 	if (userIds.length > 0) {
 		const roleRows = await db
@@ -296,8 +294,6 @@ export const getLocalUser = query(async () => {
 // ---------------------------------------------------------------------------
 // Member dashboard
 // ---------------------------------------------------------------------------
-
-const TZ = DEFAULT_TIMEZONE;
 
 export const getMemberDashboard = query(async () => {
 	const currentUser = requireUser();

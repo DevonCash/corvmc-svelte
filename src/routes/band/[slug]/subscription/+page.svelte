@@ -2,7 +2,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatDate } from '$lib/utils/format';
 	import {
@@ -112,7 +112,8 @@
 									try {
 										const result = await form.submit();
 										if (result && upgradeToPremium.result?.redirectUrl) {
-											goto(upgradeToPremium.result.redirectUrl);
+											// External Stripe Checkout URL — full-page navigation, not client-side routing.
+											window.location.href = upgradeToPremium.result.redirectUrl;
 										}
 									} catch {
 										toast.error('Something went wrong');
@@ -141,7 +142,8 @@
 									try {
 										const result = await form.submit();
 										if (result && upgradeToPremium.result?.redirectUrl) {
-											goto(upgradeToPremium.result.redirectUrl);
+											// External Stripe Checkout URL — full-page navigation, not client-side routing.
+											window.location.href = upgradeToPremium.result.redirectUrl;
 										}
 									} catch {
 										toast.error('Something went wrong');

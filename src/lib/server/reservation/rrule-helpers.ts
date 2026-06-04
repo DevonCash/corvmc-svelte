@@ -1,4 +1,4 @@
-import { addWeeks, addDays } from 'date-fns';
+import { addWeeks } from 'date-fns';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { getReservationConfig } from './config';
 import { getPartsInTz } from './timezone';
@@ -15,17 +15,6 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 const TZ = DEFAULT_TIMEZONE;
-
-/** Weekday names for display */
-const WEEKDAY_NAMES = [
-	'Sunday',
-	'Monday',
-	'Tuesday',
-	'Wednesday',
-	'Thursday',
-	'Friday',
-	'Saturday'
-];
 
 /** Serialized recurrence rule */
 interface RecurrenceRule {

@@ -6,12 +6,7 @@
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
-	import {
-		fullDate,
-		formatTimeRange,
-		formatScheduleLabel,
-		formatSlotTime
-	} from '$lib/utils/format';
+	import { fullDate, formatTimeRange, formatScheduleLabel } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
@@ -179,7 +174,7 @@
 					<p class="mb-1 text-xs font-medium opacity-70">Upcoming instances</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
-							{#each Array(3) as _, i (i)}
+							{#each Array(3), i (i)}
 								<div class="skeleton h-4 w-36 rounded"></div>
 							{/each}
 						</div>

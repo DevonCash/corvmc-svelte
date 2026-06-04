@@ -1,6 +1,5 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { z } from 'zod';
 import { user } from './authentication';
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-let selectResult: unknown[] = [];
 let insertResult: unknown[] = [];
 let updateCalled = false;
 

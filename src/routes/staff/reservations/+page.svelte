@@ -113,7 +113,7 @@
 	<div class="flex gap-2">
 		{#await Promise.all([unresolved, counts])}
 			<button class="btn btn-sm btn-ghost" onclick={() => (resolveOpen = true)}>Resolve</button>
-		{:then [unresolvedData, countsData]}
+		{:then [unresolvedData]}
 			<button
 				class="btn btn-sm {unresolvedData.length > 0 ? 'btn-warning' : 'btn-ghost'}"
 				onclick={() => (resolveOpen = true)}

@@ -7,6 +7,7 @@
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { getBandEvents } from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
@@ -25,7 +26,10 @@
 		<EmptyState>
 			<p>No events yet</p>
 			{#if isAdmin}
-				<a href="events/create" class="mt-2 inline-block link link-primary">
+				<a
+					href={resolve(`/band/${band.slug}/events/create`)}
+					class="mt-2 inline-block link link-primary"
+				>
 					Create your first event
 				</a>
 			{/if}
@@ -34,7 +38,7 @@
 		<div class="space-y-3">
 			{#each events as evt (evt.id)}
 				<a
-					href="events/{evt.id}"
+					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
 					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
 				>
 					<div class="card-body flex-row items-center justify-between py-4">

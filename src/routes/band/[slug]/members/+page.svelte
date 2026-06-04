@@ -8,6 +8,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -422,7 +423,7 @@
 		remote={leave}
 		onsuccess={() => {
 			toast.success('You have left the band');
-			goto('/member/bands');
+			goto(resolve('/member/bands'));
 		}}
 		onfailure={() => toast.error('Failed to leave')}
 	>

@@ -8,7 +8,6 @@
  */
 import mjml2html from 'mjml';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
 
 const OUTDIR = 'src/lib/server/generated';
 

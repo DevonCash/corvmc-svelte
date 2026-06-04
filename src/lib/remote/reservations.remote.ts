@@ -64,15 +64,11 @@ import {
 	type RecurringFrequency
 } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
-import {
-	buildRRule,
-	getOccurrences,
-	generationWindowEnd
-} from '$lib/server/reservation/rrule-helpers';
+import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
 import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { paginate } from '$lib/server/db/paginate';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '$lib/config';
 
 // ===========================================================================
@@ -399,7 +395,7 @@ export const getReservationEndTimes = query(
 /** Member: full pricing breakdown for a given date/time selection. */
 export const getReservationPricing = query(
 	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
-	async ({ date, startTime, endTime }) => {
+	async ({ startTime, endTime }) => {
 		const { locals } = getRequestEvent();
 		const config = await getReservationConfig();
 
@@ -722,7 +718,7 @@ const staffCreateSchema = z.object({
 	notes: z.string().optional()
 });
 
-export const createReservation = form(staffCreateSchema, async (data, issue) => {
+export const createReservation = form(staffCreateSchema, async (data, _issue) => {
 	await requireStaff();
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
@@ -746,7 +742,7 @@ const memberBookingSchema = createReservationSchema.extend({
 	seriesEndsAt: z.string().optional()
 });
 
-export const bookMemberReservation = form(memberBookingSchema, async (data, issue) => {
+export const bookMemberReservation = form(memberBookingSchema, async (data, _issue) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 
@@ -818,7 +814,7 @@ const bookAndPaySchema = createReservationSchema.extend({
 	skipPayment: z.enum(['', 'on']).optional()
 });
 
-export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
+export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue) => {
 	const { locals, url } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 
@@ -946,7 +942,7 @@ const bandBookingSchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional()
 });
 
-export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
+export const bookBandReservation = form(bandBookingSchema, async (data, _issue) => {
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
 
@@ -1014,7 +1010,7 @@ export const cancelBandReservation = form(
 	z.object({
 		reservationId: z.string().min(1)
 	}),
-	async (data, issue) => {
+	async (data, _issue) => {
 		const currentUser = requireUser();
 		await requireBandMember();
 		await cancel(data.reservationId, currentUser.id);
@@ -1029,7 +1025,7 @@ export const payForReservation = form(
 		coverFees: z.literal('on').optional(),
 		skipPayment: z.enum(['', 'on']).optional()
 	}),
-	async (data, issue) => {
+	async (data, _issue) => {
 		const currentUser = requireUser();
 		const { url } = getRequestEvent();
 
@@ -1103,7 +1099,7 @@ export const payReservation = form(
 	z.object({
 		coverFees: z.literal('on').optional()
 	}),
-	async (data, issue) => {
+	async (data, _issue) => {
 		const currentUser = requireUser();
 		const { params, url } = getRequestEvent();
 
@@ -1176,7 +1172,7 @@ export const payReservation = form(
 // ===========================================================================
 
 /** Staff/owner: confirm a reservation. */
-export const confirmReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const confirmReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	const currentUser = requireUser();
 
 	const [row] = await db
@@ -1201,7 +1197,7 @@ export const cancelReservation = form(
 		id: z.string(),
 		reason: z.string().optional()
 	}),
-	async (data, issue) => {
+	async (data, _issue) => {
 		const currentUser = requireUser();
 		const staff = await isStaff(currentUser.id);
 		await cancel(data.id, currentUser.id, data.reason, { staffOverride: staff });
@@ -1210,21 +1206,21 @@ export const cancelReservation = form(
 );
 
 /** Staff: mark a reservation as completed. */
-export const completeReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const completeReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 	await markComplete(data.id);
 	return { success: true };
 });
 
 /** Staff: mark a reservation as no-show. */
-export const noShowReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const noShowReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 	await markNoShow(data.id);
 	return { success: true };
 });
 
 /** Staff: record cash payment and complete reservation. */
-export const cashReceivedReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const cashReceivedReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 
 	const [row] = await db
@@ -1262,14 +1258,14 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 });
 
 /** Staff: comp a reservation (waive payment and confirm). */
-export const compReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 	await confirm(data.id);
 	return { success: true };
 });
 
 /** Staff: refund the payment on a reservation. */
-export const refundReservation = form(z.object({ id: z.string() }), async (data, issue) => {
+export const refundReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 
 	const [row] = await db
@@ -1292,7 +1288,7 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 });
 
 /** Member: confirm a waitlisted reservation when the slot opens. */
-export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data, issue) => {
+export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data, _issue) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 

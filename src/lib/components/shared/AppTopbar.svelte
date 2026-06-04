@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { IconMenu2, IconMusic, IconChevronDown } from '@tabler/icons-svelte';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
@@ -13,16 +12,16 @@
 		type: 'member' | 'staff' | 'band';
 	}
 
+	// eslint-disable-next-line svelte/no-unused-props -- `user` is accepted for caller (AppShell) API compatibility; not rendered here
 	let {
 		drawerId,
-		user,
 		panels,
 		activePanel
 	}: {
 		drawerId: string;
-		user: { name: string; email: string };
 		panels: PanelTab[];
 		activePanel: string;
+		user?: { name: string; email: string };
 	} = $props();
 
 	const primaryPanels = $derived(panels.filter((p) => p.type !== 'band'));

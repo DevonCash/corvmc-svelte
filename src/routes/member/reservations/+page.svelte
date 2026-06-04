@@ -4,6 +4,7 @@
 	import FreeHoursRemaining from '$lib/components/member/membership/FreeHoursRemaining.svelte';
 
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
 		confirmWaitlisted,
@@ -22,7 +23,7 @@
 	import ReservationCard from './ReservationCard.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
-	import { format, formatDistanceStrict } from 'date-fns';
+	import { format } from 'date-fns';
 
 	let activeTab = $state<'active' | 'all'>('active');
 
@@ -54,7 +55,7 @@
 	function closeConfirmModal() {
 		confirmModalOpen = false;
 		confirmReservation = null;
-		goto('/member/reservations', { replaceState: true });
+		goto(resolve('/member/reservations'), { replaceState: true });
 	}
 </script>
 

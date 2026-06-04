@@ -17,7 +17,6 @@
 		IconInboxOff,
 		IconAlarmSnooze
 	} from '@tabler/icons-svelte';
-	import { Tooltip } from 'bits-ui';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;

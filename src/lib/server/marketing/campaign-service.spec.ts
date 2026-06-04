@@ -5,18 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/server/db', () => {
-	function makeChainable(resolveFn: () => unknown[]) {
-		const proxy: any = new Proxy(() => proxy, {
-			get(_, prop) {
-				if (prop === 'then') {
-					return (resolve: (v: unknown[]) => void) => resolve(resolveFn());
-				}
-				return () => proxy;
-			}
-		});
-		return proxy;
-	}
-
 	const db = {
 		select: vi.fn(),
 		selectDistinct: vi.fn(),
@@ -148,7 +136,7 @@ function makeChainable() {
  * `.returning()` from the next selectResults slot.
  */
 function makeInsertChain(insertedRows: unknown[][]) {
-	return vi.fn((table: unknown) => ({
+	return vi.fn((_table: unknown) => ({
 		values: vi.fn((vals: unknown) => {
 			insertedRows.push(Array.isArray(vals) ? vals : [vals]);
 			return {

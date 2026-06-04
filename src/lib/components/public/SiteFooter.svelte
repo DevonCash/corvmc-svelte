@@ -30,17 +30,18 @@
 	<div class="tri-stripe"></div>
 	<div class="max-w-3xl mx-auto px-4 py-12 text-center">
 		<div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium">
-			{#each footerLinks as link}
+			{#each footerLinks as link (link.href)}
 				<a href={link.href} class="link link-hover">{link.label}</a>
 			{/each}
 		</div>
 
 		{#if socials.length > 0}
 			<div class="flex justify-center gap-4 mt-6">
-				{#each socials as social}
+				{#each socials as social (social.label)}
 					<a
 						href={social.href}
 						aria-label={social.label}
+						rel="external"
 						class="opacity-60 hover:opacity-100 transition-opacity"
 					>
 						<social.icon size={22} />

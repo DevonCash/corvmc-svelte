@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/schema/equipment';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, like, inArray, or, desc, count } from 'drizzle-orm';
+import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { domainEvents } from '$lib/server/events/event-bus';

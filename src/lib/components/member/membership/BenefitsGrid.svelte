@@ -7,7 +7,7 @@
 {#snippet benefitItem(text: string)}
 	<li class="flex items-start gap-2">
 		<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
-		<!-- @html is safe here: text is always a hardcoded string from this file, never user input -->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (hardcoded benefit text) -->
 		<span>{@html text}</span>
 	</li>
 {/snippet}

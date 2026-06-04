@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import {
 		getLoan,
 		getAvailableEquipment,
@@ -66,7 +67,9 @@
 				<dt class="opacity-60">Equipment</dt>
 				<dd>
 					{#if loan.equipmentName}
-						<a href="/staff/equipment/{loan.equipmentId}" class="link">{loan.equipmentName}</a>
+						<a href={resolve(`/staff/equipment/${loan.equipmentId}`)} class="link"
+							>{loan.equipmentName}</a
+						>
 						{#if loan.categoryName}
 							<Badge variant="outline" size="xs" class="ml-1">{loan.categoryName}</Badge>
 						{/if}
@@ -147,7 +150,7 @@
 						<Field name="equipmentId" label="Assign Equipment">
 							<select class="select select-bordered w-full" name="equipmentId" required>
 								<option value="" disabled selected>Select equipment...</option>
-								{#each availableEquipment as eq}
+								{#each availableEquipment as eq (eq.id)}
 									{#if eq.availableQuantity > 0}
 										<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
 									{/if}

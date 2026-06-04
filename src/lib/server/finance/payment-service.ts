@@ -1,4 +1,3 @@
-import type Stripe from 'stripe';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';

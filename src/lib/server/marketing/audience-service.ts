@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 
 // ---------------------------------------------------------------------------

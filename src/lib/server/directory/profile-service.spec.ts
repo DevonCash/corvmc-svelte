@@ -8,7 +8,6 @@ let selectResults: unknown[][] = [];
 let selectCallIndex = 0;
 const insertedRows: unknown[] = [];
 let updatedData: unknown[] = [];
-let deleteCalled = false;
 
 function buildChain() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -42,7 +41,6 @@ vi.mock('$lib/server/db', () => ({
 			return chain;
 		},
 		delete: () => {
-			deleteCalled = true;
 			return buildChain();
 		},
 		insert: () => ({
@@ -114,7 +112,6 @@ beforeEach(() => {
 	selectCallIndex = 0;
 	insertedRows.length = 0;
 	updatedData = [];
-	deleteCalled = false;
 });
 
 describe('updateMemberProfile', () => {

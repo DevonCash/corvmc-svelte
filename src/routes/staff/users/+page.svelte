@@ -3,7 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { resolve } from '$app/paths';
 	import {
 		IconUserCog,
 		IconUserShield,
@@ -132,14 +132,16 @@
 											tabindex="0"
 											class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
 										>
-											<li><a href="/staff/users/{row.id}"><IconEye size={16} />View</a></li>
+											<li>
+												<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
+											</li>
 											<li>
 												<button onclick={() => copyEmail(row.email)}
 													><IconCopy size={16} />Copy email</button
 												>
 											</li>
 											<li>
-												<a href="/staff/users/{row.id}/impersonate"
+												<a href={resolve(`/staff/users/${row.id}/impersonate`)}
 													><IconUserUp size={16} />Impersonate</a
 												>
 											</li>

@@ -9,7 +9,6 @@
 		reservation: {
 			startsAt: Date;
 			endsAt: Date;
-			notes?: string | null;
 			price?: number;
 			status?: string;
 			paidAt?: Date | null;

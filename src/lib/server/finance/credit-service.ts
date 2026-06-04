@@ -69,6 +69,7 @@ export async function addCredits(
 
 	const col = creditColumn[creditType];
 
+	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
 	return db.transaction(async (tx) => {
 		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
 
@@ -116,6 +117,7 @@ export async function deductCredits(
 
 	const col = creditColumn[creditType];
 
+	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
 	return db.transaction(async (tx) => {
 		const result = await tx
 			.update(user)
@@ -160,6 +162,7 @@ export async function setBalance(
 
 	const col = creditColumn[creditType];
 
+	// eslint-disable-next-line custom/no-db-transaction -- interactive read-modify-write; D1 batch migration tracked as separate follow-up
 	return db.transaction(async (tx) => {
 		const [row] = await tx.select({ balance: col }).from(user).where(eq(user.id, userId));
 

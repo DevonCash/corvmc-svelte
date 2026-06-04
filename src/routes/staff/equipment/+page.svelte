@@ -97,7 +97,7 @@
 			}}
 		>
 			<option value="">All categories</option>
-			{#each categories as c}
+			{#each categories as c (c.id)}
 				<option value={c.id}>{c.name}</option>
 			{/each}
 		</select>
@@ -110,7 +110,7 @@
 			}}
 		>
 			<option value="">All statuses</option>
-			{#each equipmentStatuses as s}
+			{#each equipmentStatuses as s (s)}
 				<option value={s}>{s}</option>
 			{/each}
 		</select>

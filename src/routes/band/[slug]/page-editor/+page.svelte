@@ -6,6 +6,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
@@ -176,7 +177,7 @@
 				<div class="card-body">
 					<h2 class="card-title text-lg">Theme</h2>
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-						{#each BAND_THEMES as theme}
+						{#each BAND_THEMES as theme (theme)}
 							<button
 								type="button"
 								class="btn btn-sm capitalize {selectedTheme === theme
@@ -212,7 +213,7 @@
 					<!-- Block type picker -->
 					{#if showBlockPicker}
 						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 p-4 bg-base-200 rounded-lg">
-							{#each BLOCK_TYPES as bt}
+							{#each BLOCK_TYPES as bt (bt.type)}
 								<button
 									type="button"
 									class="btn btn-sm btn-ghost justify-start text-left h-auto py-2"
@@ -432,13 +433,15 @@
 											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'contact' || block.type === 'tech_rider'}
 												<p class="text-sm opacity-60">
 													This block renders data from your EPK.
-													<a href="page-editor/epk" class="link">Edit EPK data &rarr;</a>
+													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
+														>Edit EPK data &rarr;</a
+													>
 												</p>
 											{:else if block.type === 'merch'}
 												<p class="text-xs opacity-60 mb-2">
 													Add merchandise items with links to your store.
 												</p>
-												{#each block.items as item, mi}
+												{#each block.items as item, mi (mi)}
 													<div class="flex gap-2 items-start">
 														<input
 															type="text"
@@ -532,7 +535,7 @@
 			<!-- Save -->
 			<div class="flex justify-between items-center">
 				<a
-					href="/?__band_subdomain={band.slug}"
+					href={resolve(`/?__band_subdomain=${band.slug}`)}
 					target="_blank"
 					rel="noopener"
 					class="link text-sm"
@@ -683,7 +686,9 @@
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<a href="page-editor/epk" class="btn btn-sm btn-outline">Edit EPK</a>
+					<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="btn btn-sm btn-outline"
+						>Edit EPK</a
+					>
 				</div>
 			</div>
 		</div>

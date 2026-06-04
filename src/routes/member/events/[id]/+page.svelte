@@ -9,7 +9,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
-	import { fullDate, formatTime, formatCents, formatDate } from '$lib/utils/format';
+	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import {
 		purchaseTickets,
@@ -234,7 +234,7 @@
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 							>
-								{#snippet form({ close })}
+								{#snippet form()}
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
 									<Field label="Number of spots" name="quantity">
@@ -270,7 +270,7 @@
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 							>
-								{#snippet form({ close })}
+								{#snippet form()}
 									<input {...fields.eventId.as('hidden', evt.id)} />
 
 									<div class="flex items-baseline gap-2">

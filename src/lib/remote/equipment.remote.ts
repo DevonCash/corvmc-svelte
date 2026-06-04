@@ -26,13 +26,7 @@ import {
 	listLoans,
 	listUserLoans
 } from '$lib/server/equipment/loan-service';
-import {
-	createCategorySchema,
-	updateCategorySchema,
-	createEquipmentSchema,
-	scheduleLoanSchema,
-	checkoutLoanSchema
-} from '$lib/server/db/schema/equipment';
+import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/equipment';
 import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -121,7 +115,7 @@ const memberEquipmentFilters = z.object({
 
 export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
 	await requireFeature('equipment');
-	const currentUser = requireUser();
+	requireUser();
 	const { rows } = await listEquipment({
 		search: filters.search || undefined,
 		categoryId: filters.categoryId || undefined,

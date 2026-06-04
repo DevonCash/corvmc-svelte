@@ -1054,7 +1054,7 @@ async function seedBands(users: SeedUser[]) {
 	return bands;
 }
 
-async function seedBandEvents(bands: any[], users: SeedUser[]) {
+async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 	console.log('Seeding band events...');
 	const rows = [];
 
@@ -1347,7 +1347,7 @@ async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservati
 	return rows;
 }
 
-async function seedTickets(users: SeedUser[], events: SeedEvent[]) {
+async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 	console.log('Seeding tickets...');
 	const rows = [];
 

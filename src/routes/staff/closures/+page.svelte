@@ -56,7 +56,7 @@
 		<EmptyState message="No closures." />
 	{:else}
 		<div class="space-y-3">
-			{#each closures as c}
+			{#each closures as c (c.id)}
 				<div class="card bg-base-100 shadow-sm">
 					<div class="card-body py-4">
 						{#if editId === c.id}

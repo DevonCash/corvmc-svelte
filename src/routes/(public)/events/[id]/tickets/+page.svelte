@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -155,7 +156,7 @@
 
 					{#if !data.isAuthenticated}
 						<p class="text-sm text-center opacity-60">
-							<a href="/login" class="link">Sign in</a> for member discounts
+							<a href={resolve('/login')} class="link">Sign in</a> for member discounts
 						</p>
 					{/if}
 				</div>

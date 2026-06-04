@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -45,7 +46,7 @@
 				audienceIds: selectedAudienceIds
 			});
 			toast.success('Draft saved');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}/edit`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}/edit`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to save');
 		} finally {
@@ -64,7 +65,7 @@
 				audienceIds: selectedAudienceIds
 			});
 			toast.success('Campaign sent');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to send');
 		} finally {
@@ -83,7 +84,7 @@
 				scheduledFor: scheduleDate
 			});
 			toast.success('Campaign scheduled');
-			goto(`/staff/marketing/campaigns/${result?.campaignId}`);
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
 		} finally {
@@ -214,6 +215,7 @@
 			<p class="label text-sm font-medium">Preview</p>
 			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
 				{#if previewHtml}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
 					{@html previewHtml}
 				{:else}
 					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">

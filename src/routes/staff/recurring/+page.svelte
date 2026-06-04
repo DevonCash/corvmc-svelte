@@ -124,7 +124,7 @@
 											}}
 											class="btn-ghost btn-xs text-error"
 										>
-											{#snippet form({ close })}
+											{#snippet form()}
 												<input {...cancelFields.seriesId.as('hidden', s.id)} />
 												<p class="py-4">
 													Cancel this recurring series? Future reservations will not be created.

@@ -35,13 +35,13 @@
 
 {#if links.length > 0}
 	<div class="flex flex-col gap-2">
-		{#each links as link}
+		{#each links as link (link.url)}
 			{@const platform = detectPlatform(link.url)}
 			{@const IconComponent = platform ? (iconMap[platform.icon] ?? IconLink) : IconLink}
 			<a
 				href={link.url}
 				target="_blank"
-				rel="noopener noreferrer"
+				rel="external noopener noreferrer"
 				class="btn btn-outline btn-sm justify-start gap-2"
 			>
 				<IconComponent size={18} />

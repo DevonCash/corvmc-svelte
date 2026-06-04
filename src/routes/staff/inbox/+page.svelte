@@ -89,7 +89,7 @@
 				}}
 			>
 				<option value="">All channels</option>
-				{#each channels as ch}
+				{#each channels as ch (ch)}
 					<option value={ch}>{channelLabels[ch]}</option>
 				{/each}
 			</select>
@@ -103,7 +103,7 @@
 			}}
 		>
 			<option value="">All statuses</option>
-			{#each inboxThreadStatuses as s}
+			{#each inboxThreadStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
 		</select>

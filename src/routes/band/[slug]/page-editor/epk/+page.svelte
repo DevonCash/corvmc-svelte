@@ -5,6 +5,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandEpk } from '$lib/remote/band-page-editor.remote';
 	import { page } from '$app/state';
@@ -193,7 +194,7 @@
 							<p class="text-sm opacity-60 mt-2">No press quotes yet.</p>
 						{:else}
 							<div class="space-y-3 mt-4">
-								{#each epk.pressQuotes as quote, i}
+								{#each epk.pressQuotes as quote, i (i)}
 									<div class="flex gap-2 items-start p-3 bg-base-200 rounded-lg">
 										<div class="flex-1 space-y-2">
 											<textarea
@@ -258,7 +259,7 @@
 							<p class="text-sm opacity-60 mt-2">No achievements yet.</p>
 						{:else}
 							<div class="space-y-2 mt-4">
-								{#each epk.achievements as achievement, i}
+								{#each epk.achievements as achievement, i (i)}
 									<div class="flex gap-2 items-center">
 										<input
 											type="text"
@@ -306,7 +307,7 @@
 										</tr>
 									</thead>
 									<tbody>
-										{#each epk.backline as item, i}
+										{#each epk.backline as item, i (i)}
 											<tr>
 												<td>
 													<input
@@ -363,7 +364,9 @@
 
 				<!-- Save -->
 				<div class="flex justify-end gap-3">
-					<a href="../page-editor" class="btn btn-ghost">Back to Page Editor</a>
+					<a href={resolve(`/band/${band.slug}/page-editor`)} class="btn btn-ghost"
+						>Back to Page Editor</a
+					>
 					<button class="btn btn-primary">Save EPK</button>
 				</div>
 			</div>

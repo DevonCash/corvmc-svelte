@@ -58,7 +58,9 @@ export const GET: RequestHandler = async ({ locals, request }) => {
 				cleanup();
 				try {
 					controller.close();
-				} catch {}
+				} catch {
+					/* already closed */
+				}
 			});
 		}
 	});

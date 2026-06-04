@@ -54,6 +54,7 @@
 		{/if}
 
 		<div class="rounded-lg bg-white p-4">
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (QR svg) -->
 			{@html qrSvg}
 		</div>
 

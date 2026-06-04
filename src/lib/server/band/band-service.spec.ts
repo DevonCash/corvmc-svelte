@@ -47,28 +47,6 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-const txMock = {
-	insert: vi.fn(() => ({
-		values: vi.fn(() => ({
-			returning: vi.fn(() => {
-				if (insertError) return Promise.reject(insertError);
-				return Promise.resolve([{ ...mockBand }]);
-			})
-		}))
-	})),
-	update: vi.fn(() => ({
-		set: vi.fn(() => ({
-			where: vi.fn(() => ({
-				returning: vi.fn(() => Promise.resolve([{ ...mockBand }]))
-			}))
-		}))
-	})),
-	select: vi.fn(() => chainable()),
-	delete: vi.fn(() => ({
-		where: vi.fn(() => Promise.resolve(deleteResult))
-	}))
-};
-
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chainable(),

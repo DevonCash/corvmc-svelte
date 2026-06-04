@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const registeredHandlers: Record<string, Function[]> = {};
+const registeredHandlers: Record<string, Array<(...args: any[]) => any>> = {};
 
 vi.mock('./event-bus', () => ({
 	domainEvents: {
-		on: (event: string, handler: Function) => {
+		on: (event: string, handler: (...args: any[]) => any) => {
 			if (!registeredHandlers[event]) registeredHandlers[event] = [];
 			registeredHandlers[event].push(handler);
 		}

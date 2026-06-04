@@ -47,7 +47,7 @@ function memberWhereConditions(
 
 	if (filters?.instruments?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
+			RAW: (table, _ops) =>
 				sql`EXISTS (SELECT 1 FROM ${userInstrument} WHERE ${userInstrument.userId} = ${table.id} AND ${userInstrument.instrument} IN (${sql.join(
 					filters.instruments!.map((i) => sql`${i}`),
 					sql`, `
@@ -57,7 +57,7 @@ function memberWhereConditions(
 
 	if (filters?.genres?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
+			RAW: (table, _ops) =>
 				sql`EXISTS (SELECT 1 FROM ${userGenre} WHERE ${userGenre.userId} = ${table.id} AND ${userGenre.genre} IN (${sql.join(
 					filters.genres!.map((g) => sql`${g}`),
 					sql`, `
@@ -200,7 +200,7 @@ function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFil
 
 	if (filters?.genres?.length) {
 		conditions.push({
-			RAW: (table, ops) =>
+			RAW: (table, _ops) =>
 				sql`EXISTS (SELECT 1 FROM ${bandGenre} WHERE ${bandGenre.bandId} = ${table.id} AND ${bandGenre.genre} IN (${sql.join(
 					filters.genres!.map((g) => sql`${g}`),
 					sql`, `

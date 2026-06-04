@@ -25,7 +25,6 @@ import postgres from 'postgres';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
-import { hashPassword } from 'better-auth/crypto';
 
 import {
 	user,
@@ -73,7 +72,7 @@ console.log();
 
 type IdMap = Record<string, Record<string, string>>;
 
-let idMap: IdMap = existsSync(ID_MAP_PATH) ? JSON.parse(readFileSync(ID_MAP_PATH, 'utf-8')) : {};
+const idMap: IdMap = existsSync(ID_MAP_PATH) ? JSON.parse(readFileSync(ID_MAP_PATH, 'utf-8')) : {};
 
 function mapId(table: string, oldId: number | string): string {
 	const key = String(oldId);
@@ -134,11 +133,6 @@ function ts(val: Date | string | null): Date | null {
 	if (!val) return null;
 	if (val instanceof Date) return val;
 	return new Date(val);
-}
-
-async function count(table: string): Promise<number> {
-	const [row] = await pg`SELECT count(*)::int as n FROM ${pg(table)}`;
-	return row.n;
 }
 
 // ---------------------------------------------------------------------------

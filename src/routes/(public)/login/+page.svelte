@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
@@ -7,7 +8,7 @@
 
 	let me = $derived(await getMe());
 	$effect(() => {
-		if (me) goto('/member');
+		if (me) goto(resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));

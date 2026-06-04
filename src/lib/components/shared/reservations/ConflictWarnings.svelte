@@ -19,7 +19,7 @@
 		endTime,
 		checkConflicts,
 		excludeReservationId,
-		hasConflicts = $bindable(false)
+		hasConflicts = $bindable()
 	}: {
 		date: string;
 		startTime: string;
@@ -61,7 +61,8 @@
 	});
 
 	$effect(() => {
-		hasConflicts = warnings.length > 0;
+		const next = warnings.length > 0;
+		if (hasConflicts !== next) hasConflicts = next;
 	});
 </script>
 

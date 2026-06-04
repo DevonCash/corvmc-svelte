@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
+	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
 	let {
 		value = $bindable(''),

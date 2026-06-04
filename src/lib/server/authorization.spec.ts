@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser, mockRole, mockStandardRoles } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
 // Mock the db module with a chainable query builder
@@ -62,9 +61,6 @@ describe('hasAnyRole', () => {
 
 	it('returns true if user has at least one of the roles', async () => {
 		// hasAnyRole checks sequentially — first call returns empty, second returns a match
-		let callCount = 0;
-		const originalResults = queryResults;
-
 		// Override the then behavior to alternate results
 		// Since hasAnyRole calls hasRole in a loop, we need per-call results
 		// The simplest approach: just set results to match on first call

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -119,7 +120,8 @@
 					{:else}
 						<div class="alert alert-warning text-sm">
 							The {channelLabels[t.channel]} channel is disabled. Enable it in
-							<a href="/staff/settings" class="link">Settings → Inbox Channels</a> to send replies.
+							<a href={resolve('/staff/settings')} class="link">Settings → Inbox Channels</a> to send
+							replies.
 						</div>
 					{/if}
 				{/await}
@@ -230,7 +232,7 @@
 								class="select select-bordered select-sm w-full"
 								value={t.status}
 							>
-								{#each inboxThreadStatuses as s}
+								{#each inboxThreadStatuses as s (s)}
 									<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 								{/each}
 							</select>

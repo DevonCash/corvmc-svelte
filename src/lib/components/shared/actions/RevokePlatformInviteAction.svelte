@@ -6,7 +6,6 @@
 	const { fields } = revokePlatformInvite;
 
 	let {
-		bandId,
 		inviteId,
 		email,
 		class: className = 'btn-ghost btn-xs text-warning',
@@ -31,7 +30,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.inviteId.as('hidden', inviteId)} />
 		<p class="py-4">Revoke invite for {email}?</p>
 	{/snippet}

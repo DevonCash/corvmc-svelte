@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { sql, eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
+import { eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
 import { buildDateInTz, getPartsInTz } from '$lib/server/reservation/timezone';
 import { getJson, putJson } from '$lib/server/kv';
 import { DEFAULT_TIMEZONE } from '$lib/config';

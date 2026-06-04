@@ -55,7 +55,7 @@
 		>
 		<div class="collapse-content">
 			<div class="space-y-2">
-				{#each categories as cat}
+				{#each categories as cat (cat.id)}
 					<div class="flex items-center justify-between gap-2 py-1">
 						<div>
 							<span class="font-medium text-sm">{cat.name}</span>
@@ -69,7 +69,7 @@
 							onsuccess={refreshData}
 							class="btn-ghost btn-xs"
 						>
-							{#snippet form({ close })}
+							{#snippet form()}
 								<input {...deleteFields.id.as('hidden', cat.id)} />
 								<p class="py-4">Delete "{cat.name}" and all its articles?</p>
 							{/snippet}

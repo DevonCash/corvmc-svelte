@@ -28,7 +28,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<div class="space-y-3">
 			<label class="form-control w-full">

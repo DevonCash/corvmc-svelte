@@ -85,7 +85,7 @@
 				>
 			</button>
 			<div class="carousel__dots">
-				{#each Array(maxIndex + 1) as _, i}
+				{#each Array(maxIndex + 1) as _, i (i)}
 					<button
 						class="carousel__dot"
 						class:is-active={i === currentIndex}

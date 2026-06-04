@@ -140,7 +140,7 @@ async function main() {
 
 	// Remove orphaned static articles
 	if (syncedSlugs.length > 0) {
-		const deleted = await db
+		await db
 			.delete(helpArticle)
 			.where(and(eq(helpArticle.source, 'static'), notInArray(helpArticle.slug, syncedSlugs)));
 		console.log(`  Cleaned up orphaned static articles`);

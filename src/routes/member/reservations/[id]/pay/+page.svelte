@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DOLLARS_PER_UNIT, DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';

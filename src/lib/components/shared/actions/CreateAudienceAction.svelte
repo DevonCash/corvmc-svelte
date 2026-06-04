@@ -49,7 +49,7 @@
 	}}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<Field name="name" type="text" label="Name" bind:value={name} />
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Slug</legend>

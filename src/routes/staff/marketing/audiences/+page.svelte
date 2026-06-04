@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getAudiences } from '$lib/remote/marketing.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -14,7 +15,7 @@
 	<CreateAudienceAction
 		onsuccess={(result) => {
 			const r = result as { audienceId?: string };
-			if (r?.audienceId) goto(`/staff/marketing/audiences/${r.audienceId}`);
+			if (r?.audienceId) goto(resolve(`/staff/marketing/audiences/${r.audienceId}`));
 		}}
 	/>
 </PageHeader>

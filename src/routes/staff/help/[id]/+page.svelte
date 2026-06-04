@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		getStaffArticle,
 		getStaffCategories,
@@ -35,10 +36,10 @@
 		action={deleteArticle}
 		modalTitle="Confirm"
 		successToast="Article deleted"
-		onsuccess={() => goto('/staff/help')}
+		onsuccess={() => goto(resolve('/staff/help'))}
 		class="btn-error btn-sm btn-outline"
 	>
-		{#snippet form({ close })}
+		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
 			<p class="py-4">Permanently delete "{article?.title}"?</p>
 		{/snippet}

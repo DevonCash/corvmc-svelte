@@ -27,6 +27,7 @@
 
 	const minEndsAt = $derived.by(() => {
 		if (!date) return '';
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Date for one-off computation within a $derived, not reactive state
 		const d = new Date(date + 'T00:00:00');
 		d.setDate(d.getDate() + 7);
 		return d.toISOString().split('T')[0];

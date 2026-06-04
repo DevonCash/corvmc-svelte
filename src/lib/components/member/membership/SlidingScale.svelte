@@ -22,7 +22,7 @@
 			</div>
 
 			<div class="mb-8 space-y-3">
-				{#each tiers as tier}
+				{#each tiers as tier (tier.amount)}
 					<div class="flex items-center justify-between rounded-lg bg-base-200/50 p-4">
 						<span class="font-medium">{tier.amount}</span>
 						<span class="opacity-50">→</span>

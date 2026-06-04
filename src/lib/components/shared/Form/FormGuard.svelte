@@ -17,11 +17,12 @@
 		if (form.status === 'dirty') {
 			cancel();
 			if (!willUnload && to?.url) {
-				const href = to.url.href;
+				const url = to.url;
 				pendingNavigation = () => {
 					bypassing = true;
 					form.reset();
-					goto(href);
+					// eslint-disable-next-line svelte/no-navigation-without-resolve -- `url` is the already-resolved navigation target supplied by SvelteKit's beforeNavigate
+					goto(url);
 				};
 				confirmModal?.showModal();
 			}

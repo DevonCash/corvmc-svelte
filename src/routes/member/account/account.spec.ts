@@ -83,12 +83,12 @@ vi.mock('$app/server', () => ({
 		locals: mockLocals,
 		request: { headers: mockHeaders }
 	}),
-	form: (_schema: unknown, handler: Function) => {
+	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'form' };
 		return fn;
 	},
-	query: (_schema: unknown, handler: Function) => {
+	query: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = (...args: unknown[]) => {
 			const result = handler(...args);
 			if (result && typeof result.then === 'function') {
@@ -100,7 +100,7 @@ vi.mock('$app/server', () => ({
 		(fn as any).refresh = vi.fn();
 		return fn;
 	},
-	command: (_schema: unknown, handler: Function) => {
+	command: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'command' };
 		return fn;

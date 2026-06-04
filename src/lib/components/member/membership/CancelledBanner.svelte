@@ -46,7 +46,7 @@
 				class="btn-sm btn-primary"
 				onsuccess={() => toast.success('Membership resumed')}
 			>
-				{#snippet form({ close })}
+				{#snippet form()}
 					<p class="py-4">Resume your sustaining membership?</p>
 				{/snippet}
 			</Action>

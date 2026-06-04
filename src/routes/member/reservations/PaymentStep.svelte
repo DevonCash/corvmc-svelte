@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
@@ -167,7 +167,8 @@
 			{#if !pricing.isSustainingMember}
 				<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
 					Sustaining members get free rehearsal hours every month.
-					<a href="{base}/member/membership" target="_blank" class="link link-primary">Learn more</a
+					<a href={resolve('/member/membership')} target="_blank" class="link link-primary"
+						>Learn more</a
 					>
 				</div>
 			{/if}

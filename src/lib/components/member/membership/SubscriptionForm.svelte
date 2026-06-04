@@ -2,7 +2,6 @@
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 

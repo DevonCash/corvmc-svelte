@@ -65,7 +65,7 @@
 			}}
 		>
 			<option value="">All statuses</option>
-			{#each loanStatuses as s}
+			{#each loanStatuses as s (s)}
 				<option value={s}>{s}</option>
 			{/each}
 		</select>

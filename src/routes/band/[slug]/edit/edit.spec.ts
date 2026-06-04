@@ -41,7 +41,7 @@ vi.mock('$app/server', () => ({
 		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
-	form: (_schema: unknown, handler: Function) => {
+	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = handler;
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
@@ -49,7 +49,7 @@ vi.mock('$app/server', () => ({
 	},
 	query: (...args: unknown[]) => {
 		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as Function;
+		const fn = handler as (...args: any[]) => any;
 		(fn as any).__ = { type: 'query' };
 		return fn;
 	}

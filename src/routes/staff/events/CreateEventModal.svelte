@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -68,7 +69,7 @@
 		await invalidateAll();
 
 		if (result?.eventId) {
-			goto(`/staff/events/${result.eventId}`);
+			goto(resolve(`/staff/events/${result.eventId}`));
 		}
 	}
 

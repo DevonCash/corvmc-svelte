@@ -57,7 +57,7 @@
 <div class="space-y-2 rounded bg-base-200 p-2">
 	{#if value.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each value as tag}
+			{#each value as tag (tag)}
 				<Button class="btn-xs" type="button" onclick={() => removeTag(tag)}>
 					{tag}
 					<IconX class="size-3" />
@@ -81,7 +81,7 @@
 			<ul
 				class="menu z-10 absolute w-full max-h-40 overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
 			>
-				{#each filteredSuggestions as suggestion}
+				{#each filteredSuggestions as suggestion (suggestion)}
 					<li>
 						<button
 							type="button"

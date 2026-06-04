@@ -27,7 +27,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
 			<p class="text-sm opacity-70">

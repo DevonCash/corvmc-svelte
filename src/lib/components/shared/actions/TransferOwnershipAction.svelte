@@ -31,7 +31,7 @@
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >
-	{#snippet form({ close })}
+	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<input {...fields.newOwnerId.as('hidden', newOwnerId)} />
 		<p class="py-4">Transfer ownership to {name}? The current owner will be demoted to admin.</p>

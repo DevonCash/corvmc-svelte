@@ -62,7 +62,7 @@
 								<a
 									href={evt.externalTicketUrl}
 									target="_blank"
-									rel="noopener"
+									rel="noopener external"
 									class="link link-primary"
 								>
 									{evt.externalTicketUrl}

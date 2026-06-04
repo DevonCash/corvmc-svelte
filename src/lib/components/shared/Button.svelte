@@ -1,15 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Button as BitsButton, Tooltip } from 'bits-ui';
-	import { IconCheck, IconX } from '@tabler/icons-svelte';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 	import clsx from 'clsx';
-
-	type Status = 'idle' | 'pending' | 'success' | 'error';
 
 	let {
 		href,
-		type,
 		title,
 		disabled = false,
 		class: className = 'btn-primary',
@@ -17,7 +12,6 @@
 		...rest
 	}: {
 		href?: string;
-		type?: 'button' | 'submit' | 'reset';
 		title?: string;
 		disabled?: boolean;
 		class?: string;
