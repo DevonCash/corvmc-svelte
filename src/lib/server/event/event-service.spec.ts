@@ -30,7 +30,7 @@ let selectResultQueue: unknown[][] = [];
 let updateRowCount = 1;
 
 function chainable(result?: unknown[]) {
-	const proxy: any = new Proxy(() => proxy, {
+	const proxy: PromiseLike<unknown[]> = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
 				return (resolve: (v: unknown[]) => void) => {
@@ -42,32 +42,31 @@ function chainable(result?: unknown[]) {
 			if (prop === 'meta') return { changes: updateRowCount };
 			return () => proxy;
 		}
-	});
+	}) as unknown as PromiseLike<unknown[]>;
 	return proxy;
 }
 
 let lastInsertedValues: Record<string, unknown> | null = null;
 let lastUpdateSet: Record<string, unknown> | null = null;
 
-const txMock = {
-	insert: vi.fn(() => ({
-		values: vi.fn((vals: Record<string, unknown>) => {
-			lastInsertedValues = vals;
-			return {
-				returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }]))
-			};
-		})
-	})),
-	update: vi.fn(() => ({
-		set: vi.fn((vals: Record<string, unknown>) => {
-			lastUpdateSet = vals;
-			return {
-				where: vi.fn(() => Promise.resolve({ meta: { changes: updateRowCount } }))
-			};
-		})
-	})),
-	select: vi.fn(() => chainable())
-};
+// When set, the next db.insert(...).returning() rejects — used to exercise the
+// compensating-delete path in create().
+let insertShouldThrow = false;
+
+const insertValues = vi.fn((vals: Record<string, unknown>) => {
+	lastInsertedValues = vals;
+	return {
+		returning: vi.fn(() =>
+			insertShouldThrow
+				? Promise.reject(new Error('insert failed'))
+				: Promise.resolve([{ ...mockEventRow, ...vals }])
+		)
+	};
+});
+const eventInsert = vi.fn(() => ({ values: insertValues }));
+
+const deleteWhere = vi.fn(() => Promise.resolve());
+const eventDelete = vi.fn(() => ({ where: deleteWhere }));
 
 vi.mock('$lib/server/db', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/server/db')>();
@@ -75,23 +74,22 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 		...actual,
 		db: {
 			select: () => chainable(),
-			insert: vi.fn(() => ({
-				values: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve([{ ...mockEventRow }]))
-				}))
-			})),
+			// Referenced lazily — the factory is evaluated during the hoisted
+			// import, before these module-level consts initialize.
+			insert: (...args: unknown[]) => eventInsert(...(args as [])),
+			delete: (...args: unknown[]) => eventDelete(...(args as [])),
 			update: vi.fn(() => ({
 				set: vi.fn((vals: Record<string, unknown>) => {
 					lastUpdateSet = vals;
 					return {
 						where: vi.fn(() => ({
 							returning: vi.fn(() => Promise.resolve([{ ...mockEventRow, ...vals }])),
-							then: (resolve: any) => resolve({ meta: { changes: updateRowCount } })
+							then: (resolve: (v: unknown) => void) =>
+								resolve({ meta: { changes: updateRowCount } })
 						}))
 					};
 				})
-			})),
-			transaction: (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)
+			}))
 		}
 	};
 });
@@ -131,6 +129,7 @@ describe('EventService', () => {
 		updateRowCount = 1;
 		lastInsertedValues = null;
 		lastUpdateSet = null;
+		insertShouldThrow = false;
 	});
 
 	// -----------------------------------------------------------------------
@@ -150,8 +149,11 @@ describe('EventService', () => {
 		it('creates an event without reservation or poster', async () => {
 			const result = await create(baseParams);
 
-			expect(result.id).toBe('evt-1');
-			expect(txMock.insert).toHaveBeenCalled();
+			// The event id is generated client-side (D1 has no interactive txn to
+			// read back a server default mid-flow) and used for the insert.
+			expect(result.id).toBe(lastInsertedValues!.id);
+			expect(eventInsert).toHaveBeenCalled();
+			expect(lastInsertedValues!.reservationId).toBeNull();
 			expect(staffCreate).not.toHaveBeenCalled();
 			expect(uploadFile).not.toHaveBeenCalled();
 		});
@@ -167,13 +169,45 @@ describe('EventService', () => {
 			});
 
 			expect(hasConflict).toHaveBeenCalled();
+			// Reservation is created first, booked against the generated event id,
+			// then the event is inserted already linked to it.
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					bookerType: 'event',
-					bookerId: 'evt-1',
+					bookerId: lastInsertedValues!.id,
 					status: 'confirmed'
 				})
 			);
+			expect(lastInsertedValues!.reservationId).toBe('res-1');
+		});
+
+		it('deletes the orphan reservation when the event insert fails', async () => {
+			insertShouldThrow = true;
+
+			await expect(
+				create({
+					...baseParams,
+					reservation: {
+						startsAt: new Date('2025-07-15T01:00:00Z'),
+						endsAt: new Date('2025-07-15T06:00:00Z'),
+						overrideConflicts: true
+					}
+				})
+			).rejects.toThrow('insert failed');
+
+			// Compensating write: the reservation we created must be removed.
+			expect(staffCreate).toHaveBeenCalled();
+			expect(eventDelete).toHaveBeenCalled();
+			expect(deleteWhere).toHaveBeenCalled();
+		});
+
+		it('does not attempt compensation when there is no reservation', async () => {
+			insertShouldThrow = true;
+
+			await expect(create(baseParams)).rejects.toThrow('insert failed');
+
+			expect(staffCreate).not.toHaveBeenCalled();
+			expect(eventDelete).not.toHaveBeenCalled();
 		});
 
 		it('skips conflict check when overrideConflicts is true', async () => {
@@ -208,14 +242,14 @@ describe('EventService', () => {
 		it('uploads poster when posterFile provided', async () => {
 			const posterBuffer = new ArrayBuffer(1024);
 
-			await create({
+			const result = await create({
 				...baseParams,
 				posterFile: { buffer: posterBuffer, contentType: 'image/jpeg' }
 			});
 
 			expect(uploadFile).toHaveBeenCalledWith(
 				posterBuffer,
-				'events/posters/evt-1.jpg',
+				`events/posters/${result.id}.jpg`,
 				'image/jpeg'
 			);
 		});
