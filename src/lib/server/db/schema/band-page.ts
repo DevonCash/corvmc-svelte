@@ -11,9 +11,9 @@ export {
 	type BandEpk,
 	type BacklineItem,
 	type PressQuote
-} from '$lib/types/band-page';
-import type { Block, BandEpk } from '$lib/types/band-page';
-import { BAND_THEMES } from '$lib/types/band-page';
+} from '../../../types/band-page';
+import type { Block, BandEpk } from '../../../types/band-page';
+import { BAND_THEMES } from '../../../types/band-page';
 
 // ---------------------------------------------------------------------------
 // Band Page Config — stores block layout, theme, and custom CSS for premium pages

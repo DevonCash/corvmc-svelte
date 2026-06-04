@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 // ---------------------------------------------------------------------------
@@ -74,7 +74,11 @@ export const user = sqliteTable('user', {
 	deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 
 	// directory profile
-	memberNumber: integer('member_number').unique(),
+	// Uniqueness is enforced via a unique index (below) rather than an inline
+	// column constraint, so the migration is a plain ADD COLUMN + CREATE INDEX
+	// and avoids a full table rebuild (which D1 can't do — it ignores
+	// `PRAGMA foreign_keys=OFF` inside its migration transaction).
+	memberNumber: integer('member_number'),
 	bio: text('bio'),
 	tagline: text('tagline'),
 	hometown: text('hometown'),
@@ -84,7 +88,7 @@ export const user = sqliteTable('user', {
 	directoryVisibility: text('directory_visibility').notNull().default('members'),
 	directoryContact: text('directory_contact', { mode: 'json' }),
 	links: text('links', { mode: 'json' })
-});
+}, (t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]);
 
 export const userInstrument = sqliteTable(
 	'user_instrument',
