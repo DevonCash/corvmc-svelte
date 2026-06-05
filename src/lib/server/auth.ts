@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { createAuthMiddleware } from 'better-auth/api';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -112,14 +113,27 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		.from(account)
 		.where(and(eq(account.providerId, 'credential'), eq(account.password, hash)));
 
-	if (!acctRow) return false;
+	if (!acctRow) {
+		captureException(
+			new Error('bcrypt migration: no credential account matches the supplied hash'),
+			{ event: 'auth.bcrypt_migration', stage: 'account_not_found' }
+		);
+		return false;
+	}
 
 	const [userRow] = await db
 		.select({ email: user.email })
 		.from(user)
 		.where(eq(user.id, acctRow.userId));
 
-	if (!userRow) return false;
+	if (!userRow) {
+		captureException(new Error('bcrypt migration: credential account has no matching user'), {
+			event: 'auth.bcrypt_migration',
+			stage: 'user_not_found',
+			userId: acctRow.userId
+		});
+		return false;
+	}
 
 	try {
 		const fetchUrl = `${laravelUrl}/api/verify-password`;
@@ -154,6 +168,18 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 			const newHash = await pbkdf2Hash(password);
 
 			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
+		} else {
+			// Laravel reached and authoritative, but rejected the credentials. This is
+			// the one bcrypt path that previously failed silently — surface it so a
+			// migration that rejects a known-good password is visible.
+			captureException(
+				new Error('bcrypt migration: Laravel verify-password rejected the credentials'),
+				{
+					event: 'auth.bcrypt_migration',
+					stage: 'invalid_credentials',
+					email: userRow.email
+				}
+			);
 		}
 
 		return valid;
@@ -165,6 +191,72 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		});
 		return false;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Sign-in failure diagnostics
+// ---------------------------------------------------------------------------
+// better-auth's /sign-in/email throws the same generic INVALID_EMAIL_OR_PASSWORD
+// for several structurally different failures, all before the `verify` callback
+// runs. This before-hook does a read-only lookup and reports the *structural*
+// anomalies (not ordinary wrong passwords) so they're distinguishable in Sentry.
+
+export type SignInAnomaly =
+	| 'user_not_found'
+	| 'no_credential_account'
+	| 'no_password'
+	| 'unknown_hash_format';
+
+/** Pure reason-derivation for a sign-in attempt; returns null when nothing is structurally wrong. */
+export function deriveSignInAnomaly(input: {
+	userFound: boolean;
+	hasCredentialAccount: boolean;
+	credentialPassword: string | null | undefined;
+}): SignInAnomaly | null {
+	if (!input.userFound) return 'user_not_found';
+	if (!input.hasCredentialAccount) return 'no_credential_account';
+	if (!input.credentialPassword) return 'no_password';
+	const hash = input.credentialPassword;
+	if (!hash.startsWith('$2') && !hash.startsWith('pbkdf2:')) return 'unknown_hash_format';
+	return null;
+}
+
+async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
+	if (typeof rawEmail !== 'string') return;
+	const email = rawEmail.toLowerCase().trim();
+	if (!email) return;
+
+	const [userRow] = await db
+		.select({ id: user.id, emailVerified: user.emailVerified })
+		.from(user)
+		.where(eq(user.email, email));
+
+	const acctRow = userRow
+		? (
+				await db
+					.select({ password: account.password })
+					.from(account)
+					.where(and(eq(account.userId, userRow.id), eq(account.providerId, 'credential')))
+			)[0]
+		: undefined;
+
+	const reason = deriveSignInAnomaly({
+		userFound: Boolean(userRow),
+		hasCredentialAccount: Boolean(acctRow),
+		credentialPassword: acctRow?.password
+	});
+
+	if (!reason) return;
+
+	captureException(new Error(`auth.sign_in: ${reason}`), {
+		event: 'auth.sign_in',
+		stage: reason,
+		email,
+		emailVerified: userRow?.emailVerified ?? null,
+		hasCredentialAccount: Boolean(acctRow),
+		// prefix only — never log the full hash or the password
+		hashPrefix: acctRow?.password ? acctRow.password.slice(0, 7) : null
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +308,17 @@ function createAuth() {
 				trialEndsAt: { type: 'string', required: false, fieldName: 'trial_ends_at' },
 				deletedAt: { type: 'string', required: false, fieldName: 'deleted_at' }
 			}
+		},
+		hooks: {
+			before: createAuthMiddleware(async (ctx) => {
+				if (ctx.path !== '/sign-in/email') return;
+				try {
+					await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
+				} catch (err) {
+					// Diagnostics must never break the sign-in flow.
+					captureException(err, { event: 'auth.sign_in', stage: 'diagnostic_error' });
+				}
+			})
 		},
 		plugins: [
 			sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
