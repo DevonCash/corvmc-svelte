@@ -301,14 +301,17 @@ Run on demand from a machine that is already a DO Postgres **Trusted Source** �
 laptop, or any box allowed to reach the cluster:
 
 ```bash
-DATABASE_URL="postgres://…?sslmode=require" bash scripts/sync-d1.sh
+pnpm db:sync             # prompts before the destructive remote reload
+pnpm db:sync -- --yes    # skip the prompt
 ```
 
+`DATABASE_URL` is read from `.env` (or the shell env); append `?sslmode=require` for DO.
 It reloads all data: ETL Postgres → local D1 → export → FK-order → clear remote (DELETE) →
-import. No `pg_dump`; the ETL reads Postgres live over SSL. Requires wrangler auth (`.env`
-`CLOUDFLARE_*` + `wrangler login`). If you've added migrations since the last deploy, run
-`pnpm db:migrate` first so the remote schema matches. The table dependency order lives in
-`scripts/d1-table-order.mjs`; add any new FK-bearing table there.
+import. No `pg_dump`; the ETL reads Postgres live over SSL. Requires wrangler auth
+(`wrangler login`, or `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`). Your **local dev
+D1 is preserved** (stashed and restored around the run). If you've added migrations since
+the last deploy, run `pnpm db:migrate` first so the remote schema matches. The table
+dependency order lives in `scripts/d1-table-order.mjs`; add any new FK-bearing table there.
 
 > **Why not GitHub Actions / a cron?** The DO cluster also hosts other production
 > databases, so it stays locked to Trusted Sources. GitHub-hosted runners have no static

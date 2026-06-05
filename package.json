@@ -29,7 +29,8 @@
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
-		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done"
+		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done",
+		"db:sync": "bash scripts/sync-d1.sh"
 	},
 	"imports": {
 		"#/*": "./src/*"
