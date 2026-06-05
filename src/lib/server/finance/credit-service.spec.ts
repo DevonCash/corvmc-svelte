@@ -340,7 +340,8 @@ describe('allocateMonthlyCredits', () => {
 
 describe('allocateEquipmentCredits', () => {
 	it('adds equipment credits via addCredits', async () => {
-		selectResults = [[{ balance: 100 }]];
+		// hasTransaction (none), then addCredits' balance read.
+		selectResults = [[], [{ balance: 100 }]];
 		updateResults = [[{ balance: 150 }]];
 
 		const result = await allocateEquipmentCredits('user-1', 50, 'sub-xyz');
@@ -350,5 +351,14 @@ describe('allocateEquipmentCredits', () => {
 			source: 'monthly_allocation',
 			sourceId: 'sub-xyz'
 		});
+	});
+
+	it('skips allocation when invoice was already processed', async () => {
+		// hasTransaction finds an existing equipment_credits row; getBalance re-reads.
+		selectResults = [[{ id: 99 }], [{ free_hours: 0, equipment_credits: 100 }]];
+
+		const result = await allocateEquipmentCredits('user-1', 50, 'inv_dup');
+		expect(result).toBe(100);
+		expect(insertedRows).toHaveLength(0);
 	});
 });

@@ -14,8 +14,8 @@ import {
 // mode: 'subscription'. This file handles lifecycle operations:
 // getSubscription, updateQuantity, cancel, resume.
 //
-// All pricing uses inline price_data from product_config. No stored Stripe
-// Price IDs — unit amounts are read from the database at checkout time.
+// All pricing uses inline price_data from the product config (KV-backed). No
+// stored Stripe Price IDs — unit amounts are read from KV at checkout time.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

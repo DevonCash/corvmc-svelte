@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { createAuthMiddleware } from 'better-auth/api';
+import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -17,9 +18,14 @@ import { captureException } from '$lib/server/sentry';
 // in 0ms with non-deterministic garbage. bcrypt-ts has the same issue.
 // PBKDF2-SHA-256 via Web Crypto is natively supported on Workers.
 // Format: "pbkdf2:iterations:salt_hex:key_hex"
+//
+// Cloudflare Workers' Web Crypto caps PBKDF2 at 100,000 iterations — anything
+// higher throws `NotSupportedError: iteration counts above 100000 are not
+// supported`, which silently broke every hash()/verify() call (and therefore
+// all email/password sign-in). 100_000 is the maximum the runtime allows.
 // ---------------------------------------------------------------------------
 
-const PBKDF2_ITERATIONS = 600_000;
+export const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_KEY_LEN = 32;
 
 function hexEncode(buf: ArrayBuffer | Uint8Array): string {
@@ -35,7 +41,7 @@ function hexDecode(hex: string): Uint8Array<ArrayBuffer> {
 	return bytes;
 }
 
-async function pbkdf2Hash(password: string): Promise<string> {
+export async function pbkdf2Hash(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16));
 	const encoder = new TextEncoder();
 	const keyMaterial = await crypto.subtle.importKey(
@@ -53,7 +59,7 @@ async function pbkdf2Hash(password: string): Promise<string> {
 	return `pbkdf2:${PBKDF2_ITERATIONS}:${hexEncode(salt)}:${hexEncode(derived)}`;
 }
 
-async function pbkdf2Verify(hash: string, password: string): Promise<boolean> {
+export async function pbkdf2Verify(hash: string, password: string): Promise<boolean> {
 	const parts = hash.split(':');
 	if (parts[0] !== 'pbkdf2' || parts.length !== 4) return false;
 
@@ -86,7 +92,58 @@ async function pbkdf2Verify(hash: string, password: string): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-// bcrypt → PBKDF2 migration via Laravel proxy
+// scrypt password hashing via node:crypto (the default going forward)
+// ---------------------------------------------------------------------------
+// This is better-auth's own algorithm and parameters. On Cloudflare Workers the
+// pure-JS @noble/hashes scrypt that better-auth falls back to is broken, but the
+// `nodejs_compat` flag (see wrangler.toml) exposes the native node:crypto scrypt,
+// which works and is far stronger than the 100k-iteration PBKDF2 ceiling Workers
+// imposes on Web Crypto. node's default maxmem (32 MiB) is just under what these
+// params need, so maxmem is raised to 64 MiB to match better-auth.
+// Format: "scrypt:N:r:p:salt_hex:key_hex"
+//
+// NOTE: scrypt costs ~80ms of CPU per hash; this requires the Workers Paid plan
+// (or Standard usage model). On the Free plan it exceeds the per-request CPU cap.
+// ---------------------------------------------------------------------------
+
+const SCRYPT_PARAMS = { N: 16384, r: 16, p: 1, keylen: 64, maxmem: 128 * 16384 * 16 * 2 };
+
+function scryptDerive(password: string, salt: Buffer, p = SCRYPT_PARAMS): Promise<Buffer> {
+	return new Promise((resolve, reject) => {
+		scrypt(
+			password.normalize('NFKC'),
+			salt,
+			p.keylen,
+			{ N: p.N, r: p.r, p: p.p, maxmem: p.maxmem },
+			(err, derivedKey) => (err ? reject(err) : resolve(derivedKey))
+		);
+	});
+}
+
+export async function scryptHash(password: string): Promise<string> {
+	const salt = randomBytes(16);
+	const key = await scryptDerive(password, salt);
+	const { N, r, p } = SCRYPT_PARAMS;
+	return `scrypt:${N}:${r}:${p}:${salt.toString('hex')}:${key.toString('hex')}`;
+}
+
+export async function scryptVerify(hash: string, password: string): Promise<boolean> {
+	const parts = hash.split(':');
+	if (parts[0] !== 'scrypt' || parts.length !== 6) return false;
+	const [, nStr, rStr, pStr, saltHex, keyHex] = parts;
+	const expectedKey = Buffer.from(keyHex, 'hex');
+	const derived = await scryptDerive(password, Buffer.from(saltHex, 'hex'), {
+		N: parseInt(nStr, 10),
+		r: parseInt(rStr, 10),
+		p: parseInt(pStr, 10),
+		keylen: expectedKey.length,
+		maxmem: SCRYPT_PARAMS.maxmem
+	});
+	return derived.length === expectedKey.length && timingSafeEqual(derived, expectedKey);
+}
+
+// ---------------------------------------------------------------------------
+// bcrypt → scrypt migration via Laravel proxy
 // ---------------------------------------------------------------------------
 
 async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
@@ -165,7 +222,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		const { valid } = JSON.parse(body) as { valid: boolean };
 
 		if (valid) {
-			const newHash = await pbkdf2Hash(password);
+			const newHash = await scryptHash(password);
 
 			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
 		} else {
@@ -217,7 +274,8 @@ export function deriveSignInAnomaly(input: {
 	if (!input.hasCredentialAccount) return 'no_credential_account';
 	if (!input.credentialPassword) return 'no_password';
 	const hash = input.credentialPassword;
-	if (!hash.startsWith('$2') && !hash.startsWith('pbkdf2:')) return 'unknown_hash_format';
+	const known = hash.startsWith('scrypt:') || hash.startsWith('$2') || hash.startsWith('pbkdf2:');
+	if (!known) return 'unknown_hash_format';
 	return null;
 }
 
@@ -285,15 +343,21 @@ function createAuth() {
 			enabled: true,
 			password: {
 				verify: async ({ hash, password }) => {
+					if (hash.startsWith('scrypt:')) {
+						return scryptVerify(hash, password);
+					}
 					if (hash.startsWith('$2')) {
 						return verifyBcryptViaLaravel(hash, password);
 					}
+					// Legacy PBKDF2 hashes (written during the brief 100k-iteration
+					// window before scrypt) still verify; they migrate to scrypt on
+					// their owner's next successful bcrypt sign-in.
 					if (hash.startsWith('pbkdf2:')) {
 						return pbkdf2Verify(hash, password);
 					}
 					return false;
 				},
-				hash: pbkdf2Hash
+				hash: scryptHash
 			}
 		},
 		user: {
