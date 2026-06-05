@@ -48,6 +48,8 @@ import {
 	roleHasPermission
 } from '../src/lib/server/db/schema/authorization';
 import { platformInvite } from '../src/lib/server/db/schema/platform-invite';
+import { detectPlatform } from '../src/lib/utils/link-platform';
+import type { ProfileLink } from '../src/lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -135,6 +137,87 @@ function ts(val: Date | string | null): Date | null {
 	return new Date(val);
 }
 
+/**
+ * Reverse the `/embed/` transforms the legacy app applied, so the new app's
+ * `getEmbedUrl()` (which matches canonical watch/track URLs) re-detects them.
+ * Already-canonical URLs (youtu.be, watch?v=, bandcamp, plain sites) pass through.
+ */
+function canonicalizeEmbedUrl(url: string): string {
+	const yt = url.match(/youtube\.com\/embed\/([\w-]+)/);
+	if (yt) return `https://www.youtube.com/watch?v=${yt[1]}`;
+
+	const sp = url.match(/open\.spotify\.com\/embed\/(track|album|artist|playlist)\/([\w]+)/);
+	if (sp) return `https://open.spotify.com/${sp[1]}/${sp[2]}`;
+
+	if (url.includes('embed.music.apple.com')) {
+		return url.replace('embed.music.apple.com', 'music.apple.com');
+	}
+
+	const sc = url.match(/w\.soundcloud\.com\/player\/\?url=([^&]+)/);
+	if (sc) {
+		try {
+			return decodeURIComponent(sc[1]);
+		} catch {
+			return url;
+		}
+	}
+
+	return url;
+}
+
+/** Parse a JSON column that may arrive as a string or already-parsed value. */
+function parseJsonColumn(val: unknown): unknown {
+	if (val == null) return null;
+	if (typeof val === 'string') {
+		try {
+			return JSON.parse(val);
+		} catch {
+			return null;
+		}
+	}
+	return val;
+}
+
+/**
+ * Build the unified `links` array for the new schema from the legacy `links` and
+ * `embeds` columns. Legacy links are `{name, url}` (shown as buttons); legacy embeds
+ * are `{url}` (shown as players). The new model unifies both into one array where
+ * embeddable URLs auto-render as players. Returns null if empty.
+ */
+function buildLinks(rawLinks: unknown, rawEmbeds: unknown): ProfileLink[] | null {
+	const linksData = parseJsonColumn(rawLinks);
+	const links: ProfileLink[] = Array.isArray(linksData)
+		? linksData.map((l: Record<string, unknown>) => ({
+				label: String(l.label ?? l.name ?? ''),
+				url: String(l.url ?? '')
+			}))
+		: [];
+
+	const seen = new Set(links.map((l) => l.url));
+
+	const embedsData = parseJsonColumn(rawEmbeds);
+	if (Array.isArray(embedsData)) {
+		for (const e of embedsData as Array<Record<string, unknown>>) {
+			const raw = String(e.url ?? '');
+			if (!raw) continue;
+			const url = canonicalizeEmbedUrl(raw);
+			if (seen.has(url)) continue;
+			seen.add(url);
+			let label = detectPlatform(url)?.name;
+			if (!label) {
+				try {
+					label = new URL(url).hostname.replace(/^www\./, '');
+				} catch {
+					label = 'Media';
+				}
+			}
+			links.push({ label, url, embed: true });
+		}
+	}
+
+	return links.length > 0 ? links : null;
+}
+
 // ---------------------------------------------------------------------------
 // Migration functions
 // ---------------------------------------------------------------------------
@@ -142,7 +225,7 @@ function ts(val: Date | string | null): Date | null {
 async function migrateUsers() {
 	console.log('── Users ──');
 	const users = await pg`
-		SELECT u.*, mp.bio, mp.links, mp.contact, mp.visibility, mp.hometown
+		SELECT u.*, mp.bio, mp.links, mp.embeds, mp.contact, mp.visibility, mp.hometown
 		FROM users u
 		LEFT JOIN member_profiles mp ON mp.user_id = u.id
 	`;
@@ -195,19 +278,9 @@ async function migrateUsers() {
 				? JSON.parse(u.contact)
 				: u.contact
 			: null;
-		const linksData = u.links
-			? typeof u.links === 'string'
-				? JSON.parse(u.links)
-				: u.links
-			: null;
 
-		// Normalize: Laravel uses "name", Svelte uses "label"
-		const normalizedLinks = Array.isArray(linksData)
-			? linksData.map((l: Record<string, unknown>) => ({
-					label: String(l.label ?? l.name ?? ''),
-					url: String(l.url ?? '')
-				}))
-			: null;
+		// Fold legacy links + embeds into the new unified links array
+		const normalizedLinks = buildLinks(u.links, u.embeds);
 
 		// Strip sms_ok from contact (migrated separately as notification preference)
 		const hasSmsOk = contactData?.sms_ok;
@@ -419,19 +492,9 @@ async function migrateBands() {
 				? JSON.parse(b.contact)
 				: b.contact
 			: null;
-		const linksData = b.links
-			? typeof b.links === 'string'
-				? JSON.parse(b.links)
-				: b.links
-			: null;
 
-		// Normalize: Laravel uses "name", Svelte uses "label"
-		const normalizedLinks = Array.isArray(linksData)
-			? linksData.map((l: Record<string, unknown>) => ({
-					label: String(l.label ?? l.name ?? ''),
-					url: String(l.url ?? '')
-				}))
-			: null;
+		// Fold legacy links + embeds into the new unified links array
+		const normalizedLinks = buildLinks(b.links, b.embeds);
 
 		// Strip sms_ok and null values from contact
 		if (contactData) {
