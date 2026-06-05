@@ -8,6 +8,7 @@ import * as schema from '$lib/server/db/schema';
 import { account } from '$lib/server/db/schema/authentication';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and } from 'drizzle-orm';
+import { captureException } from '$lib/server/sentry';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -92,6 +93,17 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 	const migrationSecret = env.MIGRATION_SECRET;
 
 	if (!laravelUrl || !migrationSecret) {
+		captureException(
+			new Error(
+				'bcrypt migration: a bcrypt hash needs migration but LARAVEL_URL/MIGRATION_SECRET are unset'
+			),
+			{
+				event: 'auth.bcrypt_migration',
+				stage: 'config_missing',
+				hasLaravelUrl: Boolean(laravelUrl),
+				hasMigrationSecret: Boolean(migrationSecret)
+			}
+		);
 		return false;
 	}
 
@@ -123,7 +135,18 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 
 		const body = await res.text();
 
-		if (!res.ok) return false;
+		if (!res.ok) {
+			captureException(
+				new Error(`bcrypt migration: Laravel verify-password returned ${res.status}`),
+				{
+					event: 'auth.bcrypt_migration',
+					stage: 'laravel_response',
+					status: res.status,
+					email: userRow.email
+				}
+			);
+			return false;
+		}
 
 		const { valid } = JSON.parse(body) as { valid: boolean };
 
@@ -134,7 +157,12 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		}
 
 		return valid;
-	} catch {
+	} catch (err) {
+		captureException(err, {
+			event: 'auth.bcrypt_migration',
+			stage: 'request',
+			email: userRow.email
+		});
 		return false;
 	}
 }
