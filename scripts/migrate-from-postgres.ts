@@ -13,7 +13,7 @@
  *
  * Prerequisites:
  *   - Restore the pg_dump: createdb corvmc-migration && pg_restore -d corvmc-migration dump.Fc
- *   - Local D1 must have migrations applied: pnpm db:migrate
+ *   - Local D1 must have migrations applied: pnpm db:migrate:local
  *   - For --remote: wrangler must be authenticated
  */
 

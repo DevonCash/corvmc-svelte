@@ -41,6 +41,10 @@ test-results.json
 
 # Migration
 scripts/.id-map.json
+# Transient D1 sync artifacts (contain production data — never commit)
+d1-seed.sql
+d1-seed-ordered.sql
+d1-delete.sql
 
 # Coverage
 coverage/
