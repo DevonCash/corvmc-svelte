@@ -27,7 +27,6 @@ import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
-import { productConfig } from '../src/lib/server/db/schema/product-config';
 import {
 	creditTransaction,
 	paymentCache as paymentRecord
@@ -444,7 +443,6 @@ async function deleteAll() {
 		'role_has_permissions',
 		'roles',
 		'permissions',
-		'product_config',
 		'user_instrument',
 		'user_genre',
 		'session',
@@ -899,40 +897,6 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	rows.push(cancelledNoRes);
 
 	return rows;
-}
-
-async function seedProductConfig() {
-	console.log('Seeding product config...');
-	await db.insert(productConfig).values([
-		{
-			key: 'contribution',
-			name: 'Monthly Contribution',
-			description: 'Sustaining member monthly contribution',
-			unitAmountCents: 500,
-			unitLabel: 'per unit / month'
-		},
-		{
-			key: 'rehearsal',
-			name: 'Rehearsal Space',
-			description: 'Practice room hourly rate',
-			unitAmountCents: 1500,
-			unitLabel: 'per hour'
-		},
-		{
-			key: 'fee_coverage',
-			name: 'Fee Coverage',
-			description: 'Covers payment processing fees',
-			unitAmountCents: 0,
-			unitLabel: null
-		},
-		{
-			key: 'band_premium',
-			name: 'Band Premium Page',
-			description: 'Premium band page with subdomain, block editor, and EPK',
-			unitAmountCents: 1500,
-			unitLabel: 'per month'
-		}
-	]);
 }
 
 async function seedCreditTransactions(users: SeedUser[]) {
@@ -2353,7 +2317,6 @@ async function main() {
 	const tickets = await seedTickets(allUsers, events);
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
-	await seedProductConfig();
 	await seedCreditTransactions(allUsers);
 	const marketing = await seedMarketing(allUsers);
 	const eq = await seedEquipment(allUsers);
@@ -2376,7 +2339,6 @@ async function main() {
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
-	console.log('  4 product configs');
 	console.log(
 		`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.campaigns} campaigns`
 	);

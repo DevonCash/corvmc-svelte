@@ -43,10 +43,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					eventId: event.id,
 					customerId: typeof customerId === 'string' ? customerId : undefined
 				});
-				// TODO(stripe-retry): we still return 200 below, so Stripe will not re-deliver
-				// this failed event. Once every handler is confirmed idempotent (see the
-				// idempotency audit in CHORES.md), return 500 here so Stripe retries instead
-				// of silently dropping the work.
+				// All handlers are idempotent, so it is safe to signal failure and let
+				// Stripe re-deliver (with backoff) rather than silently dropping the work.
+				error(500, 'Webhook handler failed');
 			}
 		}
 	}

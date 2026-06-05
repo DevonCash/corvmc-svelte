@@ -67,7 +67,7 @@ export const testUtecConnection = query(async () => {
 // ---------------------------------------------------------------------------
 
 const updateProductSchema = z.object({
-	key: z.enum(['contribution', 'rehearsal', 'fee_coverage']),
+	key: z.enum(['contribution', 'fee_coverage']),
 	name: z.string().trim().min(1, 'Name is required'),
 	description: z.string().trim(),
 	unitAmountCents: z.string().regex(/^\d+$/, 'Amount must be a whole number of cents')

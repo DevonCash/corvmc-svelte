@@ -30,6 +30,13 @@
 	function extractMessage(err: unknown): string {
 		if (err instanceof Error) return err.message;
 		if (typeof err === 'string') return err;
+		// Remote function rejections arrive as plain objects, e.g.
+		// { body: { message: 'Internal Error' }, status: 500 }.
+		if (err && typeof err === 'object') {
+			const e = err as { message?: unknown; body?: { message?: unknown } };
+			if (typeof e.body?.message === 'string') return e.body.message;
+			if (typeof e.message === 'string') return e.message;
+		}
 		return 'Something went wrong';
 	}
 
@@ -57,6 +64,6 @@
 	{/snippet}
 
 	{#snippet failed(error, reset)}
-		<Alert type="error" {reset}>Failed to load: {String(error)}</Alert>
+		<Alert type="error" {reset}>Failed to load: {extractMessage(error)}</Alert>
 	{/snippet}
 </svelte:boundary>

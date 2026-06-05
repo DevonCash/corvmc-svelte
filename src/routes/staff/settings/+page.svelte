@@ -136,7 +136,7 @@
 				to Stripe automatically. Price changes take effect on the next checkout.
 			</p>
 
-			{#each products.filter((p) => p.key !== 'rehearsal') as product (product.key)}
+			{#each products as product (product.key)}
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
 				<Form remote={instance} successToast="{product.name} updated">
