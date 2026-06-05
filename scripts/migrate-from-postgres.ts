@@ -678,7 +678,10 @@ async function migrateReservations() {
 		);
 		const protoId = rows[0]?.id;
 		if (protoId) {
-			await db.update(recurringSeries).set({ prototypeId: protoId }).where(sql`id = ${seriesId}`);
+			await db
+				.update(recurringSeries)
+				.set({ prototypeId: protoId })
+				.where(sql`id = ${seriesId}`);
 			prototypesLinked++;
 		}
 	}

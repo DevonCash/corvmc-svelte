@@ -1,4 +1,12 @@
-import { sqliteTable, text, index, uniqueIndex, check, integer, real } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	index,
+	uniqueIndex,
+	check,
+	integer,
+	real
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
