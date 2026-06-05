@@ -96,8 +96,10 @@ describe('POST /api/stripe/webhook', () => {
 		expect(mockHandler).not.toHaveBeenCalled();
 	});
 
-	it('returns 200 even when handler throws', async () => {
-		// The handler only swallows errors in non-DEV; vitest sets import.meta.env.DEV true.
+	it('returns 500 when handler throws so Stripe retries', async () => {
+		// The handler only catches errors in non-DEV; vitest sets import.meta.env.DEV true.
+		// Handlers are idempotent, so we surface failure (500) to trigger Stripe redelivery
+		// rather than silently dropping the event with a 200.
 		vi.stubEnv('DEV', false);
 		mockConstructEvent.mockReturnValue({
 			type: 'checkout.session.completed',
@@ -109,10 +111,7 @@ describe('POST /api/stripe/webhook', () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		const { POST } = await import('./+server');
-		const response = await POST(req());
-		const body = (await response.json()) as any;
-
-		expect(body).toEqual({ received: true });
+		await expect(POST(req())).rejects.toMatchObject({ status: 500 });
 		consoleSpy.mockRestore();
 		vi.unstubAllEnvs();
 	});
@@ -128,7 +127,7 @@ describe('POST /api/stripe/webhook', () => {
 		mockHandler.mockRejectedValue(handlerError);
 
 		const { POST } = await import('./+server');
-		await POST(req());
+		await expect(POST(req())).rejects.toMatchObject({ status: 500 });
 
 		expect(mockCaptureException).toHaveBeenCalledWith(handlerError, {
 			stage: 'handler',
