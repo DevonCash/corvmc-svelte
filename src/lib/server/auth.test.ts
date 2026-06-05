@@ -5,7 +5,27 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/server/db', () => ({ db: {} }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
-import { deriveSignInAnomaly, pbkdf2Hash, pbkdf2Verify, PBKDF2_ITERATIONS } from './auth';
+import {
+	deriveSignInAnomaly,
+	pbkdf2Hash,
+	pbkdf2Verify,
+	PBKDF2_ITERATIONS,
+	scryptHash,
+	scryptVerify
+} from './auth';
+
+describe('scrypt password hashing (default)', () => {
+	it('round-trips a hashed password', async () => {
+		const hash = await scryptHash('correct horse battery staple');
+		expect(hash.startsWith('scrypt:')).toBe(true);
+		expect(await scryptVerify(hash, 'correct horse battery staple')).toBe(true);
+		expect(await scryptVerify(hash, 'wrong password')).toBe(false);
+	});
+
+	it('rejects a malformed hash without throwing', async () => {
+		expect(await scryptVerify('not-a-scrypt-hash', 'whatever')).toBe(false);
+	});
+});
 
 describe('PBKDF2 password hashing', () => {
 	// Cloudflare Workers' Web Crypto throws NotSupportedError for PBKDF2 iteration
