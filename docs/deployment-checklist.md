@@ -277,10 +277,11 @@ see §9a.
 
 ---
 
-## 9a. Automated migrations & data sync (pre-cutover)
+## 9a. Migrations & data sync (pre-cutover)
 
-While Postgres (DigitalOcean) is still canonical and D1 is staging, two automations keep
-D1 in sync. **Both are temporary — remove at cutover (see §10a).**
+While Postgres (DigitalOcean) is still canonical and D1 is staging: schema migrations are
+applied automatically on deploy (A), and data is refreshed manually on demand (B).
+**Both are temporary — remove at cutover (see §10a).**
 
 ### A. Schema migrate on every deploy (Cloudflare Workers Builds)
 
@@ -294,30 +295,34 @@ build branch is `main` (so PR/preview builds never touch prod). Wire it into the
 
 If migrate fails, the build fails and nothing is published — schema can never lag code.
 
-### B. Data refresh from Postgres (GitHub Actions)
+### B. Data refresh from Postgres (manual, from a trusted host)
 
-`.github/workflows/sync-d1.yml` runs nightly (and via the **Run workflow** button). It
-applies any pending schema migrations, then runs `scripts/sync-d1.sh`, which reloads all
-data: ETL Postgres → local D1 → export → FK-order → clear remote (DELETE) → import. No
-`pg_dump` needed; the ETL reads Postgres live over SSL.
+Run on demand from a machine that is already a DO Postgres **Trusted Source** — your
+laptop, or any box allowed to reach the cluster:
 
-**GitHub → Settings → Secrets and variables → Actions:**
+```bash
+DATABASE_URL="postgres://…?sslmode=require" bash scripts/sync-d1.sh
+```
 
-- `DATABASE_URL` — DO Postgres connection string with `?sslmode=require`
-- `CLOUDFLARE_API_TOKEN` — for `wrangler ... --remote`
-- `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, `CLOUDFLARE_D1_TOKEN` — for migrate
+It reloads all data: ETL Postgres → local D1 → export → FK-order → clear remote (DELETE) →
+import. No `pg_dump`; the ETL reads Postgres live over SSL. Requires wrangler auth (`.env`
+`CLOUDFLARE_*` + `wrangler login`). If you've added migrations since the last deploy, run
+`pnpm db:migrate` first so the remote schema matches. The table dependency order lives in
+`scripts/d1-table-order.mjs`; add any new FK-bearing table there.
 
-Run `scripts/sync-d1.sh` locally once (`DATABASE_URL=… bash scripts/sync-d1.sh`) before
-relying on the cron. The table dependency order lives in `scripts/d1-table-order.mjs`;
-add any new FK-bearing table there.
+> **Why not GitHub Actions / a cron?** The DO cluster also hosts other production
+> databases, so it stays locked to Trusted Sources. GitHub-hosted runners have no static
+> IP (their published ranges are large, volatile, and shared by all GitHub users), so they
+> can't be safely allowlisted. Running from an already-trusted host avoids opening the
+> cluster at all. If you later want this automated, the clean path is a self-hosted runner
+> on a small Droplet in the DB's VPC, allowlisted as a Trusted Source and connecting over
+> the private network.
 
 ### C. DigitalOcean Postgres connectivity
 
-GitHub runners have no static IPs, so DO Managed Postgres "trusted sources" can't allowlist
-them. For pre-cutover staging: **allow inbound connections** (rely on SSL + the managed
-password), store the public connection string (+`?sslmode=require`) as `DATABASE_URL`, and
-plan to re-lock + rotate the password at cutover. (If you'd rather not open it, leave the
-nightly job and run `sync-d1.sh` from your laptop — a trusted source — on demand instead.)
+The cluster stays **locked** (it hosts other prod DBs). The sync host (your laptop) is
+already a Trusted Source, so no firewall change is needed. Ensure `DATABASE_URL` ends with
+`?sslmode=require` (DO requires SSL).
 
 ---
 
@@ -344,13 +349,11 @@ wrangler d1 execute corvmc-db --remote --command "UPDATE user SET ..."
 
 ## 10a. Cutover teardown
 
-When D1 becomes canonical (Postgres retired), the §9a sync is no longer wanted:
+When D1 becomes canonical (Postgres retired), the §9a data sync is no longer wanted:
 
-- Delete `.github/workflows/sync-d1.yml` and the `sync-d1.sh` / `migrate-from-postgres.ts`
-  / `reorder-seed.mjs` / `gen-d1-delete.mjs` / `d1-table-order.mjs` data-sync scripts.
-- Re-lock DO Managed Postgres trusted sources and **rotate the DB password** (it was
-  exposed to CI), then decommission the DO database.
-- Remove the `DATABASE_URL` GitHub secret.
+- Delete the `sync-d1.sh` / `migrate-from-postgres.ts` / `reorder-seed.mjs` /
+  `gen-d1-delete.mjs` / `d1-table-order.mjs` data-sync scripts.
+- Decommission the DO Postgres database.
 - Retire the bcrypt→scrypt Laravel proxy per §7a.
 
 Keep §9a part A (`pnpm ci:migrate` in the build command) — applying migrations before
