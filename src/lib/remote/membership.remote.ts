@@ -13,6 +13,7 @@ import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
 import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
 export const getMemberMembership = query(async () => {
@@ -75,7 +76,9 @@ const amountSchema = z
 
 export const createSubscription = form(amountSchema, async (data) => {
 	const user = await requireMember();
-	const stripeId = requireStripeId(user);
+	// A brand-new member legitimately has no Stripe customer yet — create it on
+	// demand (returns the existing id when present) rather than failing.
+	const stripeId = await ensureStripeCustomer(user.id, user.email, user.name);
 	const { url } = getRequestEvent();
 
 	const checkoutUrl = await createCheckoutSession({

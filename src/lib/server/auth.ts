@@ -8,6 +8,7 @@ import * as schema from '$lib/server/db/schema';
 import { account } from '$lib/server/db/schema/authentication';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and } from 'drizzle-orm';
+import { userAdditionalFields } from './auth-fields';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -177,17 +178,7 @@ function createAuth() {
 			}
 		},
 		user: {
-			additionalFields: {
-				pronouns: { type: 'string', required: false },
-				phone: { type: 'string', required: false },
-				settings: { type: 'string', required: false },
-				stripeId: { type: 'string', required: false, fieldName: 'stripe_id' },
-				pmType: { type: 'string', required: false, fieldName: 'pm_type' },
-				pmLastFour: { type: 'string', required: false, fieldName: 'pm_last_four' },
-				subscription: { type: 'string', required: false },
-				trialEndsAt: { type: 'string', required: false, fieldName: 'trial_ends_at' },
-				deletedAt: { type: 'string', required: false, fieldName: 'deleted_at' }
-			}
+			additionalFields: userAdditionalFields
 		},
 		plugins: [
 			sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
