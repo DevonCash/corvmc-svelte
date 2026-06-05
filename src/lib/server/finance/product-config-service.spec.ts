@@ -59,7 +59,7 @@ vi.mock('$lib/server/db', () => ({
 							return chain;
 						};
 					if (prop === 'returning')
-						return () => Promise.resolve([{ key: 'rehearsal', name: 'Updated' }]);
+						return () => Promise.resolve([{ key: 'contribution', name: 'Updated' }]);
 					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
 					return () => chain;
 				}
@@ -121,7 +121,7 @@ beforeEach(() => {
 describe('getProductConfig', () => {
 	it('returns existing row from database', async () => {
 		const row = {
-			key: 'rehearsal',
+			key: 'contribution',
 			stripeProductId: 'prod_123',
 			name: 'Practice Room',
 			description: 'Hourly',
@@ -130,7 +130,7 @@ describe('getProductConfig', () => {
 		};
 		selectResults.push([row]);
 
-		const result = await getProductConfig('rehearsal');
+		const result = await getProductConfig('contribution');
 
 		expect(result).toEqual(row);
 	});
@@ -141,7 +141,7 @@ describe('getProductConfig', () => {
 		// insert.onConflictDoNothing.returning: returns created row
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: null,
 				name: 'Practice Room Rental',
 				description: 'Hourly practice room rental at the Corvallis Music Collective',
@@ -150,7 +150,7 @@ describe('getProductConfig', () => {
 			}
 		]);
 
-		const result = await getProductConfig('rehearsal');
+		const result = await getProductConfig('contribution');
 
 		expect(result.name).toBe('Practice Room Rental');
 		expect(result.unitAmountCents).toBe(1500);
@@ -161,7 +161,7 @@ describe('getStripeProductId', () => {
 	it('returns existing stripe product ID', async () => {
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: 'prod_existing',
 				name: 'Practice Room',
 				description: null,
@@ -170,7 +170,7 @@ describe('getStripeProductId', () => {
 			}
 		]);
 
-		const result = await getStripeProductId('rehearsal');
+		const result = await getStripeProductId('contribution');
 
 		expect(result).toBe('prod_existing');
 		expect(mockStripeProducts.create).not.toHaveBeenCalled();
@@ -179,7 +179,7 @@ describe('getStripeProductId', () => {
 	it('creates Stripe product when none exists', async () => {
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: null,
 				name: 'Practice Room',
 				description: 'Hourly rental',
@@ -188,14 +188,14 @@ describe('getStripeProductId', () => {
 			}
 		]);
 
-		const result = await getStripeProductId('rehearsal');
+		const result = await getStripeProductId('contribution');
 
 		expect(result).toBe('prod_new_123');
 		expect(mockStripeProducts.create).toHaveBeenCalledWith(
 			expect.objectContaining({
 				name: 'Practice Room',
 				description: 'Hourly rental',
-				metadata: { corvmc_key: 'rehearsal' }
+				metadata: { corvmc_key: 'contribution' }
 			})
 		);
 	});
@@ -205,7 +205,7 @@ describe('updateProductConfig', () => {
 	it('updates local config and syncs to Stripe when product exists', async () => {
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: 'prod_123',
 				name: 'Old Name',
 				description: 'Old desc',
@@ -214,7 +214,7 @@ describe('updateProductConfig', () => {
 			}
 		]);
 
-		await updateProductConfig('rehearsal', { name: 'New Name', description: 'New desc' });
+		await updateProductConfig('contribution', { name: 'New Name', description: 'New desc' });
 
 		expect(updateData[0]).toMatchObject({ name: 'New Name', description: 'New desc' });
 		expect(mockStripeProducts.update).toHaveBeenCalledWith('prod_123', {
@@ -226,7 +226,7 @@ describe('updateProductConfig', () => {
 	it('skips Stripe sync when no Stripe product exists', async () => {
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: null,
 				name: 'Old',
 				description: null,
@@ -235,7 +235,7 @@ describe('updateProductConfig', () => {
 			}
 		]);
 
-		await updateProductConfig('rehearsal', { name: 'Updated' });
+		await updateProductConfig('contribution', { name: 'Updated' });
 
 		expect(mockStripeProducts.update).not.toHaveBeenCalled();
 	});
@@ -243,7 +243,7 @@ describe('updateProductConfig', () => {
 	it('skips Stripe sync when name/description unchanged', async () => {
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: 'prod_123',
 				name: 'Same',
 				description: 'Same',
@@ -252,7 +252,7 @@ describe('updateProductConfig', () => {
 			}
 		]);
 
-		await updateProductConfig('rehearsal', { unitAmountCents: 2000 });
+		await updateProductConfig('contribution', { unitAmountCents: 2000 });
 
 		expect(mockStripeProducts.update).not.toHaveBeenCalled();
 	});
@@ -263,7 +263,7 @@ describe('buildLineItem', () => {
 		// getStripeProductId -> getProductConfig
 		selectResults.push([
 			{
-				key: 'rehearsal',
+				key: 'contribution',
 				stripeProductId: 'prod_123',
 				name: 'Room',
 				description: null,
@@ -272,7 +272,7 @@ describe('buildLineItem', () => {
 			}
 		]);
 
-		const item = await buildLineItem('rehearsal', 1500, 2);
+		const item = await buildLineItem('contribution', 1500, 2);
 
 		expect(item).toEqual({
 			price_data: {

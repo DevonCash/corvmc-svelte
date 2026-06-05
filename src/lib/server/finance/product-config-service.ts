@@ -1,7 +1,8 @@
 // @deprecated — The product_config table is deprecated. Pricing config is
 // migrating to KV site config (see site-config-service.ts). The 'rehearsal'
-// product has been fully migrated to reservation.hourlyRateCents in KV.
-// Remaining products (contribution, fee_coverage, ticket) will follow.
+// product has been fully migrated to reservation.hourlyRateCents in KV and
+// removed from here. Remaining products (contribution, fee_coverage, ticket,
+// band_premium) will follow.
 import { db } from '$lib/server/db';
 import { productConfig } from '$lib/server/db/schema/product-config';
 import { stripe } from '$lib/server/stripe';
@@ -12,7 +13,7 @@ import type { CheckoutLineItem } from './payment-service';
 // Product config defaults — used to seed the table on first access
 // ---------------------------------------------------------------------------
 
-export type ProductKey = 'contribution' | 'rehearsal' | 'fee_coverage' | 'ticket' | 'band_premium';
+export type ProductKey = 'contribution' | 'fee_coverage' | 'ticket' | 'band_premium';
 
 interface ProductDefault {
 	name: string;
@@ -27,12 +28,6 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 		description: 'Recurring membership contribution to the Corvallis Music Collective',
 		unitAmountCents: 500,
 		unitLabel: 'per unit/month'
-	},
-	rehearsal: {
-		name: 'Practice Room Rental',
-		description: 'Hourly practice room rental at the Corvallis Music Collective',
-		unitAmountCents: 1500,
-		unitLabel: 'per hour'
 	},
 	fee_coverage: {
 		name: 'Processing Fee Coverage',
@@ -106,13 +101,7 @@ export async function getProductConfig(key: ProductKey): Promise<ProductConfigRo
  * Get all product configs, seeding any missing ones from defaults.
  */
 export async function getAllProductConfigs(): Promise<ProductConfigRow[]> {
-	const keys: ProductKey[] = [
-		'contribution',
-		'rehearsal',
-		'fee_coverage',
-		'ticket',
-		'band_premium'
-	];
+	const keys: ProductKey[] = ['contribution', 'fee_coverage', 'ticket', 'band_premium'];
 	const configs: ProductConfigRow[] = [];
 
 	for (const key of keys) {
