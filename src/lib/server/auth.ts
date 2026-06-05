@@ -274,8 +274,7 @@ export function deriveSignInAnomaly(input: {
 	if (!input.hasCredentialAccount) return 'no_credential_account';
 	if (!input.credentialPassword) return 'no_password';
 	const hash = input.credentialPassword;
-	const known =
-		hash.startsWith('scrypt:') || hash.startsWith('$2') || hash.startsWith('pbkdf2:');
+	const known = hash.startsWith('scrypt:') || hash.startsWith('$2') || hash.startsWith('pbkdf2:');
 	if (!known) return 'unknown_hash_format';
 	return null;
 }
