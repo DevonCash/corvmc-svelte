@@ -204,12 +204,21 @@ export async function setBalance(
 
 export async function hasTransaction(
 	source: TransactionSource,
-	sourceId: string
+	sourceId: string,
+	creditType?: CreditType
 ): Promise<boolean> {
+	const conditions = [
+		eq(creditTransaction.source, source),
+		eq(creditTransaction.sourceId, sourceId)
+	];
+	if (creditType) {
+		conditions.push(eq(creditTransaction.creditType, creditType));
+	}
+
 	const [row] = await db
 		.select({ id: creditTransaction.id })
 		.from(creditTransaction)
-		.where(and(eq(creditTransaction.source, source), eq(creditTransaction.sourceId, sourceId)))
+		.where(and(...conditions))
 		.limit(1);
 
 	return !!row;
@@ -231,8 +240,14 @@ export async function allocateMonthlyCredits(
 export async function allocateEquipmentCredits(
 	userId: string,
 	amount: number,
-	sourceId?: string
+	sourceId: string
 ): Promise<number> {
+	// Equipment credits are additive (unlike free hours, which reset), so a
+	// redelivered invoice would double-grant without this per-invoice guard.
+	if (await hasTransaction('monthly_allocation', sourceId, 'equipment_credits')) {
+		return getBalance(userId, 'equipment_credits');
+	}
+
 	return addCredits(userId, 'equipment_credits', amount, 'monthly_allocation', sourceId);
 }
 
