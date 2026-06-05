@@ -1,16 +1,21 @@
-// @deprecated — The product_config table is deprecated. Pricing config is
-// migrating to KV site config (see site-config-service.ts). The 'rehearsal'
-// product has been fully migrated to reservation.hourlyRateCents in KV and
-// removed from here. Remaining products (contribution, fee_coverage, ticket,
-// band_premium) will follow.
-import { db } from '$lib/server/db';
-import { productConfig } from '$lib/server/db/schema/product-config';
+// Pricing config for Stripe products, stored in Cloudflare KV.
+//
+// Each product is persisted as a JSON object under the `product-config:` prefix:
+//   { stripeProductId, name, description, unitAmountCents, unitLabel }
+//
+// Stripe products are created lazily and their IDs cached back into KV. Stable
+// Stripe product IDs matter — subscription line items are matched by product ID
+// (see subscription-service.ts) — so getStripeProductId reuses an existing
+// product tagged with `metadata.corvmc_key` before creating a new one. That keeps
+// IDs stable across an empty-KV cutover without a data-port step.
+import { getJson, putJson } from '$lib/server/kv';
 import { stripe } from '$lib/server/stripe';
-import { eq } from 'drizzle-orm';
 import type { CheckoutLineItem } from './payment-service';
 
+const KV_PREFIX = 'product-config:';
+
 // ---------------------------------------------------------------------------
-// Product config defaults — used to seed the table on first access
+// Product config defaults — used when no KV entry exists yet
 // ---------------------------------------------------------------------------
 
 export type ProductKey = 'contribution' | 'fee_coverage' | 'ticket' | 'band_premium';
@@ -49,6 +54,8 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 	}
 };
 
+const PRODUCT_KEYS = Object.keys(DEFAULTS) as ProductKey[];
+
 // ---------------------------------------------------------------------------
 // Core access
 // ---------------------------------------------------------------------------
@@ -62,52 +69,56 @@ export interface ProductConfigRow {
 	unitLabel: string | null;
 }
 
+/** The shape persisted in KV (the key is encoded in the KV key, not the value). */
+type StoredProduct = Omit<ProductConfigRow, 'key'>;
+
+function defaultRow(key: ProductKey): ProductConfigRow {
+	const d = DEFAULTS[key];
+	return {
+		key,
+		stripeProductId: null,
+		name: d.name,
+		description: d.description,
+		unitAmountCents: d.unitAmountCents,
+		unitLabel: d.unitLabel
+	};
+}
+
+async function readStored(key: ProductKey): Promise<StoredProduct | null> {
+	return getJson<StoredProduct>(`${KV_PREFIX}${key}`);
+}
+
+async function writeRow(row: ProductConfigRow): Promise<void> {
+	const { stripeProductId, name, description, unitAmountCents, unitLabel } = row;
+	await putJson<StoredProduct>(`${KV_PREFIX}${row.key}`, {
+		stripeProductId,
+		name,
+		description,
+		unitAmountCents,
+		unitLabel
+	});
+}
+
 /**
- * Get a product config row, creating it from defaults if it doesn't exist.
+ * Get a product config, seeding it from defaults (and persisting) if absent.
  */
 export async function getProductConfig(key: ProductKey): Promise<ProductConfigRow> {
-	const [row] = await db.select().from(productConfig).where(eq(productConfig.key, key)).limit(1);
+	const stored = await readStored(key);
+	if (stored) return { key, ...stored };
 
-	if (row) return row;
-
-	// Seed from defaults
-	const defaults = DEFAULTS[key];
-	const [created] = await db
-		.insert(productConfig)
-		.values({
-			key,
-			name: defaults.name,
-			description: defaults.description,
-			unitAmountCents: defaults.unitAmountCents,
-			unitLabel: defaults.unitLabel
-		})
-		.onConflictDoNothing()
-		.returning();
-
-	// Could have been created by a concurrent request
-	if (!created) {
-		const [existing] = await db
-			.select()
-			.from(productConfig)
-			.where(eq(productConfig.key, key))
-			.limit(1);
-		return existing;
-	}
-
-	return created;
+	const row = defaultRow(key);
+	await writeRow(row);
+	return row;
 }
 
 /**
  * Get all product configs, seeding any missing ones from defaults.
  */
 export async function getAllProductConfigs(): Promise<ProductConfigRow[]> {
-	const keys: ProductKey[] = ['contribution', 'fee_coverage', 'ticket', 'band_premium'];
 	const configs: ProductConfigRow[] = [];
-
-	for (const key of keys) {
+	for (const key of PRODUCT_KEYS) {
 		configs.push(await getProductConfig(key));
 	}
-
 	return configs;
 }
 
@@ -116,28 +127,35 @@ export async function getAllProductConfigs(): Promise<ProductConfigRow[]> {
 // ---------------------------------------------------------------------------
 
 /**
- * Get the Stripe product ID for a product key, creating the Stripe product
- * if it doesn't exist yet.
+ * Find an existing Stripe product previously created for this key (tagged via
+ * `metadata.corvmc_key`). Lets the cutover reuse products even when KV is empty.
+ */
+async function findStripeProductByKey(key: ProductKey): Promise<string | null> {
+	const list = await stripe.products.list({ active: true, limit: 100 });
+	const found = list.data.find((p) => p.metadata?.corvmc_key === key);
+	return found?.id ?? null;
+}
+
+/**
+ * Get the Stripe product ID for a product key, reusing an existing tagged
+ * product or creating one, then caching the ID in KV.
  */
 export async function getStripeProductId(key: ProductKey): Promise<string> {
 	const config = await getProductConfig(key);
-
 	if (config.stripeProductId) return config.stripeProductId;
 
-	// Create in Stripe
-	const product = await stripe.products.create({
-		name: config.name,
-		...(config.description && { description: config.description }),
-		metadata: { corvmc_key: key }
-	});
+	let productId = await findStripeProductByKey(key);
+	if (!productId) {
+		const product = await stripe.products.create({
+			name: config.name,
+			...(config.description && { description: config.description }),
+			metadata: { corvmc_key: key }
+		});
+		productId = product.id;
+	}
 
-	// Store the ID
-	await db
-		.update(productConfig)
-		.set({ stripeProductId: product.id, updatedAt: new Date() })
-		.where(eq(productConfig.key, key));
-
-	return product.id;
+	await writeRow({ ...config, stripeProductId: productId });
+	return productId;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,8 +215,8 @@ export interface UpdateProductConfigInput {
 }
 
 /**
- * Update a product config row. If the name or description changed and
- * a Stripe product exists, sync the changes to Stripe.
+ * Update a product config. If the name or description changed and a Stripe
+ * product exists, sync the changes to Stripe.
  */
 export async function updateProductConfig(
 	key: ProductKey,
@@ -206,16 +224,14 @@ export async function updateProductConfig(
 ): Promise<ProductConfigRow> {
 	const current = await getProductConfig(key);
 
-	const updates: Record<string, unknown> = { updatedAt: new Date() };
-	if (input.name !== undefined) updates.name = input.name;
-	if (input.description !== undefined) updates.description = input.description;
-	if (input.unitAmountCents !== undefined) updates.unitAmountCents = input.unitAmountCents;
+	const updated: ProductConfigRow = {
+		...current,
+		...(input.name !== undefined && { name: input.name }),
+		...(input.description !== undefined && { description: input.description }),
+		...(input.unitAmountCents !== undefined && { unitAmountCents: input.unitAmountCents })
+	};
 
-	const [updated] = await db
-		.update(productConfig)
-		.set(updates)
-		.where(eq(productConfig.key, key))
-		.returning();
+	await writeRow(updated);
 
 	// Sync name/description to Stripe if the product exists
 	if (current.stripeProductId) {
