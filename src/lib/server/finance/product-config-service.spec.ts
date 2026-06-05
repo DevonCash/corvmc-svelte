@@ -197,7 +197,11 @@ describe('updateProductConfig', () => {
 			unitAmountCents: 800
 		});
 
-		expect(result).toMatchObject({ name: 'New Name', description: 'New desc', unitAmountCents: 800 });
+		expect(result).toMatchObject({
+			name: 'New Name',
+			description: 'New desc',
+			unitAmountCents: 800
+		});
 		expect(kvStore.get(`${PREFIX}contribution`)).toMatchObject({
 			name: 'New Name',
 			unitAmountCents: 800
