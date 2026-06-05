@@ -568,7 +568,8 @@ async function migrateRecurringSeries() {
 
 	for (const s of series) {
 		const id = mapId('recurring_series', s.id);
-		const protoType = s.recurable_type?.includes('Reservation') ? 'reservation' : 'reservation';
+		// All legacy recurring_series are reservation series (recurable_type).
+		const protoType = 'reservation';
 		const userId = lookupId('users', s.user_id);
 		if (!userId) continue;
 
@@ -584,7 +585,11 @@ async function migrateRecurringSeries() {
 				id,
 				supersededBy: null,
 				prototypeType: protoType,
-				prototypeId: userId,
+				// Placeholder: prototypeId must reference the prototype reservation, which
+				// doesn't exist yet (reservations migrate after this step). Backfilled to
+				// the earliest instance in migrateReservations(). Orphan series with no
+				// instances keep this self-id, which never joins a reservation (correct).
+				prototypeId: id,
 				rrule: rruleJson,
 				createdBy: userId,
 				createdAt: ts(s.created_at)!,
@@ -653,6 +658,7 @@ async function migrateReservations() {
 				notes: r.notes,
 				cancellationReason: r.cancellation_reason ?? null,
 				stripePaymentRecordId: r.stripe_payment_intent ?? null,
+				creditsUsed: r.free_hours_used != null ? Number(r.free_hours_used) : null,
 				lockAccessId: null,
 				recurringSeriesId: recurringId,
 				createdAt: ts(r.created_at)!,
@@ -661,7 +667,24 @@ async function migrateReservations() {
 			.onConflictDoNothing();
 	}
 
+	// Backfill recurring_series.prototype_id → earliest reservation instance.
+	// Series are created before reservations exist, so prototypeId starts as a
+	// placeholder; the app joins recurringSeries.prototypeId = reservation.id.
+	const seriesIds = Object.values(idMap['recurring_series'] ?? {});
+	let prototypesLinked = 0;
+	for (const seriesId of seriesIds) {
+		const rows = await db.all<{ id: string }>(
+			sql`SELECT id FROM reservation WHERE recurring_series_id = ${seriesId} ORDER BY starts_at ASC LIMIT 1`
+		);
+		const protoId = rows[0]?.id;
+		if (protoId) {
+			await db.update(recurringSeries).set({ prototypeId: protoId }).where(sql`id = ${seriesId}`);
+			prototypesLinked++;
+		}
+	}
+
 	console.log(`  ✓ Migrated ${reservations.length} reservations`);
+	console.log(`  ✓ Linked ${prototypesLinked}/${seriesIds.length} recurring-series prototypes`);
 }
 
 async function migrateClosures() {
@@ -711,6 +734,18 @@ async function migrateEvents() {
 		let startsAt = ts(e.start_datetime)!;
 		let endsAt = ts(e.end_datetime ?? e.start_datetime)!;
 		if (endsAt < startsAt) [startsAt, endsAt] = [endsAt, startsAt];
+		// The `event_time_order` check requires ends_at > starts_at. Some legacy rows
+		// have a missing/equal end time; give them a default 2-hour duration rather
+		// than dropping the event entirely.
+		if (endsAt <= startsAt) endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
+
+		// Legacy location is JSON { is_external, details }; carry the human-readable address.
+		const locationData = e.location
+			? typeof e.location === 'string'
+				? JSON.parse(e.location)
+				: e.location
+			: null;
+		const location = locationData?.details ?? null;
 
 		try {
 			await db
@@ -726,6 +761,7 @@ async function migrateEvents() {
 					publishedAt: ts(e.published_at),
 					reservationId: null,
 					posterKey: null,
+					location,
 					tags: e.event_type,
 					ticketingEnabled: !!e.ticket_price,
 					ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
@@ -861,7 +897,7 @@ async function migrateEquipment() {
 					id: catId,
 					name: cat,
 					displayOrder: categories.size,
-					pricingTier: 'standard',
+					pricingTier: 'accessory',
 					createdAt: ts(item.created_at)!,
 					updatedAt: ts(item.updated_at)!
 				})
