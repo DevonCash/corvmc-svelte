@@ -17,9 +17,14 @@ import { captureException } from '$lib/server/sentry';
 // in 0ms with non-deterministic garbage. bcrypt-ts has the same issue.
 // PBKDF2-SHA-256 via Web Crypto is natively supported on Workers.
 // Format: "pbkdf2:iterations:salt_hex:key_hex"
+//
+// Cloudflare Workers' Web Crypto caps PBKDF2 at 100,000 iterations — anything
+// higher throws `NotSupportedError: iteration counts above 100000 are not
+// supported`, which silently broke every hash()/verify() call (and therefore
+// all email/password sign-in). 100_000 is the maximum the runtime allows.
 // ---------------------------------------------------------------------------
 
-const PBKDF2_ITERATIONS = 600_000;
+export const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_KEY_LEN = 32;
 
 function hexEncode(buf: ArrayBuffer | Uint8Array): string {
@@ -35,7 +40,7 @@ function hexDecode(hex: string): Uint8Array<ArrayBuffer> {
 	return bytes;
 }
 
-async function pbkdf2Hash(password: string): Promise<string> {
+export async function pbkdf2Hash(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16));
 	const encoder = new TextEncoder();
 	const keyMaterial = await crypto.subtle.importKey(
@@ -53,7 +58,7 @@ async function pbkdf2Hash(password: string): Promise<string> {
 	return `pbkdf2:${PBKDF2_ITERATIONS}:${hexEncode(salt)}:${hexEncode(derived)}`;
 }
 
-async function pbkdf2Verify(hash: string, password: string): Promise<boolean> {
+export async function pbkdf2Verify(hash: string, password: string): Promise<boolean> {
 	const parts = hash.split(':');
 	if (parts[0] !== 'pbkdf2' || parts.length !== 4) return false;
 
