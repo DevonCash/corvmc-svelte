@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
 	import IdCardCta from '$lib/components/shared/directory/IdCardCta.svelte';
@@ -38,73 +39,77 @@
 			</p>
 		</div>
 
-		<div class="flex justify-center mb-10">
-			<TabBar
-				tabs={[
-					{ key: 'members', label: `Musicians (${members.length})` },
-					{ key: 'bands', label: `Bands (${bands.length})` }
-				]}
-				active={activeTab}
-				onchange={(key) => (activeTab = key as 'members' | 'bands')}
-			/>
-		</div>
+		{#if data.failed}
+			<Alert type="error">Couldn't load the directory right now — please refresh the page.</Alert>
+		{:else}
+			<div class="flex justify-center mb-10">
+				<TabBar
+					tabs={[
+						{ key: 'members', label: `Musicians (${members.length})` },
+						{ key: 'bands', label: `Bands (${bands.length})` }
+					]}
+					active={activeTab}
+					onchange={(key) => (activeTab = key as 'members' | 'bands')}
+				/>
+			</div>
 
-		{#if activeTab === 'members'}
-			{#if members.length === 0}
-				<EmptyState message="No public member profiles yet." />
-			{:else}
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-					{#each members as member (member.id)}
-						<IdCard
-							href="/directory/members/{member.id}"
-							name={member.name}
-							image={member.image}
-							pronouns={member.pronouns}
-							tagline={member.tagline}
-							instruments={member.instruments}
-							genres={member.genres}
-							bands={member.bands}
-							lookingForBand={member.lookingForBand}
-							availableForHire={member.availableForHire}
-							teachesLessons={member.teachesLessons}
-							memberSince={new Date(member.memberSince).getFullYear()}
-						/>
-					{/each}
-					{#if !user}<IdCardCta />{/if}
-				</div>
+			{#if activeTab === 'members'}
+				{#if members.length === 0}
+					<EmptyState message="No public member profiles yet." />
+				{:else}
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+						{#each members as member (member.id)}
+							<IdCard
+								href="/directory/members/{member.id}"
+								name={member.name}
+								image={member.image}
+								pronouns={member.pronouns}
+								tagline={member.tagline}
+								instruments={member.instruments}
+								genres={member.genres}
+								bands={member.bands}
+								lookingForBand={member.lookingForBand}
+								availableForHire={member.availableForHire}
+								teachesLessons={member.teachesLessons}
+								memberSince={new Date(member.memberSince).getFullYear()}
+							/>
+						{/each}
+						{#if !user}<IdCardCta />{/if}
+					</div>
+				{/if}
 			{/if}
-		{/if}
 
-		{#if activeTab === 'bands'}
-			{#if bands.length === 0}
-				<EmptyState message="No public band profiles yet." />
-			{:else}
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
-					{#each bands as b, i (b.id)}
-						<VinylCard
-							href="/directory/bands/{b.slug}"
-							id={b.id}
-							name={b.name}
-							avatarUrl={b.avatarUrl}
-							tagline={b.tagline}
-							memberCount={b.memberCount}
-							lookingForMembers={b.lookingForMembers}
-							color={bandColors[i % bandColors.length]}
-						/>
-					{/each}
-					{#if !user}<VinylCardCta />{/if}
-				</div>
+			{#if activeTab === 'bands'}
+				{#if bands.length === 0}
+					<EmptyState message="No public band profiles yet." />
+				{:else}
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+						{#each bands as b, i (b.id)}
+							<VinylCard
+								href="/directory/bands/{b.slug}"
+								id={b.id}
+								name={b.name}
+								avatarUrl={b.avatarUrl}
+								tagline={b.tagline}
+								memberCount={b.memberCount}
+								lookingForMembers={b.lookingForMembers}
+								color={bandColors[i % bandColors.length]}
+							/>
+						{/each}
+						{#if !user}<VinylCardCta />{/if}
+					</div>
+				{/if}
 			{/if}
-		{/if}
-		{#if activeTab === 'members' && profileIsHidden}
-			<p class="text-center text-sm mt-10" style="color: var(--fg-3)">
-				Don't see your name? Your profile is set to
-				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
-				<a href={resolve('/member/directory')} class="underline" style="color: var(--cmc-teal)"
-					>Update your visibility</a
-				>
-				to appear here.
-			</p>
+			{#if activeTab === 'members' && profileIsHidden}
+				<p class="text-center text-sm mt-10" style="color: var(--fg-3)">
+					Don't see your name? Your profile is set to
+					<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
+					<a href={resolve('/member/directory')} class="underline" style="color: var(--cmc-teal)"
+						>Update your visibility</a
+					>
+					to appear here.
+				</p>
+			{/if}
 		{/if}
 	</div>
 </section>

@@ -3,6 +3,7 @@ import { userInstrument, userGenre } from '$lib/server/db/schema/authentication'
 import { bandGenre } from '$lib/server/db/schema/band';
 import { asc, like, sql } from 'drizzle-orm';
 import { resolveImageUrl } from '$lib/server/storage';
+import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -275,6 +276,72 @@ export async function listPublicBands(filters?: BandFilters) {
 		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
+}
+
+// ---------------------------------------------------------------------------
+// Public directory aggregate
+// ---------------------------------------------------------------------------
+
+export type PublicDirectoryFilters = MemberFilters & { lookingForMembers?: boolean };
+
+/**
+ * Public directory listing (members + bands) for the `/directory` page.
+ *
+ * The page awaits this at the top of its `<script>`, so an unexpected DB error
+ * here would surface as an unhandled rejection and crash the async error
+ * boundary. Instead we catch, report to Sentry, and return a `failed` sentinel
+ * the page can render as an inline error state.
+ */
+export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
+	try {
+		const [members, bands] = await Promise.all([
+			listPublicMembers({
+				search: filters.search,
+				instruments: filters.instruments,
+				genres: filters.genres,
+				lookingForBand: filters.lookingForBand,
+				availableForHire: filters.availableForHire,
+				teachesLessons: filters.teachesLessons
+			}),
+			listPublicBands({
+				search: filters.search,
+				genres: filters.genres,
+				lookingForMembers: filters.lookingForMembers
+			})
+		]);
+
+		return {
+			members: members.map((m) => ({
+				id: m.id,
+				name: m.name,
+				pronouns: m.pronouns,
+				image: m.image,
+				tagline: m.tagline,
+				instruments: m.instruments,
+				genres: m.genres,
+				lookingForBand: m.lookingForBand,
+				availableForHire: m.availableForHire,
+				teachesLessons: m.teachesLessons,
+				memberSince: m.createdAt,
+				bands: m.bands
+			})),
+			bands: bands.map((b) => ({
+				id: b.id,
+				name: b.name,
+				slug: b.slug,
+				bio: b.bio ? (b.bio.length > 120 ? b.bio.slice(0, 120).trimEnd() + '…' : b.bio) : null,
+				tagline: b.tagline,
+				avatarUrl: resolveImageUrl(b.avatarKey),
+				memberCount: b.memberCount,
+				genres: b.genres,
+				lookingForMembers: b.lookingForMembers
+			})),
+			failed: false
+		};
+	} catch (err) {
+		captureException(err);
+		return { members: [], bands: [], failed: true };
+	}
 }
 
 /** Single band profile by slug */
