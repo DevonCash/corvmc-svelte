@@ -5,16 +5,22 @@ import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-servi
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { resolveImageUrl } from '$lib/server/storage';
+import { captureException } from '$lib/server/sentry';
 
 export const getMe = query(async () => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) return null;
-	return {
-		id: locals.user.id,
-		name: locals.user.name,
-		email: locals.user.email,
-		image: resolveImageUrl(locals.user.image)
-	};
+	try {
+		const { locals } = getRequestEvent();
+		if (!locals.user) return null;
+		return {
+			id: locals.user.id,
+			name: locals.user.name,
+			email: locals.user.email,
+			image: resolveImageUrl(locals.user.image)
+		};
+	} catch (err) {
+		captureException(err);
+		return null;
+	}
 });
 
 export const getMemberLayout = query(async () => {

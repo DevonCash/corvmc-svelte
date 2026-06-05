@@ -6,8 +6,7 @@ import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
 	listBands,
-	listPublicMembers,
-	listPublicBands,
+	getPublicDirectory as getPublicDirectoryService,
 	getMemberProfile as getMemberProfileService,
 	suggestInstruments,
 	suggestGenres
@@ -27,6 +26,7 @@ import {
 	countMemberPastShows
 } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { captureException } from '$lib/server/sentry';
 import { isMemberRowPrivate } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
@@ -161,51 +161,9 @@ const publicFiltersSchema = z.object({
 		.transform((v) => (v === 'true' ? true : undefined))
 });
 
-export const getPublicDirectory = query(publicFiltersSchema, async (filters) => {
-	const [members, bands] = await Promise.all([
-		listPublicMembers({
-			search: filters.search,
-			instruments: filters.instruments,
-			genres: filters.genres,
-			lookingForBand: filters.lookingForBand,
-			availableForHire: filters.availableForHire,
-			teachesLessons: filters.teachesLessons
-		}),
-		listPublicBands({
-			search: filters.search,
-			genres: filters.genres,
-			lookingForMembers: filters.lookingForMembers
-		})
-	]);
-
-	return {
-		members: members.map((m) => ({
-			id: m.id,
-			name: m.name,
-			pronouns: m.pronouns,
-			image: m.image,
-			tagline: m.tagline,
-			instruments: m.instruments,
-			genres: m.genres,
-			lookingForBand: m.lookingForBand,
-			availableForHire: m.availableForHire,
-			teachesLessons: m.teachesLessons,
-			memberSince: m.createdAt,
-			bands: m.bands
-		})),
-		bands: bands.map((b) => ({
-			id: b.id,
-			name: b.name,
-			slug: b.slug,
-			bio: b.bio ? (b.bio.length > 120 ? b.bio.slice(0, 120).trimEnd() + '…' : b.bio) : null,
-			tagline: b.tagline,
-			avatarUrl: resolveImageUrl(b.avatarKey),
-			memberCount: b.memberCount,
-			genres: b.genres,
-			lookingForMembers: b.lookingForMembers
-		}))
-	};
-});
+export const getPublicDirectory = query(publicFiltersSchema, (filters) =>
+	getPublicDirectoryService(filters)
+);
 
 export const getPublicBandProfile = query(z.string(), async (slug) => {
 	return loadBandProfile(slug, 'public');
@@ -366,11 +324,16 @@ export const getMemberShows = query(z.string(), async (userId) => {
 export const getMyDirectoryVisibility = query(z.void(), async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return null;
-	const [row] = await db
-		.select({ directoryVisibility: user.directoryVisibility })
-		.from(user)
-		.where(eq(user.id, locals.user.id));
-	return row?.directoryVisibility ?? null;
+	try {
+		const [row] = await db
+			.select({ directoryVisibility: user.directoryVisibility })
+			.from(user)
+			.where(eq(user.id, locals.user.id));
+		return row?.directoryVisibility ?? null;
+	} catch (err) {
+		captureException(err);
+		return null;
+	}
 });
 
 export const getInstrumentSuggestions = query(z.void(), async () => {
