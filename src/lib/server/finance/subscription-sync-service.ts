@@ -7,7 +7,7 @@ import type { Subscription } from '$lib/server/db/schema/authentication';
 import { stripe } from '$lib/server/stripe';
 import { getStripeProductId } from './product-config-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
-import type { SubscriptionSyncError, SubscriptionSyncSummary } from '$lib/types/subscription-sync';
+import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 
 // ---------------------------------------------------------------------------
 // SubscriptionSyncService — reconcile Stripe subscription *status* into local D1
