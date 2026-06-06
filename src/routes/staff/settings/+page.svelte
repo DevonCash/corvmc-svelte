@@ -10,15 +10,20 @@
 		updateIntegrationSettings,
 		testUtecConnection,
 		getFeatureFlags,
-		updateFeatureFlag
+		updateFeatureFlag,
+		syncSubscriptions
 	} from '$lib/remote/settings.remote';
 	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
+	import StatCard from '$lib/components/shared/StatCard.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 	import { formatDollars } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -51,8 +56,11 @@
 		{ key: 'organization', label: 'Organization' },
 		{ key: 'integrations', label: 'Integrations' },
 		{ key: 'inbox', label: 'Inbox Channels' },
-		{ key: 'features', label: 'Features' }
+		{ key: 'features', label: 'Features' },
+		{ key: 'subscriptions', label: 'Subscriptions' }
 	];
+
+	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 
 	const featureMeta: Record<string, { label: string; description: string }> = {
 		staffInbox: {
@@ -637,6 +645,46 @@
 					</div>
 				</div>
 			{/each}
+		{:else if activeTab === 'subscriptions'}
+			<p class="text-sm opacity-70">
+				Reconciles every member and band subscription status from Stripe into the local database.
+				Use this as a one-time backfill after migration, or any time to re-sync if a webhook was
+				missed. This only updates subscription status — credit balances are never changed.
+			</p>
+
+			<Action
+				label="Sync now"
+				successLabel="Synced"
+				successToast="Subscriptions synced from Stripe"
+				action={async () => {
+					syncResult = await syncSubscriptions();
+				}}
+			/>
+
+			{#if syncResult}
+				<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+					<StatCard title="Scanned" value={syncResult.totalScanned} />
+					<StatCard title="Users updated" value={syncResult.usersUpdated} />
+					<StatCard title="Users cleared" value={syncResult.usersCleared} />
+					<StatCard title="Bands updated" value={syncResult.bandsUpdated} />
+					<StatCard title="Bands cleared" value={syncResult.bandsCleared} />
+					<StatCard title="Skipped" value={syncResult.skipped} />
+				</div>
+
+				{#if syncResult.errors.length > 0}
+					<Alert type="warning">
+						<p class="font-semibold">{syncResult.errors.length} record(s) had issues:</p>
+						<ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm">
+							{#each syncResult.errors as err, i (i)}
+								<li>
+									<span class="badge badge-ghost badge-sm">{err.kind}</span>
+									{err.message}{err.ref ? ` (${err.ref})` : ''}
+								</li>
+							{/each}
+						</ul>
+					</Alert>
+				{/if}
+			{/if}
 		{/if}
 	</div>
 </PageContent>
