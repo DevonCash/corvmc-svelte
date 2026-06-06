@@ -16,6 +16,7 @@ export type MemberFilters = {
 	lookingForBand?: boolean;
 	availableForHire?: boolean;
 	teachesLessons?: boolean;
+	openToCollaboration?: boolean;
 };
 
 export type BandFilters = {
@@ -78,6 +79,10 @@ function memberWhereConditions(
 		conditions.push({ teachesLessons: true });
 	}
 
+	if (filters?.openToCollaboration) {
+		conditions.push({ openToCollaboration: true });
+	}
+
 	return { AND: conditions };
 }
 
@@ -124,6 +129,7 @@ const memberColumns = {
 	lookingForBand: true,
 	availableForHire: true,
 	teachesLessons: true,
+	openToCollaboration: true,
 	directoryContact: true,
 	links: true,
 	createdAt: true
@@ -301,7 +307,8 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 				genres: filters.genres,
 				lookingForBand: filters.lookingForBand,
 				availableForHire: filters.availableForHire,
-				teachesLessons: filters.teachesLessons
+				teachesLessons: filters.teachesLessons,
+				openToCollaboration: filters.openToCollaboration
 			}),
 			listPublicBands({
 				search: filters.search,
@@ -322,6 +329,7 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 				lookingForBand: m.lookingForBand,
 				availableForHire: m.availableForHire,
 				teachesLessons: m.teachesLessons,
+				openToCollaboration: m.openToCollaboration,
 				memberSince: m.createdAt,
 				bands: m.bands
 			})),

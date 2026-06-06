@@ -61,6 +61,7 @@ export type MemberProfileData = {
 	lookingForBand?: boolean;
 	availableForHire?: boolean;
 	teachesLessons?: boolean;
+	openToCollaboration?: boolean;
 	directoryVisibility?: DirectoryVisibility;
 	directoryContact?: DirectoryContact;
 	links?: ProfileLink[];
@@ -88,6 +89,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 				lookingForBand: data.lookingForBand ?? false,
 				availableForHire: data.availableForHire ?? false,
 				teachesLessons: data.teachesLessons ?? false,
+				openToCollaboration: data.openToCollaboration ?? false,
 				directoryVisibility: data.directoryVisibility ?? 'members',
 				directoryContact: mergedContact,
 				links: data.links ? validateLinks(data.links) : null,
@@ -129,6 +131,7 @@ export async function getMemberProfileForEdit(userId: string) {
 			lookingForBand: user.lookingForBand,
 			availableForHire: user.availableForHire,
 			teachesLessons: user.teachesLessons,
+			openToCollaboration: user.openToCollaboration,
 			directoryVisibility: user.directoryVisibility,
 			directoryContact: user.directoryContact,
 			links: user.links

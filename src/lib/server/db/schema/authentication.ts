@@ -87,6 +87,9 @@ export const user = sqliteTable(
 		lookingForBand: integer('looking_for_band', { mode: 'boolean' }).notNull().default(false),
 		availableForHire: integer('available_for_hire', { mode: 'boolean' }).notNull().default(false),
 		teachesLessons: integer('teaches_lessons', { mode: 'boolean' }).notNull().default(false),
+		openToCollaboration: integer('open_to_collaboration', { mode: 'boolean' })
+			.notNull()
+			.default(false),
 		directoryVisibility: text('directory_visibility').notNull().default('members'),
 		directoryContact: text('directory_contact', { mode: 'json' }),
 		links: text('links', { mode: 'json' })

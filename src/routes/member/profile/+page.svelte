@@ -36,6 +36,7 @@
 	let lookingForBand = $state(false);
 	let availableForHire = $state(false);
 	let teachesLessons = $state(false);
+	let openToCollaboration = $state(false);
 	let directoryVisibility = $state<string>('members');
 
 	$effect(() => {
@@ -47,6 +48,7 @@
 			lookingForBand = profile.lookingForBand;
 			availableForHire = profile.availableForHire;
 			teachesLessons = profile.teachesLessons;
+			openToCollaboration = profile.openToCollaboration;
 			directoryVisibility = profile.directoryVisibility;
 		}
 	});
@@ -129,6 +131,12 @@
 						type="toggle"
 						value={teachesLessons}
 						checkboxLabel="I teach lessons"
+					/>
+					<FormField
+						field={fields.openToCollaboration}
+						type="toggle"
+						value={openToCollaboration}
+						checkboxLabel="I'm open to collaboration"
 					/>
 				</div>
 			</InfoCard>

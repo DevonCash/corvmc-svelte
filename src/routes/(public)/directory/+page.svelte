@@ -71,6 +71,7 @@
 								lookingForBand={member.lookingForBand}
 								availableForHire={member.availableForHire}
 								teachesLessons={member.teachesLessons}
+								openToCollaboration={member.openToCollaboration}
 								memberSince={new Date(member.memberSince).getFullYear()}
 							/>
 						{/each}

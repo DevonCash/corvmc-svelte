@@ -14,6 +14,7 @@
 		lookingForBand?: boolean;
 		availableForHire?: boolean;
 		teachesLessons?: boolean;
+		openToCollaboration?: boolean;
 		memberSince: number;
 	}
 
@@ -29,6 +30,7 @@
 		lookingForBand = false,
 		availableForHire = false,
 		teachesLessons = false,
+		openToCollaboration = false,
 		memberSince
 	}: Props = $props();
 
@@ -91,11 +93,12 @@
 			{/if}
 		</div>
 	</div>
-	{#if lookingForBand || availableForHire || teachesLessons}
+	{#if lookingForBand || availableForHire || teachesLessons || openToCollaboration}
 		<div class="id-card__gaffs">
 			{#if lookingForBand}<div class="id-card__gaff">seeking a band</div>{/if}
 			{#if availableForHire}<div class="id-card__gaff">available for hire</div>{/if}
 			{#if teachesLessons}<div class="id-card__gaff">teaches lessons</div>{/if}
+			{#if openToCollaboration}<div class="id-card__gaff">open to collab</div>{/if}
 		</div>
 	{/if}
 	<div class="id-card__footer">

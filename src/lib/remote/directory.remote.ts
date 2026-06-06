@@ -74,6 +74,10 @@ const filtersSchema = z.object({
 		.string()
 		.optional()
 		.transform((v) => (v === 'true' ? true : undefined)),
+	openToCollaboration: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
 	lookingForMembers: z
 		.string()
 		.optional()
@@ -88,7 +92,8 @@ export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 		genres: filters.genres,
 		lookingForBand: filters.lookingForBand,
 		availableForHire: filters.availableForHire,
-		teachesLessons: filters.teachesLessons
+		teachesLessons: filters.teachesLessons,
+		openToCollaboration: filters.openToCollaboration
 	});
 });
 
@@ -152,6 +157,10 @@ const publicFiltersSchema = z.object({
 		.optional()
 		.transform((v) => (v === 'true' ? true : undefined)),
 	teachesLessons: z
+		.string()
+		.optional()
+		.transform((v) => (v === 'true' ? true : undefined)),
+	openToCollaboration: z
 		.string()
 		.optional()
 		.transform((v) => (v === 'true' ? true : undefined)),
@@ -273,6 +282,7 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			lookingForBand: member.lookingForBand,
 			availableForHire: member.availableForHire,
 			teachesLessons: member.teachesLessons,
+			openToCollaboration: member.openToCollaboration,
 			directoryContact: member.directoryContact as DirectoryContact | null,
 			links: (member.links as ProfileLink[] | null) ?? [],
 			bands: member.bands
@@ -401,6 +411,10 @@ const memberProfileSchema = z.object({
 		.string()
 		.optional()
 		.transform((v) => v === 'on'),
+	openToCollaboration: z
+		.string()
+		.optional()
+		.transform((v) => v === 'on'),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('members'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
@@ -432,6 +446,7 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		lookingForBand: data.lookingForBand,
 		availableForHire: data.availableForHire,
 		teachesLessons: data.teachesLessons,
+		openToCollaboration: data.openToCollaboration,
 		directoryVisibility: data.directoryVisibility,
 		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
 		links: data.links
