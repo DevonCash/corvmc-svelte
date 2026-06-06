@@ -214,7 +214,7 @@
 			</div>
 
 			{#if evt.description}
-				<p class="edet__desc">{evt.description}</p>
+				<p class="edet__desc">{@html evt.description}</p>
 			{/if}
 
 			{#if evt.ticketingEnabled}
