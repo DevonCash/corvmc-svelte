@@ -282,7 +282,12 @@ async function migrateUsers() {
 	}
 
 	if (!COMMIT) {
-		const counts = { lookingForBand: 0, availableForHire: 0, teachesLessons: 0, openToCollaboration: 0 };
+		const counts = {
+			lookingForBand: 0,
+			availableForHire: 0,
+			teachesLessons: 0,
+			openToCollaboration: 0
+		};
 		for (const names of Object.values(flagsByUser)) {
 			const flags = mapMemberFlags(names);
 			for (const key of Object.keys(counts) as (keyof typeof counts)[]) {

@@ -77,11 +77,7 @@
 					<span>Teaches lessons</span>
 				</label>
 				<label class="directory-filters__toggle">
-					<input
-						type="checkbox"
-						class="checkbox checkbox-sm"
-						bind:checked={openToCollaboration}
-					/>
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={openToCollaboration} />
 					<span>Open to collaboration</span>
 				</label>
 			{:else}
