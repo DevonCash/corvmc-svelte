@@ -9,7 +9,10 @@
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
-	let { reservation }: { reservation: Reservation } = $props();
+	let {
+		reservation,
+		onchange
+	}: { reservation: Reservation; onchange?: () => void } = $props();
 
 	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
 
@@ -44,11 +47,15 @@
 		<span class="reservation-status">{reservation.status}</span>
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
 			{#if ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
-				<CancelReservationAction {reservation} class="btn-outline btn-xs btn-error" />
+				<CancelReservationAction
+					{reservation}
+					onsuccess={onchange}
+					class="btn-outline btn-xs btn-error"
+				/>
 				{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
-					<ConfirmWaitlistedAction {reservation} class="btn-xs btn-success" />
+					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} class="btn-xs btn-success" />
 				{:else if reservation.status === 'scheduled'}
-					<ConfirmReservationAction {reservation} class="btn-xs btn-primary" />
+					<ConfirmReservationAction {reservation} onsuccess={onchange} class="btn-xs btn-primary" />
 				{:else if reservation.status === 'confirmed' && reservation.paidAt}
 					<span class="badge badge-success badge-sm">Paid</span>
 				{:else if reservation.status === 'confirmed' && (reservation.cashDueCents ?? 0) > 0}

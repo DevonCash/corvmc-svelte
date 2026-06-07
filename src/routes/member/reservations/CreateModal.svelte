@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -16,9 +15,11 @@
 	let reloadToken = $state(0);
 
 	let {
-		isSustaining = false
+		isSustaining = false,
+		onbooked
 	}: {
 		isSustaining?: boolean;
+		onbooked?: () => void;
 	} = $props();
 </script>
 
@@ -43,7 +44,7 @@
 			if (r?.waitlisted) {
 				toast.info('The first instance is waitlisted because the slot is currently booked.');
 			}
-			await invalidateAll();
+			onbooked?.();
 		}
 	}}
 >
