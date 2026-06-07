@@ -14,7 +14,6 @@
 		changed(): void;
 		readonly currentStep: number;
 		readonly totalSteps: number;
-		readonly hasSteps: boolean;
 		readonly currentStepValid: boolean;
 		registerStep(): number;
 		setStepValid(index: number, valid: boolean): void;
@@ -114,9 +113,6 @@
 		get totalSteps() {
 			return totalSteps;
 		},
-		get hasSteps() {
-			return totalSteps > 0;
-		},
 		get currentStepValid() {
 			return stepValidity[currentStep] ?? true;
 		},
@@ -141,15 +137,29 @@
 
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
+	// Step navigation is button-driven (a non-last-step button calls next()); the
+	// only way to accidentally submit mid-wizard is pressing Enter inside a text
+	// field, which we redirect to "advance" below. A submit *event* always means
+	// "submit" and is never hijacked — buttons, links, and widgets keep their
+	// native Enter behavior so a terminal submit button still submits.
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key !== 'Enter' || e.defaultPrevented) return; // a widget already handled it
+		if (ctx.currentStep >= ctx.totalSteps - 1) return; // single/last step: submit natively
+		// Only a text-like input implicitly submits the form on Enter. Leave
+		// buttons, textareas, selects, and custom widgets alone.
+		const t = e.target;
+		const isTextField =
+			t instanceof HTMLInputElement &&
+			!['button', 'submit', 'reset', 'checkbox', 'radio'].includes(t.type);
+		if (!isTextField) return;
+		e.preventDefault();
+		if (ctx.currentStepValid) ctx.next();
+	}
+
 	let submitting = false;
 	let remoteAttrs = $derived(
 		remote?.enhance(async (...args) => {
 			if (submitting) return;
-			// Guard: multi-step forms shouldn't submit until the last step
-			if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
-				if (ctx.currentStepValid) ctx.next();
-				return;
-			}
 			submitting = true;
 			const [{ submit }] = args;
 			status = 'pending';
@@ -184,11 +194,6 @@
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!action || !formEl) return;
-		// Guard: multi-step forms shouldn't submit until the last step
-		if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
-			if (ctx.currentStepValid) ctx.next();
-			return;
-		}
 		status = 'pending';
 		actionIssues = null;
 		const start = performance.now();
@@ -215,11 +220,17 @@
 </script>
 
 {#if remote}
-	<form bind:this={formEl} {...remoteAttrs} class={className} {...rest}>
+	<form bind:this={formEl} {...remoteAttrs} onkeydown={handleKeydown} class={className} {...rest}>
 		{@render children()}
 	</form>
 {:else}
-	<form bind:this={formEl} onsubmit={handleActionSubmit} class={className} {...rest}>
+	<form
+		bind:this={formEl}
+		onsubmit={handleActionSubmit}
+		onkeydown={handleKeydown}
+		class={className}
+		{...rest}
+	>
 		{@render children()}
 	</form>
 {/if}

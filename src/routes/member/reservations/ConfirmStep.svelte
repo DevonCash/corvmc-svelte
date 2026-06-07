@@ -12,10 +12,10 @@
 
 	let {
 		reservation,
-		fields
+		fields = {}
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
-		fields: { id?: RemoteFormField<string>; skipPayment: RemoteFormField<string> };
+		fields?: { id?: RemoteFormField<string> };
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -23,7 +23,6 @@
 	const activeStep = $derived(reservation ? 0 : 1);
 
 	let el: HTMLDivElement;
-	let skipPaymentInput: HTMLInputElement;
 
 	function extractTimeFields(d: Date) {
 		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
@@ -49,6 +48,10 @@
 	let scheduleLabel = $state('');
 
 	const isRecurring = $derived(recurringFrequency !== '');
+
+	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
+	// (which skips payment) is the single action — no redundant payment screen.
+	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
 
 	function cents(amount: number): string {
 		return (amount / 100).toFixed(2);
@@ -124,13 +127,6 @@
 			}
 		}
 	});
-
-	function confirmWithoutPayment() {
-		if (skipPaymentInput) {
-			skipPaymentInput.value = 'on';
-		}
-		formCtx.submit();
-	}
 </script>
 
 <div bind:this={el}>
@@ -138,7 +134,6 @@
 		{#if reservation && fields.id}
 			<input {...fields.id.as('hidden', reservation.id)} />
 		{/if}
-		<input {...fields.skipPayment.as('hidden', '')} bind:this={skipPaymentInput} />
 
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
@@ -200,8 +195,16 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
-			<Button type="button" class="btn-ghost" onclick={confirmWithoutPayment}>Confirm</Button>
-			<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+			<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
+			<Button
+				type="submit"
+				name="skipPayment"
+				value="on"
+				class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+			>
+			{#if showPayAhead}
+				<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+			{/if}
 		</div>
 	</Form.Step>
 </div>

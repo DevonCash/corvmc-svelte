@@ -29,7 +29,7 @@
 
 	let ctx = getFormContext()!;
 
-	const isLastStep = $derived(!ctx.hasSteps || ctx.currentStep === ctx.totalSteps - 1);
+	const isLastStep = $derived(ctx.currentStep >= ctx.totalSteps - 1);
 	const activeLabel = $derived(isLastStep ? label : continueLabel);
 	const isDisabled = $derived(
 		disabled || !ctx.currentStepValid || (ctx.status !== 'idle' && ctx.status !== 'dirty')
@@ -47,7 +47,7 @@
 </script>
 
 <div class="flex items-center gap-2">
-	{#if ctx.hasSteps && ctx.currentStep > 0}
+	{#if ctx.currentStep > 0}
 		<Button type="button" class="btn-ghost" onclick={() => ctx.back()}>Back</Button>
 	{/if}
 	<button
