@@ -1,10 +1,8 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
-import { buildDateInTz, getPartsInTz } from '$lib/server/reservation/timezone';
+import { and, isNull, isNotNull, count, sql } from 'drizzle-orm';
 import { getJson, putJson } from '$lib/server/kv';
-import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+import { creditsToHours } from '$lib/config';
 
 export interface CommunityStats {
 	sustainingMemberCount: number;
@@ -25,28 +23,22 @@ export async function getCommunityStats(): Promise<CommunityStats> {
 }
 
 async function queryStats(): Promise<CommunityStats> {
-	const monthStart = getMonthStart();
-
-	const [allocationStats] = await db
+	// Source from the subscription snapshot (the app-wide source of truth) rather
+	// than the credit ledger — migrated members hold balances but have no
+	// monthly_allocation ledger rows, which would make every stat read 0.
+	const [subStats] = await db
 		.select({
-			memberCount: countDistinct(creditTransaction.userId),
-			totalHours: sum(creditTransaction.amount)
+			memberCount: count(),
+			totalCredits: sql<number>`COALESCE(SUM(CAST(json_extract(${user.subscription}, '$.hoursPerReset') AS INTEGER)), 0)`
 		})
-		.from(creditTransaction)
-		.where(
-			and(
-				eq(creditTransaction.source, 'monthly_allocation'),
-				eq(creditTransaction.creditType, 'free_hours'),
-				gte(creditTransaction.createdAt, monthStart)
-			)
-		);
+		.from(user)
+		.where(and(isNotNull(user.subscription), isNull(user.deletedAt)));
 
-	const sustainingMemberCount = allocationStats?.memberCount ?? 0;
-	// Ledger amounts are in credits (30-min blocks); report the stat in hours.
-	const totalFreeHoursAllocated = creditsToHours(Number(allocationStats?.totalHours ?? 0));
+	const sustainingMemberCount = subStats?.memberCount ?? 0;
+	// hoursPerReset is in credits (30-min blocks); report funded practice time in hours.
+	const totalFreeHoursAllocated = creditsToHours(Number(subStats?.totalCredits ?? 0));
 
 	const [userStats] = await db.select({ total: count() }).from(user).where(isNull(user.deletedAt));
-
 	const totalUsers = userStats?.total ?? 0;
 
 	const participationPercent =
@@ -57,10 +49,4 @@ async function queryStats(): Promise<CommunityStats> {
 		totalFreeHoursAllocated,
 		participationPercent
 	};
-}
-
-function getMonthStart(): Date {
-	const TZ = DEFAULT_TIMEZONE;
-	const now = getPartsInTz(new Date(), TZ);
-	return buildDateInTz(`${now.year}-${String(now.month).padStart(2, '0')}-01`, '00:00', TZ);
 }
