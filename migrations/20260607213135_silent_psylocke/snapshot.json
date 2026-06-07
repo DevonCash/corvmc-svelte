@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ea249557-d2fd-4012-a23f-e98f6465c7e1",
+  "id": "998ec4ac-fd79-416b-93b2-960e1f432d9c",
   "prevIds": [
-    "c25dfa5d-9085-4b38-9df7-548b21c5deb9"
+    "9c2eb976-883c-4864-848d-b9d81ed17c1a"
   ],
   "ddl": [
     {
@@ -1303,6 +1303,16 @@
       "default": null,
       "generated": null,
       "name": "refunded_at",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cash_due_cents",
       "entityType": "columns",
       "table": "reservation"
     },
