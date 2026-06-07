@@ -186,6 +186,8 @@ export const getFeatureFlags = query(async () => {
 const VALID_FLAGS: FeatureFlag[] = [
 	'staffInbox',
 	'bandPremium',
+	'bandReservations',
+	'bandEvents',
 	'emailMarketing',
 	'equipment',
 	'helpArticles'

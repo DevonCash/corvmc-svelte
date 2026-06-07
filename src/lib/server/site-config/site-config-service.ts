@@ -32,6 +32,8 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 
 	'feature.staffInbox': false,
 	'feature.bandPremium': false,
+	'feature.bandReservations': false,
+	'feature.bandEvents': false,
 	'feature.emailMarketing': false,
 	'feature.equipment': false,
 	'feature.helpArticles': false
