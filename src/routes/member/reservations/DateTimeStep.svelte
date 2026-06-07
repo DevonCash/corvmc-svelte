@@ -9,9 +9,12 @@
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
 	let {
-		isSustaining = false
+		isSustaining = false,
+		reloadToken = 0
 	}: {
 		isSustaining?: boolean;
+		/** Bump to force a fresh reload of availability (e.g. after a slot conflict). */
+		reloadToken?: number;
 	} = $props();
 
 	const tz = getLocalTimeZone();
@@ -39,11 +42,25 @@
 	let availableDates = $state<string[]>([]);
 	let initialLoading = $state(true);
 
+	let availSeen = 0;
+	let availGen = 0;
 	$effect(() => {
-		getAvailableDates().then((dates) => {
+		const token = reloadToken;
+		const forceReload = token > availSeen;
+		availSeen = token;
+		const gen = ++availGen;
+		const q = getAvailableDates();
+		(async () => {
+			// refresh() re-fetches and updates the resource's reactive `current`;
+			// the awaitable itself resolves only once, so read `current` after it.
+			if (forceReload) await q.refresh();
+			const dates = (forceReload ? q.current : await q) ?? [];
+			// Drop a stale resolve (e.g. the initial load finishing after a
+			// conflict-triggered refresh already ran).
+			if (gen !== availGen) return;
 			availableDates = dates;
 			initialLoading = false;
-		});
+		})();
 	});
 
 	let availableSet = $derived(new Set(availableDates));
@@ -53,16 +70,23 @@
 	let endTimeOptions = $state<{ value: string; label: string }[] | null>(null);
 
 	let startGen = 0;
+	let startSeen = 0;
 	$effect(() => {
 		const d = date;
+		const token = reloadToken;
+		const forceReload = token > startSeen;
+		startSeen = token;
 		const gen = ++startGen;
 		startTime = '';
 		endTime = '';
 		startTimeOptions = null;
 		endTimeOptions = null;
-		getReservationStartTimes(d).then((opts) => {
+		const q = getReservationStartTimes(d);
+		(async () => {
+			if (forceReload) await q.refresh();
+			const opts = (forceReload ? q.current : await q) ?? [];
 			if (gen === startGen) startTimeOptions = opts;
-		});
+		})();
 	});
 
 	let endGen = 0;

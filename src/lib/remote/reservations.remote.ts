@@ -1017,16 +1017,24 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 			notes: data.notes
 		});
 	} catch (err) {
-		if (isRecurring && err instanceof ReservationConflictError) {
-			res = await createWaitlisted({
-				userId: locals.user.id,
-				bookerType: 'user',
-				bookerId: locals.user.id,
-				startsAt,
-				endsAt,
-				notes: data.notes
-			});
-			waitlisted = true;
+		if (err instanceof ReservationConflictError) {
+			if (isRecurring) {
+				res = await createWaitlisted({
+					userId: locals.user.id,
+					bookerType: 'user',
+					bookerId: locals.user.id,
+					startsAt,
+					endsAt,
+					notes: data.notes
+				});
+				waitlisted = true;
+			} else {
+				// One-time slot was taken between selection and submit. create()
+				// checks conflicts before inserting, so nothing was written — signal
+				// the wizard to send the member back to a refreshed time picker
+				// rather than surfacing a 500.
+				return { conflict: true as const };
+			}
 		} else {
 			throw err;
 		}
