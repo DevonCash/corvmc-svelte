@@ -32,7 +32,12 @@
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
-	const actions = $derived(visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId));
+	const actions = $derived(
+		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), {
+			cashDueCents: r.cashDueCents,
+			paidAt: r.paidAt
+		})
+	);
 
 	// Derived formatting
 	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
@@ -47,10 +52,11 @@
 				? { label: 'Refunded', class: 'badge-error' }
 				: { label: 'Cancelled', class: 'badge-ghost' };
 		}
+		if (r.paidAt) return { label: 'Paid', class: 'badge-success' };
+		if ((r.cashDueCents ?? 0) > 0)
+			return { label: `Cash due ${formatCents(r.cashDueCents ?? 0)}`, class: 'badge-warning' };
 		if (status === 'scheduled') return { label: 'Unpaid', class: 'badge-warning' };
-		return r.stripePaymentRecordId
-			? { label: 'Paid', class: 'badge-success' }
-			: { label: 'Comped', class: 'badge-info' };
+		return { label: 'Comped', class: 'badge-info' };
 	});
 </script>
 

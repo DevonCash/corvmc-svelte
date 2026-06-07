@@ -17,6 +17,7 @@
 	import type { Snippet } from 'svelte';
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { reportError } from '$lib/report-error';
 	import Alert from './Alert.svelte';
 
 	let {
@@ -41,7 +42,10 @@
 	}
 
 	function handleError(err: unknown) {
-		console.error('[ErrorToastBoundary]', err);
+		// Single client-side sink: forward genuine errors to Sentry (filtered) and
+		// surface a toast. Covers both boundary-caught render/async errors and
+		// errors handed up by child components (e.g. the Form component's catch).
+		reportError(err);
 		toast.error(extractMessage(err));
 	}
 

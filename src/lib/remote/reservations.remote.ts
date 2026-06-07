@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
+import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {
@@ -57,6 +58,11 @@ import {
 	refund as refundPayment
 } from '$lib/server/finance/payment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
+import {
+	commitReservationCredits,
+	computeReservationCredit,
+	reverseReservationCredits
+} from '$lib/server/reservation/reservation-credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import {
 	RECURRING_FREQUENCIES,
@@ -105,6 +111,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 });
 
 export const getBandReservations = query(z.string(), async (slug) => {
+	await requireFeature('bandReservations');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
@@ -418,17 +425,21 @@ export const getReservationPricing = query(
 			isSustainingMember = row?.subscription != null;
 		}
 
-		const creditsApplicable = Math.min(freeHoursBalance, durationHours);
-		const creditDiscountCents =
-			durationHours > 0 ? creditsApplicable * (totalCents / durationHours) : 0;
-		const remainingCents = totalCents - creditDiscountCents;
+		// Single source of truth shared with settlement (commitReservationCredits)
+		// so the member is never shown a different remainder than they're charged.
+		const { creditUnits, creditDiscountCents, remainingCents } = computeReservationCredit({
+			totalCents,
+			durationHours,
+			hourlyRateCents,
+			freeHoursBalance
+		});
 
 		return {
 			durationHours,
 			hourlyRateCents,
 			totalCents,
 			freeHoursBalance,
-			creditsApplicable,
+			creditsApplicable: creditUnits,
 			creditDiscountCents,
 			remainingCents,
 			isSustainingMember
@@ -500,6 +511,7 @@ export const previewRecurringInstances = query(
 
 /** Band: available slots + config + recurring frequencies for a given date. */
 export const getBandSlots = query(z.string(), async (dateParam) => {
+	await requireFeature('bandReservations');
 	await requireBandMember();
 
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
@@ -566,6 +578,7 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.void(), async () => {
+	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
@@ -637,6 +650,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			bookerType: reservation.bookerType,
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			paidAt: reservation.paidAt,
+			cashDueCents: reservation.cashDueCents,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
 			memberName: user.name,
@@ -690,11 +705,26 @@ export const getUnresolvedReservations = query(async () => {
 			memberName: user.name,
 			memberEmail: user.email,
 			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id)
+			memberRole: primaryRoleFor(user.id),
+			cashDueCents: reservation.cashDueCents
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(and(eq(reservation.status, 'scheduled'), lt(reservation.endsAt, now)))
+		.where(
+			and(
+				lt(reservation.endsAt, now),
+				or(
+					// Never confirmed/paid — pending resolution.
+					eq(reservation.status, 'scheduled'),
+					// Confirmed with cash still owed at the door.
+					and(
+						eq(reservation.status, 'confirmed'),
+						isNull(reservation.paidAt),
+						gt(reservation.cashDueCents, 0)
+					)
+				)
+			)
+		)
 		.orderBy(asc(reservation.endsAt))
 		.limit(LIST_LIMIT);
 });
@@ -806,6 +836,145 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 	return { reservationId: res.id, waitlisted };
 });
 
+/**
+ * Commit free-hour credits to a reservation. If credits fully cover it, settle it
+ * as a $0 credit payment (status confirmed, paidAt, best-effort Stripe record) and
+ * return `settled: true`. Otherwise return the cash remainder owed. The credit
+ * commit is idempotent, so calling this from Confirm then Pay-Ahead/Cash never
+ * double-deducts.
+ */
+async function commitCreditsAndSettleIfCovered(opts: {
+	reservationId: string;
+	userId: string;
+	email: string;
+	name: string | null;
+	durationHours: number;
+	totalCents: number;
+	hourlyRateCents: number;
+}): Promise<{ remainingCents: number; settled: boolean }> {
+	const credit = await commitReservationCredits({
+		userId: opts.userId,
+		reservationId: opts.reservationId,
+		totalCents: opts.totalCents,
+		durationHours: opts.durationHours,
+		hourlyRateCents: opts.hourlyRateCents
+	});
+
+	if (credit.remainingCents > 0) {
+		return { remainingCents: credit.remainingCents, settled: false };
+	}
+
+	// Fully covered by free hours → settle as a credit payment. The $0 Stripe
+	// record is best-effort; the committed credits are the authoritative settlement.
+	let stripePaymentRecordId: string | null = null;
+	try {
+		const stripeCustomerId = await ensureStripeCustomer(
+			opts.userId,
+			opts.email,
+			opts.name ?? undefined
+		);
+		const rec = await recordCashPayment({
+			userId: opts.userId,
+			stripeCustomerId,
+			amountCents: 0,
+			displayName: 'Credits',
+			metadata: { reservation_id: opts.reservationId }
+		});
+		stripePaymentRecordId = rec.paymentRecordId;
+	} catch (err) {
+		console.error('[reservation] $0 credit settlement record failed (settling anyway):', err);
+	}
+
+	await db
+		.update(reservation)
+		.set({
+			status: 'confirmed',
+			paidAt: new Date(),
+			stripePaymentRecordId,
+			cashDueCents: 0,
+			updatedAt: new Date()
+		})
+		.where(eq(reservation.id, opts.reservationId));
+
+	return { remainingCents: 0, settled: true };
+}
+
+/**
+ * Pay for an existing reservation: commit free hours, then either settle (fully
+ * covered) or charge the cash remainder online. Credits are committed once
+ * (idempotent) and not re-applied inside checkout.
+ */
+async function payReservationRemainder(opts: {
+	row: { id: string; startsAt: Date; endsAt: Date };
+	userId: string;
+	email: string;
+	name: string | null;
+	coverFees: boolean;
+	successUrl: string;
+	cancelUrl: string;
+}): Promise<{ paid: true } | { checkoutUrl: string }> {
+	const reservationConfig = await getReservationConfig();
+	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const durationHours =
+		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+
+	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
+		reservationId: opts.row.id,
+		userId: opts.userId,
+		email: opts.email,
+		name: opts.name,
+		durationHours,
+		totalCents,
+		hourlyRateCents
+	});
+	if (settled) return { paid: true };
+
+	const stripeCustomerId = await ensureStripeCustomer(
+		opts.userId,
+		opts.email,
+		opts.name ?? undefined
+	);
+	const result = await checkout({
+		stripeCustomerId,
+		customerEmail: opts.email,
+		userId: opts.userId,
+		mode: 'payment',
+		lineItems: [
+			{
+				price_data: {
+					currency: 'usd',
+					product_data: { name: 'Practice Room Rental' },
+					unit_amount: remainingCents
+				},
+				quantity: 1
+			}
+		],
+		// Credits already committed against this reservation — don't deduct again.
+		eligibleCredits: [],
+		coverFees: opts.coverFees,
+		metadata: { reservation_id: opts.row.id },
+		successUrl: opts.successUrl,
+		cancelUrl: opts.cancelUrl
+	});
+
+	if (result.paid) {
+		await db
+			.update(reservation)
+			.set({
+				status: 'confirmed',
+				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+				paidAt: new Date(),
+				cashDueCents: 0,
+				updatedAt: new Date()
+			})
+			.where(eq(reservation.id, opts.row.id));
+		return { paid: true };
+	}
+
+	return { checkoutUrl: result.checkoutUrl! };
+}
+
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
@@ -848,16 +1017,24 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 			notes: data.notes
 		});
 	} catch (err) {
-		if (isRecurring && err instanceof ReservationConflictError) {
-			res = await createWaitlisted({
-				userId: locals.user.id,
-				bookerType: 'user',
-				bookerId: locals.user.id,
-				startsAt,
-				endsAt,
-				notes: data.notes
-			});
-			waitlisted = true;
+		if (err instanceof ReservationConflictError) {
+			if (isRecurring) {
+				res = await createWaitlisted({
+					userId: locals.user.id,
+					bookerType: 'user',
+					bookerId: locals.user.id,
+					startsAt,
+					endsAt,
+					notes: data.notes
+				});
+				waitlisted = true;
+			} else {
+				// One-time slot was taken between selection and submit. create()
+				// checks conflicts before inserting, so nothing was written — signal
+				// the wizard to send the member back to a refreshed time picker
+				// rather than surfacing a 500.
+				return { conflict: true as const };
+			}
 		} else {
 			throw err;
 		}
@@ -880,24 +1057,51 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 		return { reservationId: res.id, waitlisted: true as const };
 	}
 
+	const reservationConfig = await getReservationConfig();
+	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+
 	if (data.skipPayment === 'on') {
-		await db
-			.update(reservation)
-			.set({ status: 'confirmed', updatedAt: new Date() })
-			.where(eq(reservation.id, res.id));
+		// Confirm: commit free hours now. If fully covered, it's settled; otherwise
+		// the cash remainder is collected at the door.
+		const { settled } = await commitCreditsAndSettleIfCovered({
+			reservationId: res.id,
+			userId: locals.user.id,
+			email: locals.user.email,
+			name: locals.user.name,
+			durationHours,
+			totalCents,
+			hourlyRateCents
+		});
+		if (!settled) {
+			await db
+				.update(reservation)
+				.set({ status: 'confirmed', updatedAt: new Date() })
+				.where(eq(reservation.id, res.id));
+		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
 
-	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
-	const durationMs = endsAt.getTime() - startsAt.getTime();
-	const durationHours = durationMs / (1000 * 60 * 60);
-	const totalCents = Math.round(durationHours * hourlyRateCents);
+	// Pay Ahead: commit free hours, then charge any cash remainder online now.
+	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
+		reservationId: res.id,
+		userId: locals.user.id,
+		email: locals.user.email,
+		name: locals.user.name,
+		durationHours,
+		totalCents,
+		hourlyRateCents
+	});
+	if (settled) {
+		return { reservationId: res.id, paid: true as const };
+	}
+
 	const lineItem: CheckoutLineItem = {
 		price_data: {
 			currency: 'usd',
 			product_data: { name: 'Practice Room Rental' },
-			unit_amount: totalCents
+			unit_amount: remainingCents
 		},
 		quantity: 1
 	};
@@ -914,7 +1118,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 		userId: locals.user.id,
 		mode: 'payment',
 		lineItems: [lineItem],
-		eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+		// Credits already committed against this reservation — don't deduct again.
+		eligibleCredits: [],
 		coverFees: data.coverFees === 'on',
 		metadata: { reservation_id: res.id },
 		successUrl: `${url.origin}/member/reservations`,
@@ -927,6 +1132,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 			.set({
 				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
+				paidAt: new Date(),
+				cashDueCents: 0,
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
@@ -943,6 +1150,7 @@ const bandBookingSchema = createReservationSchema.extend({
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, _issue) => {
+	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
 
@@ -1011,6 +1219,7 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
+		await requireFeature('bandReservations');
 		const currentUser = requireUser();
 		await requireBandMember();
 		await cancel(data.reservationId, currentUser.id);
@@ -1037,60 +1246,35 @@ export const payForReservation = form(
 			throw error(400, 'Not eligible for payment');
 
 		if (data.skipPayment === 'on') {
-			if (row.status === 'scheduled') await confirm(data.id);
+			// Confirm: commit free hours; settle if fully covered, else cash at door.
+			const reservationConfig = await getReservationConfig();
+			const hourlyRateCents = reservationConfig.hourlyRateCents;
+			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+			const totalCents = Math.round(durationHours * hourlyRateCents);
+			const { settled } = await commitCreditsAndSettleIfCovered({
+				reservationId: row.id,
+				userId: currentUser.id,
+				email: currentUser.email,
+				name: currentUser.name,
+				durationHours,
+				totalCents,
+				hourlyRateCents
+			});
+			if (!settled && row.status === 'scheduled') await confirm(row.id);
 			return { confirmed: true };
 		}
 
-		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
-
-		const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-		const durationHours = durationMs / (1000 * 60 * 60);
-		const totalCents = Math.round(durationHours * hourlyRateCents);
-
-		const lineItem: CheckoutLineItem = {
-			price_data: {
-				currency: 'usd',
-				product_data: { name: 'Practice Room Rental' },
-				unit_amount: totalCents
-			},
-			quantity: 1
-		};
-
-		const stripeCustomerId = await ensureStripeCustomer(
-			currentUser.id,
-			currentUser.email,
-			currentUser.name
-		);
-
-		const result = await checkout({
-			stripeCustomerId,
-			customerEmail: currentUser.email,
+		const result = await payReservationRemainder({
+			row,
 			userId: currentUser.id,
-			mode: 'payment',
-			lineItems: [lineItem],
-			eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+			email: currentUser.email,
+			name: currentUser.name,
 			coverFees: data.coverFees === 'on',
-			metadata: { reservation_id: row.id },
 			successUrl: `${url.origin}/member/reservations`,
 			cancelUrl: `${url.origin}/member/reservations`
 		});
 
-		if (result.paid) {
-			await db
-				.update(reservation)
-				.set({
-					status: 'confirmed',
-					stripePaymentRecordId: result.stripePaymentRecordId ?? null,
-					paidAt: new Date(),
-					updatedAt: new Date()
-				})
-				.where(eq(reservation.id, row.id));
-
-			return { paid: true };
-		}
-
-		return { redirectUrl: result.checkoutUrl! };
+		return 'paid' in result ? { paid: true } : { redirectUrl: result.checkoutUrl };
 	}
 );
 
@@ -1114,56 +1298,17 @@ export const payReservation = form(
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
 
-		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
-
-		const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-		const durationHours = durationMs / (1000 * 60 * 60);
-		const totalCents = Math.round(durationHours * hourlyRateCents);
-
-		const lineItem: CheckoutLineItem = {
-			price_data: {
-				currency: 'usd',
-				product_data: { name: 'Practice Room Rental' },
-				unit_amount: totalCents
-			},
-			quantity: 1
-		};
-
-		const stripeCustomerId = await ensureStripeCustomer(
-			currentUser.id,
-			currentUser.email,
-			currentUser.name
-		);
-
-		const result = await checkout({
-			stripeCustomerId,
-			customerEmail: currentUser.email,
+		const result = await payReservationRemainder({
+			row,
 			userId: currentUser.id,
-			mode: 'payment',
-			lineItems: [lineItem],
-			eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+			email: currentUser.email,
+			name: currentUser.name,
 			coverFees: data.coverFees === 'on',
-			metadata: { reservation_id: row.id },
 			successUrl: `${url.origin}/member/reservations`,
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 
-		if (result.paid) {
-			await db
-				.update(reservation)
-				.set({
-					status: 'confirmed',
-					stripePaymentRecordId: result.stripePaymentRecordId ?? null,
-					paidAt: new Date(),
-					updatedAt: new Date()
-				})
-				.where(eq(reservation.id, row.id));
-
-			redirect(303, '/member/reservations');
-		}
-
-		redirect(303, result.checkoutUrl!);
+		redirect(303, 'paid' in result ? '/member/reservations' : result.checkoutUrl);
 	}
 );
 
@@ -1176,7 +1321,13 @@ export const confirmReservation = form(z.object({ id: z.string() }), async (data
 	const currentUser = requireUser();
 
 	const [row] = await db
-		.select({ createdByUserId: reservation.createdByUserId })
+		.select({
+			id: reservation.id,
+			createdByUserId: reservation.createdByUserId,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			status: reservation.status
+		})
 		.from(reservation)
 		.where(eq(reservation.id, data.id))
 		.limit(1);
@@ -1187,7 +1338,27 @@ export const confirmReservation = form(z.object({ id: z.string() }), async (data
 	const staff = await isStaff(currentUser.id);
 	if (!isOwner && !staff) throw error(403, 'Not authorized');
 
-	await confirm(data.id);
+	// Commit the owner's free hours; settle if fully covered, else confirm with
+	// the cash remainder owed at the door.
+	const [owner] = await db
+		.select({ email: user.email, name: user.name })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+	const reservationConfig = await getReservationConfig();
+	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+	const { settled } = await commitCreditsAndSettleIfCovered({
+		reservationId: row.id,
+		userId: row.createdByUserId,
+		email: owner?.email ?? '',
+		name: owner?.name ?? null,
+		durationHours,
+		totalCents,
+		hourlyRateCents
+	});
+	if (!settled && row.status === 'scheduled') await confirm(row.id);
 	return { success: true };
 });
 
@@ -1234,33 +1405,59 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 
-	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-	const durationHours = durationMs / (1000 * 60 * 60);
+	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
-	const amountCents = Math.round(durationHours * hourlyRateCents);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	const [member] = await db
-		.select({ stripeId: user.stripeId })
-		.from(user)
-		.where(eq(user.id, row.createdByUserId))
-		.limit(1);
-	if (!member?.stripeId) throw error(400, 'Member has no Stripe customer ID');
-
-	const { paymentRecordId } = await recordCashPayment({
+	// Commit the member's free hours (idempotent — already done if confirmed
+	// ahead of time), then collect only the cash remainder.
+	const { remainingCents } = await commitCreditsAndSettleIfCovered({
+		reservationId: data.id,
 		userId: row.createdByUserId,
-		stripeCustomerId: member.stripeId,
-		amountCents,
-		metadata: { reservation_id: data.id }
+		email: '',
+		name: null,
+		durationHours,
+		totalCents,
+		hourlyRateCents
 	});
+
+	let paymentRecordId: string;
+	if (remainingCents > 0) {
+		const [member] = await db
+			.select({ stripeId: user.stripeId })
+			.from(user)
+			.where(eq(user.id, row.createdByUserId))
+			.limit(1);
+		if (!member?.stripeId) throw error(400, 'Member has no Stripe customer ID');
+
+		({ paymentRecordId } = await recordCashPayment({
+			userId: row.createdByUserId,
+			stripeCustomerId: member.stripeId,
+			amountCents: remainingCents,
+			metadata: { reservation_id: data.id }
+		}));
+	} else {
+		// Fully covered by credits — already settled by the commit (paidAt set).
+		const [r] = await db
+			.select({ rec: reservation.stripePaymentRecordId })
+			.from(reservation)
+			.where(eq(reservation.id, data.id))
+			.limit(1);
+		paymentRecordId = r?.rec ?? '';
+	}
 
 	await recordCashAndComplete(data.id, paymentRecordId);
 	return { success: true };
 });
 
-/** Staff: comp a reservation (waive payment and confirm). */
+/** Staff: comp a reservation (waive payment and confirm — no credits used). */
 export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireStaff();
 	await confirm(data.id);
+	await db
+		.update(reservation)
+		.set({ cashDueCents: 0, updatedAt: new Date() })
+		.where(eq(reservation.id, data.id));
 	return { success: true };
 });
 
@@ -1283,6 +1480,9 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 		userId: row.createdByUserId,
 		stripePaymentRecordId: row.stripePaymentRecordId
 	});
+	// Reservation free-hour credits live in the ledger (not the payment record's
+	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
+	await reverseReservationCredits(row.createdByUserId, data.id);
 	await db.update(reservation).set({ refundedAt: new Date() }).where(eq(reservation.id, data.id));
 	return { success: true };
 });

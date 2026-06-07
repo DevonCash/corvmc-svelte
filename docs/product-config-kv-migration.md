@@ -39,6 +39,7 @@ ID), so no data-port script is required.
       `product_config` table. (Per project rule, agent does not write migrations.)
 
 ## Notes
+
 - No consumer files change (subscription-service, band-subscription-service,
   payment-service, events.remote, membership.remote, settings.remote, staff
   settings page) — they all go through the unchanged service API.

@@ -12,11 +12,13 @@ export function visibleActions(
 	startsAt: Date,
 	endsAt: Date,
 	stripePaymentRecordId?: string | null,
-	now: Date = new Date()
+	now: Date = new Date(),
+	opts?: { cashDueCents?: number | null; paidAt?: Date | null }
 ): Set<ReservationActionKey> {
 	const actions = new Set<ReservationActionKey>();
 	const start = startsAt;
 	const end = endsAt;
+	const cashOwed = !opts?.paidAt && (opts?.cashDueCents ?? 0) > 0;
 
 	if (status === 'scheduled') {
 		actions.add('confirm');
@@ -30,6 +32,8 @@ export function visibleActions(
 		actions.add('cancel');
 		if (now >= end) actions.add('complete');
 		if (now >= start) actions.add('noShow');
+		// Credits committed at Confirm, cash still owed → staff can record cash.
+		if (cashOwed) actions.add('cashReceived');
 	}
 
 	if (stripePaymentRecordId && (status === 'confirmed' || status === 'completed')) {

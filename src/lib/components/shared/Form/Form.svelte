@@ -14,12 +14,12 @@
 		changed(): void;
 		readonly currentStep: number;
 		readonly totalSteps: number;
-		readonly hasSteps: boolean;
 		readonly currentStepValid: boolean;
 		registerStep(): number;
 		setStepValid(index: number, valid: boolean): void;
 		next(): void;
 		back(): void;
+		goToStep(index: number): void;
 	}
 
 	const FORM_KEY = Symbol('form');
@@ -41,6 +41,7 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { reportError } from '$lib/report-error';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -114,9 +115,6 @@
 		get totalSteps() {
 			return totalSteps;
 		},
-		get hasSteps() {
-			return totalSteps > 0;
-		},
 		get currentStepValid() {
 			return stepValidity[currentStep] ?? true;
 		},
@@ -135,21 +133,60 @@
 		},
 		back() {
 			if (currentStep > 0) currentStep--;
+		},
+		goToStep(index: number) {
+			currentStep = Math.max(0, Math.min(index, totalSteps - 1));
 		}
 	};
 	setFormContext(ctx);
 
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
+	// Step navigation is button-driven (a non-last-step button calls next()); the
+	// only way to accidentally submit mid-wizard is pressing Enter inside a text
+	// field, which we redirect to "advance" below. A submit *event* always means
+	// "submit" and is never hijacked — buttons, links, and widgets keep their
+	// native Enter behavior so a terminal submit button still submits.
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key !== 'Enter' || e.defaultPrevented) return; // a widget already handled it
+		if (ctx.currentStep >= ctx.totalSteps - 1) return; // single/last step: submit natively
+		// Only a text-like input implicitly submits the form on Enter. Leave
+		// buttons, textareas, selects, and custom widgets alone.
+		const t = e.target;
+		const isTextField =
+			t instanceof HTMLInputElement &&
+			!['button', 'submit', 'reset', 'checkbox', 'radio'].includes(t.type);
+		if (!isTextField) return;
+		e.preventDefault();
+		if (ctx.currentStepValid) ctx.next();
+	}
+
+	// In a multi-step wizard every step (and its submit button) is rendered at
+	// once and merely hidden, so the form's *default* submit button is whichever
+	// type=submit appears first in the DOM — which may belong to a later, hidden
+	// step. An implicit submission (Enter on a widget the keydown guard doesn't
+	// cover) would then fire that hidden button, POSTing the wrong step early
+	// (e.g. creating a reservation before the Confirm screen). Only honor a submit
+	// triggered by a *visible* button — i.e. the current step's. Explicit clicks
+	// always have a visible submitter; stray implicit submits are dropped.
+	function isVisible(el: HTMLElement): boolean {
+		const check = (el as { checkVisibility?: () => boolean }).checkVisibility;
+		if (typeof check === 'function') return check.call(el);
+		return el.offsetParent !== null || el.getClientRects().length > 0;
+	}
+
+	function guardSubmit(e: SubmitEvent) {
+		const submitter = e.submitter as HTMLElement | null;
+		if (submitter && !isVisible(submitter)) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		}
+	}
+
 	let submitting = false;
 	let remoteAttrs = $derived(
 		remote?.enhance(async (...args) => {
 			if (submitting) return;
-			// Guard: multi-step forms shouldn't submit until the last step
-			if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
-				if (ctx.currentStepValid) ctx.next();
-				return;
-			}
 			submitting = true;
 			const [{ submit }] = args;
 			status = 'pending';
@@ -163,13 +200,25 @@
 					status = 'success';
 					changeCount = 0;
 				} else {
-					throw new Error('Form validation failed');
+					// Validation failed — expected. Field-level issues are already
+					// rendered; surface them without reporting a bug to Sentry.
+					await delay(150 - (performance.now() - start));
+					if (onfailure) onfailure(ctx.issues);
+					else toast.error('Please fix the highlighted fields and try again.');
+					status = 'error';
 				}
 			} catch (err) {
+				// Genuine submission failure (network/server). Capture it: forms with
+				// an onfailure handler bypass the error boundary, so report directly.
 				await delay(150 - (performance.now() - start));
-				console.error('[Form] submission error:', err);
-				if (onfailure) onfailure(ctx.issues);
-				else errorBoundary?.reportError(err);
+				if (onfailure) {
+					reportError(err);
+					onfailure(ctx.issues);
+				} else if (errorBoundary) {
+					errorBoundary.reportError(err);
+				} else {
+					reportError(err);
+				}
 				status = 'error';
 			} finally {
 				submitting = false;
@@ -184,11 +233,6 @@
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!action || !formEl) return;
-		// Guard: multi-step forms shouldn't submit until the last step
-		if (ctx.hasSteps && ctx.currentStep < ctx.totalSteps - 1) {
-			if (ctx.currentStepValid) ctx.next();
-			return;
-		}
 		status = 'pending';
 		actionIssues = null;
 		const start = performance.now();
@@ -202,9 +246,12 @@
 			changeCount = 0;
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
-			console.error('[Form] submission error:', err);
+			if (errorBoundary) {
+				errorBoundary.reportError(err); // reports to Sentry + toasts
+			} else {
+				reportError(err);
+			}
 			onfailure?.(null);
-			errorBoundary?.reportError(err);
 			status = 'error';
 		}
 
@@ -215,11 +262,25 @@
 </script>
 
 {#if remote}
-	<form bind:this={formEl} {...remoteAttrs} class={className} {...rest}>
+	<form
+		bind:this={formEl}
+		{...remoteAttrs}
+		onsubmitcapture={guardSubmit}
+		onkeydown={handleKeydown}
+		class={className}
+		{...rest}
+	>
 		{@render children()}
 	</form>
 {:else}
-	<form bind:this={formEl} onsubmit={handleActionSubmit} class={className} {...rest}>
+	<form
+		bind:this={formEl}
+		onsubmit={handleActionSubmit}
+		onsubmitcapture={guardSubmit}
+		onkeydown={handleKeydown}
+		class={className}
+		{...rest}
+	>
 		{@render children()}
 	</form>
 {/if}

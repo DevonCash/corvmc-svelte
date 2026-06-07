@@ -79,6 +79,10 @@ vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: vi.fn(async () => false)
 }));
 
+vi.mock('$lib/server/feature-flags', () => ({
+	requireFeature: vi.fn(async () => undefined)
+}));
+
 const subscriptionServiceMock = {
 	getSubscription: vi.fn(async () => null as { id: string; status: string } | null)
 };

@@ -10,12 +10,16 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
+	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
 
 	let data = $derived(await getMemberDashboard());
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
-	const freeHours = $derived(data.credits.free_hours ?? 0);
+	// Credits are stored as 30-min blocks; display practice time in hours.
+	const freeHours = $derived(creditsToHours(data.credits.free_hours ?? 0));
+	const usedHours = $derived(creditsToHours(data.usedThisMonth));
+	const allocatedHours = $derived(creditsToHours(data.allocatedThisMonth));
 	const pendingInvites = $derived(data.pendingInviteCount ?? 0);
 </script>
 
@@ -102,7 +106,7 @@
 						max={data.allocatedThisMonth || 1}
 					></progress>
 					<p class="text-xs opacity-60">
-						{data.usedThisMonth} of {data.allocatedThisMonth} hours used this month
+						{usedHours} of {allocatedHours} hours used this month
 					</p>
 				</div>
 			{:else}

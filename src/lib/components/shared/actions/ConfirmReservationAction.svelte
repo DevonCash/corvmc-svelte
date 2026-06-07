@@ -39,7 +39,7 @@
 	{...rest}
 >
 	{#snippet form()}
-		<ConfirmStep {reservation} fields={{ id: fields.id, skipPayment: fields.skipPayment }} />
+		<ConfirmStep {reservation} fields={{ id: fields.id }} />
 		<PaymentStep {reservation} fields={{ id: fields.id, coverFees: fields.coverFees }} />
 	{/snippet}
 </Action>
