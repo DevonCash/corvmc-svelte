@@ -10,6 +10,7 @@
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import {
 		purchaseTickets,
@@ -30,6 +31,9 @@
 	let data = $derived({ ...eventData, myTicket });
 
 	const evt = $derived(data.event);
+	// Descriptions are rich text (legacy rows contain HTML), so sanitize before
+	// rendering to strip any XSS payload while keeping formatting.
+	const descriptionHtml = $derived(evt.description ? sanitizeHtml(evt.description) : '');
 	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
@@ -213,8 +217,9 @@
 				</div>
 			</div>
 
-			{#if evt.description}
-				<p class="edet__desc">{@html evt.description}</p>
+			{#if descriptionHtml}
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized rich text (sanitizeHtml) -->
+				<p class="edet__desc">{@html descriptionHtml}</p>
 			{/if}
 
 			{#if evt.ticketingEnabled}
