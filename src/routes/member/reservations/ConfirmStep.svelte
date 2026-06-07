@@ -129,7 +129,7 @@
 		if (skipPaymentInput) {
 			skipPaymentInput.value = 'on';
 		}
-		formCtx.submit();
+		formCtx.forceSubmit();
 	}
 </script>
 
