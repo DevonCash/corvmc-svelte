@@ -18,7 +18,7 @@ import {
 	deductCredits,
 	listTransactions
 } from '$lib/server/finance/credit-service';
-import { getSubscription } from '$lib/server/finance/subscription-service';
+import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { startOfWeek, endOfWeek } from 'date-fns';
@@ -322,7 +322,7 @@ export const getMemberDashboard = query(async () => {
 		.from(bandMember)
 		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
 
-	const [weekReservations, bandWeekReservations, upcomingEvents, credits, subscription] =
+	const [weekReservations, bandWeekReservations, upcomingEvents, credits, dbSubscription] =
 		await Promise.all([
 			db
 				.select()
@@ -354,17 +354,17 @@ export const getMemberDashboard = query(async () => {
 				: Promise.resolve([]),
 			listUpcoming(4),
 			getAllBalances(currentUser.id),
-			currentUser.stripeId ? getSubscription(currentUser.stripeId) : Promise.resolve(null)
+			getMemberSubscription(currentUser.id)
 		]);
+
+	const subscription = mapDbSubscription(dbSubscription);
 
 	const allReservations = [...weekReservations, ...bandWeekReservations].sort(
 		(a, b) => a.startsAt.getTime() - b.startsAt.getTime()
 	);
 
-	let allocatedThisMonth = 0;
-	if (subscription && credits.free_hours != null) {
-		allocatedThisMonth = subscription.quantity;
-	}
+	// Allocation/usage tracked in credits (30-min blocks); the UI converts to hours.
+	const allocatedThisMonth = dbSubscription?.hoursPerReset ?? 0;
 	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {

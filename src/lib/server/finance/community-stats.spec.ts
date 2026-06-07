@@ -83,7 +83,8 @@ describe('getCommunityStats', () => {
 		const stats = await getCommunityStats();
 
 		expect(stats.sustainingMemberCount).toBe(12);
-		expect(stats.totalFreeHoursAllocated).toBe(47);
+		// Ledger amounts are credits (30-min blocks); reported as hours = 47 / 2.
+		expect(stats.totalFreeHoursAllocated).toBe(23.5);
 		expect(stats.participationPercent).toBe(15);
 	});
 
@@ -136,7 +137,8 @@ describe('getCommunityStats', () => {
 
 		const cached = JSON.parse(kvStore['community-stats']);
 		expect(cached.sustainingMemberCount).toBe(8);
-		expect(cached.totalFreeHoursAllocated).toBe(30);
+		// Ledger amounts are credits (30-min blocks); reported as hours = 30 / 2.
+		expect(cached.totalFreeHoursAllocated).toBe(15);
 		expect(cached.participationPercent).toBe(20);
 	});
 });

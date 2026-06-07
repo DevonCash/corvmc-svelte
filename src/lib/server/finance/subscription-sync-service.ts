@@ -5,7 +5,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import type { Subscription } from '$lib/server/db/schema/authentication';
 import { stripe } from '$lib/server/stripe';
-import { getStripeProductId } from './product-config-service';
+import { buildMemberSubscriptionState } from './subscription-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 
@@ -69,7 +69,6 @@ export async function syncAllSubscriptions(
 		errors: []
 	};
 
-	const contributionProductId = await getStripeProductId('contribution');
 	const seenUserIds = new Set<string>();
 	const seenBandIds = new Set<string>();
 
@@ -95,7 +94,7 @@ export async function syncAllSubscriptions(
 				if (meta.subscription_type === 'band_premium' && meta.band_id) {
 					await applyBand(sub, meta.band_id, dryRun, summary, seenBandIds);
 				} else {
-					await applyUser(sub, contributionProductId, dryRun, summary, seenUserIds);
+					await applyUser(sub, dryRun, summary, seenUserIds);
 				}
 			} catch (err) {
 				summary.errors.push({
@@ -166,7 +165,6 @@ async function applyBand(
 
 async function applyUser(
 	sub: Stripe.Subscription,
-	contributionProductId: string,
 	dryRun: boolean,
 	summary: SubscriptionSyncSummary,
 	seenUserIds: Set<string>
@@ -203,32 +201,12 @@ async function applyUser(
 	}
 
 	if (WRITE_STATUSES.has(sub.status)) {
-		// Identify the contribution line by product id (mirrors
-		// subscription-service.ts:101-107), with a quantity>0 fallback.
-		const item =
-			sub.items.data.find((i) => {
-				const product = i.price.product;
-				return (typeof product === 'string' ? product : product?.id) === contributionProductId;
-			}) ?? sub.items.data.find((i) => (i.quantity ?? 0) > 0);
-
-		const hoursPerReset = item?.quantity ?? 0;
-		// In Stripe v22 the period end lives on the subscription item.
-		const periodEnd = item?.current_period_end;
-		const creditsResetAt = periodEnd
-			? new Date(periodEnd * 1000).toISOString()
-			: new Date(Date.now() + 30 * 86400_000).toISOString();
-
+		// Status snapshot only — `hoursPerReset` is in credits (30-min blocks) and
+		// `startedAt` is preserved for idempotency. NO creditService.* calls (unlike
+		// handleInvoicePaid).
 		const existingSub = member.subscription as Subscription | null;
-		const subscription: Subscription = {
-			// Preserve existing startedAt so re-runs are idempotent (matches
-			// webhook-handlers.ts:104).
-			startedAt: existingSub?.startedAt ?? new Date().toISOString(),
-			stripeSubscriptionId: sub.id,
-			hoursPerReset,
-			creditsResetAt
-		};
+		const subscription = await buildMemberSubscriptionState(sub, existingSub);
 
-		// NOTE: deliberately NO creditService.* calls (unlike handleInvoicePaid).
 		if (!dryRun) await db.update(user).set({ subscription }).where(eq(user.id, member.id));
 		seenUserIds.add(member.id);
 		summary.usersUpdated++;

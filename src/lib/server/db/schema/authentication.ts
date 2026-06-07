@@ -12,7 +12,9 @@ export const subscriptionSchema = z
 		startedAt: z.string(),
 		stripeSubscriptionId: z.string(),
 		hoursPerReset: z.number(),
-		creditsResetAt: z.string()
+		creditsResetAt: z.string(),
+		coveringFees: z.boolean().default(false),
+		cancelAtPeriodEnd: z.boolean().default(false)
 	})
 	.nullable()
 	.default(null);

@@ -625,6 +625,29 @@ async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: Seed
 			.insert(modelHasRole)
 			.values({ roleId: sustainingRole.id, userId: u.id })
 			.onConflictDoNothing();
+
+		// Give sustaining members an active subscription snapshot so the membership
+		// page renders the dashboard view. hoursPerReset and creditFreeHours are in
+		// credits (30-min blocks): each $5-unit grants one hour = two credits.
+		const units = pick([2, 5, 12]); // $10 / $25 / $60 per month
+		const hoursPerReset = units * 2;
+		const startedAt = new Date(Date.now() - randomInt(30, 365) * 86400000);
+		const creditsResetAt = new Date(Date.now() + randomInt(3, 27) * 86400000);
+		await db
+			.update(user)
+			.set({
+				stripeId: `cus_seed_${u.id.slice(0, 8)}`,
+				creditFreeHours: randomInt(0, hoursPerReset),
+				subscription: {
+					startedAt: startedAt.toISOString(),
+					stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
+					hoursPerReset,
+					creditsResetAt: creditsResetAt.toISOString(),
+					coveringFees: Math.random() > 0.6,
+					cancelAtPeriodEnd: false
+				}
+			})
+			.where(eq(user.id, u.id));
 	}
 }
 

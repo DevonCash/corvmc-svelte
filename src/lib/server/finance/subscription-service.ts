@@ -1,4 +1,8 @@
+import type Stripe from 'stripe';
+import { eq } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
+import { db } from '$lib/server/db';
+import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { checkout } from './payment-service';
 import { calculateTotalWithFeeCoverage } from './fees';
 import {
@@ -84,6 +88,33 @@ export async function createCheckoutSession(options: CreateSubscriptionOptions):
 // getSubscription
 // ---------------------------------------------------------------------------
 
+/** Resolve a subscription item's product id (price.product may be expanded). */
+function itemProductId(item: Stripe.SubscriptionItem): string | undefined {
+	const product = item.price.product;
+	return typeof product === 'string' ? product : product?.id;
+}
+
+/**
+ * Locate the contribution line item on a subscription. Prefers an exact product-id
+ * match; if that fails (product ids can drift after a KV/product-config migration),
+ * falls back to the largest-quantity line that is NOT the fee-coverage line — the
+ * fee line is always quantity 1, so a naive "first quantity>0" fallback can wrongly
+ * pick it. Returns undefined only when no usable line exists.
+ */
+function findContributionItem(
+	items: Stripe.SubscriptionItem[],
+	contributionProductId: string,
+	feeProductId: string
+): Stripe.SubscriptionItem | undefined {
+	const byProduct = items.find((i) => itemProductId(i) === contributionProductId);
+	if (byProduct) return byProduct;
+
+	const nonFee = items
+		.filter((i) => itemProductId(i) !== feeProductId && (i.quantity ?? 0) > 0)
+		.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+	return nonFee[0] ?? items.find((i) => (i.quantity ?? 0) > 0);
+}
+
 /**
  * Fetch the active subscription for a user. Returns null if none exists.
  */
@@ -101,14 +132,13 @@ export async function getSubscription(stripeCustomerId: string): Promise<Subscri
 	const contributionProductId = await getStripeProductId('contribution');
 	const feeProductId = await getStripeProductId('fee_coverage');
 
-	const contributionItem = sub.items.data.find((item) => {
-		const product = item.price.product;
-		return (typeof product === 'string' ? product : product.id) === contributionProductId;
-	});
-	const feeItem = sub.items.data.find((item) => {
-		const product = item.price.product;
-		return (typeof product === 'string' ? product : product.id) === feeProductId;
-	});
+	// `quantity` here is the $5-unit count (not credits).
+	const contributionItem = findContributionItem(
+		sub.items.data,
+		contributionProductId,
+		feeProductId
+	);
+	const feeItem = sub.items.data.find((item) => itemProductId(item) === feeProductId);
 
 	// In Stripe v22, current_period_end moved to subscription items
 	const periodEnd = contributionItem?.current_period_end ?? 0;
@@ -121,6 +151,90 @@ export async function getSubscription(stripeCustomerId: string): Promise<Subscri
 		currentPeriodEnd: new Date(periodEnd * 1000),
 		cancelAtPeriodEnd: sub.cancel_at_period_end
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Subscription state mapping (DB-backed source of truth)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the `user.subscription` JSON snapshot from a Stripe subscription.
+ * `hoursPerReset` is stored in credits (30-min blocks): each $5-unit grants one
+ * hour = two credits, so `credits = contribution quantity × 2`. Preserves the
+ * existing `startedAt` so re-runs stay idempotent.
+ */
+export async function buildMemberSubscriptionState(
+	sub: Stripe.Subscription,
+	existing: Subscription | null
+): Promise<NonNullable<Subscription>> {
+	const contributionProductId = await getStripeProductId('contribution');
+	const feeProductId = await getStripeProductId('fee_coverage');
+
+	const contributionItem = findContributionItem(
+		sub.items.data,
+		contributionProductId,
+		feeProductId
+	);
+	const coveringFees = sub.items.data.some((i) => itemProductId(i) === feeProductId);
+
+	const units = contributionItem?.quantity ?? 0;
+	const periodEnd = contributionItem?.current_period_end;
+
+	return {
+		startedAt: existing?.startedAt ?? new Date().toISOString(),
+		stripeSubscriptionId: sub.id,
+		hoursPerReset: units * 2,
+		creditsResetAt: periodEnd
+			? new Date(periodEnd * 1000).toISOString()
+			: (existing?.creditsResetAt ?? new Date(Date.now() + 30 * 86400_000).toISOString()),
+		coveringFees,
+		cancelAtPeriodEnd: sub.cancel_at_period_end
+	};
+}
+
+/**
+ * Map a stored `user.subscription` JSON to the `SubscriptionInfo` shape the
+ * membership UI consumes. `quantity` is returned in $5-units (= credits / 2) so
+ * the dollar figure (`quantity × DOLLARS_PER_UNIT`) and "free practice hours"
+ * labels stay correct. Returns null when the member has no active subscription.
+ */
+export function mapDbSubscription(sub: Subscription | null): SubscriptionInfo | null {
+	if (!sub) return null;
+	return {
+		id: sub.stripeSubscriptionId,
+		status: 'active',
+		quantity: sub.hoursPerReset / 2,
+		coveringFees: sub.coveringFees ?? false,
+		currentPeriodEnd: new Date(sub.creditsResetAt),
+		cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false
+	};
+}
+
+/** Read a member's subscription snapshot from the DB (source of truth). */
+export async function getMemberSubscription(userId: string): Promise<Subscription | null> {
+	const [row] = await db
+		.select({ subscription: user.subscription })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	return (row?.subscription as Subscription | null) ?? null;
+}
+
+/**
+ * Merge a partial update into the member's stored subscription snapshot. Used for
+ * write-through after a Stripe mutation so the UI reflects the change before the
+ * webhook lands. No-op if the member has no subscription.
+ */
+export async function patchMemberSubscription(
+	userId: string,
+	patch: Partial<Subscription>
+): Promise<void> {
+	const existing = await getMemberSubscription(userId);
+	if (!existing) return;
+	await db
+		.update(user)
+		.set({ subscription: { ...existing, ...patch } })
+		.where(eq(user.id, userId));
 }
 
 // ---------------------------------------------------------------------------

@@ -76,7 +76,10 @@ vi.mock('drizzle-orm', () => ({
 	eq: (col: unknown, val: unknown) => ({ op: 'eq', col, val }),
 	and: (...c: unknown[]) => ({ op: 'and', c }),
 	isNotNull: (col: unknown) => ({ op: 'isNotNull', col }),
-	notInArray: (col: unknown, vals: unknown[]) => ({ op: 'notInArray', col, vals })
+	notInArray: (col: unknown, vals: unknown[]) => ({ op: 'notInArray', col, vals }),
+	// Needed because the mapper pulls in the finance schema, which uses sql`` for
+	// column defaults at module load.
+	sql: (..._args: unknown[]) => ({ op: 'sql' })
 }));
 
 vi.mock('$lib/server/db', () => {
@@ -184,8 +187,11 @@ describe('syncAllSubscriptions — users', () => {
 		const upd = dbState.updates.find((u) => u.table === 'user');
 		expect(upd?.set.subscription).toMatchObject({
 			stripeSubscriptionId: 'sub_1',
-			hoursPerReset: 7,
-			creditsResetAt: new Date(1_700_000_000 * 1000).toISOString()
+			// credits = contribution quantity × 2 (each $5-unit = 1 hour = 2 credits)
+			hoursPerReset: 14,
+			creditsResetAt: new Date(1_700_000_000 * 1000).toISOString(),
+			coveringFees: false,
+			cancelAtPeriodEnd: false
 		});
 	});
 

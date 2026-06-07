@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatDate } from '$lib/utils/format';
+	import { creditsToHours } from '$lib/config';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconClock } from '@tabler/icons-svelte';
@@ -19,13 +20,15 @@
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
 				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
-					>{membership.freeHoursBalance}</span
+					>{creditsToHours(membership.freeHoursBalance)}</span
 				>
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">free hours remaining</span>
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
-					Resets to {membership.hoursPerReset} on {formatDate(new Date(membership.creditsResetAt))}
+					Resets to {creditsToHours(membership.hoursPerReset)} on {formatDate(
+						new Date(membership.creditsResetAt)
+					)}
 				</span>
 			{/if}
 		{:else}

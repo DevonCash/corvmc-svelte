@@ -69,7 +69,14 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '$lib/config';
+import {
+	DEFAULT_TIMEZONE,
+	SEARCH_LIMIT,
+	LIST_LIMIT,
+	creditsToHours,
+	hoursToCredits,
+	creditValueCents
+} from '$lib/config';
 
 // ===========================================================================
 // Queries
@@ -418,9 +425,13 @@ export const getReservationPricing = query(
 			isSustainingMember = row?.subscription != null;
 		}
 
-		const creditsApplicable = Math.min(freeHoursBalance, durationHours);
+		// freeHoursBalance is in credits (30-min blocks). Value the discount in hours,
+		// then report the credits applied (the UI converts both back to hours).
+		const availableHours = creditsToHours(freeHoursBalance);
+		const appliedHours = Math.min(availableHours, durationHours);
 		const creditDiscountCents =
-			durationHours > 0 ? creditsApplicable * (totalCents / durationHours) : 0;
+			durationHours > 0 ? Math.round(appliedHours * (totalCents / durationHours)) : 0;
+		const creditsApplicable = hoursToCredits(appliedHours);
 		const remainingCents = totalCents - creditDiscountCents;
 
 		return {
@@ -914,7 +925,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 		userId: locals.user.id,
 		mode: 'payment',
 		lineItems: [lineItem],
-		eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+		eligibleCredits: [{ type: 'free_hours', unitValueCents: creditValueCents(hourlyRateCents) }],
 		coverFees: data.coverFees === 'on',
 		metadata: { reservation_id: res.id },
 		successUrl: `${url.origin}/member/reservations`,
@@ -1069,7 +1080,7 @@ export const payForReservation = form(
 			userId: currentUser.id,
 			mode: 'payment',
 			lineItems: [lineItem],
-			eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: creditValueCents(hourlyRateCents) }],
 			coverFees: data.coverFees === 'on',
 			metadata: { reservation_id: row.id },
 			successUrl: `${url.origin}/member/reservations`,
@@ -1142,7 +1153,7 @@ export const payReservation = form(
 			userId: currentUser.id,
 			mode: 'payment',
 			lineItems: [lineItem],
-			eligibleCredits: [{ type: 'free_hours', unitValueCents: hourlyRateCents }],
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: creditValueCents(hourlyRateCents) }],
 			coverFees: data.coverFees === 'on',
 			metadata: { reservation_id: row.id },
 			successUrl: `${url.origin}/member/reservations`,
