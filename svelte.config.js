@@ -28,6 +28,13 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 
+		// Poll for new deploys so a stale client reloads before it tries to import a
+		// chunk that no longer exists (the "error loading dynamically imported module"
+		// failures seen on client-side navigation after a deploy).
+		version: {
+			pollInterval: 60_000
+		},
+
 		typescript: {
 			config: (config) => ({
 				...config,

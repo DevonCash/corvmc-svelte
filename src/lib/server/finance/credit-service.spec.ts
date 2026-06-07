@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 let selectResults: unknown[][] = [];
 let updateResults: unknown[][] = [];
 const insertedRows: Record<string, unknown>[] = [];
+const setPayloads: Record<string, unknown>[] = [];
 
 /** A thenable chain whose await pops the next result from `queue`. */
 function chain(queue: () => unknown[][]): PromiseLike<unknown[]> {
@@ -21,6 +22,12 @@ function chain(queue: () => unknown[][]): PromiseLike<unknown[]> {
 			}
 			if (prop === 'returning') {
 				return () => chain(() => updateResults);
+			}
+			if (prop === 'set') {
+				return (payload: Record<string, unknown>) => {
+					setPayloads.push(payload);
+					return proxy;
+				};
 			}
 			return () => proxy;
 		}
@@ -75,10 +82,17 @@ const {
 	InsufficientCreditsError
 } = await import('./credit-service');
 
+// The real `user` schema exposes Drizzle column *properties* keyed by their TS
+// names (creditFreeHours), distinct from the DB column names (credit_free_hours)
+// returned by `column.name`. `.set()` must be keyed by the property name; passing
+// the DB name yields an empty SET clause and a SQLite syntax error in production.
+const VALID_USER_COLUMNS = ['id', 'creditFreeHours', 'creditEquipment'];
+
 beforeEach(() => {
 	selectResults = [];
 	updateResults = [];
 	insertedRows.length = 0;
+	setPayloads.length = 0;
 });
 
 // ---------------------------------------------------------------------------
@@ -132,6 +146,8 @@ describe('addCredits', () => {
 			'Test add'
 		);
 		expect(result).toBe(5);
+		// Regression: CAS UPDATE must SET the schema property, not the DB column name.
+		expect(Object.keys(setPayloads[0])).toEqual(['creditFreeHours']);
 		expect(insertedRows).toHaveLength(1);
 		expect(insertedRows[0]).toMatchObject({
 			userId: 'user-1',
@@ -212,6 +228,11 @@ describe('deductCredits', () => {
 
 		const result = await deductCredits('user-1', 'free_hours', 2, 'checkout', 'sess-123');
 		expect(result).toBe(3);
+		// Regression: the UPDATE must SET the schema property (creditFreeHours), not
+		// the DB column name. A wrong key makes Drizzle emit `set` with no assignments.
+		expect(setPayloads).toHaveLength(1);
+		expect(Object.keys(setPayloads[0])).toEqual(['creditFreeHours']);
+		expect(Object.keys(setPayloads[0]).every((k) => VALID_USER_COLUMNS.includes(k))).toBe(true);
 		expect(insertedRows[0]).toMatchObject({
 			userId: 'user-1',
 			creditType: 'free_hours',
