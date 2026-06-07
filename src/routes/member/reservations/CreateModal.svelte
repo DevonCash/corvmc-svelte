@@ -45,7 +45,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
 		<DateTimeStep {isSustaining} />
-		<ConfirmStep fields={{ skipPayment: fields.skipPayment }} />
+		<ConfirmStep />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />
 	{/snippet}
 </Action>
