@@ -7,7 +7,7 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -38,6 +38,7 @@
 		durationHours: number;
 		hourlyRateCents: number;
 		totalCents: number;
+		creditsApplicable: number;
 		remainingCents: number;
 	} | null>(null);
 
@@ -150,12 +151,24 @@
 				<div class="skeleton h-5 w-16"></div>
 			</div>
 		{:else}
-			<div class="flex justify-between py-2 text-sm">
-				<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
-				{#if pricing.remainingCents < pricing.totalCents}
-					<span class="text-success">${cents(pricing.remainingCents)} due</span>
-				{:else}
-					<span>${cents(pricing.totalCents)}</span>
+			<div class="py-2 text-sm">
+				<div class="flex justify-between">
+					<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
+					{#if pricing.creditsApplicable > 0}
+						<span>
+							<span class="line-through opacity-60">${cents(pricing.totalCents)}</span>
+							<span class="ml-1 font-medium text-success">${cents(pricing.remainingCents)}</span>
+						</span>
+					{:else}
+						<span>${cents(pricing.totalCents)}</span>
+					{/if}
+				</div>
+				{#if pricing.creditsApplicable > 0}
+					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
+					<div class="mt-1 flex justify-between text-success">
+						<span>Free hours applied</span>
+						<span>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</span>
+					</div>
 				{/if}
 			</div>
 		{/if}
