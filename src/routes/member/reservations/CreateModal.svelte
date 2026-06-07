@@ -7,8 +7,13 @@
 	import DateTimeStep from './DateTimeStep.svelte';
 	import ConfirmStep from './ConfirmStep.svelte';
 	import PaymentStep from './PaymentStep.svelte';
+	import BookingConflict from './BookingConflict.svelte';
 
 	const { fields } = bookAndPayReservation;
+
+	// Bumped when a slot conflict sends the wizard back to step 1, forcing the
+	// Date/Time step to reload availability so the just-taken slot disappears.
+	let reloadToken = $state(0);
 
 	let {
 		isSustaining = false
@@ -44,8 +49,9 @@
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
-		<DateTimeStep {isSustaining} />
+		<DateTimeStep {isSustaining} {reloadToken} />
 		<ConfirmStep />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />
+		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
 	{/snippet}
 </Action>

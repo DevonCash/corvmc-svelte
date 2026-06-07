@@ -19,6 +19,7 @@
 		setStepValid(index: number, valid: boolean): void;
 		next(): void;
 		back(): void;
+		goToStep(index: number): void;
 	}
 
 	const FORM_KEY = Symbol('form');
@@ -131,6 +132,9 @@
 		},
 		back() {
 			if (currentStep > 0) currentStep--;
+		},
+		goToStep(index: number) {
+			currentStep = Math.max(0, Math.min(index, totalSteps - 1));
 		}
 	};
 	setFormContext(ctx);
@@ -154,6 +158,28 @@
 		if (!isTextField) return;
 		e.preventDefault();
 		if (ctx.currentStepValid) ctx.next();
+	}
+
+	// In a multi-step wizard every step (and its submit button) is rendered at
+	// once and merely hidden, so the form's *default* submit button is whichever
+	// type=submit appears first in the DOM — which may belong to a later, hidden
+	// step. An implicit submission (Enter on a widget the keydown guard doesn't
+	// cover) would then fire that hidden button, POSTing the wrong step early
+	// (e.g. creating a reservation before the Confirm screen). Only honor a submit
+	// triggered by a *visible* button — i.e. the current step's. Explicit clicks
+	// always have a visible submitter; stray implicit submits are dropped.
+	function isVisible(el: HTMLElement): boolean {
+		const check = (el as { checkVisibility?: () => boolean }).checkVisibility;
+		if (typeof check === 'function') return check.call(el);
+		return el.offsetParent !== null || el.getClientRects().length > 0;
+	}
+
+	function guardSubmit(e: SubmitEvent) {
+		const submitter = e.submitter as HTMLElement | null;
+		if (submitter && !isVisible(submitter)) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		}
 	}
 
 	let submitting = false;
@@ -220,13 +246,21 @@
 </script>
 
 {#if remote}
-	<form bind:this={formEl} {...remoteAttrs} onkeydown={handleKeydown} class={className} {...rest}>
+	<form
+		bind:this={formEl}
+		{...remoteAttrs}
+		onsubmitcapture={guardSubmit}
+		onkeydown={handleKeydown}
+		class={className}
+		{...rest}
+	>
 		{@render children()}
 	</form>
 {:else}
 	<form
 		bind:this={formEl}
 		onsubmit={handleActionSubmit}
+		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}
 		class={className}
 		{...rest}
