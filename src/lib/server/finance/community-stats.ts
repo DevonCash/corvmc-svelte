@@ -4,7 +4,7 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, gte, isNull, count, countDistinct, sum } from 'drizzle-orm';
 import { buildDateInTz, getPartsInTz } from '$lib/server/reservation/timezone';
 import { getJson, putJson } from '$lib/server/kv';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
 
 export interface CommunityStats {
 	sustainingMemberCount: number;
@@ -42,7 +42,8 @@ async function queryStats(): Promise<CommunityStats> {
 		);
 
 	const sustainingMemberCount = allocationStats?.memberCount ?? 0;
-	const totalFreeHoursAllocated = Number(allocationStats?.totalHours ?? 0);
+	// Ledger amounts are in credits (30-min blocks); report the stat in hours.
+	const totalFreeHoursAllocated = creditsToHours(Number(allocationStats?.totalHours ?? 0));
 
 	const [userStats] = await db.select({ total: count() }).from(user).where(isNull(user.deletedAt));
 

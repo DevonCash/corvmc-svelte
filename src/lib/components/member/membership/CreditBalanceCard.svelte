@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
 	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
+	import { creditsToHours } from '$lib/config';
 
 	let {
 		credits,
@@ -14,7 +15,10 @@
 		usedThisMonth: number;
 	} = $props();
 
-	const remaining = $derived(credits.free_hours ?? 0);
+	// allocated/used/remaining arrive as credits (30-min blocks); display as hours.
+	const allocatedHours = $derived(creditsToHours(allocatedThisMonth));
+	const usedHours = $derived(creditsToHours(usedThisMonth));
+	const remaining = $derived(creditsToHours(credits.free_hours ?? 0));
 	const refreshDate = $derived(
 		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
 			month: 'long',
@@ -37,7 +41,7 @@
 
 		<div class="mt-4 grid gap-4 sm:grid-cols-3">
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
-				<div class="text-3xl font-bold text-primary">{allocatedThisMonth}</div>
+				<div class="text-3xl font-bold text-primary">{allocatedHours}</div>
 				<div class="text-sm opacity-60">Total This Month</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
@@ -51,7 +55,7 @@
 				<div class="text-sm opacity-60">Remaining</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
-				<div class="text-3xl font-bold">{usedThisMonth}</div>
+				<div class="text-3xl font-bold">{usedHours}</div>
 				<div class="text-sm opacity-60">Used</div>
 			</div>
 		</div>

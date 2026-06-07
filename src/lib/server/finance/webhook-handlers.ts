@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
+import { buildMemberSubscriptionState } from './subscription-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -69,7 +70,8 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 
 	// Find the subscription line item (has subscription_item_details in parent).
 	// Filters out proration adjustments and tax lines.
-	// The subscription uses $5/unit pricing — quantity = free hours.
+	// The subscription uses $5/unit pricing where each unit grants one hour of
+	// practice time = two credits (credits are 30-minute blocks).
 	const lines = invoice.lines?.data ?? [];
 	const contributionLine = lines.find(
 		(line) =>
@@ -81,12 +83,13 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		return;
 	}
 
-	const freeHours = contributionLine.quantity;
+	// Credits granted = $5-units × 2 (each unit = 1 hour = 2 thirty-minute credits).
+	const freeHoursCredits = contributionLine.quantity * 2;
 
 	// Use invoice ID as sourceId for idempotency — each invoice is unique
-	await creditService.allocateMonthlyCredits(member.id, freeHours, invoice.id);
+	await creditService.allocateMonthlyCredits(member.id, freeHoursCredits, invoice.id);
 
-	// Equipment credits: 1:1 with contribution level, capped at 250
+	// Equipment credits: 1:1 with contribution units, capped at 250
 	await creditService.allocateEquipmentCredits(member.id, contributionLine.quantity, invoice.id);
 
 	const [existing] = await db
@@ -99,6 +102,15 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		? new Date(contributionLine.period.end * 1000).toISOString()
 		: new Date(Date.now() + 30 * 86400_000).toISOString();
 
+	// A fee-coverage line is a second subscription line item alongside the
+	// contribution line. Renewals don't cancel, so preserve cancelAtPeriodEnd.
+	const coveringFees = lines.some(
+		(line) =>
+			line !== contributionLine &&
+			line.parent?.subscription_item_details != null &&
+			(line.quantity ?? 0) > 0
+	);
+
 	const existingSub = existing?.subscription as Subscription | null;
 	const subscription: Subscription = {
 		startedAt: existingSub?.startedAt ?? new Date().toISOString(),
@@ -106,8 +118,10 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 			typeof subDetails.subscription === 'string'
 				? subDetails.subscription
 				: (subDetails.subscription?.id ?? ''),
-		hoursPerReset: freeHours,
-		creditsResetAt: nextReset
+		hoursPerReset: freeHoursCredits,
+		creditsResetAt: nextReset,
+		coveringFees,
+		cancelAtPeriodEnd: existingSub?.cancelAtPeriodEnd ?? false
 	};
 
 	await db.update(user).set({ subscription }).where(eq(user.id, member.id));
@@ -126,8 +140,25 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 		return;
 	}
 
-	// User subscriptions don't currently need update handling beyond invoice.paid
-	// (period renewal is handled there). Future: track cancel_at_period_end for user subs.
+	// User subscription update — refresh the status snapshot so cancel/resume and
+	// quantity changes reflect immediately on the membership page. Credits are owned
+	// by invoice.paid / subscription.deleted, so this makes NO creditService.* calls.
+	if (subscription.status !== 'active' && subscription.status !== 'past_due') return;
+
+	const customerId =
+		typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+	if (!customerId) return;
+
+	const [member] = await db
+		.select({ id: user.id, subscription: user.subscription })
+		.from(user)
+		.where(eq(user.stripeId, customerId))
+		.limit(1);
+	if (!member) return;
+
+	const existingSub = member.subscription as Subscription | null;
+	const next = await buildMemberSubscriptionState(subscription, existingSub);
+	await db.update(user).set({ subscription: next }).where(eq(user.id, member.id));
 }
 
 // ---------------------------------------------------------------------------

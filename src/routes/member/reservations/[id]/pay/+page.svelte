@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -17,8 +17,12 @@
 
 	let coverFees = $state(false);
 
-	const creditsApplicable = $derived(Math.min(freeHoursBalance, durationHours));
-	const creditDiscountCents = $derived(creditsApplicable * (totalCents / durationHours));
+	// freeHoursBalance is in credits (30-min blocks); convert to hours for the preview.
+	const availableHours = $derived(creditsToHours(freeHoursBalance));
+	const creditsApplicable = $derived(Math.min(availableHours, durationHours));
+	const creditDiscountCents = $derived(
+		durationHours > 0 ? creditsApplicable * (totalCents / durationHours) : 0
+	);
 	const remainingCents = $derived(totalCents - creditDiscountCents);
 
 	function formatDate(d: Date): string {
@@ -77,7 +81,7 @@
 
 			{#if creditsApplicable > 0}
 				<div class="flex justify-between text-success">
-					<span>Free hours ({creditsApplicable} of {freeHoursBalance} available)</span>
+					<span>Free hours ({creditsApplicable} of {availableHours} available)</span>
 					<span>−${cents(creditDiscountCents)}</span>
 				</div>
 			{/if}
