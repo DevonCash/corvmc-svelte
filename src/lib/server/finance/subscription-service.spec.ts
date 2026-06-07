@@ -331,11 +331,15 @@ describe('buildMemberSubscriptionState', () => {
 			items: {
 				data: [
 					{
-						price: { product: 'prod_contribution' },
+						price: { product: 'prod_contribution', unit_amount: 500 },
 						quantity: 6,
 						current_period_end: 1700000000
 					},
-					{ price: { product: 'prod_fee' }, quantity: 1, current_period_end: 1700000000 }
+					{
+						price: { product: 'prod_fee', unit_amount: 200 },
+						quantity: 1,
+						current_period_end: 1700000000
+					}
 				]
 			}
 		} as never;
@@ -350,11 +354,26 @@ describe('buildMemberSubscriptionState', () => {
 		});
 	});
 
+	it('derives credits from the dollar amount for a flat 1 × $60 line', async () => {
+		// Some subscriptions bill a single line (quantity 1) at a flat unit_amount
+		// rather than N × $5. $60 must still yield 24 credits (12 hours).
+		const sub = {
+			id: 'sub_flat',
+			cancel_at_period_end: false,
+			items: {
+				data: [{ price: { product: 'prod_contribution', unit_amount: 6000 }, quantity: 1 }]
+			}
+		} as never;
+
+		const state = await buildMemberSubscriptionState(sub, null);
+		expect(state.hoursPerReset).toBe(24);
+	});
+
 	it('preserves existing startedAt for idempotency', async () => {
 		const sub = {
 			id: 'sub_1',
 			cancel_at_period_end: false,
-			items: { data: [{ price: { product: 'prod_contribution' }, quantity: 2 }] }
+			items: { data: [{ price: { product: 'prod_contribution', unit_amount: 500 }, quantity: 2 }] }
 		} as never;
 
 		const state = await buildMemberSubscriptionState(sub, {
