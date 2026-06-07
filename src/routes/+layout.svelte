@@ -4,8 +4,19 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
+	import { updated } from '$app/state';
 
 	let { children } = $props();
+
+	// When a new version has been deployed, force a full-page navigation so the
+	// browser fetches fresh chunks instead of failing to import stale ones
+	// ("error loading dynamically imported module").
+	beforeNavigate(({ willUnload, to }) => {
+		if (updated.current && !willUnload && to?.url) {
+			location.href = to.url.href;
+		}
+	});
 
 	onMount(() => {
 		const PRESS_MIN_MS = 140;

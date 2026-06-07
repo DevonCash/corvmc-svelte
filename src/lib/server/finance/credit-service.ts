@@ -21,6 +21,14 @@ const creditColumn = {
 	equipment_credits: user.creditEquipment
 } as const satisfies Record<CreditType, unknown>;
 
+// Drizzle's `.set()` keys must be the schema *property* names (e.g. `creditFreeHours`),
+// not the DB column names exposed by `column.name` (e.g. `credit_free_hours`). Passing a
+// DB column name produces an UPDATE with an empty SET clause and a SQLite syntax error.
+const creditColumnKey = {
+	free_hours: 'creditFreeHours',
+	equipment_credits: 'creditEquipment'
+} as const satisfies Record<CreditType, keyof typeof user.$inferInsert>;
+
 export class InsufficientCreditsError extends Error {
 	constructor(type: CreditType, requested: number, available: number) {
 		super(`Insufficient ${type}: requested ${requested}, available ${available}`);
@@ -93,7 +101,7 @@ async function applyBalanceMutation(
 		// CAS: only write if the balance is still what we read.
 		const updated = await db
 			.update(user)
-			.set({ [col.name]: next })
+			.set({ [creditColumnKey[creditType]]: next })
 			.where(and(eq(user.id, userId), eq(col, current)))
 			.returning({ balance: col });
 
@@ -155,7 +163,7 @@ export async function deductCredits(
 	// if the balance is too low, so no read-modify-write window exists.
 	const result = await db
 		.update(user)
-		.set({ [col.name]: sql`${col} - ${amount}` })
+		.set({ [creditColumnKey[creditType]]: sql`${col} - ${amount}` })
 		.where(and(eq(user.id, userId), gte(col, amount)))
 		.returning({ newBalance: col });
 
