@@ -38,6 +38,7 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 			status: 'confirmed',
 			stripePaymentRecordId: paymentRecordId,
 			paidAt: new Date(),
+			cashDueCents: 0,
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, reservationId));

@@ -369,15 +369,15 @@ describe('ReservationService', () => {
 			);
 		});
 
-		it('throws when reservation is not scheduled', async () => {
+		it('throws when reservation is in a terminal status', async () => {
 			setupUpdateMock(0);
-			const limit = vi.fn().mockResolvedValue([{ status: 'confirmed' }]);
+			const limit = vi.fn().mockResolvedValue([{ status: 'completed' }]);
 			const where = vi.fn().mockReturnValue({ limit });
 			const from = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
 			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(
-				'Expected status "scheduled", got "confirmed"'
+				'Expected status "scheduled" or "confirmed", got "completed"'
 			);
 		});
 	});
