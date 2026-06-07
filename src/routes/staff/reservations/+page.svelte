@@ -74,11 +74,12 @@
 				? { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp }
 				: { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
 		}
+		if (r.paidAt) return { label: 'Paid', color: 'text-success', icon: IconCheck };
+		if ((r.cashDueCents ?? 0) > 0)
+			return { label: 'Cash due', color: 'text-warning', icon: IconClock };
 		if (r.status === 'scheduled')
 			return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
-		return r.stripePaymentRecordId
-			? { label: 'Paid', color: 'text-success', icon: IconCheck }
-			: { label: 'Comped', color: 'text-info', icon: IconGift };
+		return { label: 'Comped', color: 'text-info', icon: IconGift };
 	}
 
 	function dayLabel(r: Reservation): string {

@@ -5,7 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { formatDate, formatTimeRange, formatDurationAndAmount } from '$lib/utils/format';
+	import { formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let {
 		open = $bindable(false),
@@ -24,9 +24,17 @@
 			memberEmail: string;
 			memberPronouns: string | null;
 			memberRole: string | null;
+			cashDueCents: number | null;
 		}>;
 		hourlyRateCents: number;
 	} = $props();
+
+	function dueLabel(r: { startsAt: Date; endsAt: Date; cashDueCents: number | null }): string {
+		const hrs = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
+		const dueCents = r.cashDueCents ?? Math.round(hrs * hourlyRateCents);
+		const hrsLabel = hrs === 1 ? '1 hr' : `${hrs} hrs`;
+		return `${hrsLabel} · $${(dueCents / 100).toFixed(2)} due`;
+	}
 
 	let resolved = $state<Set<string>>(new Set());
 
@@ -78,9 +86,7 @@
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
 								<p class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</p>
-								<p class="text-sm opacity-60">
-									{formatDurationAndAmount(r.startsAt, r.endsAt, hourlyRateCents)}
-								</p>
+								<p class="text-sm opacity-60">{dueLabel(r)}</p>
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">

@@ -323,19 +323,21 @@ export interface CashPaymentOptions {
 	stripeCustomerId: string;
 	amountCents: number;
 	metadata?: Record<string, string>;
+	/** Payment method label (default 'Cash'); use 'Credits' for $0 credit settlements. */
+	displayName?: string;
 }
 
 export async function recordCashPayment(
 	options: CashPaymentOptions
 ): Promise<{ paymentRecordId: string }> {
-	const { userId, stripeCustomerId, amountCents, metadata = {} } = options;
+	const { userId, stripeCustomerId, amountCents, metadata = {}, displayName = 'Cash' } = options;
 
 	const now = Math.floor(Date.now() / 1000);
 	const stripeRecord = await stripe.paymentRecords.reportPayment({
 		amount_requested: { value: amountCents, currency: 'usd' },
 		initiated_at: now,
 		payment_method_details: {
-			custom: { display_name: 'Cash', type: 'custom' },
+			custom: { display_name: displayName, type: 'custom' },
 			type: 'custom'
 		},
 		metadata,
@@ -353,7 +355,7 @@ export async function recordCashPayment(
 			stripeCustomerId,
 			amountCents,
 			currency: 'usd',
-			paymentMethod: 'Cash',
+			paymentMethod: displayName,
 			status: 'completed',
 			paidAt: new Date()
 		});

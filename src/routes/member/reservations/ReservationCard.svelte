@@ -2,8 +2,7 @@
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
-		ConfirmWaitlistedAction,
-		PayReservationAction
+		ConfirmWaitlistedAction
 	} from '$lib/components/shared/actions';
 	import ReservationSummary from '$lib/components/shared/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
@@ -13,6 +12,10 @@
 	let { reservation }: { reservation: Reservation } = $props();
 
 	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
+
+	function cents(n: number): string {
+		return (n / 100).toFixed(2);
+	}
 </script>
 
 <div
@@ -46,8 +49,12 @@
 					<ConfirmWaitlistedAction {reservation} class="btn-xs btn-success" />
 				{:else if reservation.status === 'scheduled'}
 					<ConfirmReservationAction {reservation} class="btn-xs btn-primary" />
-				{:else if reservation.status === 'confirmed' && !reservation.paidAt}
-					<PayReservationAction {reservation} label="Pay Ahead" class="btn-xs btn-primary" />
+				{:else if reservation.status === 'confirmed' && reservation.paidAt}
+					<span class="badge badge-success badge-sm">Paid</span>
+				{:else if reservation.status === 'confirmed' && (reservation.cashDueCents ?? 0) > 0}
+					<span class="text-xs font-medium">${cents(reservation.cashDueCents ?? 0)} due at door</span>
+				{:else if reservation.status === 'confirmed'}
+					<span class="badge badge-sm">Comped</span>
 				{/if}
 			{/if}
 		</div>

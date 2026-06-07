@@ -63,6 +63,11 @@ export const reservation = sqliteTable(
 		stripePaymentRecordId: text('stripe_payment_record_id'),
 		paidAt: integer('paid_at', { mode: 'timestamp' }),
 		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
+		// Cash owed at the door after free-hour credits are committed at Confirm.
+		// null = not yet committed (plain scheduled); 0 = settled (fully credit-covered
+		// or comped); > 0 = cash owed. Combined with paidAt: paidAt set ⇒ paid,
+		// paidAt null & >0 ⇒ cash owed, paidAt null & 0 ⇒ comped/credit-settled.
+		cashDueCents: integer('cash_due_cents'),
 		lockAccessId: text('lock_access_id'),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
