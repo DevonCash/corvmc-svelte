@@ -11,7 +11,8 @@
 		testUtecConnection,
 		getFeatureFlags,
 		updateFeatureFlag,
-		syncSubscriptions
+		syncSubscriptions,
+		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
 	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -24,6 +25,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
+	import type { CommunityStats } from '$lib/server/db/schema/finance';
 	import { formatDollars } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -61,6 +63,7 @@
 	];
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
+	let statsResult = $state<CommunityStats | null>(null);
 
 	const featureMeta: Record<string, { label: string; description: string }> = {
 		staffInbox: {
@@ -684,6 +687,31 @@
 						</ul>
 					</Alert>
 				{/if}
+			{/if}
+
+			<div class="divider"></div>
+
+			<p class="text-sm opacity-70">
+				Community impact stats (sustaining members, free hours funded, participation) are cached for
+				24 hours. Refresh to recompute them now from current subscriptions — useful right after a
+				sync.
+			</p>
+
+			<Action
+				label="Refresh stats"
+				successLabel="Refreshed"
+				successToast="Community stats refreshed"
+				action={async () => {
+					statsResult = await refreshCommunityStats();
+				}}
+			/>
+
+			{#if statsResult}
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+					<StatCard title="Sustaining members" value={statsResult.sustainingMemberCount} />
+					<StatCard title="Free hours / month" value={statsResult.totalFreeHoursAllocated} />
+					<StatCard title="Participation" value={`${statsResult.participationPercent}%`} />
+				</div>
 			{/if}
 		{/if}
 	</div>
