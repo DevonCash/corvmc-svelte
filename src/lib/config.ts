@@ -20,6 +20,27 @@ export const LIST_LIMIT = 100;
 
 export const DOLLARS_PER_UNIT = 5;
 
+// Free-hours credits are stored as 30-minute blocks: one credit covers half an
+// hour of practice-room time. The credit currency lives in the data layer (DB,
+// services, remotes); the UI presents it as hours via `creditsToHours`, and the
+// money path values one credit at half the hourly room rate.
+export const MINUTES_PER_CREDIT = 30;
+
+/** Convert a credit count (30-min blocks) to display hours. 24 → 12. */
+export function creditsToHours(credits: number): number {
+	return (credits * MINUTES_PER_CREDIT) / 60;
+}
+
+/** Convert hours of room time to credits (30-min blocks). 1.5h → 3. */
+export function hoursToCredits(hours: number): number {
+	return Math.round((hours * 60) / MINUTES_PER_CREDIT);
+}
+
+/** Cents value of one free-hours credit at a given hourly room rate. */
+export function creditValueCents(hourlyRateCents: number): number {
+	return Math.round((hourlyRateCents * MINUTES_PER_CREDIT) / 60);
+}
+
 export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }> = {
 	free_hours: { maxBalance: null },
 	equipment_credits: { maxBalance: 250 }

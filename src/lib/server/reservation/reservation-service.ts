@@ -1,8 +1,9 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
+import { eq, and, or, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
+import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
 import { formatDateInTz, formatTimeInTz } from './timezone';
@@ -209,8 +210,12 @@ export async function cancel(
 		throw new Error('Reservation status changed concurrently');
 	}
 
-	// If it was confirmed (paid), trigger refund
-	if (status === 'confirmed' && row.stripePaymentRecordId) {
+	// If a payment was recorded, refund it (Stripe-side). Credits committed to the
+	// reservation live in the ledger (not the payment record breakdown), so reverse
+	// them separately — this also covers cash-owed confirms that have credits
+	// committed but no payment record yet. Both paths are idempotent / no-ops when
+	// nothing applies.
+	if (row.stripePaymentRecordId) {
 		await refund({
 			userId,
 			stripePaymentRecordId: row.stripePaymentRecordId
@@ -220,6 +225,7 @@ export async function cancel(
 			.set({ refundedAt: new Date() })
 			.where(eq(reservation.id, reservationId));
 	}
+	await reverseReservationCredits(row.createdByUserId, reservationId);
 
 	// Emit cancellation event (enables waitlist promotion)
 	const TZ = DEFAULT_TIMEZONE;
@@ -254,9 +260,9 @@ export async function markNoShow(reservationId: string): Promise<void> {
 }
 
 /**
- * Staff records cash payment for a scheduled reservation.
- * Transitions: scheduled → confirmed → completed in one action.
- * Returns the Stripe payment record ID for bookkeeping.
+ * Staff records cash payment for a scheduled or confirmed (cash-owed) reservation
+ * and completes it in one action. Returns the Stripe payment record ID for
+ * bookkeeping.
  */
 export async function recordCashAndComplete(
 	reservationId: string,
@@ -268,9 +274,15 @@ export async function recordCashAndComplete(
 			status: 'completed',
 			stripePaymentRecordId,
 			paidAt: new Date(),
+			cashDueCents: 0,
 			updatedAt: new Date()
 		})
-		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'scheduled')));
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				inArray(reservation.status, ['scheduled', 'confirmed'])
+			)
+		);
 
 	if (getRowCount(result) === 0) {
 		const [row] = await db
@@ -280,7 +292,7 @@ export async function recordCashAndComplete(
 			.limit(1);
 
 		if (!row) throw new Error('Reservation not found');
-		throw new Error(`Expected status "scheduled", got "${row.status}"`);
+		throw new Error(`Expected status "scheduled" or "confirmed", got "${row.status}"`);
 	}
 }
 
@@ -290,14 +302,17 @@ export async function recordCashAndComplete(
 
 export async function autoCompleteExpired(): Promise<number> {
 	const now = new Date();
+	// Auto-complete confirmed reservations past their end time that owe no cash:
+	// paid (has a payment record) or comped/credit-settled (cashDueCents = 0).
+	// Cash-owed reservations (cashDueCents > 0) are left for staff to collect.
 	const result = await db
 		.update(reservation)
 		.set({ status: 'completed', updatedAt: now })
 		.where(
 			and(
 				eq(reservation.status, 'confirmed'),
-				isNotNull(reservation.stripePaymentRecordId),
-				lt(reservation.endsAt, now)
+				lt(reservation.endsAt, now),
+				or(isNotNull(reservation.stripePaymentRecordId), eq(reservation.cashDueCents, 0))
 			)
 		);
 	return getRowCount(result);

@@ -4,7 +4,9 @@ import { form, getRequestEvent, query } from '$app/server';
 import { requireMember } from '$lib/server/authorization';
 import {
 	createCheckoutSession,
-	getSubscription,
+	getMemberSubscription,
+	mapDbSubscription,
+	patchMemberSubscription,
 	createBillingPortalUrl,
 	updateQuantity,
 	resume
@@ -13,15 +15,16 @@ import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
 import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
 export const getMemberMembership = query(async () => {
 	const user = await requireMember();
 	const { url } = getRequestEvent();
 
-	const [subscription, credits, communityStats, contributionConfig, billingPortalUrl] =
+	const [dbSubscription, credits, communityStats, contributionConfig, billingPortalUrl] =
 		await Promise.all([
-			user.stripeId ? getSubscription(user.stripeId) : Promise.resolve(null),
+			getMemberSubscription(user.id),
 			getAllBalances(user.id),
 			getCommunityStats(),
 			getProductConfig('contribution'),
@@ -30,10 +33,11 @@ export const getMemberMembership = query(async () => {
 				: Promise.resolve(null)
 		]);
 
-	let allocatedThisMonth = 0;
-	if (subscription && credits.free_hours != null) {
-		allocatedThisMonth = subscription.quantity;
-	}
+	const subscription = mapDbSubscription(dbSubscription);
+
+	// Allocation/usage are tracked in credits (30-min blocks); the UI converts to
+	// hours for display via creditsToHours.
+	const allocatedThisMonth = dbSubscription?.hoursPerReset ?? 0;
 	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {
@@ -75,7 +79,9 @@ const amountSchema = z
 
 export const createSubscription = form(amountSchema, async (data) => {
 	const user = await requireMember();
-	const stripeId = requireStripeId(user);
+	// A brand-new member legitimately has no Stripe customer yet — create it on
+	// demand (returns the existing id when present) rather than failing.
+	const stripeId = await ensureStripeCustomer(user.id, user.email, user.name);
 	const { url } = getRequestEvent();
 
 	const checkoutUrl = await createCheckoutSession({
@@ -94,7 +100,14 @@ export const updateAmount = form(amountSchema, async (data) => {
 	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 
-	await updateQuantity(stripeId, data.amount / DOLLARS_PER_UNIT, data.coverFees === 'on');
+	const units = data.amount / DOLLARS_PER_UNIT;
+	await updateQuantity(stripeId, units, data.coverFees === 'on');
+	// Write-through so the page reflects the change before the webhook lands.
+	// hoursPerReset is in credits (30-min blocks): units × 2.
+	await patchMemberSubscription(user.id, {
+		hoursPerReset: units * 2,
+		coveringFees: data.coverFees === 'on'
+	});
 	return { success: true };
 });
 
@@ -103,5 +116,6 @@ export const resumeSubscription = form(z.object({}), async () => {
 	const stripeId = requireStripeId(user);
 
 	await resume(stripeId);
+	await patchMemberSubscription(user.id, { cancelAtPeriodEnd: false });
 	return { success: true };
 });

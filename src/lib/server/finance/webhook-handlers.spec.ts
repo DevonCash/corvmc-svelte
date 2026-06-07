@@ -122,7 +122,8 @@ describe('handleInvoicePaid', () => {
 
 		await handleInvoicePaid(invoice);
 
-		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith('user-1', 5, 'inv_123');
+		// Credits granted = quantity × 2 (each $5-unit = 1 hour = 2 thirty-min credits).
+		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith('user-1', 10, 'inv_123');
 	});
 
 	it('handles customer as an object with id property', async () => {
@@ -150,7 +151,7 @@ describe('handleInvoicePaid', () => {
 
 		expect(mockCreditService.allocateMonthlyCredits).toHaveBeenCalledWith(
 			'user-2',
-			3,
+			6,
 			'inv_obj_cus'
 		);
 	});

@@ -3,7 +3,7 @@
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -125,7 +125,9 @@
 				{#if pricing.creditsApplicable > 0}
 					<div class="flex justify-between text-success">
 						<span
-							>Free hours ({pricing.creditsApplicable} of {pricing.freeHoursBalance} available)</span
+							>Free hours ({creditsToHours(pricing.creditsApplicable)} of {creditsToHours(
+								pricing.freeHoursBalance
+							)} available)</span
 						>
 						<span>-${cents(pricing.creditDiscountCents)}</span>
 					</div>

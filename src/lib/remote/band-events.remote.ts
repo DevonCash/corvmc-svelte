@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import { getBySlug } from '$lib/server/band/band-service';
 import {
@@ -24,6 +25,7 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 
 /** All events for a band (all statuses) — for the band panel. */
 export const getBandEvents = query(z.string(), async (slug) => {
+	await requireFeature('bandEvents');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
@@ -42,6 +44,7 @@ export const getBandEvents = query(z.string(), async (slug) => {
 
 /** Published upcoming band events — for public display. */
 export const getBandEventsPublic = query(z.string(), async (bandId) => {
+	await requireFeature('bandEvents');
 	const events = await listBandEventsUpcoming(bandId);
 
 	return events.map((e) => ({
@@ -61,6 +64,7 @@ export const getBandEventsPublic = query(z.string(), async (bandId) => {
 export const getBandEventDetail = query(
 	z.object({ slug: z.string(), eventId: z.string() }),
 	async ({ slug, eventId }) => {
+		await requireFeature('bandEvents');
 		requireUser();
 		const band = await getBySlug(slug);
 		if (!band) throw error(404, 'Band not found');
@@ -103,6 +107,7 @@ export const createBandEventForm = form(
 		externalTicketUrl: z.string().url().optional().or(z.literal(''))
 	}),
 	async (data, issue) => {
+		await requireFeature('bandEvents');
 		const { user, band } = await requireBandAdmin();
 
 		if (!data.title) {
@@ -146,6 +151,7 @@ export const updateBandEventForm = form(
 		externalTicketUrl: z.string().optional()
 	}),
 	async (data) => {
+		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
 		const tz = DEFAULT_TIMEZONE;
@@ -176,6 +182,7 @@ export const updateBandEventForm = form(
 export const publishBandEvent = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
+		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
 		const evt = await getById(data.eventId);
@@ -189,6 +196,7 @@ export const publishBandEvent = form(
 export const unpublishBandEvent = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
+		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
 		const evt = await getById(data.eventId);
@@ -202,6 +210,7 @@ export const unpublishBandEvent = form(
 export const cancelBandEventForm = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
+		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
 		await cancelBandEvent(data.eventId, band.id);

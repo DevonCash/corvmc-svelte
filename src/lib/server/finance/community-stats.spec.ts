@@ -27,25 +27,16 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', credits: 'credits', deletedAt: 'deleted_at' }
-}));
-
-vi.mock('$lib/server/db/schema/finance', () => ({
-	creditTransaction: {
-		userId: 'user_id',
-		source: 'source',
-		creditType: 'credit_type',
-		amount: 'amount',
-		createdAt: 'created_at'
-	}
+	user: { id: 'id', subscription: 'subscription', deletedAt: 'deleted_at' }
 }));
 
 vi.mock('drizzle-orm', () => ({
-	sql: {},
+	sql: vi.fn(),
 	eq: vi.fn(),
 	and: vi.fn(),
 	gte: vi.fn(),
 	isNull: vi.fn(),
+	isNotNull: vi.fn(),
 	count: vi.fn(),
 	countDistinct: vi.fn(),
 	sum: vi.fn()
@@ -69,7 +60,7 @@ describe('getCommunityStats', () => {
 			if (callCount === 1) {
 				return {
 					from: () => ({
-						where: () => Promise.resolve([{ memberCount: 12, totalHours: '47' }])
+						where: () => Promise.resolve([{ memberCount: 12, totalCredits: '47' }])
 					})
 				};
 			}
@@ -83,14 +74,15 @@ describe('getCommunityStats', () => {
 		const stats = await getCommunityStats();
 
 		expect(stats.sustainingMemberCount).toBe(12);
-		expect(stats.totalFreeHoursAllocated).toBe(47);
+		// hoursPerReset is in credits (30-min blocks); reported as hours = 47 / 2.
+		expect(stats.totalFreeHoursAllocated).toBe(23.5);
 		expect(stats.participationPercent).toBe(15);
 	});
 
 	it('returns zeros when no data exists', async () => {
 		mockSelect.mockImplementation(() => ({
 			from: () => ({
-				where: () => Promise.resolve([{ memberCount: 0, totalHours: null, total: 0 }])
+				where: () => Promise.resolve([{ memberCount: 0, totalCredits: null, total: 0 }])
 			})
 		}));
 
@@ -121,7 +113,7 @@ describe('getCommunityStats', () => {
 			if (callCount === 1) {
 				return {
 					from: () => ({
-						where: () => Promise.resolve([{ memberCount: 8, totalHours: '30' }])
+						where: () => Promise.resolve([{ memberCount: 8, totalCredits: '30' }])
 					})
 				};
 			}
@@ -136,7 +128,8 @@ describe('getCommunityStats', () => {
 
 		const cached = JSON.parse(kvStore['community-stats']);
 		expect(cached.sustainingMemberCount).toBe(8);
-		expect(cached.totalFreeHoursAllocated).toBe(30);
+		// hoursPerReset is in credits (30-min blocks); reported as hours = 30 / 2.
+		expect(cached.totalFreeHoursAllocated).toBe(15);
 		expect(cached.participationPercent).toBe(20);
 	});
 });

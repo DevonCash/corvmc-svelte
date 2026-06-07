@@ -7,15 +7,15 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate, formatTimeRange, formatScheduleLabel } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
 		reservation,
-		fields
+		fields = {}
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
-		fields: { id?: RemoteFormField<string>; skipPayment: RemoteFormField<string> };
+		fields?: { id?: RemoteFormField<string> };
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -23,7 +23,6 @@
 	const activeStep = $derived(reservation ? 0 : 1);
 
 	let el: HTMLDivElement;
-	let skipPaymentInput: HTMLInputElement;
 
 	function extractTimeFields(d: Date) {
 		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
@@ -39,6 +38,7 @@
 		durationHours: number;
 		hourlyRateCents: number;
 		totalCents: number;
+		creditsApplicable: number;
 		remainingCents: number;
 	} | null>(null);
 
@@ -49,6 +49,10 @@
 	let scheduleLabel = $state('');
 
 	const isRecurring = $derived(recurringFrequency !== '');
+
+	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
+	// (which skips payment) is the single action — no redundant payment screen.
+	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
 
 	function cents(amount: number): string {
 		return (amount / 100).toFixed(2);
@@ -124,13 +128,6 @@
 			}
 		}
 	});
-
-	function confirmWithoutPayment() {
-		if (skipPaymentInput) {
-			skipPaymentInput.value = 'on';
-		}
-		formCtx.submit();
-	}
 </script>
 
 <div bind:this={el}>
@@ -138,7 +135,6 @@
 		{#if reservation && fields.id}
 			<input {...fields.id.as('hidden', reservation.id)} />
 		{/if}
-		<input {...fields.skipPayment.as('hidden', '')} bind:this={skipPaymentInput} />
 
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
@@ -155,12 +151,24 @@
 				<div class="skeleton h-5 w-16"></div>
 			</div>
 		{:else}
-			<div class="flex justify-between py-2 text-sm">
-				<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
-				{#if pricing.remainingCents < pricing.totalCents}
-					<span class="text-success">${cents(pricing.remainingCents)} due</span>
-				{:else}
-					<span>${cents(pricing.totalCents)}</span>
+			<div class="py-2 text-sm">
+				<div class="flex justify-between">
+					<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
+					{#if pricing.creditsApplicable > 0}
+						<span>
+							<span class="line-through opacity-60">${cents(pricing.totalCents)}</span>
+							<span class="ml-1 font-medium text-success">${cents(pricing.remainingCents)}</span>
+						</span>
+					{:else}
+						<span>${cents(pricing.totalCents)}</span>
+					{/if}
+				</div>
+				{#if pricing.creditsApplicable > 0}
+					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
+					<div class="mt-1 flex justify-between text-success">
+						<span>Free hours applied</span>
+						<span>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</span>
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -200,8 +208,19 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
-			<Button type="button" class="btn-ghost" onclick={confirmWithoutPayment}>Confirm</Button>
-			<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+			{#if formCtx.currentStep > 0}
+				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
+			{/if}
+			<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
+			<Button
+				type="submit"
+				name="skipPayment"
+				value="on"
+				class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+			>
+			{#if showPayAhead}
+				<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+			{/if}
 		</div>
 	</Form.Step>
 </div>

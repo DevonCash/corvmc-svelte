@@ -1,0 +1,148 @@
+/**
+ * Reservation credit policy: free-hour credits are committed (deducted) exactly
+ * once, at Confirm time, tagged to the reservation in the credit ledger
+ * (`source: 'reservation'`, `sourceId: reservationId`). The committed cash
+ * remainder is stored on `reservation.cashDueCents` (the commitment marker:
+ * null = not committed). Credits are reversed once on cancel.
+ *
+ * This keeps reservation-specific credit rules out of the generic credit- and
+ * payment-services.
+ */
+import { db } from '$lib/server/db';
+import { reservation } from '$lib/server/db/schema/reservation';
+import { creditTransaction } from '$lib/server/db/schema/finance';
+import { and, eq, sql } from 'drizzle-orm';
+import * as creditService from '$lib/server/finance/credit-service';
+import { creditValueCents, hoursToCredits } from '$lib/config';
+
+export interface ReservationCreditResult {
+	/** Free-hour credit units applied to this reservation (committed or already-committed). */
+	creditUnits: number;
+	/** Cents covered by the applied credits. */
+	creditDiscountCents: number;
+	/** Cash still owed after credits (what `cashDueCents` is set to). */
+	remainingCents: number;
+	/** True when a prior commit existed and nothing was deducted this call. */
+	alreadyCommitted: boolean;
+}
+
+/**
+ * Pure pricing: how many free-hour credits apply to a reservation total, and the
+ * resulting cash remainder. Single source of truth shared by display
+ * (`getReservationPricing`) and settlement (`commitReservationCredits`) so the
+ * member is never shown a different remainder than they're charged.
+ */
+export function computeReservationCredit(params: {
+	totalCents: number;
+	durationHours: number;
+	hourlyRateCents: number;
+	freeHoursBalance: number;
+}): { creditUnits: number; creditDiscountCents: number; remainingCents: number } {
+	const { totalCents, durationHours, hourlyRateCents, freeHoursBalance } = params;
+	const unitValue = creditValueCents(hourlyRateCents);
+	const unitsNeeded = hoursToCredits(durationHours);
+	const creditUnits = Math.max(0, Math.min(freeHoursBalance, unitsNeeded));
+	const creditDiscountCents = Math.min(creditUnits * unitValue, totalCents);
+	const remainingCents = totalCents - creditDiscountCents;
+	return { creditUnits, creditDiscountCents, remainingCents };
+}
+
+/** Sum the free-hour credit units already committed to a reservation (ledger-driven). */
+async function sumCommittedUnits(reservationId: string): Promise<number> {
+	const [row] = await db
+		.select({ units: sql<number>`coalesce(-sum(${creditTransaction.amount}), 0)` })
+		.from(creditTransaction)
+		.where(
+			and(
+				eq(creditTransaction.source, 'reservation'),
+				eq(creditTransaction.sourceId, reservationId),
+				eq(creditTransaction.creditType, 'free_hours')
+			)
+		);
+	return row?.units ?? 0;
+}
+
+/**
+ * Commit free-hour credits to a reservation exactly once. Idempotent: if the
+ * reservation has already been committed (`cashDueCents` is non-null), nothing is
+ * deducted and the existing remainder is returned — so Confirm → Pay-Ahead and
+ * Confirm → Cash-Received never double-deduct. On first commit it deducts the
+ * applicable credits and sets `reservation.cashDueCents = remainingCents`.
+ */
+export async function commitReservationCredits(params: {
+	userId: string;
+	reservationId: string;
+	totalCents: number;
+	durationHours: number;
+	hourlyRateCents: number;
+}): Promise<ReservationCreditResult> {
+	const { userId, reservationId, totalCents, durationHours, hourlyRateCents } = params;
+
+	const [row] = await db
+		.select({ cashDueCents: reservation.cashDueCents })
+		.from(reservation)
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	if (!row) throw new Error(`Reservation ${reservationId} not found`);
+
+	if (row.cashDueCents !== null) {
+		const committedUnits = await sumCommittedUnits(reservationId);
+		return {
+			creditUnits: committedUnits,
+			creditDiscountCents: totalCents - row.cashDueCents,
+			remainingCents: row.cashDueCents,
+			alreadyCommitted: true
+		};
+	}
+
+	const freeHoursBalance = await creditService.getBalance(userId, 'free_hours');
+	const { creditUnits, creditDiscountCents, remainingCents } = computeReservationCredit({
+		totalCents,
+		durationHours,
+		hourlyRateCents,
+		freeHoursBalance
+	});
+
+	if (creditUnits > 0) {
+		await creditService.deductCredits(
+			userId,
+			'free_hours',
+			creditUnits,
+			'reservation',
+			reservationId,
+			`${creditUnits} free_hours applied to reservation`
+		);
+	}
+
+	await db
+		.update(reservation)
+		.set({ cashDueCents: remainingCents, updatedAt: new Date() })
+		.where(eq(reservation.id, reservationId));
+
+	return { creditUnits, creditDiscountCents, remainingCents, alreadyCommitted: false };
+}
+
+/**
+ * Reverse the free-hour credits committed to a reservation, exactly once.
+ * No-op when nothing was committed (e.g. comped reservations, or legacy
+ * reservations whose credits live under a Stripe payment record instead).
+ */
+export async function reverseReservationCredits(
+	userId: string,
+	reservationId: string
+): Promise<void> {
+	// Idempotency guard: don't reverse twice across retried cancels.
+	if (await creditService.hasTransaction('cancelled', reservationId, 'free_hours')) return;
+
+	const units = await sumCommittedUnits(reservationId);
+	if (units > 0) {
+		await creditService.addCredits(
+			userId,
+			'free_hours',
+			units,
+			'cancelled',
+			reservationId,
+			`Reversed ${units} free_hours from cancelled reservation`
+		);
+	}
+}

@@ -51,12 +51,16 @@
 		<Nav.Item href={`${base}/members`} label="Members">
 			{#snippet icon()}<IconUsersGroup />{/snippet}
 		</Nav.Item>
-		<Nav.Item href={`${base}/reservations`} label="Reservations">
-			{#snippet icon()}<IconCalendar />{/snippet}
-		</Nav.Item>
-		<Nav.Item href={`${base}/events`} label="Events">
-			{#snippet icon()}<IconCalendarEvent />{/snippet}
-		</Nav.Item>
+		{#if layout.features.bandReservations}
+			<Nav.Item href={`${base}/reservations`} label="Reservations">
+				{#snippet icon()}<IconCalendar />{/snippet}
+			</Nav.Item>
+		{/if}
+		{#if layout.features.bandEvents}
+			<Nav.Item href={`${base}/events`} label="Events">
+				{#snippet icon()}<IconCalendarEvent />{/snippet}
+			</Nav.Item>
+		{/if}
 		{#if isOwnerOrAdmin}
 			<Nav.Item href={`${base}/edit`} label="Edit Profile">
 				{#snippet icon()}<IconPencil />{/snippet}

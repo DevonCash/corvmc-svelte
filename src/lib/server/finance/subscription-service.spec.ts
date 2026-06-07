@@ -74,7 +74,9 @@ const {
 	updateQuantity,
 	cancel,
 	createBillingPortalUrl,
-	resume
+	resume,
+	mapDbSubscription,
+	buildMemberSubscriptionState
 } = await import('./subscription-service');
 
 // ---------------------------------------------------------------------------
@@ -250,6 +252,140 @@ describe('getSubscription', () => {
 	it('returns null when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
 		expect(await getSubscription('cus_none')).toBeNull();
+	});
+
+	it('falls back to a quantity>0 item when no product id matches', async () => {
+		// Product ids can drift after a KV/product-config migration; the contribution
+		// line is then identified by having a quantity rather than by product id.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_drift',
+					status: 'active',
+					cancel_at_period_end: false,
+					items: {
+						data: [
+							{
+								price: { id: 'price_x', product: 'prod_unknown' },
+								quantity: 4,
+								current_period_end: 1700000000
+							}
+						]
+					}
+				}
+			]
+		});
+
+		const info = await getSubscription('cus_drift');
+		expect(info?.quantity).toBe(4);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// mapDbSubscription
+// ---------------------------------------------------------------------------
+describe('mapDbSubscription', () => {
+	it('returns null when there is no stored subscription', () => {
+		expect(mapDbSubscription(null)).toBeNull();
+	});
+
+	it('maps stored credits (blocks) to $5-unit quantity', () => {
+		const info = mapDbSubscription({
+			startedAt: '2026-01-01T00:00:00.000Z',
+			stripeSubscriptionId: 'sub_x',
+			hoursPerReset: 24, // credits → 12 units → $60
+			creditsResetAt: '2026-07-01T00:00:00.000Z',
+			coveringFees: true,
+			cancelAtPeriodEnd: false
+		});
+		expect(info).toEqual({
+			id: 'sub_x',
+			status: 'active',
+			quantity: 12,
+			coveringFees: true,
+			currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
+			cancelAtPeriodEnd: false
+		});
+	});
+
+	it('defaults missing flags to false (pre-migration rows)', () => {
+		const info = mapDbSubscription({
+			startedAt: 'x',
+			stripeSubscriptionId: 'sub_y',
+			hoursPerReset: 4,
+			creditsResetAt: '2026-07-01T00:00:00.000Z'
+		} as never);
+		expect(info?.coveringFees).toBe(false);
+		expect(info?.cancelAtPeriodEnd).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// buildMemberSubscriptionState
+// ---------------------------------------------------------------------------
+describe('buildMemberSubscriptionState', () => {
+	it('stores credits = contribution quantity × 2 and detects fee coverage', async () => {
+		const sub = {
+			id: 'sub_1',
+			cancel_at_period_end: true,
+			items: {
+				data: [
+					{
+						price: { product: 'prod_contribution', unit_amount: 500 },
+						quantity: 6,
+						current_period_end: 1700000000
+					},
+					{
+						price: { product: 'prod_fee', unit_amount: 200 },
+						quantity: 1,
+						current_period_end: 1700000000
+					}
+				]
+			}
+		} as never;
+
+		const state = await buildMemberSubscriptionState(sub, null);
+		expect(state).toMatchObject({
+			stripeSubscriptionId: 'sub_1',
+			hoursPerReset: 12,
+			coveringFees: true,
+			cancelAtPeriodEnd: true,
+			creditsResetAt: new Date(1700000000 * 1000).toISOString()
+		});
+	});
+
+	it('derives credits from the dollar amount for a flat 1 × $60 line', async () => {
+		// Some subscriptions bill a single line (quantity 1) at a flat unit_amount
+		// rather than N × $5. $60 must still yield 24 credits (12 hours).
+		const sub = {
+			id: 'sub_flat',
+			cancel_at_period_end: false,
+			items: {
+				data: [{ price: { product: 'prod_contribution', unit_amount: 6000 }, quantity: 1 }]
+			}
+		} as never;
+
+		const state = await buildMemberSubscriptionState(sub, null);
+		expect(state.hoursPerReset).toBe(24);
+	});
+
+	it('preserves existing startedAt for idempotency', async () => {
+		const sub = {
+			id: 'sub_1',
+			cancel_at_period_end: false,
+			items: { data: [{ price: { product: 'prod_contribution', unit_amount: 500 }, quantity: 2 }] }
+		} as never;
+
+		const state = await buildMemberSubscriptionState(sub, {
+			startedAt: '2020-01-01T00:00:00.000Z',
+			stripeSubscriptionId: 'sub_1',
+			hoursPerReset: 4,
+			creditsResetAt: 'x',
+			coveringFees: false,
+			cancelAtPeriodEnd: false
+		});
+		expect(state.startedAt).toBe('2020-01-01T00:00:00.000Z');
+		expect(state.coveringFees).toBe(false);
 	});
 });
 

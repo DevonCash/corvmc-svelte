@@ -73,6 +73,11 @@ export const reservation = sqliteTable(
 		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
 		// Free credit-hours applied to this booking (legacy: reservations.free_hours_used).
 		creditsUsed: real('credits_used'),
+		// Cash owed at the door after free-hour credits are committed at Confirm.
+		// null = not yet committed (plain scheduled); 0 = settled (fully credit-covered
+		// or comped); > 0 = cash owed. Combined with paidAt: paidAt set ⇒ paid,
+		// paidAt null & >0 ⇒ cash owed, paidAt null & 0 ⇒ comped/credit-settled.
+		cashDueCents: integer('cash_due_cents'),
 		lockAccessId: text('lock_access_id'),
 		// Per-reservation door lock code (not backfilled from legacy data).
 		lockCode: text('lock_code'),
