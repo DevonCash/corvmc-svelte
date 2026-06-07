@@ -9,10 +9,7 @@
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
-	let {
-		reservation,
-		onchange
-	}: { reservation: Reservation; onchange?: () => void } = $props();
+	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
 	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
 
