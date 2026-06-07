@@ -49,6 +49,7 @@ import {
 } from '../src/lib/server/db/schema/authorization';
 import { platformInvite } from '../src/lib/server/db/schema/platform-invite';
 import { detectPlatform } from '../src/lib/utils/link-platform';
+import { mapMemberFlags } from '../src/lib/server/directory/legacy-flags';
 import type { ProfileLink } from '../src/lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
@@ -266,8 +267,37 @@ async function migrateUsers() {
 		}
 	}
 
+	// Member flags live in the polymorphic `flags` table (spatie/laravel-model-flags),
+	// keyed by member-profile id. flaggable_type appears in two historical formats.
+	const flagRows = await pg`
+		SELECT name, flaggable_id
+		FROM flags
+		WHERE flaggable_type IN ('App\\Models\\MemberProfile', 'member_profile')
+	`;
+	const flagsByUser: Record<string, Set<string>> = {};
+	for (const f of flagRows) {
+		const userId = profileToUser[String(f.flaggable_id)];
+		if (!userId) continue;
+		(flagsByUser[userId] ??= new Set()).add(String(f.name));
+	}
+
 	if (!COMMIT) {
+		const counts = {
+			lookingForBand: 0,
+			availableForHire: 0,
+			teachesLessons: 0,
+			openToCollaboration: 0
+		};
+		for (const names of Object.values(flagsByUser)) {
+			const flags = mapMemberFlags(names);
+			for (const key of Object.keys(counts) as (keyof typeof counts)[]) {
+				if (flags[key]) counts[key]++;
+			}
+		}
 		console.log(`  Would create: ${users.length} users, instruments/genres for tagged profiles`);
+		console.log(
+			`  Member flags: lookingForBand=${counts.lookingForBand}, availableForHire=${counts.availableForHire}, teachesLessons=${counts.teachesLessons}, openToCollaboration=${counts.openToCollaboration}`
+		);
 		return;
 	}
 
@@ -281,6 +311,10 @@ async function migrateUsers() {
 
 		// Fold legacy links + embeds into the new unified links array
 		const normalizedLinks = buildLinks(u.links, u.embeds);
+
+		// Directory flags from the legacy `flags` table (keyed by legacy user id,
+		// same as tagsByProfile above)
+		const memberFlags = mapMemberFlags(flagsByUser[String(u.id)] ?? []);
 
 		// Strip sms_ok from contact (migrated separately as notification preference)
 		const hasSmsOk = contactData?.sms_ok;
@@ -319,7 +353,10 @@ async function migrateUsers() {
 				bio: u.bio,
 				tagline: null,
 				hometown: u.hometown ?? null,
-				lookingForBand: false,
+				lookingForBand: memberFlags.lookingForBand,
+				availableForHire: memberFlags.availableForHire,
+				teachesLessons: memberFlags.teachesLessons,
+				openToCollaboration: memberFlags.openToCollaboration,
 				directoryVisibility:
 					u.visibility === 'public' ? 'public' : u.visibility === 'private' ? 'hidden' : 'members',
 				directoryContact: contactData ?? null,

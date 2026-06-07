@@ -20,6 +20,7 @@
 	let lookingForBand = $state(false);
 	let availableForHire = $state(false);
 	let teachesLessons = $state(false);
+	let openToCollaboration = $state(false);
 	let lookingForMembers = $state(false);
 
 	let filters = $derived({
@@ -29,6 +30,7 @@
 		lookingForBand: lookingForBand ? 'true' : undefined,
 		availableForHire: availableForHire ? 'true' : undefined,
 		teachesLessons: teachesLessons ? 'true' : undefined,
+		openToCollaboration: openToCollaboration ? 'true' : undefined,
 		lookingForMembers: lookingForMembers ? 'true' : undefined
 	});
 
@@ -73,6 +75,10 @@
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={teachesLessons} />
 					<span>Teaches lessons</span>
+				</label>
+				<label class="directory-filters__toggle">
+					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={openToCollaboration} />
+					<span>Open to collaboration</span>
 				</label>
 			{:else}
 				<label class="directory-filters__toggle">
@@ -121,6 +127,7 @@
 						lookingForBand={member.lookingForBand}
 						availableForHire={member.availableForHire}
 						teachesLessons={member.teachesLessons}
+						openToCollaboration={member.openToCollaboration}
 						memberSince={new Date(member.createdAt).getFullYear()}
 					/>
 				{/each}
