@@ -41,6 +41,7 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { reportError } from '$lib/report-error';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -199,13 +200,25 @@
 					status = 'success';
 					changeCount = 0;
 				} else {
-					throw new Error('Form validation failed');
+					// Validation failed — expected. Field-level issues are already
+					// rendered; surface them without reporting a bug to Sentry.
+					await delay(150 - (performance.now() - start));
+					if (onfailure) onfailure(ctx.issues);
+					else toast.error('Please fix the highlighted fields and try again.');
+					status = 'error';
 				}
 			} catch (err) {
+				// Genuine submission failure (network/server). Capture it: forms with
+				// an onfailure handler bypass the error boundary, so report directly.
 				await delay(150 - (performance.now() - start));
-				console.error('[Form] submission error:', err);
-				if (onfailure) onfailure(ctx.issues);
-				else errorBoundary?.reportError(err);
+				if (onfailure) {
+					reportError(err);
+					onfailure(ctx.issues);
+				} else if (errorBoundary) {
+					errorBoundary.reportError(err);
+				} else {
+					reportError(err);
+				}
 				status = 'error';
 			} finally {
 				submitting = false;
@@ -233,9 +246,12 @@
 			changeCount = 0;
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
-			console.error('[Form] submission error:', err);
+			if (errorBoundary) {
+				errorBoundary.reportError(err); // reports to Sentry + toasts
+			} else {
+				reportError(err);
+			}
 			onfailure?.(null);
-			errorBoundary?.reportError(err);
 			status = 'error';
 		}
 
