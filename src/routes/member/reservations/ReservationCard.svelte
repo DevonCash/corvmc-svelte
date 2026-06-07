@@ -52,7 +52,9 @@
 				{:else if reservation.status === 'confirmed' && reservation.paidAt}
 					<span class="badge badge-success badge-sm">Paid</span>
 				{:else if reservation.status === 'confirmed' && (reservation.cashDueCents ?? 0) > 0}
-					<span class="text-xs font-medium">${cents(reservation.cashDueCents ?? 0)} due at door</span>
+					<span class="text-xs font-medium"
+						>${cents(reservation.cashDueCents ?? 0)} due at door</span
+					>
 				{:else if reservation.status === 'confirmed'}
 					<span class="badge badge-sm">Comped</span>
 				{/if}

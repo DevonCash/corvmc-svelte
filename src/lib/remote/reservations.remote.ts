@@ -868,7 +868,11 @@ async function commitCreditsAndSettleIfCovered(opts: {
 	// record is best-effort; the committed credits are the authoritative settlement.
 	let stripePaymentRecordId: string | null = null;
 	try {
-		const stripeCustomerId = await ensureStripeCustomer(opts.userId, opts.email, opts.name ?? undefined);
+		const stripeCustomerId = await ensureStripeCustomer(
+			opts.userId,
+			opts.email,
+			opts.name ?? undefined
+		);
 		const rec = await recordCashPayment({
 			userId: opts.userId,
 			stripeCustomerId,
@@ -911,7 +915,8 @@ async function payReservationRemainder(opts: {
 }): Promise<{ paid: true } | { checkoutUrl: string }> {
 	const reservationConfig = await getReservationConfig();
 	const hourlyRateCents = reservationConfig.hourlyRateCents;
-	const durationHours = (opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours =
+		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
@@ -925,7 +930,11 @@ async function payReservationRemainder(opts: {
 	});
 	if (settled) return { paid: true };
 
-	const stripeCustomerId = await ensureStripeCustomer(opts.userId, opts.email, opts.name ?? undefined);
+	const stripeCustomerId = await ensureStripeCustomer(
+		opts.userId,
+		opts.email,
+		opts.name ?? undefined
+	);
 	const result = await checkout({
 		stripeCustomerId,
 		customerEmail: opts.email,
