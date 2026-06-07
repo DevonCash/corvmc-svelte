@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `open_to_collaboration` integer DEFAULT false NOT NULL;
