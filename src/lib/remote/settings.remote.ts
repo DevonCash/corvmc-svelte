@@ -16,6 +16,7 @@ import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { requireStaff } from '$lib/server/authorization';
 import { getAllFeatureFlags, type FeatureFlag } from '$lib/server/feature-flags';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
+import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
 
 // ---------------------------------------------------------------------------
 // Public queries (no auth)
@@ -213,6 +214,11 @@ export const updateFeatureFlag = form(
 export const syncSubscriptions = command(async () => {
 	await requireStaff();
 	return syncAllSubscriptions();
+});
+
+export const refreshCommunityStats = command(async () => {
+	await requireStaff();
+	return refreshStats();
 });
 
 export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, isNull, isNotNull, count, sql } from 'drizzle-orm';
-import { getJson, putJson } from '$lib/server/kv';
+import { getJson, putJson, deleteKey } from '$lib/server/kv';
 import { creditsToHours } from '$lib/config';
 
 export interface CommunityStats {
@@ -20,6 +20,12 @@ export async function getCommunityStats(): Promise<CommunityStats> {
 	const stats = await queryStats();
 	await putJson(STATS_KEY, stats, TTL_SECONDS);
 	return stats;
+}
+
+/** Drop the cached stats and recompute now (staff-triggered). */
+export async function refreshCommunityStats(): Promise<CommunityStats> {
+	await deleteKey(STATS_KEY);
+	return getCommunityStats();
 }
 
 async function queryStats(): Promise<CommunityStats> {
