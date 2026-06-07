@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
+import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {
@@ -112,6 +113,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 });
 
 export const getBandReservations = query(z.string(), async (slug) => {
+	await requireFeature('bandReservations');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
@@ -511,6 +513,7 @@ export const previewRecurringInstances = query(
 
 /** Band: available slots + config + recurring frequencies for a given date. */
 export const getBandSlots = query(z.string(), async (dateParam) => {
+	await requireFeature('bandReservations');
 	await requireBandMember();
 
 	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
@@ -577,6 +580,7 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.void(), async () => {
+	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
@@ -954,6 +958,7 @@ const bandBookingSchema = createReservationSchema.extend({
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, _issue) => {
+	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
 
@@ -1022,6 +1027,7 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
+		await requireFeature('bandReservations');
 		const currentUser = requireUser();
 		await requireBandMember();
 		await cancel(data.reservationId, currentUser.id);
