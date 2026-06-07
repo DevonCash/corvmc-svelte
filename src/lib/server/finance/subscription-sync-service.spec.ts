@@ -142,7 +142,11 @@ function userSub(opts: {
 				{
 					quantity: opts.quantity ?? 5,
 					current_period_end: opts.periodEnd ?? 1_700_000_000,
-					price: { product: 'prod_contribution', recurring: { interval: 'month' } }
+					price: {
+						product: 'prod_contribution',
+						unit_amount: 500,
+						recurring: { interval: 'month' }
+					}
 				}
 			]
 		}

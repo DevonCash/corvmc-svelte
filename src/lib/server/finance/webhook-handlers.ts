@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
+import { DOLLARS_PER_UNIT } from '$lib/config';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { buildMemberSubscriptionState } from './subscription-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
@@ -83,14 +84,17 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		return;
 	}
 
-	// Credits granted = $5-units × 2 (each unit = 1 hour = 2 thirty-minute credits).
-	const freeHoursCredits = contributionLine.quantity * 2;
+	// Derive from the line's dollar amount, not the raw quantity — a contribution
+	// may be billed as 12 × $5 or as a single 1 × $60 line. $5 = 1 hour = 2 credits.
+	const contributionCents = contributionLine.amount ?? 0;
+	const freeHoursCredits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 50));
+	const contributionUnits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 100));
 
 	// Use invoice ID as sourceId for idempotency — each invoice is unique
 	await creditService.allocateMonthlyCredits(member.id, freeHoursCredits, invoice.id);
 
 	// Equipment credits: 1:1 with contribution units, capped at 250
-	await creditService.allocateEquipmentCredits(member.id, contributionLine.quantity, invoice.id);
+	await creditService.allocateEquipmentCredits(member.id, contributionUnits, invoice.id);
 
 	const [existing] = await db
 		.select({ subscription: user.subscription })

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
+import { DOLLARS_PER_UNIT } from '$lib/config';
 import { checkout } from './payment-service';
 import { calculateTotalWithFeeCoverage } from './fees';
 import {
@@ -116,6 +117,17 @@ function findContributionItem(
 }
 
 /**
+ * Credits (30-min blocks) granted by a contribution line. Derived from the dollar
+ * amount (`unit_amount × quantity`), NOT the raw Stripe quantity — a contribution
+ * can be billed as 12 × $5 or as a single 1 × $60 line, and both must yield the
+ * same allocation. $5 = 1 hour = 2 credits, so credits = cents / (DOLLARS_PER_UNIT × 50).
+ */
+function contributionCreditsFromItem(item: Stripe.SubscriptionItem | undefined): number {
+	const cents = (item?.price.unit_amount ?? 0) * (item?.quantity ?? 0);
+	return Math.round(cents / (DOLLARS_PER_UNIT * 50));
+}
+
+/**
  * Fetch the active subscription for a user. Returns null if none exists.
  */
 export async function getSubscription(stripeCustomerId: string): Promise<SubscriptionInfo | null> {
@@ -177,13 +189,12 @@ export async function buildMemberSubscriptionState(
 	);
 	const coveringFees = sub.items.data.some((i) => itemProductId(i) === feeProductId);
 
-	const units = contributionItem?.quantity ?? 0;
 	const periodEnd = contributionItem?.current_period_end;
 
 	return {
 		startedAt: existing?.startedAt ?? new Date().toISOString(),
 		stripeSubscriptionId: sub.id,
-		hoursPerReset: units * 2,
+		hoursPerReset: contributionCreditsFromItem(contributionItem),
 		creditsResetAt: periodEnd
 			? new Date(periodEnd * 1000).toISOString()
 			: (existing?.creditsResetAt ?? new Date(Date.now() + 30 * 86400_000).toISOString()),
