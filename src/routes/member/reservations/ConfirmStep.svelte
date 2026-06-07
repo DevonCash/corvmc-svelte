@@ -208,6 +208,9 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
+			{#if formCtx.currentStep > 0}
+				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
+			{/if}
 			<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
 			<Button
 				type="submit"
