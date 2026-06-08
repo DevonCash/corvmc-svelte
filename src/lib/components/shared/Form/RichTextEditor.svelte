@@ -80,10 +80,10 @@
 
 <div class="rounded-box border border-base-300">
 	{#if editor}
-		<div class="join flex flex-wrap border-b border-base-300 p-1">
+		<div class="join flex flex-wrap border-b border-base-300 rounded-b-none">
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
+				class="btn btn-ghost btn-xs btn-square join-item rounded-b-none"
 				class:btn-active={isActive('bold')}
 				aria-label="Bold"
 				onclick={() => editor!.chain().focus().toggleBold().run()}
@@ -146,13 +146,14 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
+				class="btn btn-ghost btn-xs btn-square join-item rounded-b-none"
 				class:btn-active={isActive('link')}
 				aria-label="Link"
 				onclick={toggleLink}
 			>
 				<IconLink size={16} />
 			</button>
+			<div class='filler join-item rounded-b-none grow btn btn-xs pointer-events-none btn-ghost'></div>
 		</div>
 	{/if}
 	<div bind:this={element} data-placeholder={placeholder}></div>
