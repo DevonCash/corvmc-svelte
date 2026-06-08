@@ -93,7 +93,9 @@
 			</span>
 		</label>
 		{#if coverFees}
-			<p class="ml-12 text-sm opacity-60">Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)</p>
+			<p class="ml-12 text-sm opacity-60">
+				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)
+			</p>
 		{/if}
 	</div>
 
