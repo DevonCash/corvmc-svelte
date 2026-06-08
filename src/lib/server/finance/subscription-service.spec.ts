@@ -420,7 +420,16 @@ describe('updateQuantity', () => {
 
 		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_upd', {
 			items: expect.arrayContaining([
-				{ id: 'si_contrib', quantity: 7 },
+				{
+					id: 'si_contrib',
+					price_data: expect.objectContaining({
+						currency: 'usd',
+						product: 'prod_contribution',
+						unit_amount: 500,
+						recurring: { interval: 'month' }
+					}),
+					quantity: 7
+				},
 				expect.objectContaining({
 					price_data: expect.objectContaining({
 						currency: 'usd',
@@ -436,6 +445,38 @@ describe('updateQuantity', () => {
 		const call = mockStripe.subscriptions.update.mock.calls[0][1];
 		const feeItem = call.items.find((i: any) => i.price_data);
 		expect(feeItem.price_data.unit_amount).toBeGreaterThan(0);
+	});
+
+	it('normalizes a legacy flat-priced line so it is not billed at the stale unit price', async () => {
+		// Legacy subscriptions billed 1 × full-dollar-amount (unit_amount 6000,
+		// quantity 1 = $60). Setting only the quantity to the new $5-unit count (12)
+		// while preserving unit_amount 6000 would bill 12 × $60 = $720. The update
+		// must restate unit_amount to the $5/unit config price so 12 × $5 = $60.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_legacy',
+					items: {
+						data: [
+							{
+								id: 'si_legacy',
+								price: { id: 'price_legacy', product: 'prod_contribution', unit_amount: 6000 },
+								quantity: 1
+							}
+						]
+					}
+				}
+			]
+		});
+
+		await updateQuantity('cus_123', 12, false);
+
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		const contribItem = call.items.find((i: any) => i.id === 'si_legacy');
+		expect(contribItem.price_data.unit_amount).toBe(500);
+		expect(contribItem.quantity).toBe(12);
+		// Effective monthly charge is $5 × 12 = $60, not the stale $720.
+		expect(contribItem.price_data.unit_amount * contribItem.quantity).toBe(6000);
 	});
 
 	it('removes existing fee item before adding new one', async () => {
@@ -494,7 +535,11 @@ describe('updateQuantity', () => {
 
 		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_rm_fee', {
 			items: [
-				{ id: 'si_contrib', quantity: 5 },
+				{
+					id: 'si_contrib',
+					price_data: expect.objectContaining({ unit_amount: 500 }),
+					quantity: 5
+				},
 				{ id: 'si_fee', deleted: true }
 			]
 		});
@@ -540,8 +585,20 @@ describe('updateQuantity', () => {
 
 		await updateQuantity('cus_123', 8, false);
 
+		// The drifted line is restated under the canonical contribution product and
+		// the $5/unit config price, so the quantity always multiplies $5 — not a
+		// stale legacy unit price.
 		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_drift', {
-			items: [{ id: 'si_legacy_contrib', quantity: 8 }]
+			items: [
+				{
+					id: 'si_legacy_contrib',
+					price_data: expect.objectContaining({
+						product: 'prod_contribution',
+						unit_amount: 500
+					}),
+					quantity: 8
+				}
+			]
 		});
 	});
 
