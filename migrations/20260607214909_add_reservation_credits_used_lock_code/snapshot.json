@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "9c2eb976-883c-4864-848d-b9d81ed17c1a",
+  "id": "bfe35971-09d4-458e-bf92-5bbd1d315cea",
   "prevIds": [
-    "ea249557-d2fd-4012-a23f-e98f6465c7e1"
+    "9c2eb976-883c-4864-848d-b9d81ed17c1a"
   ],
   "ddl": [
     {
@@ -1307,6 +1307,16 @@
       "table": "reservation"
     },
     {
+      "type": "real",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "credits_used",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -1323,6 +1333,16 @@
       "default": null,
       "generated": null,
       "name": "lock_access_id",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_code",
       "entityType": "columns",
       "table": "reservation"
     },
