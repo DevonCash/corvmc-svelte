@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
+	import Field from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
 
@@ -81,17 +82,13 @@
 	</div>
 
 	<div>
-		<label class="label cursor-pointer items-start justify-start gap-3">
-			<input
-				type="checkbox"
-				name="coverFees"
-				bind:checked={coverFees}
-				class="toggle toggle-primary toggle-sm shrink-0"
-			/>
-			<span class="label-text flex-1 whitespace-normal">
-				Cover processing fees so the Collective receives 100% of your contribution
-			</span>
-		</label>
+		<Field
+			name="coverFees"
+			type="toggle"
+			label=""
+			bind:value={coverFees}
+			checkboxLabel="Cover processing fees so the Collective receives 100% of your contribution"
+		/>
 		{#if coverFees}
 			<p class="ml-12 text-sm opacity-60">
 				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)

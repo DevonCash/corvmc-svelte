@@ -21,6 +21,8 @@ db.sqlite
 .env.*
 !.env.example
 !.env.test
+.dev.vars
+.dev.vars.*
 
 # Filled-in secrets for `wrangler secret bulk` (only secrets.template.json is tracked)
 secrets.json

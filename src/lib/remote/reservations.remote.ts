@@ -977,7 +977,7 @@ async function payReservationRemainder(opts: {
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
-	coverFees: z.enum(['', 'on']).optional(),
+	coverFees: z.boolean().default(false),
 	skipPayment: z.enum(['', 'on']).optional()
 });
 
@@ -1115,7 +1115,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 		lineItems: [lineItem],
 		// Credits already committed against this reservation — don't deduct again.
 		eligibleCredits: [],
-		coverFees: data.coverFees === 'on',
+		coverFees: data.coverFees,
 		metadata: { reservation_id: res.id },
 		successUrl: `${url.origin}/member/reservations`,
 		cancelUrl: `${url.origin}/member/reservations`
@@ -1232,7 +1232,7 @@ export const cancelBandReservation = form(
 export const payForReservation = form(
 	z.object({
 		id: z.string(),
-		coverFees: z.literal('on').optional(),
+		coverFees: z.boolean().default(false),
 		skipPayment: z.enum(['', 'on']).optional()
 	}),
 	async (data, _issue) => {
@@ -1270,7 +1270,7 @@ export const payForReservation = form(
 			userId: currentUser.id,
 			email: currentUser.email,
 			name: currentUser.name,
-			coverFees: data.coverFees === 'on',
+			coverFees: data.coverFees,
 			successUrl: `${url.origin}/member/reservations`,
 			cancelUrl: `${url.origin}/member/reservations`
 		});
@@ -1282,7 +1282,7 @@ export const payForReservation = form(
 /** Member: pay for a reservation via Stripe checkout (from pay page). */
 export const payReservation = form(
 	z.object({
-		coverFees: z.literal('on').optional()
+		coverFees: z.boolean().default(false)
 	}),
 	async (data, _issue) => {
 		const currentUser = requireUser();
@@ -1304,7 +1304,7 @@ export const payReservation = form(
 			userId: currentUser.id,
 			email: currentUser.email,
 			name: currentUser.name,
-			coverFees: data.coverFees === 'on',
+			coverFees: data.coverFees,
 			successUrl: `${url.origin}/member/reservations`,
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});

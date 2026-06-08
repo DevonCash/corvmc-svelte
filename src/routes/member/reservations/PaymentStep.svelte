@@ -12,7 +12,7 @@
 		precedingSteps = reservation ? 1 : 2
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
-		fields: { id?: RemoteFormField<string>; coverFees: RemoteFormField<string> };
+		fields: { id?: RemoteFormField<string>; coverFees: RemoteFormField<boolean> };
 		precedingSteps?: number;
 	} = $props();
 

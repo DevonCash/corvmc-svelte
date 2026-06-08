@@ -213,15 +213,15 @@
 
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
-						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled ? 'on' : 'off')} />
+						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled)} />
 						{#if editTicketingEnabled}
 							<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
 						{/if}
 						{#if rebookNeeded && rebookConfirmed}
-							<input {...fields.rebookReservation.as('hidden', 'on')} />
+							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
 						{#if overrideConflicts}
-							<input {...fields.overrideConflicts.as('hidden', 'on')} />
+							<input {...fields.overrideConflicts.as('hidden', true)} />
 						{/if}
 
 						<div class="space-y-4">

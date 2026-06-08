@@ -384,20 +384,20 @@ export const createEvent = form(
 		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 		doorsTime: z.string().optional(),
 		tags: z.string().optional(),
-		ticketingEnabled: z.string().optional(),
+		ticketingEnabled: z.boolean().default(false),
 		ticketPrice: z.string().optional(),
 		ticketQuantity: z.string().optional(),
-		reserveSpace: z.string().optional(),
+		reserveSpace: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
 		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.string().optional()
+		overrideConflicts: z.boolean().default(false)
 	}),
 	async (data, issue) => {
 		const staff = await requireStaff();
 
-		const ticketingEnabled = data.ticketingEnabled === 'on';
-		const reserveSpace = data.reserveSpace === 'on';
-		const overrideConflicts = data.overrideConflicts === 'on';
+		const ticketingEnabled = data.ticketingEnabled;
+		const reserveSpace = data.reserveSpace;
+		const overrideConflicts = data.overrideConflicts;
 		const ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : undefined;
 		const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
 
@@ -447,22 +447,21 @@ export const updateEvent = form(
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
 		doorsTime: z.string().optional(),
-		ticketingEnabled: z.string().optional(),
+		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
 		ticketQuantity: z.string().optional(),
-		rebookReservation: z.string().optional(),
+		rebookReservation: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
 		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.string().optional()
+		overrideConflicts: z.boolean().default(false)
 	}),
 	async (data) => {
 		const staff = await requireStaff();
 		const tz = DEFAULT_TIMEZONE;
 
-		const ticketingEnabled =
-			data.ticketingEnabled === 'on' ? true : data.ticketingEnabled === 'off' ? false : undefined;
-		const rebookReservation = data.rebookReservation === 'on';
-		const overrideConflicts = data.overrideConflicts === 'on';
+		const ticketingEnabled = data.ticketingEnabled;
+		const rebookReservation = data.rebookReservation;
+		const overrideConflicts = data.overrideConflicts;
 
 		const updateParams: Parameters<typeof update>[1] = {};
 
@@ -631,7 +630,7 @@ export const purchaseTickets = form(
 		quantity: z.string().transform(Number),
 		attendeeName: z.string().min(1),
 		attendeeEmail: z.string().email(),
-		coverFees: z.string().optional()
+		coverFees: z.boolean().default(false)
 	}),
 	async (data, issue) => {
 		const { locals, url } = getRequestEvent();
@@ -653,7 +652,7 @@ export const purchaseTickets = form(
 			);
 		}
 
-		const coverFees = data.coverFees === 'on';
+		const coverFees = data.coverFees;
 		const purchaseId = randomUUID();
 
 		await createTickets({

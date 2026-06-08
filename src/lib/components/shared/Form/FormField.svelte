@@ -81,15 +81,18 @@
 			type === 'file'
 	);
 
+	// Both `checkbox` and `toggle` render an `<input type="checkbox">`, so they must
+	// register with SvelteKit as a checkbox. That gives the field name a `b:` prefix,
+	// which makes the submitted value a real boolean (`'on'` → true, unchecked → absent
+	// → false via the schema default) instead of the string "on".
+	let isBooleanInput = $derived(type === 'checkbox' || type === 'toggle');
+
 	// Resolve field attributes from SvelteKit field definition when provided
 	let fieldAttrs = $derived.by(() => {
 		if (!field) return null;
-		const asType =
-			type === 'textarea' ||
-			type === 'tags' ||
-			type === 'calendar' ||
-			type === 'toggle' ||
-			type === 'file'
+		const asType = isBooleanInput
+			? 'checkbox'
+			: type === 'textarea' || type === 'tags' || type === 'calendar' || type === 'file'
 				? 'text'
 				: (type ?? 'text');
 		// Forward the supplied value so plain inputs render pre-filled from existing
@@ -99,8 +102,10 @@
 			: field.as(asType as any, value);
 	});
 
-	// When field is provided, derive name/id from it
-	let resolvedName = $derived(fieldAttrs?.name ?? _name);
+	// When field is provided, `fieldAttrs.name` already carries the `b:` prefix. For
+	// name-only boolean inputs (no `field`), apply the prefix manually so SvelteKit
+	// still coerces the value to a boolean.
+	let resolvedName = $derived(fieldAttrs?.name ?? (isBooleanInput ? `b:${_name}` : _name));
 	let resolvedId = $derived(
 		propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id)
 	);

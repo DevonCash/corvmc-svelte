@@ -400,22 +400,10 @@ const memberProfileSchema = z.object({
 			return [];
 		}
 	}),
-	lookingForBand: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on'),
-	availableForHire: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on'),
-	teachesLessons: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on'),
-	openToCollaboration: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on'),
+	lookingForBand: z.boolean().default(false),
+	availableForHire: z.boolean().default(false),
+	teachesLessons: z.boolean().default(false),
+	openToCollaboration: z.boolean().default(false),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('members'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
@@ -479,10 +467,7 @@ const bandProfileSchema = z.object({
 			return [];
 		}
 	}),
-	lookingForMembers: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on'),
+	lookingForMembers: z.boolean().default(false),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('public'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),

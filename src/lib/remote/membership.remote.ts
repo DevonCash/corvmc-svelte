@@ -71,7 +71,7 @@ const amountSchema = z
 				(n) => !isNaN(n) && n >= MIN_QUANTITY * DOLLARS_PER_UNIT,
 				`Contribution must be at least $${MIN_QUANTITY * DOLLARS_PER_UNIT}/month`
 			),
-		coverFees: z.literal('on').optional()
+		coverFees: z.boolean().default(false)
 	})
 	.refine((d) => d.amount % DOLLARS_PER_UNIT === 0, {
 		message: `Contribution must be a multiple of $${DOLLARS_PER_UNIT}`,
@@ -89,7 +89,7 @@ export const createSubscription = form(amountSchema, async (data) => {
 		userId: user.id,
 		stripeCustomerId: stripeId,
 		quantity: data.amount / DOLLARS_PER_UNIT,
-		coverFees: data.coverFees === 'on',
+		coverFees: data.coverFees,
 		successUrl: `${url.origin}/member/membership`,
 		cancelUrl: `${url.origin}/member/membership`
 	});
@@ -103,7 +103,7 @@ export const updateAmount = form(amountSchema, async (data) => {
 
 	const units = data.amount / DOLLARS_PER_UNIT;
 	try {
-		await updateQuantity(stripeId, units, data.coverFees === 'on');
+		await updateQuantity(stripeId, units, data.coverFees);
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -111,7 +111,7 @@ export const updateAmount = form(amountSchema, async (data) => {
 	// hoursPerReset is in credits (30-min blocks): units × 2.
 	await patchMemberSubscription(user.id, {
 		hoursPerReset: units * 2,
-		coveringFees: data.coverFees === 'on'
+		coveringFees: data.coverFees
 	});
 	return { success: true };
 });

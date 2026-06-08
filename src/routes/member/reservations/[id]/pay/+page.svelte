@@ -3,6 +3,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
+	import Field from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
@@ -110,17 +111,13 @@
 
 	<Form remote={payReservation}>
 		{#if remainingCents > 0}
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-3">
-					<input
-						type="checkbox"
-						name="coverFees"
-						bind:checked={coverFees}
-						class="checkbox checkbox-sm"
-					/>
-					<span class="label-text"> Cover processing fees so the Collective receives 100% </span>
-				</label>
-			</div>
+			<Field
+				name="coverFees"
+				type="checkbox"
+				label=""
+				bind:value={coverFees}
+				checkboxLabel="Cover processing fees so the Collective receives 100%"
+			/>
 		{/if}
 
 		<SubmitButton class="btn-primary w-full mt-4">

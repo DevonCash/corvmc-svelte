@@ -112,10 +112,7 @@ const createArticleSchema = z.object({
 	summary: z.string().trim().max(500).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
-	published: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on')
+	published: z.boolean().default(false)
 });
 
 export const createArticle = form(createArticleSchema, async (data) => {
@@ -136,10 +133,7 @@ const updateArticleSchema = z.object({
 	summary: z.string().trim().max(500).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
-	published: z
-		.string()
-		.optional()
-		.transform((v) => v === 'on')
+	published: z.boolean().default(false)
 });
 
 export const updateArticle = form(updateArticleSchema, async (data) => {
