@@ -62,6 +62,7 @@
 			removeForm={removeBandAvatar}
 			currentUrl={band.avatarUrl}
 			name={band.name}
+			shape="square"
 		/>
 	</InfoCard>
 
