@@ -317,7 +317,24 @@ export async function updateQuantity(
 		};
 		quantity?: number;
 		deleted?: boolean;
-	}> = [{ id: contributionItem.id, quantity: newQuantity }];
+	}> = [
+		// Always restate the unit price from config rather than only setting the
+		// quantity. Legacy subscriptions were billed as 1 × full-dollar-amount
+		// (e.g. unit_amount 6000, quantity 1); setting quantity alone on such a
+		// line would multiply the stale $60 unit by the new $5-unit count and bill
+		// 12 × $60 = $720. Normalizing unit_amount to the $5/unit price keeps
+		// `unit_amount × quantity` correct regardless of how the line was created.
+		{
+			id: contributionItem.id,
+			price_data: {
+				currency: 'usd',
+				product: contributionProductId,
+				unit_amount: contributionConfig.unitAmountCents,
+				recurring: { interval: 'month' }
+			},
+			quantity: newQuantity
+		}
+	];
 
 	if (coverFees) {
 		const contributionCents = newQuantity * contributionConfig.unitAmountCents;
