@@ -28,6 +28,18 @@ export class ReservationValidationError extends Error {
 	}
 }
 
+/**
+ * Thrown when a reservation can't transition to the requested state — e.g.
+ * cancelling an already-cancelled reservation, or a concurrent status change.
+ * These are expected conflicts (stale UI, double-click), not server faults.
+ */
+export class ReservationStateError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'ReservationStateError';
+	}
+}
+
 // ---------------------------------------------------------------------------
 // create()
 // ---------------------------------------------------------------------------
@@ -192,7 +204,7 @@ export async function cancel(
 	const status = row.status as ReservationStatus;
 
 	if (status === 'cancelled' || status === 'completed' || status === 'no_show') {
-		throw new Error(`Cannot cancel a reservation with status "${status}"`);
+		throw new ReservationStateError(`Cannot cancel a reservation with status "${status}"`);
 	}
 
 	// Atomic conditional update — only cancels if status hasn't changed since read
@@ -207,7 +219,7 @@ export async function cancel(
 		.where(and(eq(reservation.id, reservationId), inArray(reservation.status, cancellable)));
 
 	if (getRowCount(result) === 0) {
-		throw new Error('Reservation status changed concurrently');
+		throw new ReservationStateError('Reservation status changed concurrently');
 	}
 
 	// If a payment was recorded, refund it (Stripe-side). Credits committed to the

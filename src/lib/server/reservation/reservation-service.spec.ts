@@ -38,7 +38,8 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	autoCompleteExpired
+	autoCompleteExpired,
+	ReservationStateError
 } from './reservation-service';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
@@ -170,6 +171,17 @@ describe('ReservationService', () => {
 			});
 
 			await expect(cancel('res-1', 'user-1')).rejects.toThrow('Cannot cancel');
+		});
+
+		it('throws ReservationStateError (not a generic 500) for already-cancelled', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'cancelled',
+				stripePaymentRecordId: null
+			});
+
+			await expect(cancel('res-1', 'user-1')).rejects.toBeInstanceOf(ReservationStateError);
 		});
 
 		it('throws when reservation not found', async () => {

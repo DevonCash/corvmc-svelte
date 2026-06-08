@@ -76,7 +76,8 @@ const {
 	createBillingPortalUrl,
 	resume,
 	mapDbSubscription,
-	buildMemberSubscriptionState
+	buildMemberSubscriptionState,
+	SubscriptionStateError
 } = await import('./subscription-service');
 
 // ---------------------------------------------------------------------------
@@ -504,6 +505,44 @@ describe('updateQuantity', () => {
 		await expect(updateQuantity('cus_ghost', 3, false)).rejects.toThrow(
 			'No active subscription found'
 		);
+	});
+
+	it('throws SubscriptionStateError (not a generic 500) when no usable line item', async () => {
+		// Active subscription with no line items at all — nothing to update.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [{ id: 'sub_empty', items: { data: [] } }]
+		});
+		await expect(updateQuantity('cus_123', 4, false)).rejects.toBeInstanceOf(
+			SubscriptionStateError
+		);
+	});
+
+	it('updates the contribution line even when its product id has drifted', async () => {
+		// Product id no longer matches 'prod_contribution' (e.g. after a product-config
+		// migration). The strict match used to throw "Contribution item not found"; the
+		// drift-tolerant lookup picks the largest non-fee line instead.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_drift',
+					items: {
+						data: [
+							{
+								id: 'si_legacy_contrib',
+								price: { id: 'price_legacy', product: 'prod_legacy_contribution' },
+								quantity: 3
+							}
+						]
+					}
+				}
+			]
+		});
+
+		await updateQuantity('cus_123', 8, false);
+
+		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_drift', {
+			items: [{ id: 'si_legacy_contrib', quantity: 8 }]
+		});
 	});
 
 	it('throws when quantity is less than 1', async () => {

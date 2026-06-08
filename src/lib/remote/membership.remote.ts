@@ -16,6 +16,7 @@ import { getCommunityStats } from '$lib/server/finance/community-stats';
 import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
+import { mapDomainError } from '$lib/server/errors';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
 export const getMemberMembership = query(async () => {
@@ -101,7 +102,11 @@ export const updateAmount = form(amountSchema, async (data) => {
 	const stripeId = requireStripeId(user);
 
 	const units = data.amount / DOLLARS_PER_UNIT;
-	await updateQuantity(stripeId, units, data.coverFees === 'on');
+	try {
+		await updateQuantity(stripeId, units, data.coverFees === 'on');
+	} catch (err) {
+		mapDomainError(err);
+	}
 	// Write-through so the page reflects the change before the webhook lands.
 	// hoursPerReset is in credits (30-min blocks): units × 2.
 	await patchMemberSubscription(user.id, {
@@ -115,7 +120,11 @@ export const resumeSubscription = form(z.object({}), async () => {
 	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 
-	await resume(stripeId);
+	try {
+		await resume(stripeId);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	await patchMemberSubscription(user.id, { cancelAtPeriodEnd: false });
 	return { success: true };
 });

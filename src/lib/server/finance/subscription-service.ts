@@ -24,6 +24,22 @@ import {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown when an operation can't proceed because the Stripe subscription isn't
+ * in the expected state — no active subscription, or a missing line item. These
+ * are expected conflicts (stale UI, mid-cancellation), not server faults.
+ */
+export class SubscriptionStateError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'SubscriptionStateError';
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -270,21 +286,24 @@ export async function updateQuantity(
 	});
 
 	const sub = subscriptions.data[0];
-	if (!sub) throw new Error('No active subscription found');
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
 
 	const contributionProductId = await getStripeProductId('contribution');
 	const feeProductId = await getStripeProductId('fee_coverage');
 
-	const contributionItem = sub.items.data.find((item) => {
-		const product = item.price.product;
-		return (typeof product === 'string' ? product : product.id) === contributionProductId;
-	});
-	const feeItem = sub.items.data.find((item) => {
-		const product = item.price.product;
-		return (typeof product === 'string' ? product : product.id) === feeProductId;
-	});
+	// Use the same drift-tolerant lookup as getSubscription(): a strict product-id
+	// match misses the contribution line whenever the product id has drifted (e.g.
+	// after a product-config migration), which is what surfaced as the
+	// "Contribution item not found on subscription" error in production.
+	const contributionItem = findContributionItem(
+		sub.items.data,
+		contributionProductId,
+		feeProductId
+	);
+	const feeItem = sub.items.data.find((item) => itemProductId(item) === feeProductId);
 
-	if (!contributionItem) throw new Error('Contribution item not found on subscription');
+	if (!contributionItem)
+		throw new SubscriptionStateError('Contribution item not found on subscription');
 
 	const contributionConfig = await getProductConfig('contribution');
 
@@ -340,7 +359,7 @@ export async function cancel(stripeCustomerId: string): Promise<void> {
 	});
 
 	const sub = subscriptions.data[0];
-	if (!sub) throw new Error('No active subscription found');
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: true });
 }
@@ -356,7 +375,7 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 	});
 
 	const sub = subscriptions.data[0];
-	if (!sub) throw new Error('No active subscription found');
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
 
 	if (!sub.cancel_at_period_end) {
 		throw new Error('Subscription is not scheduled for cancellation');
