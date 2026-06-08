@@ -16,6 +16,9 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 
 const TZ = DEFAULT_TIMEZONE;
 
+/** How a monthly rule repeats. */
+export type MonthlyMode = 'weekday' | 'monthday';
+
 /** Serialized recurrence rule */
 interface RecurrenceRule {
 	freq: 'weekly' | 'monthly';
@@ -25,21 +28,32 @@ interface RecurrenceRule {
 	start: { year: number; month: number; day: number; hour: number; minute: number };
 	/** JS weekday 0=Sun..6=Sat */
 	weekday: number;
-	/** For monthly: which occurrence of the weekday (1st, 2nd, 3rd, etc.) */
+	/** For monthly: whether it repeats on the nth weekday or a fixed day of the month */
+	monthlyMode?: MonthlyMode;
+	/** For monthly weekday mode: which occurrence of the weekday (1st, 2nd, 3rd, etc.) */
 	nthWeek?: number;
+	/** For monthly monthday mode: the fixed day of the month (1-31) */
+	dayOfMonth?: number;
 }
 
 /**
  * Build a recurrence rule string from a prototype date and frequency.
  *
  * For weekly/biweekly: recurs on the same day of the week.
- * For monthly: recurs on the nth weekday of the month (e.g., "3rd Tuesday").
+ * For monthly: recurs either on the nth weekday of the month (e.g., "3rd Tuesday",
+ * the default) or on a fixed day of the month (e.g., "the 20th") when
+ * `monthlyMode` is `'monthday'`.
  */
-export function buildRRule(prototypeStartsAt: Date, frequency: RecurringFrequency): string {
+export function buildRRule(
+	prototypeStartsAt: Date,
+	frequency: RecurringFrequency,
+	monthlyMode: MonthlyMode = 'weekday'
+): string {
 	const parts = getPartsInTz(prototypeStartsAt, TZ);
+	const isMonthly = frequency === 'monthly';
 
 	const rule: RecurrenceRule = {
-		freq: frequency === 'monthly' ? 'monthly' : 'weekly',
+		freq: isMonthly ? 'monthly' : 'weekly',
 		interval: frequency === 'biweekly' ? 2 : 1,
 		tz: TZ,
 		start: {
@@ -50,7 +64,9 @@ export function buildRRule(prototypeStartsAt: Date, frequency: RecurringFrequenc
 			minute: parts.minute
 		},
 		weekday: parts.weekday,
-		nthWeek: frequency === 'monthly' ? Math.ceil(parts.day / 7) : undefined
+		monthlyMode: isMonthly ? monthlyMode : undefined,
+		nthWeek: isMonthly && monthlyMode === 'weekday' ? Math.ceil(parts.day / 7) : undefined,
+		dayOfMonth: isMonthly && monthlyMode === 'monthday' ? parts.day : undefined
 	};
 
 	return JSON.stringify(rule);
@@ -95,7 +111,8 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 			current = addWeeks(current, rule.interval);
 		}
 	} else if (rule.freq === 'monthly') {
-		// Monthly: find the nth weekday of each month
+		// Monthly: find the matching date in each month - either the nth weekday
+		// (e.g. "2nd Tuesday") or a fixed day of the month (e.g. "the 20th").
 		let current = buildDateFromParts(rule.start, rule.tz);
 		let year = rule.start.year;
 		let month = rule.start.month;
@@ -107,15 +124,7 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 				year += Math.floor((month - 1) / 12);
 				month = ((month - 1) % 12) + 1;
 			}
-			const candidate = findNthWeekdayOfMonth(
-				year,
-				month,
-				rule.weekday,
-				rule.nthWeek ?? 1,
-				rule.start.hour,
-				rule.start.minute,
-				rule.tz
-			);
+			const candidate = findMonthlyOccurrence(rule, year, month);
 			if (candidate) current = candidate;
 		}
 
@@ -129,19 +138,11 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 				year += Math.floor((month - 1) / 12);
 				month = ((month - 1) % 12) + 1;
 			}
-			const candidate = findNthWeekdayOfMonth(
-				year,
-				month,
-				rule.weekday,
-				rule.nthWeek ?? 1,
-				rule.start.hour,
-				rule.start.minute,
-				rule.tz
-			);
+			const candidate = findMonthlyOccurrence(rule, year, month);
 			if (candidate) {
 				current = candidate;
 			} else {
-				break; // nth weekday doesn't exist in this month (e.g., 5th Tuesday)
+				break; // the target date doesn't exist this month (e.g. 5th Tuesday, or the 31st)
 			}
 		}
 	}
@@ -168,6 +169,15 @@ export function describeFrequency(rruleString: string): string {
 	if (rule.freq === 'weekly') return 'Weekly';
 
 	return `Every ${rule.interval} weeks`;
+}
+
+/**
+ * Extract the monthly repeat mode from a stored rule, or null for non-monthly rules.
+ */
+export function monthlyModeOf(rruleString: string): MonthlyMode | null {
+	const rule = parseRRule(rruleString);
+	if (rule.freq !== 'monthly') return null;
+	return rule.monthlyMode ?? 'weekday';
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +216,35 @@ function getUtcOffsetMinutes(date: Date, tz: string): number {
 	const utcMinutes = inUtc.hour * 60 + inUtc.minute + inUtc.day * 1440;
 
 	return utcMinutes - tzMinutes;
+}
+
+/**
+ * Resolve a monthly rule's occurrence in a specific month, honoring its mode.
+ * Returns null when the target date doesn't exist that month.
+ */
+function findMonthlyOccurrence(rule: RecurrenceRule, year: number, month: number): Date | null {
+	const { hour, minute } = rule.start;
+	if (rule.monthlyMode === 'monthday') {
+		return findDayOfMonth(year, month, rule.dayOfMonth ?? rule.start.day, hour, minute, rule.tz);
+	}
+	return findNthWeekdayOfMonth(year, month, rule.weekday, rule.nthWeek ?? 1, hour, minute, rule.tz);
+}
+
+/**
+ * Resolve a fixed day of the month (e.g. the 20th).
+ * Returns null if the day doesn't exist in the month (e.g. the 31st of February).
+ */
+function findDayOfMonth(
+	year: number,
+	month: number,
+	day: number,
+	hour: number,
+	minute: number,
+	tz: string
+): Date | null {
+	const daysInMonth = new Date(year, month, 0).getDate();
+	if (day > daysInMonth) return null;
+	return buildDateFromParts({ year, month, day, hour, minute }, tz);
 }
 
 /**

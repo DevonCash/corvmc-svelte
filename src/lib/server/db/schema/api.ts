@@ -113,6 +113,7 @@ export interface MemberReservationsResponse {
 	recurringSeries: {
 		id: string;
 		frequencyLabel: string;
+		monthlyMode: 'weekday' | 'monthday' | null;
 		bookerType: string;
 		startsAt: Date;
 		endsAt: Date;

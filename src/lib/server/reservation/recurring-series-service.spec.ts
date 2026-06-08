@@ -48,7 +48,8 @@ vi.mock('$lib/server/authorization', () => ({
 
 vi.mock('./rrule-helpers', () => ({
 	buildRRule: vi.fn(() => 'FREQ=WEEKLY;BYDAY=MO'),
-	describeFrequency: vi.fn(() => 'Weekly')
+	describeFrequency: vi.fn(() => 'Weekly'),
+	monthlyModeOf: vi.fn(() => null)
 }));
 
 vi.mock('./config', () => ({}));
@@ -136,7 +137,11 @@ describe('recurring-series-service', () => {
 
 			await svc.create(params);
 
-			expect(buildRRule).toHaveBeenCalledWith(params.prototypeStartsAt, params.frequency);
+			expect(buildRRule).toHaveBeenCalledWith(
+				params.prototypeStartsAt,
+				params.frequency,
+				'weekday'
+			);
 		});
 
 		it('inserts a recurringSeries row via batch with rrule, type, and prototypeId', async () => {

@@ -24,16 +24,35 @@
 	let endTime = $state('');
 	let notes = $state('');
 	let frequency = $state('');
-	let seriesEndsAt = $state('');
+	let monthlyMode = $state('weekday');
 
-	const isRecurring = $derived(frequency !== '');
+	const isMonthly = $derived(frequency === 'monthly');
 
-	const minEndsAt = $derived.by(() => {
-		if (!date) return '';
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Date for one-off computation within a $derived, not reactive state
+	function ordinal(n: number): string {
+		const mod100 = n % 100;
+		if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+		switch (n % 10) {
+			case 1:
+				return `${n}st`;
+			case 2:
+				return `${n}nd`;
+			case 3:
+				return `${n}rd`;
+			default:
+				return `${n}th`;
+		}
+	}
+
+	const monthlyLabels = $derived.by(() => {
+		if (!date) return { weekday: 'Same weekday each month', monthday: 'Same date each month' };
 		const d = new Date(date + 'T00:00:00');
-		d.setDate(d.getDate() + 7);
-		return d.toISOString().split('T')[0];
+		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+		const dayOfMonth = d.getDate();
+		const nth = Math.ceil(dayOfMonth / 7);
+		return {
+			weekday: `${ordinal(nth)} ${weekdayName} of the month`,
+			monthday: `Monthly on the ${ordinal(dayOfMonth)}`
+		};
 	});
 
 	const minDate = today(tz);
@@ -195,15 +214,24 @@
 				</div>
 			</fieldset>
 
-			{#if isRecurring}
-				<Form.Field
-					name="seriesEndsAt"
-					label="End date (optional)"
-					type="date"
-					bind:value={seriesEndsAt}
-					min={minEndsAt}
-					description="Leave empty for ongoing"
-				/>
+			{#if isMonthly}
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend">Monthly pattern</legend>
+					<div class="flex flex-col gap-1">
+						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
+							<label class="btn btn-sm justify-start" class:btn-primary={monthlyMode === opt.value}>
+								<input
+									type="radio"
+									name="monthlyMode"
+									value={opt.value}
+									bind:group={monthlyMode}
+									class="hidden"
+								/>
+								{opt.label}
+							</label>
+						{/each}
+					</div>
+				</fieldset>
 			{/if}
 		{/if}
 	{/if}

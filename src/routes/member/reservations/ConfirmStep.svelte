@@ -91,7 +91,7 @@
 					startTime = fd.get('startTime') as string;
 					endTime = fd.get('endTime') as string;
 					recurringFrequency = (fd.get('recurring') as string) || '';
-					const seriesEndsAt = (fd.get('seriesEndsAt') as string) || undefined;
+					const monthlyMode = (fd.get('monthlyMode') as 'weekday' | 'monthday') || 'weekday';
 					if (date && startTime) {
 						const startIso = new Date(`${date}T${startTime}:00`);
 						const endIso = endTime ? new Date(`${date}T${endTime}:00`) : startIso;
@@ -106,13 +106,17 @@
 								: recurringFrequency === 'biweekly'
 									? 'Every 2 weeks'
 									: 'Monthly';
-						scheduleLabel = formatScheduleLabel(freqLabel, new Date(`${date}T${startTime}:00`));
+						scheduleLabel = formatScheduleLabel(
+							freqLabel,
+							new Date(`${date}T${startTime}:00`),
+							monthlyMode
+						);
 						recurringPreview = null;
 						previewRecurringInstances({
 							date,
 							startTime,
 							frequency: recurringFrequency as 'weekly' | 'biweekly' | 'monthly',
-							endsAt: seriesEndsAt
+							monthlyMode
 						}).then((result) => {
 							recurringPreview = result;
 						});

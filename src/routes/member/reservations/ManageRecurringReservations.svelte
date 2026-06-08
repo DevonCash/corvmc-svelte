@@ -3,6 +3,7 @@
 	import { CancelSeriesAction } from '$lib/components/shared/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
 	import { getRecurringReservations } from '$lib/remote/reservations.remote';
+	import { formatScheduleLabel } from '$lib/utils/format';
 	import { format, formatDistanceStrict } from 'date-fns';
 </script>
 
@@ -27,7 +28,7 @@
 		>
 			<div class="min-w-0">
 				<p class="font-medium">
-					{series.frequencyLabel} · {format(series.startsAt, 'EEEE')}s
+					{formatScheduleLabel(series.frequencyLabel, series.startsAt, series.monthlyMode)}
 				</p>
 				<p class="text-sm opacity-70">
 					{format(series.startsAt, 'p')} – {format(series.endsAt, 'p')} · {formatDistanceStrict(

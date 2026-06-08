@@ -17,7 +17,8 @@ import {
 	parseRRule,
 	getOccurrences,
 	generationWindowEnd,
-	describeFrequency
+	describeFrequency,
+	monthlyModeOf
 } from './rrule-helpers';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -49,6 +50,26 @@ describe('buildRRule', () => {
 		expect(rule.interval).toBe(1);
 		expect(rule.weekday).toBe(2);
 		expect(rule.nthWeek).toBe(2);
+	});
+
+	it('defaults monthly rules to weekday mode', () => {
+		const rule = parseRRule(buildRRule(new Date('2026-05-12T17:00:00.000Z'), 'monthly'));
+
+		expect(rule.monthlyMode).toBe('weekday');
+		expect(rule.nthWeek).toBe(2);
+		expect(rule.dayOfMonth).toBeUndefined();
+	});
+
+	it('encodes a monthly rule on a fixed day of the month', () => {
+		// 2026-05-20 -> day 20
+		const rule = parseRRule(
+			buildRRule(new Date('2026-05-20T17:00:00.000Z'), 'monthly', 'monthday')
+		);
+
+		expect(rule.freq).toBe('monthly');
+		expect(rule.monthlyMode).toBe('monthday');
+		expect(rule.dayOfMonth).toBe(20);
+		expect(rule.nthWeek).toBeUndefined();
 	});
 
 	it('encodes a monthly rule on the 3rd Wednesday', () => {
@@ -157,6 +178,22 @@ describe('getOccurrences', () => {
 		expect(occurrences.length).toBeLessThanOrEqual(4);
 	});
 
+	it('lands on the fixed day of the month for monthday rules', () => {
+		// Start on the 20th; monthday mode should recur on the 20th each month.
+		const start = new Date('2026-05-20T17:00:00.000Z');
+		const rruleString = buildRRule(start, 'monthly', 'monthday');
+
+		const after = new Date('2026-05-21T00:00:00.000Z');
+		const before = new Date('2026-08-21T00:00:00.000Z');
+
+		const occurrences = getOccurrences(rruleString, after, before);
+
+		expect(occurrences.length).toBeGreaterThanOrEqual(2);
+		for (const occ of occurrences) {
+			expect(occ.getDate()).toBe(20);
+		}
+	});
+
 	it('returns empty array when window has no occurrences', () => {
 		const start = new Date('2026-05-12T17:00:00.000Z');
 		const rruleString = buildRRule(start, 'weekly');
@@ -230,5 +267,19 @@ describe('describeFrequency', () => {
 		const rruleString = buildRRule(start, 'monthly');
 
 		expect(describeFrequency(rruleString)).toBe('Monthly');
+	});
+});
+
+describe('monthlyModeOf', () => {
+	it('returns null for non-monthly rules', () => {
+		const start = new Date('2026-05-12T17:00:00.000Z');
+		expect(monthlyModeOf(buildRRule(start, 'weekly'))).toBeNull();
+		expect(monthlyModeOf(buildRRule(start, 'biweekly'))).toBeNull();
+	});
+
+	it('returns the monthly mode for monthly rules', () => {
+		const start = new Date('2026-05-20T17:00:00.000Z');
+		expect(monthlyModeOf(buildRRule(start, 'monthly'))).toBe('weekday');
+		expect(monthlyModeOf(buildRRule(start, 'monthly', 'monthday'))).toBe('monthday');
 	});
 });

@@ -152,17 +152,39 @@ export function formatMonthDayYear(d: Date): string {
 	return format(d, 'MMMM d, yyyy');
 }
 
-/** "Every Sunday", "Every other Tuesday", "1st Saturday of each month" */
-export function formatScheduleLabel(frequencyLabel: string, startsAt: Date): string {
+/** Ordinal suffix for a number: 1 -> "1st", 22 -> "22nd", 13 -> "13th". */
+function ordinalNumber(n: number): string {
+	const mod100 = n % 100;
+	if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+	switch (n % 10) {
+		case 1:
+			return `${n}st`;
+		case 2:
+			return `${n}nd`;
+		case 3:
+			return `${n}rd`;
+		default:
+			return `${n}th`;
+	}
+}
+
+/** "Every Sunday", "Every other Tuesday", "1st Saturday of each month", "On the 20th of each month" */
+export function formatScheduleLabel(
+	frequencyLabel: string,
+	startsAt: Date,
+	monthlyMode: 'weekday' | 'monthday' | null = 'weekday'
+): string {
 	const dayName = format(startsAt, 'EEEE');
 
 	if (frequencyLabel === 'Weekly') return `Every ${dayName}`;
 	if (frequencyLabel === 'Every 2 weeks') return `Every other ${dayName}`;
 	if (frequencyLabel === 'Monthly') {
 		const dayOfMonth = getDate(startsAt);
+		if (monthlyMode === 'monthday') {
+			return `On the ${ordinalNumber(dayOfMonth)} of each month`;
+		}
 		const nth = Math.ceil(dayOfMonth / 7);
-		const ordinal = nth === 1 ? '1st' : nth === 2 ? '2nd' : nth === 3 ? '3rd' : `${nth}th`;
-		return `${ordinal} ${dayName} of each month`;
+		return `${ordinalNumber(nth)} ${dayName} of each month`;
 	}
 
 	return frequencyLabel;

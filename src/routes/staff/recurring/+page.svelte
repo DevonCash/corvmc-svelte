@@ -95,7 +95,7 @@
 								<td>
 									<div class="flex items-center gap-1">
 										<IconRepeat size={14} class="opacity-60 shrink-0" />
-										{formatScheduleLabel(s.frequencyLabel, s.startsAt)}
+										{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
 									</div>
 									<div class="text-sm opacity-60">
 										{formatTimeRange(s.startsAt, s.endsAt)}
