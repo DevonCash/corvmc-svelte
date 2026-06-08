@@ -27,11 +27,9 @@
 	let subscribers = $derived(await getAudienceSubscribers(id));
 
 	// Local mirror of the opt-in setting so the toggle submits an explicit boolean
-	// (the previous string-only checkbox could turn opt-in on but never off).
-	let allowOptIn = $state(false);
-	$effect(() => {
-		allowOptIn = audienceData?.allowOptIn ?? false;
-	});
+	// (the previous string-only checkbox could turn opt-in on but never off). A
+	// writable $derived tracks the server value but lets the toggle reassign it.
+	let allowOptIn = $derived(audienceData?.allowOptIn ?? false);
 </script>
 
 {#if audienceData}

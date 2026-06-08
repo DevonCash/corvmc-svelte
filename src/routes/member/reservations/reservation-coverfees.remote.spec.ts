@@ -54,9 +54,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { bookAndPayReservation, payForReservation, payReservation } = (await import(
-	'$lib/remote/reservations.remote'
-)) as any;
+const { bookAndPayReservation, payForReservation, payReservation } =
+	(await import('$lib/remote/reservations.remote')) as any;
 
 const baseBooking = { date: '2026-06-15', startTime: '09:00', endTime: '10:00' };
 
