@@ -236,7 +236,7 @@
 	.vinyl-card__band {
 		font-weight: 700;
 		font-size: 0.95rem;
-		color: var(--cmc-navy);
+		color: var(--cmc-teal);
 		line-height: 1.2;
 	}
 	.vinyl-card__meta {

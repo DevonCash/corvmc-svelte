@@ -51,13 +51,33 @@
 	--noise: 0;
 
 	--shadow-color: var(--cmc-brown);
+
+	/* Brand palette */
+	--cmc-orange: oklch(64% 0.175 48);
+	--cmc-goldenrod: oklch(81% 0.17 85);
+	--cmc-red-orange: oklch(60% 0.22 38);
+	--cmc-teal: oklch(60% 0.115 215);
+	--cmc-navy: oklch(27% 0.1 254);
+	--cmc-light-blue: oklch(85% 0.04 200);
+	--cmc-green: oklch(70% 0.14 160);
+	--cmc-brown: oklch(33% 0.06 55);
+	--cmc-cream: oklch(99% 0.01 70);
+	--cmc-parchment: oklch(93% 0.04 60);
+	--cmc-aged-paper: oklch(91% 0.04 75);
+
+	/* Surfaces */
+	--bg-card: var(--color-base-100);
+	--surface: #ffffff;
+	--surface-border: color-mix(in oklch, var(--cmc-orange) 14%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
    corvmc-dark — dark theme
    Warm brown-tinted bases with cream text and lifted brand accents.
-   All dark brand palette overrides live here so DaisyUI's prefersdark
-   mechanism emits both [data-theme] and @media selectors automatically.
+   Each theme block owns its full palette + surfaces so DaisyUI's prefersdark
+   mechanism emits both [data-theme] and @media (prefers-color-scheme) selectors
+   automatically. Keep theme-varying tokens here — NOT in :root, where an
+   unlayered definition would shadow these layered overrides.
    --------------------------------------------------------------------------- */
 @plugin 'daisyui/theme' {
 	name: 'corvmc-dark';
@@ -99,28 +119,29 @@
 
 	--shadow-color: oklch(6% 0.01 60);
 
-	/* Dark brand palette overrides */
+	/* Brand palette */
 	--cmc-orange: oklch(73% 0.17 50);
-	--cmc-teal: oklch(74% 0.13 213);
-	--cmc-navy: oklch(72% 0.15 255);
 	--cmc-goldenrod: oklch(82% 0.17 86);
 	--cmc-red-orange: oklch(65% 0.22 40);
+	--cmc-teal: oklch(74% 0.13 213);
+	--cmc-navy: oklch(72% 0.15 255);
 	--cmc-light-blue: oklch(88% 0.04 200);
 	--cmc-green: oklch(72% 0.13 160);
+	--cmc-brown: oklch(78% 0.04 60);
 	--cmc-cream: oklch(91% 0.025 65);
 	--cmc-parchment: oklch(21% 0.015 45);
 	--cmc-aged-paper: oklch(25% 0.02 50);
-	--cmc-brown: oklch(78% 0.04 60);
 
-	/* Dark surface & background overrides */
+	/* Surfaces */
 	--bg-card: var(--color-base-300);
-	--bg-soft: var(--color-base-300);
 	--surface: var(--color-base-300);
 	--surface-border: rgba(255, 255, 255, 0.06);
 }
 
 /* ---------------------------------------------------------------------------
-   Brand palette — available in both themes via :root
+   Theme-independent & derived tokens
+   These are the same across themes, or resolve through themed color and brand
+   variables at use-time — so they live in :root, NOT in the theme blocks.
    --------------------------------------------------------------------------- */
 :root {
 	--default-font-family:
@@ -130,19 +151,6 @@
 	/* Handwriting / chalk fonts (loaded in app.html) */
 	--font-chalk: 'Permanent Marker', 'Lexend', system-ui, sans-serif;
 	--font-script: 'Caveat', 'Permanent Marker', cursive;
-
-	/* Brand palette (oklch) */
-	--cmc-orange: oklch(64% 0.175 48);
-	--cmc-goldenrod: oklch(81% 0.17 85);
-	--cmc-red-orange: oklch(60% 0.22 38);
-	--cmc-teal: oklch(60% 0.115 215);
-	--cmc-navy: oklch(27% 0.1 254);
-	--cmc-light-blue: oklch(85% 0.04 200);
-	--cmc-green: oklch(70% 0.14 160);
-	--cmc-brown: oklch(33% 0.06 55);
-	--cmc-cream: oklch(99% 0.01 70);
-	--cmc-parchment: oklch(93% 0.04 60);
-	--cmc-aged-paper: oklch(91% 0.04 75);
 
 	/* Deprecated — use --cmc-goldenrod directly */
 	--cmc-yellow: var(--cmc-goldenrod);
@@ -159,15 +167,10 @@
 	--fg-2: color-mix(in oklch, var(--color-base-content) 70%, transparent);
 	--fg-3: color-mix(in oklch, var(--color-base-content) 45%, transparent);
 
-	/* Background tokens */
+	/* Background tokens (track themed base shades at use-time) */
 	--bg-page: var(--color-base-100);
 	--bg-section: var(--color-base-200);
-	--bg-card: var(--color-base-100);
 	--bg-soft: var(--color-base-300);
-
-	/* Surface (elevated cards / sidebars) */
-	--surface: #ffffff;
-	--surface-border: color-mix(in oklch, var(--cmc-orange) 14%, transparent);
 
 	/* Logo-specific tokens */
 	--speaker-case: var(--cmc-orange);
@@ -182,11 +185,6 @@
 	--font-features-body: 'cv05', 'cv11';
 	--font-features-display: 'cv05', 'cv11', 'ss01';
 }
-
-/* Dark brand palette + surface overrides now live in the corvmc-dark
-   @plugin 'daisyui/theme' block above. DaisyUI's prefersdark mechanism
-   emits both [data-theme='corvmc-dark'] and @media (prefers-color-scheme: dark)
-   selectors automatically — no duplication needed. */
 
 /* ---------------------------------------------------------------------------
    Typography foundations

@@ -39,7 +39,7 @@
 	<div class="max-w-2xl mx-auto flex flex-col items-center gap-4">
 		<h1
 			class="text-5xl font-bold leading-tight tracking-tight text-balance"
-			style="color: var(--cmc-navy)"
+			style="color: var(--cmc-teal)"
 		>
 			Building and Connecting Music Communities in Corvallis
 		</h1>
@@ -58,7 +58,9 @@
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">Upcoming Events</h2>
+			<h2 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-teal)">
+				Upcoming Events
+			</h2>
 		</div>
 		<div class="text-center mt-8">
 			<Button href="/events" class="btn-ghost">View All Events &rarr;</Button>
@@ -70,7 +72,9 @@
 <section class="section-tint-secondary py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">What We Do</h2>
+			<h2 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-teal)">
+				What We Do
+			</h2>
 			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
 				Supporting musicians and building community through various programs
 			</p>
@@ -99,7 +103,9 @@
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">Get Involved</h2>
+			<h2 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-teal)">
+				Get Involved
+			</h2>
 			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
 				Join our mission to support the local music community
 			</p>
