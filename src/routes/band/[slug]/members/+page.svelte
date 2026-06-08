@@ -24,6 +24,7 @@
 		inviteByEmail,
 		revokePlatformInviteRemote
 	} from '$lib/remote/bands.remote';
+	import MemberRoleSelect from './MemberRoleSelect.svelte';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
 
@@ -140,7 +141,15 @@
 									</div>
 								</div>
 								<div class="flex items-center gap-2">
-									<StatusBadge status={member.role} />
+									{#if (isOwner || isAdmin) && member.role !== 'owner'}
+										<MemberRoleSelect
+											memberId={member.id}
+											role={member.role}
+											onchanged={refreshMembers}
+										/>
+									{:else}
+										<StatusBadge status={member.role} />
+									{/if}
 									{#if (isOwner || isAdmin) && member.role !== 'owner'}
 										{@const remove = removeMember.for(member.id)}
 										<Form
