@@ -80,10 +80,10 @@
 
 <div class="rounded-box border border-base-300">
 	{#if editor}
-		<div class="flex flex-wrap gap-1 border-b border-base-300 p-1">
+		<div class="join flex flex-wrap border-b border-base-300 p-1">
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('bold')}
 				aria-label="Bold"
 				onclick={() => editor!.chain().focus().toggleBold().run()}
@@ -92,7 +92,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('italic')}
 				aria-label="Italic"
 				onclick={() => editor!.chain().focus().toggleItalic().run()}
@@ -101,7 +101,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('underline')}
 				aria-label="Underline"
 				onclick={() => editor!.chain().focus().toggleUnderline().run()}
@@ -110,7 +110,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('heading', { level: 3 })}
 				aria-label="Heading"
 				onclick={() => editor!.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -119,7 +119,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('bulletList')}
 				aria-label="Bullet list"
 				onclick={() => editor!.chain().focus().toggleBulletList().run()}
@@ -128,7 +128,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('orderedList')}
 				aria-label="Numbered list"
 				onclick={() => editor!.chain().focus().toggleOrderedList().run()}
@@ -137,7 +137,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('blockquote')}
 				aria-label="Quote"
 				onclick={() => editor!.chain().focus().toggleBlockquote().run()}
@@ -146,7 +146,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				class="btn btn-ghost btn-xs btn-square join-item"
 				class:btn-active={isActive('link')}
 				aria-label="Link"
 				onclick={toggleLink}
