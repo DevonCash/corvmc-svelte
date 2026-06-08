@@ -11,6 +11,7 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/shared/Button.svelte';
+	import Modal from '$lib/components/shared/Modal.svelte';
 	import {
 		createSubscription,
 		updateAmount,
@@ -19,6 +20,8 @@
 	} from '$lib/remote/membership.remote';
 
 	let data = $derived(await getMemberMembership());
+
+	let subscribeModalOpen = $state(false);
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);
@@ -39,12 +42,16 @@
 			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the
 			amount — keeps the spaces open, the gear available, and the music going.
 		</p>
-		<div class="mx-auto max-w-md">
-			<SubscriptionForm mode="create" remote={createSubscription} />
-		</div>
+		<Button class="btn-lg btn-primary" onclick={() => (subscribeModalOpen = true)}>
+			Become a Sustaining Member
+		</Button>
 		<p class="mt-4 text-sm opacity-60">Cancel anytime. Seriously.</p>
 	</div>
 {/snippet}
+
+<Modal bind:open={subscribeModalOpen} title="Become a Sustaining Member">
+	<SubscriptionForm mode="create" remote={createSubscription} />
+</Modal>
 
 <div class="space-y-8 pt-8">
 	<!-- Active sustaining member view -->
@@ -81,7 +88,9 @@
 	{#if isNonMember}
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
-				<Button href="#subscribe" class="btn-lg">Become a Sustaining Member</Button>
+				<Button class="btn-lg" onclick={() => (subscribeModalOpen = true)}>
+					Become a Sustaining Member
+				</Button>
 			{/snippet}
 		</MembershipHero>
 

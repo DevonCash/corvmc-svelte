@@ -4,6 +4,7 @@
 	import { IconCreditCard } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import Modal from '$lib/components/shared/Modal.svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
@@ -21,7 +22,7 @@
 		showModifyForm?: boolean;
 	} = $props();
 
-	let editing = $state(untrack(() => showModifyForm));
+	let modalOpen = $state(untrack(() => showModifyForm));
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
 	const nextBilling = $derived(
@@ -58,27 +59,23 @@
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
-			<Button class="btn-sm btn-outline" onclick={() => (editing = !editing)}>
-				{editing ? 'Cancel' : 'Modify Amount'}
-			</Button>
+			<Button class="btn-sm btn-outline" onclick={() => (modalOpen = true)}>Modify Amount</Button>
 			{#if billingPortalUrl}
 				<Button href={billingPortalUrl} class="btn-sm btn-outline">Manage Billing</Button>
 			{/if}
 		</div>
-
-		{#if editing}
-			<div class="mt-4 border-t border-base-200 pt-4">
-				<SubscriptionForm
-					mode="modify"
-					currentAmount={amountPerMonth}
-					currentCoverFees={subscription.coveringFees}
-					remote={updateRemote}
-					onsuccess={() => {
-						editing = false;
-						toast.success('Contribution updated');
-					}}
-				/>
-			</div>
-		{/if}
 	</div>
 </div>
+
+<Modal bind:open={modalOpen} title="Update Contribution">
+	<SubscriptionForm
+		mode="modify"
+		currentAmount={amountPerMonth}
+		currentCoverFees={subscription.coveringFees}
+		remote={updateRemote}
+		onsuccess={() => {
+			modalOpen = false;
+			toast.success('Contribution updated');
+		}}
+	/>
+</Modal>
