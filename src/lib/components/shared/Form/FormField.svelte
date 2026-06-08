@@ -173,6 +173,7 @@
 			{accept}
 			{value}
 			{src}
+			orientation={rest.orientation}
 			disabled={pending || readonly}
 		/>
 	{:else if type === 'select' && rest.multiple}

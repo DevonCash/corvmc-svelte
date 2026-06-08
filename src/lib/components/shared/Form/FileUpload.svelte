@@ -8,6 +8,7 @@
 		value = $bindable(''),
 		src,
 		disabled = false,
+		orientation = 'row',
 		preview
 	}: {
 		name: string;
@@ -16,6 +17,8 @@
 		value?: string;
 		src?: string;
 		disabled?: boolean;
+		/** row = preview beside the picker; col = preview stacked over the picker */
+		orientation?: 'row' | 'col';
 		preview?: Snippet<[{ file: File | null; src: string | null }]>;
 	} = $props();
 
@@ -70,7 +73,7 @@
 
 <input type="hidden" {name} bind:value bind:this={hiddenInput} />
 
-<div class="flex items-start gap-4">
+<div class="flex items-start gap-4" class:flex-col={orientation === 'col'}>
 	{#if preview}
 		{@render preview({ file: selectedFile, src: previewUrl ?? src ?? null })}
 	{:else if previewUrl || src}

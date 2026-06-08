@@ -25,6 +25,7 @@ import {
 	listMemberUpcomingShows,
 	countMemberPastShows
 } from '$lib/server/event/event-service';
+import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 import { isMemberRowPrivate } from '$lib/utils/directory-display';
@@ -466,6 +467,8 @@ export const getBandProfile = query(z.void(), async () => {
 });
 
 const bandProfileSchema = z.object({
+	name: z.string().min(1, 'Name is required').max(200),
+	bio: z.string().max(2000).optional().default(''),
 	tagline: z.string().max(150).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	foundedYear: z.string().max(16).optional().default(''),
@@ -502,6 +505,8 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		...(data.contactSocial ? { social: data.contactSocial } : {})
 	};
 
+	const updated = await updateBandBasics(band.id, { name: data.name, bio: data.bio });
+
 	await updateBandProfile(band.id, user.id, {
 		tagline: data.tagline || undefined,
 		hometown: data.hometown || undefined,
@@ -514,5 +519,5 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	});
 
 	void getBandProfile().refresh();
-	return { success: true };
+	return { success: true, slug: updated.slug };
 });
