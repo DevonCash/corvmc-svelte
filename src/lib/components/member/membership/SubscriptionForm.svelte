@@ -61,7 +61,7 @@
 			max={MAX_AMOUNT}
 			step={STEP}
 			bind:value={amount}
-			class="range range-primary mt-3"
+			class="range range-primary mt-3 w-full"
 			aria-label="Monthly contribution amount"
 		/>
 		<div class="mt-1 flex w-full justify-between px-1 text-xs opacity-50">
@@ -81,14 +81,14 @@
 	</div>
 
 	<div>
-		<label class="label cursor-pointer justify-start gap-3">
+		<label class="label cursor-pointer items-start justify-start gap-3">
 			<input
 				type="checkbox"
 				name="coverFees"
 				bind:checked={coverFees}
-				class="toggle toggle-primary toggle-sm"
+				class="toggle toggle-primary toggle-sm shrink-0"
 			/>
-			<span class="label-text">
+			<span class="label-text flex-1 whitespace-normal">
 				Cover processing fees so the Collective receives 100% of your contribution
 			</span>
 		</label>
