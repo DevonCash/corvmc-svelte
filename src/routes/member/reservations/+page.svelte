@@ -33,6 +33,15 @@
 	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
 	let allReservations = $state(getReservations({ includeTerminal: true }));
 
+	// Remote queries aren't refreshed by invalidateAll() — only by their own
+	// refresh() method. Mutations (book/cancel/confirm) must call this so the
+	// lists (and free-hours balance) update without a manual page reload.
+	function refreshReservations() {
+		activeReservations.refresh();
+		allReservations.refresh();
+		getMembershipStatus().refresh();
+	}
+
 	// Waitlist confirmation via ?confirm={id}
 	const confirmId = $derived(page.url.searchParams.get('confirm'));
 	let confirmModalOpen = $state(false);
@@ -60,7 +69,7 @@
 </script>
 
 <PageHeader title="Reserve Practice Space">
-	<CreateModal {isSustaining} />
+	<CreateModal {isSustaining} onbooked={refreshReservations} />
 </PageHeader>
 <PageContent>
 	<BookingPolicy />
@@ -86,14 +95,14 @@
 			</header>
 			<Tabs.Content value="active" class="card-grid">
 				{#each await activeReservations as reservation (reservation.id)}
-					<ReservationCard {reservation} />
+					<ReservationCard {reservation} onchange={refreshReservations} />
 				{:else}
 					<p class="text-sm opacity-60">No upcoming reservations. Book your next practice slot!</p>
 				{/each}
 			</Tabs.Content>
 			<Tabs.Content value="all" class="card-grid">
 				{#each await allReservations as reservation (reservation.id)}
-					<ReservationCard {reservation} />
+					<ReservationCard {reservation} onchange={refreshReservations} />
 				{:else}
 					<p class="text-sm opacity-60">
 						No reservations found. Start by creating your first practice space reservation.
@@ -117,7 +126,7 @@
 			successToast="Reservation confirmed"
 			onsuccess={async () => {
 				closeConfirmModal();
-				activeReservations = getReservations({ after: new Date().toISOString() });
+				refreshReservations();
 			}}
 		>
 			<div class="space-y-4">
