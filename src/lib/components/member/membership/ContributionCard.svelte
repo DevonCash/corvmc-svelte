@@ -6,6 +6,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
+	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
@@ -25,6 +26,9 @@
 	let modalOpen = $state(untrack(() => showModifyForm));
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
+	const feeAmount = $derived(
+		(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents / 100).toFixed(2)
+	);
 	const nextBilling = $derived(
 		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
 			month: 'long',
@@ -51,7 +55,7 @@
 				<div class="flex items-center gap-2">
 					<span class="text-3xl font-bold">${amountPerMonth}/month</span>
 					{#if subscription.coveringFees}
-						<Badge variant="secondary">+ fees covered</Badge>
+						<Badge variant="secondary">+ ${feeAmount} fees covered</Badge>
 					{/if}
 				</div>
 				<p class="mt-1 text-sm opacity-60">Next bill {nextBilling}</p>

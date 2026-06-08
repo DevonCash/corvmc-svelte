@@ -8,7 +8,7 @@ import {
 	type TransactionSource,
 	creditTypes
 } from '$lib/server/db/schema/finance';
-import { calculateTotalWithFeeCoverage } from './fees';
+import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getStripeProductId } from './product-config-service';
 
 // ---------------------------------------------------------------------------

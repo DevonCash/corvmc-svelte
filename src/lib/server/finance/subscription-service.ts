@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 import { checkout } from './payment-service';
-import { calculateTotalWithFeeCoverage } from './fees';
+import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import {
 	getProductConfig,
 	getStripeProductId,
