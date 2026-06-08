@@ -525,7 +525,11 @@ describe('updateQuantity', () => {
 								price: { id: 'price_contribution', product: 'prod_contribution' },
 								quantity: 12
 							},
-							{ id: 'si_drifted_fee', price: { id: 'price_old', product: 'prod_old_fee' }, quantity: 1 }
+							{
+								id: 'si_drifted_fee',
+								price: { id: 'price_old', product: 'prod_old_fee' },
+								quantity: 1
+							}
 						]
 					}
 				}
@@ -587,7 +591,11 @@ describe('updateQuantity', () => {
 								quantity: 5
 							},
 							{ id: 'si_fee_1', price: { id: 'price_fee_1', product: 'prod_fee' }, quantity: 1 },
-							{ id: 'si_drifted_fee', price: { id: 'price_old', product: 'prod_old_fee' }, quantity: 1 }
+							{
+								id: 'si_drifted_fee',
+								price: { id: 'price_old', product: 'prod_old_fee' },
+								quantity: 1
+							}
 						]
 					}
 				}
