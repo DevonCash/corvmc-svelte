@@ -9,8 +9,10 @@ import {
 } from './band/band-service';
 import {
 	ReservationConflictError,
-	ReservationValidationError
+	ReservationValidationError,
+	ReservationStateError
 } from './reservation/reservation-service';
+import { SubscriptionStateError } from './finance/subscription-service';
 import { RecurringSeriesError } from './reservation/recurring-series-service';
 import {
 	EquipmentNotFoundError,
@@ -79,7 +81,12 @@ export function mapDomainError(err: unknown): never {
 	}
 
 	// --- 409 Conflict ---
-	if (err instanceof ReservationConflictError || err instanceof BandMemberExistsError) {
+	if (
+		err instanceof ReservationConflictError ||
+		err instanceof ReservationStateError ||
+		err instanceof SubscriptionStateError ||
+		err instanceof BandMemberExistsError
+	) {
 		error(409, (err as Error).message);
 	}
 

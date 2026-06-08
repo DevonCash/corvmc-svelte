@@ -49,6 +49,7 @@ import {
 	recordCashAndComplete,
 	ReservationConflictError
 } from '$lib/server/reservation/reservation-service';
+import { mapDomainError } from '$lib/server/errors';
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
@@ -1218,7 +1219,11 @@ export const cancelBandReservation = form(
 		await requireFeature('bandReservations');
 		const currentUser = requireUser();
 		await requireBandMember();
-		await cancel(data.reservationId, currentUser.id);
+		try {
+			await cancel(data.reservationId, currentUser.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -1367,7 +1372,11 @@ export const cancelReservation = form(
 	async (data, _issue) => {
 		const currentUser = requireUser();
 		const staff = await isStaff(currentUser.id);
-		await cancel(data.id, currentUser.id, data.reason, { staffOverride: staff });
+		try {
+			await cancel(data.id, currentUser.id, data.reason, { staffOverride: staff });
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
