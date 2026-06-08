@@ -7,7 +7,9 @@ import { SubscriptionStateError } from './finance/subscription-service';
 describe('mapDomainError', () => {
 	it('maps ReservationStateError to a 409 HttpError', () => {
 		try {
-			mapDomainError(new ReservationStateError('Cannot cancel a reservation with status "cancelled"'));
+			mapDomainError(
+				new ReservationStateError('Cannot cancel a reservation with status "cancelled"')
+			);
 			expect.unreachable('should have thrown');
 		} catch (err) {
 			expect(isHttpError(err)).toBe(true);
