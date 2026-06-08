@@ -3,7 +3,26 @@ import * as Sentry from '@sentry/sveltekit';
 import { env } from '$env/dynamic/public';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 
+/**
+ * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
+ * a route module whose immutable filename changed. The `vite:preloadError`
+ * listener below reloads onto the fresh build, so these are recoverable noise,
+ * not faults — drop them before they reach Sentry.
+ */
+function isStaleChunkError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error ?? '');
+	return (
+		message.includes('dynamically imported module') ||
+		message.includes('Importing a module script failed')
+	);
+}
+
 Sentry.init({
+	beforeSend(event, hint) {
+		if (isStaleChunkError(hint?.originalException)) return null;
+		return event;
+	},
+
 	dsn: SENTRY_DSN,
 
 	environment: env.PUBLIC_SENTRY_ENVIRONMENT ?? 'production',
@@ -31,6 +50,21 @@ Sentry.init({
 	// https://docs.sentry.io/platforms/javascript/guides/sveltekit/configuration/options/#sendDefaultPii
 	sendDefaultPii: true
 });
+
+// A new deploy replaces the immutable chunk files, so a tab opened before the
+// deploy fails to lazy-load a route module ("error loading dynamically imported
+// module"). This is expected, not a bug — recover by reloading onto the new
+// build. The timestamp guard suppresses a reload loop if the asset is genuinely
+// gone (rapid repeat) while still allowing recovery from a later, separate deploy.
+if (typeof window !== 'undefined') {
+	window.addEventListener('vite:preloadError', () => {
+		const key = 'preload-error-reloaded-at';
+		const last = Number(sessionStorage.getItem(key) ?? 0);
+		if (Date.now() - last < 10_000) return;
+		sessionStorage.setItem(key, String(Date.now()));
+		window.location.reload();
+	});
+}
 
 // If you have a custom error handler, pass it to `handleErrorWithSentry`
 export const handleError = handleErrorWithSentry();
