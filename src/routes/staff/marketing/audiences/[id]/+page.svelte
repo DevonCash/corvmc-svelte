@@ -25,6 +25,13 @@
 	let id = $derived(page.params.id!);
 	let audienceData = $derived(await getAudienceDetail(id));
 	let subscribers = $derived(await getAudienceSubscribers(id));
+
+	// Local mirror of the opt-in setting so the toggle submits an explicit boolean
+	// (the previous string-only checkbox could turn opt-in on but never off).
+	let allowOptIn = $state(false);
+	$effect(() => {
+		allowOptIn = audienceData?.allowOptIn ?? false;
+	});
 </script>
 
 {#if audienceData}
@@ -69,13 +76,12 @@
 
 					<Form remote={updateAudience} successToast="Opt-in setting updated">
 						<input {...fields.id.as('hidden', id)} />
+						<input {...fields.allowOptIn.as('hidden', allowOptIn)} />
 						<label class="label cursor-pointer justify-start gap-3">
 							<input
 								type="checkbox"
 								class="toggle toggle-sm"
-								name="allowOptIn"
-								value="true"
-								checked={audienceData.allowOptIn}
+								bind:checked={allowOptIn}
 								onchange={(e) => {
 									(e.target as HTMLInputElement).form?.requestSubmit();
 								}}

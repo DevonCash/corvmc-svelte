@@ -139,7 +139,7 @@ export const createAudience = form(
 		name: z.string().min(1).max(255),
 		slug: z.string().max(100).optional(),
 		description: z.string().max(2000).optional(),
-		allowOptIn: z.string().optional()
+		allowOptIn: z.boolean().default(false)
 	}),
 	async (data, issue) => {
 		await requireStaff();
@@ -157,7 +157,7 @@ export const createAudience = form(
 			name,
 			slug,
 			description: (data.description as string)?.trim() || undefined,
-			allowOptIn: data.allowOptIn === 'true' || data.allowOptIn === 'on'
+			allowOptIn: data.allowOptIn
 		});
 
 		void getAudiences().refresh();
@@ -170,7 +170,7 @@ export const updateAudience = form(
 		id: z.string(),
 		name: z.string().max(255).optional(),
 		description: z.string().max(2000).optional(),
-		allowOptIn: z.string().optional()
+		allowOptIn: z.boolean().default(false)
 	}),
 	async (data) => {
 		await requireStaff();
@@ -179,10 +179,7 @@ export const updateAudience = form(
 		await updateAudienceService(id, {
 			name: data.name ? (data.name as string).trim() : undefined,
 			description: data.description !== undefined ? (data.description as string).trim() : undefined,
-			allowOptIn:
-				data.allowOptIn !== undefined
-					? data.allowOptIn === 'true' || data.allowOptIn === 'on'
-					: undefined
+			allowOptIn: data.allowOptIn
 		});
 
 		void getAudienceDetail(id).refresh();

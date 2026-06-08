@@ -194,7 +194,7 @@
 			{/if}
 
 			{#if hasConflicts}
-				<input {...fields.overrideConflicts.as('hidden', 'on')} />
+				<input {...fields.overrideConflicts.as('hidden', true)} />
 			{/if}
 
 			<div class="modal-action">

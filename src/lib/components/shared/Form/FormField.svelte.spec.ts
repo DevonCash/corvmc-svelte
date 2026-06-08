@@ -8,8 +8,10 @@ import FormField from './FormField.svelte';
 // what controls the rendered value for edit forms.
 function fakeField(name: string) {
 	return {
+		// Mirror SvelteKit's `get_type_prefix`: a checkbox field's name is `b:`-prefixed
+		// so the submitted value is coerced to a boolean.
 		as: (type: string, value?: unknown) => ({
-			name,
+			name: type === 'checkbox' ? `b:${name}` : name,
 			type,
 			value: value ?? '',
 			'aria-invalid': undefined
@@ -40,5 +42,52 @@ describe('FormField', () => {
 		});
 
 		await expect.element(page.getByRole('textbox')).toHaveValue('');
+	});
+
+	// Regression: a checkbox/toggle must submit a real boolean, which SvelteKit only
+	// does when the input name carries the `b:` prefix. A string-typed schema otherwise
+	// rejects the coerced boolean with "Invalid option: expected one of \"\"|\"on\"".
+	it('b:-prefixes a name-only checkbox so the value is a boolean', async () => {
+		const { container } = render(FormField, {
+			name: 'coverFees',
+			type: 'checkbox',
+			label: '',
+			checkboxLabel: 'Cover fees'
+		});
+		const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+		expect(input.name).toBe('b:coverFees');
+	});
+
+	it('b:-prefixes a name-only toggle so the value is a boolean', async () => {
+		const { container } = render(FormField, {
+			name: 'published',
+			type: 'toggle',
+			label: '',
+			checkboxLabel: 'Published'
+		});
+		const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+		expect(input.name).toBe('b:published');
+	});
+
+	it('b:-prefixes a field-based checkbox so the value is a boolean', async () => {
+		const { container } = render(FormField, {
+			field: fakeField('coverFees'),
+			type: 'checkbox',
+			label: '',
+			checkboxLabel: 'Cover fees'
+		});
+		const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+		expect(input.name).toBe('b:coverFees');
+	});
+
+	it('b:-prefixes a field-based toggle so the value is a boolean', async () => {
+		const { container } = render(FormField, {
+			field: fakeField('lookingForBand'),
+			type: 'toggle',
+			label: '',
+			checkboxLabel: 'Looking for a band'
+		});
+		const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+		expect(input.name).toBe('b:lookingForBand');
 	});
 });
