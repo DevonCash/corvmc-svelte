@@ -69,6 +69,18 @@
 		() => label ?? (_name ? _name.slice(0, 1).toUpperCase() + _name.slice(1) : '')
 	);
 
+	// These types render `value` themselves (bind:value / bind:checked / select) and
+	// only use fieldAttrs for the resolved name, so we don't forward value into `.as()`.
+	let ownsValue = $derived(
+		type === 'textarea' ||
+			type === 'tags' ||
+			type === 'calendar' ||
+			type === 'toggle' ||
+			type === 'checkbox' ||
+			type === 'select' ||
+			type === 'file'
+	);
+
 	// Resolve field attributes from SvelteKit field definition when provided
 	let fieldAttrs = $derived.by(() => {
 		if (!field) return null;
@@ -80,7 +92,11 @@
 			type === 'file'
 				? 'text'
 				: (type ?? 'text');
-		return field.as(asType as any);
+		// Forward the supplied value so plain inputs render pre-filled from existing
+		// data (edit forms). `.as(type, value)` controls the rendered value.
+		return ownsValue || value === undefined
+			? field.as(asType as any)
+			: field.as(asType as any, value);
 	});
 
 	// When field is provided, derive name/id from it
