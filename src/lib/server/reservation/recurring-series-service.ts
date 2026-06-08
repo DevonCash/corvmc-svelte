@@ -5,7 +5,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
-import { buildRRule, describeFrequency } from './rrule-helpers';
+import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +30,8 @@ export interface CreateSeriesParams {
 	frequency: RecurringFrequency;
 	/** The prototype's startsAt — used to derive RRULE DTSTART and BYDAY */
 	prototypeStartsAt: Date;
+	/** For monthly series: repeat on the nth weekday (default) or a fixed day of the month */
+	monthlyMode?: MonthlyMode;
 	/** Optional scheduled end date for the series */
 	endsAt?: Date;
 }
@@ -59,6 +61,7 @@ export interface SeriesListItem {
 	id: string;
 	rrule: string;
 	frequencyLabel: string;
+	monthlyMode: MonthlyMode | null;
 	createdAt: Date;
 	seriesEndsAt: Date | null;
 	cancelledAt: Date | null;
@@ -85,7 +88,7 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 		.limit(1);
 	if (!proto) throw new RecurringSeriesError('Prototype reservation not found');
 
-	const rruleString = buildRRule(prototypeStartsAt, frequency);
+	const rruleString = buildRRule(prototypeStartsAt, frequency, params.monthlyMode ?? 'weekday');
 
 	const seriesId = crypto.randomUUID();
 
@@ -247,7 +250,8 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 
 	return rows.map((r) => ({
 		...r,
-		frequencyLabel: describeFrequency(r.rrule)
+		frequencyLabel: describeFrequency(r.rrule),
+		monthlyMode: monthlyModeOf(r.rrule)
 	}));
 }
 
@@ -301,7 +305,8 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		...result,
 		rows: result.rows.map((r) => ({
 			...r,
-			frequencyLabel: describeFrequency(r.rrule)
+			frequencyLabel: describeFrequency(r.rrule),
+			monthlyMode: monthlyModeOf(r.rrule)
 		}))
 	};
 }

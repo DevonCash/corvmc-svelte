@@ -36,7 +36,33 @@
 	let selectedStart = $state('');
 	let selectedEnd = $state('');
 	let recurring = $state('');
+	let monthlyMode = $state('weekday');
 
+	function ordinal(n: number): string {
+		const mod100 = n % 100;
+		if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+		switch (n % 10) {
+			case 1:
+				return `${n}st`;
+			case 2:
+				return `${n}nd`;
+			case 3:
+				return `${n}rd`;
+			default:
+				return `${n}th`;
+		}
+	}
+
+	const monthlyLabels = $derived.by(() => {
+		const d = new Date(currentDate + 'T00:00:00');
+		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+		const dayOfMonth = d.getDate();
+		const nth = Math.ceil(dayOfMonth / 7);
+		return {
+			weekday: `${ordinal(nth)} ${weekdayName} of the month`,
+			monthday: `Monthly on the ${ordinal(dayOfMonth)}`
+		};
+	});
 	const minSlots = $derived(config.minDurationHours * (60 / config.slotMinutes));
 	const maxSlots = $derived(config.maxDurationHours * (60 / config.slotMinutes));
 
@@ -210,6 +236,20 @@
 					<option value="biweekly">Every 2 weeks</option>
 					<option value="monthly">Monthly</option>
 				</select>
+				{#if recurring === 'monthly'}
+					<label class="label mt-2" for="monthlyMode">
+						<span class="label-text">Monthly pattern</span>
+					</label>
+					<select
+						id="monthlyMode"
+						name="monthlyMode"
+						class="select select-bordered"
+						bind:value={monthlyMode}
+					>
+						<option value="weekday">{monthlyLabels.weekday}</option>
+						<option value="monthday">{monthlyLabels.monthday}</option>
+					</select>
+				{/if}
 				{#if recurring}
 					<p class="text-sm mt-1 opacity-60">Future instances will be generated automatically.</p>
 				{/if}

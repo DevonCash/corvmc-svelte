@@ -31,7 +31,7 @@ import {
 import { getBySlug } from '$lib/server/band/band-service';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
-import { describeFrequency } from '$lib/server/reservation/rrule-helpers';
+import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
 import {
 	getAvailableSlots,
@@ -489,18 +489,18 @@ export const previewRecurringInstances = query(
 		date: z.string(),
 		startTime: z.string(),
 		frequency: z.enum(['weekly', 'biweekly', 'monthly']),
-		endsAt: z.string().optional()
+		monthlyMode: z.enum(['weekday', 'monthday']).optional()
 	}),
-	async ({ date, startTime, frequency, endsAt }) => {
+	async ({ date, startTime, frequency, monthlyMode }) => {
 		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
-		const rruleString = buildRRule(startsAt, frequency as RecurringFrequency);
+		const rruleString = buildRRule(
+			startsAt,
+			frequency as RecurringFrequency,
+			monthlyMode ?? 'weekday'
+		);
 		const now = new Date();
 		// Show ~60 days of preview
-		let windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-		if (endsAt) {
-			const end = new Date(endsAt + 'T23:59:59');
-			if (end < windowEnd) windowEnd = end;
-		}
+		const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 		const occurrences = getOccurrences(rruleString, now, windowEnd);
 		return {
 			dates: occurrences.slice(0, 8).map((d) => d.toISOString()),
@@ -769,7 +769,7 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 /** Member: book a reservation (optionally recurring). */
 const memberBookingSchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	seriesEndsAt: z.string().optional()
+	monthlyMode: z.enum(['weekday', 'monthday']).optional()
 });
 
 export const bookMemberReservation = form(memberBookingSchema, async (data, _issue) => {
@@ -822,14 +822,11 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 	}
 
 	if (isRecurring && recurringFrequency) {
-		const seriesEndsAt = data.seriesEndsAt
-			? buildDateInTz(data.seriesEndsAt, '23:59', DEFAULT_TIMEZONE)
-			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			endsAt: seriesEndsAt
+			monthlyMode: data.monthlyMode
 		});
 	}
 
@@ -978,7 +975,7 @@ async function payReservationRemainder(opts: {
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	seriesEndsAt: z.string().optional(),
+	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
 	coverFees: z.enum(['', 'on']).optional(),
 	skipPayment: z.enum(['', 'on']).optional()
 });
@@ -1041,14 +1038,11 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 	}
 
 	if (isRecurring && recurringFrequency) {
-		const seriesEndsAt = data.seriesEndsAt
-			? buildDateInTz(data.seriesEndsAt, '23:59', DEFAULT_TIMEZONE)
-			: undefined;
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			endsAt: seriesEndsAt
+			monthlyMode: data.monthlyMode
 		});
 	}
 
@@ -1146,7 +1140,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 
 /** Band: book a reservation (optionally recurring). */
 const bandBookingSchema = createReservationSchema.extend({
-	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional()
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	monthlyMode: z.enum(['weekday', 'monthday']).optional()
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, _issue) => {
@@ -1206,7 +1201,8 @@ export const bookBandReservation = form(bandBookingSchema, async (data, _issue) 
 		await createSeries({
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
-			prototypeStartsAt: startsAt
+			prototypeStartsAt: startsAt,
+			monthlyMode: data.monthlyMode
 		});
 	}
 
@@ -1605,7 +1601,8 @@ export const getRecurringReservations = query(
 
 		return rows.map((r) => ({
 			...r,
-			frequencyLabel: describeFrequency(r.rrule)
+			frequencyLabel: describeFrequency(r.rrule),
+			monthlyMode: monthlyModeOf(r.rrule)
 		}));
 	}
 );
