@@ -300,10 +300,18 @@ export async function updateQuantity(
 		contributionProductId,
 		feeProductId
 	);
-	const feeItem = sub.items.data.find((item) => itemProductId(item) === feeProductId);
 
 	if (!contributionItem)
 		throw new SubscriptionStateError('Contribution item not found on subscription');
+
+	// Treat every line that ISN'T the contribution line as a fee line and delete
+	// them all. A strict `product === feeProductId` match misses fee lines whose
+	// product id has drifted after a product-config migration, so the stale line
+	// was never removed and a fresh one was appended — billing the member for two
+	// "Processing Fee Coverage" lines. Identifying fee lines by exclusion (and
+	// deleting every match, not just the first) collapses any accumulated
+	// duplicates back to a single line.
+	const feeItems = sub.items.data.filter((item) => item.id !== contributionItem.id);
 
 	const contributionConfig = await getProductConfig('contribution');
 
@@ -336,13 +344,15 @@ export async function updateQuantity(
 		}
 	];
 
+	// Remove any existing fee lines first (handles drift and accumulated duplicates).
+	for (const feeItem of feeItems) {
+		items.push({ id: feeItem.id, deleted: true });
+	}
+
 	if (coverFees) {
 		const contributionCents = newQuantity * contributionConfig.unitAmountCents;
 		const { feeCents } = calculateTotalWithFeeCoverage(contributionCents);
 
-		if (feeItem) {
-			items.push({ id: feeItem.id, deleted: true });
-		}
 		items.push({
 			price_data: {
 				currency: 'usd',
@@ -352,8 +362,6 @@ export async function updateQuantity(
 			},
 			quantity: 1
 		});
-	} else if (feeItem) {
-		items.push({ id: feeItem.id, deleted: true });
 	}
 
 	// @ts-expect-error — Stripe v22 Item type requires all fields; we only send

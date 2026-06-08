@@ -508,6 +508,109 @@ describe('updateQuantity', () => {
 		expect(newFee).toBeDefined();
 	});
 
+	it('deletes a fee line whose product id has drifted instead of appending a duplicate', async () => {
+		// After a product-config migration the fee_coverage product id drifts, so the
+		// existing fee line carries a stale product ('prod_old_fee') that no longer
+		// matches getStripeProductId('fee_coverage') === 'prod_fee'. A strict product-id
+		// match misses it: it is never deleted and a fresh fee line is appended, leaving
+		// the member billed for TWO "Processing Fee Coverage" lines.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_drift_fee',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 12
+							},
+							{
+								id: 'si_drifted_fee',
+								price: { id: 'price_old', product: 'prod_old_fee' },
+								quantity: 1
+							}
+						]
+					}
+				}
+			]
+		});
+
+		await updateQuantity('cus_123', 12, true);
+
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		// The drifted fee line must be deleted...
+		expect(call.items).toContainEqual({ id: 'si_drifted_fee', deleted: true });
+		// ...and exactly one new fee line added — never two.
+		const feeLines = call.items.filter((i: any) => i.price_data?.product === 'prod_fee');
+		expect(feeLines).toHaveLength(1);
+	});
+
+	it('collapses pre-existing duplicate fee lines down to a single line', async () => {
+		// A subscription that already accumulated two fee lines (from an earlier drift)
+		// must not stay duplicated: every non-contribution line is deleted and one fresh
+		// fee line is added.
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_dup_fee',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 12
+							},
+							{ id: 'si_fee_1', price: { id: 'price_fee_1', product: 'prod_fee' }, quantity: 1 },
+							{ id: 'si_fee_2', price: { id: 'price_fee_2', product: 'prod_fee' }, quantity: 1 }
+						]
+					}
+				}
+			]
+		});
+
+		await updateQuantity('cus_123', 12, true);
+
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		expect(call.items).toContainEqual({ id: 'si_fee_1', deleted: true });
+		expect(call.items).toContainEqual({ id: 'si_fee_2', deleted: true });
+		const feeLines = call.items.filter((i: any) => i.price_data?.product === 'prod_fee');
+		expect(feeLines).toHaveLength(1);
+	});
+
+	it('deletes every stray fee line when turning coverFees off', async () => {
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [
+				{
+					id: 'sub_dup_off',
+					items: {
+						data: [
+							{
+								id: 'si_contrib',
+								price: { id: 'price_contribution', product: 'prod_contribution' },
+								quantity: 5
+							},
+							{ id: 'si_fee_1', price: { id: 'price_fee_1', product: 'prod_fee' }, quantity: 1 },
+							{
+								id: 'si_drifted_fee',
+								price: { id: 'price_old', product: 'prod_old_fee' },
+								quantity: 1
+							}
+						]
+					}
+				}
+			]
+		});
+
+		await updateQuantity('cus_123', 5, false);
+
+		const call = mockStripe.subscriptions.update.mock.calls[0][1];
+		expect(call.items).toContainEqual({ id: 'si_fee_1', deleted: true });
+		expect(call.items).toContainEqual({ id: 'si_drifted_fee', deleted: true });
+		// No new fee line is added.
+		expect(call.items.some((i: any) => i.price_data?.product === 'prod_fee')).toBe(false);
+	});
+
 	it('removes fee item when coverFees is false', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({
 			data: [
