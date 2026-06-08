@@ -13,7 +13,7 @@ import {
 } from '$lib/server/finance/subscription-service';
 import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
-import { calculateTotalWithFeeCoverage } from '$lib/server/finance/fees';
+import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
