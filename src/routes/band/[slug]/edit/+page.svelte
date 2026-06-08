@@ -10,12 +10,10 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import AvatarManager from '$lib/components/shared/AvatarManager.svelte';
 	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
 	import LinkListEditor from '$lib/components/shared/Form/LinkListEditor.svelte';
 	import VisibilityField from '$lib/components/shared/Form/VisibilityField.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import { updateBand, uploadBandAvatar, removeBandAvatar } from '$lib/remote/bands.remote';
 	import {
 		getBandProfile,
 		getGenreSuggestions,
@@ -30,7 +28,6 @@
 
 	const band = $derived(layout.band);
 
-	const bandFields = updateBand.fields;
 	const profileFields = saveBandProfile.fields;
 
 	// Basics
@@ -51,67 +48,53 @@
 	});
 
 	let contact = $derived((profile?.directoryContact as DirectoryContact | null) ?? {});
+
+	// Avatar uploads instantly through the band-avatar API route, which persists
+	// the new key and returns it (the value is also submitted with the form).
+	async function uploadAvatar(file: File): Promise<string> {
+		const fd = new FormData();
+		fd.set('file', file);
+		const res = await fetch(`/api/bands/${band.id}/avatar`, { method: 'POST', body: fd });
+		if (!res.ok) {
+			const err = (await res.json().catch(() => ({}))) as { message?: string };
+			throw new Error(err.message || 'Upload failed');
+		}
+		const data = (await res.json()) as { avatarKey: string };
+		invalidateAll();
+		return data.avatarKey;
+	}
 </script>
 
 <PageHeader title="Band Profile" subtitle={band.name} />
 <PageContent width="3xl">
-	<!-- Avatar -->
-	<InfoCard title="Avatar">
-		<AvatarManager
-			uploadForm={uploadBandAvatar}
-			removeForm={removeBandAvatar}
-			currentUrl={band.avatarUrl}
-			name={band.name}
-			shape="square"
-		/>
-	</InfoCard>
-
-	<!-- Basics -->
-	<InfoCard title="Basics">
-		<Form
-			remote={updateBand}
-			guard
-			onsuccess={() => {
-				toast.success('Profile updated');
-				const newSlug = updateBand.result?.slug;
-				if (newSlug && newSlug !== band.slug) {
-					goto(resolve(`/band/${newSlug}/edit`));
-				} else {
-					invalidateAll();
-				}
-			}}
-			onfailure={() => toast.error('Failed to update')}
-		>
-			<div class="space-y-4">
-				<FormField
-					field={bandFields.name}
-					type="text"
-					label="Band Name"
-					value={band.name}
-					required
-				/>
-
-				<FormField field={bandFields.bio} label="Bio">
-					<input {...bandFields.bio.as('hidden', bioHtml)} />
-					<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your band..." />
-				</FormField>
-
-				<div class="flex justify-end pt-2">
-					<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s">
-						{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
-					</SubmitButton>
-				</div>
-			</div>
-		</Form>
-	</InfoCard>
-
-	<!-- Directory -->
-	<Form remote={saveBandProfile} guard onsuccess={() => toast.success('Directory profile saved')}>
+	<Form
+		remote={saveBandProfile}
+		guard
+		onsuccess={() => {
+			toast.success('Profile saved');
+			const newSlug = saveBandProfile.result?.slug;
+			if (newSlug && newSlug !== band.slug) {
+				goto(resolve(`/band/${newSlug}/edit`));
+			} else {
+				invalidateAll();
+			}
+		}}
+		onfailure={() => toast.error('Failed to save')}
+	>
 		<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />
 
-		<div class="mb-6 grid gap-6 lg:grid-cols-2">
-			<InfoCard title="Directory Listing">
-				<div class="space-y-4">
+		<!-- Basics -->
+		<InfoCard title="Basics">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+				<div class="flex-1 space-y-4">
+					<FormField
+						field={profileFields.name}
+						type="text"
+						label="Band Name"
+						value={band.name}
+						required
+					/>
+
 					<FormField
 						field={profileFields.tagline}
 						label="Tagline"
@@ -120,33 +103,51 @@
 						placeholder="e.g. Funk trio from Portland"
 						description="A short one-liner shown on your directory card"
 					/>
-
-					<FormField field={profileFields.genres} label="Genres">
-						<FreeformTagInput
-							bind:value={genres}
-							suggestions={genreSuggestions}
-							placeholder="e.g. jazz, funk, rock..."
-						/>
-					</FormField>
-
-					<FormField
-						field={profileFields.lookingForMembers}
-						type="toggle"
-						value={lookingForMembers}
-						checkboxLabel="We're looking for members"
-					/>
 				</div>
-			</InfoCard>
 
+				<FormField
+					label="Avatar"
+					name="avatarKey"
+					type="file"
+					upload={uploadAvatar}
+					accept="image/jpeg,image/png,image/webp"
+					src={band.avatarUrl ?? undefined}
+					orientation="col"
+					class="shrink-0"
+				/>
+			</div>
+
+			<div class="mt-4 space-y-4">
+				<FormField field={profileFields.bio} label="Bio">
+					<input {...profileFields.bio.as('hidden', bioHtml)} />
+					<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your band..." />
+				</FormField>
+
+				<FormField field={profileFields.genres} label="Genres">
+					<FreeformTagInput
+						bind:value={genres}
+						suggestions={genreSuggestions}
+						placeholder="e.g. jazz, funk, rock..."
+					/>
+				</FormField>
+
+				<FormField
+					field={profileFields.lookingForMembers}
+					type="toggle"
+					value={lookingForMembers}
+					checkboxLabel="We're looking for members"
+				/>
+			</div>
+		</InfoCard>
+
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Links">
 				<p class="mb-3 text-sm opacity-60">
 					SoundCloud, YouTube, and Spotify links show as embedded players on your profile.
 				</p>
 				<LinkListEditor bind:value={links} field={profileFields.links} />
 			</InfoCard>
-		</div>
 
-		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Directory Contact Info">
 				<p class="mb-3 text-sm opacity-60">
 					Optional contact details shown on your directory listing.
@@ -174,7 +175,9 @@
 					/>
 				</div>
 			</InfoCard>
+		</div>
 
+		<div class="mb-6">
 			<InfoCard title="Visibility">
 				<VisibilityField
 					field={profileFields.directoryVisibility}
@@ -185,7 +188,9 @@
 		</div>
 
 		<div class="flex justify-end">
-			<SubmitButton label="Save Directory Profile" successLabel="Saved" class="btn-primary" />
+			<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s">
+				{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
+			</SubmitButton>
 		</div>
 	</Form>
 </PageContent>
