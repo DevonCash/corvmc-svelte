@@ -15,7 +15,10 @@
 		IconArrowBackUp,
 		IconClockPause,
 		IconInboxOff,
-		IconAlarmSnooze
+		IconAlarmSnooze,
+		IconCrown,
+		IconShield,
+		IconUser
 	} from '@tabler/icons-svelte';
 	import type { SvelteComponent } from 'svelte';
 
@@ -48,7 +51,10 @@
 		error: 'badge-error',
 		open: 'badge-info',
 		resolved: 'badge-success',
-		snoozed: 'badge-ghost'
+		snoozed: 'badge-ghost',
+		owner: 'badge-warning',
+		admin: 'badge-info',
+		member: 'badge-ghost'
 	};
 
 	type Variant = { icon: IconComponent; color: string };
@@ -71,6 +77,11 @@
 		open: { icon: IconClock, color: 'text-info' },
 		resolved: { icon: IconInboxOff, color: 'text-success' },
 		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
+
+		// Band roles
+		owner: { icon: IconCrown, color: 'text-warning' },
+		admin: { icon: IconShield, color: 'text-info' },
+		member: { icon: IconUser, color: 'text-base-content' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },
