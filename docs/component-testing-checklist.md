@@ -16,14 +16,22 @@ Incremental coverage for isolated component tests. See
 ## Pure components — stories
 
 - [x] EmptyState
-- [ ] Button
-- [ ] Badge
-- [ ] Avatar
-- [ ] Alert
-- [ ] PageHeader
-- [ ] InfoCard
-- [ ] Modal
+- [x] Button
+- [x] Badge
+- [x] StatusBadge
+- [x] Avatar
+- [x] EntityAvatar
+- [x] Alert
+- [x] PageHeader
+- [x] InfoCard
+- [x] StatCard
+- [x] Modal
+- [x] CopyableId
+- [x] VinylCard / VinylCardCta (decorative)
+- [x] IdCard / IdCardCta (decorative)
 - [ ] FormField (has a spec; add a story for the gallery)
+
+See `docs/component-style-audit.md` for the visual audit run over these.
 
 ## Coupled components — specs
 
