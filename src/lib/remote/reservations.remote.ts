@@ -1561,19 +1561,42 @@ export const getReservations = query(
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];
 		const rateInCents = await config<number>('reservation.hourlyRateCents');
+		const freeHoursBalance = await getBalance(forUser ?? locals.user.id, 'free_hours');
 
-		return (
-			await db
-				.select()
-				.from(reservation)
-				.where(and(...(filters.filter(Boolean) as any[])))
-				.orderBy(reservation.startsAt)
-		).map((value: Reservation) => ({
-			...value,
-			price:
-				(((value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60)) * rateInCents) /
-				100
-		}));
+		const rows = await db
+			.select()
+			.from(reservation)
+			.where(and(...(filters.filter(Boolean) as any[])))
+			.orderBy(reservation.startsAt);
+
+		// `price` is the cash the member actually pays after free-hour credits.
+		// Confirmed/paid rows carry the committed cash in cashDueCents; uncommitted
+		// rows are projected against the remaining balance in starts-at order so
+		// each booking only spends credits the earlier ones left behind.
+		let remainingFreeHours = freeHoursBalance;
+		return rows.map((value: Reservation) => {
+			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
+			const totalCents = Math.round(durationHours * rateInCents);
+			const isTerminal = ['completed', 'cancelled', 'no-show'].includes(value.status);
+
+			let netCents: number;
+			if (value.cashDueCents != null) {
+				netCents = value.cashDueCents;
+			} else if (!isTerminal) {
+				const { creditUnits, remainingCents } = computeReservationCredit({
+					totalCents,
+					durationHours,
+					hourlyRateCents: rateInCents,
+					freeHoursBalance: remainingFreeHours
+				});
+				remainingFreeHours -= creditUnits;
+				netCents = remainingCents;
+			} else {
+				netCents = totalCents;
+			}
+
+			return { ...value, price: netCents / 100 };
+		});
 	}
 );
 
