@@ -13,6 +13,7 @@
 			status?: string;
 			paidAt?: Date | null;
 			refundedAt?: Date | null;
+			creditsAvailable?: boolean;
 		};
 		member?: { name: string };
 		class?: string;
@@ -50,6 +51,9 @@
 				Due {formatDistanceToNow(reservation.startsAt, { addSuffix: true })}
 			{/if}
 		</p>
+	{/if}
+	{#if reservation.creditsAvailable}
+		<p class="text-sm font-medium text-success">Free hours available — applied at checkout</p>
 	{/if}
 	{#if member?.name}
 		<p class="text-sm opacity-70">{member.name}</p>

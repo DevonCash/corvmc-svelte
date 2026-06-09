@@ -1,0 +1,20 @@
+# Git hooks via lefthook. Warn-only / auto-fix: formats and lint-fixes staged files
+# before commit and re-stages them; never blocks on remaining warnings.
+# Reuses the existing prettier (.prettierrc) and eslint (eslint.config.js) setup.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: prettier
+      glob: '*.{ts,js,svelte,json,md,css,html}'
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    - name: eslint
+      glob: '*.{ts,js,svelte}'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
+
+# Non-blocking heads-up on push. Prints type errors but does not fail the push.
+pre-push:
+  jobs:
+    - name: svelte-check
+      run: pnpm check || true
