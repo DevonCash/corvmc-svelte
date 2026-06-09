@@ -2,6 +2,8 @@
 
 When building or modifying pages in this app, use the shared components and patterns described here. Every page should compose from these building blocks so the UI stays consistent.
 
+> Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
+
 ## Page structure
 
 Every page under a panel layout (staff, member, or band) follows this shape:
