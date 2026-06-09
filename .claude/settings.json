@@ -1,0 +1,35 @@
+{
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write|MultiEdit",
+				"hooks": [{ "type": "command", "command": "bash scripts/format-edited-file.sh" }]
+			}
+		]
+	},
+	"permissions": {
+		"allow": [
+			"Bash(pnpm check*)",
+			"Bash(pnpm run check*)",
+			"Bash(pnpm svelte-check *)",
+			"Bash(pnpm test:unit*)",
+			"Bash(pnpm lint*)",
+			"Bash(pnpm lint:changed*)",
+			"Bash(pnpm format*)",
+			"Bash(pnpm db:generate*)",
+			"Bash(drizzle-kit generate*)",
+			"Bash(npx svelte-check*)",
+			"mcp__Claude_Preview__preview_screenshot",
+			"mcp__Claude_Preview__preview_console_logs",
+			"mcp__Claude_Preview__preview_logs",
+			"mcp__Claude_Preview__preview_snapshot",
+			"mcp__Claude_Preview__preview_list",
+			"mcp__svelte__svelte-autofixer",
+			"mcp__svelte__get-documentation",
+			"mcp__2e17fd32-0d55-41f8-998d-210ff0ea38a7__get_sentry_resource",
+			"mcp__2e17fd32-0d55-41f8-998d-210ff0ea38a7__search_issues",
+			"mcp__2e17fd32-0d55-41f8-998d-210ff0ea38a7__find_organizations",
+			"mcp__2e17fd32-0d55-41f8-998d-210ff0ea38a7__find_projects"
+		]
+	}
+}
