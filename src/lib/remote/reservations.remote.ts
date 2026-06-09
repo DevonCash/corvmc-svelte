@@ -1538,7 +1538,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 	return { success: true };
 });
 
-type ReservationWithPrice = Reservation & { price: number };
+type ReservationWithPrice = Reservation & { price: number; creditsAvailable: boolean };
 export const getReservations = query(
 	z
 		.object({
@@ -1569,33 +1569,27 @@ export const getReservations = query(
 			.where(and(...(filters.filter(Boolean) as any[])))
 			.orderBy(reservation.startsAt);
 
-		// `price` is the cash the member actually pays after free-hour credits.
-		// Confirmed/paid rows carry the committed cash in cashDueCents; uncommitted
-		// rows are projected against the remaining balance in starts-at order so
-		// each booking only spends credits the earlier ones left behind.
-		let remainingFreeHours = freeHoursBalance;
+		// `price` is the full room rate. We deliberately do NOT project a credit
+		// discount onto uncommitted bookings here: free hours are only applied at
+		// confirm/pay time, against the live balance. Projecting a discounted
+		// figure on the listing drifts from the modal (which computes credits live,
+		// at the moment of the charge) and confused members with a lower number on
+		// the card than at Pay Ahead. Instead, show the full price and flag that
+		// credits are available so the UI can indicate they'll apply.
+		// Confirmed/paid rows carry the real cash owed in cashDueCents (0 = fully
+		// covered by credits).
+		const hasFreeHours = freeHoursBalance > 0;
 		return rows.map((value: Reservation) => {
 			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
 			const totalCents = Math.round(durationHours * rateInCents);
 			const isTerminal = ['completed', 'cancelled', 'no-show'].includes(value.status);
 
-			let netCents: number;
-			if (value.cashDueCents != null) {
-				netCents = value.cashDueCents;
-			} else if (!isTerminal) {
-				const { creditUnits, remainingCents } = computeReservationCredit({
-					totalCents,
-					durationHours,
-					hourlyRateCents: rateInCents,
-					freeHoursBalance: remainingFreeHours
-				});
-				remainingFreeHours -= creditUnits;
-				netCents = remainingCents;
-			} else {
-				netCents = totalCents;
-			}
+			// Committed rows owe their stored remainder; everything else owes full price.
+			const netCents = value.cashDueCents ?? totalCents;
+			// Credits can still apply only to an uncommitted, non-terminal booking.
+			const creditsAvailable = hasFreeHours && value.cashDueCents == null && !isTerminal;
 
-			return { ...value, price: netCents / 100 };
+			return { ...value, price: netCents / 100, creditsAvailable };
 		});
 	}
 );
