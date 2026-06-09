@@ -29,17 +29,17 @@ art. 16 components storied, 146 screenshots captured (`/tmp/story-shots/`).
 The intent was relative-color syntax copying white (`oklch(from white l c h)`).
 But the literal `1 100% none` sets **chroma 100%** (≈0.4 absolute, far out of
 gamut) with no hue, which the browser clamps to a saturated **magenta**. Computed:
-`oklch(1 0.4 none)`. So the *foreground* text/icon color on those solid surfaces
+`oklch(1 0.4 none)`. So the _foreground_ text/icon color on those solid surfaces
 is magenta in every component that uses them.
 
 Affected tokens:
 
-| Token | Light (`corvmc`) | Dark (`corvmc-dark`) |
-| --- | --- | --- |
-| `--color-primary-content` | 🔴 broken ([:20](../src/routes/layout.css#L20)) | 🔴 broken ([:89](../src/routes/layout.css#L89)) |
-| `--color-error-content` | 🔴 broken ([:42](../src/routes/layout.css#L42)) | 🔴 broken ([:109](../src/routes/layout.css#L109)) |
-| `--color-secondary-content` | 🔴 broken ([:24](../src/routes/layout.css#L24)) | ok |
-| `--color-success-content` | 🔴 broken ([:38](../src/routes/layout.css#L38)) | ok |
+| Token                       | Light (`corvmc`)                                | Dark (`corvmc-dark`)                              |
+| --------------------------- | ----------------------------------------------- | ------------------------------------------------- |
+| `--color-primary-content`   | 🔴 broken ([:20](../src/routes/layout.css#L20)) | 🔴 broken ([:89](../src/routes/layout.css#L89))   |
+| `--color-error-content`     | 🔴 broken ([:42](../src/routes/layout.css#L42)) | 🔴 broken ([:109](../src/routes/layout.css#L109)) |
+| `--color-secondary-content` | 🔴 broken ([:24](../src/routes/layout.css#L24)) | ok                                                |
+| `--color-success-content`   | 🔴 broken ([:38](../src/routes/layout.css#L38)) | ok                                                |
 
 Visually confirmed across components (not just one):
 
@@ -61,7 +61,7 @@ e.g. `white` or `oklch(100% 0 0)`. One-line each; no component changes needed.
 
 ## 🟡 Minor — contrast / hierarchy
 
-- **EmptyState** wraps the *entire* block in `opacity-60`
+- **EmptyState** wraps the _entire_ block in `opacity-60`
   ([EmptyState.svelte:25](../src/lib/components/shared/EmptyState.svelte#L25)).
   Confirmed on the dark screenshot (`shared-emptystate--with-action__corvmc-dark.png`):
   the title and body collapse to the same dim weight, so there's no visual
@@ -80,7 +80,7 @@ e.g. `white` or `oklch(100% 0 0)`. One-line each; no component changes needed.
 
 - **`#fff` avatar/ID initials** (`Avatar`, `EntityAvatar`, `IdCard`, `VinylCard`).
   The static pass flagged these as dark-mode breakage. Rendering shows they sit on
-  a *colored generated pattern* (theme-independent), and the white + brown
+  a _colored generated pattern_ (theme-independent), and the white + brown
   text-stroke stays legible in **both** themes
   (`shared-avatar--initials__corvmc-dark.png`, `shared-directory-idcard--default__corvmc-dark.png`).
   Leave as hardcoded white.

@@ -13,4 +13,6 @@
 <Story name="Success" args={{ type: 'success' }}>Your reservation is confirmed.</Story>
 <Story name="Warning" args={{ type: 'warning' }}>Your membership renews in 3 days.</Story>
 <Story name="Error" args={{ type: 'error' }}>We couldn't process your payment.</Story>
-<Story name="With retry" args={{ type: 'error', reset: () => {} }}>Something went wrong loading shows.</Story>
+<Story name="With retry" args={{ type: 'error', reset: () => {} }}
+	>Something went wrong loading shows.</Story
+>
