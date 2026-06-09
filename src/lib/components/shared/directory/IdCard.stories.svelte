@@ -27,7 +27,4 @@
 	name="All flags"
 	args={{ availableForHire: true, teachesLessons: true, openToCollaboration: true }}
 />
-<Story
-	name="With photo"
-	args={{ image: 'https://i.pravatar.cc/300?img=32' }}
-/>
+<Story name="With photo" args={{ image: 'https://i.pravatar.cc/300?img=32' }} />
