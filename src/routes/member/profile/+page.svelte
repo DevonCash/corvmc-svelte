@@ -61,6 +61,7 @@
 	<!-- Avatar -->
 	<InfoCard title="Photo">
 		<AvatarManager
+			key="member-profile"
 			uploadForm={uploadMemberAvatar}
 			removeForm={removeMemberAvatar}
 			currentUrl={profile?.avatarUrl ?? null}

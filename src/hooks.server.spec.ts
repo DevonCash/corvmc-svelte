@@ -31,7 +31,8 @@ vi.mock('$lib/server/events/register-listeners', () => ({
 }));
 
 vi.mock('$app/environment', () => ({
-	building: false
+	building: false,
+	dev: false
 }));
 
 const mockGetSession = vi.fn();

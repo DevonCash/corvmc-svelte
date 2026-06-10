@@ -1,7 +1,7 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import * as Sentry from '@sentry/sveltekit';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
-import { building } from '$app/environment';
+import { building, dev } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/events/register-listeners';
@@ -63,9 +63,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 export const handle: Handle = sequence(
 	Sentry.initCloudflareSentryHandle({
 		dsn: SENTRY_DSN,
-		environment: process.env.SENTRY_ENVIRONMENT ?? 'production',
-		// Don't report from the Playwright/preview e2e run (set in playwright.config.ts)
-		enabled: process.env.SENTRY_ENVIRONMENT !== 'ci',
+		environment: process.env.SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
+		// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
+		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci',
 		sendDefaultPii: true,
 		tracesSampleRate: 1.0,
 		enableLogs: true
