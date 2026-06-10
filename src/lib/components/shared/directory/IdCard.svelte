@@ -1,6 +1,7 @@
 <script lang="ts">
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
 
 	interface Props {
 		href: string;
@@ -35,6 +36,15 @@
 	}: Props = $props();
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
+
+	const flags = $derived(
+		[
+			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
+			availableForHire && { icon: IconBriefcase, label: 'Available for hire' },
+			teachesLessons && { icon: IconSchool, label: 'Teaches lessons' },
+			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }
+		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
+	);
 
 	function initials(n: string): string {
 		return n
@@ -93,16 +103,19 @@
 			{/if}
 		</div>
 	</div>
-	{#if lookingForBand || availableForHire || teachesLessons || openToCollaboration}
-		<div class="id-card__gaffs">
-			{#if lookingForBand}<div class="id-card__gaff">seeking a band</div>{/if}
-			{#if availableForHire}<div class="id-card__gaff">available for hire</div>{/if}
-			{#if teachesLessons}<div class="id-card__gaff">teaches lessons</div>{/if}
-			{#if openToCollaboration}<div class="id-card__gaff">open to collab</div>{/if}
-		</div>
-	{/if}
 	<div class="id-card__footer">
-		<div class="id-card__since">Member since {memberSince}</div>
+		<div class="id-card__footer-left">
+			<div class="id-card__since">Member since {memberSince}</div>
+			{#if flags.length}
+				<div class="id-card__flags">
+					{#each flags as flag (flag.label)}
+						<span class="tooltip" data-tip={flag.label} aria-label={flag.label}>
+							<flag.icon class="id-card__flag-icon" />
+						</span>
+					{/each}
+				</div>
+			{/if}
+		</div>
 		<div class="id-card__barcode" aria-hidden="true"></div>
 	</div>
 </a>
@@ -262,27 +275,6 @@
 		flex-wrap: wrap;
 		margin-top: 1cqi;
 	}
-	.id-card__gaffs {
-		position: absolute;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 2px;
-		z-index: 2;
-		bottom: 4cqi;
-		right: -2cqi;
-	}
-	.id-card__gaff {
-		padding: 3px 10px;
-		background: var(--color-primary);
-		color: var(--color-primary-content);
-		font-weight: 700;
-		font-size: 0.55rem;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		transform: rotate(-2deg);
-	}
-
 	.id-tag {
 		display: inline-block;
 		font-weight: 700;
@@ -325,6 +317,23 @@
 		justify-content: space-between;
 		padding: 0 5cqi 3cqi;
 		gap: 3cqi;
+	}
+	.id-card__footer-left {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5cqi;
+		min-width: 0;
+	}
+	.id-card__flags {
+		display: flex;
+		gap: 2cqi;
+		flex-wrap: wrap;
+	}
+	.id-card__flags :global(.id-card__flag-icon) {
+		width: 5cqi;
+		height: 5cqi;
+		color: var(--cmc-orange);
+		opacity: 0.85;
 	}
 	.id-card__since {
 		font-size: 2.6cqi;
