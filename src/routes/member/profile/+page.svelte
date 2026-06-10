@@ -4,17 +4,16 @@
 		getMemberProfile,
 		getInstrumentSuggestions,
 		getGenreSuggestions,
-		saveMemberProfile,
-		uploadMemberAvatar,
-		removeMemberAvatar
+		saveMemberProfile
 	} from '$lib/remote/directory.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import FileUpload from '$lib/components/shared/Form/FileUpload.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import AvatarManager from '$lib/components/shared/AvatarManager.svelte';
+	import EntityAvatar from '$lib/components/shared/directory/EntityAvatar.svelte';
 	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
 	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
 	import LinkListEditor from '$lib/components/shared/Form/LinkListEditor.svelte';
@@ -54,29 +53,34 @@
 	});
 
 	let contact = $derived((profile?.directoryContact as DirectoryContact | null) ?? {});
+
+	// Avatar uploads instantly through the member-avatar API route, which persists
+	// the new key and returns it (the value is also submitted with the form).
+	async function uploadAvatar(file: File): Promise<string> {
+		const fd = new FormData();
+		fd.set('file', file);
+		const res = await fetch('/api/member/avatar', { method: 'POST', body: fd });
+		if (!res.ok) {
+			const err = (await res.json().catch(() => ({}))) as { message?: string };
+			throw new Error(err.message || 'Upload failed');
+		}
+		const data = (await res.json()) as { avatarKey: string };
+		void getMemberProfile().refresh();
+		return data.avatarKey;
+	}
 </script>
 
 <PageHeader subtitle="Profile" title="My Profile" />
 <PageContent width="3xl">
-	<!-- Avatar -->
-	<InfoCard title="Photo">
-		<AvatarManager
-			uploadForm={uploadMemberAvatar}
-			removeForm={removeMemberAvatar}
-			currentUrl={profile?.avatarUrl ?? null}
-			name={profile?.name ?? ''}
-		/>
-	</InfoCard>
-
 	<Form remote={saveMemberProfile} guard onsuccess={() => toast.success('Profile saved')}>
 		<!-- Hidden fields for complex data (links renders its own via LinkListEditor) -->
 		<input {...fields.instruments.as('hidden', JSON.stringify(instruments))} />
 		<input {...fields.genres.as('hidden', JSON.stringify(genres))} />
 
-		<div class="mb-6 grid gap-6 lg:grid-cols-2">
-			<!-- Identity & About -->
-			<InfoCard title="About You">
-				<div class="space-y-4">
+		<!-- About You: identity, photo, and bio -->
+		<InfoCard title="About You">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+				<div class="flex-1 space-y-4">
 					<FormField
 						field={fields.tagline}
 						label="Tagline"
@@ -85,62 +89,78 @@
 						placeholder="e.g. Drummer | Jazz & Funk"
 						description="A short one-liner shown on your directory card"
 					/>
-					<FormField field={fields.bio} label="Bio">
-						<input {...fields.bio.as('hidden', bioHtml)} />
-						<RichTextEditor
-							bind:value={bioHtml}
-							placeholder="Tell other members about yourself..."
-						/>
-					</FormField>
 				</div>
-			</InfoCard>
 
-			<!-- Music -->
-			<InfoCard title="Music">
-				<div class="space-y-4">
-					<FormField field={fields.instruments} label="Instruments">
-						<FreeformTagInput
-							bind:value={instruments}
-							suggestions={instrumentSuggestions}
-							placeholder="e.g. guitar, vocals, drums..."
-						/>
-					</FormField>
-
-					<FormField field={fields.genres} label="Genres">
-						<FreeformTagInput
-							bind:value={genres}
-							suggestions={genreSuggestions}
-							placeholder="e.g. jazz, funk, rock..."
-						/>
-					</FormField>
-
-					<FormField
-						field={fields.lookingForBand}
-						type="toggle"
-						value={lookingForBand}
-						checkboxLabel="I'm looking for a band"
-					/>
-					<FormField
-						field={fields.availableForHire}
-						type="toggle"
-						value={availableForHire}
-						checkboxLabel="I'm available for hire"
-					/>
-					<FormField
-						field={fields.teachesLessons}
-						type="toggle"
-						value={teachesLessons}
-						checkboxLabel="I teach lessons"
-					/>
-					<FormField
-						field={fields.openToCollaboration}
-						type="toggle"
-						value={openToCollaboration}
-						checkboxLabel="I'm open to collaboration"
-					/>
+				<div class="shrink-0">
+					<FileUpload
+						name="image"
+						upload={uploadAvatar}
+						accept="image/jpeg,image/png,image/webp"
+						src={profile?.avatarUrl ?? undefined}
+						orientation="col"
+					>
+						{#snippet preview({ src })}
+							<EntityAvatar shape="round" name={profile?.name ?? ''} image={src} class="size-24" />
+						{/snippet}
+					</FileUpload>
 				</div>
-			</InfoCard>
-		</div>
+			</div>
+
+			<div class="mt-4">
+				<FormField field={fields.bio} label="Bio">
+					<input {...fields.bio.as('hidden', bioHtml)} />
+					<RichTextEditor bind:value={bioHtml} placeholder="Tell other members about yourself..." />
+				</FormField>
+			</div>
+		</InfoCard>
+
+		<!-- Music -->
+		<InfoCard title="Music">
+			<div class="grid gap-4 sm:grid-cols-2">
+				<FormField field={fields.instruments} label="Instruments">
+					<FreeformTagInput
+						bind:value={instruments}
+						suggestions={instrumentSuggestions}
+						placeholder="e.g. guitar, vocals, drums..."
+					/>
+				</FormField>
+
+				<FormField field={fields.genres} label="Genres">
+					<FreeformTagInput
+						bind:value={genres}
+						suggestions={genreSuggestions}
+						placeholder="e.g. jazz, funk, rock..."
+					/>
+				</FormField>
+			</div>
+
+			<div class="mt-4 grid gap-3 sm:grid-cols-2">
+				<FormField
+					field={fields.lookingForBand}
+					type="toggle"
+					value={lookingForBand}
+					checkboxLabel="I'm looking for a band"
+				/>
+				<FormField
+					field={fields.availableForHire}
+					type="toggle"
+					value={availableForHire}
+					checkboxLabel="I'm available for hire"
+				/>
+				<FormField
+					field={fields.teachesLessons}
+					type="toggle"
+					value={teachesLessons}
+					checkboxLabel="I teach lessons"
+				/>
+				<FormField
+					field={fields.openToCollaboration}
+					type="toggle"
+					value={openToCollaboration}
+					checkboxLabel="I'm open to collaboration"
+				/>
+			</div>
+		</InfoCard>
 
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<!-- Links -->
@@ -152,41 +172,42 @@
 				<LinkListEditor bind:value={links} field={fields.links} />
 			</InfoCard>
 
-			<!-- Contact & Visibility -->
-			<div class="space-y-6">
-				<InfoCard title="Directory Contact Info">
-					<p class="mb-3 text-sm opacity-60">
-						Optional contact details shown on your directory profile. Leave blank to keep private.
-					</p>
-					<div class="space-y-3">
-						<FormField
-							field={fields.contactEmail}
-							label="Display email"
-							type="email"
-							value={contact.email ?? ''}
-							placeholder="you@example.com"
-						/>
-						<FormField
-							field={fields.contactPhone}
-							label="Phone"
-							type="tel"
-							value={contact.phone ?? ''}
-							placeholder="Optional"
-						/>
-						<FormField
-							field={fields.contactSocial}
-							label="Social handle"
-							type="text"
-							value={contact.social ?? ''}
-							placeholder="@handle or URL"
-						/>
-					</div>
-				</InfoCard>
+			<!-- Contact -->
+			<InfoCard title="Directory Contact Info">
+				<p class="mb-3 text-sm opacity-60">
+					Optional contact details shown on your directory profile. Leave blank to keep private.
+				</p>
+				<div class="space-y-3">
+					<FormField
+						field={fields.contactEmail}
+						label="Display email"
+						type="email"
+						value={contact.email ?? ''}
+						placeholder="you@example.com"
+					/>
+					<FormField
+						field={fields.contactPhone}
+						label="Phone"
+						type="tel"
+						value={contact.phone ?? ''}
+						placeholder="Optional"
+					/>
+					<FormField
+						field={fields.contactSocial}
+						label="Social handle"
+						type="text"
+						value={contact.social ?? ''}
+						placeholder="@handle or URL"
+					/>
+				</div>
+			</InfoCard>
+		</div>
 
-				<InfoCard title="Visibility">
-					<VisibilityField field={fields.directoryVisibility} bind:value={directoryVisibility} />
-				</InfoCard>
-			</div>
+		<!-- Visibility -->
+		<div class="mb-6">
+			<InfoCard title="Visibility">
+				<VisibilityField field={fields.directoryVisibility} bind:value={directoryVisibility} />
+			</InfoCard>
 		</div>
 
 		<div class="flex justify-end">
