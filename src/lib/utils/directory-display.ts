@@ -13,6 +13,7 @@ export const STREAMING_PLATFORMS = [
 	'SoundCloud',
 	'YouTube',
 	'Apple Music',
+	'Amazon Music',
 	'Tidal'
 ] as const;
 

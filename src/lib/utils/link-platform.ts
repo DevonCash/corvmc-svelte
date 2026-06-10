@@ -63,9 +63,18 @@ const PLATFORM_MATCHERS: Array<{
 	{
 		name: 'Apple Music',
 		icon: 'IconBrandApple',
-		pattern: /music\.apple\.com\/[\w-]+\/(album|playlist|song)\//,
+		pattern: /music\.apple\.com\//,
+		// Only album/playlist/song URLs have an in-page embed; artist pages
+		// are still recognized (icon + link) but skip the embed.
 		getEmbedUrl: (url) =>
-			`https://embed.music.apple.com/${url.replace('https://music.apple.com/', '')}`
+			/music\.apple\.com\/[\w-]+\/(album|playlist|song)\//.test(url)
+				? `https://embed.music.apple.com/${url.replace('https://music.apple.com/', '')}`
+				: undefined
+	},
+	{
+		name: 'Amazon Music',
+		icon: 'IconBrandAmazon',
+		pattern: /music\.amazon\./
 	},
 	{
 		name: 'GitHub',
