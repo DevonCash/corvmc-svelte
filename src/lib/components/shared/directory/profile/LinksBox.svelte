@@ -11,6 +11,7 @@
 		IconBrandFacebook,
 		IconBrandX,
 		IconBrandApple,
+		IconBrandAmazon,
 		IconBrandGithub,
 		IconBrandLinkedin,
 		IconWorld,
@@ -32,6 +33,7 @@
 		IconBrandFacebook,
 		IconBrandX,
 		IconBrandApple,
+		IconBrandAmazon,
 		IconBrandGithub,
 		IconBrandLinkedin
 	};

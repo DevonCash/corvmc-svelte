@@ -11,7 +11,6 @@
 		removeForm,
 		currentUrl,
 		name,
-		key,
 		shape = 'round',
 		accept = 'image/jpeg,image/png,image/webp'
 	}: {
@@ -19,27 +18,17 @@
 		removeForm: RemoteForm<any, any>;
 		currentUrl: string | null;
 		name: string;
-		/**
-		 * Unique id for this manager. The upload/remove forms are singleton
-		 * `form()` instances; `.for(key)` gives each render its own instance so
-		 * two managers on one page can't both attach the same form to a `<form>`
-		 * element (SvelteKit throws "a form object can only be attached to a
-		 * single `<form>` element" otherwise).
-		 */
-		key: string | number;
 		/** member = round, band = square — the directory-wide convention */
 		shape?: 'round' | 'square';
 		accept?: string;
 	} = $props();
 
-	const upload = $derived(uploadForm.for(key));
-	const remove = $derived(removeForm.for(key));
 	const shapeClass = $derived(shape === 'round' ? 'rounded-full' : 'rounded-lg');
 </script>
 
 <div class="flex items-start gap-4">
 	<Form
-		remote={upload}
+		remote={uploadForm}
 		enctype="multipart/form-data"
 		onsuccess={() => toast.success('Photo updated')}
 		onfailure={() => toast.error('Upload failed')}
@@ -56,7 +45,7 @@
 				<span class="text-xs font-semibold">{currentUrl ? 'Replace' : 'Add'}</span>
 			</span>
 			<input
-				{...upload.fields.file.as('file')}
+				{...uploadForm.fields.file.as('file')}
 				{accept}
 				class="hidden"
 				onchange={(e) => e.currentTarget.form?.requestSubmit()}
@@ -66,7 +55,7 @@
 
 	{#if currentUrl}
 		<Form
-			remote={remove}
+			remote={removeForm}
 			onsuccess={() => toast.success('Photo removed')}
 			onfailure={() => toast.error('Failed to remove')}
 		>
