@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { getDirectoryMember, getMemberShows } from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -69,8 +68,9 @@
 </script>
 
 {#if member}
-	<PageHeader title={member.name} subtitle="Member Profile" backHref="/member/directory" />
 	<PageContent width="3xl">
+		<a href="/member/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
+
 		<ProfileHeader
 			avatarShape="round"
 			name={member.name}
