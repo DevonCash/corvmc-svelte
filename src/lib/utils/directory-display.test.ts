@@ -15,6 +15,14 @@ const youtube: ProfileLink = { label: 'YT', url: 'https://www.youtube.com/watch?
 const bandcamp: ProfileLink = { label: 'BC', url: 'https://artist.bandcamp.com/album/foo' };
 const website: ProfileLink = { label: 'Site', url: 'https://example.com' };
 const instagram: ProfileLink = { label: 'IG', url: 'https://instagram.com/artist' };
+const appleArtist: ProfileLink = {
+	label: 'Apple Music',
+	url: 'https://music.apple.com/us/artist/the-church-ladies/123456'
+};
+const amazon: ProfileLink = {
+	label: 'Amazon Music',
+	url: 'https://music.amazon.com/artists/B0ABCDEFGH/the-church-ladies'
+};
 
 describe('isStreamingPlatform', () => {
 	it('recognizes streaming services', () => {
@@ -37,6 +45,12 @@ describe('partitionLinks', () => {
 	it('treats unknown links as web', () => {
 		const { streaming, web } = partitionLinks([website]);
 		expect(streaming).toHaveLength(0);
+		expect(web).toEqual([website]);
+	});
+
+	it('puts Apple Music artist pages and Amazon Music in the listen ribbon', () => {
+		const { streaming, web } = partitionLinks([appleArtist, amazon, website]);
+		expect(streaming).toEqual([appleArtist, amazon]);
 		expect(web).toEqual([website]);
 	});
 });
