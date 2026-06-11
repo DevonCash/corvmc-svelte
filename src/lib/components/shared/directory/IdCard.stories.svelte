@@ -28,3 +28,19 @@
 	args={{ availableForHire: true, teachesLessons: true, openToCollaboration: true }}
 />
 <Story name="With photo" args={{ image: 'https://i.pravatar.cc/300?img=32' }} />
+<Story
+	name="Many tags"
+	args={{
+		name: 'Justin Sheetz',
+		pronouns: 'he/him',
+		tagline: 'Jean Shorts Jesus',
+		instruments: ['Guitarist', 'Bassist', 'Drummer', 'Audio Engineer', 'Producer'],
+		genres: ['Jazz', 'Funk', 'Rock', 'Metal', 'Prog', 'Fusion', 'Midwestern Emo', 'Punk'],
+		bands: [
+			{ name: 'Band One' },
+			{ name: 'Band Two' },
+			{ name: 'Band Three' },
+			{ name: 'Band Four' }
+		]
+	}}
+/>

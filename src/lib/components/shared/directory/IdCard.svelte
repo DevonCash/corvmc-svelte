@@ -37,6 +37,11 @@
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 
+	const MAX_TAGS = 3;
+	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
+	const shownGenres = $derived(genres.slice(0, MAX_TAGS));
+	const shownBands = $derived(bands.slice(0, MAX_TAGS));
+
 	const flags = $derived(
 		[
 			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
@@ -86,17 +91,17 @@
 			{/if}
 			{#if instruments.length || genres.length}
 				<div class="id-card__badges">
-					{#each instruments as inst (inst)}
+					{#each shownInstruments as inst (inst)}
 						<span class="id-tag id-tag--teal">{inst}</span>
 					{/each}
-					{#each genres as genre (genre)}
+					{#each shownGenres as genre (genre)}
 						<span class="id-tag id-tag--genre">{genre}</span>
 					{/each}
 				</div>
 			{/if}
 			{#if bands.length}
 				<div class="id-card__bands">
-					{#each bands as b (b.name)}
+					{#each shownBands as b (b.name)}
 						<span class="id-tag id-tag--band">{b.name}</span>
 					{/each}
 				</div>
