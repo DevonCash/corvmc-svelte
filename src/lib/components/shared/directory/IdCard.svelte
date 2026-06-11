@@ -89,11 +89,15 @@
 			{#if tagline}
 				<div class="id-card__role">{tagline}</div>
 			{/if}
-			{#if instruments.length || genres.length}
+			{#if instruments.length}
 				<div class="id-card__badges">
 					{#each shownInstruments as inst (inst)}
 						<span class="id-tag id-tag--teal">{inst}</span>
 					{/each}
+				</div>
+			{/if}
+			{#if genres.length}
+				<div class="id-card__badges">
 					{#each shownGenres as genre (genre)}
 						<span class="id-tag id-tag--genre">{genre}</span>
 					{/each}
