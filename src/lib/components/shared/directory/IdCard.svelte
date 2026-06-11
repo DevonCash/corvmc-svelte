@@ -37,6 +37,11 @@
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 
+	const MAX_TAGS = 3;
+	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
+	const shownGenres = $derived(genres.slice(0, MAX_TAGS));
+	const shownBands = $derived(bands.slice(0, MAX_TAGS));
+
 	const flags = $derived(
 		[
 			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
@@ -84,19 +89,23 @@
 			{#if tagline}
 				<div class="id-card__role">{tagline}</div>
 			{/if}
-			{#if instruments.length || genres.length}
+			{#if instruments.length}
 				<div class="id-card__badges">
-					{#each instruments as inst (inst)}
+					{#each shownInstruments as inst (inst)}
 						<span class="id-tag id-tag--teal">{inst}</span>
 					{/each}
-					{#each genres as genre (genre)}
+				</div>
+			{/if}
+			{#if genres.length}
+				<div class="id-card__badges">
+					{#each shownGenres as genre (genre)}
 						<span class="id-tag id-tag--genre">{genre}</span>
 					{/each}
 				</div>
 			{/if}
 			{#if bands.length}
 				<div class="id-card__bands">
-					{#each bands as b (b.name)}
+					{#each shownBands as b (b.name)}
 						<span class="id-tag id-tag--band">{b.name}</span>
 					{/each}
 				</div>
@@ -104,19 +113,16 @@
 		</div>
 	</div>
 	<div class="id-card__footer">
-		<div class="id-card__footer-left">
-			<div class="id-card__since">Member since {memberSince}</div>
-			{#if flags.length}
-				<div class="id-card__flags">
-					{#each flags as flag (flag.label)}
-						<span class="tooltip" data-tip={flag.label} aria-label={flag.label}>
-							<flag.icon class="id-card__flag-icon" />
-						</span>
-					{/each}
-				</div>
-			{/if}
-		</div>
-		<div class="id-card__barcode" aria-hidden="true"></div>
+		<div class="id-card__since">Member since {memberSince}</div>
+		{#if flags.length}
+			<div class="id-card__flags">
+				{#each flags as flag (flag.label)}
+					<span class="tooltip" data-tip={flag.label} aria-label={flag.label}>
+						<flag.icon class="id-card__flag-icon" />
+					</span>
+				{/each}
+			</div>
+		{/if}
 	</div>
 </a>
 
@@ -313,16 +319,10 @@
 	}
 	.id-card__footer {
 		display: flex;
-		align-items: flex-end;
+		align-items: center;
 		justify-content: space-between;
 		padding: 0 5cqi 3cqi;
 		gap: 3cqi;
-	}
-	.id-card__footer-left {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5cqi;
-		min-width: 0;
 	}
 	.id-card__flags {
 		display: flex;
@@ -343,26 +343,5 @@
 		color: var(--color-base-content, currentColor);
 		opacity: 0.4;
 		white-space: nowrap;
-	}
-	.id-card__barcode {
-		flex: 1;
-		max-width: 28cqi;
-		height: 5cqi;
-		opacity: 0.35;
-		background: repeating-linear-gradient(
-			to right,
-			currentColor 0 0.5cqi,
-			transparent 0.5cqi 1cqi,
-			currentColor 1cqi 1.3cqi,
-			transparent 1.3cqi 2cqi,
-			currentColor 2cqi 2.3cqi,
-			transparent 2.3cqi 3.2cqi,
-			currentColor 3.2cqi 3.5cqi,
-			transparent 3.5cqi 4cqi,
-			currentColor 4cqi 5cqi,
-			transparent 5cqi 5.4cqi,
-			currentColor 5.4cqi 5.7cqi,
-			transparent 5.7cqi 6.5cqi
-		);
 	}
 </style>
