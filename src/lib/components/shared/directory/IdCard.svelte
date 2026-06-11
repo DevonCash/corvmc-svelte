@@ -109,19 +109,16 @@
 		</div>
 	</div>
 	<div class="id-card__footer">
-		<div class="id-card__footer-left">
-			<div class="id-card__since">Member since {memberSince}</div>
-			{#if flags.length}
-				<div class="id-card__flags">
-					{#each flags as flag (flag.label)}
-						<span class="tooltip" data-tip={flag.label} aria-label={flag.label}>
-							<flag.icon class="id-card__flag-icon" />
-						</span>
-					{/each}
-				</div>
-			{/if}
-		</div>
-		<div class="id-card__barcode" aria-hidden="true"></div>
+		<div class="id-card__since">Member since {memberSince}</div>
+		{#if flags.length}
+			<div class="id-card__flags">
+				{#each flags as flag (flag.label)}
+					<span class="tooltip" data-tip={flag.label} aria-label={flag.label}>
+						<flag.icon class="id-card__flag-icon" />
+					</span>
+				{/each}
+			</div>
+		{/if}
 	</div>
 </a>
 
@@ -318,16 +315,10 @@
 	}
 	.id-card__footer {
 		display: flex;
-		align-items: flex-end;
+		align-items: center;
 		justify-content: space-between;
 		padding: 0 5cqi 3cqi;
 		gap: 3cqi;
-	}
-	.id-card__footer-left {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5cqi;
-		min-width: 0;
 	}
 	.id-card__flags {
 		display: flex;
@@ -348,26 +339,5 @@
 		color: var(--color-base-content, currentColor);
 		opacity: 0.4;
 		white-space: nowrap;
-	}
-	.id-card__barcode {
-		flex: 1;
-		max-width: 28cqi;
-		height: 5cqi;
-		opacity: 0.35;
-		background: repeating-linear-gradient(
-			to right,
-			currentColor 0 0.5cqi,
-			transparent 0.5cqi 1cqi,
-			currentColor 1cqi 1.3cqi,
-			transparent 1.3cqi 2cqi,
-			currentColor 2cqi 2.3cqi,
-			transparent 2.3cqi 3.2cqi,
-			currentColor 3.2cqi 3.5cqi,
-			transparent 3.5cqi 4cqi,
-			currentColor 4cqi 5cqi,
-			transparent 5cqi 5.4cqi,
-			currentColor 5.4cqi 5.7cqi,
-			transparent 5.7cqi 6.5cqi
-		);
 	}
 </style>
