@@ -92,13 +92,7 @@
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
 			<TagCloud label="Genres · Influences" tags={band.genres} />
 			<LinksBox links={band.links} />
-			<ContactBox
-				label="Booking"
-				{contact}
-				cta={contact.email
-					? { label: 'Email booking', href: `mailto:${contact.email}` }
-					: { label: '', href: '' }}
-			/>
+			<ContactBox label="Booking" {contact} />
 		{/snippet}
 	</ProfileGrid>
 
