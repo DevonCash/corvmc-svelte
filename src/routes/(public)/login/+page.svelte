@@ -3,8 +3,10 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
+	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { getMe } from '$lib/remote/layout.remote';
+	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
 
 	let me = $derived(await getMe());
 	$effect(() => {
@@ -26,6 +28,8 @@
 	);
 	let error = $state('');
 	let showPassword = $state(false);
+	let turnstileToken = $state('');
+	let resetTurnstile = $state<() => void>();
 
 	$effect(() => {
 		if (inviteToken) {
@@ -46,15 +50,20 @@
 			email: data.get('email') as string,
 			password: data.get('password') as string
 		};
-		if (mode === 'register') body.name = data.get('name') as string;
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (mode === 'register') {
+			body.name = data.get('name') as string;
+			headers['x-turnstile-token'] = turnstileToken;
+		}
 
 		const res = await fetch(endpoint, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers,
 			body: JSON.stringify(body)
 		});
 
 		if (!res.ok) {
+			if (mode === 'register') resetTurnstile?.();
 			const body = (await res.json().catch(() => null)) as { message?: string } | null;
 			error =
 				mode === 'login'
@@ -133,6 +142,15 @@
 							</div>
 						{/snippet}
 					</Field>
+					{#if mode === 'register'}
+						<Turnstile
+							siteKey={TURNSTILE_SITE_KEY}
+							theme="auto"
+							bind:reset={resetTurnstile}
+							on:callback={(e) => (turnstileToken = e.detail.token)}
+							on:expired={() => (turnstileToken = '')}
+						/>
+					{/if}
 					<SubmitButton
 						label={mode === 'login' ? 'Sign in' : 'Create account'}
 						class="btn-primary w-full mt-1"
