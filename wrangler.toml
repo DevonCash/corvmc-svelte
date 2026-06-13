@@ -26,6 +26,11 @@ PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "staff@corvmc.org"
+# Public Cloudflare Turnstile site key for the bot-protection widget on the public
+# sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
+# TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value
+# below is Cloudflare's always-pass test key; replace with the real site key.
+PUBLIC_TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
 LARAVEL_URL = "https://corvmc.org"
@@ -81,6 +86,9 @@ PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "staff@corvmc.org"
+# Production Turnstile site key. Replace with the real key before cutover; the
+# matching TURNSTILE_SECRET_KEY must be set with `wrangler secret put --env production`.
+PUBLIC_TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
 # LARAVEL_URL points at the live Laravel app for bcrypt password verification
 # during migration. Once corvmc.org is redirected to this Worker, update this to
 # Forge's default URL (Laravel stays reachable at its Forge hostname). Also

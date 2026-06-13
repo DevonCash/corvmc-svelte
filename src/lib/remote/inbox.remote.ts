@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
+import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
@@ -24,7 +25,12 @@ import { inboxChannels, inboxThreadStatuses } from '$lib/config';
 // Public forms
 // ---------------------------------------------------------------------------
 
-export const submitContactForm = form(submitContactFormSchema, async (data) => {
+export const submitContactForm = form(submitContactFormSchema, async (data, issue) => {
+	const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
+	if (!(await verifyTurnstile(data.turnstileToken, ip))) {
+		issue.turnstileToken('Verification failed. Please try again.');
+		return;
+	}
 	await handleContactForm(data);
 	return { success: true };
 });

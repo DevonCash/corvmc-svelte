@@ -20,7 +20,8 @@ export const submitContactFormSchema = z.object({
 	name: z.string().trim().min(1).max(200),
 	email: z.string().trim().email().max(320),
 	subject: z.string().trim().min(1).max(200),
-	message: z.string().trim().min(1).max(5000)
+	message: z.string().trim().min(1).max(5000),
+	turnstileToken: z.string().min(1)
 });
 
 export const replyToThreadSchema = z.object({

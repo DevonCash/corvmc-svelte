@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
+import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
@@ -53,9 +54,19 @@ export const getPublicAudienceBySlug = query(z.string(), async (slug) => {
 });
 
 export const subscribeToAudience = form(
-	z.object({ slug: z.string(), email: z.string().email(), name: z.string().optional() }),
-	async (data) => {
+	z.object({
+		slug: z.string(),
+		email: z.string().email(),
+		name: z.string().optional(),
+		turnstileToken: z.string().min(1)
+	}),
+	async (data, issue) => {
 		await requireFeature('emailMarketing');
+		const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
+		if (!(await verifyTurnstile(data.turnstileToken, ip))) {
+			issue.turnstileToken('Verification failed. Please try again.');
+			return;
+		}
 		const aud = await getAudienceBySlug(data.slug);
 		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 		const sub = await findOrCreateByEmail(data.email.trim().toLowerCase(), data.name?.trim());

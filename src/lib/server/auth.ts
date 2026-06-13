@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { createAuthMiddleware } from 'better-auth/api';
+import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
@@ -12,6 +12,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and } from 'drizzle-orm';
 import { userAdditionalFields } from './auth-fields';
 import { captureException } from '$lib/server/sentry';
+import { verifyTurnstile } from '$lib/server/turnstile';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -366,6 +367,19 @@ function createAuth() {
 		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
+				// Gate public sign-up behind Cloudflare Turnstile. The login page sends
+				// the widget token in the x-turnstile-token header on register.
+				if (ctx.path === '/sign-up/email') {
+					const token = ctx.headers?.get('x-turnstile-token');
+					const ip = ctx.headers?.get('CF-Connecting-IP');
+					if (!(await verifyTurnstile(token, ip))) {
+						throw new APIError('BAD_REQUEST', {
+							message: 'Verification failed. Please try again.'
+						});
+					}
+					return;
+				}
+
 				if (ctx.path !== '/sign-in/email') return;
 				try {
 					await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
