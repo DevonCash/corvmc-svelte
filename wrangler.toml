@@ -8,10 +8,8 @@ directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
 
 # ---------------------------------------------------------------------------
-# Default / dev target — deploys as `corvmc` (corvmc.devon-cash.workers.dev)
-# via `wrangler deploy`. NOTE: bindings and [vars] are non-inheritable keys —
-# once any environment overrides one (see [env.production] below), every
-# environment must re-declare the full set, so they are duplicated there.
+# Single deploy target — deploys as `corvmc` (corvmc.devon-cash.workers.dev)
+# via `wrangler deploy`.
 # ---------------------------------------------------------------------------
 
 [vars]
@@ -58,8 +56,7 @@ binding = "CF_VERSION_METADATA"
 # Sentry over OTLP, adding platform-level spans (D1 queries, KV/R2 ops, subrequests)
 # that the Sentry SDK can't see. The destination names below must match the OTLP
 # destinations created in the Cloudflare dashboard (Workers & Pages > Observability
-# > Destinations). observability is inheritable, but it's repeated under
-# [env.production] for clarity so prod export is unambiguous.
+# > Destinations).
 [observability.traces]
 enabled = true
 destinations = ["sentry-traces"]
@@ -67,55 +64,5 @@ destinations = ["sentry-traces"]
 # persist = false          # set false to export to Sentry only (skips CF storage billing)
 
 [observability.logs]
-enabled = true
-destinations = ["sentry-logs"]
-
-# ---------------------------------------------------------------------------
-# Production target — deploys as `corvmc-production` via
-# `wrangler deploy --env production`. All non-inheritable keys (bindings + vars)
-# must be re-declared here even though most match the defaults above.
-# ---------------------------------------------------------------------------
-
-[env.production.vars]
-# Final production origin. Not live until the cutover from the legacy Laravel
-# app — deploy prod with `wrangler deploy --env production` only after that.
-ORIGIN = "https://corvmc.org"
-R2_PUBLIC_URL = "https://media.corvmc.org"
-PUBLIC_SITE_URL = "https://corvmc.org"
-PUBLIC_BASE_URL = "https://corvmc.org"
-EMAIL_FROM_NAME = "CorvMC"
-EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
-STAFF_CONTACT_EMAIL = "staff@corvmc.org"
-# Production Turnstile site key. Replace with the real key before cutover; the
-# matching TURNSTILE_SECRET_KEY must be set with `wrangler secret put --env production`.
-PUBLIC_TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
-# LARAVEL_URL points at the live Laravel app for bcrypt password verification
-# during migration. Once corvmc.org is redirected to this Worker, update this to
-# Forge's default URL (Laravel stays reachable at its Forge hostname). Also
-# satisfies wrangler's non-inheritance check so prod deploys don't warn.
-LARAVEL_URL = "https://corvmc.org"
-# Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
-
-[[env.production.d1_databases]]
-binding = "DB"
-database_name = "corvmc-db"
-database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
-
-[[env.production.r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "corvmc"
-
-[[env.production.kv_namespaces]]
-binding = "KV"
-id = "fc85459046fe47f9bbfae4f343012041"
-
-[env.production.version_metadata]
-binding = "CF_VERSION_METADATA"
-
-[env.production.observability.traces]
-enabled = true
-destinations = ["sentry-traces"]
-
-[env.production.observability.logs]
 enabled = true
 destinations = ["sentry-logs"]
