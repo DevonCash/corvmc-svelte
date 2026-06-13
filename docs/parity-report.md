@@ -1,6 +1,6 @@
 # Laravel → Svelte Parity Report
 
-Last updated: 2026-05-15
+Last updated: 2026-06-13
 
 This document tracks feature coverage between the Laravel app (corvmc-redux) and the Svelte rebuild (corvmc-svelte). Use it to plan what to build next and to avoid re-discovering gaps.
 
@@ -42,17 +42,18 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 
 ## Member panel
 
-| Feature                   | Laravel                         | Svelte               | Notes                                                                                                                      |
-| ------------------------- | ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Dashboard                 | MemberDashboard                 | ✅ +page.svelte      | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner |
-| Membership / subscription | MyMembership page               | ✅ Full flow         | Sliding scale, Stripe checkout, credit balance, benefits grid                                                              |
-| Reservations              | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout                                                               |
-| Account settings          | MyProfile, MyAccount pages      | ✅ Full flow         | Profile editing, password change (modal), account deletion with password confirmation, email list subscriptions            |
-| My orders                 | MyOrders page                   | —                    | May become "payment history" pulling from Stripe                                                                           |
-| My tickets                | MyTickets page + Livewire       | ✅ Full flow         | Upcoming/past split, ticket codes, status badges                                                                           |
-| Equipment loans           | Equipment resource (nested)     | ✅ Full flow         | Browse catalog, request loans (specific + free-form), my loans with cancel                                                 |
-| Bands                     | Bands resource                  | ✅ Full flow         | My Bands list, create band, accept/decline invitations                                                                     |
-| Volunteer hours           | SubmitHoursPage, VolunteerPage  | —                    | Not started                                                                                                                |
+| Feature                   | Laravel                         | Svelte               | Notes                                                                                                                                                                                        |
+| ------------------------- | ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard                 | MemberDashboard                 | ✅ +page.svelte      | Quick links, this week's reservations (incl. band), credit balance widget, upcoming events, pending band invitation banner                                                                   |
+| Membership / subscription | MyMembership page               | ✅ Full flow         | Sliding scale, Stripe checkout, credit balance, benefits grid                                                                                                                                |
+| Reservations              | Reservations resource + widgets | ✅ List + book + pay | New reservation flow with conflict checking, Stripe checkout                                                                                                                                 |
+| Account settings          | MyProfile, MyAccount pages      | ✅ Full flow         | Profile editing, password change (modal), account deletion with password confirmation, email list subscriptions                                                                              |
+| My orders                 | MyOrders page                   | —                    | May become "payment history" pulling from Stripe                                                                                                                                             |
+| My tickets                | MyTickets page + Livewire       | ✅ Full flow         | Upcoming/past split, ticket codes, status badges                                                                                                                                             |
+| Member event detail       | EventDetail Livewire            | ✅ Enriched          | Capacity bar + urgency, sustaining-member upsell, per-ticket QR stubs, add-to-calendar (Google/.ics) + share, location, "more shows"; RSVP join table for non-ticketed events (`event_rsvp`) |
+| Equipment loans           | Equipment resource (nested)     | ✅ Full flow         | Browse catalog, request loans (specific + free-form), my loans with cancel                                                                                                                   |
+| Bands                     | Bands resource                  | ✅ Full flow         | My Bands list, create band, accept/decline invitations                                                                                                                                       |
+| Volunteer hours           | SubmitHoursPage, VolunteerPage  | —                    | Not started                                                                                                                                                                                  |
 
 ## Band panel
 

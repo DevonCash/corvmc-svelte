@@ -4,6 +4,7 @@ export * from './finance';
 export * from './reservation';
 export * from './event';
 export * from './ticket';
+export * from './event-rsvp';
 export * from './notification';
 export * from './recurring';
 export * from './marketing';

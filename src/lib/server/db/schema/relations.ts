@@ -61,6 +61,10 @@ export const relations = defineRelations(schema, (t) => ({
 		user: t.one.user({ from: t.ticket.userId, to: t.user.id }),
 		checkedInBy: t.one.user({ from: t.ticket.checkedInByUserId, to: t.user.id })
 	},
+	eventRsvp: {
+		event: t.one.event({ from: t.eventRsvp.eventId, to: t.event.id }),
+		user: t.one.user({ from: t.eventRsvp.userId, to: t.user.id })
+	},
 	paymentCache: {
 		user: t.one.user({ from: t.paymentCache.userId, to: t.user.id }),
 		reservation: t.one.reservation({ from: t.paymentCache.reservationId, to: t.reservation.id })
