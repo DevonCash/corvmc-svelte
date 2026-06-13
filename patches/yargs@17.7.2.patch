@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index 389cc6b064b5f888e7f9d718f5440feabdce57ad..fcd7c5cb326dae002c0f44db3df2ab6f5dea08fb 100644
+--- a/package.json
++++ b/package.json
+@@ -28,7 +28,6 @@
+       "./yargs"
+     ]
+   },
+-  "type": "module",
+   "module": "./index.mjs",
+   "contributors": [
+     {
