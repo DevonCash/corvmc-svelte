@@ -57,16 +57,7 @@
 <PageContent width="3xl">
 	<a href="/member/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
 
-	<ProfileHeader
-		avatarShape="square"
-		name={band.name}
-		{subtitle}
-		image={band.avatarUrl}
-		{pills}
-		primaryAction={contact.email
-			? { label: 'Email to book', href: `mailto:${contact.email}` }
-			: undefined}
-	/>
+	<ProfileHeader avatarShape="square" name={band.name} {subtitle} image={band.avatarUrl} {pills} />
 
 	<QuickFacts {facts} />
 
@@ -80,13 +71,7 @@
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
 			<TagCloud label="Genres · Influences" tags={band.genres} />
 			<LinksBox links={band.links} />
-			<ContactBox
-				label="Booking"
-				{contact}
-				cta={contact.email
-					? { label: 'Email booking', href: `mailto:${contact.email}` }
-					: { label: '', href: '' }}
-			/>
+			<ContactBox label="Booking" {contact} />
 		{/snippet}
 	</ProfileGrid>
 </PageContent>

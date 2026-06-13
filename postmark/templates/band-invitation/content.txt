@@ -1,0 +1,5 @@
+You've been invited to a band!
+
+Hi {{invitedUserName}}, {{invitedByName}} has invited you to join {{bandName}}.
+
+View invitation: {{siteUrl}}/member

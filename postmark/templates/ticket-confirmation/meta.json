@@ -1,0 +1,7 @@
+{
+  "Name": "Ticket Confirmation",
+  "Alias": "ticket-confirmation",
+  "Subject": "Your tickets for {{eventTitle}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

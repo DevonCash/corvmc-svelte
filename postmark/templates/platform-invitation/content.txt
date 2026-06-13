@@ -1,0 +1,9 @@
+You've been invited to join a band!
+
+{{invitedByName}} has invited you to join {{bandName}} as a {{role}} on CorvMC.
+
+CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.
+
+Create your account & join: {{signupUrl}}
+
+This invitation expires in 7 days.

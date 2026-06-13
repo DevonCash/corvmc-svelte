@@ -5,13 +5,10 @@
 
 	let {
 		label,
-		contact,
-		cta
+		contact
 	}: {
 		label: 'Contact' | 'Booking';
 		contact: DirectoryContact | null | undefined;
-		/** primary email CTA — "Email via CMC" / "Email booking" */
-		cta: { label: string; href: string };
 	} = $props();
 
 	const c = $derived(contact ?? {});
@@ -39,9 +36,6 @@
 					<span>{c.social}</span>
 				</span>
 			{/if}
-			{#if cta.href}
-				<a href={cta.href} class="btn btn-primary btn-sm contact__cta">{cta.label}</a>
-			{/if}
 		</div>
 	</ProfileSection>
 {/if}
@@ -62,9 +56,5 @@
 	}
 	a.contact__row:hover {
 		color: var(--color-primary);
-	}
-	.contact__cta {
-		margin-top: 4px;
-		align-self: flex-start;
 	}
 </style>

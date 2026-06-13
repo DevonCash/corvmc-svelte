@@ -1,10 +1,10 @@
 export {
-	sendEmail,
+	sendEmailWithTemplate,
 	sendBroadcastBatch,
 	sendInboxReply,
-	type SendEmailParams,
+	checkEmailService,
+	type SendTemplateParams,
 	type BroadcastMessage,
-	type SendInboxReplyParams
+	type SendInboxReplyTemplateParams,
+	type EmailServiceHealth
 } from './postmark-client';
-export { compileEmail } from './compile-template';
-export * as templates from './templates';

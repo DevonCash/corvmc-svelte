@@ -70,16 +70,7 @@
 <div class="profile-page">
 	<a href="/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
 
-	<ProfileHeader
-		avatarShape="round"
-		name={member.name}
-		{subtitle}
-		image={member.image}
-		{pills}
-		primaryAction={contact.email
-			? { label: 'Email via CMC', href: `mailto:${contact.email}` }
-			: undefined}
-	/>
+	<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 
 	<QuickFacts {facts} />
 
@@ -93,13 +84,7 @@
 			<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
 			<TagCloud label="Plays · Genres" {tags} />
 			<LinksBox links={member.links} />
-			<ContactBox
-				label="Contact"
-				{contact}
-				cta={contact.email
-					? { label: 'Email via CMC', href: `mailto:${contact.email}` }
-					: { label: '', href: '' }}
-			/>
+			<ContactBox label="Contact" {contact} />
 		{/snippet}
 	</ProfileGrid>
 
