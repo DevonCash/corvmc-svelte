@@ -1,0 +1,7 @@
+{
+  "Name": "Equipment Loan Scheduled",
+  "Alias": "loan-scheduled-confirmation",
+  "Subject": "Equipment pickup confirmed: {{equipmentName}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

@@ -1,0 +1,7 @@
+{
+  "Name": "Reservation Reminder",
+  "Alias": "reservation-reminder",
+  "Subject": "Reservation reminder: {{date}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

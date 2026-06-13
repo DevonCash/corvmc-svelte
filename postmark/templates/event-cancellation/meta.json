@@ -1,0 +1,7 @@
+{
+  "Name": "Event Cancellation",
+  "Alias": "event-cancellation",
+  "Subject": "{{eventTitle}} has been cancelled",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

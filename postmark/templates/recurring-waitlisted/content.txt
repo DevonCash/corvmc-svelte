@@ -1,0 +1,7 @@
+Recurring reservation waitlisted
+
+Hi {{userName}}, your recurring reservation on {{date}} from {{startTime}} – {{endTime}} is on the waitlist because the time slot is currently booked.
+
+You'll be notified automatically if the slot opens up.
+
+View my reservations: {{siteUrl}}/member/reservations

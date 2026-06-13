@@ -1,0 +1,7 @@
+{
+  "Name": "Waitlist Expired",
+  "Alias": "waitlist-expired",
+  "Subject": "Waitlisted reservation expired: {{date}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}
