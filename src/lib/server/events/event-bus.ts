@@ -221,6 +221,16 @@ export interface InboxMessageSentEvent {
 	sentByUserId: string;
 }
 
+export interface ContentFlaggedEvent {
+	flagId: string;
+	entityType: string;
+	entityId: string;
+	entityLabel: string;
+	reason: string;
+	reportedByUserId: string;
+	reportedByName: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -247,6 +257,7 @@ export type DomainEvents = {
 	'platform_invite.created': PlatformInviteCreatedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
+	'content.flagged': ContentFlaggedEvent;
 };
 
 // ---------------------------------------------------------------------------

@@ -6,11 +6,17 @@
 		getAllRoles,
 		getUserPayments,
 		getUserCredits,
-		updateUser
+		updateUser,
+		deactivateUser,
+		reactivateUser,
+		purgeUser
 	} from '$lib/remote/users.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -30,6 +36,10 @@
 	let initialRoles = $derived(
 		(allRoles ?? []).filter((r) => member.roles.includes(r.name)).map((r) => String(r.id))
 	);
+
+	const { fields: deactivateFields } = deactivateUser;
+	const { fields: reactivateFields } = reactivateUser;
+	const { fields: purgeFields } = purgeUser;
 </script>
 
 <Form remote={updateUser} guard successToast="Changes saved">
@@ -117,6 +127,60 @@
 					<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
 				{/if}
 			</dl>
+		</InfoCard>
+
+		<InfoCard title="Danger Zone" class="border border-error/30 bg-error/5 shadow-none mt-6">
+			{#if member.deletedAt}
+				<p class="text-sm opacity-70 mb-3">
+					This account is deactivated. Reactivate it to restore access, or permanently delete it.
+				</p>
+				<div class="flex gap-2">
+					<Action
+						action={reactivateUser}
+						label="Reactivate"
+						successToast="Account reactivated"
+						class="btn-success btn-sm"
+						onsuccess={() => void getUser(id).refresh()}
+					>
+						{#snippet form()}
+							<input {...reactivateFields.id.as('hidden', id)} />
+							<p class="py-4">Reactivate this account?</p>
+						{/snippet}
+					</Action>
+					<Action
+						action={purgeUser}
+						label="Delete permanently"
+						successToast="Account deleted"
+						class="btn-error btn-sm"
+						onsuccess={() => goto(resolve('/staff/users'))}
+					>
+						{#snippet form()}
+							<input {...purgeFields.id.as('hidden', id)} />
+							<p class="py-4">
+								Permanently delete <strong>{member.name}</strong>? This cannot be undone. The
+								account must own no bands.
+							</p>
+						{/snippet}
+					</Action>
+				</div>
+			{:else}
+				<p class="text-sm opacity-70 mb-3">
+					Deactivating cancels all of this member's future reservations and hides them from the
+					directory. This is reversible.
+				</p>
+				<Action
+					action={deactivateUser}
+					label="Deactivate"
+					successToast="Account deactivated"
+					class="btn-error btn-sm"
+					onsuccess={() => void getUser(id).refresh()}
+				>
+					{#snippet form()}
+						<input {...deactivateFields.id.as('hidden', id)} />
+						<p class="py-4">Deactivate this account? All future reservations will be cancelled.</p>
+					{/snippet}
+				</Action>
+			{/if}
 		</InfoCard>
 	</PageContent>
 </Form>

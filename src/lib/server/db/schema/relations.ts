@@ -118,6 +118,10 @@ export const relations = defineRelations(schema, (t) => ({
 		campaign: t.one.campaign({ from: t.campaignAudience.campaignId, to: t.campaign.id }),
 		audience: t.one.audience({ from: t.campaignAudience.audienceId, to: t.audience.id })
 	},
+	contentFlag: {
+		reportedBy: t.one.user({ from: t.contentFlag.reportedByUserId, to: t.user.id }),
+		resolvedBy: t.one.user({ from: t.contentFlag.resolvedByUserId, to: t.user.id })
+	},
 	helpCategory: {
 		articles: t.many.helpArticle()
 	},

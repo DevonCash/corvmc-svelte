@@ -93,6 +93,10 @@
 		helpArticles: {
 			label: 'Help Articles',
 			description: 'Knowledge base with staff-managed articles for members'
+		},
+		contentFlags: {
+			label: 'Content Flags',
+			description: 'Lets members report profiles and gives staff a moderation queue'
 		}
 	};
 

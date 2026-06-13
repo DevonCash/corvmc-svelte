@@ -1,6 +1,7 @@
 import { domainEvents } from '$lib/server/events/event-bus';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
+import { listStaffUsers } from '$lib/server/authorization';
 import { env } from '$env/dynamic/private';
 
 // ---------------------------------------------------------------------------
@@ -341,5 +342,24 @@ export function registerAllNotificationListeners(): void {
 				message: event.message
 			}
 		});
+	});
+
+	// --- Content flagged (notify all staff, in-app) ---
+	domainEvents.on('content.flagged', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'content_flagged',
+					userId: member.id,
+					userEmail: member.email,
+					title: 'Content flagged for review',
+					body: `${event.reportedByName} reported ${event.entityLabel}: ${event.reason}`,
+					href: `/staff/flags/${event.flagId}`
+				});
+			} catch (err) {
+				captureException(err, { event: 'notification.content_flagged', to: member.email });
+			}
+		}
 	});
 }

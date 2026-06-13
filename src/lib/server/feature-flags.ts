@@ -8,7 +8,8 @@ export type FeatureFlag =
 	| 'bandEvents'
 	| 'emailMarketing'
 	| 'equipment'
-	| 'helpArticles';
+	| 'helpArticles'
+	| 'contentFlags';
 
 const ALL_FLAGS: FeatureFlag[] = [
 	'staffInbox',
@@ -17,7 +18,8 @@ const ALL_FLAGS: FeatureFlag[] = [
 	'bandEvents',
 	'emailMarketing',
 	'equipment',
-	'helpArticles'
+	'helpArticles',
+	'contentFlags'
 ];
 
 export async function isFeatureEnabled(flag: FeatureFlag): Promise<boolean> {

@@ -114,6 +114,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'New inbox message (staff)',
 		description: 'Notification when a new message arrives in the staff inbox',
 		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'content_flagged',
+		label: 'Content flagged (staff)',
+		description: 'Notification when a member reports a profile for review',
+		defaults: { email: false, inApp: true, sms: false }
 	}
 ];
 
