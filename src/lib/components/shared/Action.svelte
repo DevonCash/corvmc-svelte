@@ -167,6 +167,26 @@
 	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
 		{#if body}
 			{@render body({ close, run, status })}
+		{:else if isForm}
+			<!-- RemoteForm actions always submit through <Form> so `run()` (callback-only)
+			     is never involved. `confirm`, when set, renders as a lead-in above the fields. -->
+			<Form
+				class="space-y-4"
+				remote={action as RemoteForm<any, any>}
+				{successToast}
+				onsuccess={handleFormSuccess}
+				onfailure={handleFormFailure}
+			>
+				{#if confirm}
+					<p class="py-4">{confirm}</p>
+				{/if}
+				{@render formSnippet?.({ close })}
+				{#if !noFooter}
+					<div class="flex justify-end pt-2">
+						<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
+					</div>
+				{/if}
+			</Form>
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
@@ -176,21 +196,6 @@
 					{label}
 				</Button>
 			</div>
-		{:else if formSnippet}
-			<Form
-				class="space-y-4"
-				remote={action as RemoteForm<any, any>}
-				{successToast}
-				onsuccess={handleFormSuccess}
-				onfailure={handleFormFailure}
-			>
-				{@render formSnippet?.({ close })}
-				{#if !noFooter}
-					<div class="flex justify-end pt-2">
-						<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
-					</div>
-				{/if}
-			</Form>
 		{/if}
 	</Modal>
 {/if}

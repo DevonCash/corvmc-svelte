@@ -1,26 +1,35 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
+	import { IconShare3, IconCheck, IconCalendarPlus } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
 	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
+	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import {
 		purchaseTickets,
 		rsvpForEvent,
+		rsvpToEvent,
+		cancelRsvp,
 		getMemberEventDetail,
 		getMemberTickets
 	} from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
 	const rsvpFields = rsvpForEvent.fields;
+	const rsvpToEventFields = rsvpToEvent.fields;
+	const cancelRsvpFields = cancelRsvp.fields;
 
 	let eventData = $derived(await getMemberEventDetail(page.params.id!));
 	let allTickets = $derived(await getMemberTickets());
@@ -42,11 +51,41 @@
 		evt.ticketPrice && data.isSustainingMember ? Math.round(evt.ticketPrice / 2) : evt.ticketPrice
 	);
 
+	// Availability visuals (ticketed, capacity-capped events only)
+	const capacityKnown = $derived(
+		evt.ticketingEnabled && evt.ticketQuantity != null && data.sold != null
+	);
+	const lowAvailability = $derived(
+		evt.ticketingEnabled &&
+			data.remaining !== null &&
+			!soldOut &&
+			(data.remaining <= 10 ||
+				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
+	);
+	// Show the membership upsell to non-sustaining members on paid, available events.
+	const showUpsell = $derived(
+		evt.ticketingEnabled && !isFreeEvent && !data.isSustainingMember && !soldOut
+	);
+
+	const quantityOptions = $derived(
+		Array.from({ length: maxQuantity }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
+	);
+
+	const calendarEvt = $derived({
+		title: evt.title,
+		description: evt.description,
+		location: evt.location,
+		startsAt: evt.startsAt,
+		endsAt: evt.endsAt
+	});
+
 	let quantity = $state(1);
 	let attendeeName = $state((page.data as any).user?.name ?? '');
 	let attendeeEmail = $state((page.data as any).user?.email ?? '');
 	let coverFees = $state(false);
 	let qrOpen = $state(false);
+	let qrIndex = $state(0);
+	let copied = $state(false);
 
 	const subtotal = $derived((discountedPrice ?? 0) * quantity);
 
@@ -61,6 +100,21 @@
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 
+	async function share() {
+		try {
+			await navigator.clipboard.writeText(window.location.href);
+			copied = true;
+			setTimeout(() => (copied = false), 1500);
+		} catch {
+			// clipboard unavailable — no-op
+		}
+	}
+
+	function refreshDetail() {
+		void getMemberEventDetail(page.params.id!).refresh();
+		void getMemberTickets().refresh();
+	}
+
 	async function handlePurchaseSuccess(result?: unknown) {
 		const data = result as { redirectUrl?: string } | undefined;
 		if (data?.redirectUrl) {
@@ -73,47 +127,65 @@
 	}
 </script>
 
-<PageHeader title={evt.title} backHref="/member/events" />
-<PageContent>
-	{#if data.myTicket}
-		<button type="button" class="tixbanner" onclick={() => (qrOpen = true)}>
-			<div class="tixbanner__icon">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					style="width:20px;height:20px"><path d="M5 12l4 4 10-10" /></svg
-				>
-			</div>
-			<div class="tixbanner__text">
-				<strong>You're going!</strong>
-				<small>{myTickets.length === 1 ? data.myTicket.code : `${myTickets.length} tickets`}</small>
-			</div>
-			<span class="tixbanner__action">
-				View ticket
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					style="width:14px;height:14px"><path d="M9 6l6 6-6 6" /></svg
-				>
-			</span>
+<PageHeader title={evt.title} backHref={resolve('/member/events')}>
+	<div class="flex items-center gap-1">
+		<details class="dropdown dropdown-end">
+			<summary class="btn btn-ghost btn-sm gap-1">
+				<IconCalendarPlus size={18} />
+				Add to calendar
+			</summary>
+			<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
+				<li>
+					<a href={googleCalendarUrl(calendarEvt)} target="_blank" rel="noopener noreferrer"
+						>Google Calendar</a
+					>
+				</li>
+				<li>
+					<a href={icsDataUrl(calendarEvt)} download="{evt.title}.ics">Apple / Outlook (.ics)</a>
+				</li>
+			</ul>
+		</details>
+		<button
+			type="button"
+			class="btn btn-ghost btn-sm btn-square"
+			title="Copy link to this event"
+			onclick={share}
+		>
+			{#if copied}
+				<IconCheck size={18} />
+			{:else}
+				<IconShare3 size={18} />
+			{/if}
 		</button>
-		<TicketQRModal bind:open={qrOpen} tickets={myTickets} />
+	</div>
+</PageHeader>
+<PageContent>
+	{#if myTickets.length > 0}
+		<section>
+			<SectionLabel
+				label={myTickets.length === 1 ? 'Your ticket' : 'Your tickets'}
+				count={myTickets.length}
+			/>
+			<div class="edet__stubs">
+				{#each myTickets as t, i (t.id)}
+					<TicketStub
+						ticket={t}
+						tags={evt.tags}
+						onclick={() => {
+							qrIndex = i;
+							qrOpen = true;
+						}}
+					/>
+				{/each}
+			</div>
+		</section>
+		<TicketQRModal bind:open={qrOpen} tickets={myTickets} initialIndex={qrIndex} />
 	{/if}
 
 	<div class="edet">
 		<div class="edet__poster">
 			<PosterCard
-				href="/member/events/{evt.id}"
+				href={resolve(`/member/events/${evt.id}`)}
 				title={evt.title}
 				posterUrl={evt.posterUrl}
 				startsAt={evt.startsAt}
@@ -180,6 +252,29 @@
 						{/if}
 					</span>
 				</div>
+				{#if evt.location}
+					<div class="edet__fact">
+						<span class="edet__fact-label">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								style="width:13px;height:13px"
+								><path d="M12 21s-7-5.686-7-11a7 7 0 0 1 14 0c0 5.314-7 11-7 11Z" /><circle
+									cx="12"
+									cy="10"
+									r="2.5"
+								/></svg
+							>
+							Location
+						</span>
+						<span class="edet__fact-value">{evt.location}</span>
+					</div>
+				{/if}
 				<div class="edet__fact">
 					<span class="edet__fact-label">
 						<svg
@@ -223,6 +318,22 @@
 			{/if}
 
 			{#if evt.ticketingEnabled}
+				{#if capacityKnown}
+					<div class="edet__capacity">
+						<div class="edet__capacity-head">
+							<span>{data.sold} of {evt.ticketQuantity} claimed</span>
+							{#if lowAvailability}
+								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
+							{/if}
+						</div>
+						<progress
+							class="progress progress-primary w-full"
+							value={data.sold}
+							max={evt.ticketQuantity}
+						></progress>
+					</div>
+				{/if}
+
 				<div class="edet__ctas">
 					{#if soldOut}
 						<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
@@ -242,17 +353,13 @@
 								{#snippet form()}
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
-									<Field label="Number of spots" name="quantity">
-										<select
-											name="quantity"
-											bind:value={quantity}
-											class="select select-bordered w-full"
-										>
-											{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
-												<option value={n}>{n}</option>
-											{/each}
-										</select>
-									</Field>
+									<Field
+										label="Number of spots"
+										name="quantity"
+										type="select"
+										options={quantityOptions}
+										bind:value={quantity}
+									/>
 
 									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
 									<Field
@@ -291,17 +398,13 @@
 										<span class="text-sm opacity-50">per ticket</span>
 									</div>
 
-									<Field label="Number of tickets" name="quantity">
-										<select
-											name="quantity"
-											bind:value={quantity}
-											class="select select-bordered w-full"
-										>
-											{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
-												<option value={n}>{n}</option>
-											{/each}
-										</select>
-									</Field>
+									<Field
+										label="Number of tickets"
+										name="quantity"
+										type="select"
+										options={quantityOptions}
+										bind:value={quantity}
+									/>
 
 									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
 									<Field
@@ -331,13 +434,151 @@
 						{/if}
 					{/if}
 
+					{#if showUpsell && evt.ticketPrice}
+						<p class="edet__upsell">
+							Sustaining members pay {formatCents(Math.round(evt.ticketPrice / 2))}.
+							<a href={resolve('/member/membership')} class="link link-primary">Become a member →</a
+							>
+						</p>
+					{/if}
+
 					{#if data.remaining !== null && !soldOut}
 						<span class="text-sm" style="color: var(--fg-2)"
 							>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 						>
 					{/if}
 				</div>
+			{:else}
+				<!-- Non-ticketed event: lightweight RSVP (join table, no QR / check-in) -->
+				<div class="edet__ctas">
+					{#if data.myRsvp}
+						<div class="tixbanner tixbanner--static">
+							<div class="tixbanner__icon">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									style="width:20px;height:20px"><path d="M5 12l4 4 10-10" /></svg
+								>
+							</div>
+							<div class="tixbanner__text">
+								<strong>You're going!</strong>
+								<small>We'll see you there</small>
+							</div>
+						</div>
+						<Action
+							action={cancelRsvp}
+							label="Can't make it?"
+							confirm="Cancel your RSVP for this event?"
+							modalTitle="Cancel RSVP"
+							submitLabel="Yes, cancel my RSVP"
+							submitClass="btn-error"
+							class="btn-ghost btn-sm"
+							onsuccess={refreshDetail}
+						>
+							{#snippet form()}
+								<input {...cancelRsvpFields.eventId.as('hidden', evt.id)} />
+							{/snippet}
+						</Action>
+					{:else}
+						<Action
+							action={rsvpToEvent}
+							label="RSVP"
+							modalTitle="RSVP"
+							submitLabel="RSVP"
+							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
+							class="btn-primary btn-lg"
+							onsuccess={refreshDetail}
+							onfailure={(err) =>
+								toast.error(err instanceof Error ? err.message : 'Something went wrong')}
+						>
+							{#snippet form()}
+								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
+								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+							{/snippet}
+						</Action>
+					{/if}
+
+					{#if data.rsvpCount > 0}
+						<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</div>
+
+	{#if data.upcoming.length > 0}
+		<section class="edet__more">
+			<SectionLabel label="More shows" />
+			<div class="edet__more-grid">
+				{#each data.upcoming as e (e.id)}
+					{@const eTags = parseTags(e.tags)}
+					<PosterCard
+						href={resolve(`/member/events/${e.id}`)}
+						title={e.title}
+						posterUrl={e.posterUrl}
+						startsAt={e.startsAt}
+						ticketingEnabled={e.ticketingEnabled}
+						ticketPrice={e.ticketPrice}
+						tags={e.tags}
+						tapeLabel={eTags[0] ?? undefined}
+						tapeColor={eTags[0] ? tagToTapeVariant(eTags[0]) : ''}
+					/>
+				{/each}
+			</div>
+		</section>
+	{/if}
 </PageContent>
+
+<style>
+	.edet__stubs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.edet__capacity {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.edet__capacity-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+		color: var(--fg-2);
+	}
+
+	.tixbanner--static {
+		cursor: default;
+	}
+
+	.edet__upsell {
+		font-size: 0.85rem;
+		color: var(--fg-2);
+	}
+
+	.edet__more {
+		margin-top: 2.5rem;
+	}
+
+	.edet__more-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem;
+	}
+
+	@media (min-width: 768px) {
+		.edet__more-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+</style>
