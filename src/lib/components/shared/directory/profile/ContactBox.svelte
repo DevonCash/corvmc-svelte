@@ -3,16 +3,14 @@
 	import { IconMail, IconPhone, IconAt } from '@tabler/icons-svelte';
 	import type { DirectoryContact } from '$lib/server/db/schema/authentication';
 
-	let {
-		label,
-		contact,
-		cta
-	}: {
+	interface Props {
 		label: 'Contact' | 'Booking';
 		contact: DirectoryContact | null | undefined;
 		/** primary email CTA — "Email via CMC" / "Email booking" */
 		cta: { label: string; href: string };
-	} = $props();
+	}
+
+	let { label, contact, cta }: Props = $props();
 
 	const c = $derived(contact ?? {});
 	const hasAny = $derived(!!c.email || !!c.phone || !!c.social);
