@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { getDirectoryBand, getBandShows } from '$lib/remote/directory.remote';
+	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { ReportContentAction } from '$lib/components/shared/actions';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import ProfileHeader, {
 		type ProfilePill
@@ -21,8 +24,13 @@
 
 	let data = $derived(await getDirectoryBand(page.params.slug!));
 	let shows = $derived(await getBandShows(data.band.id));
+	let viewer = $derived(await getMemberLayout());
 
 	const band = $derived(data.band);
+
+	let canReport = $derived(
+		viewer.features.contentFlags && !data.members.some((m) => m.userId === viewer.user.id)
+	);
 	const contact = $derived(band.directoryContact ?? {});
 
 	let subtitle = $derived(band.tagline || band.genres.join(' · ') || null);
@@ -55,7 +63,14 @@
 </script>
 
 <PageContent width="3xl">
-	<a href="/member/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
+	<div class="flex items-center justify-between">
+		<a href={resolve('/member/directory')} class="link text-sm opacity-60"
+			>&larr; Back to Directory</a
+		>
+		{#if canReport}
+			<ReportContentAction entityType="band_profile" entityId={band.id} entityLabel={band.name} />
+		{/if}
+	</div>
 
 	<ProfileHeader avatarShape="square" name={band.name} {subtitle} image={band.avatarUrl} {pills} />
 

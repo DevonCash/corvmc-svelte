@@ -62,6 +62,7 @@ import {
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import { inboxThread, inboxMessage, inboxNote } from '../src/lib/server/db/schema/inbox';
+import { contentFlag } from '../src/lib/server/db/schema/flag';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
@@ -428,6 +429,7 @@ const BACKLINE_ITEMS = [
 async function deleteAll() {
 	console.log('Deleting all data...');
 	const tables = [
+		'content_flag',
 		'inbox_note',
 		'inbox_message',
 		'inbox_thread',
@@ -2437,6 +2439,7 @@ async function main() {
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
 	const inbox = await seedInbox(adminUser);
+	const flags = await seedContentFlags(allUsers, bands);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -2463,12 +2466,56 @@ async function main() {
 	);
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
+	console.log(`  ${flags.length} content flags`);
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {
 		console.log(`    http://localhost:5173/?__band_subdomain=${b.slug}`);
 	}
 
 	await dispose();
+}
+
+async function seedContentFlags(users: any[], bands: any[]) {
+	console.log('Seeding content flags...');
+	const REASONS = [
+		'Inappropriate language in bio',
+		'Possible impersonation',
+		'Spam links in profile',
+		'Offensive band name',
+		'Outdated / misleading info'
+	];
+	const STATUSES = ['pending', 'pending', 'pending', 'resolved', 'dismissed'] as const;
+	const rows = [];
+
+	for (let i = 0; i < 5; i++) {
+		const reporter = users[i % users.length];
+		const flagBand = i % 2 === 0 && bands.length > 0;
+		const target = flagBand ? pick(bands) : pick(users.filter((u) => u.id !== reporter.id));
+		const status = STATUSES[i];
+		const resolved = status !== 'pending';
+
+		const [row] = await db
+			.insert(contentFlag)
+			.values({
+				entityType: flagBand ? 'band_profile' : 'member_profile',
+				entityId: target.id,
+				reportedByUserId: reporter.id,
+				reason: REASONS[i],
+				description: i % 3 === 0 ? 'Flagged via the directory report button.' : null,
+				status,
+				resolvedByUserId: resolved ? users[0].id : null,
+				resolutionNotes: resolved
+					? status === 'resolved'
+						? 'Content edited.'
+						: 'No action needed.'
+					: null,
+				resolvedAt: resolved ? new Date() : null
+			})
+			.returning();
+		rows.push(row);
+	}
+
+	return rows;
 }
 
 main().catch((err) => {

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { getDirectoryMember, getMemberShows } from '$lib/remote/directory.remote';
+	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { ReportContentAction } from '$lib/components/shared/actions';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -25,6 +28,9 @@
 	let id = $derived(page.params.id!);
 	let member = $derived(await getDirectoryMember(id));
 	let shows = $derived(await getMemberShows(id));
+	let viewer = $derived(await getMemberLayout());
+
+	let canReport = $derived(viewer.features.contentFlags && viewer.user.id !== id);
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact ?? {}) as NonNullable<DirectoryContact>);
@@ -69,7 +75,14 @@
 
 {#if member}
 	<PageContent width="3xl">
-		<a href="/member/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
+		<div class="flex items-center justify-between">
+			<a href={resolve('/member/directory')} class="link text-sm opacity-60"
+				>&larr; Back to Directory</a
+			>
+			{#if canReport}
+				<ReportContentAction entityType="member_profile" entityId={id} entityLabel={member.name} />
+			{/if}
+		</div>
 
 		<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 

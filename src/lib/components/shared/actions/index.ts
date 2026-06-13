@@ -54,5 +54,8 @@ export { default as UpdateClosureAction } from './UpdateClosureAction.svelte';
 // Users
 export { default as AdjustCreditsAction } from './AdjustCreditsAction.svelte';
 
+// Moderation
+export { default as ReportContentAction } from './ReportContentAction.svelte';
+
 // Cross-domain
 export { default as ActivateToggleAction } from './ActivateToggleAction.svelte';

@@ -19,7 +19,8 @@
 		IconPackage,
 		IconBook,
 		IconLayoutDashboard,
-		IconInbox
+		IconInbox,
+		IconFlag
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -79,6 +80,11 @@
 			<Nav.Item href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic />{/snippet}
 			</Nav.Item>
+			{#if layout.features.contentFlags}
+				<Nav.Item href="/staff/flags" label="Content Flags">
+					{#snippet icon()}<IconFlag />{/snippet}
+				</Nav.Item>
+			{/if}
 			{#if layout.features.equipment}
 				<Nav.Collapsible
 					href="/staff/equipment/loans"

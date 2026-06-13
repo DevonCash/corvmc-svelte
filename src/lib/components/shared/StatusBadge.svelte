@@ -51,6 +51,7 @@
 		error: 'badge-error',
 		open: 'badge-info',
 		resolved: 'badge-success',
+		dismissed: 'badge-ghost',
 		snoozed: 'badge-ghost',
 		owner: 'badge-warning',
 		admin: 'badge-info',
@@ -76,6 +77,7 @@
 		// Inbox statuses
 		open: { icon: IconClock, color: 'text-info' },
 		resolved: { icon: IconInboxOff, color: 'text-success' },
+		dismissed: { icon: IconCircleX, color: 'text-base-content' },
 		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
 
 		// Band roles

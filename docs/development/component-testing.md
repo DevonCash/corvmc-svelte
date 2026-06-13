@@ -47,7 +47,9 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 		title: 'Shared/MyComponent',
 		component: MyComponent,
 		tags: ['autodocs'],
-		args: { /* defaults shared by all stories */ }
+		args: {
+			/* defaults shared by all stories */
+		}
 	});
 </script>
 
@@ -76,7 +78,8 @@ import { render } from 'vitest-browser-svelte';
 // The vi.mock factory is hoisted above all imports — it must INLINE its return
 // value and cannot reference the fixtures helpers.
 vi.mock('$lib/remote/layout.remote', () => ({
-	getMe: () => Promise.resolve({ id: 'user-1', name: 'Jane Doe', email: 'jane@example.dev', image: null })
+	getMe: () =>
+		Promise.resolve({ id: 'user-1', name: 'Jane Doe', email: 'jane@example.dev', image: null })
 }));
 vi.mock('$app/paths', () => ({ resolve: (path: string) => path }));
 

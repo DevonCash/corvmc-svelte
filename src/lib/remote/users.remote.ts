@@ -20,6 +20,15 @@ import {
 } from '$lib/server/finance/credit-service';
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
+import {
+	deactivateUser as deactivateUserService,
+	reactivateUser as reactivateUserService,
+	purgeUser as purgeUserService,
+	UserNotFoundError,
+	UserNotDeactivatedError,
+	UserHasOwnedBandsError,
+	UserHasLinkedRecordsError
+} from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
@@ -287,6 +296,59 @@ export const adjustCredits = form(
 		}
 
 		void getUserCredits(userId).refresh();
+		return { success: true };
+	}
+);
+
+export const deactivateUser = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await deactivateUserService(data.id);
+		} catch (err) {
+			if (err instanceof UserNotFoundError) error(404, err.message);
+			throw err;
+		}
+		void getUser(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const reactivateUser = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await reactivateUserService(data.id);
+		} catch (err) {
+			if (err instanceof UserNotFoundError) error(404, err.message);
+			throw err;
+		}
+		void getUser(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const purgeUser = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await purgeUserService(data.id);
+		} catch (err) {
+			if (err instanceof UserNotFoundError) error(404, err.message);
+			if (err instanceof UserNotDeactivatedError) error(409, err.message);
+			if (err instanceof UserHasOwnedBandsError) error(409, err.message);
+			if (err instanceof UserHasLinkedRecordsError) error(409, err.message);
+			throw err;
+		}
 		return { success: true };
 	}
 );
