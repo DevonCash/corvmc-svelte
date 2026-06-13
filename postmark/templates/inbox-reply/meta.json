@@ -1,0 +1,7 @@
+{
+  "Name": "Inbox Reply",
+  "Alias": "inbox-reply",
+  "Subject": "{{subject}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

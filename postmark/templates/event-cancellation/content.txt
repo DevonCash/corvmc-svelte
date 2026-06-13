@@ -1,0 +1,7 @@
+Event cancelled
+
+Hi {{attendeeName}}, unfortunately {{eventTitle}} scheduled for {{eventDate}} has been cancelled.
+
+{{refundNote}}
+
+We apologize for the inconvenience.

@@ -1,0 +1,11 @@
+Your tickets are confirmed!
+
+Hi {{attendeeName}}, thanks for purchasing {{#multiple}}{{quantity}} tickets{{/multiple}}{{^multiple}}a ticket{{/multiple}} for {{eventTitle}}.
+
+Date: {{eventDate}}
+Time: {{eventTime}}
+
+Your ticket{{#multiple}} codes{{/multiple}}{{^multiple}} code{{/multiple}}:
+{{#ticketCodes}}- {{code}}
+{{/ticketCodes}}
+Show {{#multiple}}these codes{{/multiple}}{{^multiple}}this code{{/multiple}} at the door for check-in. See you there!

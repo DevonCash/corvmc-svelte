@@ -1,6 +1,5 @@
 import { env } from '$env/dynamic/private';
 import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
-import { templates } from '$lib/server/notification/email';
 import { sendSms } from './twilio-client';
 import { isChannelEnabled } from './channel-config-service';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
@@ -56,15 +55,6 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 		throw new Error('Cannot send email reply: no contact email on thread');
 	}
 
-	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
-
-	const htmlBody = templates.inboxReply({
-		contactName: params.contactName ?? 'there',
-		staffName: params.staffName,
-		body: params.body,
-		siteUrl
-	});
-
 	const subject = params.subject
 		? params.subject.startsWith('Re:')
 			? params.subject
@@ -73,9 +63,12 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 
 	const messageId = await sendInboxReply({
 		to: params.contactEmail,
-		subject,
-		htmlBody,
-		textBody: params.body,
+		model: {
+			subject,
+			contactName: params.contactName ?? 'there',
+			staffName: params.staffName,
+			body: params.body
+		},
 		inReplyTo: params.lastInboundMessageId,
 		references: params.references,
 		metadata: { threadId: params.threadId }

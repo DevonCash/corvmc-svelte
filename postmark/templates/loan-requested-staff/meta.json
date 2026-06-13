@@ -1,0 +1,7 @@
+{
+  "Name": "Equipment Loan Requested (Staff)",
+  "Alias": "loan-requested-staff",
+  "Subject": "Equipment request from {{userName}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}
