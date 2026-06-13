@@ -16,31 +16,31 @@ are files in `postmark/templates/`, pushed to Postmark via `postmark-cli`).
 
 **In scope** — migrate to Postmark templates (16 functions in `templates.ts`):
 
-| Function | Postmark alias | Notes |
-|---|---|---|
-| ticketConfirmation | `ticket-confirmation` | `{{#each ticketCodes}}` loop + singular/plural via `{{#if multiple}}` |
-| eventCancellation | `event-cancellation` | |
-| checkInReminder | `check-in-reminder` | |
-| reservationReminder | `reservation-reminder` | |
-| confirmationReminder | `confirmation-reminder` | |
-| bandInvitation | `band-invitation` | |
-| bandInvitationAccepted | `band-invitation-accepted` | |
-| platformInvitation | `platform-invitation` | |
-| contactFormForward | `contact-form-forward` | |
-| loanScheduledConfirmation | `loan-scheduled-confirmation` | |
-| loanRequestedStaffNotification | `loan-requested-staff` | conditional notes/item via `{{#if}}` |
-| recurringSkipped | `recurring-skipped` | |
-| recurringWaitlisted | `recurring-waitlisted` | |
-| waitlistSlotAvailable | `waitlist-slot-available` | |
-| waitlistExpired | `waitlist-expired` | |
-| inboxReply | `inbox-reply` | freeform `{{{body}}}` (unescaped); keeps threading headers + returns MessageID |
+| Function                       | Postmark alias                | Notes                                                                          |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------ |
+| ticketConfirmation             | `ticket-confirmation`         | `{{#each ticketCodes}}` loop + singular/plural via `{{#if multiple}}`          |
+| eventCancellation              | `event-cancellation`          |                                                                                |
+| checkInReminder                | `check-in-reminder`           |                                                                                |
+| reservationReminder            | `reservation-reminder`        |                                                                                |
+| confirmationReminder           | `confirmation-reminder`       |                                                                                |
+| bandInvitation                 | `band-invitation`             |                                                                                |
+| bandInvitationAccepted         | `band-invitation-accepted`    |                                                                                |
+| platformInvitation             | `platform-invitation`         |                                                                                |
+| contactFormForward             | `contact-form-forward`        |                                                                                |
+| loanScheduledConfirmation      | `loan-scheduled-confirmation` |                                                                                |
+| loanRequestedStaffNotification | `loan-requested-staff`        | conditional notes/item via `{{#if}}`                                           |
+| recurringSkipped               | `recurring-skipped`           |                                                                                |
+| recurringWaitlisted            | `recurring-waitlisted`        |                                                                                |
+| waitlistSlotAvailable          | `waitlist-slot-available`     |                                                                                |
+| waitlistExpired                | `waitlist-expired`            |                                                                                |
+| inboxReply                     | `inbox-reply`                 | freeform `{{{body}}}` (unescaped); keeps threading headers + returns MessageID |
 
 Plus one **Layout** template `corvmc-transactional` (the wrapper), reusing the
 HTML the MJML build currently produces.
 
 **Out of scope** — the marketing campaign path (`sendBroadcastBatch`,
 `campaign-render.ts`, `CAMPAIGN_LAYOUT`). It stays as-is; the MJML build step is
-trimmed to compile *only* the campaign layout. The `email-layout-campaign` type
+trimmed to compile _only_ the campaign layout. The `email-layout-campaign` type
 error is pre-existing and unrelated.
 
 ## Decisions
@@ -138,4 +138,7 @@ templates MUST exist on the target server before the new code runs:
 
 The `/api/cron/email-heartbeat` cron backstops this — it alerts (Sentry + 503) if any
 required alias is missing from the server.
+
+```
+
 ```

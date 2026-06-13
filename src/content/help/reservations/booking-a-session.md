@@ -1,29 +1,40 @@
 ---
-title: Booking a Session
+title: Book a Practice Session
 slug: booking-a-session
 category: reservations
 summary: How to reserve practice time at the studio.
 minRole: member
-sortOrder: 0
+sortOrder: 1
 ---
 
-## Booking a Session
+## Booking a session
 
-You can book a rehearsal room from your member dashboard.
+1. Open **Reservations** from the sidebar and start a new booking.
+2. Pick a **date**, then choose a **start time** from the available slots.
+3. Set the **duration**. The form enforces the minimum and maximum lengths and
+   shows the cost as you adjust it.
+4. Add **notes** if there's anything staff should know.
+5. Confirm your booking.
 
-### How to Book
+If the time you want is on a waitlist, you'll be able to reserve a spot and
+[confirm it later](/member/help/confirm-waitlisted) when it opens.
 
-1. Navigate to **Reservations** in the sidebar
-2. Select an available time slot
-3. Choose the duration (1-4 hours)
-4. Confirm your booking
+## Cost & free hours
 
-### Cancellation Policy
+The price is shown before you confirm. If you're a sustaining member with
+[free practice hours](/member/help/practice-credits) remaining, those are applied
+automatically.
 
-You can cancel a reservation up to 24 hours before the start time without charge. Late cancellations may incur a fee.
+## After you book
 
-### Tips
+- Some bookings require payment before the session — see
+  [pay for a reservation](/member/help/pay-for-reservation).
+- Need to change plans? See [cancel or change a reservation](/member/help/cancel-reservation).
 
-- Book during off-peak hours (weekday mornings) for better availability
-- You can book on behalf of your band if you're an admin or owner
-- Check the calendar view for a quick overview of what's available
+## Tips
+
+- Weekday mornings tend to have the best availability.
+- If you're a band owner or admin, you can
+  [book on behalf of your band](/member/help/book-band-session).
+- Practice at the same time every week? Set up a
+  [recurring booking](/member/help/recurring-reservations).

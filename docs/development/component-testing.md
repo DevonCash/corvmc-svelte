@@ -17,10 +17,10 @@ CI runs `pnpm test`, which executes the same files via `vitest --run`.
 
 Decide by whether the component reads its data from props or from the server.
 
-| Component shape | Write a… | Why |
-| --- | --- | --- |
-| **Pure** — all data via props (Button, Badge, EmptyState, PageHeader, Modal, FormField, …) | `*.stories.svelte` next to the component | Doubles as a gallery **and** an automated render/interaction test (the `storybook` Vitest project runs each story's `play`). |
-| **Coupled** — `await`s a remote query/command, imports `$app/*`, or takes a remote `form()` (e.g. AccountDropdown, NotificationBell, `actions/*`) | `*.svelte.spec.ts` next to the component | `vi.mock` (native to Vitest) replaces the server dependency with a fixture. The `client` Vitest project runs these. |
+| Component shape                                                                                                                                   | Write a…                                 | Why                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Pure** — all data via props (Button, Badge, EmptyState, PageHeader, Modal, FormField, …)                                                        | `*.stories.svelte` next to the component | Doubles as a gallery **and** an automated render/interaction test (the `storybook` Vitest project runs each story's `play`). |
+| **Coupled** — `await`s a remote query/command, imports `$app/*`, or takes a remote `form()` (e.g. AccountDropdown, NotificationBell, `actions/*`) | `*.svelte.spec.ts` next to the component | `vi.mock` (native to Vitest) replaces the server dependency with a fixture. The `client` Vitest project runs these.          |
 
 > Storybook module-mocking is intentionally avoided — it needs subpath imports or
 > fragile aliases. Coupled-component logic is tested in `*.svelte.spec.ts` where
@@ -47,7 +47,9 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 		title: 'Shared/MyComponent',
 		component: MyComponent,
 		tags: ['autodocs'],
-		args: { /* defaults shared by all stories */ }
+		args: {
+			/* defaults shared by all stories */
+		}
 	});
 </script>
 
@@ -76,7 +78,8 @@ import { render } from 'vitest-browser-svelte';
 // The vi.mock factory is hoisted above all imports — it must INLINE its return
 // value and cannot reference the fixtures helpers.
 vi.mock('$lib/remote/layout.remote', () => ({
-	getMe: () => Promise.resolve({ id: 'user-1', name: 'Jane Doe', email: 'jane@example.dev', image: null })
+	getMe: () =>
+		Promise.resolve({ id: 'user-1', name: 'Jane Doe', email: 'jane@example.dev', image: null })
 }));
 vi.mock('$app/paths', () => ({ resolve: (path: string) => path }));
 
@@ -100,5 +103,5 @@ render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeForm(['
 
 ## Coverage
 
-Coverage is built up incrementally — see `docs/component-testing-checklist.md`
+Coverage is built up incrementally — see `docs/development/component-testing-checklist.md`
 for the running list of which components have stories/specs.

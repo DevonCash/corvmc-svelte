@@ -58,3 +58,7 @@ src/lib/server/generated/
 .claude/worktrees/
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Docs-drift detector artifacts (ephemeral)
+docs-drift-report.json
+changed-files.txt

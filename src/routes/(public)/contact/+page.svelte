@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
+	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
+	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 	import { toast } from 'svelte-sonner';
 
 	let submitted = $state(false);
+	let resetTurnstile = $state<() => void>();
 
 	const subjects = [
 		'General Inquiry',
@@ -36,7 +39,10 @@
 				<form
 					{...rf.enhance(async ({ submit }) => {
 						if (await submit()) submitted = true;
-						else toast.error('Something went wrong. Please try again.');
+						else {
+							resetTurnstile?.();
+							toast.error('Something went wrong. Please try again.');
+						}
 					})}
 					class="flex flex-col gap-4"
 				>
@@ -67,6 +73,12 @@
 						<textarea name="message" class="textarea textarea-bordered w-full" rows="5" required
 						></textarea>
 					</label>
+					<Turnstile
+						siteKey={TURNSTILE_SITE_KEY}
+						responseFieldName={TURNSTILE_RESPONSE_FIELD}
+						theme="auto"
+						bind:reset={resetTurnstile}
+					/>
 					<button type="submit" class="btn btn-primary">Send Message</button>
 				</form>
 			{/if}

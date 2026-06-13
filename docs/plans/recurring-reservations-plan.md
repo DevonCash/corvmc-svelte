@@ -301,7 +301,7 @@ Build the edit flow (could be a modal or separate page):
 
 ### 8.1 Update parity report
 
-In `docs/parity-report.md`:
+In `docs/reports/parity-report.md`:
 
 - Update the "Recurring reservations" row in the staff panel table to `✅` with notes.
 - Update the "Recurring reservation generation" row in the scheduled jobs table to `✅ /api/cron/generate-recurring-reservations`.

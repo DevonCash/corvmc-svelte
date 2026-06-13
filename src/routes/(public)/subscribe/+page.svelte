@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { Turnstile } from 'svelte-turnstile';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { getPublicAudiences, subscribeToAudience } from '$lib/remote/marketing.remote';
+	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
 	const { fields } = subscribeToAudience;
 
@@ -70,6 +72,12 @@
 
 			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
 			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
+
+			<Turnstile
+				siteKey={TURNSTILE_SITE_KEY}
+				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				theme="auto"
+			/>
 
 			<SubmitButton label="Subscribe" class="btn-primary w-full" />
 		</Form>
