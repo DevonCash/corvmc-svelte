@@ -11,11 +11,28 @@
  *   - Local D1 SQLite file exists (run `pnpm db:push` first)
  */
 import 'dotenv/config';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql, eq } from 'drizzle-orm';
-import { hashPassword } from 'better-auth/crypto';
+
+// Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
+// import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
+// resolve under tsx — so the format is reproduced inline. The app's verifier only
+// accepts `scrypt:` / `$2` / `pbkdf2:` prefixes; better-auth's bare-hex hashPassword
+// is rejected as `unknown_hash_format`, which is why seeded logins must use this.
+const SCRYPT_PARAMS = { N: 16384, r: 16, p: 1, keylen: 64, maxmem: 128 * 16384 * 16 * 2 };
+function scryptHash(password: string): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const salt = randomBytes(16);
+		const { N, r, p, keylen, maxmem } = SCRYPT_PARAMS;
+		scrypt(password.normalize('NFKC'), salt, keylen, { N, r, p, maxmem }, (err, key) =>
+			err
+				? reject(err)
+				: resolve(`scrypt:${N}:${r}:${p}:${salt.toString('hex')}:${key.toString('hex')}`)
+		);
+	});
+}
 import {
 	user,
 	account,
@@ -27,6 +44,7 @@ import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
+import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
 	creditTransaction,
 	paymentCache as paymentRecord
@@ -560,7 +578,7 @@ async function seedAdminUser(): Promise<SeedUser> {
 	console.log('Seeding admin user (admin@corvallismusic.org)...');
 	const id = randomUUID();
 	const now = new Date();
-	const hashedPassword = await hashPassword('password');
+	const hashedPassword = await scryptHash('password');
 
 	const [adminUser] = await db
 		.insert(user)
@@ -1398,6 +1416,36 @@ async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 					.returning();
 				rows.push(t);
 			}
+		}
+	}
+
+	return rows;
+}
+
+async function seedRsvps(users: SeedUser[]) {
+	console.log('Seeding RSVPs...');
+	const rows = [];
+
+	// RSVPs only apply to non-ticketed events (lightweight headcount, no codes).
+	const nonTicketedEvents = await db
+		.select({ id: event.id })
+		.from(event)
+		.where(eq(event.ticketingEnabled, false));
+
+	for (const evt of nonTicketedEvents) {
+		// A random, distinct subset of members RSVP (unique per event_id, user_id).
+		for (const u of pickN(users, randomInt(2, 8))) {
+			const [r] = await db
+				.insert(eventRsvp)
+				.values({
+					eventId: evt.id,
+					userId: u.id,
+					attendeeName: u.name,
+					attendeeEmail: `${u.name.toLowerCase().replace(' ', '.')}@example.com`
+				})
+				.onConflictDoNothing({ target: [eventRsvp.eventId, eventRsvp.userId] })
+				.returning();
+			if (r) rows.push(r);
 		}
 	}
 
@@ -2341,6 +2389,7 @@ async function main() {
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
+	const rsvps = await seedRsvps(allUsers);
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedCreditTransactions(allUsers);
@@ -2363,6 +2412,7 @@ async function main() {
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
 	console.log(`  ${tickets.length} tickets`);
+	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
 	console.log(

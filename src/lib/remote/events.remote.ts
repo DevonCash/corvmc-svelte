@@ -29,6 +29,12 @@ import {
 	checkIn,
 	cancelTicket as cancelTicketService
 } from '$lib/server/ticket/ticket-service';
+import {
+	createRsvp,
+	cancelRsvp as cancelRsvpService,
+	getUserRsvp,
+	countRsvps
+} from '$lib/server/event/rsvp-service';
 import { getSubscription } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
@@ -102,6 +108,33 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const isSustainingMember = locals.user ? await hasAnyRole(locals.user.id, ['sustaining']) : false;
 
+	// Sold is derived from remaining only when the event is both ticketed and capped;
+	// otherwise the capacity bar isn't shown so the count isn't needed.
+	const sold =
+		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
+
+	// Non-ticketed events use the lightweight RSVP join table for headcount.
+	const rsvpCount = evt.ticketingEnabled ? 0 : await countRsvps(id);
+	const myRsvp =
+		!evt.ticketingEnabled && locals.user ? Boolean(await getUserRsvp(id, locals.user.id)) : false;
+
+	// "More shows" tail: other upcoming events, excluding this one.
+	const upcomingRows = await listUpcoming();
+	const upcoming = upcomingRows
+		.filter((e) => e.id !== id)
+		.slice(0, 6)
+		.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ?? null,
+			tags: e.tags as string | null,
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice,
+			posterUrl: resolveImageUrl(e.posterKey)
+		}));
+
 	return {
 		event: {
 			id: evt.id,
@@ -110,6 +143,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			startsAt: evt.startsAt,
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
+			location: evt.location,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
@@ -117,7 +151,11 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			ticketQuantity: evt.ticketQuantity
 		},
 		remaining,
-		isSustainingMember
+		sold,
+		isSustainingMember,
+		myRsvp,
+		rsvpCount,
+		upcoming
 	};
 });
 
@@ -623,6 +661,40 @@ export const rsvpForEvent = form(
 		return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
 	}
 );
+
+// RSVP for a NON-ticketed event. Distinct from `rsvpForEvent` above (which issues a free
+// *ticket* with a QR code for price-0 ticketed events): this writes a lightweight join
+// row with no code, no check-in, and no capacity. One RSVP per member (idempotent).
+export const rsvpToEvent = form(
+	z.object({
+		eventId: z.string(),
+		attendeeName: z.string().min(1, 'Name is required'),
+		attendeeEmail: z.string().email('Valid email is required')
+	}),
+	async (data) => {
+		const user = requireUser();
+
+		const evt = await getById(data.eventId);
+		if (!evt) throw error(404, 'Event not found');
+		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		if (evt.ticketingEnabled) throw error(400, 'This event uses tickets, not RSVPs');
+
+		await createRsvp({
+			eventId: evt.id,
+			userId: user.id,
+			attendeeName: data.attendeeName,
+			attendeeEmail: data.attendeeEmail
+		});
+
+		return { success: true };
+	}
+);
+
+export const cancelRsvp = form(z.object({ eventId: z.string() }), async (data) => {
+	const user = requireUser();
+	await cancelRsvpService(data.eventId, user.id);
+	return { success: true };
+});
 
 export const purchaseTickets = form(
 	z.object({
