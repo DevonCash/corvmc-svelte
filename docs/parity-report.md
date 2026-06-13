@@ -92,7 +92,8 @@ The Svelte app uses two channels — Postmark for email and a database-backed in
 
 | Concern              | Laravel                                 | Svelte                           | Notes                                                                         |
 | -------------------- | --------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
-| Email transport      | Laravel Mail (SMTP/SES)                 | ✅ Postmark                      | Direct Postmark API via `postmark` SDK, MJML templates                        |
+| Email transport      | Laravel Mail (SMTP/SES)                 | ✅ Postmark                      | `postmark` SDK; transactional bodies are Postmark-hosted templates (repo source in `postmark/templates`, pushed via `pnpm email:push`). See `docs/postmark-template-migration.md` |
+| Email health check   | —                                       | ✅ Heartbeat cron               | `/api/cron/email-heartbeat` validates token + required template aliases (no send); send failures report to Sentry |
 | SMS                  | — (not implemented)                     | —                                | Deferred; channel architecture supports adding Twilio later                   |
 | In-app notifications | Database channel + Filament bell        | ✅ Bell + SSE                    | Persistent `notification` table, bell dropdown in sidebar, SSE real-time push |
 | User preferences     | —                                       | ✅ notification_preference table | Per-user, per-notification-type channel toggles on account page               |

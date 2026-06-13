@@ -1,0 +1,7 @@
+A slot has opened up!
+
+Hi {{userName}}, the time slot on {{date}} from {{startTime}} – {{endTime}} is now available.
+
+You have 24 hours to confirm your reservation before it expires.
+
+Confirm reservation: {{confirmUrl}}

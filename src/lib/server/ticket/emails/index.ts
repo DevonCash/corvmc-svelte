@@ -6,7 +6,7 @@
 // through the notification dispatcher. See:
 //   - src/lib/server/events/event-bus.ts (event definitions)
 //   - src/lib/server/notification/notification-listeners.ts (handlers)
-//   - src/lib/server/notification/email/templates.ts (email templates)
+//   - postmark/templates/ (Postmark-hosted email templates, pushed via pnpm email:push)
 //
 // These stubs remain for reference only and can be deleted.
 // ---------------------------------------------------------------------------

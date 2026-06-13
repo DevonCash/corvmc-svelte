@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -11,22 +11,6 @@ vi.mock('./dispatcher', () => ({
 	dispatch: (...args: unknown[]) => mockDispatch(...args),
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
-
-const mockTemplates: Record<string, Mock> = {
-	ticketConfirmation: vi.fn().mockReturnValue('<html>ticket</html>'),
-	eventCancellation: vi.fn().mockReturnValue('<html>cancelled</html>'),
-	reservationReminder: vi.fn().mockReturnValue('<html>reminder</html>'),
-	confirmationReminder: vi.fn().mockReturnValue('<html>confirm</html>'),
-	bandInvitation: vi.fn().mockReturnValue('<html>invite</html>'),
-	bandInvitationAccepted: vi.fn().mockReturnValue('<html>accepted</html>'),
-	platformInvitation: vi.fn().mockReturnValue('<html>platform</html>'),
-	recurringSkipped: vi.fn().mockReturnValue('<html>skipped</html>'),
-	loanScheduledConfirmation: vi.fn().mockReturnValue('<html>loan</html>'),
-	loanRequestedStaffNotification: vi.fn().mockReturnValue('<html>loan-staff</html>'),
-	contactFormForward: vi.fn().mockReturnValue('<html>contact</html>')
-};
-
-vi.mock('./email', () => ({ templates: mockTemplates }));
 
 vi.mock('$env/dynamic/private', () => ({
 	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
@@ -71,6 +55,9 @@ describe('registerAllNotificationListeners', () => {
 		expect(handlers['band.invitation_accepted']).toBeDefined();
 		expect(handlers['platform_invite.created']).toBeDefined();
 		expect(handlers['reservation.recurring_skipped']).toBeDefined();
+		expect(handlers['reservation.recurring_waitlisted']).toBeDefined();
+		expect(handlers['reservation.waitlist_slot_available']).toBeDefined();
+		expect(handlers['reservation.waitlist_expired']).toBeDefined();
 		expect(handlers['equipment.loan_scheduled']).toBeDefined();
 		expect(handlers['equipment.loan_requested']).toBeDefined();
 		expect(handlers['contact.form_submitted']).toBeDefined();
@@ -82,7 +69,34 @@ describe('ticket.purchased handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('sends email-only notification to ticket buyer', async () => {
+	it('sends email-only notification to ticket buyer with the ticket-confirmation template', async () => {
+		await emit('ticket.purchased', {
+			attendeeName: 'Alice',
+			attendeeEmail: 'alice@test.com',
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			eventTime: '8:00 PM',
+			ticketCodes: ['ABC123', 'DEF456'],
+			quantity: 2
+		});
+
+		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: 'ticket_confirmation',
+				toEmail: 'alice@test.com',
+				templateAlias: 'ticket-confirmation',
+				model: expect.objectContaining({
+					attendeeName: 'Alice',
+					eventTitle: 'Jazz Night',
+					quantity: 2,
+					multiple: true,
+					ticketCodes: [{ code: 'ABC123' }, { code: 'DEF456' }]
+				})
+			})
+		);
+	});
+
+	it('marks single-ticket purchases as not multiple', async () => {
 		await emit('ticket.purchased', {
 			attendeeName: 'Alice',
 			attendeeEmail: 'alice@test.com',
@@ -93,12 +107,9 @@ describe('ticket.purchased handler', () => {
 			quantity: 1
 		});
 
-		expect(mockTemplates.ticketConfirmation).toHaveBeenCalled();
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
 			expect.objectContaining({
-				type: 'ticket_confirmation',
-				toEmail: 'alice@test.com',
-				subject: 'Your tickets for Jazz Night'
+				model: expect.objectContaining({ multiple: false, ticketCodes: [{ code: 'ABC123' }] })
 			})
 		);
 	});
@@ -109,7 +120,7 @@ describe('reservation.reminder_due handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches in-app + email notification', async () => {
+	it('dispatches in-app + reservation-reminder template', async () => {
 		await emit('reservation.reminder_due', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
@@ -124,7 +135,17 @@ describe('reservation.reminder_due handler', () => {
 				type: 'reservation_reminder',
 				userId: 'user-1',
 				userEmail: 'user@test.com',
-				title: 'Upcoming reservation reminder'
+				title: 'Upcoming reservation reminder',
+				emailTemplate: {
+					alias: 'reservation-reminder',
+					model: {
+						userName: 'Bob',
+						date: 'May 21',
+						startTime: '10:00 AM',
+						endTime: '11:00 AM',
+						siteUrl: 'https://test.corvmc.com'
+					}
+				}
 			})
 		);
 	});
@@ -135,7 +156,7 @@ describe('platform_invite.created handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('sends email with signup URL containing invite token', async () => {
+	it('sends platform-invitation template with signup URL containing invite token', async () => {
 		await emit('platform_invite.created', {
 			email: 'new@test.com',
 			token: 'tok-xyz',
@@ -145,16 +166,16 @@ describe('platform_invite.created handler', () => {
 			invitedByName: 'Alice'
 		});
 
-		expect(mockTemplates.platformInvitation).toHaveBeenCalledWith(
-			expect.objectContaining({
-				signupUrl: 'https://test.corvmc.com/login?invite=tok-xyz',
-				bandName: 'The Strokes'
-			})
-		);
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'platform_invitation',
-				toEmail: 'new@test.com'
+				toEmail: 'new@test.com',
+				templateAlias: 'platform-invitation',
+				model: expect.objectContaining({
+					signupUrl: 'https://test.corvmc.com/login?invite=tok-xyz',
+					bandName: 'The Strokes',
+					role: 'member'
+				})
 			})
 		);
 	});
@@ -165,7 +186,7 @@ describe('band.invitation_sent handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches notification to invited user', async () => {
+	it('dispatches band-invitation template to invited user', async () => {
 		await emit('band.invitation_sent', {
 			invitedUserId: 'user-2',
 			invitedUserEmail: 'invited@test.com',
@@ -178,7 +199,11 @@ describe('band.invitation_sent handler', () => {
 			expect.objectContaining({
 				type: 'band_invitation',
 				userId: 'user-2',
-				title: "You've been invited to The Strokes"
+				title: "You've been invited to The Strokes",
+				emailTemplate: expect.objectContaining({
+					alias: 'band-invitation',
+					model: expect.objectContaining({ invitedUserName: 'Bob', bandName: 'The Strokes' })
+				})
 			})
 		);
 	});
@@ -197,21 +222,22 @@ describe('event.cancelled handler', () => {
 			ticketHolders: [{ attendeeName: 'Alice', attendeeEmail: 'alice@test.com', userId: 'user-1' }]
 		});
 
-		expect(mockTemplates.eventCancellation).toHaveBeenCalledWith(
-			expect.objectContaining({
-				attendeeName: 'Alice',
-				eventTitle: 'Jazz Night',
-				eventDate: 'May 20',
-				refundNote: 'Full refund within 5 days'
-			})
-		);
 		expect(mockDispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'event_cancellation',
 				userId: 'user-1',
 				userEmail: 'alice@test.com',
 				title: 'Jazz Night has been cancelled',
-				href: '/member/tickets'
+				href: '/member/tickets',
+				emailTemplate: {
+					alias: 'event-cancellation',
+					model: {
+						attendeeName: 'Alice',
+						eventTitle: 'Jazz Night',
+						eventDate: 'May 20',
+						refundNote: 'Full refund within 5 days'
+					}
+				}
 			})
 		);
 	});
@@ -228,7 +254,7 @@ describe('event.cancelled handler', () => {
 			expect.objectContaining({
 				type: 'event_cancellation',
 				toEmail: 'bob@test.com',
-				subject: 'Jazz Night has been cancelled'
+				templateAlias: 'event-cancellation'
 			})
 		);
 	});
@@ -255,7 +281,7 @@ describe('reservation.confirmation_reminder_due handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches confirmation reminder notification', async () => {
+	it('dispatches confirmation-reminder template', async () => {
 		await emit('reservation.confirmation_reminder_due', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
@@ -265,15 +291,6 @@ describe('reservation.confirmation_reminder_due handler', () => {
 			endTime: '3:00 PM'
 		});
 
-		expect(mockTemplates.confirmationReminder).toHaveBeenCalledWith(
-			expect.objectContaining({
-				userName: 'Bob',
-				date: 'May 22',
-				startTime: '2:00 PM',
-				endTime: '3:00 PM',
-				siteUrl: 'https://test.corvmc.com'
-			})
-		);
 		expect(mockDispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'confirmation_reminder',
@@ -281,7 +298,16 @@ describe('reservation.confirmation_reminder_due handler', () => {
 				userEmail: 'user@test.com',
 				title: 'Please confirm your reservation',
 				href: '/member/reservations',
-				emailSubject: 'Please confirm your reservation: May 22'
+				emailTemplate: {
+					alias: 'confirmation-reminder',
+					model: {
+						userName: 'Bob',
+						date: 'May 22',
+						startTime: '2:00 PM',
+						endTime: '3:00 PM',
+						siteUrl: 'https://test.corvmc.com'
+					}
+				}
 			})
 		);
 	});
@@ -292,7 +318,7 @@ describe('band.invitation_accepted handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches notification to each band admin', async () => {
+	it('dispatches band-invitation-accepted template to each band admin', async () => {
 		await emit('band.invitation_accepted', {
 			acceptedByName: 'Charlie',
 			bandName: 'The Strokes',
@@ -303,28 +329,20 @@ describe('band.invitation_accepted handler', () => {
 			]
 		});
 
-		expect(mockTemplates.bandInvitationAccepted).toHaveBeenCalledTimes(2);
-		expect(mockTemplates.bandInvitationAccepted).toHaveBeenCalledWith(
-			expect.objectContaining({
-				adminName: 'Alice',
-				acceptedByName: 'Charlie',
-				bandName: 'The Strokes',
-				bandId: 'band-1'
-			})
-		);
 		expect(mockDispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'band_invitation_accepted',
 				userId: 'admin-1',
 				title: 'Charlie joined The Strokes',
-				href: '/member/bands/band-1'
+				href: '/member/bands/band-1',
+				emailTemplate: expect.objectContaining({
+					alias: 'band-invitation-accepted',
+					model: expect.objectContaining({ adminName: 'Alice', acceptedByName: 'Charlie' })
+				})
 			})
 		);
 		expect(mockDispatch).toHaveBeenCalledWith(
-			expect.objectContaining({
-				type: 'band_invitation_accepted',
-				userId: 'admin-2'
-			})
+			expect.objectContaining({ type: 'band_invitation_accepted', userId: 'admin-2' })
 		);
 	});
 
@@ -350,7 +368,7 @@ describe('reservation.recurring_skipped handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches recurring skipped notification', async () => {
+	it('dispatches recurring-skipped template', async () => {
 		await emit('reservation.recurring_skipped', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
@@ -361,16 +379,6 @@ describe('reservation.recurring_skipped handler', () => {
 			reason: 'Conflicting event'
 		});
 
-		expect(mockTemplates.recurringSkipped).toHaveBeenCalledWith(
-			expect.objectContaining({
-				userName: 'Bob',
-				skippedDate: 'May 25',
-				startTime: '10:00 AM',
-				endTime: '11:00 AM',
-				reason: 'Conflicting event',
-				siteUrl: 'https://test.corvmc.com'
-			})
-		);
 		expect(mockDispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'recurring_skipped',
@@ -379,7 +387,17 @@ describe('reservation.recurring_skipped handler', () => {
 				title: 'Recurring reservation skipped',
 				body: 'May 25 10:00 AM–11:00 AM: Conflicting event',
 				href: '/member/reservations',
-				emailSubject: 'Recurring reservation skipped: May 25'
+				emailTemplate: {
+					alias: 'recurring-skipped',
+					model: {
+						userName: 'Bob',
+						skippedDate: 'May 25',
+						startTime: '10:00 AM',
+						endTime: '11:00 AM',
+						reason: 'Conflicting event',
+						siteUrl: 'https://test.corvmc.com'
+					}
+				}
 			})
 		);
 	});
@@ -390,7 +408,7 @@ describe('equipment.loan_scheduled handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('dispatches loan scheduled notification to member', async () => {
+	it('dispatches loan-scheduled-confirmation template to member', async () => {
 		await emit('equipment.loan_scheduled', {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
@@ -399,20 +417,21 @@ describe('equipment.loan_scheduled handler', () => {
 			scheduledPickupDate: '2026-06-01'
 		});
 
-		expect(mockTemplates.loanScheduledConfirmation).toHaveBeenCalledWith(
-			expect.objectContaining({
-				userName: 'Bob',
-				equipmentName: 'SM58 Microphone',
-				siteUrl: 'https://test.corvmc.com'
-			})
-		);
 		expect(mockDispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'equipment_loan_scheduled',
 				userId: 'user-1',
 				userEmail: 'user@test.com',
 				title: 'Equipment pickup confirmed: SM58 Microphone',
-				href: '/member/equipment/loans'
+				href: '/member/equipment/loans',
+				emailTemplate: expect.objectContaining({
+					alias: 'loan-scheduled-confirmation',
+					model: expect.objectContaining({
+						userName: 'Bob',
+						equipmentName: 'SM58 Microphone',
+						siteUrl: 'https://test.corvmc.com'
+					})
+				})
 			})
 		);
 	});
@@ -423,7 +442,7 @@ describe('equipment.loan_requested handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('sends email notification to staff', async () => {
+	it('sends loan-requested-staff template to staff', async () => {
 		await emit('equipment.loan_requested', {
 			userName: 'Bob',
 			equipmentName: 'SM58 Microphone',
@@ -432,20 +451,18 @@ describe('equipment.loan_requested handler', () => {
 			loanId: 'loan-1'
 		});
 
-		expect(mockTemplates.loanRequestedStaffNotification).toHaveBeenCalledWith(
-			expect.objectContaining({
-				userName: 'Bob',
-				equipmentName: 'SM58 Microphone',
-				memberNotes: 'Need for weekend gig',
-				loanId: 'loan-1',
-				siteUrl: 'https://test.corvmc.com'
-			})
-		);
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: 'equipment_loan_requested',
 				toEmail: 'staff@test.com',
-				subject: 'Equipment request from Bob'
+				templateAlias: 'loan-requested-staff',
+				model: expect.objectContaining({
+					userName: 'Bob',
+					equipmentName: 'SM58 Microphone',
+					memberNotes: 'Need for weekend gig',
+					loanId: 'loan-1',
+					siteUrl: 'https://test.corvmc.com'
+				})
 			})
 		);
 	});
@@ -456,7 +473,7 @@ describe('contact.form_submitted handler', () => {
 		registerAllNotificationListeners();
 	});
 
-	it('forwards to staff email', async () => {
+	it('forwards to staff with the contact-form-forward template', async () => {
 		await emit('contact.form_submitted', {
 			name: 'Charlie',
 			email: 'charlie@test.com',
@@ -467,7 +484,12 @@ describe('contact.form_submitted handler', () => {
 			expect.objectContaining({
 				type: 'contact_form',
 				toEmail: 'staff@test.com',
-				subject: 'Contact form: Charlie'
+				templateAlias: 'contact-form-forward',
+				model: {
+					senderName: 'Charlie',
+					senderEmail: 'charlie@test.com',
+					message: 'Hello, I have a question'
+				}
 			})
 		);
 	});

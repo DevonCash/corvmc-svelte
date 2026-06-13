@@ -1,0 +1,9 @@
+Equipment pickup confirmed
+
+Hi {{userName}}, your equipment loan for {{equipmentName}} has been confirmed.
+
+Pickup date: {{scheduledPickupDate}}
+
+Please visit the space during open hours on the pickup date.
+
+View my loans: {{siteUrl}}/member/equipment/loans

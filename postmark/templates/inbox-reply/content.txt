@@ -1,0 +1,6 @@
+Hi {{contactName}},
+
+{{{body}}}
+
+—
+{{staffName}} · Corvallis Music Collective

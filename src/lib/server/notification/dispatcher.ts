@@ -1,4 +1,4 @@
-import { sendEmail } from './email/postmark-client';
+import { sendEmailWithTemplate } from './email/postmark-client';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
@@ -11,7 +11,8 @@ import { captureException } from '$lib/server/sentry';
 // based on user preferences. Called by notification listeners.
 //
 // The dispatcher does NOT know about specific notification types — callers
-// provide the type key, recipient, content, and pre-compiled email HTML.
+// provide the type key, recipient, in-app content, and (for email) a Postmark
+// template alias plus its model. Email bodies/subjects live in Postmark.
 // ---------------------------------------------------------------------------
 
 export interface DispatchParams {
@@ -25,9 +26,8 @@ export interface DispatchParams {
 	body?: string;
 	href?: string;
 	data?: Record<string, unknown>;
-	/** Email content (pre-compiled HTML) */
-	emailSubject?: string;
-	emailHtml?: string;
+	/** Email: Postmark template alias + Mustachio model (subject lives in the template) */
+	emailTemplate?: { alias: string; model: Record<string, unknown> };
 	/** Override: send email even if no userId (e.g., ticket buyer without account) */
 	forceEmail?: boolean;
 }
@@ -67,12 +67,12 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 	}
 
 	// Email
-	if ((pref.email || params.forceEmail) && params.emailSubject && params.emailHtml) {
+	if ((pref.email || params.forceEmail) && params.emailTemplate) {
 		try {
-			await sendEmail({
+			await sendEmailWithTemplate({
 				to: params.userEmail,
-				subject: params.emailSubject,
-				htmlBody: params.emailHtml,
+				templateAlias: params.emailTemplate.alias,
+				model: params.emailTemplate.model,
 				tag: params.type
 			});
 		} catch (err) {
@@ -88,14 +88,14 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 export async function dispatchEmailOnly(params: {
 	type: string;
 	toEmail: string;
-	subject: string;
-	html: string;
+	templateAlias: string;
+	model: Record<string, unknown>;
 }): Promise<void> {
 	try {
-		await sendEmail({
+		await sendEmailWithTemplate({
 			to: params.toEmail,
-			subject: params.subject,
-			htmlBody: params.html,
+			templateAlias: params.templateAlias,
+			model: params.model,
 			tag: params.type
 		});
 	} catch (err) {

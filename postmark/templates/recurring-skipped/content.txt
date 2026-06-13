@@ -1,0 +1,7 @@
+Recurring reservation skipped
+
+Hi {{userName}}, your recurring reservation on {{skippedDate}} from {{startTime}} – {{endTime}} was skipped due to: {{reason}}.
+
+Your series will continue generating future reservations as normal.
+
+View my reservations: {{siteUrl}}/member/reservations

@@ -1,0 +1,7 @@
+{
+  "Name": "Waitlist Slot Available",
+  "Alias": "waitlist-slot-available",
+  "Subject": "Slot available: {{date}} {{startTime}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}
