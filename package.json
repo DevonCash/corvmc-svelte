@@ -14,7 +14,7 @@
 		"test:unit": "vitest",
 		"test:components": "vitest --run --project=client --project=storybook",
 		"test": "pnpm run test:unit -- --run && pnpm run test:e2e",
-		"test:e2e": "playwright install && playwright test",
+		"test:e2e": "playwright install chromium && playwright test",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --check . && eslint .",
 		"lint:changed": "bash scripts/lint-changed.sh",
