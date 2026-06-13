@@ -1,0 +1,314 @@
+[
+	{
+		"route": "/",
+		"panel": "public"
+	},
+	{
+		"route": "/band-site/[slug]",
+		"panel": "band"
+	},
+	{
+		"route": "/band-site/[slug]/epk",
+		"panel": "band"
+	},
+	{
+		"route": "/band-site/[slug]/events",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/edit",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/events",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/events/[eventId]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/events/create",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/members",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/page-editor",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/page-editor/epk",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/reservations",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/reservations/new",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/settings",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/subscription",
+		"panel": "band"
+	},
+	{
+		"route": "/contact",
+		"panel": "public"
+	},
+	{
+		"route": "/contribute",
+		"panel": "public"
+	},
+	{
+		"route": "/demo",
+		"panel": "public"
+	},
+	{
+		"route": "/demo/playwright",
+		"panel": "public"
+	},
+	{
+		"route": "/directory",
+		"panel": "public"
+	},
+	{
+		"route": "/directory/bands/[slug]",
+		"panel": "public"
+	},
+	{
+		"route": "/directory/members/[id]",
+		"panel": "public"
+	},
+	{
+		"route": "/events",
+		"panel": "public"
+	},
+	{
+		"route": "/events/[id]/tickets",
+		"panel": "public"
+	},
+	{
+		"route": "/events/[id]/tickets/success",
+		"panel": "public"
+	},
+	{
+		"route": "/login",
+		"panel": "public"
+	},
+	{
+		"route": "/member",
+		"panel": "member"
+	},
+	{
+		"route": "/member/account",
+		"panel": "member"
+	},
+	{
+		"route": "/member/bands",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory/bands/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory/members/[id]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/equipment",
+		"panel": "member"
+	},
+	{
+		"route": "/member/equipment/loans",
+		"panel": "member"
+	},
+	{
+		"route": "/member/events",
+		"panel": "member"
+	},
+	{
+		"route": "/member/events/[id]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/help",
+		"panel": "member"
+	},
+	{
+		"route": "/member/help/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/membership",
+		"panel": "member"
+	},
+	{
+		"route": "/member/profile",
+		"panel": "member"
+	},
+	{
+		"route": "/member/reservations",
+		"panel": "member"
+	},
+	{
+		"route": "/member/reservations/[id]/pay",
+		"panel": "member"
+	},
+	{
+		"route": "/programs",
+		"panel": "public"
+	},
+	{
+		"route": "/staff",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/bands",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/bands/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/closures",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/credits",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/equipment",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/equipment/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/equipment/loans",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/equipment/loans/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events/[id]/check-in",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/help",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/help/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/help/create",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inbox",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inbox/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/audiences",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/audiences/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/campaigns",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/campaigns/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/campaigns/[id]/edit",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/marketing/campaigns/new",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/recurring",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/recurring/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reservations",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reservations/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/settings",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/users",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/users/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/subscribe",
+		"panel": "public"
+	},
+	{
+		"route": "/subscribe/[slug]",
+		"panel": "public"
+	},
+	{
+		"route": "/unsubscribe/[token]",
+		"panel": "public"
+	}
+]

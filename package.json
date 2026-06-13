@@ -28,6 +28,8 @@
 		"stripe:sync-webhooks": "tsx scripts/sync-webhooks.ts",
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
+		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
+		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
 		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done",
 		"db:sync": "bash scripts/sync-d1.sh"

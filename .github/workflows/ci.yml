@@ -63,3 +63,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test
+
+  docs:
+    name: Docs integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No deps needed — the checker is plain Node. Fails only on integrity errors
+      # (broken help links, duplicate slugs, bad frontmatter, orphaned static slugs);
+      # route drift is informational here and handled by the nightly sync.
+      - run: node scripts/docs/check-docs-drift.mjs --ci
