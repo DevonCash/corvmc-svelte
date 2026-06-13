@@ -106,6 +106,6 @@ None affect correctness.
 - Storybook harness made theme-correct: `.storybook/preview.ts` now imports the
   app stylesheet and adds a light/dark theme toolbar.
 - Stories live next to their components (`*.stories.svelte`), following
-  `docs/component-testing.md`.
+  `docs/development/component-testing.md`.
 - Screenshots: `scripts/shoot-stories.mjs` drives Playwright over every story in
   both themes. Re-run with Storybook up (`pnpm storybook`) + `node scripts/shoot-stories.mjs`.

@@ -2061,7 +2061,7 @@ async function seedHelp() {
 				slug: 'bands',
 				description: 'Creating and managing bands',
 				icon: 'music',
-				sortOrder: 2,
+				sortOrder: 3,
 				minRole: 'member'
 			},
 			{
@@ -2069,11 +2069,51 @@ async function seedHelp() {
 				slug: 'staff-guide',
 				description: 'Operations and admin tasks',
 				icon: 'settings',
-				sortOrder: 3,
+				sortOrder: 8,
 				minRole: 'staff'
+			},
+			{
+				name: 'Profile & Directory',
+				slug: 'profile-directory',
+				description: 'Your profile, visibility, and being found',
+				icon: 'user',
+				sortOrder: 2,
+				minRole: 'member'
+			},
+			{
+				name: 'Band Pages (Premium)',
+				slug: 'band-pages',
+				description: 'Premium band websites, page editor, and press kit',
+				icon: 'layout',
+				sortOrder: 4,
+				minRole: 'member'
+			},
+			{
+				name: 'Events & Tickets',
+				slug: 'events-tickets',
+				description: 'Browsing events, buying tickets, and check-in',
+				icon: 'ticket',
+				sortOrder: 5,
+				minRole: 'member'
+			},
+			{
+				name: 'Equipment Lending',
+				slug: 'equipment',
+				description: 'Borrowing gear from the lending library',
+				icon: 'package',
+				sortOrder: 6,
+				minRole: 'member'
+			},
+			{
+				name: 'Membership & Billing',
+				slug: 'membership',
+				description: 'Sustaining membership, benefits, and billing',
+				icon: 'heart',
+				sortOrder: 7,
+				minRole: 'member'
 			}
 		],
-		4
+		9
 	);
 
 	const articles = await batchInsert(
@@ -2098,7 +2138,7 @@ async function seedHelp() {
 				summary: 'How to set up and customize your member profile.',
 				content:
 					'## Your Profile\n\nYour profile helps other members find you in the directory.\n\n### What to Add\n\n- **Instruments** — What do you play?\n- **Genres** — What styles are you into?\n- **Looking for a band** — Toggle this to show up in searches\n\n### Updating Your Profile\n\nNavigate to your account settings to update your display name, pronouns, and contact info.',
-				source: 'dynamic',
+				source: 'static',
 				minRole: 'member',
 				published: true,
 				sortOrder: 1
@@ -2122,7 +2162,7 @@ async function seedHelp() {
 				summary: 'Set up weekly or biweekly practice schedules.',
 				content:
 					'## Recurring Reservations\n\nIf you practice at the same time each week, set up a recurring reservation.\n\n### How It Works\n\n- Choose weekly, biweekly, or monthly frequency\n- Recurring reservations are created in advance\n- You can skip individual occurrences without cancelling the series\n\n### Eligibility\n\nRecurring reservations are available to sustaining members and above.',
-				source: 'dynamic',
+				source: 'static',
 				minRole: 'member',
 				published: true,
 				sortOrder: 1
@@ -2134,7 +2174,7 @@ async function seedHelp() {
 				summary: 'How to create a band and invite members.',
 				content:
 					'## Creating a Band\n\nBands allow you to share a practice schedule and coordinate with other members.\n\n### Steps\n\n1. Go to **My Bands** in the sidebar\n2. Click **Create Band**\n3. Name your band and add a bio\n4. Invite members by searching the directory\n\n### Roles\n\n- **Owner** — Full control, can delete the band\n- **Admin** — Can manage members and book on behalf of the band\n- **Member** — Can view the schedule and band info',
-				source: 'dynamic',
+				source: 'static',
 				minRole: 'member',
 				published: true,
 				sortOrder: 0
@@ -2146,7 +2186,7 @@ async function seedHelp() {
 				summary: 'How to confirm, complete, and resolve reservations.',
 				content:
 					"## Managing Reservations\n\nAs staff, you can manage all member reservations.\n\n### Actions\n\n- **Confirm** — Approve a pending reservation\n- **Complete** — Mark as done after the session\n- **No-show** — Mark if the member didn't arrive\n- **Cancel** — Cancel with an optional reason\n\n### Resolving Issues\n\nUse the Resolve panel to handle unresolved reservations (past their end time but not completed).",
-				source: 'dynamic',
+				source: 'static',
 				minRole: 'staff',
 				published: true,
 				sortOrder: 0

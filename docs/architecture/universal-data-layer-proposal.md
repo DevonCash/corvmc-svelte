@@ -81,7 +81,7 @@ The `.svelte` files don't change at all.
 SvelteKit form actions (`+page.server.ts` `actions`) only work with SSR. Replace with:
 
 - `POST /api/<resource>/<action>` endpoints
-- Client-side form submission via fetch (the app already uses a `Form` component from `docs/ui-patterns.md` that can be adapted)
+- Client-side form submission via fetch (the app already uses a `Form` component from `docs/development/ui-patterns.md` that can be adapted)
 
 ## What this enables
 

@@ -31,7 +31,7 @@ Incremental coverage for isolated component tests. See
 - [x] IdCard / IdCardCta (decorative)
 - [ ] FormField (has a spec; add a story for the gallery)
 
-See `docs/component-style-audit.md` for the visual audit run over these.
+See `docs/development/component-style-audit.md` for the visual audit run over these.
 
 ## Coupled components — specs
 
