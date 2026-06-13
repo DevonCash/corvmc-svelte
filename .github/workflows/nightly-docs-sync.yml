@@ -1,0 +1,85 @@
+name: Nightly Docs Sync
+
+# Reviews the day's commits to main and opens a PR updating any documentation
+# that has drifted (manual articles, parity report, manifest).
+#
+# One-time setup required before this works:
+#   1. Install the Claude GitHub App: https://github.com/apps/claude
+#      (or run `/install-github-app` from a Claude Code CLI session).
+#   2. Add an `ANTHROPIC_API_KEY` repository secret
+#      (Settings → Secrets and variables → Actions).
+#
+# Notes:
+#   - Scheduled workflows only fire from the copy of this file on the DEFAULT
+#     branch, so this must be merged to `main` before the nightly run starts.
+#   - GitHub cron is UTC and does NOT observe DST. `0 10 * * *` is 03:00 Pacific
+#     during PDT (summer) and 02:00 Pacific during PST (winter).
+#   - GitHub auto-pauses scheduled workflows after 60 days of repo inactivity.
+
+on:
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: nightly-docs-sync
+  cancel-in-progress: false
+
+jobs:
+  docs-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so `git log --since` can see the day's commits
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Sync docs with the day's changes
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--max-turns 40"
+          prompt: |
+            Keep the CorvMC documentation in sync with code changes merged in the last day, and open a pull request with any fixes. Make NO changes if nothing has drifted — never open an empty or no-op PR.
+
+            ## Environment
+            You are running in GitHub Actions on the `main` branch, checked out at the workspace root with full history. SvelteKit / TypeScript / pnpm; dependencies are already installed (`pnpm install --frozen-lockfile` ran before you). The default branch is `main`. Use the `gh` CLI for the PR.
+
+            ## What the docs are
+            - `docs/README.md` — index of all docs with a status column.
+            - `docs/manual/README.md` — the USER-MANUAL MANIFEST: a checklist of ~76 articles across four audiences (public site, member panel, band panel, staff panel), each tagged `[P]` (page-level) or `[H]` (how-to). This is the source of truth for manual coverage.
+            - In-app help articles live in `src/content/help/<category-slug>/<article-slug>.md`. Each has YAML frontmatter (`title`, `slug`, `category`, `summary`, `minRole` = member|staff|admin, `sortOrder`) followed by a CommonMark body. `scripts/sync-help-articles.ts` upserts these into the help DB as `source='static'` and deletes static rows whose slug no longer has a file. Categories are defined in `scripts/seed-dev.ts`.
+            - Public-site how-tos live in `docs/manual/public/*.md` (markdown only — the in-app help at `/member/help` is behind member auth).
+            - `docs/reports/parity-report.md` — feature parity vs. the legacy Laravel app, organized by panel.
+
+            ## Steps
+            1. List code merged in roughly the last day: `git log --since="26 hours ago" --stat`. Focus on changes under `src/routes/` (member/band/staff/public pages and their `*.remote.ts`), `src/lib/server/`, `src/lib/components/`, and `scripts/seed-dev.ts`.
+            2. For each change, decide whether it alters behavior the docs describe: a new/removed/renamed route or page, a changed user-facing workflow, a new feature, a new help category, or a parity-status change. Read the relevant `+page.svelte` / `data.remote.ts` to confirm the ACTUAL current behavior — never document from the commit message alone.
+            3. Update only what genuinely drifted:
+               - Edit the affected help article(s) in `src/content/help/` (or `docs/manual/public/` for public-site pages). Match the existing voice: concise, second-person, step-numbered how-tos, with a short "Related" list. Internal links use the form `/member/help/<slug>`.
+               - For a genuinely new feature, add a new article file AND add its checklist entry to `docs/manual/README.md` (use an existing category, or add a new category to both `docs/manual/README.md` and the category list in `scripts/seed-dev.ts`).
+               - Update `docs/reports/parity-report.md` rows when a feature's status changed, and `docs/README.md` status flags if a tracked action item was resolved.
+               - Do not invent specifics (prices, durations, limits) you cannot verify in the code or config; keep wording general when unsure.
+            4. Validate (these are the gates — all must pass before you open a PR):
+               - Frontmatter parses for every help file, slugs are unique, every `static` slug seeded in `scripts/seed-dev.ts` still has a backing file, and every internal `/member/help/<slug>` link resolves to an existing article. Replicate the parser in `scripts/sync-help-articles.ts` with a small Node script (regex `/^---\n([\s\S]*?)\n---\n([\s\S]*)$/`). This offline check is the hard gate.
+               - Run `pnpm check` (svelte-check) and confirm you introduced no NEW type errors in files you touched. Pre-existing errors elsewhere are acceptable — do not try to fix unrelated ones.
+               - Do NOT run `pnpm help:sync` here: it needs a provisioned D1 database that isn't available on the runner. The offline validation above covers it.
+            5. If — and only if — you changed files: create a branch `docs/nightly-sync-$(date +%Y-%m-%d)`, commit with a descriptive message (NO co-author or sign-off lines; do not mention being an AI), push, and open a PR against `main` with `gh pr create`. The PR body should list, per doc touched, what changed and which commit/feature prompted it. Print the PR URL.
+            6. If nothing drifted, make no commit and no PR. Print a one-line summary: which commits you reviewed and that the docs were already current.
+
+            ## Constraints
+            - Branch off `main`; never commit docs changes directly to `main`.
+            - Keep the PR documentation-only — do not modify application code (other than help categories in `scripts/seed-dev.ts` when a new help category is genuinely required).
+            - No interface gradients; no co-author lines in commits (project conventions).
