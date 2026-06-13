@@ -3,14 +3,13 @@
 	import { IconMail, IconPhone, IconAt } from '@tabler/icons-svelte';
 	import type { DirectoryContact } from '$lib/server/db/schema/authentication';
 
-	interface Props {
+	let {
+		label,
+		contact
+	}: {
 		label: 'Contact' | 'Booking';
 		contact: DirectoryContact | null | undefined;
-		/** primary email CTA — "Email via CMC" / "Email booking" */
-		cta: { label: string; href: string };
-	}
-
-	let { label, contact, cta }: Props = $props();
+	} = $props();
 
 	const c = $derived(contact ?? {});
 	const hasAny = $derived(!!c.email || !!c.phone || !!c.social);
@@ -37,9 +36,6 @@
 					<span>{c.social}</span>
 				</span>
 			{/if}
-			{#if cta.href}
-				<a href={cta.href} class="btn btn-primary btn-sm contact__cta">{cta.label}</a>
-			{/if}
 		</div>
 	</ProfileSection>
 {/if}
@@ -60,9 +56,5 @@
 	}
 	a.contact__row:hover {
 		color: var(--color-primary);
-	}
-	.contact__cta {
-		margin-top: 4px;
-		align-self: flex-start;
 	}
 </style>

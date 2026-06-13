@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./email/postmark-client', () => ({ sendEmail: vi.fn() }));
+vi.mock('./email/postmark-client', () => ({ sendEmailWithTemplate: vi.fn() }));
 vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
 vi.mock('./sse', () => ({ pushToUser: vi.fn() }));
+
+const EMAIL_TEMPLATE = {
+	alias: 'reservation-reminder',
+	model: { userName: 'Ada', date: '2026-02-01' }
+};
 
 const BASE_PARAMS = {
 	type: 'reservation.confirmed',
@@ -12,8 +17,7 @@ const BASE_PARAMS = {
 	title: 'Reservation Confirmed',
 	body: 'Your reservation has been confirmed.',
 	href: '/reservations/1',
-	emailSubject: 'Reservation Confirmed',
-	emailHtml: '<p>Confirmed</p>'
+	emailTemplate: EMAIL_TEMPLATE
 };
 
 const FAKE_ROW = {
@@ -26,7 +30,7 @@ const FAKE_ROW = {
 };
 
 describe('dispatch', () => {
-	let sendEmail: ReturnType<typeof vi.fn>;
+	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
 	let createNotification: ReturnType<typeof vi.fn>;
 	let getPreference: ReturnType<typeof vi.fn>;
 	let pushToUser: ReturnType<typeof vi.fn>;
@@ -35,9 +39,8 @@ describe('dispatch', () => {
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<
-			typeof vi.fn
-		>;
+		sendEmailWithTemplate = (await import('./email/postmark-client'))
+			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
 		createNotification = (await import('./in-app-service'))
 			.createNotification as unknown as ReturnType<typeof vi.fn>;
 		getPreference = (await import('./preference-service')).getPreference as unknown as ReturnType<
@@ -52,7 +55,7 @@ describe('dispatch', () => {
 	it('sends in-app notification and SSE push when pref.inApp is true', async () => {
 		getPreference.mockResolvedValue({ email: false, inApp: true });
 
-		await dispatch({ ...BASE_PARAMS, emailSubject: undefined, emailHtml: undefined });
+		await dispatch({ ...BASE_PARAMS, emailTemplate: undefined });
 
 		expect(createNotification).toHaveBeenCalledWith({
 			userId: BASE_PARAMS.userId,
@@ -72,25 +75,25 @@ describe('dispatch', () => {
 		});
 	});
 
-	it('sends email when pref.email is true and email content is provided', async () => {
+	it('sends templated email when pref.email is true and a template is provided', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
 
 		await dispatch(BASE_PARAMS);
 
-		expect(sendEmail).toHaveBeenCalledWith({
+		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
-			subject: BASE_PARAMS.emailSubject,
-			htmlBody: BASE_PARAMS.emailHtml,
+			templateAlias: EMAIL_TEMPLATE.alias,
+			model: EMAIL_TEMPLATE.model,
 			tag: BASE_PARAMS.type
 		});
 	});
 
-	it('skips email when no emailSubject or emailHtml', async () => {
+	it('skips email when no emailTemplate', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
 
-		await dispatch({ ...BASE_PARAMS, emailSubject: undefined, emailHtml: undefined });
+		await dispatch({ ...BASE_PARAMS, emailTemplate: undefined });
 
-		expect(sendEmail).not.toHaveBeenCalled();
+		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
 	});
 
 	it('sends email via forceEmail even when pref.email is false', async () => {
@@ -98,10 +101,10 @@ describe('dispatch', () => {
 
 		await dispatch({ ...BASE_PARAMS, forceEmail: true });
 
-		expect(sendEmail).toHaveBeenCalledWith({
+		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
-			subject: BASE_PARAMS.emailSubject,
-			htmlBody: BASE_PARAMS.emailHtml,
+			templateAlias: EMAIL_TEMPLATE.alias,
+			model: EMAIL_TEMPLATE.model,
 			tag: BASE_PARAMS.type
 		});
 	});
@@ -120,17 +123,15 @@ describe('dispatch', () => {
 		createNotification.mockRejectedValue(new Error('DB error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		await expect(
-			dispatch({ ...BASE_PARAMS, emailSubject: undefined, emailHtml: undefined })
-		).resolves.toBeUndefined();
+		await expect(dispatch({ ...BASE_PARAMS, emailTemplate: undefined })).resolves.toBeUndefined();
 
 		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
 	});
 
-	it('logs error but does not throw if sendEmail fails', async () => {
+	it('logs error but does not throw if sendEmailWithTemplate fails', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
-		sendEmail.mockRejectedValue(new Error('SMTP error'));
+		sendEmailWithTemplate.mockRejectedValue(new Error('Postmark error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(dispatch(BASE_PARAMS)).resolves.toBeUndefined();
@@ -141,46 +142,45 @@ describe('dispatch', () => {
 });
 
 describe('dispatchEmailOnly', () => {
-	let sendEmail: ReturnType<typeof vi.fn>;
+	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
 	let dispatchEmailOnly: (params: any) => Promise<void>;
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
 
-		sendEmail = (await import('./email/postmark-client')).sendEmail as unknown as ReturnType<
-			typeof vi.fn
-		>;
+		sendEmailWithTemplate = (await import('./email/postmark-client'))
+			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
 		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
 	});
 
-	it('sends email with the provided params', async () => {
-		sendEmail.mockResolvedValue(undefined);
+	it('sends a templated email with the provided params', async () => {
+		sendEmailWithTemplate.mockResolvedValue(undefined);
 
 		await dispatchEmailOnly({
 			type: 'ticket.purchased',
 			toEmail: 'buyer@example.com',
-			subject: 'Your Ticket',
-			html: '<p>Thanks!</p>'
+			templateAlias: 'ticket-confirmation',
+			model: { attendeeName: 'Ada' }
 		});
 
-		expect(sendEmail).toHaveBeenCalledWith({
+		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
 			to: 'buyer@example.com',
-			subject: 'Your Ticket',
-			htmlBody: '<p>Thanks!</p>',
+			templateAlias: 'ticket-confirmation',
+			model: { attendeeName: 'Ada' },
 			tag: 'ticket.purchased'
 		});
 	});
 
-	it('logs error but does not throw on sendEmail failure', async () => {
-		sendEmail.mockRejectedValue(new Error('Network error'));
+	it('logs error but does not throw on send failure', async () => {
+		sendEmailWithTemplate.mockRejectedValue(new Error('Network error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(
 			dispatchEmailOnly({
 				type: 'ticket.purchased',
 				toEmail: 'buyer@example.com',
-				subject: 'Your Ticket',
-				html: '<p>Thanks!</p>'
+				templateAlias: 'ticket-confirmation',
+				model: {}
 			})
 		).resolves.toBeUndefined();
 

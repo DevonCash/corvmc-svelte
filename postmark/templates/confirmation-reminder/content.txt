@@ -1,0 +1,10 @@
+Please confirm your reservation
+
+Hi {{userName}}, you have an unconfirmed reservation:
+
+Date: {{date}}
+Time: {{startTime}} – {{endTime}}
+
+Please confirm or cancel your reservation to free up the time slot for others.
+
+Confirm now: {{siteUrl}}/member/reservations

@@ -9,6 +9,10 @@ bun.lockb
 /static/
 /drizzle/
 
+# Postmark template sources — pushed to Postmark via `pnpm email:push`.
+# Whitespace inside Mustachio blocks is significant; don't let Prettier reflow it.
+/postmark/
+
 # Generated drizzle migrations (SQL + snapshot.json)
 /migrations/
 

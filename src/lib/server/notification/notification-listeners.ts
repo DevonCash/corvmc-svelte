@@ -1,6 +1,6 @@
 import { domainEvents } from '$lib/server/events/event-bus';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
-import { templates } from './email';
+import { captureException } from '$lib/server/sentry';
 import { env } from '$env/dynamic/private';
 
 // ---------------------------------------------------------------------------
@@ -9,28 +9,39 @@ import { env } from '$env/dynamic/private';
 // Subscribes to domain events and dispatches notifications through the
 // appropriate channels. Each listener maps a domain event to one or more
 // notification dispatches.
+//
+// Email bodies and subjects live in Postmark templates (source of truth in
+// postmark/templates, pushed via `pnpm email:push`). Listeners supply only the
+// template alias and its Mustachio model — never HTML.
 // ---------------------------------------------------------------------------
+
+function formatPickupDate(value: string): string {
+	return new Date(value).toLocaleDateString('en-US', {
+		weekday: 'long',
+		month: 'long',
+		day: 'numeric'
+	});
+}
 
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
 	// --- Ticket purchase confirmation ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
-		const html = templates.ticketConfirmation({
-			attendeeName: event.attendeeName,
-			eventTitle: event.eventTitle,
-			eventDate: event.eventDate,
-			eventTime: event.eventTime,
-			ticketCodes: event.ticketCodes,
-			quantity: event.quantity
-		});
-
 		// Ticket buyers may not have accounts — use email-only dispatch
 		await dispatchEmailOnly({
 			type: 'ticket_confirmation',
 			toEmail: event.attendeeEmail,
-			subject: `Your tickets for ${event.eventTitle}`,
-			html
+			templateAlias: 'ticket-confirmation',
+			model: {
+				attendeeName: event.attendeeName,
+				eventTitle: event.eventTitle,
+				eventDate: event.eventDate,
+				eventTime: event.eventTime,
+				quantity: event.quantity,
+				multiple: event.quantity > 1,
+				ticketCodes: event.ticketCodes.map((code) => ({ code }))
+			}
 		});
 	});
 
@@ -38,12 +49,12 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('event.cancelled', async ({ data: event }) => {
 		for (const holder of event.ticketHolders) {
 			try {
-				const html = templates.eventCancellation({
+				const model = {
 					attendeeName: holder.attendeeName,
 					eventTitle: event.eventTitle,
 					eventDate: event.eventDate,
 					refundNote: event.refundNote
-				});
+				};
 
 				if (holder.userId) {
 					await dispatch({
@@ -53,36 +64,27 @@ export function registerAllNotificationListeners(): void {
 						title: `${event.eventTitle} has been cancelled`,
 						body: event.refundNote,
 						href: '/member/tickets',
-						emailSubject: `${event.eventTitle} has been cancelled`,
-						emailHtml: html
+						emailTemplate: { alias: 'event-cancellation', model }
 					});
 				} else {
 					await dispatchEmailOnly({
 						type: 'event_cancellation',
 						toEmail: holder.attendeeEmail,
-						subject: `${event.eventTitle} has been cancelled`,
-						html
+						templateAlias: 'event-cancellation',
+						model
 					});
 				}
 			} catch (err) {
-				console.error(
-					`[notification] Failed to notify ticket holder ${holder.attendeeEmail}:`,
-					err
-				);
+				captureException(err, {
+					event: 'notification.event_cancelled',
+					to: holder.attendeeEmail
+				});
 			}
 		}
 	});
 
 	// --- Reservation reminder ---
 	domainEvents.on('reservation.reminder_due', async ({ data: event }) => {
-		const html = templates.reservationReminder({
-			userName: event.userName,
-			date: event.date,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'reservation_reminder',
 			userId: event.userId,
@@ -90,21 +92,21 @@ export function registerAllNotificationListeners(): void {
 			title: 'Upcoming reservation reminder',
 			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
 			href: '/member/reservations',
-			emailSubject: `Reservation reminder: ${event.date}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'reservation-reminder',
+				model: {
+					userName: event.userName,
+					date: event.date,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					siteUrl
+				}
+			}
 		});
 	});
 
 	// --- Confirmation reminder ---
 	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
-		const html = templates.confirmationReminder({
-			userName: event.userName,
-			date: event.date,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'confirmation_reminder',
 			userId: event.userId,
@@ -112,20 +114,21 @@ export function registerAllNotificationListeners(): void {
 			title: 'Please confirm your reservation',
 			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
 			href: '/member/reservations',
-			emailSubject: `Please confirm your reservation: ${event.date}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'confirmation-reminder',
+				model: {
+					userName: event.userName,
+					date: event.date,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					siteUrl
+				}
+			}
 		});
 	});
 
 	// --- Band invitation sent ---
 	domainEvents.on('band.invitation_sent', async ({ data: event }) => {
-		const html = templates.bandInvitation({
-			invitedUserName: event.invitedUserName,
-			bandName: event.bandName,
-			invitedByName: event.invitedByName,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'band_invitation',
 			userId: event.invitedUserId,
@@ -133,8 +136,15 @@ export function registerAllNotificationListeners(): void {
 			title: `You've been invited to ${event.bandName}`,
 			body: `${event.invitedByName} invited you to join their band`,
 			href: '/member',
-			emailSubject: `${event.invitedByName} invited you to ${event.bandName}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'band-invitation',
+				model: {
+					invitedUserName: event.invitedUserName,
+					bandName: event.bandName,
+					invitedByName: event.invitedByName,
+					siteUrl
+				}
+			}
 		});
 	});
 
@@ -142,14 +152,6 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('band.invitation_accepted', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {
-				const html = templates.bandInvitationAccepted({
-					adminName: admin.userName,
-					acceptedByName: event.acceptedByName,
-					bandName: event.bandName,
-					siteUrl,
-					bandId: event.bandId
-				});
-
 				await dispatch({
 					type: 'band_invitation_accepted',
 					userId: admin.userId,
@@ -157,11 +159,22 @@ export function registerAllNotificationListeners(): void {
 					title: `${event.acceptedByName} joined ${event.bandName}`,
 					body: 'A new member has joined your band',
 					href: `/member/bands/${event.bandId}`,
-					emailSubject: `${event.acceptedByName} joined ${event.bandName}`,
-					emailHtml: html
+					emailTemplate: {
+						alias: 'band-invitation-accepted',
+						model: {
+							adminName: admin.userName,
+							acceptedByName: event.acceptedByName,
+							bandName: event.bandName,
+							siteUrl,
+							bandId: event.bandId
+						}
+					}
 				});
 			} catch (err) {
-				console.error(`[notification] Failed to notify band admin ${admin.userEmail}:`, err);
+				captureException(err, {
+					event: 'notification.band_invitation_accepted',
+					to: admin.userEmail
+				});
 			}
 		}
 	});
@@ -169,33 +182,22 @@ export function registerAllNotificationListeners(): void {
 	// --- Platform invite (non-user) ---
 	domainEvents.on('platform_invite.created', async ({ data: event }) => {
 		const signupUrl = `${siteUrl}/login?invite=${event.token}`;
-		const html = templates.platformInvitation({
-			email: event.email,
-			bandName: event.bandName,
-			invitedByName: event.invitedByName,
-			role: event.role,
-			signupUrl
-		});
-
 		await dispatchEmailOnly({
 			type: 'platform_invitation',
 			toEmail: event.email,
-			subject: `${event.invitedByName} invited you to join ${event.bandName} on CorvMC`,
-			html
+			templateAlias: 'platform-invitation',
+			model: {
+				email: event.email,
+				bandName: event.bandName,
+				invitedByName: event.invitedByName,
+				role: event.role,
+				signupUrl
+			}
 		});
 	});
 
 	// --- Recurring reservation skipped ---
 	domainEvents.on('reservation.recurring_skipped', async ({ data: event }) => {
-		const html = templates.recurringSkipped({
-			userName: event.userName,
-			skippedDate: event.skippedDate,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			reason: event.reason,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'recurring_skipped',
 			userId: event.userId,
@@ -203,24 +205,22 @@ export function registerAllNotificationListeners(): void {
 			title: 'Recurring reservation skipped',
 			body: `${event.skippedDate} ${event.startTime}–${event.endTime}: ${event.reason}`,
 			href: '/member/reservations',
-			emailSubject: `Recurring reservation skipped: ${event.skippedDate}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'recurring-skipped',
+				model: {
+					userName: event.userName,
+					skippedDate: event.skippedDate,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					reason: event.reason,
+					siteUrl
+				}
+			}
 		});
 	});
 
 	// --- Equipment loan scheduled (notify member) ---
 	domainEvents.on('equipment.loan_scheduled', async ({ data: event }) => {
-		const html = templates.loanScheduledConfirmation({
-			userName: event.userName,
-			equipmentName: event.equipmentName,
-			scheduledPickupDate: new Date(event.scheduledPickupDate).toLocaleDateString('en-US', {
-				weekday: 'long',
-				month: 'long',
-				day: 'numeric'
-			}),
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'equipment_loan_scheduled',
 			userId: event.userId,
@@ -228,8 +228,15 @@ export function registerAllNotificationListeners(): void {
 			title: `Equipment pickup confirmed: ${event.equipmentName}`,
 			body: `Pickup on ${new Date(event.scheduledPickupDate).toLocaleDateString()}`,
 			href: '/member/equipment/loans',
-			emailSubject: `Equipment pickup confirmed: ${event.equipmentName}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'loan-scheduled-confirmation',
+				model: {
+					userName: event.userName,
+					equipmentName: event.equipmentName,
+					scheduledPickupDate: formatPickupDate(event.scheduledPickupDate),
+					siteUrl
+				}
+			}
 		});
 	});
 
@@ -237,38 +244,23 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('equipment.loan_requested', async ({ data: event }) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
 
-		const html = templates.loanRequestedStaffNotification({
-			userName: event.userName,
-			equipmentName: event.equipmentName,
-			memberNotes: event.memberNotes,
-			requestedPickupDate: new Date(event.requestedPickupDate).toLocaleDateString('en-US', {
-				weekday: 'long',
-				month: 'long',
-				day: 'numeric'
-			}),
-			siteUrl,
-			loanId: event.loanId
-		});
-
 		await dispatchEmailOnly({
 			type: 'equipment_loan_requested',
 			toEmail: staffEmail,
-			subject: `Equipment request from ${event.userName}`,
-			html
+			templateAlias: 'loan-requested-staff',
+			model: {
+				userName: event.userName,
+				equipmentName: event.equipmentName,
+				memberNotes: event.memberNotes,
+				requestedPickupDate: formatPickupDate(event.requestedPickupDate),
+				siteUrl,
+				loanId: event.loanId
+			}
 		});
 	});
 
 	// --- Recurring reservation waitlisted ---
 	domainEvents.on('reservation.recurring_waitlisted', async ({ data: event }) => {
-		const html = templates.recurringWaitlisted({
-			userName: event.userName,
-			date: event.date,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			reason: event.reason,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'recurring_waitlisted',
 			userId: event.userId,
@@ -276,22 +268,22 @@ export function registerAllNotificationListeners(): void {
 			title: 'Recurring reservation waitlisted',
 			body: `${event.date} ${event.startTime}–${event.endTime}: waiting for slot`,
 			href: '/member/reservations',
-			emailSubject: `Recurring reservation waitlisted: ${event.date}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'recurring-waitlisted',
+				model: {
+					userName: event.userName,
+					date: event.date,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					reason: event.reason,
+					siteUrl
+				}
+			}
 		});
 	});
 
 	// --- Waitlist slot available ---
 	domainEvents.on('reservation.waitlist_slot_available', async ({ data: event }) => {
-		const html = templates.waitlistSlotAvailable({
-			userName: event.userName,
-			date: event.date,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			expiresAt: event.expiresAt,
-			confirmUrl: event.confirmUrl
-		});
-
 		await dispatch({
 			type: 'waitlist_slot_available',
 			userId: event.userId,
@@ -299,21 +291,22 @@ export function registerAllNotificationListeners(): void {
 			title: 'A slot has opened up!',
 			body: `${event.date} ${event.startTime}–${event.endTime} is available — confirm within 24 hours`,
 			href: `/member/reservations?confirm=${event.reservationId}`,
-			emailSubject: `Slot available: ${event.date} ${event.startTime}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'waitlist-slot-available',
+				model: {
+					userName: event.userName,
+					date: event.date,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					expiresAt: event.expiresAt,
+					confirmUrl: event.confirmUrl
+				}
+			}
 		});
 	});
 
 	// --- Waitlist expired ---
 	domainEvents.on('reservation.waitlist_expired', async ({ data: event }) => {
-		const html = templates.waitlistExpired({
-			userName: event.userName,
-			date: event.date,
-			startTime: event.startTime,
-			endTime: event.endTime,
-			siteUrl
-		});
-
 		await dispatch({
 			type: 'waitlist_expired',
 			userId: event.userId,
@@ -321,8 +314,16 @@ export function registerAllNotificationListeners(): void {
 			title: 'Waitlisted reservation expired',
 			body: `${event.date} ${event.startTime}–${event.endTime} was not confirmed in time`,
 			href: '/member/reservations',
-			emailSubject: `Waitlisted reservation expired: ${event.date}`,
-			emailHtml: html
+			emailTemplate: {
+				alias: 'waitlist-expired',
+				model: {
+					userName: event.userName,
+					date: event.date,
+					startTime: event.startTime,
+					endTime: event.endTime,
+					siteUrl
+				}
+			}
 		});
 	});
 
@@ -330,17 +331,15 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
 
-		const html = templates.contactFormForward({
-			senderName: event.name,
-			senderEmail: event.email,
-			message: event.message
-		});
-
 		await dispatchEmailOnly({
 			type: 'contact_form',
 			toEmail: staffEmail,
-			subject: `Contact form: ${event.name}`,
-			html
+			templateAlias: 'contact-form-forward',
+			model: {
+				senderName: event.name,
+				senderEmail: event.email,
+				message: event.message
+			}
 		});
 	});
 }
