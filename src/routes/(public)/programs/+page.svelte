@@ -4,7 +4,8 @@
 		IconMicrophone,
 		IconUsers,
 		IconInfoCircle,
-		IconBulb
+		IconBulb,
+		IconGuitarPick
 	} from '@tabler/icons-svelte';
 	import Keyfob from '$lib/components/illustrations/Keyfob.svelte';
 	import Ticket from '$lib/components/illustrations/Ticket.svelte';
@@ -53,7 +54,8 @@
 				</p>
 				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
 					Members can book hourly sessions in our sound-treated practice room, complete with a PA
-					system, microphones, and all the essentials for a productive practice session.
+					system, microphones, a drum kit, backline, and our full gear library — included. Book
+					online, show up, and play.
 				</p>
 				<div
 					class="flex items-start gap-3 rounded-lg p-4 mt-4"
@@ -88,9 +90,65 @@
 				<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
 					Sustaining Members
 				</div>
-				<div class="text-4xl font-bold" style="color: var(--cmc-orange)">up to 10 Free Hours</div>
-				<div class="text-sm mt-1" style="color: var(--fg-2)">then $15/hour</div>
+				<div class="text-4xl font-bold" style="color: var(--cmc-orange)">up to 12 Free Hours</div>
+				<div class="text-sm mt-1" style="color: var(--fg-2)">every month, then $15/hour</div>
 			</a>
+		</div>
+	</div>
+</section>
+
+<!-- Gear Library & Rentals -->
+<section class="section-tint-secondary py-16 px-6 program-block">
+	<div class="max-w-5xl mx-auto">
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+			<div>
+				<span class="sticker-badge sticker-badge--teal" style="margin-bottom: 12px"
+					>Gear Library</span
+				>
+				<h2 class="text-3xl font-bold leading-tight mt-3 mb-4">Borrow the Gear You Need</h2>
+				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+					CMC maintains a gear library available to every member — a drum kit, backline, and our
+					full gear library are included in the practice space, and members can also rent equipment
+					to take out.
+				</p>
+				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+					Need an amp for a gig, an instrument for a session, or a speaker for an event? We don't
+					have a full catalogue online yet — <a href={resolve('/contact')} class="link">reach out</a
+					> and we'll tell you what we've got, or come by and take a look.
+				</p>
+				<div
+					class="flex items-start gap-3 rounded-lg p-4 mt-4"
+					style="background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent)"
+				>
+					<IconGuitarPick size={20} class="shrink-0 mt-0.5" style="color: var(--cmc-teal)" />
+					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">
+						Got gear collecting dust? We accept instrument and equipment donations in any condition
+						— email <a href="mailto:contact@corvmc.org" class="link">contact@corvmc.org</a>.
+					</p>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-6 self-center">
+				<div
+					class="rounded-lg p-6 text-center"
+					style="background: var(--surface); border: 1px solid var(--surface-border)"
+				>
+					<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
+						Instruments & Amps
+					</div>
+					<div class="text-4xl font-bold" style="color: var(--cmc-navy)">$5/day</div>
+					<div class="text-sm mt-1" style="color: var(--fg-2)">per item</div>
+				</div>
+				<div
+					class="rounded-lg p-6 text-center"
+					style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
+				>
+					<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
+						Cables & Accessories
+					</div>
+					<div class="text-4xl font-bold" style="color: var(--cmc-orange)">$1/day</div>
+					<div class="text-sm mt-1" style="color: var(--fg-2)">free for sustaining members</div>
+				</div>
+			</div>
 		</div>
 	</div>
 </section>
@@ -203,7 +261,7 @@
 					<a
 						href={resolve('/events')}
 						class="program-block__cta sticker-badge sticker-badge--orange sticker-badge--sm"
-						>Last Thursday &middot; 6:30 PM</a
+						>Last Thursday &middot; 6&ndash;8:30 PM</a
 					>
 				</div>
 			</div>
