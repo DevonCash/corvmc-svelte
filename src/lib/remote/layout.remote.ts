@@ -4,6 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
+import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 
@@ -61,10 +62,13 @@ export const getStaffLayout = query(async () => {
 		getAllFeatureFlags()
 	]);
 
+	const inboxUnread = features.staffInbox ? await getUnresolvedCount().catch(() => 0) : 0;
+
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
-		features
+		features,
+		inboxUnread
 	};
 });
 
