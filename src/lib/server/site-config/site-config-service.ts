@@ -22,6 +22,11 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'org.contactEmail': 'staff@corvmc.org',
 	'org.timezone': 'America/Los_Angeles',
 
+	'org.addressStreet': '6775 SW Philomath Blvd',
+	'org.addressCity': 'Corvallis',
+	'org.addressState': 'OR',
+	'org.addressZip': '97333',
+
 	'org.socialFacebook': '',
 	'org.socialInstagram': '',
 

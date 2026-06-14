@@ -461,6 +461,44 @@
 
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
+						<h3 class="card-title text-base">Location</h3>
+						<p class="text-xs opacity-60">Shown in the site footer and on the contact page.</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								name="addressStreet"
+								label="Street address"
+								type="text"
+								value={String(orgSettings.addressStreet ?? '')}
+								placeholder="6775 SW Philomath Blvd"
+							/>
+							<FormField
+								name="addressCity"
+								label="City"
+								type="text"
+								value={String(orgSettings.addressCity ?? '')}
+								placeholder="Corvallis"
+							/>
+							<FormField
+								name="addressState"
+								label="State"
+								type="text"
+								value={String(orgSettings.addressState ?? '')}
+								placeholder="OR"
+							/>
+							<FormField
+								name="addressZip"
+								label="ZIP"
+								type="text"
+								value={String(orgSettings.addressZip ?? '')}
+								placeholder="97333"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
 						<h3 class="card-title text-base">Social Links</h3>
 						<p class="text-xs opacity-60">Shown in the site footer. Leave blank to hide.</p>
 
