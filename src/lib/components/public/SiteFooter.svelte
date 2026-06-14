@@ -9,6 +9,7 @@
 		{ href: '/programs', label: 'Programs' },
 		{ href: '/events', label: 'Events' },
 		{ href: '/directory', label: 'Directory' },
+		{ href: '/local-resources', label: 'Local Resources' },
 		{ href: '/contribute', label: 'Contribute' },
 		{ href: '/about/bylaws', label: 'Bylaws' },
 		{ href: '/about/privacy', label: 'Privacy' },

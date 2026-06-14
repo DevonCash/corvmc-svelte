@@ -91,7 +91,7 @@
 					<span style="color: var(--cmc-teal)"><IconMapPin size={18} /></span> Visit Us
 				</h3>
 				<p class="text-sm" style="color: var(--fg-2)">
-					6775 A Philomath Blvd<br />
+					6775 SW Philomath Blvd<br />
 					Corvallis, OR 97333
 				</p>
 				<p class="text-xs mt-1" style="color: var(--fg-3)">Office available by appointment only.</p>

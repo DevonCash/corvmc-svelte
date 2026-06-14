@@ -29,7 +29,7 @@ The Corvallis Music Collective exists to foster an inclusive, vibrant music comm
 - **January 2024** — Founded by a group of local musicians frustrated by the lack of affordable practice space in Corvallis.
 - **April 2024** — Held our first fundraiser event, bringing the community together around a shared vision.
 - **June 2024** — Received 501(c)(3) nonprofit status.
-- **August 2024** — Signed a lease on our practice space at 6775 A Philomath Blvd.
+- **August 2024** — Signed a lease on our practice space at 6775 SW Philomath Blvd.
 - **January 2025** — Hosted our first concert. Since then, we've put on 25+ live performances.
 
 ## Leadership
