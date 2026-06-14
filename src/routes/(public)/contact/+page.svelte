@@ -130,8 +130,11 @@
 							>How do I submit music for a show?</summary
 						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							Use the contact form on this page with "Performance Inquiry" as the subject, and tell
-							us about your act.
+							All-ages, all genres — if you make music, we want to hear from you. Use the contact
+							form with "Performance Inquiry" as the subject, or email a link to your music and any
+							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"
+								>booking@corvmc.org</a
+							>.
 						</div>
 					</details>
 				</div>

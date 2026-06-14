@@ -17,6 +17,13 @@ The Corvallis Music Collective exists to foster an inclusive, vibrant music comm
 - **Growth** — Supporting artists in developing their craft and reaching new audiences.
 - **Sustainability** — Creating lasting resources that serve the Corvallis music scene for years to come.
 
+## How We Operate
+
+- **All-ages, always.** A lot of great music in Corvallis happens in 21+ venues. CMC is an all-ages, substance-free alternative — a real venue where anyone can walk through the door and catch a live show.
+- **NOTAFLOF.** No One Turned Away For Lack Of Funds. If money is tight, you're still welcome here. Come on out.
+- **Bands get paid.** When you buy a ticket to a CMC show, 70% goes directly to the band. The rest keeps the doors open. Sustaining members get 50% off tickets — and the band still gets their full cut.
+- **Volunteer-run and member-governed.** Shows are operated by volunteers, and the collective is built for musicians, not for profit. If you want to get involved, [reach out](/contact).
+
 ## Our Story
 
 - **January 2024** — Founded by a group of local musicians frustrated by the lack of affordable practice space in Corvallis.
