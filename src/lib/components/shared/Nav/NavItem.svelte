@@ -5,11 +5,13 @@
 	let {
 		href,
 		label,
-		icon
+		icon,
+		badge
 	}: {
 		href: string;
 		label: string;
 		icon?: Snippet;
+		badge?: number;
 	} = $props();
 
 	let active = $derived(page.url.pathname === href);
@@ -18,7 +20,10 @@
 <li>
 	<a {href} class:active>
 		{@render icon?.()}
-		{label}
+		<span class="grow">{label}</span>
+		{#if badge}
+			<span class="badge badge-primary badge-sm">{badge > 99 ? '99+' : badge}</span>
+		{/if}
 	</a>
 </li>
 

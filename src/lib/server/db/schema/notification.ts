@@ -116,6 +116,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: false, inApp: true, sms: false }
 	},
 	{
+		key: 'inbox_assigned',
+		label: 'Inbox conversation assigned (staff)',
+		description: 'Notification when a staff inbox conversation is assigned to you',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
 		key: 'content_flagged',
 		label: 'Content flagged (staff)',
 		description: 'Notification when a member reports a profile for review',

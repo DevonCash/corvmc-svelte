@@ -11,7 +11,9 @@
 		replyToThread,
 		addThreadNote,
 		updateThreadStatus,
-		getInboxEnabledChannels
+		assignThread,
+		getInboxEnabledChannels,
+		getAssignableStaff
 	} from '$lib/remote/inbox.remote';
 	import {
 		IconMail,
@@ -44,10 +46,12 @@
 	const threadId = $derived(page.params.id!);
 	let thread = $derived(getInboxThread(threadId));
 	let enabledChannels = $derived(getInboxEnabledChannels());
+	let staffUsers = $derived(getAssignableStaff());
 
 	const replyForm = replyToThread.for('reply');
 	const noteForm = addThreadNote.for('note');
 	const statusForm = updateThreadStatus.for('status');
+	const assignForm = assignThread.for('assign');
 </script>
 
 {#await thread}
@@ -211,6 +215,38 @@
 						<div class="text-xs opacity-50">
 							Created {formatDateTime(t.createdAt)}
 						</div>
+					</div>
+				</div>
+
+				<div class="card bg-base-200">
+					<div class="card-body p-4 gap-3">
+						<h3 class="card-title text-sm">Assignment</h3>
+						{#await staffUsers then staff}
+							<form
+								{...assignForm.enhance(async ({ submit }) => {
+									if (await submit()) {
+										toast.success('Assignment updated');
+										void getInboxThread(threadId).refresh();
+									} else {
+										toast.error('Failed to update assignment');
+									}
+								})}
+								class="flex flex-col gap-2"
+							>
+								<input {...assignForm.fields.threadId.as('hidden', t.id)} />
+								<select
+									name="userId"
+									class="select select-bordered select-sm w-full"
+									value={t.assignedToUserId ?? ''}
+								>
+									<option value="">Unassigned</option>
+									{#each staff as s (s.id)}
+										<option value={s.id}>{s.name}</option>
+									{/each}
+								</select>
+								<button type="submit" class="btn btn-sm">Update Assignment</button>
+							</form>
+						{/await}
 					</div>
 				</div>
 

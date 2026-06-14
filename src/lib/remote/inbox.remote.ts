@@ -2,8 +2,9 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff } from '$lib/server/authorization';
+import { requireStaff, listStaffUsers } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
+import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import {
 	listThreads,
@@ -75,6 +76,12 @@ export const getInboxUnreadCount = query(z.void(), async () => {
 	return getUnresolvedCount();
 });
 
+export const getAssignableStaff = query(z.void(), async () => {
+	await requireFeature('staffInbox');
+	await requireStaff();
+	return listStaffUsers();
+});
+
 // ---------------------------------------------------------------------------
 // Staff forms
 // ---------------------------------------------------------------------------
@@ -129,8 +136,26 @@ const assignSchema = z.object({
 });
 
 export const assignThread = form(assignSchema, async (data) => {
-	await requireStaff();
+	const staff = await requireStaff();
 	await assignThreadSvc(data.threadId, data.userId);
+
+	// Notify the assignee, unless they assigned the thread to themselves.
+	if (data.userId && data.userId !== staff.id) {
+		const assignee = (await listStaffUsers()).find((u) => u.id === data.userId);
+		const thread = await getThread(data.threadId);
+		if (assignee && thread) {
+			await dispatch({
+				type: 'inbox_assigned',
+				userId: assignee.id,
+				userEmail: assignee.email,
+				title: 'A conversation was assigned to you',
+				body: thread.subject ?? thread.contactName ?? undefined,
+				href: `/staff/inbox/${data.threadId}`
+			});
+		}
+	}
+
+	void getInboxThread(data.threadId).refresh();
 	return { success: true };
 });
 
