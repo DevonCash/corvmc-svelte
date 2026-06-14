@@ -35,7 +35,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'integration.utec.deviceId': '',
 	'integration.utec.refreshToken': '',
 
-	'feature.staffInbox': false,
+	'feature.staffInbox': true,
 	'feature.bandPremium': false,
 	'feature.bandReservations': false,
 	'feature.bandEvents': false,
