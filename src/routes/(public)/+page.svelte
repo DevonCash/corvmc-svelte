@@ -53,6 +53,11 @@
 			>
 			<Button href="/about" class="btn-ghost btn-wide">Learn More About Us</Button>
 		</div>
+		<div class="flex flex-wrap justify-center gap-2 mt-5">
+			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
+				<span class="sticker-badge sticker-badge--sm">{tag}</span>
+			{/each}
+		</div>
 	</div>
 </section>
 
