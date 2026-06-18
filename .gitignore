@@ -62,3 +62,6 @@ src/lib/server/generated/
 # Docs-drift detector artifacts (ephemeral)
 docs-drift-report.json
 changed-files.txt
+
+# tsx runner temp cache (created during build/prepare)
+tsx-*/
