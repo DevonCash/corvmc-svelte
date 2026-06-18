@@ -396,6 +396,7 @@ const memberProfileSchema = z.object({
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
+	contactPublic: z.boolean().default(false),
 	links: z.string().transform((s) => {
 		try {
 			return JSON.parse(s) as Array<{ label: string; url: string }>;
@@ -413,6 +414,12 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		...(data.contactPhone ? { phone: data.contactPhone } : {}),
 		...(data.contactSocial ? { social: data.contactSocial } : {})
 	};
+	// Personal contact defaults to members-only; the member opts it into the
+	// public profile explicitly. contactForView() reads this on the public side.
+	const directoryContact =
+		Object.keys(contact).length > 0
+			? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
+			: undefined;
 
 	await updateMemberProfile(user.id, {
 		tagline: data.tagline || undefined,
@@ -425,7 +432,7 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		teachesLessons: data.teachesLessons,
 		openToCollaboration: data.openToCollaboration,
 		directoryVisibility: data.directoryVisibility,
-		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
+		directoryContact,
 		links: data.links
 	});
 

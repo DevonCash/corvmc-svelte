@@ -37,6 +37,7 @@
 	let teachesLessons = $state(false);
 	let openToCollaboration = $state(false);
 	let directoryVisibility = $state<string>('members');
+	let contactPublic = $state(false);
 
 	$effect(() => {
 		if (profile) {
@@ -49,6 +50,8 @@
 			teachesLessons = profile.teachesLessons;
 			openToCollaboration = profile.openToCollaboration;
 			directoryVisibility = profile.directoryVisibility;
+			contactPublic =
+				(profile.directoryContact as DirectoryContact | null)?.visibility === 'public';
 		}
 	});
 
@@ -198,6 +201,13 @@
 						type="text"
 						value={contact.social ?? ''}
 						placeholder="@handle or URL"
+					/>
+					<FormField
+						field={fields.contactPublic}
+						type="toggle"
+						value={contactPublic}
+						checkboxLabel="Show my contact info on my public profile"
+						description="Off by default, your contact info is only visible to logged-in members."
 					/>
 				</div>
 			</InfoCard>
