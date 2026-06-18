@@ -3,8 +3,16 @@
 	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
+	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 	import { toast } from 'svelte-sonner';
+
+	const address = $derived(await getOrgAddress());
+	const cityStateZip = $derived(
+		[[address.city, address.state].filter(Boolean).join(', '), address.zip]
+			.filter(Boolean)
+			.join(' ')
+	);
 
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();
@@ -91,8 +99,8 @@
 					<span style="color: var(--cmc-teal)"><IconMapPin size={18} /></span> Visit Us
 				</h3>
 				<p class="text-sm" style="color: var(--fg-2)">
-					6775 A Philomath Blvd<br />
-					Corvallis, OR 97333
+					{address.street}<br />
+					{cityStateZip}
 				</p>
 				<p class="text-xs mt-1" style="color: var(--fg-3)">Office available by appointment only.</p>
 			</div>
@@ -130,8 +138,11 @@
 							>How do I submit music for a show?</summary
 						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							Use the contact form on this page with "Performance Inquiry" as the subject, and tell
-							us about your act.
+							All-ages, all genres — if you make music, we want to hear from you. Use the contact
+							form with "Performance Inquiry" as the subject, or email a link to your music and any
+							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"
+								>booking@corvmc.org</a
+							>.
 						</div>
 					</details>
 				</div>
