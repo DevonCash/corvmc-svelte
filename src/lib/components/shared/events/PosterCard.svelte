@@ -213,7 +213,8 @@
 	}
 
 	.poster-card__figure {
-		aspect-ratio: 1 / 1;
+		/* US Letter (8.5 x 11) portrait — standard show-poster proportions */
+		aspect-ratio: 8.5 / 11;
 		background: color-mix(in oklch, var(--cmc-light-blue) 60%, transparent);
 		border: 2px solid var(--cmc-brown);
 		border-radius: 4px;
