@@ -4,7 +4,8 @@ import {
 	orderEmbeddableServices,
 	isStreamingPlatform,
 	isMemberRowPrivate,
-	contactForView
+	contactForView,
+	toPublicMemberProfile
 } from './directory-display';
 import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 
