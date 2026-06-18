@@ -13,10 +13,15 @@
 
 	const c = $derived(contact ?? {});
 	const hasAny = $derived(!!c.email || !!c.phone || !!c.social);
+	// Booking contact is always public; personal contact reflects the member's
+	// own opt-in (members-only by default).
+	const note = $derived<'public' | 'members-only'>(
+		label === 'Booking' || c.visibility === 'public' ? 'public' : 'members-only'
+	);
 </script>
 
 {#if hasAny}
-	<ProfileSection title={label} note={label === 'Booking' ? 'public' : 'members-only'}>
+	<ProfileSection title={label} {note}>
 		<div class="contact">
 			{#if c.email}
 				<a href="mailto:{c.email}" class="contact__row">
