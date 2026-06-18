@@ -36,6 +36,7 @@ import { band, bandGenre, bandMember } from '../src/lib/server/db/schema/band';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
+import { mapLegacyEventTicketing } from '../src/lib/server/event/legacy-ticketing';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { creditTransaction } from '../src/lib/server/db/schema/finance';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
@@ -850,6 +851,8 @@ async function migrateEvents() {
 			: null;
 		const location = locationData?.details ?? null;
 
+		const ticketing = mapLegacyEventTicketing(e);
+
 		try {
 			await db
 				.insert(event)
@@ -866,9 +869,10 @@ async function migrateEvents() {
 					posterKey: null,
 					location,
 					tags: e.event_type,
-					ticketingEnabled: !!e.ticket_price,
-					ticketPrice: e.ticket_price ? Math.round(Number(e.ticket_price) * 100) : null,
-					ticketQuantity: null,
+					ticketingEnabled: ticketing.ticketingEnabled,
+					ticketPrice: ticketing.ticketPrice,
+					ticketQuantity: ticketing.ticketQuantity,
+					externalTicketUrl: ticketing.externalTicketUrl,
 					createdByUserId,
 					createdAt: ts(e.created_at)!,
 					updatedAt: ts(e.updated_at)!

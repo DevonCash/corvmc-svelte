@@ -1,14 +1,22 @@
 <script lang="ts">
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
-	import { getSocialLinks } from '$lib/remote/settings.remote';
+	import { getSocialLinks, getOrgAddress } from '$lib/remote/settings.remote';
 
 	let socialLinks = $derived(await getSocialLinks());
+	let address = $derived(await getOrgAddress());
+
+	const addressLine = $derived(
+		[address.street, [address.city, address.state].filter(Boolean).join(', ')]
+			.filter(Boolean)
+			.join(', ')
+	);
 
 	const footerLinks = [
 		{ href: '/about', label: 'About' },
 		{ href: '/programs', label: 'Programs' },
 		{ href: '/events', label: 'Events' },
 		{ href: '/directory', label: 'Directory' },
+		{ href: '/local-resources', label: 'Local Resources' },
 		{ href: '/contribute', label: 'Contribute' },
 		{ href: '/about/bylaws', label: 'Bylaws' },
 		{ href: '/about/privacy', label: 'Privacy' },
@@ -52,7 +60,9 @@
 
 		<div class="mt-6 text-xs" style="color: var(--fg-3)">
 			<p>&copy; {new Date().getFullYear()} Corvallis Music Collective. All rights reserved.</p>
-			<p class="mt-1">501(c)(3) Nonprofit &middot; 6775 SW Philomath Blvd, Corvallis, OR</p>
+			<p class="mt-1">
+				501(c)(3) Nonprofit{#if addressLine}&nbsp;&middot; {addressLine}{/if}
+			</p>
 		</div>
 	</div>
 </footer>
