@@ -150,11 +150,39 @@
 
 				<div class="edet__facts">
 					<div class="edet__fact">
-						<span class="edet__fact-label">Date</span>
+						<span class="edet__fact-label">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								style="width:13px;height:13px"
+								><rect x="3" y="5" width="18" height="16" rx="2" /><path
+									d="M3 9h18M8 3v4M16 3v4"
+								/></svg
+							>
+							Date
+						</span>
 						<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
 					</div>
 					<div class="edet__fact">
-						<span class="edet__fact-label">Time</span>
+						<span class="edet__fact-label">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								style="width:13px;height:13px"
+								><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
+							>
+							Time
+						</span>
 						<span class="edet__fact-value">
 							{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 							{#if evt.doorsAt}
@@ -165,12 +193,44 @@
 					</div>
 					{#if evt.location}
 						<div class="edet__fact">
-							<span class="edet__fact-label">Location</span>
+							<span class="edet__fact-label">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									style="width:13px;height:13px"
+									><path d="M12 21s-7-5.686-7-11a7 7 0 0 1 14 0c0 5.314-7 11-7 11Z" /><circle
+										cx="12"
+										cy="10"
+										r="2.5"
+									/></svg
+								>
+								Location
+							</span>
 							<span class="edet__fact-value">{evt.location}</span>
 						</div>
 					{/if}
 					<div class="edet__fact">
-						<span class="edet__fact-label">Price</span>
+						<span class="edet__fact-label">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								style="width:13px;height:13px"
+								><path
+									d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
+								/><path d="M13 6v12" /></svg
+							>
+							Price
+						</span>
 						<span class="edet__fact-value">
 							{#if !evt.ticketingEnabled}
 								Free
@@ -273,75 +333,9 @@
 </section>
 
 <style>
-	.edet {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 1.75rem;
-		margin-top: 1.5rem;
-	}
-
-	@media (min-width: 768px) {
-		.edet {
-			grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-			gap: 2.5rem;
-			align-items: start;
-		}
-	}
-
-	.edet__poster {
-		max-width: 320px;
-		margin-inline: auto;
-	}
-
-	.edet__main {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.edet__tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-	}
-
-	.edet__title {
-		font-size: 1.9rem;
-		font-weight: 700;
-		line-height: 1.1;
-		color: var(--cmc-navy);
-	}
-
-	.edet__facts {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.85rem 1.5rem;
-	}
-
-	.edet__fact {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-	}
-
-	.edet__fact-label {
-		font-size: 0.7rem;
-		font-weight: 600;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		color: var(--fg-2);
-	}
-
-	.edet__fact-value {
-		font-size: 0.95rem;
-		font-weight: 500;
-	}
-
-	.edet__desc {
-		line-height: 1.6;
-		color: var(--fg-1);
-	}
-
+	/* Layout (.edet, .edet__poster/main/tags/title/facts/fact/desc/ctas) is
+	   shared with the member event detail page and lives in routes/layout.css.
+	   Only the rules unique to this page are defined locally below. */
 	.edet__capacity {
 		display: flex;
 		flex-direction: column;
@@ -355,14 +349,6 @@
 		gap: 0.5rem;
 		font-size: 0.85rem;
 		color: var(--fg-2);
-	}
-
-	.edet__ctas {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
 	}
 
 	.edet__upsell {
