@@ -52,6 +52,10 @@
 
 	--shadow-color: var(--cmc-brown);
 
+	/* Retro-button hard-shadow source for variant-less buttons.
+	   Light mode keeps the universal dark-brown shadow regardless of fill. */
+	--btn-shadow-base: var(--cmc-brown);
+
 	/* Brand palette */
 	--cmc-orange: oklch(64% 0.175 48);
 	--cmc-goldenrod: oklch(81% 0.17 85);
@@ -119,6 +123,12 @@
 
 	--shadow-color: oklch(6% 0.01 60);
 
+	/* Retro-button hard-shadow source for variant-less buttons. Dark mode derives
+	   the shadow from the button's own fill so the depth reads as a darker shade of
+	   the button instead of a free-floating light-tan outline. Colored variants set
+	   --btn-color and never reach this fallback. */
+	--btn-shadow-base: var(--btn-bg, var(--color-base-200));
+
 	/* Brand palette */
 	--cmc-orange: oklch(73% 0.17 50);
 	--cmc-goldenrod: oklch(82% 0.17 86);
@@ -154,6 +164,12 @@
 
 	/* Deprecated — use --cmc-goldenrod directly */
 	--cmc-yellow: var(--cmc-goldenrod);
+
+	/* Ink — fixed dark brown for text/borders/fills that sit ON bright brand
+	   surfaces (badges, stickers, washi tape, generative posters). Theme-independent
+	   so that artwork stays legible in dark mode, where --cmc-brown flips light to
+	   serve as page-chrome structure instead. */
+	--cmc-ink: oklch(33% 0.06 55);
 
 	/* Depth scale — independent axis for shadow offset */
 	--depth-0: 0;
@@ -339,7 +355,7 @@ p {
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	border-radius: 2px;
-	color: var(--cmc-brown);
+	color: var(--cmc-ink);
 	background:
 		linear-gradient(
 			180deg,
@@ -385,14 +401,14 @@ p {
 	display: inline-block;
 	padding: 6px 12px;
 	background: var(--cmc-goldenrod);
-	color: var(--cmc-brown);
+	color: var(--cmc-ink);
 	font-weight: 700;
 	font-size: 12px;
 	letter-spacing: 0.05em;
 	text-transform: uppercase;
 	border-radius: 3px;
 	transform: rotate(var(--sticker-tilt, -1deg));
-	box-shadow: 1.5px 1.5px 0 var(--cmc-brown);
+	box-shadow: 1.5px 1.5px 0 var(--cmc-ink);
 	white-space: nowrap;
 }
 .sticker-badge:nth-child(3n + 1) {
@@ -695,8 +711,8 @@ p {
 	left: 50%;
 	transform: translateX(-50%) rotate(-1.5deg);
 	background: var(--cmc-goldenrod);
-	color: var(--cmc-brown);
-	border: 2px solid var(--cmc-brown);
+	color: var(--cmc-ink);
+	border: 2px solid var(--cmc-ink);
 	padding: 4px 14px 3px;
 	font-size: 9.5px;
 	font-weight: 700;
@@ -704,7 +720,7 @@ p {
 	text-transform: uppercase;
 	border-radius: 3px;
 	z-index: 4;
-	box-shadow: 1px 1px 0 var(--cmc-brown);
+	box-shadow: 1px 1px 0 var(--cmc-ink);
 	pointer-events: none;
 	white-space: nowrap;
 }
@@ -775,7 +791,7 @@ p {
 }
 .poster-gen--halftone {
 	background:
-		radial-gradient(circle at center, var(--cmc-brown) 1.4px, transparent 2.2px) 0 0 / 9px 9px,
+		radial-gradient(circle at center, var(--cmc-ink) 1.4px, transparent 2.2px) 0 0 / 9px 9px,
 		var(--cmc-goldenrod);
 }
 .poster-gen--blobs {
@@ -833,8 +849,8 @@ p {
 }
 .poster-gen--cross {
 	background:
-		linear-gradient(var(--cmc-brown) 2px, transparent 2px) 0 0/18px 18px,
-		linear-gradient(90deg, var(--cmc-brown) 2px, transparent 2px) 0 0/18px 18px,
+		linear-gradient(var(--cmc-ink) 2px, transparent 2px) 0 0/18px 18px,
+		linear-gradient(90deg, var(--cmc-ink) 2px, transparent 2px) 0 0/18px 18px,
 		var(--cmc-cream);
 }
 .poster-gen--triangles {
@@ -878,10 +894,10 @@ p {
 }
 .poster-gen--houndstooth {
 	background:
-		linear-gradient(45deg, var(--cmc-brown) 25%, transparent 25%) 0 0/20px 20px,
-		linear-gradient(-45deg, var(--cmc-brown) 25%, transparent 25%) 0 10px/20px 20px,
-		linear-gradient(45deg, transparent 75%, var(--cmc-brown) 75%) 10px 0/20px 20px,
-		linear-gradient(-45deg, transparent 75%, var(--cmc-brown) 75%) 10px 10px/20px 20px,
+		linear-gradient(45deg, var(--cmc-ink) 25%, transparent 25%) 0 0/20px 20px,
+		linear-gradient(-45deg, var(--cmc-ink) 25%, transparent 25%) 0 10px/20px 20px,
+		linear-gradient(45deg, transparent 75%, var(--cmc-ink) 75%) 10px 0/20px 20px,
+		linear-gradient(-45deg, transparent 75%, var(--cmc-ink) 75%) 10px 10px/20px 20px,
 		var(--cmc-cream);
 }
 .poster-gen--concentric {
@@ -921,10 +937,10 @@ p {
 }
 .poster-gen--bricks {
 	background:
-		linear-gradient(transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
-		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 0 0/48px 24px,
-		linear-gradient(90deg, transparent 47%, var(--cmc-brown) 47% 53%, transparent 53%) 24px
-			12px/48px 24px,
+		linear-gradient(transparent 47%, var(--cmc-ink) 47% 53%, transparent 53%) 0 0/48px 24px,
+		linear-gradient(90deg, transparent 47%, var(--cmc-ink) 47% 53%, transparent 53%) 0 0/48px 24px,
+		linear-gradient(90deg, transparent 47%, var(--cmc-ink) 47% 53%, transparent 53%) 24px 12px/48px
+			24px,
 		var(--cmc-orange);
 }
 .poster-gen--polka {
@@ -940,7 +956,7 @@ p {
 	color: #fff;
 	text-transform: uppercase;
 	z-index: 1;
-	background: var(--cmc-brown);
+	background: var(--cmc-ink);
 	align-self: flex-start;
 	padding: 3px 7px;
 	border-radius: 3px;
@@ -950,7 +966,7 @@ p {
 	font-size: 22px;
 	line-height: 0.95;
 	color: #fff;
-	-webkit-text-stroke: 4px var(--cmc-brown);
+	-webkit-text-stroke: 4px var(--cmc-ink);
 	paint-order: stroke fill;
 	margin-top: 6px;
 	letter-spacing: -0.01em;
@@ -970,7 +986,7 @@ p {
 	color: #fff;
 	letter-spacing: 0.06em;
 	z-index: 1;
-	background: var(--cmc-brown);
+	background: var(--cmc-ink);
 	align-self: flex-start;
 	padding: 3px 7px;
 	border-radius: 3px;
@@ -1196,7 +1212,7 @@ p {
 	box-shadow: 0 0 0 var(--cmc-brown);
 }
 .btn--latch.is-latched {
-	background: var(--cmc-brown);
+	background: var(--cmc-ink);
 	color: var(--cmc-cream);
 	transform: translateY(3px);
 	box-shadow: 0 0 0 var(--cmc-brown);
@@ -1502,8 +1518,8 @@ p {
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	background: var(--cmc-goldenrod);
-	color: var(--cmc-brown);
-	border: 2px solid var(--cmc-brown);
+	color: var(--cmc-ink);
+	border: 2px solid var(--cmc-ink);
 	border-radius: 4px;
 }
 .sticker--orange {
