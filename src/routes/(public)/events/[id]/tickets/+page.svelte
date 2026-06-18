@@ -9,6 +9,8 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
+	import { IconHeartHandshake } from '@tabler/icons-svelte';
 	import { purchaseTickets, rsvpForEvent, getPublicTicketPage } from '$lib/remote/events.remote';
 
 	const purchaseFields = purchaseTickets.fields;
@@ -26,6 +28,8 @@
 	const unitPrice = $derived(evt.ticketPrice ?? 0);
 	const discountedPrice = $derived(data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice);
 	const subtotal = $derived(discountedPrice * quantity);
+	const memberSubtotal = $derived(Math.round(unitPrice / 2) * quantity);
+	const memberSavings = $derived(subtotal - memberSubtotal);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
@@ -112,6 +116,34 @@
 			</div>
 		</Form>
 	{:else}
+		{#if !data.isSustainingMember}
+			<div class="card border border-primary/30 bg-primary/5">
+				<div class="card-body gap-3 p-4">
+					<div class="flex items-center gap-2">
+						<IconHeartHandshake size={20} class="text-primary" />
+						<h3 class="font-semibold">Save 50% as a sustaining member</h3>
+					</div>
+					<p class="text-sm opacity-80">
+						Sustaining members pay
+						<span class="font-semibold">{formatCents(memberSubtotal)}</span> for this order — you'd
+						save {formatCents(memberSavings)}. Plus free practice hours, gear discounts, and 50% off
+						every show.
+					</p>
+					{#if data.isAuthenticated}
+						<Button href={resolve('/member/membership')} class="btn-primary btn-sm self-start">
+							Become a Sustaining Member
+						</Button>
+					{:else}
+						<Button
+							href="{resolve('/login')}?redirect={encodeURIComponent(page.url.pathname)}"
+							class="btn-primary btn-sm self-start"
+						>
+							Sign in &amp; save 50%
+						</Button>
+					{/if}
+				</div>
+			</div>
+		{/if}
 		<Form
 			remote={purchaseTickets}
 			onsuccess={handleSuccess}
@@ -153,12 +185,6 @@
 						label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
 						class="btn-primary w-full"
 					/>
-
-					{#if !data.isAuthenticated}
-						<p class="text-sm text-center opacity-60">
-							<a href={resolve('/login')} class="link">Sign in</a> for member discounts
-						</p>
-					{/if}
 				</div>
 			</div>
 		</Form>

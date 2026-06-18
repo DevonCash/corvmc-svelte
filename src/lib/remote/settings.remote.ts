@@ -30,6 +30,16 @@ export const getSocialLinks = query(async () => {
 	};
 });
 
+export const getOrgAddress = query(async () => {
+	const settings = await getConfigsByPrefix('org');
+	return {
+		street: String(settings.addressStreet ?? ''),
+		city: String(settings.addressCity ?? ''),
+		state: String(settings.addressState ?? ''),
+		zip: String(settings.addressZip ?? '')
+	};
+});
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -142,6 +152,10 @@ const orgSettingsSchema = z.object({
 	shortName: z.string().trim().min(1, 'Short name is required'),
 	contactEmail: z.string().trim().email('Invalid email address'),
 	timezone: z.string().trim().min(1, 'Timezone is required'),
+	addressStreet: z.string().trim().max(200).optional().default(''),
+	addressCity: z.string().trim().max(100).optional().default(''),
+	addressState: z.string().trim().max(50).optional().default(''),
+	addressZip: z.string().trim().max(20).optional().default(''),
 	socialFacebook: z.string().trim().max(500).optional().default(''),
 	socialInstagram: z.string().trim().max(500).optional().default('')
 });
@@ -154,11 +168,16 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 		{ key: 'org.shortName', value: data.shortName },
 		{ key: 'org.contactEmail', value: data.contactEmail },
 		{ key: 'org.timezone', value: data.timezone },
+		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
+		{ key: 'org.addressCity', value: data.addressCity ?? '' },
+		{ key: 'org.addressState', value: data.addressState ?? '' },
+		{ key: 'org.addressZip', value: data.addressZip ?? '' },
 		{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
 		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 	]);
 
 	void getOrgSettings().refresh();
+	void getOrgAddress().refresh();
 
 	return { success: true };
 });
