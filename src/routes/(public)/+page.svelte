@@ -48,7 +48,9 @@
 			local musicians to grow, collaborate, and thrive together.
 		</p>
 		<div class="flex flex-col items-center gap-3 mt-4">
-			<Button href="/login?redirect=/member" class="btn-wide">Join Our Community!</Button>
+			<Button href="/login?redirect=/member" class="btn-primary btn-wide"
+				>Join Our Community!</Button
+			>
 			<Button href="/about" class="btn-ghost btn-wide">Learn More About Us</Button>
 		</div>
 		<div class="flex flex-wrap justify-center gap-2 mt-5">
