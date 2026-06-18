@@ -107,7 +107,7 @@
 		"clsx": "^2.1.1",
 		"daisyui": "^5.5.20",
 		"date-fns": "^4.3.0",
-		"dompurify": "^3.4.8",
+		"dompurify": "^3.4.9",
 		"emittery": "^2.0.0",
 		"linkedom": "^0.18.12",
 		"marked": "^18.0.4",
