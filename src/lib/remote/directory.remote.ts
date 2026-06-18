@@ -26,7 +26,7 @@ import {
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
-import { isMemberRowPrivate } from '$lib/utils/directory-display';
+import { isMemberRowPrivate, contactForView } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -282,7 +282,11 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 			availableForHire: member.availableForHire,
 			teachesLessons: member.teachesLessons,
 			openToCollaboration: member.openToCollaboration,
-			directoryContact: member.directoryContact as DirectoryContact | null,
+			// Personal contact is members-only unless the member opted it public.
+			directoryContact: contactForView(
+				'public',
+				member.directoryContact as DirectoryContact | null
+			),
 			links: (member.links as ProfileLink[] | null) ?? [],
 			bands: member.bands
 		}

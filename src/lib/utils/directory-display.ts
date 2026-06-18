@@ -4,7 +4,7 @@
  * tested and reused on both client and server.
  */
 import { detectPlatform } from './link-platform';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 
 /** Services that belong in the icon-only "Listen on" ribbon / the Listen tabs. */
 export const STREAMING_PLATFORMS = [
@@ -72,4 +72,22 @@ export function isMemberRowPrivate(
 	memberVisibility: string | null | undefined
 ): boolean {
 	return viewVisibility === 'public' && memberVisibility !== 'public';
+}
+
+/**
+ * A member's personal directory contact details (email/phone/social) are
+ * members-only by default. They are only exposed in the public view when the
+ * member has explicitly opted the contact block to `public` via
+ * `directoryContact.visibility`. Returns the contact to render, or `null` to
+ * withhold it entirely.
+ *
+ * Band booking contact is public by design and is not gated through here.
+ */
+export function contactForView(
+	viewVisibility: 'members' | 'public',
+	contact: DirectoryContact | null | undefined
+): DirectoryContact | null {
+	if (!contact) return null;
+	if (viewVisibility === 'public' && contact.visibility !== 'public') return null;
+	return contact;
 }

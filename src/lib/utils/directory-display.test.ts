@@ -3,9 +3,10 @@ import {
 	partitionLinks,
 	orderEmbeddableServices,
 	isStreamingPlatform,
-	isMemberRowPrivate
+	isMemberRowPrivate,
+	contactForView
 } from './directory-display';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 
 const spotify: ProfileLink = {
 	label: 'Spotify',
@@ -79,5 +80,30 @@ describe('isMemberRowPrivate', () => {
 		expect(isMemberRowPrivate('public', 'public')).toBe(false);
 		expect(isMemberRowPrivate('members', 'members')).toBe(false);
 		expect(isMemberRowPrivate('members', 'hidden')).toBe(false);
+	});
+});
+
+describe('contactForView', () => {
+	const contact: DirectoryContact = { email: 'me@example.com', phone: '555-1234' };
+
+	it('withholds members-only contact from the public view', () => {
+		// Default (no visibility set) is members-only — must not leak publicly.
+		expect(contactForView('public', contact)).toBeNull();
+		expect(contactForView('public', { ...contact, visibility: 'members' })).toBeNull();
+	});
+
+	it('exposes contact publicly only when explicitly opted public', () => {
+		const publicContact = { ...contact, visibility: 'public' };
+		expect(contactForView('public', publicContact)).toEqual(publicContact);
+	});
+
+	it('always shows contact in the members view', () => {
+		expect(contactForView('members', contact)).toEqual(contact);
+		expect(contactForView('members', { ...contact, visibility: 'members' })).toBeTruthy();
+	});
+
+	it('returns null for missing contact', () => {
+		expect(contactForView('public', null)).toBeNull();
+		expect(contactForView('members', undefined)).toBeNull();
 	});
 });
