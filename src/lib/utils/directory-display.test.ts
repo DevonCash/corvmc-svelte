@@ -107,3 +107,59 @@ describe('contactForView', () => {
 		expect(contactForView('members', undefined)).toBeNull();
 	});
 });
+
+describe('toPublicMemberProfile', () => {
+	const member = {
+		id: 'm1',
+		name: 'Jeff',
+		memberNumber: 7, // NOT part of the public DTO
+		pronouns: null,
+		image: null,
+		bio: null,
+		tagline: null,
+		hometown: null,
+		instruments: ['guitar'],
+		genres: ['rock'],
+		lookingForBand: false,
+		availableForHire: false,
+		teachesLessons: false,
+		openToCollaboration: false,
+		links: null,
+		bands: [{ name: 'The Band', slug: 'the-band' }],
+		createdAt: new Date(0)
+	};
+
+	it('withholds members-only contact and never leaks it into the payload', () => {
+		const dto = toPublicMemberProfile({
+			...member,
+			directoryContact: { email: 'secret@jeff.com', phone: '555-9999', visibility: 'members' }
+		});
+		expect(dto.directoryContact).toBeNull();
+		const serialized = JSON.stringify(dto);
+		expect(serialized).not.toContain('secret@jeff.com');
+		expect(serialized).not.toContain('555-9999');
+	});
+
+	it('treats contact with no visibility set as members-only', () => {
+		const dto = toPublicMemberProfile({
+			...member,
+			directoryContact: { email: 'secret@jeff.com' }
+		});
+		expect(dto.directoryContact).toBeNull();
+		expect(JSON.stringify(dto)).not.toContain('secret@jeff.com');
+	});
+
+	it('exposes contact only when the member opted it public', () => {
+		const dto = toPublicMemberProfile({
+			...member,
+			directoryContact: { email: 'book@jeff.com', visibility: 'public' }
+		});
+		expect(dto.directoryContact).toEqual({ email: 'book@jeff.com', visibility: 'public' });
+	});
+
+	it('whitelists fields — non-public columns like memberNumber never appear', () => {
+		const dto = toPublicMemberProfile({ ...member, directoryContact: null });
+		expect(dto).not.toHaveProperty('memberNumber');
+		expect(JSON.stringify(dto)).not.toContain('memberNumber');
+	});
+});

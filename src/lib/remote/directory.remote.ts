@@ -26,7 +26,7 @@ import {
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
-import { isMemberRowPrivate, contactForView } from '$lib/utils/directory-display';
+import { isMemberRowPrivate, toPublicMemberProfile } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -267,30 +267,7 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 	const member = await getMemberProfileService(id, 'public');
 	if (!member) throw error(404, 'Member not found');
 
-	return {
-		member: {
-			id: member.id,
-			name: member.name,
-			pronouns: member.pronouns,
-			image: member.image,
-			bio: member.bio,
-			tagline: member.tagline,
-			hometown: member.hometown,
-			instruments: member.instruments,
-			genres: member.genres,
-			lookingForBand: member.lookingForBand,
-			availableForHire: member.availableForHire,
-			teachesLessons: member.teachesLessons,
-			openToCollaboration: member.openToCollaboration,
-			// Personal contact is members-only unless the member opted it public.
-			directoryContact: contactForView(
-				'public',
-				member.directoryContact as DirectoryContact | null
-			),
-			links: (member.links as ProfileLink[] | null) ?? [],
-			bands: member.bands
-		}
-	};
+	return { member: toPublicMemberProfile(member) };
 });
 
 // ---------------------------------------------------------------------------
