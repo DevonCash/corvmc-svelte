@@ -6,7 +6,11 @@
 .btn {
 	--shadow: var(--depth-2);
 	--shadow-size: var(--shadow);
-	--shadow-color: color-mix(in oklch, var(--btn-color, var(--cmc-brown)) 80%, black);
+	--shadow-color: color-mix(
+		in oklch,
+		var(--btn-color, var(--btn-shadow-base, var(--cmc-brown))) 80%,
+		black
+	);
 	border-width: 2.5px;
 	border-color: var(--shadow-color);
 	box-shadow: 0 var(--shadow-size) 0 var(--shadow-color);

@@ -176,6 +176,66 @@ export const getPublicEvents = query(async () => {
 	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
 });
 
+export const getPublicEventDetail = query(z.string(), async (id) => {
+	const { locals } = getRequestEvent();
+	const evt = await getById(id);
+	if (!evt) throw error(404, 'Event not found');
+	if (evt.status !== 'published') throw error(404, 'Event not found');
+
+	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
+	const sold =
+		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
+
+	// Non-ticketed events use the lightweight RSVP join table for headcount.
+	const rsvpCount = evt.ticketingEnabled ? 0 : await countRsvps(id);
+
+	// Sustaining members see the discounted price; anonymous visitors don't.
+	const isSustainingMember = locals.user ? await hasAnyRole(locals.user.id, ['sustaining']) : false;
+
+	const isPast = evt.endsAt.getTime() < Date.now();
+
+	// "More shows" tail: other upcoming events, excluding this one.
+	const upcomingRows = await listUpcoming();
+	const upcoming = upcomingRows
+		.filter((e) => e.id !== id)
+		.slice(0, 6)
+		.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ?? null,
+			tags: e.tags as string | null,
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice,
+			posterUrl: resolveImageUrl(e.posterKey)
+		}));
+
+	return {
+		event: {
+			id: evt.id,
+			title: evt.title,
+			description: evt.description,
+			startsAt: evt.startsAt,
+			endsAt: evt.endsAt,
+			doorsAt: evt.doorsAt ?? null,
+			location: evt.location,
+			tags: evt.tags as string | null,
+			posterUrl: resolveImageUrl(evt.posterKey),
+			ticketingEnabled: evt.ticketingEnabled,
+			ticketPrice: evt.ticketPrice,
+			ticketQuantity: evt.ticketQuantity
+		},
+		remaining,
+		sold,
+		rsvpCount,
+		isSustainingMember,
+		isPast,
+		isAuthenticated: !!locals.user,
+		upcoming
+	};
+});
+
 export const getPublicTicketPage = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
