@@ -207,6 +207,10 @@ export async function cancel(
 		throw new ReservationStateError(`Cannot cancel a reservation with status "${status}"`);
 	}
 
+	if (!options?.staffOverride && row.startsAt.getTime() <= Date.now()) {
+		throw new ReservationStateError('Cannot cancel a reservation that has already started');
+	}
+
 	// Atomic conditional update — only cancels if status hasn't changed since read
 	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
 	const result = await db

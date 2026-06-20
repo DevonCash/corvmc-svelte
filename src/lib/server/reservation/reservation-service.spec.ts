@@ -99,6 +99,10 @@ describe('ReservationService', () => {
 	});
 
 	describe('cancel', () => {
+		const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+		const futureEnd = new Date(future.getTime() + 2 * 60 * 60 * 1000);
+		const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
 		function setupSelectMock(row: Record<string, unknown>) {
 			const limit = vi.fn().mockResolvedValue([row]);
 			const where = vi.fn().mockReturnValue({ limit });
@@ -119,8 +123,8 @@ describe('ReservationService', () => {
 				createdByUserId: 'user-1',
 				status: 'scheduled',
 				stripePaymentRecordId: null,
-				startsAt: new Date('2025-07-15T17:00:00Z'),
-				endsAt: new Date('2025-07-15T19:00:00Z')
+				startsAt: future,
+				endsAt: futureEnd
 			});
 			const set = setupUpdateMock(1);
 
@@ -138,8 +142,8 @@ describe('ReservationService', () => {
 				createdByUserId: 'user-1',
 				status: 'confirmed',
 				stripePaymentRecordId: 'pr_123',
-				startsAt: new Date('2025-07-15T17:00:00Z'),
-				endsAt: new Date('2025-07-15T19:00:00Z')
+				startsAt: future,
+				endsAt: futureEnd
 			});
 			setupUpdateMock(1);
 
@@ -198,7 +202,9 @@ describe('ReservationService', () => {
 				id: 'res-1',
 				createdByUserId: 'user-1',
 				status: 'scheduled',
-				stripePaymentRecordId: null
+				stripePaymentRecordId: null,
+				startsAt: future,
+				endsAt: futureEnd
 			});
 			setupUpdateMock(0);
 
@@ -213,14 +219,30 @@ describe('ReservationService', () => {
 				createdByUserId: 'user-1',
 				status: 'scheduled',
 				stripePaymentRecordId: null,
-				startsAt: new Date('2025-07-15T17:00:00Z'),
-				endsAt: new Date('2025-07-15T19:00:00Z')
+				startsAt: past,
+				endsAt: new Date(past.getTime() + 2 * 60 * 60 * 1000)
 			});
 			setupUpdateMock(1);
 
 			await cancel('res-1', 'staff-1', 'Staff cancelled', { staffOverride: true });
 
 			expect(refund).not.toHaveBeenCalled();
+		});
+
+		it('rejects cancellation of a past reservation by the owner', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'confirmed',
+				stripePaymentRecordId: null,
+				startsAt: past,
+				endsAt: new Date(past.getTime() + 2 * 60 * 60 * 1000)
+			});
+			const set = setupUpdateMock(1);
+
+			await expect(cancel('res-1', 'user-1')).rejects.toBeInstanceOf(ReservationStateError);
+			await expect(cancel('res-1', 'user-1')).rejects.toThrow('already started');
+			expect(set).not.toHaveBeenCalled();
 		});
 	});
 

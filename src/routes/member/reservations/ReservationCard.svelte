@@ -12,6 +12,7 @@
 	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
 	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
+	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
 
 	function cents(n: number): string {
 		return (n / 100).toFixed(2);
@@ -43,7 +44,7 @@
 		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
 		<span class="reservation-status">{reservation.status}</span>
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
-			{#if ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
+			{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
 				<CancelReservationAction
 					{reservation}
 					onsuccess={onchange}
