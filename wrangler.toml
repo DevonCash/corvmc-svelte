@@ -28,7 +28,7 @@ STAFF_CONTACT_EMAIL = "staff@corvmc.org"
 # sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
 # TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value
 # below is Cloudflare's always-pass test key; replace with the real site key.
-PUBLIC_TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
+PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
 LARAVEL_URL = "https://corvmc.org"
