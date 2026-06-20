@@ -653,6 +653,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
 			cashDueCents: reservation.cashDueCents,
+			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
 			memberName: user.name,
@@ -836,8 +837,9 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 
 /**
  * Commit free-hour credits to a reservation. If credits fully cover it, settle it
- * as a $0 credit payment (status confirmed, paidAt, best-effort Stripe record) and
- * return `settled: true`. Otherwise return the cash remainder owed. The credit
+ * as a credit payment (status confirmed, creditsUsed set, cashDueCents 0, paidAt
+ * left null, best-effort $0 Stripe record) and return `settled: true`. Otherwise
+ * return the cash remainder owed. The credit
  * commit is idempotent, so calling this from Confirm then Pay-Ahead/Cash never
  * double-deducts.
  */
@@ -887,9 +889,12 @@ async function commitCreditsAndSettleIfCovered(opts: {
 		.update(reservation)
 		.set({
 			status: 'confirmed',
-			paidAt: new Date(),
+			// paidAt intentionally left null — credit-settled, not cash-paid. The
+			// $0 stripePaymentRecordId is the best-effort receipt; creditsUsed is
+			// what marks this as "Paid with credits" vs. a true comp.
 			stripePaymentRecordId,
 			cashDueCents: 0,
+			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, opts.reservationId));
@@ -1442,7 +1447,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			metadata: { reservation_id: data.id }
 		}));
 	} else {
-		// Fully covered by credits — already settled by the commit (paidAt set).
+		// Fully covered by credits — already settled by the commit (creditsUsed set).
 		const [r] = await db
 			.select({ rec: reservation.stripePaymentRecordId })
 			.from(reservation)

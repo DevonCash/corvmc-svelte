@@ -746,6 +746,23 @@ async function migrateReservations() {
 			? lookupId('recurring_series', r.recurring_series_id)
 			: null;
 
+		// Reconstruct payment state. Legacy reservations carry no payment columns,
+		// only hours_used / free_hours_used. Derive paid-hours and encode per the
+		// app's model: paidAt set ⇒ cash/online paid; cashDueCents 0 + creditsUsed
+		// > 0 ⇒ paid with credits; cashDueCents 0 + no credits ⇒ comped.
+		const hoursUsed = r.hours_used != null ? Number(r.hours_used) : 0;
+		const freeHours = r.free_hours_used != null ? Number(r.free_hours_used) : 0;
+		const paidHours = hoursUsed - freeHours;
+		let paidAt: Date | null = null;
+		let cashDueCents: number | null = null;
+		if (status === 'confirmed' || status === 'completed') {
+			cashDueCents = 0; // settled — nothing owed at the door
+			// Cash/online paid historically; legacy has no real paid-at, proxy with updated_at.
+			if (paidHours > 0) paidAt = ts(r.updated_at);
+			// else: fully credit-covered (creditsUsed > 0) or comped (creditsUsed 0) — paidAt stays null
+		}
+		// scheduled → paidAt/cashDueCents null (Unpaid); cancelled → handled by status in display
+
 		await db
 			.insert(reservation)
 			.values({
@@ -758,8 +775,9 @@ async function migrateReservations() {
 				endsAt: ts(r.reserved_until)!,
 				notes: r.notes,
 				cancellationReason: r.cancellation_reason ?? null,
-				stripePaymentRecordId: r.stripe_payment_intent ?? null,
-				creditsUsed: r.free_hours_used != null ? Number(r.free_hours_used) : null,
+				paidAt,
+				cashDueCents,
+				creditsUsed: freeHours,
 				lockAccessId: null,
 				recurringSeriesId: recurringId,
 				createdAt: ts(r.created_at)!,

@@ -7,6 +7,38 @@ export type ReservationActionKey =
 	| 'cancel'
 	| 'refund';
 
+export type ReservationPaymentState =
+	| 'paid'
+	| 'cash_due'
+	| 'unpaid'
+	| 'credits'
+	| 'comped'
+	| 'cancelled'
+	| 'refunded'
+	| 'no_show';
+
+/**
+ * Derive a reservation's payment state for display. Order matters:
+ * paidAt (cash/online) → cash owed → not-yet-settled → credit-settled → comped.
+ * Credit-settled and comped share `paidAt null & cashDueCents 0`; `creditsUsed`
+ * is what distinguishes them.
+ */
+export function reservationPaymentState(r: {
+	status: string;
+	paidAt?: Date | null;
+	cashDueCents?: number | null;
+	creditsUsed?: number | null;
+	stripePaymentRecordId?: string | null;
+}): ReservationPaymentState {
+	if (r.status === 'no_show') return 'no_show';
+	if (r.status === 'cancelled') return r.stripePaymentRecordId ? 'refunded' : 'cancelled';
+	if (r.paidAt) return 'paid';
+	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
+	if (r.status === 'scheduled') return 'unpaid';
+	if ((r.creditsUsed ?? 0) > 0) return 'credits';
+	return 'comped';
+}
+
 export function visibleActions(
 	status: string,
 	startsAt: Date,

@@ -24,7 +24,7 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMail, IconPhone } from '@tabler/icons-svelte';
-	import { visibleActions } from '$lib/utils/reservation-actions';
+	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
 
@@ -46,17 +46,24 @@
 	const rateFormatted = $derived(formatCents(data.hourlyRateCents));
 
 	const paymentStatus = $derived.by((): { label: string; class: string } => {
-		if (status === 'no_show') return { label: 'No-show', class: 'badge-error' };
-		if (status === 'cancelled') {
-			return r.stripePaymentRecordId
-				? { label: 'Refunded', class: 'badge-error' }
-				: { label: 'Cancelled', class: 'badge-ghost' };
+		switch (reservationPaymentState(r)) {
+			case 'no_show':
+				return { label: 'No-show', class: 'badge-error' };
+			case 'refunded':
+				return { label: 'Refunded', class: 'badge-error' };
+			case 'cancelled':
+				return { label: 'Cancelled', class: 'badge-ghost' };
+			case 'paid':
+				return { label: 'Paid', class: 'badge-success' };
+			case 'cash_due':
+				return { label: `Cash due ${formatCents(r.cashDueCents ?? 0)}`, class: 'badge-warning' };
+			case 'unpaid':
+				return { label: 'Unpaid', class: 'badge-warning' };
+			case 'credits':
+				return { label: 'Paid with credits', class: 'badge-info' };
+			case 'comped':
+				return { label: 'Comped', class: 'badge-info' };
 		}
-		if (r.paidAt) return { label: 'Paid', class: 'badge-success' };
-		if ((r.cashDueCents ?? 0) > 0)
-			return { label: `Cash due ${formatCents(r.cashDueCents ?? 0)}`, class: 'badge-warning' };
-		if (status === 'scheduled') return { label: 'Unpaid', class: 'badge-warning' };
-		return { label: 'Comped', class: 'badge-info' };
 	});
 </script>
 

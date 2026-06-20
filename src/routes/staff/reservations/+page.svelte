@@ -17,6 +17,7 @@
 		IconCircleCheck,
 		IconClock,
 		IconGift,
+		IconCoin,
 		IconArrowBackUp,
 		IconUserX,
 		IconCircleX,
@@ -24,7 +25,7 @@
 	} from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { visibleActions } from '$lib/utils/reservation-actions';
+	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import {
 		getStaffReservations,
@@ -68,18 +69,24 @@
 	let resolveOpen = $state(false);
 
 	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
-		if (r.status === 'no_show') return { label: 'No-show', color: 'text-error', icon: IconUserX };
-		if (r.status === 'cancelled') {
-			return r.stripePaymentRecordId
-				? { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp }
-				: { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
+		switch (reservationPaymentState(r)) {
+			case 'no_show':
+				return { label: 'No-show', color: 'text-error', icon: IconUserX };
+			case 'refunded':
+				return { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp };
+			case 'cancelled':
+				return { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
+			case 'paid':
+				return { label: 'Paid', color: 'text-success', icon: IconCheck };
+			case 'cash_due':
+				return { label: 'Cash due', color: 'text-warning', icon: IconClock };
+			case 'unpaid':
+				return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
+			case 'credits':
+				return { label: 'Paid with credits', color: 'text-info', icon: IconCoin };
+			case 'comped':
+				return { label: 'Comped', color: 'text-info', icon: IconGift };
 		}
-		if (r.paidAt) return { label: 'Paid', color: 'text-success', icon: IconCheck };
-		if ((r.cashDueCents ?? 0) > 0)
-			return { label: 'Cash due', color: 'text-warning', icon: IconClock };
-		if (r.status === 'scheduled')
-			return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
-		return { label: 'Comped', color: 'text-info', icon: IconGift };
 	}
 
 	function dayLabel(r: Reservation): string {
