@@ -15,7 +15,7 @@ binding = "ASSETS"
 [vars]
 # ORIGIN is required — better-auth uses it as baseURL and throws if unset
 # (src/lib/server/auth.ts). Differs per environment.
-ORIGIN = "https://corvmc.devon-cash.workers.dev"
+ORIGIN = "https://corvmc.org"
 R2_PUBLIC_URL = "https://media.corvmc.org"
 # Canonical public site URLs (used for links in emails/notifications) + email
 # sender name. Non-secret config.
@@ -31,7 +31,7 @@ STAFF_CONTACT_EMAIL = "staff@corvmc.org"
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
-LARAVEL_URL = "https://corvmc.org"
+LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com/"
 # Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
 
 [[d1_databases]]
