@@ -43,6 +43,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 
 import {
 	deactivateUser,
+	deactivateUsers,
 	reactivateUser,
 	purgeUser,
 	UserNotFoundError,
@@ -78,6 +79,27 @@ describe('deactivateUser', () => {
 	it('throws UserNotFoundError when already deactivated / missing', async () => {
 		updateResult = []; // no row updated (deletedAt was already set)
 		await expect(deactivateUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+	});
+});
+
+describe('deactivateUsers', () => {
+	it('deactivates multiple users', async () => {
+		updateResult = [{ id: 'x', deletedAt: new Date() }];
+		selectResultQueue = [[], []]; // future reservations per user
+
+		const res = await deactivateUsers(['u1', 'u2']);
+
+		expect(res.deactivated).toEqual(['u1', 'u2']);
+		expect(res.skipped).toEqual([]);
+	});
+
+	it('skips skipUserId without touching the DB and skips not-found ids', async () => {
+		updateResult = []; // any update finds no row -> UserNotFoundError
+
+		const res = await deactivateUsers(['me', 'u2'], { skipUserId: 'me' });
+
+		expect(res.deactivated).toEqual([]);
+		expect(res.skipped).toEqual(['me', 'u2']); // 'me' self-skip, 'u2' already-deactivated/missing
 	});
 });
 

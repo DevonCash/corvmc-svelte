@@ -7,7 +7,21 @@ import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { band, bandMember } from '$lib/server/db/schema/band';
-import { eq, or, like, isNull, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
+import {
+	eq,
+	or,
+	like,
+	isNull,
+	isNotNull,
+	count,
+	desc,
+	gte,
+	lte,
+	ne,
+	inArray,
+	sql,
+	and
+} from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
@@ -22,6 +36,7 @@ import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/su
 import { listUpcoming } from '$lib/server/event/event-service';
 import {
 	deactivateUser as deactivateUserService,
+	deactivateUsers as deactivateUsersService,
 	reactivateUser as reactivateUserService,
 	purgeUser as purgeUserService,
 	UserNotFoundError,
@@ -70,6 +85,7 @@ export const getStaffDashboard = query(async () => {
 
 const staffUsersFilters = z.object({
 	search: z.string().optional(),
+	status: z.enum(['active', 'deactivated', 'all']).optional(),
 	page: z.number().optional()
 });
 
@@ -80,8 +96,17 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	const searchCondition = search
 		? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`))
 		: undefined;
-	const activeCondition = isNull(user.deletedAt);
-	const where = searchCondition ? and(searchCondition, activeCondition) : activeCondition;
+	const status = filters.status ?? 'active';
+	const statusCondition =
+		status === 'active'
+			? isNull(user.deletedAt)
+			: status === 'deactivated'
+				? isNotNull(user.deletedAt)
+				: undefined;
+	const where =
+		searchCondition && statusCondition
+			? and(searchCondition, statusCondition)
+			: (searchCondition ?? statusCondition);
 
 	const dataQ = db
 		.select({
@@ -89,6 +114,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 			name: user.name,
 			email: user.email,
 			pronouns: user.pronouns,
+			deletedAt: user.deletedAt,
 			createdAt: user.createdAt
 		})
 		.from(user)
@@ -316,6 +342,20 @@ export const deactivateUser = form(
 		return { success: true };
 	}
 );
+
+const bulkDeactivateSchema = z.object({
+	ids: z
+		.string()
+		.transform((s) => JSON.parse(s) as string[])
+		.pipe(z.array(z.string().min(1)).min(1).max(100))
+});
+
+export const bulkDeactivateUsers = form(bulkDeactivateSchema, async (rawData) => {
+	await requireStaff();
+	const data = rawData as z.infer<typeof bulkDeactivateSchema>;
+	const me = requireUser();
+	return deactivateUsersService(data.ids, { skipUserId: me.id });
+});
 
 export const reactivateUser = form(
 	z.object({

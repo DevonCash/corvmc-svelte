@@ -3,6 +3,11 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Pagination from '$lib/components/shared/Pagination.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import Field from '$lib/components/shared/Form/FormField.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { toast } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
 	import {
 		IconUserCog,
@@ -11,12 +16,14 @@
 		IconDots,
 		IconEye,
 		IconCopy,
-		IconUserUp
+		IconUserUp,
+		IconUserOff
 	} from '@tabler/icons-svelte';
-	import { getStaffUsers } from '$lib/remote/users.remote';
+	import { getStaffUsers, bulkDeactivateUsers } from '$lib/remote/users.remote';
 	import { formatDate } from '$lib/utils/format';
 
 	let search = $state('');
+	let status = $state<'active' | 'deactivated' | 'all'>('active');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -32,6 +39,7 @@
 
 	let filters = $derived({
 		search: searchDebounced || undefined,
+		status,
 		page
 	});
 
@@ -52,8 +60,40 @@
 		sustaining: 'Sustaining Member'
 	};
 
+	const statusOptions = [
+		{ value: 'active', label: 'Active' },
+		{ value: 'deactivated', label: 'Deactivated' },
+		{ value: 'all', label: 'All' }
+	];
+
+	// Selection (active users only — deactivated rows can't be deactivated again).
+	let selected = new SvelteSet<string>();
+	const { fields: bulkFields } = bulkDeactivateUsers;
+
+	function toggle(id: string, checked: boolean) {
+		if (checked) selected.add(id);
+		else selected.delete(id);
+	}
+
+	function selectablePageIds(users: User[]): string[] {
+		return users.filter((u) => !u.deletedAt).map((u) => u.id);
+	}
+
+	function toggleAll(users: User[], checked: boolean) {
+		const ids = selectablePageIds(users);
+		if (checked) ids.forEach((id) => selected.add(id));
+		else ids.forEach((id) => selected.delete(id));
+	}
+
 	async function copyEmail(email: string) {
 		await navigator.clipboard.writeText(email);
+	}
+
+	// `status` is updated by the select's own bind handler before this bubbling
+	// change handler fires; reset paging + selection for the new filter.
+	function onStatusChange() {
+		page = 1;
+		selected.clear();
 	}
 </script>
 
@@ -71,7 +111,43 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
+		<div onchange={onStatusChange}>
+			<Field type="select" label="" bind:value={status} options={statusOptions} class="w-40" />
+		</div>
 	</div>
+
+	{#if selected.size > 0}
+		<div class="flex items-center gap-3 mb-4 rounded-box bg-base-200 px-4 py-2">
+			<span class="text-sm">{selected.size} selected</span>
+			<Action
+				action={bulkDeactivateUsers}
+				label="Deactivate"
+				class="btn-error btn-sm"
+				modalTitle="Deactivate users"
+				submitLabel="Deactivate"
+				submitClass="btn-error"
+				onsuccess={(result) => {
+					const r = result as { deactivated: string[]; skipped: string[] };
+					selected.clear();
+					void getStaffUsers(filters).refresh();
+					const skipped = r.skipped.length ? `, ${r.skipped.length} skipped` : '';
+					toast.success(`${r.deactivated.length} deactivated${skipped}`);
+				}}
+			>
+				{#snippet icon()}
+					<IconUserOff size={16} />
+				{/snippet}
+				{#snippet form()}
+					<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
+					<p class="py-2">
+						Deactivate {selected.size} selected user{selected.size === 1 ? '' : 's'}? Their future
+						personal reservations will be cancelled.
+					</p>
+				{/snippet}
+			</Action>
+			<Button class="btn-ghost btn-sm" onclick={() => selected.clear()}>Clear</Button>
+		</div>
+	{/if}
 
 	{#await result}
 		<div class="flex justify-center py-12">
@@ -81,10 +157,20 @@
 		{#if users.length === 0}
 			<p class="text-center opacity-60 py-8">No users found</p>
 		{:else}
+			{@const pageIds = selectablePageIds(users)}
 			<div class="overflow-x-auto">
 				<table class="table">
 					<thead>
 						<tr>
+							<th class="w-px">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									disabled={pageIds.length === 0}
+									checked={pageIds.length > 0 && pageIds.every((id) => selected.has(id))}
+									onchange={(e) => toggleAll(users, e.currentTarget.checked)}
+								/>
+							</th>
 							<th class="w-px"></th>
 							<th>Member</th>
 							<th>Email</th>
@@ -98,6 +184,15 @@
 								class="hover cursor-pointer"
 								onclick={() => (window.location.href = `/staff/users/${row.id}`)}
 							>
+								<td class="w-px" onclick={(e) => e.stopPropagation()}>
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm"
+										disabled={!!row.deletedAt}
+										checked={selected.has(row.id)}
+										onchange={(e) => toggle(row.id, e.currentTarget.checked)}
+									/>
+								</td>
 								<td class="w-px">
 									{#if getTier(row)}
 										{@const tier = getTier(row)}
@@ -115,6 +210,9 @@
 								<td>
 									<div>
 										<span class="font-medium">{row.name}</span>
+										{#if row.deletedAt}
+											<Badge variant="error" size="xs" class="ml-2">Deactivated</Badge>
+										{/if}
 										{#if row.pronouns}
 											<span class="block text-sm opacity-60">{row.pronouns}</span>
 										{/if}

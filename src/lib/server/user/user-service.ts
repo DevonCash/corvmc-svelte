@@ -74,6 +74,41 @@ export async function deactivateUser(userId: string) {
 	return row;
 }
 
+/**
+ * Deactivate many users in one pass. Iterates `deactivateUser` per id rather
+ * than a single bulk UPDATE so each user's future-reservation cancellation
+ * (credit refunds / status transitions) runs through the tested single-user
+ * path. The acting staff member (`skipUserId`) is never deactivated, and ids
+ * that are missing / already deactivated are collected into `skipped` instead
+ * of aborting the batch.
+ */
+export async function deactivateUsers(
+	userIds: string[],
+	opts: { skipUserId?: string } = {}
+): Promise<{ deactivated: string[]; skipped: string[] }> {
+	const deactivated: string[] = [];
+	const skipped: string[] = [];
+
+	for (const id of userIds) {
+		if (id === opts.skipUserId) {
+			skipped.push(id);
+			continue;
+		}
+		try {
+			await deactivateUser(id);
+			deactivated.push(id);
+		} catch (err) {
+			if (err instanceof UserNotFoundError) {
+				skipped.push(id);
+				continue;
+			}
+			throw err;
+		}
+	}
+
+	return { deactivated, skipped };
+}
+
 /** Restore a soft-deleted user. */
 export async function reactivateUser(userId: string) {
 	const [row] = await db
