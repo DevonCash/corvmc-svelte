@@ -94,10 +94,21 @@ export function chargePaymentRecordId(charge: LegacyCharge): string {
 /**
  * Derive a reservation's payment fields from its authoritative legacy charge
  * (or null when the reservation has no charge row).
+ *
+ * `coveredByMembership` handles the legacy quirk that a sustaining member's
+ * confirmed booking persisted no charge/ledger entry at all — legacy computed
+ * "covered by credits" live from the membership. When there's no charge and the
+ * booker was a sustaining member as of the reservation date, treat it as
+ * credit-settled (credits_used = durationHours) rather than comped.
  */
 export function deriveReservationPayment(
 	charge: LegacyCharge | null,
-	ctx: { status: MappedStatus; updatedAt: Date | string | null }
+	ctx: {
+		status: MappedStatus;
+		updatedAt: Date | string | null;
+		durationHours?: number;
+		coveredByMembership?: boolean;
+	}
 ): ReservationPaymentFields {
 	const settled = ctx.status === 'confirmed' || ctx.status === 'completed';
 	const empty: ReservationPaymentFields = {
@@ -109,7 +120,21 @@ export function deriveReservationPayment(
 		stripePaymentRecordId: null
 	};
 
-	if (!charge) return empty;
+	if (!charge) {
+		// No persisted payment. A sustaining member's confirmed booking was covered
+		// by their free hours (legacy showed "covered by credits"); everything else
+		// with no charge is a comp.
+		if (settled && ctx.coveredByMembership && (ctx.durationHours ?? 0) > 0) {
+			return {
+				paidAt: null,
+				refundedAt: null,
+				cashDueCents: 0,
+				creditsUsed: ctx.durationHours!,
+				stripePaymentRecordId: null
+			};
+		}
+		return empty;
+	}
 
 	const chargeStatus = String(charge.status ?? '').toLowerCase();
 	const netCents = normalizeCents(charge.net_amount);

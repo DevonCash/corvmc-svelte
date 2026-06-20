@@ -96,7 +96,7 @@ describe('deriveReservationPayment', () => {
 		expect(r.stripePaymentRecordId).toBeNull();
 	});
 
-	it('no charge + settled → comped (cashDueCents 0)', () => {
+	it('no charge + settled + not a member → comped (cashDueCents 0)', () => {
 		const r = deriveReservationPayment(null, { status: 'completed', updatedAt: UPDATED });
 		expect(r).toEqual({
 			paidAt: null,
@@ -105,6 +105,30 @@ describe('deriveReservationPayment', () => {
 			creditsUsed: null,
 			stripePaymentRecordId: null
 		});
+	});
+
+	it('no charge + settled + covered by membership → paid with credits (duration hrs)', () => {
+		const r = deriveReservationPayment(null, {
+			status: 'confirmed',
+			updatedAt: UPDATED,
+			durationHours: 2,
+			coveredByMembership: true
+		});
+		expect(r.paidAt).toBeNull();
+		expect(r.cashDueCents).toBe(0);
+		expect(r.creditsUsed).toBe(2);
+		expect(r.stripePaymentRecordId).toBeNull();
+	});
+
+	it('no charge + covered by membership but NOT settled (scheduled) → unpaid', () => {
+		const r = deriveReservationPayment(null, {
+			status: 'scheduled',
+			updatedAt: UPDATED,
+			durationHours: 2,
+			coveredByMembership: true
+		});
+		expect(r.cashDueCents).toBeNull();
+		expect(r.creditsUsed).toBeNull();
 	});
 
 	it('no charge + scheduled → unpaid (all null)', () => {

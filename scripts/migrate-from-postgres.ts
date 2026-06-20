@@ -785,6 +785,31 @@ async function migrateReservations() {
 		}
 	}
 
+	// Sustaining-membership intervals per legacy user. A confirmed booking with no
+	// charge was covered by the member's free hours (legacy showed "covered by
+	// credits" but persisted nothing); we reconstruct that only when the booker had
+	// an active subscription as of the reservation date. Incomplete subscriptions
+	// (never activated) don't count.
+	const subs = await pg`
+		SELECT user_id, created_at, ends_at FROM subscriptions
+		WHERE stripe_status NOT IN ('incomplete', 'incomplete_expired')
+	`;
+	const subsByUser = new Map<string, { start: number; end: number }[]>();
+	for (const s of subs) {
+		const key = String(s.user_id);
+		const start = s.created_at ? new Date(s.created_at as string).getTime() : 0;
+		const end = s.ends_at ? new Date(s.ends_at as string).getTime() : Number.POSITIVE_INFINITY;
+		if (!subsByUser.has(key)) subsByUser.set(key, []);
+		subsByUser.get(key)!.push({ start, end });
+	}
+	const coveredByMembership = (legacyUserId: number | string | null, reservedAt: Date | null) => {
+		if (legacyUserId == null || !reservedAt) return false;
+		const intervals = subsByUser.get(String(legacyUserId));
+		if (!intervals) return false;
+		const t = reservedAt.getTime();
+		return intervals.some((i) => i.start <= t && t <= i.end);
+	};
+
 	for (const r of reservations) {
 		const id = mapId('reservations', r.id);
 
@@ -815,9 +840,17 @@ async function migrateReservations() {
 		// a synthetic id); credits_applied with net 0 ⇒ paid with credits; comped or
 		// no charge ⇒ comped/unpaid. See scripts/lib/reservation-payment.ts.
 		const charge = chargeByReservation.get(String(r.id)) ?? null;
+		const startsAt = ts(r.reserved_at);
+		const endsAt = ts(r.reserved_until);
+		const durationHours =
+			startsAt && endsAt ? (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60) : 0;
+		// Membership coverage only applies to member (rehearsal) bookings, not events.
+		const memberCovered = rType !== 'event' && coveredByMembership(r.reservable_id, startsAt);
 		const payment = deriveReservationPayment(charge, {
 			status: status as MappedStatus,
-			updatedAt: ts(r.updated_at)
+			updatedAt: ts(r.updated_at),
+			durationHours,
+			coveredByMembership: memberCovered
 		});
 
 		await db
