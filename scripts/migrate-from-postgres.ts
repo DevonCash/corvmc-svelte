@@ -38,7 +38,7 @@ import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
 import { mapLegacyEventTicketing } from '../src/lib/server/event/legacy-ticketing';
 import { ticket } from '../src/lib/server/db/schema/ticket';
-import { creditTransaction } from '../src/lib/server/db/schema/finance';
+import { creditTransaction, paymentCache } from '../src/lib/server/db/schema/finance';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import {
@@ -50,6 +50,13 @@ import {
 } from '../src/lib/server/db/schema/authorization';
 import { platformInvite } from '../src/lib/server/db/schema/platform-invite';
 import { detectPlatform } from '../src/lib/utils/link-platform';
+import {
+	deriveReservationPayment,
+	chargePaymentRecordId,
+	normalizeCents,
+	type LegacyCharge,
+	type MappedStatus
+} from './lib/reservation-payment';
 import { mapMemberFlags } from '../src/lib/server/directory/legacy-flags';
 import type { ProfileLink } from '../src/lib/server/db/schema/authentication';
 
@@ -137,6 +144,23 @@ function ts(val: Date | string | null): Date | null {
 	if (!val) return null;
 	if (val instanceof Date) return val;
 	return new Date(val);
+}
+
+/** Map a legacy charge payment_method to a payment_cache display label. */
+function paymentMethodLabel(method: string | null): string {
+	switch (String(method ?? '').toLowerCase()) {
+		case 'stripe':
+		case 'card':
+			return 'Card';
+		case 'cash':
+			return 'Cash';
+		case 'venmo':
+			return 'Venmo';
+		case 'manual':
+			return 'Manual';
+		default:
+			return 'Other';
+	}
 }
 
 /**
@@ -721,6 +745,71 @@ async function migrateReservations() {
 	}
 	const fallbackUserId = lookupId('users', 162)!;
 
+	// Authoritative payment state lives in the legacy `charges` table, not on the
+	// reservation row (hours_used/free_hours_used are unreliable). Load reservation
+	// charges once and pick the most-relevant charge per reservation: prefer a
+	// real-money (`net_amount > 0`) paid charge, then most recent by paid/updated/
+	// created time — so a re-paid booking wins over an earlier credit/comp/refund.
+	const reservationCharges = await pg`
+		SELECT c.*, u.stripe_id
+		FROM charges c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.chargeable_type = 'rehearsal_reservation'
+	`;
+	type ChargeRow = LegacyCharge & {
+		chargeable_id: number | string;
+		user_id: number | string;
+		stripe_id: string | null;
+		payment_method: string | null;
+		updated_at: Date | string | null;
+		created_at: Date | string | null;
+	};
+	const chargeTime = (c: ChargeRow): number => {
+		const t = c.paid_at ?? c.updated_at ?? c.created_at;
+		return t ? new Date(t as string).getTime() : 0;
+	};
+	const chargeByReservation = new Map<string, ChargeRow>();
+	for (const raw of reservationCharges) {
+		const c = raw as ChargeRow;
+		const key = String(c.chargeable_id);
+		const prev = chargeByReservation.get(key);
+		if (!prev) {
+			chargeByReservation.set(key, c);
+			continue;
+		}
+		const cPaid = normalizeCents(c.net_amount) > 0;
+		const prevPaid = normalizeCents(prev.net_amount) > 0;
+		// Real-money charge beats non-money; otherwise newest wins.
+		if (cPaid !== prevPaid ? cPaid : chargeTime(c) >= chargeTime(prev)) {
+			chargeByReservation.set(key, c);
+		}
+	}
+
+	// Sustaining-membership intervals per legacy user. A confirmed booking with no
+	// charge was covered by the member's free hours (legacy showed "covered by
+	// credits" but persisted nothing); we reconstruct that only when the booker had
+	// an active subscription as of the reservation date. Incomplete subscriptions
+	// (never activated) don't count.
+	const subs = await pg`
+		SELECT user_id, created_at, ends_at FROM subscriptions
+		WHERE stripe_status NOT IN ('incomplete', 'incomplete_expired')
+	`;
+	const subsByUser = new Map<string, { start: number; end: number }[]>();
+	for (const s of subs) {
+		const key = String(s.user_id);
+		const start = s.created_at ? new Date(s.created_at as string).getTime() : 0;
+		const end = s.ends_at ? new Date(s.ends_at as string).getTime() : Number.POSITIVE_INFINITY;
+		if (!subsByUser.has(key)) subsByUser.set(key, []);
+		subsByUser.get(key)!.push({ start, end });
+	}
+	const coveredByMembership = (legacyUserId: number | string | null, reservedAt: Date | null) => {
+		if (legacyUserId == null || !reservedAt) return false;
+		const intervals = subsByUser.get(String(legacyUserId));
+		if (!intervals) return false;
+		const t = reservedAt.getTime();
+		return intervals.some((i) => i.start <= t && t <= i.end);
+	};
+
 	for (const r of reservations) {
 		const id = mapId('reservations', r.id);
 
@@ -746,22 +835,23 @@ async function migrateReservations() {
 			? lookupId('recurring_series', r.recurring_series_id)
 			: null;
 
-		// Reconstruct payment state. Legacy reservations carry no payment columns,
-		// only hours_used / free_hours_used. Derive paid-hours and encode per the
-		// app's model: paidAt set ⇒ cash/online paid; cashDueCents 0 + creditsUsed
-		// > 0 ⇒ paid with credits; cashDueCents 0 + no credits ⇒ comped.
-		const hoursUsed = r.hours_used != null ? Number(r.hours_used) : 0;
-		const freeHours = r.free_hours_used != null ? Number(r.free_hours_used) : 0;
-		const paidHours = hoursUsed - freeHours;
-		let paidAt: Date | null = null;
-		let cashDueCents: number | null = null;
-		if (status === 'confirmed' || status === 'completed') {
-			cashDueCents = 0; // settled — nothing owed at the door
-			// Cash/online paid historically; legacy has no real paid-at, proxy with updated_at.
-			if (paidHours > 0) paidAt = ts(r.updated_at);
-			// else: fully credit-covered (creditsUsed > 0) or comped (creditsUsed 0) — paidAt stays null
-		}
-		// scheduled → paidAt/cashDueCents null (Unpaid); cancelled → handled by status in display
+		// Reconstruct payment state from the reservation's authoritative legacy
+		// charge: net_amount > 0 ⇒ cash/online paid (link the real PaymentIntent or
+		// a synthetic id); credits_applied with net 0 ⇒ paid with credits; comped or
+		// no charge ⇒ comped/unpaid. See scripts/lib/reservation-payment.ts.
+		const charge = chargeByReservation.get(String(r.id)) ?? null;
+		const startsAt = ts(r.reserved_at);
+		const endsAt = ts(r.reserved_until);
+		const durationHours =
+			startsAt && endsAt ? (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60) : 0;
+		// Membership coverage only applies to member (rehearsal) bookings, not events.
+		const memberCovered = rType !== 'event' && coveredByMembership(r.reservable_id, startsAt);
+		const payment = deriveReservationPayment(charge, {
+			status: status as MappedStatus,
+			updatedAt: ts(r.updated_at),
+			durationHours,
+			coveredByMembership: memberCovered
+		});
 
 		await db
 			.insert(reservation)
@@ -775,15 +865,41 @@ async function migrateReservations() {
 				endsAt: ts(r.reserved_until)!,
 				notes: r.notes,
 				cancellationReason: r.cancellation_reason ?? null,
-				paidAt,
-				cashDueCents,
-				creditsUsed: freeHours,
+				paidAt: payment.paidAt,
+				refundedAt: payment.refundedAt,
+				cashDueCents: payment.cashDueCents,
+				creditsUsed: payment.creditsUsed,
+				stripePaymentRecordId: payment.stripePaymentRecordId,
 				lockAccessId: null,
 				recurringSeriesId: recurringId,
 				createdAt: ts(r.created_at)!,
 				updatedAt: ts(r.updated_at)!
 			})
 			.onConflictDoNothing();
+
+		// Mirror real-money payments into payment_cache (local Stripe mirror). Only
+		// charges with cash (net_amount > 0) get a record; credit/comp carry no money
+		// and no Stripe record. No live Stripe writes — online charges reuse their
+		// existing PaymentIntent id, cash charges a deterministic synthetic id.
+		if (charge && normalizeCents(charge.net_amount) > 0) {
+			const chargeUserId = lookupId('users', charge.user_id) ?? bookerId;
+			const isRefunded = String(charge.status ?? '').toLowerCase() === 'refunded';
+			await db
+				.insert(paymentCache)
+				.values({
+					id: chargePaymentRecordId(charge),
+					userId: chargeUserId,
+					reservationId: id,
+					stripeCustomerId: charge.stripe_id ?? null,
+					amountCents: normalizeCents(charge.net_amount),
+					currency: 'usd',
+					paymentMethod: paymentMethodLabel(charge.payment_method),
+					status: isRefunded ? 'refunded' : 'completed',
+					paidAt: ts(charge.paid_at) ?? ts(r.updated_at) ?? ts(r.created_at)!,
+					refundedAt: isRefunded ? (ts(charge.paid_at) ?? ts(r.updated_at)) : null
+				})
+				.onConflictDoNothing();
+		}
 	}
 
 	// Backfill recurring_series.prototype_id → earliest reservation instance.
@@ -1172,26 +1288,30 @@ async function migrateInvitations() {
 }
 
 async function exportCashPayments() {
-	console.log('── Cash Payments (export only) ──');
+	console.log('── Real-money Payments (export only) ──');
+	// All real money (net_amount > 0), regardless of method — this includes online
+	// Stripe charges, which a future idempotent Stripe-materialization step will
+	// *link* via stripePaymentIntentId rather than re-*report*. Cash/Venmo/manual
+	// charges (no intent id) get reported as custom Payment Records by that step.
 	const charges = await pg`
 		SELECT c.*, u.name as user_name, u.email as user_email, u.stripe_id
 		FROM charges c
 		JOIN users u ON u.id = c.user_id
-		WHERE c.payment_method IN ('cash', 'venmo', 'card', 'manual')
-		AND c.status = 'paid'
+		WHERE c.net_amount > 0
 		ORDER BY c.paid_at
 	`;
-	console.log(`  Source: ${charges.length} paid cash/venmo/card/manual charges`);
+	console.log(`  Source: ${charges.length} real-money charges (net_amount > 0)`);
 
 	const records = charges.map((c) => {
-		const raw = Number(c.amount);
-		const amountCents = raw > 10000 ? Math.round(raw / 100) : raw;
 		return {
 			stripeCustomerId: c.stripe_id ?? null,
 			userName: c.user_name,
 			userEmail: c.user_email,
-			amountCents,
+			amountCents: normalizeCents(c.net_amount),
 			paymentMethod: c.payment_method,
+			status: c.status,
+			stripePaymentIntentId: c.stripe_payment_intent_id ?? null,
+			stripeSessionId: c.stripe_session_id ?? null,
 			paidAt: ts(c.paid_at)!,
 			notes: c.notes,
 			reservationId: c.chargeable_id ? lookupId('reservations', c.chargeable_id) : null,
