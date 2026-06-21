@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { user, session } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, isNull, isNotNull, count } from 'drizzle-orm';
@@ -53,6 +53,11 @@ export async function deactivateUser(userId: string) {
 		.returning();
 
 	if (!row) throw new UserNotFoundError();
+
+	// Purge the user's existing sessions so a deactivated account can't keep
+	// riding a live session. The per-request hook gate is the primary defense;
+	// this removes the now-inert rows instead of letting them expire naturally.
+	await db.delete(session).where(eq(session.userId, userId));
 
 	// Cancel all future personal reservations booked by this user.
 	const futureReservations = await db

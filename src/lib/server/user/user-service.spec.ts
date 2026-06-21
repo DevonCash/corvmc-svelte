@@ -76,9 +76,19 @@ describe('deactivateUser', () => {
 		});
 	});
 
+	it('purges the user session rows', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date() }];
+		selectResultQueue = [[]]; // no future reservations
+
+		await deactivateUser('u1');
+
+		expect(deleteWhere).toHaveBeenCalledTimes(1);
+	});
+
 	it('throws UserNotFoundError when already deactivated / missing', async () => {
 		updateResult = []; // no row updated (deletedAt was already set)
 		await expect(deactivateUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+		expect(deleteWhere).not.toHaveBeenCalled();
 	});
 });
 

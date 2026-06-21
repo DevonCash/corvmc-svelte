@@ -289,9 +289,20 @@ export function deriveSignInAnomaly(input: {
 	return null;
 }
 
-async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
-	if (typeof rawEmail !== 'string') return;
+/** True when a user row carries a deletedAt (soft-deleted / deactivated). */
+export function isDeactivated(deletedAt: Date | null | undefined): boolean {
+	return deletedAt != null;
+}
+
+/** Normalize a raw sign-in email body field, or null when not a usable string. */
+function normalizeEmail(rawEmail: unknown): string | null {
+	if (typeof rawEmail !== 'string') return null;
 	const email = rawEmail.toLowerCase().trim();
+	return email || null;
+}
+
+async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
+	const email = normalizeEmail(rawEmail);
 	if (!email) return;
 
 	const [userRow] = await db
@@ -389,6 +400,22 @@ function createAuth() {
 				}
 
 				if (ctx.path !== '/sign-in/email') return;
+
+				// Reject deactivated accounts before credentials are even checked.
+				// Uses the same generic message as a bad password so a deactivated
+				// account is indistinguishable from a wrong one (no enumeration).
+				// Kept outside the diagnostics try/catch below, which swallows throws.
+				const signInEmail = normalizeEmail((ctx.body as { email?: unknown } | undefined)?.email);
+				if (signInEmail) {
+					const [row] = await db
+						.select({ deletedAt: user.deletedAt })
+						.from(user)
+						.where(eq(user.email, signInEmail));
+					if (isDeactivated(row?.deletedAt)) {
+						throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
+					}
+				}
+
 				try {
 					await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
 				} catch (err) {
