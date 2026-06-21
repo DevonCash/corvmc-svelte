@@ -3,13 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // `getPublicMemberProfile` is the public-facing endpoint, so it must never
 // surface a member's members-only contact details. We exercise the *real*
 // handler: `$app/server` is a SvelteKit virtual module, so we mock `query`/
-// `form` as pass-throughs that hand back the raw handler, and mock the DB at
-// the same boundary the service test uses.
+// `form` as pass-throughs that hand back the raw handler. The handler must be
+// tagged with a `__` marker so the kit plugin's remote-function init
+// validation accepts the export. The DB is mocked at the same boundary the
+// service test uses.
 const { userFindFirst } = vi.hoisted(() => ({ userFindFirst: vi.fn() }));
 
 vi.mock('$app/server', () => ({
-	query: (_schema: unknown, fn: (arg: any) => any) => fn,
-	form: (_schema: unknown, fn: (arg: any) => any) => fn,
+	query: (...args: unknown[]) => {
+		const fn = (typeof args[0] === 'function' ? args[0] : args[1]) as (...a: any[]) => any;
+		(fn as any).__ = { type: 'query' };
+		return fn;
+	},
+	form: (...args: unknown[]) => {
+		const fn = (typeof args[0] === 'function' ? args[0] : args[1]) as (...a: any[]) => any;
+		(fn as any).__ = { type: 'form' };
+		(fn as any).for = () => fn;
+		return fn;
+	},
 	getRequestEvent: () => ({ locals: {} })
 }));
 vi.mock('$lib/server/db', () => ({

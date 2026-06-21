@@ -23,7 +23,7 @@ PUBLIC_SITE_URL = "https://corvmc.org"
 PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
-STAFF_CONTACT_EMAIL = "staff@corvmc.org"
+STAFF_CONTACT_EMAIL = "contact@corvmc.org"
 # Public Cloudflare Turnstile site key for the bot-protection widget on the public
 # sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
 # TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value

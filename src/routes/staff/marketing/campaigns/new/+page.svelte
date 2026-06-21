@@ -8,16 +8,13 @@
 		getAudienceOptions,
 		getPreview,
 		createDraft,
-		createAndSend,
-		createAndSchedule
+		createAndSend
 	} from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
-	let scheduleDate = $state('');
 	let submitting = $state(false);
-	let showSchedule = $state(false);
 
 	let audiences = $derived(await getAudienceOptions());
 	let previewHtml = $derived(await getPreview(markdownBody));
@@ -68,25 +65,6 @@
 			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to send');
-		} finally {
-			submitting = false;
-		}
-	}
-
-	async function handleSchedule() {
-		if (!isValid() || !scheduleDate) return;
-		submitting = true;
-		try {
-			const result = await createAndSchedule({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				scheduledFor: scheduleDate
-			});
-			toast.success('Campaign scheduled');
-			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
 		} finally {
 			submitting = false;
 		}
@@ -172,35 +150,7 @@
 				>
 					Send Now
 				</button>
-				<button
-					class="btn btn-secondary btn-sm"
-					disabled={!isValid() || submitting}
-					onclick={() => (showSchedule = !showSchedule)}
-				>
-					Schedule
-				</button>
 			</div>
-
-			{#if showSchedule}
-				<div class="flex gap-2 items-end">
-					<div>
-						<label for="schedule-date" class="text-xs opacity-60">Send at</label>
-						<input
-							id="schedule-date"
-							type="datetime-local"
-							bind:value={scheduleDate}
-							class="input-bordered input input-sm"
-						/>
-					</div>
-					<button
-						class="btn btn-secondary btn-sm"
-						disabled={!scheduleDate || submitting}
-						onclick={handleSchedule}
-					>
-						Confirm Schedule
-					</button>
-				</div>
-			{/if}
 
 			{#if submitting}
 				<div class="flex items-center gap-2 text-sm opacity-60">

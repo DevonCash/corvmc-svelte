@@ -6,6 +6,9 @@ import { user } from './authentication';
 // Subscribers
 // ---------------------------------------------------------------------------
 
+/** Why a subscriber is globally suppressed (set by Postmark webhooks). */
+export type SuppressionReason = 'bounce' | 'complaint';
+
 export const subscriber = sqliteTable(
 	'subscriber',
 	{
@@ -15,6 +18,11 @@ export const subscriber = sqliteTable(
 		email: text('email').notNull().unique(),
 		name: text('name'),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+		// Global (cross-audience) suppression set by Postmark bounce/complaint
+		// webhooks. Null = deliverable. Distinct from per-audience opt-out
+		// (audienceMember.unsubscribedAt).
+		suppressedAt: integer('suppressed_at', { mode: 'timestamp' }),
+		suppressionReason: text('suppression_reason').$type<SuppressionReason>(),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { subscriber } from '$lib/server/db/schema/marketing';
+import { subscriber, type SuppressionReason } from '$lib/server/db/schema/marketing';
 import { eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -36,6 +36,29 @@ export async function findOrCreateByEmail(
 		});
 
 	return row;
+}
+
+/**
+ * Globally suppress a subscriber by email — set by Postmark bounce/complaint
+ * webhooks. Suppressed subscribers are excluded from every campaign send,
+ * regardless of per-audience opt-in. Idempotent; no-op if no matching
+ * subscriber exists (we only suppress addresses we've mailed). Returns whether
+ * a row was updated.
+ */
+export async function suppressByEmail(email: string, reason: SuppressionReason): Promise<boolean> {
+	const normalized = email.toLowerCase().trim();
+
+	const updated = await db
+		.update(subscriber)
+		.set({ suppressedAt: new Date(), suppressionReason: reason })
+		.where(eq(subscriber.email, normalized))
+		.returning({ id: subscriber.id });
+
+	if (updated.length === 0) {
+		console.warn(`[marketing] suppress (${reason}) for unknown subscriber: ${normalized}`);
+		return false;
+	}
+	return true;
 }
 
 /**

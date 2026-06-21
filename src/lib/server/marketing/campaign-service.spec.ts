@@ -32,7 +32,12 @@ vi.mock('$lib/server/db/schema/marketing', () => ({
 		subscriberId: 'audienceMember.subscriberId',
 		unsubscribedAt: 'audienceMember.unsubscribedAt'
 	},
-	subscriber: { id: 'subscriber.id', email: 'subscriber.email', name: 'subscriber.name' }
+	subscriber: {
+		id: 'subscriber.id',
+		email: 'subscriber.email',
+		name: 'subscriber.name',
+		suppressedAt: 'subscriber.suppressedAt'
+	}
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -66,6 +71,7 @@ vi.mock('$env/dynamic/private', () => ({
 // ---------------------------------------------------------------------------
 
 import { db } from '$lib/server/db';
+import { isNull } from 'drizzle-orm';
 import { sendBroadcastBatch } from '$lib/server/notification/email';
 import { renderCampaignForSend } from './campaign-render';
 import { signUnsubscribeToken } from './unsubscribe';
@@ -489,6 +495,21 @@ describe('campaign-service', () => {
 			expect(messages[0].to).toBe(mockRecipient.email);
 			expect(messages[0].subject).toBe(mockCampaign.subject);
 			expect(messages[0].tag).toBe('campaign');
+			// one-click unsubscribe headers (RFC 8058)
+			expect(messages[0].headers).toEqual([
+				{ Name: 'List-Unsubscribe', Value: '<https://test.com/unsubscribe/unsub-token>' },
+				{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }
+			]);
+		});
+
+		it('filters out globally-suppressed subscribers in the recipient query', async () => {
+			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+
+			await executeSend('camp-1');
+
+			// The recipient WHERE clause must include isNull(subscriber.suppressedAt).
+			const isNullCols = vi.mocked(isNull).mock.calls.map((c) => c[0]);
+			expect(isNullCols).toContain('subscriber.suppressedAt');
 		});
 
 		it('marks campaign as sent with correct recipient count after sending', async () => {
