@@ -111,6 +111,7 @@ export interface BroadcastMessage {
 	htmlBody: string;
 	tag?: string;
 	metadata?: Record<string, string>;
+	headers?: { Name: string; Value: string }[];
 }
 
 const BATCH_SIZE = 500;
@@ -138,6 +139,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					HtmlBody: msg.htmlBody,
 					Tag: msg.tag,
 					Metadata: msg.metadata,
+					Headers: msg.headers,
 					MessageStream: 'broadcast'
 				}))
 			);

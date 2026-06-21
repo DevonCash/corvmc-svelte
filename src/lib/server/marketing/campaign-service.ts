@@ -252,7 +252,11 @@ export async function getRecipientsForCampaign(campaignId: string) {
 		.from(audienceMember)
 		.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.where(
-			and(inArray(audienceMember.audienceId, audienceIds), isNull(audienceMember.unsubscribedAt))
+			and(
+				inArray(audienceMember.audienceId, audienceIds),
+				isNull(audienceMember.unsubscribedAt),
+				isNull(subscriber.suppressedAt)
+			)
 		);
 
 	return rows;
@@ -291,7 +295,14 @@ export async function executeSend(campaignId: string): Promise<number> {
 			subject: row.subject,
 			htmlBody,
 			tag: 'campaign',
-			metadata: { campaignId }
+			metadata: { campaignId },
+			// One-click unsubscribe (RFC 8058) — required for Gmail/Yahoo bulk
+			// senders. The List-Unsubscribe-Post header makes mail clients POST
+			// the same URL the footer link points at.
+			headers: [
+				{ Name: 'List-Unsubscribe', Value: `<${unsubscribeUrl}>` },
+				{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }
+			]
 		};
 	});
 
