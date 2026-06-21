@@ -1,8 +1,0 @@
-Upcoming reservation reminder
-
-Hi {{userName}}, you have a reservation coming up:
-
-Date: {{date}}
-Time: {{startTime}} – {{endTime}}
-
-View my reservations: {{siteUrl}}/member/reservations

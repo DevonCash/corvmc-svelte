@@ -3,6 +3,7 @@ import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
 import { env } from '$env/dynamic/private';
+import type { NotificationEmailModel } from '$lib/types/notification-email';
 
 // ---------------------------------------------------------------------------
 // Notification listeners
@@ -11,10 +12,15 @@ import { env } from '$env/dynamic/private';
 // appropriate channels. Each listener maps a domain event to one or more
 // notification dispatches.
 //
-// Email bodies and subjects live in Postmark templates (source of truth in
-// postmark/templates, pushed via `pnpm email:push`). Listeners supply only the
-// template alias and its Mustachio model — never HTML.
+// All transactional emails render through a single Postmark template,
+// `notification` (source: postmark/templates/notification, pushed via
+// `pnpm email:push`). Listeners supply the copy as a NotificationEmailModel —
+// subject, heading, body paragraphs, optional details + CTA. The two
+// exceptions are `ticket-confirmation` (ticket-code list) and `inbox-reply`
+// (raw passthrough + threading), which keep dedicated templates.
 // ---------------------------------------------------------------------------
+
+const GENERIC_ALIAS = 'notification';
 
 function formatPickupDate(value: string): string {
 	return new Date(value).toLocaleDateString('en-US', {
@@ -24,10 +30,21 @@ function formatPickupDate(value: string): string {
 	});
 }
 
+function formatMoney(cents: number): string {
+	return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Date + time range as a single inline-HTML paragraph (matches legacy copy). */
+function whenLine(date: string, startTime: string, endTime: string): { text: string } {
+	return {
+		text: `<strong>Date:</strong> ${date}<br /><strong>Time:</strong> ${startTime} – ${endTime}`
+	};
+}
+
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
-	// --- Ticket purchase confirmation ---
+	// --- Ticket purchase confirmation (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		// Ticket buyers may not have accounts — use email-only dispatch
 		await dispatchEmailOnly({
@@ -51,11 +68,17 @@ export function registerAllNotificationListeners(): void {
 		for (const holder of event.ticketHolders) {
 			try {
 				const model = {
-					attendeeName: holder.attendeeName,
-					eventTitle: event.eventTitle,
-					eventDate: event.eventDate,
-					refundNote: event.refundNote
-				};
+					subject: `${event.eventTitle} has been cancelled`,
+					heading: 'Event cancelled',
+					greeting: `Hi ${holder.attendeeName},`,
+					paragraphs: [
+						{
+							text: `Unfortunately ${event.eventTitle} scheduled for ${event.eventDate} has been cancelled.`
+						},
+						...(event.refundNote ? [{ text: event.refundNote }] : []),
+						{ text: 'We apologize for the inconvenience.' }
+					]
+				} satisfies NotificationEmailModel;
 
 				if (holder.userId) {
 					await dispatch({
@@ -65,13 +88,13 @@ export function registerAllNotificationListeners(): void {
 						title: `${event.eventTitle} has been cancelled`,
 						body: event.refundNote,
 						href: '/member/tickets',
-						emailTemplate: { alias: 'event-cancellation', model }
+						emailTemplate: { alias: GENERIC_ALIAS, model }
 					});
 				} else {
 					await dispatchEmailOnly({
 						type: 'event_cancellation',
 						toEmail: holder.attendeeEmail,
-						templateAlias: 'event-cancellation',
+						templateAlias: GENERIC_ALIAS,
 						model
 					});
 				}
@@ -94,14 +117,17 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
 			href: '/member/reservations',
 			emailTemplate: {
-				alias: 'reservation-reminder',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					date: event.date,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					siteUrl
-				}
+					subject: `Reservation reminder: ${event.date}`,
+					heading: 'Upcoming reservation reminder',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'You have a reservation coming up:' },
+						whenLine(event.date, event.startTime, event.endTime)
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -116,14 +142,20 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
 			href: '/member/reservations',
 			emailTemplate: {
-				alias: 'confirmation-reminder',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					date: event.date,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					siteUrl
-				}
+					subject: `Please confirm your reservation: ${event.date}`,
+					heading: 'Please confirm your reservation',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'You have an unconfirmed reservation:' },
+						whenLine(event.date, event.startTime, event.endTime),
+						{
+							text: 'Please confirm or cancel your reservation to free up the time slot for others.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'Confirm now' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -138,13 +170,16 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.invitedByName} invited you to join their band`,
 			href: '/member',
 			emailTemplate: {
-				alias: 'band-invitation',
+				alias: GENERIC_ALIAS,
 				model: {
-					invitedUserName: event.invitedUserName,
-					bandName: event.bandName,
-					invitedByName: event.invitedByName,
-					siteUrl
-				}
+					subject: `${event.invitedByName} invited you to ${event.bandName}`,
+					heading: "You've been invited to a band!",
+					greeting: `Hi ${event.invitedUserName},`,
+					paragraphs: [
+						{ text: `${event.invitedByName} has invited you to join ${event.bandName}.` }
+					],
+					cta: { url: `${siteUrl}/member`, label: 'View invitation' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -161,14 +196,18 @@ export function registerAllNotificationListeners(): void {
 					body: 'A new member has joined your band',
 					href: `/member/bands/${event.bandId}`,
 					emailTemplate: {
-						alias: 'band-invitation-accepted',
+						alias: GENERIC_ALIAS,
 						model: {
-							adminName: admin.userName,
-							acceptedByName: event.acceptedByName,
-							bandName: event.bandName,
-							siteUrl,
-							bandId: event.bandId
-						}
+							subject: `${event.acceptedByName} joined ${event.bandName}`,
+							heading: 'New band member!',
+							greeting: `Hi ${admin.userName},`,
+							paragraphs: [
+								{
+									text: `${event.acceptedByName} has accepted the invitation to join ${event.bandName}.`
+								}
+							],
+							cta: { url: `${siteUrl}/member/bands/${event.bandId}`, label: 'View band' }
+						} satisfies NotificationEmailModel
 					}
 				});
 			} catch (err) {
@@ -186,14 +225,21 @@ export function registerAllNotificationListeners(): void {
 		await dispatchEmailOnly({
 			type: 'platform_invitation',
 			toEmail: event.email,
-			templateAlias: 'platform-invitation',
+			templateAlias: GENERIC_ALIAS,
 			model: {
-				email: event.email,
-				bandName: event.bandName,
-				invitedByName: event.invitedByName,
-				role: event.role,
-				signupUrl
-			}
+				subject: `${event.invitedByName} invited you to join ${event.bandName} on CorvMC`,
+				heading: "You've been invited to join a band!",
+				paragraphs: [
+					{
+						text: `${event.invitedByName} has invited you to join ${event.bandName} as a ${event.role} on CorvMC.`
+					},
+					{
+						text: 'CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.'
+					}
+				],
+				cta: { url: signupUrl, label: 'Create your account & join' },
+				footnote: 'This invitation expires in 7 days.'
+			} satisfies NotificationEmailModel
 		});
 	});
 
@@ -207,15 +253,19 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.skippedDate} ${event.startTime}–${event.endTime}: ${event.reason}`,
 			href: '/member/reservations',
 			emailTemplate: {
-				alias: 'recurring-skipped',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					skippedDate: event.skippedDate,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					reason: event.reason,
-					siteUrl
-				}
+					subject: `Recurring reservation skipped: ${event.skippedDate}`,
+					heading: 'Recurring reservation skipped',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `Your recurring reservation on ${event.skippedDate} from ${event.startTime} – ${event.endTime} was skipped due to: ${event.reason}.`
+						},
+						{ text: 'Your series will continue generating future reservations as normal.' }
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -230,13 +280,20 @@ export function registerAllNotificationListeners(): void {
 			body: `Pickup on ${new Date(event.scheduledPickupDate).toLocaleDateString()}`,
 			href: '/member/equipment/loans',
 			emailTemplate: {
-				alias: 'loan-scheduled-confirmation',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					equipmentName: event.equipmentName,
-					scheduledPickupDate: formatPickupDate(event.scheduledPickupDate),
-					siteUrl
-				}
+					subject: `Equipment pickup confirmed: ${event.equipmentName}`,
+					heading: 'Equipment pickup confirmed',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: `Your equipment loan for ${event.equipmentName} has been confirmed.` },
+						{
+							text: `<strong>Pickup date:</strong> ${formatPickupDate(event.scheduledPickupDate)}`
+						},
+						{ text: 'Please visit the space during open hours on the pickup date.' }
+					],
+					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View my loans' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -248,14 +305,122 @@ export function registerAllNotificationListeners(): void {
 		await dispatchEmailOnly({
 			type: 'equipment_loan_requested',
 			toEmail: staffEmail,
-			templateAlias: 'loan-requested-staff',
+			templateAlias: GENERIC_ALIAS,
 			model: {
-				userName: event.userName,
-				equipmentName: event.equipmentName,
-				memberNotes: event.memberNotes,
-				requestedPickupDate: formatPickupDate(event.requestedPickupDate),
-				siteUrl,
-				loanId: event.loanId
+				subject: `Equipment request from ${event.userName}`,
+				heading: 'New equipment loan request',
+				paragraphs: [
+					{ text: `${event.userName} has requested to borrow equipment.` },
+					{
+						text: event.equipmentName
+							? `<strong>Item:</strong> ${event.equipmentName}`
+							: 'Free-form request'
+					},
+					{
+						text: `<strong>Requested pickup:</strong> ${formatPickupDate(event.requestedPickupDate)}`
+					},
+					...(event.memberNotes ? [{ text: `<strong>Notes:</strong> ${event.memberNotes}` }] : [])
+				],
+				cta: { url: `${siteUrl}/staff/equipment/loans/${event.loanId}`, label: 'Review request' }
+			} satisfies NotificationEmailModel
+		});
+	});
+
+	// --- Equipment checked out (notify member) ---
+	domainEvents.on('equipment.checked_out', async ({ data: event }) => {
+		await dispatch({
+			type: 'equipment_checked_out',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Equipment checked out: ${event.equipmentName}`,
+			body: 'Your equipment is checked out',
+			href: '/member/equipment/loans',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Equipment checked out: ${event.equipmentName}`,
+					heading: 'Equipment checked out',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `You've checked out ${event.equipmentName}. Please return it on time so others can use it.`
+						}
+					],
+					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View my loans' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Equipment returned (notify member) ---
+	domainEvents.on('equipment.returned', async ({ data: event }) => {
+		const paragraphs: NotificationEmailModel['paragraphs'] = [
+			{ text: `Thanks for returning ${event.equipmentName}.` },
+			{
+				text: `<strong>Borrowed for:</strong> ${event.daysBorrowed} day${event.daysBorrowed === 1 ? '' : 's'}`
+			}
+		];
+		if (event.totalChargeCents > 0) {
+			const breakdown =
+				event.creditsCents > 0
+					? ` (credits ${formatMoney(event.creditsCents)}, cash ${formatMoney(event.cashCents)})`
+					: '';
+			paragraphs.push({
+				text: `<strong>Total charge:</strong> ${formatMoney(event.totalChargeCents)}${breakdown}`
+			});
+		}
+
+		await dispatch({
+			type: 'equipment_returned',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Equipment returned: ${event.equipmentName}`,
+			body: 'Your equipment return is recorded',
+			href: '/member/equipment/loans',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Equipment returned: ${event.equipmentName}`,
+					heading: 'Equipment returned',
+					greeting: `Hi ${event.userName},`,
+					paragraphs,
+					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View my loans' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Reservation cancelled (notify member; skip self-cancels) ---
+	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
+		// Members who cancel their own reservation don't need an email about it.
+		if (event.cancelledBy === 'member') return;
+
+		const reasonLine =
+			event.cancelledBy === 'staff'
+				? 'This was done by CMC staff. Reach out if you have any questions.'
+				: 'This reservation was cancelled automatically.';
+
+		await dispatch({
+			type: 'reservation_cancelled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Reservation cancelled',
+			body: `${event.date} ${event.startTime}–${event.endTime}`,
+			href: '/member/reservations',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Reservation cancelled: ${event.date}`,
+					heading: 'Reservation cancelled',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `Your reservation on ${event.date} from ${event.startTime} – ${event.endTime} has been cancelled.`
+						},
+						{ text: reasonLine }
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -270,15 +435,19 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.date} ${event.startTime}–${event.endTime}: waiting for slot`,
 			href: '/member/reservations',
 			emailTemplate: {
-				alias: 'recurring-waitlisted',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					date: event.date,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					reason: event.reason,
-					siteUrl
-				}
+					subject: `Recurring reservation waitlisted: ${event.date}`,
+					heading: 'Recurring reservation waitlisted',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `Your recurring reservation on ${event.date} from ${event.startTime} – ${event.endTime} is on the waitlist because the time slot is currently booked.`
+						},
+						{ text: "You'll be notified automatically if the slot opens up." }
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -293,15 +462,19 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.date} ${event.startTime}–${event.endTime} is available — confirm within 24 hours`,
 			href: `/member/reservations?confirm=${event.reservationId}`,
 			emailTemplate: {
-				alias: 'waitlist-slot-available',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					date: event.date,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					expiresAt: event.expiresAt,
-					confirmUrl: event.confirmUrl
-				}
+					subject: `Slot available: ${event.date} ${event.startTime}`,
+					heading: 'A slot has opened up!',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `The time slot on ${event.date} from ${event.startTime} – ${event.endTime} is now available.`
+						},
+						{ text: 'You have 24 hours to confirm your reservation before it expires.' }
+					],
+					cta: { url: event.confirmUrl, label: 'Confirm reservation' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -316,14 +489,18 @@ export function registerAllNotificationListeners(): void {
 			body: `${event.date} ${event.startTime}–${event.endTime} was not confirmed in time`,
 			href: '/member/reservations',
 			emailTemplate: {
-				alias: 'waitlist-expired',
+				alias: GENERIC_ALIAS,
 				model: {
-					userName: event.userName,
-					date: event.date,
-					startTime: event.startTime,
-					endTime: event.endTime,
-					siteUrl
-				}
+					subject: `Waitlisted reservation expired: ${event.date}`,
+					heading: 'Waitlisted reservation expired',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `Your waitlisted reservation on ${event.date} from ${event.startTime} – ${event.endTime} has expired because it was not confirmed within 24 hours.`
+						}
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
+				} satisfies NotificationEmailModel
 			}
 		});
 	});
@@ -335,12 +512,16 @@ export function registerAllNotificationListeners(): void {
 		await dispatchEmailOnly({
 			type: 'contact_form',
 			toEmail: staffEmail,
-			templateAlias: 'contact-form-forward',
+			templateAlias: GENERIC_ALIAS,
 			model: {
-				senderName: event.name,
-				senderEmail: event.email,
-				message: event.message
-			}
+				subject: `Contact form: ${event.name}`,
+				heading: 'New contact form submission',
+				paragraphs: [
+					{ text: `<strong>From:</strong> ${event.name} (${event.email})` },
+					{ text: event.message },
+					{ text: 'Reply directly to this email to respond to the sender.' }
+				]
+			} satisfies NotificationEmailModel
 		});
 	});
 

@@ -9,6 +9,10 @@ import { captureException } from '$lib/server/sentry';
 // so the server token isn't required during build/test.
 // ---------------------------------------------------------------------------
 
+// Postmark message streams. Both must exist on the configured server.
+const BROADCAST_STREAM = 'corvmc-broadcast';
+const TRANSACTIONAL_STREAM = 'corvmc-transactional';
+
 let client: ServerClient | null = null;
 
 function getClient(): ServerClient {
@@ -38,20 +42,8 @@ function getClient(): ServerClient {
  * so a forgotten `pnpm email:push` surfaces as an alert, not a failed send.
  */
 export const REQUIRED_TEMPLATE_ALIASES = [
+	'notification',
 	'ticket-confirmation',
-	'event-cancellation',
-	'reservation-reminder',
-	'confirmation-reminder',
-	'band-invitation',
-	'band-invitation-accepted',
-	'platform-invitation',
-	'contact-form-forward',
-	'loan-scheduled-confirmation',
-	'loan-requested-staff',
-	'recurring-skipped',
-	'recurring-waitlisted',
-	'waitlist-slot-available',
-	'waitlist-expired',
 	'inbox-reply'
 ] as const;
 
@@ -111,6 +103,7 @@ export interface BroadcastMessage {
 	htmlBody: string;
 	tag?: string;
 	metadata?: Record<string, string>;
+	headers?: { Name: string; Value: string }[];
 }
 
 const BATCH_SIZE = 500;
@@ -138,7 +131,8 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					HtmlBody: msg.htmlBody,
 					Tag: msg.tag,
 					Metadata: msg.metadata,
-					MessageStream: 'broadcast'
+					Headers: msg.headers,
+					MessageStream: BROADCAST_STREAM
 				}))
 			);
 		} catch (err) {
@@ -157,8 +151,8 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 // Template-based sending (Postmark-hosted templates)
 // ---------------------------------------------------------------------------
 // Transactional notifications render from templates stored in Postmark (source
-// of truth in postmark/templates, pushed via `pnpm email:push`). The subject
-// lives in the template; callers supply only the alias and the model.
+// of truth in postmark/templates, pushed via `pnpm email:push`). Most use the
+// generic `notification` template, whose subject + body come from the model.
 
 export interface SendTemplateParams {
 	to: string;
@@ -181,7 +175,8 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 			TemplateAlias: params.templateAlias,
 			TemplateModel: params.model,
 			Tag: params.tag,
-			Metadata: params.metadata
+			Metadata: params.metadata,
+			MessageStream: TRANSACTIONAL_STREAM
 		});
 	} catch (err) {
 		captureException(err, {
@@ -230,7 +225,8 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 			TemplateModel: params.model,
 			Tag: 'inbox-reply',
 			Metadata: params.metadata,
-			Headers: headers.length > 0 ? headers : undefined
+			Headers: headers.length > 0 ? headers : undefined,
+			MessageStream: TRANSACTIONAL_STREAM
 		});
 		return result.MessageID;
 	} catch (err) {

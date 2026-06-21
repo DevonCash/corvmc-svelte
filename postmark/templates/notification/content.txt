@@ -1,0 +1,12 @@
+{{#heading}}{{heading}}
+
+{{/heading}}{{#greeting}}{{greeting}}
+
+{{/greeting}}{{#paragraphs}}{{text}}
+
+{{/paragraphs}}{{#details}}{{label}}: {{value}}
+{{/details}}{{#cta}}
+{{label}}: {{url}}
+{{/cta}}{{#footnote}}
+{{footnote}}
+{{/footnote}}

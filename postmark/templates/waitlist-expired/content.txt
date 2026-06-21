@@ -1,5 +1,0 @@
-Waitlisted reservation expired
-
-Hi {{userName}}, your waitlisted reservation on {{date}} from {{startTime}} – {{endTime}} has expired because it was not confirmed within 24 hours.
-
-View my reservations: {{siteUrl}}/member/reservations

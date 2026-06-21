@@ -1,7 +1,0 @@
-{
-  "Name": "Recurring Reservation Waitlisted",
-  "Alias": "recurring-waitlisted",
-  "Subject": "Recurring reservation waitlisted: {{date}}",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}
