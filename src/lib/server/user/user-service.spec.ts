@@ -41,6 +41,11 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	cancel: (...args: unknown[]) => cancelMock(...args)
 }));
 
+const subCancelMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/finance/subscription-service', () => ({
+	cancel: (...args: unknown[]) => subCancelMock(...args)
+}));
+
 import {
 	deactivateUser,
 	deactivateUsers,
@@ -55,6 +60,7 @@ beforeEach(() => {
 	selectResultQueue = [];
 	updateResult = [];
 	cancelMock.mockClear();
+	subCancelMock.mockClear();
 	deleteWhere.mockClear();
 });
 
@@ -83,6 +89,24 @@ describe('deactivateUser', () => {
 		await deactivateUser('u1');
 
 		expect(deleteWhere).toHaveBeenCalledTimes(1);
+	});
+
+	it('cancels the Stripe subscription when the user has a stripeId', async () => {
+		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: new Date() }];
+		selectResultQueue = [[]];
+
+		await deactivateUser('u1');
+
+		expect(subCancelMock).toHaveBeenCalledWith('cus_1');
+	});
+
+	it('skips subscription cancel when the user has no stripeId', async () => {
+		updateResult = [{ id: 'u1', stripeId: null, deletedAt: new Date() }];
+		selectResultQueue = [[]];
+
+		await deactivateUser('u1');
+
+		expect(subCancelMock).not.toHaveBeenCalled();
 	});
 
 	it('throws UserNotFoundError when already deactivated / missing', async () => {

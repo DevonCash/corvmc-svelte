@@ -62,6 +62,10 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 	cancel: vi.fn().mockResolvedValue(undefined)
 }));
 
+vi.mock('$lib/server/user/user-service', () => ({
+	deactivateUser: vi.fn().mockResolvedValue(undefined)
+}));
+
 // Mock getRequestEvent for remote functions
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 const mockHeaders = new Headers({ cookie: 'session=abc' });
@@ -109,8 +113,7 @@ vi.mock('$app/server', () => ({
 
 import { auth } from '$lib/server/auth';
 import { requireUser, hasAnyRole } from '$lib/server/authorization';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import { deactivateUser } from '$lib/server/user/user-service';
 import {
 	getSubscriptionsForUser,
 	getOptInAudiencesForUser,
@@ -255,38 +258,28 @@ describe('unsubscribeFromList', () => {
 // ---------------------------------------------------------------------------
 
 describe('deleteAccount', () => {
-	it('cancels future reservations, cancels subscription, soft-deletes, and signs out', async () => {
+	it('verifies the password, delegates offboarding to deactivateUser, and signs out', async () => {
 		mockLocals.user = mockUser({ id: 'user-1', name: 'Test User', stripeId: 'cus_123' }) as any;
 		vi.mocked(requireUser).mockReturnValue(mockLocals.user);
-		queryResults = [[{ id: 'res-1' }, { id: 'res-2' }]];
 
 		await deleteAccount({ password: 'correct-pass' });
 
 		expect(auth.api.signInEmail).toHaveBeenCalled();
-		expect(cancelReservation).toHaveBeenCalledTimes(2);
-		expect(cancelSubscription).toHaveBeenCalledWith('cus_123');
-		expect(lastUpdate!.set).toHaveProperty('deletedAt');
+		expect(deactivateUser).toHaveBeenCalledWith('user-1');
 		expect(auth.api.signOut).toHaveBeenCalled();
 	});
 
-	it('rejects deletion for staff/admin accounts', async () => {
+	it('rejects deletion for staff/admin accounts without deactivating', async () => {
 		vi.mocked(hasAnyRole).mockResolvedValueOnce(true);
 
 		await expect(deleteAccount({ password: 'any' })).rejects.toThrow();
+		expect(deactivateUser).not.toHaveBeenCalled();
 	});
 
-	it('rejects incorrect password', async () => {
+	it('rejects incorrect password without deactivating', async () => {
 		vi.mocked(auth.api.signInEmail).mockRejectedValueOnce(new Error('bad creds'));
 
 		await expect(deleteAccount({ password: 'wrong' })).rejects.toThrow();
-	});
-
-	it('skips subscription cancellation when no stripeId', async () => {
-		mockLocals.user = mockUser({ id: 'user-1', name: 'Test User' }) as any;
-		queryResults = [[]];
-
-		await deleteAccount({ password: 'correct-pass' });
-
-		expect(cancelSubscription).not.toHaveBeenCalled();
+		expect(deactivateUser).not.toHaveBeenCalled();
 	});
 });

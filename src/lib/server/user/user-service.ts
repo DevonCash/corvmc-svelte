@@ -4,6 +4,7 @@ import { band } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, isNull, isNotNull, count } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -42,8 +43,11 @@ export class UserHasLinkedRecordsError extends Error {
 // ---------------------------------------------------------------------------
 
 /**
- * Soft-delete a user: set deletedAt and cancel all of their future personal
- * reservations. Mirrors band deactivation. Reversible via reactivateUser.
+ * Soft-delete a user: the single offboarding entry point used by both staff
+ * deactivation and user self-delete. Sets deletedAt, purges sessions, cancels
+ * the user's future personal reservations, and cancels their Stripe
+ * subscription. Reversible via reactivateUser (which does not restore the
+ * cancelled reservations or subscription).
  */
 export async function deactivateUser(userId: string) {
 	const [row] = await db
@@ -59,7 +63,9 @@ export async function deactivateUser(userId: string) {
 	// this removes the now-inert rows instead of letting them expire naturally.
 	await db.delete(session).where(eq(session.userId, userId));
 
-	// Cancel all future personal reservations booked by this user.
+	// Cancel all future personal reservations booked by this user. Scoped to
+	// personal bookings (bookerType 'user') — band/event/lesson reservations
+	// belong to those entities, not the leaving user.
 	const futureReservations = await db
 		.select({ id: reservation.id })
 		.from(reservation)
@@ -74,6 +80,16 @@ export async function deactivateUser(userId: string) {
 
 	for (const r of futureReservations) {
 		await cancelReservation(r.id, userId, 'Account deactivated', { staffOverride: true });
+	}
+
+	// Cancel the Stripe subscription if one exists. The subscription may already
+	// be gone, so failures here are non-fatal to the deactivation.
+	if (row.stripeId) {
+		try {
+			await cancelSubscription(row.stripeId);
+		} catch {
+			// Subscription may not exist — that's fine.
+		}
 	}
 
 	return row;
