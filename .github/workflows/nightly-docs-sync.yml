@@ -24,7 +24,7 @@ name: Nightly Docs Sync
 
 on:
   schedule:
-    - cron: "0 10 * * *"
+    - cron: '0 10 * * *'
   workflow_dispatch: {}
 
 permissions:
@@ -96,7 +96,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 40"
+          claude_args: '--max-turns 40'
           prompt: |
             Documentation may have drifted from recent code changes. A deterministic detector has already run — use its output as your worklist. Update only the docs that genuinely drifted, then open a documentation-only pull request. If, after reading the inputs and the actual code, nothing genuinely needs a docs change, make no commit and no PR.
 

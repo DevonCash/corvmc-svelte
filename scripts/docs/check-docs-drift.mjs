@@ -168,11 +168,11 @@ function main() {
 			console.log('Integrity: OK');
 		}
 		if (report.snapshotMissing) {
-			console.log(`\nRoute snapshot ${SNAPSHOT_PATH} missing — run \`pnpm docs:routes\` to create it.`);
-		} else {
 			console.log(
-				`\nRoute drift: +${report.routeAdded.length} / -${report.routeRemoved.length}`
+				`\nRoute snapshot ${SNAPSHOT_PATH} missing — run \`pnpm docs:routes\` to create it.`
 			);
+		} else {
+			console.log(`\nRoute drift: +${report.routeAdded.length} / -${report.routeRemoved.length}`);
 			for (const r of report.routeAdded) console.log(`  + ${r} (no doc snapshot yet)`);
 			for (const r of report.routeRemoved) console.log(`  - ${r} (route gone; docs may be stale)`);
 		}
@@ -182,7 +182,8 @@ function main() {
 	}
 
 	const hasIntegrity = report.integrityErrors.length > 0;
-	const hasDrift = report.routeAdded.length > 0 || report.routeRemoved.length > 0 || report.snapshotMissing;
+	const hasDrift =
+		report.routeAdded.length > 0 || report.routeRemoved.length > 0 || report.snapshotMissing;
 	if (ci) process.exit(hasIntegrity ? 1 : 0);
 	process.exit(hasIntegrity || hasDrift ? 1 : 0);
 }
