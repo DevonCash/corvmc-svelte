@@ -153,7 +153,9 @@
 			>
 				<IconLink size={16} />
 			</button>
-			<div class='filler join-item rounded-b-none grow btn btn-xs pointer-events-none btn-ghost'></div>
+			<div
+				class="filler join-item rounded-b-none grow btn btn-xs pointer-events-none btn-ghost"
+			></div>
 		</div>
 	{/if}
 	<div bind:this={element} data-placeholder={placeholder}></div>
