@@ -136,8 +136,7 @@ templates MUST exist on the target server before the new code runs:
 2. `POSTMARK_SERVER_TOKEN=<prod token> pnpm email:push`
 3. `wrangler deploy` (and `--env production`).
 
-The `/api/cron/email-heartbeat` cron backstops this — it alerts (Sentry + 503) if any
-required alias is missing from the server.
+A missing template surfaces as a failed send reported to Sentry (`email.send`).
 
 ```
 
