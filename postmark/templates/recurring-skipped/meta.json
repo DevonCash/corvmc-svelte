@@ -1,7 +1,0 @@
-{
-  "Name": "Recurring Reservation Skipped",
-  "Alias": "recurring-skipped",
-  "Subject": "Recurring reservation skipped: {{skippedDate}}",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}

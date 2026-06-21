@@ -103,6 +103,24 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'equipment_checked_out',
+		label: 'Equipment checked out',
+		description: 'Confirmation when you check out equipment',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'equipment_returned',
+		label: 'Equipment returned',
+		description: 'Summary when your equipment return is recorded',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'reservation_cancelled',
+		label: 'Reservation cancelled',
+		description: 'Notification when your reservation is cancelled by staff',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'contact_form',
 		label: 'Contact form submission',
 		description: 'Forwarded contact form messages (staff only)',

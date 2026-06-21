@@ -1,7 +1,0 @@
-{
-  "Name": "Platform Invitation",
-  "Alias": "platform-invitation",
-  "Subject": "{{invitedByName}} invited you to join {{bandName}} on CorvMC",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}

@@ -1,9 +1,0 @@
-New contact form submission
-
-From: {{senderName}} ({{senderEmail}})
-
----
-{{message}}
----
-
-Reply directly to this email to respond to the sender.

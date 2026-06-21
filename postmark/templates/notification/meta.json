@@ -1,0 +1,7 @@
+{
+  "Name": "Notification",
+  "Alias": "notification",
+  "Subject": "{{subject}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}

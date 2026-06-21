@@ -1,7 +1,0 @@
-{
-  "Name": "Contact Form Forward",
-  "Alias": "contact-form-forward",
-  "Subject": "Contact form: {{senderName}}",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}

@@ -1,5 +1,0 @@
-New band member!
-
-Hi {{adminName}}, {{acceptedByName}} has accepted the invitation to join {{bandName}}.
-
-View band: {{siteUrl}}/member/bands/{{bandId}}

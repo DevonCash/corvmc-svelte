@@ -306,6 +306,12 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const sustaining = await isSustainingMember(loan.userId);
 	const dailyRate = calculateDailyRate(item.pricingTier as PricingTier, sustaining);
 
+	const [member] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, loan.userId))
+		.limit(1);
+
 	const [updated] = await db
 		.update(equipmentLoan)
 		.set({
@@ -323,6 +329,8 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 			await domainEvents.emit('equipment.checked_out', {
 				loanId,
 				userId: loan.userId,
+				userName: member?.name ?? 'Unknown',
+				userEmail: member?.email ?? '',
 				equipmentName: item?.name ?? 'Unknown'
 			});
 		} catch (err) {
@@ -342,7 +350,7 @@ export async function returnLoan(loanId: string, staffNotes?: string) {
 	const totalCharge = calculateLoanCharge(loan.dailyRateCents ?? 0, loan.checkedOutAt!, now);
 
 	const [member] = await db
-		.select({ name: user.name, stripeId: user.stripeId })
+		.select({ name: user.name, email: user.email, stripeId: user.stripeId })
 		.from(user)
 		.where(eq(user.id, loan.userId))
 		.limit(1);
@@ -389,6 +397,7 @@ export async function returnLoan(loanId: string, staffNotes?: string) {
 				loanId,
 				userId: loan.userId,
 				userName: member?.name ?? 'Unknown',
+				userEmail: member?.email ?? '',
 				equipmentName,
 				totalChargeCents: totalCharge,
 				creditsCents,

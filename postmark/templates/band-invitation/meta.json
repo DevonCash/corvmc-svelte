@@ -1,7 +1,0 @@
-{
-  "Name": "Band Invitation",
-  "Alias": "band-invitation",
-  "Subject": "{{invitedByName}} invited you to {{bandName}}",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}

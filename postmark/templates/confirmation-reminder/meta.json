@@ -1,7 +1,0 @@
-{
-  "Name": "Confirmation Reminder",
-  "Alias": "confirmation-reminder",
-  "Subject": "Please confirm your reservation: {{date}}",
-  "TemplateType": "Standard",
-  "LayoutTemplate": "corvmc-transactional"
-}

@@ -150,6 +150,8 @@ export interface EquipmentLoanScheduledEvent {
 export interface EquipmentCheckedOutEvent {
 	loanId: string;
 	userId: string;
+	userName: string;
+	userEmail: string;
 	equipmentName: string;
 }
 
@@ -157,6 +159,7 @@ export interface EquipmentReturnedEvent {
 	loanId: string;
 	userId: string;
 	userName: string;
+	userEmail: string;
 	equipmentName: string;
 	totalChargeCents: number;
 	creditsCents: number;
