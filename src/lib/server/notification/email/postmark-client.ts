@@ -9,6 +9,10 @@ import { captureException } from '$lib/server/sentry';
 // so the server token isn't required during build/test.
 // ---------------------------------------------------------------------------
 
+// Postmark message streams. Both must exist on the configured server.
+const BROADCAST_STREAM = 'corvmc-broadcast';
+const TRANSACTIONAL_STREAM = 'corvmc-transactional';
+
 let client: ServerClient | null = null;
 
 function getClient(): ServerClient {
@@ -140,7 +144,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					Tag: msg.tag,
 					Metadata: msg.metadata,
 					Headers: msg.headers,
-					MessageStream: 'broadcast'
+					MessageStream: BROADCAST_STREAM
 				}))
 			);
 		} catch (err) {
@@ -183,7 +187,8 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 			TemplateAlias: params.templateAlias,
 			TemplateModel: params.model,
 			Tag: params.tag,
-			Metadata: params.metadata
+			Metadata: params.metadata,
+			MessageStream: TRANSACTIONAL_STREAM
 		});
 	} catch (err) {
 		captureException(err, {
@@ -232,7 +237,8 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 			TemplateModel: params.model,
 			Tag: 'inbox-reply',
 			Metadata: params.metadata,
-			Headers: headers.length > 0 ? headers : undefined
+			Headers: headers.length > 0 ? headers : undefined,
+			MessageStream: TRANSACTIONAL_STREAM
 		});
 		return result.MessageID;
 	} catch (err) {
