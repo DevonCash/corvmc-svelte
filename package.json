@@ -96,7 +96,7 @@
 	},
 	"dependencies": {
 		"@internationalized/date": "^3.12.2",
-		"@sentry/cloudflare": "^10.55.0",
+		"@sentry/cloudflare": "^10.56.0",
 		"@sentry/sveltekit": "^10",
 		"@tabler/icons-svelte": "^3.44.0",
 		"@tiptap/core": "^3.25.0",
