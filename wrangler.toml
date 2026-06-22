@@ -31,7 +31,7 @@ STAFF_CONTACT_EMAIL = "contact@corvmc.org"
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
-LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com/"
+LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com"
 # Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
 
 [[d1_databases]]

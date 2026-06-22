@@ -6,6 +6,7 @@ vi.mock('$lib/server/db', () => ({ db: {} }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 import {
+	buildVerifyPasswordUrl,
 	deriveSignInAnomaly,
 	pbkdf2Hash,
 	pbkdf2Verify,
@@ -41,6 +42,29 @@ describe('PBKDF2 password hashing', () => {
 		expect(hash.startsWith(`pbkdf2:${PBKDF2_ITERATIONS}:`)).toBe(true);
 		expect(await pbkdf2Verify(hash, 'correct horse battery staple')).toBe(true);
 		expect(await pbkdf2Verify(hash, 'wrong password')).toBe(false);
+	});
+});
+
+describe('buildVerifyPasswordUrl', () => {
+	// Production LARAVEL_URL carried a trailing slash, which turned the verify
+	// endpoint into `…//api/verify-password`. Laravel 404s the double slash, so
+	// every un-migrated bcrypt user got "Invalid email or password." on sign-in.
+	it('strips a trailing slash so the path has no double slash', () => {
+		expect(buildVerifyPasswordUrl('https://example.test/')).toBe(
+			'https://example.test/api/verify-password'
+		);
+	});
+
+	it('strips multiple trailing slashes', () => {
+		expect(buildVerifyPasswordUrl('https://example.test///')).toBe(
+			'https://example.test/api/verify-password'
+		);
+	});
+
+	it('leaves a slash-free base unchanged', () => {
+		expect(buildVerifyPasswordUrl('https://example.test')).toBe(
+			'https://example.test/api/verify-password'
+		);
 	});
 });
 
