@@ -148,6 +148,14 @@ export async function scryptVerify(hash: string, password: string): Promise<bool
 // bcrypt → scrypt migration via Laravel proxy
 // ---------------------------------------------------------------------------
 
+// Build the verify-password endpoint URL. LARAVEL_URL is operator-configured and
+// has historically carried a trailing slash (the production var did), which would
+// otherwise produce `…//api/verify-password` — a double slash that Laravel's
+// router 404s, silently failing sign-in for every un-migrated bcrypt user.
+export function buildVerifyPasswordUrl(laravelUrl: string): string {
+	return `${laravelUrl.replace(/\/+$/, '')}/api/verify-password`;
+}
+
 async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
 	const laravelUrl = env.LARAVEL_URL;
 	const migrationSecret = env.MIGRATION_SECRET;
@@ -195,7 +203,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 	}
 
 	try {
-		const fetchUrl = `${laravelUrl}/api/verify-password`;
+		const fetchUrl = buildVerifyPasswordUrl(laravelUrl);
 
 		const res = await fetch(fetchUrl, {
 			method: 'POST',
