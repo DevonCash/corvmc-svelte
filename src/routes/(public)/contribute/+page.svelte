@@ -51,8 +51,9 @@
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
 		<p class="text-base leading-relaxed" style="color: var(--fg-2)">
 			The most direct way to support the space is a monthly contribution on a sliding scale —
-			starting at $10/month. Sustaining members earn free practice hours and unlock member perks,
-			and your contribution keeps the doors open.
+			starting at $10/month. Sustaining members earn free practice hours every month, can lock in a
+			recurring weekly practice slot, and get discounts on show tickets and gear. Your contribution
+			keeps the doors open.
 		</p>
 		<Button href="/membership" class="btn-lg">Explore Membership</Button>
 	</div>
