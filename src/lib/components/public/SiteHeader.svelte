@@ -12,6 +12,7 @@
 		{ href: '/events', label: 'Events' },
 		{ href: '/directory', label: 'Directory' },
 		{ href: '/programs', label: 'Programs' },
+		{ href: '/membership', label: 'Membership' },
 		{ href: '/about', label: 'About' }
 	];
 
