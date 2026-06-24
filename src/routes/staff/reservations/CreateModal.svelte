@@ -94,10 +94,8 @@
 	{#snippet form()}
 		<svelte:boundary>
 			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
-			<input {...fields.date.as('hidden', date)} />
 			<input {...fields.startTime.as('hidden', startTime)} />
 			<input {...fields.endTime.as('hidden', endTime)} />
-			<input {...fields.notes.as('hidden', notes)} />
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Member</legend>

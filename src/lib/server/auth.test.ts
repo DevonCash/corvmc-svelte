@@ -8,6 +8,7 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 import {
 	buildVerifyPasswordUrl,
 	deriveSignInAnomaly,
+	isDeactivated,
 	pbkdf2Hash,
 	pbkdf2Verify,
 	PBKDF2_ITERATIONS,
@@ -123,5 +124,16 @@ describe('deriveSignInAnomaly', () => {
 				credentialPassword: 'pbkdf2:600000:abcd:ef01'
 			})
 		).toBeNull();
+	});
+});
+
+describe('isDeactivated', () => {
+	it('is false for null / undefined deletedAt', () => {
+		expect(isDeactivated(null)).toBe(false);
+		expect(isDeactivated(undefined)).toBe(false);
+	});
+
+	it('is true when deletedAt is a date', () => {
+		expect(isDeactivated(new Date('2026-01-01'))).toBe(true);
 	});
 });
