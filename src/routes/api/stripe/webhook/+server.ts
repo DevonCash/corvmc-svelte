@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { stripe } from '$lib/server/stripe';
+import { stripe, webhookCryptoProvider } from '$lib/server/stripe';
 import { webhookHandlerMap } from '$lib/server/finance/webhook-handlers';
 import { captureException } from '$lib/server/sentry';
 
@@ -20,7 +20,15 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let event;
 	try {
-		event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+		// Workers has no synchronous crypto — must use the async verifier with an
+		// explicit SubtleCrypto provider (sync `constructEvent` throws here).
+		event = await stripe.webhooks.constructEventAsync(
+			body,
+			signature,
+			webhookSecret,
+			undefined,
+			webhookCryptoProvider
+		);
 	} catch (err) {
 		// Note: this endpoint may be probed by scanners, so signature failures can be
 		// somewhat noisy. Acceptable at current volume; gate or drop if it floods Sentry.
