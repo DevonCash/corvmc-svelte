@@ -69,7 +69,10 @@
 				mode === 'login'
 					? 'Invalid email or password.'
 					: (body?.message ?? 'Registration failed. Please try again.');
-			throw new Error(error);
+			// Throw so the Form shows its error state, but carry the HTTP status so
+			// `reportError`'s `isExpected` check drops these 4xx auth failures instead
+			// of logging every bad password to Sentry. A 5xx still reports as a bug.
+			throw Object.assign(new Error(error), { status: res.status });
 		}
 
 		const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';

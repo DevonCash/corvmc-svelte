@@ -66,6 +66,11 @@ vi.mock('$lib/server/band/platform-invite-service', () => ({
 	resolvePendingInvites: (...args: unknown[]) => mockResolvePendingInvites(...args)
 }));
 
+const mockCaptureException = vi.fn();
+vi.mock('$lib/server/sentry', () => ({
+	captureException: (...args: unknown[]) => mockCaptureException(...args)
+}));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockSvelteKitHandler.mockResolvedValue(new Response('ok'));
@@ -177,5 +182,34 @@ describe('hooks.server handle', () => {
 		await handle({ event: event as any, resolve });
 
 		expect(mockSvelteKitHandler).toHaveBeenCalledWith(expect.objectContaining({ event, resolve }));
+	});
+});
+
+describe('hooks.server handleError', () => {
+	it('does not report 4xx client errors (e.g. bot /.well-known probes)', async () => {
+		const { handleError } = await import('./hooks.server');
+
+		await handleError({
+			error: new Error('Not found: /.well-known/traffic-advice'),
+			event: makeEvent({ url: new URL('http://localhost/.well-known/traffic-advice') }) as any,
+			status: 404,
+			message: 'Not Found'
+		});
+
+		expect(mockCaptureException).not.toHaveBeenCalled();
+	});
+
+	it('reports genuine 5xx errors to Sentry', async () => {
+		const { handleError } = await import('./hooks.server');
+		const error = new Error('boom');
+
+		await handleError({
+			error,
+			event: makeEvent({ url: new URL('http://localhost/member') }) as any,
+			status: 500,
+			message: 'Internal Error'
+		});
+
+		expect(mockCaptureException).toHaveBeenCalledWith(error);
 	});
 });

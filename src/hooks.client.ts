@@ -18,9 +18,23 @@ function isStaleChunkError(error: unknown): boolean {
 	);
 }
 
+/**
+ * Fetch aborted by the browser, usually because the user navigated away mid-request
+ * or briefly lost connectivity. Not actionable and not our bug — drop it.
+ */
+function isNetworkAbortError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error ?? '');
+	return (
+		message.includes('NetworkError when attempting to fetch resource') ||
+		message.includes('Failed to fetch') ||
+		message.includes('Load failed')
+	);
+}
+
 Sentry.init({
 	beforeSend(event, hint) {
 		if (isStaleChunkError(hint?.originalException)) return null;
+		if (isNetworkAbortError(hint?.originalException)) return null;
 		return event;
 	},
 
