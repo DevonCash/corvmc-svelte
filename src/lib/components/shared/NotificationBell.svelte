@@ -98,8 +98,11 @@
 	}
 
 	function handleClickOutside(e: MouseEvent) {
-		const target = e.target as HTMLElement;
-		if (!target.closest('.notification-bell-wrapper')) {
+		// Only react when the dropdown is open — avoids a reactive write on every
+		// document click and skips the case where the target is detached/null.
+		if (!open) return;
+		const target = e.target as HTMLElement | null;
+		if (!target?.closest('.notification-bell-wrapper')) {
 			open = false;
 		}
 	}

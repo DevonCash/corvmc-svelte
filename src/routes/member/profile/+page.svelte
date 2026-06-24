@@ -27,33 +27,23 @@
 
 	const { fields } = saveMemberProfile;
 
-	// Local state for complex fields
-	let bioHtml = $state('');
-	let instruments = $state<string[]>([]);
-	let genres = $state<string[]>([]);
-	let links = $state<ProfileLink[]>([]);
-	let lookingForBand = $state(false);
-	let availableForHire = $state(false);
-	let teachesLessons = $state(false);
-	let openToCollaboration = $state(false);
-	let directoryVisibility = $state<string>('members');
-	let contactPublic = $state(false);
-
-	$effect(() => {
-		if (profile) {
-			bioHtml = profile.bio ?? '';
-			instruments = profile.instruments ?? [];
-			genres = profile.genres ?? [];
-			links = (profile.links as ProfileLink[] | null) ?? [];
-			lookingForBand = profile.lookingForBand;
-			availableForHire = profile.availableForHire;
-			teachesLessons = profile.teachesLessons;
-			openToCollaboration = profile.openToCollaboration;
-			directoryVisibility = profile.directoryVisibility;
-			contactPublic =
-				(profile.directoryContact as DirectoryContact | null)?.visibility === 'public';
-		}
-	});
+	// Editable copies of the complex fields, seeded once from the loaded profile.
+	// Reading the resolved value directly here (rather than syncing through an
+	// ongoing $effect) avoids the infinite update loop the bind:value editors
+	// drove when the effect re-clobbered state every pass (effect_update_depth_exceeded).
+	const initial = await getMemberProfile();
+	let bioHtml = $state(initial?.bio ?? '');
+	let instruments = $state<string[]>(initial?.instruments ?? []);
+	let genres = $state<string[]>(initial?.genres ?? []);
+	let links = $state<ProfileLink[]>((initial?.links as ProfileLink[] | null) ?? []);
+	let lookingForBand = $state(initial?.lookingForBand ?? false);
+	let availableForHire = $state(initial?.availableForHire ?? false);
+	let teachesLessons = $state(initial?.teachesLessons ?? false);
+	let openToCollaboration = $state(initial?.openToCollaboration ?? false);
+	let directoryVisibility = $state<string>(initial?.directoryVisibility ?? 'members');
+	let contactPublic = $state(
+		(initial?.directoryContact as DirectoryContact | null)?.visibility === 'public'
+	);
 
 	let contact = $derived((profile?.directoryContact as DirectoryContact | null) ?? {});
 
