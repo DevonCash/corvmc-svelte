@@ -191,7 +191,7 @@ describe('hooks.server handleError', () => {
 
 		await handleError({
 			error: new Error('Not found: /.well-known/traffic-advice'),
-			event: makeEvent() as any,
+			event: makeEvent({ url: new URL('http://localhost/.well-known/traffic-advice') }) as any,
 			status: 404,
 			message: 'Not Found'
 		});
@@ -205,7 +205,7 @@ describe('hooks.server handleError', () => {
 
 		await handleError({
 			error,
-			event: makeEvent() as any,
+			event: makeEvent({ url: new URL('http://localhost/member') }) as any,
 			status: 500,
 			message: 'Internal Error'
 		});
