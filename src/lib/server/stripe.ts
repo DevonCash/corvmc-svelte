@@ -11,6 +11,13 @@ export function getStripe(): Stripe {
 	return _stripe;
 }
 
+/**
+ * Crypto provider for webhook signature verification. Cloudflare Workers has no
+ * synchronous crypto, so the sync `constructEvent` throws "SubtleCryptoProvider
+ * cannot be used in a synchronous context." Pair this with `constructEventAsync`.
+ */
+export const webhookCryptoProvider = Stripe.createSubtleCryptoProvider();
+
 /** Convenience re-export for existing call sites. */
 export const stripe = new Proxy({} as Stripe, {
 	get(_, prop) {

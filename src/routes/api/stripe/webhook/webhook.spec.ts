@@ -4,11 +4,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
+// The route uses the async verifier (`constructEventAsync`) because Workers has
+// no synchronous crypto. This mock guards the wiring only — Node vitest cannot
+// reproduce the runtime SubtleCrypto-sync failure (Node has sync crypto).
 const mockConstructEvent = vi.fn();
 vi.mock('$lib/server/stripe', () => ({
 	stripe: {
-		webhooks: { constructEvent: (...args: unknown[]) => mockConstructEvent(...args) }
-	}
+		webhooks: { constructEventAsync: (...args: unknown[]) => mockConstructEvent(...args) }
+	},
+	webhookCryptoProvider: {}
 }));
 
 const mockHandler = vi.fn();
