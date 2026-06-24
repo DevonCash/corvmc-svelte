@@ -4,7 +4,7 @@ import { form, query, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { auth } from '$lib/server/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireUser, hasAnyRole } from '$lib/server/authorization';
 import { deactivateUser } from '$lib/server/user/user-service';
 import {
