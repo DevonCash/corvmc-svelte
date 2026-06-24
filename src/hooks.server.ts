@@ -59,6 +59,16 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
+// Bot/proxy clients probe paths we don't serve (e.g. /.well-known/traffic-advice),
+// each producing a SvelteKit "Not found: <path>" 404. These aren't our bugs and
+// drowned out real issues, so drop them before they reach Sentry. The matching
+// 4xx guard in `handleError` covers our explicit captures; this catches anything
+// captured by the request handler itself.
+function isNotFoundError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error ?? '');
+	return message.startsWith('Not found:');
+}
+
 // On Cloudflare Workers, Sentry must be initialised per-request via
 // initCloudflareSentryHandle. The Node-style `Sentry.init()` in an
 // instrumentation file pulls in Node/OpenTelemetry APIs the Workers runtime
@@ -69,6 +79,10 @@ export const handle: Handle = sequence(
 		environment: process.env.SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
 		// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
 		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci',
+		beforeSend(event, hint) {
+			if (isNotFoundError(hint?.originalException)) return null;
+			return event;
+		},
 		sendDefaultPii: true,
 		tracesSampleRate: 1.0,
 		enableLogs: true
@@ -80,7 +94,9 @@ export const handle: Handle = sequence(
 export const handleError: HandleServerError = Sentry.handleErrorWithSentry(
 	async ({ error, event, status, message }) => {
 		console.error(`[${status}] ${event.request.method} ${event.url.pathname}`, error);
-		captureException(error);
+		// 4xx are client errors, not our bugs — mostly bot/proxy probes for paths we
+		// don't serve (e.g. /.well-known/traffic-advice). Only report genuine 5xx.
+		if (status >= 500) captureException(error);
 		return { message };
 	}
 );
