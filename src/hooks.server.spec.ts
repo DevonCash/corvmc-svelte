@@ -116,6 +116,28 @@ describe('hooks.server handle', () => {
 		expect(event.locals.session).toEqual(mockSession.session);
 	});
 
+	it('treats a deactivated user (deletedAt set) as anonymous', async () => {
+		const mockSession = {
+			session: { id: 'sess-del', userId: 'user-del' },
+			user: {
+				id: 'user-del',
+				name: 'Deleted',
+				email: 'deleted@test.com',
+				deletedAt: new Date('2026-01-01')
+			}
+		};
+		mockGetSession.mockResolvedValue(mockSession);
+
+		const { handle } = await import('./hooks.server');
+		const event = makeEvent();
+
+		await handle({ event: event as any, resolve: vi.fn() });
+
+		expect(event.locals.user).toBeUndefined();
+		expect(event.locals.session).toBeUndefined();
+		expect(mockResolvePendingInvites).not.toHaveBeenCalled();
+	});
+
 	it('does not populate locals when session is null', async () => {
 		mockGetSession.mockResolvedValue(null);
 

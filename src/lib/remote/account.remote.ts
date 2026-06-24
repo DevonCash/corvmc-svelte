@@ -3,12 +3,10 @@ import { error } from '@sveltejs/kit';
 import { form, query, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { reservation } from '$lib/server/db/schema/reservation';
 import { auth } from '$lib/server/auth';
-import { eq, and, gt, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireUser, hasAnyRole } from '$lib/server/authorization';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import { deactivateUser } from '$lib/server/user/user-service';
 import {
 	getSubscriptionsForUser,
 	getOptInAudiencesForUser
@@ -138,35 +136,9 @@ export const deleteAccount = form(
 			throw error(403, 'Incorrect password');
 		}
 
-		// Cancel all future non-cancelled reservations
-		const futureReservations = await db
-			.select({ id: reservation.id })
-			.from(reservation)
-			.where(
-				and(
-					eq(reservation.createdByUserId, currentUser.id),
-					gt(reservation.startsAt, new Date()),
-					ne(reservation.status, 'cancelled')
-				)
-			);
-
-		for (const r of futureReservations) {
-			await cancelReservation(r.id, currentUser.id, 'Account deleted', {
-				staffOverride: true
-			});
-		}
-
-		// Cancel Stripe subscription if active
-		if (currentUser.stripeId) {
-			try {
-				await cancelSubscription(currentUser.stripeId);
-			} catch {
-				// Subscription may not exist — that's fine
-			}
-		}
-
-		// Soft-delete the user
-		await db.update(user).set({ deletedAt: new Date() }).where(eq(user.id, currentUser.id));
+		// Full offboarding (cancels reservations + subscription, purges sessions,
+		// soft-deletes) lives in the shared service shared with staff deactivation.
+		await deactivateUser(currentUser.id);
 
 		// Sign out
 		await auth.api.signOut({ headers: event.request.headers });

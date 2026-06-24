@@ -43,7 +43,10 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
-	if (session) {
+	// Deactivated users (soft-deleted, `deletedAt` set) are treated as anonymous.
+	// The session row is left intact in the DB; it's inert because every request
+	// re-resolves through this gate. Layout auth gates then redirect to login.
+	if (session && !session.user.deletedAt) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 
