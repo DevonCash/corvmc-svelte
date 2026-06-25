@@ -1,6 +1,7 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
+import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
 
 import prettier from 'eslint-config-prettier';
@@ -81,6 +82,11 @@ export default defineConfig(
 	{
 		files: ['**/+page.svelte'],
 		rules: { 'custom/no-raw-form-elements': 'warn' }
+	},
+	{
+		files: ['**/*.svelte'],
+		plugins: { custom: { rules: { 'no-duplicate-field-names': noDuplicateFieldNames } } },
+		rules: { 'custom/no-duplicate-field-names': 'error' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],
