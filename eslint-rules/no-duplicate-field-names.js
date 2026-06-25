@@ -57,8 +57,7 @@ export default {
 	meta: {
 		type: 'problem',
 		docs: {
-			description:
-				'Disallow two form fields submitting the same property name within one form.'
+			description: 'Disallow two form fields submitting the same property name within one form.'
 		},
 		messages: {
 			duplicateName:
