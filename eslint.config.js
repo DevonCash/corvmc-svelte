@@ -15,10 +15,10 @@ import svelteConfig from './svelte.config.js';
 
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
-// A single `custom` plugin object reused across config blocks. eslint's flat
-// config rejects two config objects that define the same plugin namespace with
-// *different* objects ("Cannot redefine plugin custom"), so the rules must live
-// on one shared reference even though each block enables a different rule.
+// The `custom` plugin must be registered in exactly one config object — eslint's
+// flat config rejects the same plugin namespace appearing in more than one config
+// ("Cannot redefine plugin custom"), even with an identical object. So register it
+// globally here and let the file-scoped blocks below only *enable* its rules.
 const customPlugin = {
 	rules: {
 		'no-raw-form-elements': noRawFormElements,
@@ -75,14 +75,16 @@ export default defineConfig(
 		}
 	},
 	{
+		// Register the custom plugin once, globally; the blocks below only enable rules.
+		plugins: { custom: customPlugin }
+	},
+	{
 		files: ['**/+page.svelte'],
-		plugins: { custom: customPlugin },
 		rules: { 'custom/no-raw-form-elements': 'warn' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
-		plugins: { custom: customPlugin },
 		rules: { 'custom/no-db-transaction': 'error' }
 	}
 );
