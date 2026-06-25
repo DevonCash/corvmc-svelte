@@ -83,6 +83,16 @@ export default {
 				const scope = formStack[formStack.length - 1];
 				if (!scope) return;
 
+				// Only consider field *components* (FormField, Field, FileUpload, …). Raw HTML
+				// elements legitimately share a `name`: radio groups, native checkbox groups, and
+				// `<input type="hidden">` mirrors. The codebase routes submissions through field
+				// components anyway, so this targets the real duplicate-field bug without flagging
+				// those patterns.
+				const tag = node.name?.name;
+				const isComponent =
+					node.kind === 'component' || (typeof tag === 'string' && /^[A-Z]/.test(tag));
+				if (!isComponent) return;
+
 				const resolved = resolveFieldName(node);
 				if (!resolved) return;
 
