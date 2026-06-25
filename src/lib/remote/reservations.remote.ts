@@ -33,6 +33,7 @@ import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone'
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
+import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import {
 	getAvailableSlots,
 	getConflictDetails,
@@ -684,7 +685,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			memberName: user.name,
 			memberEmail: user.email,
 			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id)
+			memberRole: primaryRoleFor(user.id),
+			memberSustaining: isSustainingMemberSql(user.id)
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))

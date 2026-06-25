@@ -50,7 +50,7 @@
 	function getTier(user: User): 'admin' | 'staff' | 'sustaining' | null {
 		if (user.roles.includes('admin')) return 'admin';
 		if (user.roles.includes('staff')) return 'staff';
-		if (user.roles.includes('sustaining')) return 'sustaining';
+		if (user.sustaining) return 'sustaining';
 		return null;
 	}
 

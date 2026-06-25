@@ -64,7 +64,8 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 }));
 
 vi.mock('$lib/server/finance/subscription-service', () => ({
-	getSubscription: vi.fn().mockResolvedValue(null)
+	getSubscription: vi.fn().mockResolvedValue(null),
+	isSustainingMember: vi.fn().mockResolvedValue(false)
 }));
 
 vi.mock('./equipment-service', () => ({
