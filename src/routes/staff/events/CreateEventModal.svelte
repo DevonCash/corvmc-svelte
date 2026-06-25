@@ -25,7 +25,7 @@
 	let reservationStartTime = $state('');
 	let reservationEndTime = $state('');
 	let ticketingEnabled = $state(false);
-	let ticketPriceDollars = $state('');
+	let ticketPriceDollars = $state('10');
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
 	let hasConflicts = $state(false);
@@ -82,7 +82,7 @@
 		doorsTime = '';
 		tags = '';
 		ticketingEnabled = false;
-		ticketPriceDollars = '';
+		ticketPriceDollars = '10';
 		ticketQuantity = '';
 		reserveSpace = false;
 		reservationStartTime = '';
@@ -140,6 +140,9 @@
 							type="number"
 							label="Ticket price ($)"
 							bind:value={ticketPriceDollars}
+							required
+							min="0.01"
+							step="0.01"
 						/>
 						<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
 						<Field
