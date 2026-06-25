@@ -1,0 +1,158 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mockUser } from '$lib/server/db/test-factory';
+
+// Regression: staff confirming/pricing a reservation on a member's behalf must key
+// free hours to the reservation OWNER, never the acting staff user. The staff
+// confirm UI previously routed through the member self-pay flow, which keyed both
+// the pricing display and the credit deduction to `currentUser.id` (the staff
+// member). Both `confirmReservation` (deduction) and `getReservationPricing`
+// (display) must use `reservation.createdByUserId`.
+
+const staffUser = mockUser({ id: 'staff-1', name: 'Staff Person', email: 'staff@example.com' });
+const ownerId = 'member-1';
+
+// Sequential `db.select(...).limit(1)` calls resolve from this queue in order.
+const selectResults: unknown[][] = [];
+function chain() {
+	const c: Record<string, unknown> = {
+		from: () => c,
+		where: () => c,
+		innerJoin: () => c,
+		limit: () => Promise.resolve(selectResults.shift() ?? [])
+	};
+	return c;
+}
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: () => chain(),
+		update: () => ({ set: () => ({ where: () => Promise.resolve() }) })
+	}
+}));
+
+vi.mock('$lib/server/authorization', () => ({
+	requireUser: () => staffUser,
+	requireStaff: vi.fn(async () => undefined),
+	isStaff: vi.fn(async () => true),
+	primaryRoleFor: vi.fn()
+}));
+
+vi.mock('$lib/server/reservation/config', () => ({
+	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
+}));
+
+// Owner has no free hours; the acting staff user has a big balance. If pricing keyed
+// to the wrong user, the staff balance would leak credits onto the member's booking.
+const getBalance = vi.fn(async (userId: string) => (userId === ownerId ? 0 : 100));
+vi.mock('$lib/server/finance/credit-service', () => ({ getBalance }));
+
+const commitReservationCredits = vi.fn(async (params: { userId: string; totalCents: number }) => ({
+	creditUnits: 0,
+	creditDiscountCents: 0,
+	remainingCents: params.totalCents,
+	alreadyCommitted: false
+}));
+vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+	return {
+		// Keep the real pricing math so the pricing test reflects production behavior.
+		computeReservationCredit: actual.computeReservationCredit,
+		commitReservationCredits,
+		reverseReservationCredits: vi.fn()
+	};
+});
+
+const confirm = vi.fn(async () => undefined);
+vi.mock('$lib/server/reservation/reservation-service', () => ({
+	create: vi.fn(),
+	createWaitlisted: vi.fn(),
+	confirm,
+	cancel: vi.fn(),
+	markComplete: vi.fn(),
+	markNoShow: vi.fn(),
+	recordCashAndComplete: vi.fn(),
+	staffCreate: vi.fn(),
+	ReservationConflictError: class extends Error {}
+}));
+
+vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+
+vi.mock('$app/server', () => ({
+	getRequestEvent: () => ({
+		locals: { user: staffUser },
+		url: new URL('http://localhost/staff/reservations'),
+		request: { headers: new Headers() }
+	}),
+	form: (schema: unknown, handler: (...args: any[]) => any) => {
+		const fn = handler;
+		(fn as any).__ = { type: 'form' };
+		(fn as any).__schema = schema;
+		(fn as any).for = () => fn;
+		return fn;
+	},
+	query: (...args: any[]) => {
+		const handler = typeof args[0] === 'function' ? args[0] : args[1];
+		const fn = handler as (...a: any[]) => any;
+		(fn as any).__ = { type: 'query' };
+		return fn;
+	}
+}));
+
+const { confirmReservation, getReservationPricing } =
+	(await import('$lib/remote/reservations.remote')) as any;
+
+beforeEach(() => {
+	commitReservationCredits.mockClear();
+	confirm.mockClear();
+	getBalance.mockClear();
+	selectResults.length = 0;
+});
+
+describe('staff confirm commits the owner credits, not the staff member', () => {
+	it('passes the reservation owner id to commitReservationCredits', async () => {
+		selectResults.push(
+			[
+				{
+					id: 'res-1',
+					createdByUserId: ownerId,
+					startsAt: new Date('2026-06-15T17:00:00Z'),
+					endsAt: new Date('2026-06-15T18:00:00Z'),
+					status: 'scheduled'
+				}
+			],
+			[{ email: 'member@example.com', name: 'Test Member' }]
+		);
+
+		// The `form` mock exposes the raw handler, so call it with parsed data.
+		await confirmReservation({ id: 'res-1' }, undefined);
+
+		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
+		const arg = commitReservationCredits.mock.calls[0][0];
+		expect(arg.userId).toBe(ownerId);
+		expect(arg.userId).not.toBe(staffUser.id);
+	});
+});
+
+describe('getReservationPricing keys free hours to the reservation owner', () => {
+	it('shows no free hours for a non-sustaining owner even when the staff user has a balance', async () => {
+		selectResults.push(
+			[{ createdByUserId: ownerId }], // reservation lookup
+			[{ subscription: null }] // owner subscription lookup → not sustaining
+		);
+
+		const pricing = await getReservationPricing({
+			date: '2026-06-15',
+			startTime: '17:00',
+			endTime: '18:00',
+			reservationId: 'res-1'
+		});
+
+		// Balance was read for the owner, not the acting staff user.
+		expect(getBalance).toHaveBeenCalledWith(ownerId, 'free_hours');
+		expect(pricing.freeHoursBalance).toBe(0);
+		expect(pricing.creditsApplicable).toBe(0);
+		expect(pricing.isSustainingMember).toBe(false);
+		expect(pricing.remainingCents).toBe(pricing.totalCents);
+	});
+});

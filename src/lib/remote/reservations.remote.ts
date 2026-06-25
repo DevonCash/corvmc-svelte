@@ -402,8 +402,17 @@ export const getReservationEndTimes = query(
 
 /** Member: full pricing breakdown for a given date/time selection. */
 export const getReservationPricing = query(
-	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
-	async ({ startTime, endTime }) => {
+	z.object({
+		date: z.string(),
+		startTime: z.string(),
+		endTime: z.string(),
+		// When confirming an existing reservation, pricing must reflect the
+		// reservation OWNER's free hours / sustaining status — not the acting user
+		// (e.g. a staff member confirming on the owner's behalf). Omitted by the
+		// create flow, which has no reservation yet and keys to the acting user.
+		reservationId: z.string().optional()
+	}),
+	async ({ startTime, endTime, reservationId }) => {
 		const { locals } = getRequestEvent();
 		const config = await getReservationConfig();
 
@@ -414,14 +423,30 @@ export const getReservationPricing = query(
 		const hourlyRateCents = config.hourlyRateCents;
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
-		const freeHoursBalance = locals.user ? await getBalance(locals.user.id, 'free_hours') : 0;
+		// Resolve whose free hours apply. For an existing reservation, that's the
+		// owner — staff or the owner themselves may view it.
+		let targetUserId = locals.user?.id ?? null;
+		if (reservationId) {
+			const [res] = await db
+				.select({ createdByUserId: reservation.createdByUserId })
+				.from(reservation)
+				.where(eq(reservation.id, reservationId))
+				.limit(1);
+			if (!res) throw error(404, 'Reservation not found');
+			const isOwner = locals.user?.id === res.createdByUserId;
+			const staff = locals.user ? await isStaff(locals.user.id) : false;
+			if (!isOwner && !staff) throw error(403, 'Not authorized');
+			targetUserId = res.createdByUserId;
+		}
+
+		const freeHoursBalance = targetUserId ? await getBalance(targetUserId, 'free_hours') : 0;
 
 		let isSustainingMember = false;
-		if (locals.user) {
+		if (targetUserId) {
 			const [row] = await db
 				.select({ subscription: user.subscription })
 				.from(user)
-				.where(eq(user.id, locals.user.id))
+				.where(eq(user.id, targetUserId))
 				.limit(1);
 			isSustainingMember = row?.subscription != null;
 		}

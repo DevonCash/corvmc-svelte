@@ -280,7 +280,11 @@
 								<td onclick={(e) => e.stopPropagation()}>
 									<div class="flex items-center gap-1">
 										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
-											<ConfirmReservationAction reservation={r} class="btn-ghost btn-sm latched">
+											<ConfirmReservationAction
+												reservation={r}
+												staff
+												class="btn-ghost btn-sm latched"
+											>
 												{#snippet icon()}<IconCheck size={16} />{/snippet}
 											</ConfirmReservationAction>
 										{/if}
