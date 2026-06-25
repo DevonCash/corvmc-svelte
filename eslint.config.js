@@ -23,6 +23,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 const customPlugin = {
 	rules: {
 		'no-raw-form-elements': noRawFormElements,
+		'no-duplicate-field-names': noDuplicateFieldNames,
 		'no-db-transaction': noDbTransaction
 	}
 };
@@ -85,7 +86,6 @@ export default defineConfig(
 	},
 	{
 		files: ['**/*.svelte'],
-		plugins: { custom: { rules: { 'no-duplicate-field-names': noDuplicateFieldNames } } },
 		rules: { 'custom/no-duplicate-field-names': 'error' }
 	},
 	{
