@@ -69,9 +69,11 @@
 
 			if (date && startTime && endTime) {
 				pricing = null;
-				getReservationPricing({ date, startTime, endTime }).then((result) => {
-					pricing = result;
-				});
+				getReservationPricing({ date, startTime, endTime, reservationId: reservation?.id }).then(
+					(result) => {
+						pricing = result;
+					}
+				);
 			}
 		}
 	});

@@ -12,10 +12,14 @@
 
 	let {
 		reservation,
-		fields = {}
+		fields = {},
+		staff = false
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
+		// Staff confirming on the owner's behalf: render a single Confirm action
+		// (no Pay Ahead / online checkout) and key pricing to the reservation owner.
+		staff?: boolean;
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -126,9 +130,11 @@
 
 			if (date && startTime && endTime) {
 				pricing = null;
-				getReservationPricing({ date, startTime, endTime }).then((result) => {
-					pricing = result;
-				});
+				getReservationPricing({ date, startTime, endTime, reservationId: reservation?.id }).then(
+					(result) => {
+						pricing = result;
+					}
+				);
 			}
 		}
 	});
@@ -215,15 +221,20 @@
 			{#if formCtx.currentStep > 0}
 				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
 			{/if}
-			<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
-			<Button
-				type="submit"
-				name="skipPayment"
-				value="on"
-				class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
-			>
-			{#if showPayAhead}
-				<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+			{#if staff}
+				<!-- Staff confirm: single action, no online Pay Ahead. -->
+				<Button type="submit" class="btn-primary">Confirm</Button>
+			{:else}
+				<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
+				<Button
+					type="submit"
+					name="skipPayment"
+					value="on"
+					class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+				>
+				{#if showPayAhead}
+					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+				{/if}
 			{/if}
 		</div>
 	</Form.Step>

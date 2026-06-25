@@ -92,7 +92,7 @@
 			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
 				<div class="flex flex-wrap items-center gap-2 border-t border-base-200 pt-3">
 					{#if actions.has('confirm')}
-						<ConfirmReservationAction reservation={r} />
+						<ConfirmReservationAction reservation={r} staff />
 					{/if}
 					{#if actions.has('complete')}
 						<CompleteReservationAction reservation={r} />
