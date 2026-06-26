@@ -3,7 +3,7 @@ import { event } from '$lib/server/db/schema/event';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
-import { eq, and, gt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
+import { eq, and, gt, gte, lt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -12,7 +12,7 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { formatDateFull } from '$lib/server/reservation/timezone';
+import { formatDateFull, formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -464,6 +464,39 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 
 	if (limit) return query.limit(limit);
 	return query;
+}
+
+/** Add one calendar day to a "YYYY-MM-DD" string (UTC rollover handles month/year). */
+function nextDay(dateStr: string): string {
+	const [year, month, day] = dateStr.split('-').map(Number);
+	const d = new Date(Date.UTC(year, month - 1, day + 1));
+	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+		d.getUTCDate()
+	).padStart(2, '0')}`;
+}
+
+/** Soonest published CMC show on today's calendar day (PT) that hasn't ended yet. */
+export async function getShowTonight(now = new Date()): Promise<EventRow | null> {
+	const today = formatDateInTz(now, DEFAULT_TIMEZONE);
+	const dayStart = buildDateInTz(today, '00:00', DEFAULT_TIMEZONE);
+	const dayEnd = buildDateInTz(nextDay(today), '00:00', DEFAULT_TIMEZONE);
+
+	const [row] = await db
+		.select()
+		.from(event)
+		.where(
+			and(
+				eq(event.status, 'published'),
+				eq(event.source, 'cmc'),
+				gte(event.startsAt, dayStart),
+				lt(event.startsAt, dayEnd),
+				gt(event.endsAt, now)
+			)
+		)
+		.orderBy(asc(event.startsAt))
+		.limit(1);
+
+	return row ?? null;
 }
 
 /** Published events that have already ended, newest first. */
