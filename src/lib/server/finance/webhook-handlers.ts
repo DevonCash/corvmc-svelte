@@ -246,12 +246,13 @@ export async function allocateCreditsFromInvoice(
 
 	const contributionCents = contributionLine.amount ?? 0;
 	const freeHoursCredits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 50));
-	const contributionUnits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 100));
 
 	// Use invoice ID as sourceId for idempotency — each invoice is unique.
 	await creditService.allocateMonthlyCredits(memberId, freeHoursCredits, invoice.id);
-	// Equipment credits: 1:1 with contribution units, capped at 250.
-	await creditService.allocateEquipmentCredits(memberId, contributionUnits, invoice.id);
+	// Equipment credits are denominated in cents: every dollar contributed is
+	// spendable 1:1 against equipment-loan charges (see settleReturn). Capped per
+	// config (creditTypeConfig.equipment_credits.maxBalance).
+	await creditService.allocateEquipmentCredits(memberId, contributionCents, invoice.id);
 
 	return { reconciled: !alreadyApplied };
 }
