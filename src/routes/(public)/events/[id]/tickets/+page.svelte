@@ -104,9 +104,11 @@
 						</select>
 					</Field>
 
-					<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
+					{#if !data.isAuthenticated}
+						<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
 
-					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+					{/if}
 
 					<SubmitButton
 						label="RSVP{quantity > 1 ? ` for ${quantity}` : ''}"
@@ -160,9 +162,11 @@
 						</select>
 					</Field>
 
-					<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
+					{#if !data.isAuthenticated}
+						<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
 
-					<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+					{/if}
 
 					<Field
 						name="coverFees"
