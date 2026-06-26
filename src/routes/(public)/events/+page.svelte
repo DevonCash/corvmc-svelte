@@ -1,8 +1,14 @@
 <script lang="ts">
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import { getPublicEvents } from '$lib/remote/events.remote';
+	import { page } from '$app/state';
 
 	let { upcoming, past } = $derived(await getPublicEvents());
+
+	let dismissed = $state(false);
+	let showNotice = $derived(
+		page.url.searchParams.get('notice') === 'no-show-tonight' && !dismissed
+	);
 </script>
 
 <svelte:head>
@@ -26,6 +32,25 @@
 				Shows, jams, and meetups from the Collective
 			</p>
 		</div>
+
+		{#if showNotice}
+			<div
+				class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 mb-8"
+				style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
+				role="status"
+			>
+				<p class="text-sm font-medium">
+					No show at the Collective tonight — here's what's coming up.
+				</p>
+				<button
+					type="button"
+					class="text-sm font-semibold underline shrink-0"
+					onclick={() => (dismissed = true)}
+				>
+					Dismiss
+				</button>
+			</div>
+		{/if}
 
 		{#if upcoming.length > 0}
 			<h2 class="text-xl font-semibold mb-4" style="color: var(--cmc-navy)">Upcoming</h2>
