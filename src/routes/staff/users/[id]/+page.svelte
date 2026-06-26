@@ -17,6 +17,7 @@
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { creditsToHours } from '$lib/config';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -99,7 +100,7 @@
 			<InfoCard title="Credits">
 				<div class="flex gap-6 mb-3">
 					<div>
-						<p class="text-2xl font-medium">{credits.free_hours ?? 0}</p>
+						<p class="text-2xl font-medium">{creditsToHours(credits.free_hours ?? 0)}</p>
 						<p class="text-sm opacity-60">Free Hours</p>
 					</div>
 					<div>

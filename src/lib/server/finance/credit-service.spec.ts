@@ -169,12 +169,12 @@ describe('addCredits', () => {
 	});
 
 	it('respects maxBalance cap from config', async () => {
-		selectResults = [[{ balance: 240 }]];
-		updateResults = [[{ balance: 250 }]];
+		selectResults = [[{ balance: 24990 }]];
+		updateResults = [[{ balance: 25000 }]];
 
 		const result = await addCredits('user-1', 'equipment_credits', 20, 'monthly_allocation');
-		expect(result).toBe(250);
-		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 250 });
+		expect(result).toBe(25000);
+		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 25000 });
 	});
 
 	it('retries the CAS when the balance changes concurrently', async () => {

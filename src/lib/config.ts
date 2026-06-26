@@ -41,9 +41,12 @@ export function creditValueCents(hourlyRateCents: number): number {
 	return Math.round((hourlyRateCents * MINUTES_PER_CREDIT) / 60);
 }
 
+// Equipment credits are denominated in cents (1 credit = 1¢ of equipment-loan
+// charge), granted 1:1 with the member's monthly contribution. The cap bounds
+// rollover hoarding — 25000 = $250 of accrued credit.
 export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }> = {
 	free_hours: { maxBalance: null },
-	equipment_credits: { maxBalance: 250 }
+	equipment_credits: { maxBalance: 25000 }
 };
 
 // ---------------------------------------------------------------------------

@@ -113,13 +113,13 @@ beforeEach(() => {
 describe('credit reconciliation during sync', () => {
 	it('replays an unprocessed paid invoice and counts it as reconciled', async () => {
 		sweep([sub()]);
-		invoicesList.mockResolvedValue({ data: [paidInvoice('in_1', 1000)] }); // $10 = 4 credits
+		invoicesList.mockResolvedValue({ data: [paidInvoice('in_1', 1000)] }); // $10 = 4 free-hour credits + 1000 equipment credits (cents)
 
 		const summary = await syncAllSubscriptions();
 
 		expect(invoicesList).toHaveBeenCalledWith({ subscription: 'sub_1', status: 'paid', limit: 1 });
 		expect(allocateMonthlyCredits).toHaveBeenCalledWith('user_1', 4, 'in_1');
-		expect(allocateEquipmentCredits).toHaveBeenCalledWith('user_1', 2, 'in_1');
+		expect(allocateEquipmentCredits).toHaveBeenCalledWith('user_1', 1000, 'in_1');
 		expect(summary.usersUpdated).toBe(1);
 		expect(summary.creditsReconciled).toBe(1);
 		expect(summary.errors).toHaveLength(0);
