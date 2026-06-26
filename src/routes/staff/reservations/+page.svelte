@@ -256,6 +256,7 @@
 												email: r.memberEmail,
 												pronouns: r.memberPronouns,
 												role: r.memberRole,
+												sustaining: !!r.memberSustaining,
 												userId: r.createdByUserId
 											}}
 											class="p-7 px-4 w-full"

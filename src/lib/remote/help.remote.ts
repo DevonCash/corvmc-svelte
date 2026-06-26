@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, getUserRoles } from '$lib/server/authorization';
+import { requireStaff } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listCategories,
@@ -9,6 +9,7 @@ import {
 	getArticleBySlug,
 	searchArticles,
 	listAllArticles,
+	resolveUserHelpRole,
 	createArticle as createArticleSvc,
 	updateArticle as updateArticleSvc,
 	deleteArticle as deleteArticleSvc,
@@ -31,21 +32,11 @@ function slugify(text: string) {
 		.trim();
 }
 
-const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
-
-function highestRole(roles: string[]): string {
-	let best = 'member';
-	for (const r of roles) {
-		if ((ROLE_LEVEL[r] ?? 4) < (ROLE_LEVEL[best] ?? 4)) best = r;
-	}
-	return best;
-}
-
 async function requireUserWithRole() {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
-	const roles = await getUserRoles(locals.user.id);
-	return { user: locals.user, role: highestRole(roles) };
+	const role = await resolveUserHelpRole(locals.user.id);
+	return { user: locals.user, role };
 }
 
 // ---------------------------------------------------------------------------

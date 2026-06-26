@@ -42,13 +42,6 @@ vi.mock('./webhook-events', () => ({
 	registeredEvents: ['checkout.session.completed', 'invoice.paid', 'customer.subscription.deleted']
 }));
 
-const mockAssignRole = vi.fn();
-const mockRemoveRole = vi.fn();
-vi.mock('$lib/server/authorization', () => ({
-	assignRole: (...args: unknown[]) => mockAssignRole(...args),
-	removeRole: (...args: unknown[]) => mockRemoveRole(...args)
-}));
-
 vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	cancelAllForUser: vi.fn()
 }));

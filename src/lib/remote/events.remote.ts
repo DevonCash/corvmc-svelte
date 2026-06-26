@@ -35,7 +35,10 @@ import {
 	getUserRsvp,
 	countRsvps
 } from '$lib/server/event/rsvp-service';
-import { getSubscription } from '$lib/server/finance/subscription-service';
+import {
+	getSubscription,
+	isSustainingMember as checkSustainingMember
+} from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -44,7 +47,6 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
 import { event, createEventSchema } from '$lib/server/db/schema/event';
-import { hasAnyRole } from '$lib/server/authorization';
 import { randomUUID } from 'crypto';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -106,7 +108,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
-	const isSustainingMember = locals.user ? await hasAnyRole(locals.user.id, ['sustaining']) : false;
+	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
 
 	// Sold is derived from remaining only when the event is both ticketed and capped;
 	// otherwise the capacity bar isn't shown so the count isn't needed.
@@ -190,7 +192,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const rsvpCount = evt.ticketingEnabled ? 0 : await countRsvps(id);
 
 	// Sustaining members see the discounted price; anonymous visitors don't.
-	const isSustainingMember = locals.user ? await hasAnyRole(locals.user.id, ['sustaining']) : false;
+	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
 
 	const isPast = evt.endsAt.getTime() < Date.now();
 
