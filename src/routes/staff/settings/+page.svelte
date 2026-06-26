@@ -702,7 +702,9 @@
 			<p class="text-sm opacity-70">
 				Reconciles every member and band subscription status from Stripe into the local database.
 				Use this as a one-time backfill after migration, or any time to re-sync if a webhook was
-				missed. This only updates subscription status — credit balances are never changed.
+				missed. For active members it also tops up any missing monthly credits by replaying their
+				latest paid invoice — it never reduces a balance already spent down this month, and leaves
+				canceled members' credits untouched.
 			</p>
 
 			<Action
@@ -715,10 +717,11 @@
 			/>
 
 			{#if syncResult}
-				<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+				<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
 					<StatCard title="Scanned" value={syncResult.totalScanned} />
 					<StatCard title="Users updated" value={syncResult.usersUpdated} />
 					<StatCard title="Users cleared" value={syncResult.usersCleared} />
+					<StatCard title="Credits reconciled" value={syncResult.creditsReconciled} />
 					<StatCard title="Bands updated" value={syncResult.bandsUpdated} />
 					<StatCard title="Bands cleared" value={syncResult.bandsCleared} />
 					<StatCard title="Skipped" value={syncResult.skipped} />

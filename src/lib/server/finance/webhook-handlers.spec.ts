@@ -26,6 +26,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const mockCreditService = {
+	hasTransaction: vi.fn().mockResolvedValue(false),
 	allocateMonthlyCredits: vi.fn(),
 	allocateEquipmentCredits: vi.fn(),
 	setBalance: vi.fn()
