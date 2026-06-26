@@ -8,7 +8,15 @@ vi.mock('$env/dynamic/private', () => ({
 	}
 }));
 
-import { initStorage, uploadFile, deleteObject, getPublicUrl, isConfigured } from './storage';
+import {
+	initStorage,
+	uploadFile,
+	deleteObject,
+	getPublicUrl,
+	isConfigured,
+	validateUpload,
+	MAX_SIZE_BYTES
+} from './storage';
 import { env } from '$env/dynamic/private';
 
 const mockBucket = {
@@ -58,18 +66,41 @@ describe('storage', () => {
 			expect(mockBucket.put).not.toHaveBeenCalled();
 		});
 
-		it('rejects files over 5MB', async () => {
-			const buffer = new ArrayBuffer(6 * 1024 * 1024);
+		it('rejects files over 10MB', async () => {
+			const buffer = new ArrayBuffer(11 * 1024 * 1024);
 
 			await expect(uploadFile(buffer, 'big.jpg', 'image/jpeg')).rejects.toThrow(
-				'exceeds the 5MB limit'
+				'exceeds the 10MB limit'
 			);
 			expect(mockBucket.put).not.toHaveBeenCalled();
 		});
 
-		it('accepts files exactly at 5MB', async () => {
-			const buffer = new ArrayBuffer(5 * 1024 * 1024);
+		it('accepts files exactly at 10MB', async () => {
+			const buffer = new ArrayBuffer(MAX_SIZE_BYTES);
 			await expect(uploadFile(buffer, 'max.jpg', 'image/jpeg')).resolves.toBe('max.jpg');
+		});
+	});
+
+	describe('validateUpload', () => {
+		function fakeFile(type: string, size: number): File {
+			return { type, size } as File;
+		}
+
+		it('returns null for a valid file', () => {
+			expect(validateUpload(fakeFile('image/jpeg', 1024))).toBeNull();
+		});
+
+		it('returns a reason for a disallowed type', () => {
+			expect(validateUpload(fakeFile('application/pdf', 1024))).toMatch(/not allowed/);
+		});
+
+		it('returns a reason naming the limit for oversized files', () => {
+			const reason = validateUpload(fakeFile('image/png', MAX_SIZE_BYTES + 1));
+			expect(reason).toMatch(/exceeds the 10MB limit/);
+		});
+
+		it('accepts a file exactly at the limit', () => {
+			expect(validateUpload(fakeFile('image/webp', MAX_SIZE_BYTES))).toBeNull();
 		});
 	});
 
