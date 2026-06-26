@@ -8,6 +8,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
+	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
@@ -30,6 +31,8 @@
 	const subtotal = $derived(discountedPrice * quantity);
 	const memberSubtotal = $derived(Math.round(unitPrice / 2) * quantity);
 	const memberSavings = $derived(subtotal - memberSubtotal);
+	const feeCents = $derived(calculateTotalWithFeeCoverage(subtotal).feeCents);
+	const total = $derived(coverFees ? subtotal + feeCents : subtotal);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
@@ -167,14 +170,26 @@
 					<Field
 						name="coverFees"
 						type="checkbox"
-						value={coverFees}
-						checkboxLabel="Cover processing fees so the collective receives the full amount"
+						bind:value={coverFees}
+						checkboxLabel="Add {formatCents(
+							feeCents
+						)} to cover processing fees so the collective receives the full amount"
 					/>
 
 					<div class="border-t border-base-200 pt-4">
+						{#if coverFees}
+							<div class="flex justify-between text-sm opacity-70">
+								<span>Subtotal</span>
+								<span>{formatCents(subtotal)}</span>
+							</div>
+							<div class="flex justify-between text-sm opacity-70">
+								<span>Processing fees</span>
+								<span>{formatCents(feeCents)}</span>
+							</div>
+						{/if}
 						<div class="flex justify-between text-lg font-medium">
 							<span>Total</span>
-							<span>{formatCents(subtotal)}</span>
+							<span>{formatCents(total)}</span>
 						</div>
 						{#if data.isSustainingMember}
 							<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
