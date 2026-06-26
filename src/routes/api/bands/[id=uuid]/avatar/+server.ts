@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { band } from '$lib/server/db/schema/band';
 import { eq } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,6 +45,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!file || !(file instanceof File)) {
 		throw error(400, 'No file provided');
 	}
+
+	// Validate before mutating anything so a bad upload doesn't wipe the existing avatar.
+	const reason = validateUpload(file);
+	if (reason) throw error(400, reason);
 
 	// Delete old avatar if exists
 	if (row.avatarKey) {
