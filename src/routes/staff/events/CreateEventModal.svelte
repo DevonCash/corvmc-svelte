@@ -9,6 +9,7 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { checkConflicts, createEvent } from '$lib/remote/events.remote';
+	import { responseErrorMessage } from '$lib/api';
 
 	const { fields } = createEvent;
 
@@ -25,7 +26,7 @@
 	let reservationStartTime = $state('');
 	let reservationEndTime = $state('');
 	let ticketingEnabled = $state(false);
-	let ticketPriceDollars = $state('10');
+	let ticketPriceDollars = $state('');
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
 	let hasConflicts = $state(false);
@@ -60,7 +61,9 @@
 				body: formData
 			});
 			if (!res.ok) {
-				toast.warning('Event created but poster upload failed');
+				toast.warning(
+					`Event created but poster upload failed: ${await responseErrorMessage(res, 'unknown error')}`
+				);
 			}
 		}
 
@@ -82,7 +85,7 @@
 		doorsTime = '';
 		tags = '';
 		ticketingEnabled = false;
-		ticketPriceDollars = '10';
+		ticketPriceDollars = '';
 		ticketQuantity = '';
 		reserveSpace = false;
 		reservationStartTime = '';
@@ -140,9 +143,6 @@
 							type="number"
 							label="Ticket price ($)"
 							bind:value={ticketPriceDollars}
-							required
-							min="0.01"
-							step="0.01"
 						/>
 						<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
 						<Field

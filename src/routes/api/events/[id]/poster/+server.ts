@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
 import { getById } from '$lib/server/event/event-service';
 import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
@@ -20,6 +20,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const formData = await request.formData();
 	const file = formData.get('poster');
 	if (!(file instanceof File)) throw error(400, 'No file provided');
+
+	// Validate before mutating anything so a bad upload doesn't wipe the existing poster.
+	const reason = validateUpload(file);
+	if (reason) throw error(400, reason);
 
 	const buffer = await file.arrayBuffer();
 	const contentType = file.type;

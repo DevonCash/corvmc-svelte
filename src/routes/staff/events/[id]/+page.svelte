@@ -8,6 +8,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
+	import { responseErrorMessage } from '$lib/api';
 	import {
 		PublishEventAction,
 		UnpublishEventAction,
@@ -147,7 +148,7 @@
 				method: 'POST',
 				body: formData
 			});
-			if (!res.ok) throw new Error('Upload failed');
+			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
 			toast.success('Poster updated');
 			void getStaffEventDetail(id).refresh();
 		} catch (err) {
