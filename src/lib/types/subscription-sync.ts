@@ -25,6 +25,12 @@ export interface SubscriptionSyncSummary {
 	bandsCleared: number;
 	/** trialing/incomplete/paused subs left untouched (status ambiguous). */
 	skipped: number;
+	/**
+	 * active/past_due members whose latest paid invoice was replayed and newly
+	 * allocated free-hour + equipment credits (a missed webhook). Members whose
+	 * invoice was already allocated are not counted — their balances are untouched.
+	 */
+	creditsReconciled: number;
 	/** total subscriptions returned by the Stripe sweep. */
 	totalScanned: number;
 	/** when true, counts are computed but no DB writes are issued. */
