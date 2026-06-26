@@ -5,6 +5,7 @@
 		ConfirmWaitlistedAction
 	} from '$lib/components/shared/actions';
 	import ReservationSummary from '$lib/components/shared/reservations/ReservationSummary.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
@@ -42,7 +43,9 @@
 	</div>
 	<div class="flex flex-1 flex-col">
 		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
-		<span class="reservation-status">{reservation.status}</span>
+		<span class="reservation-status">
+			<StatusBadge status={reservation.status} size={18} />
+		</span>
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
 			{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
 				<CancelReservationAction
@@ -96,7 +99,6 @@
 	}
 
 	.reservation-status {
-		@apply absolute top-2 right-2 text-xs font-bold tracking-wide uppercase opacity-50;
-		font-family: var(--font-mono);
+		@apply absolute top-2 right-2 flex items-center;
 	}
 </style>
