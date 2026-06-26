@@ -239,6 +239,6 @@ export async function getUserTickets(userId: string) {
 		})
 		.from(ticket)
 		.innerJoin(event, eq(event.id, ticket.eventId))
-		.where(eq(ticket.userId, userId))
+		.where(and(eq(ticket.userId, userId), inArray(ticket.status, ['valid', 'checked_in'])))
 		.orderBy(desc(event.startsAt), asc(ticket.code));
 }

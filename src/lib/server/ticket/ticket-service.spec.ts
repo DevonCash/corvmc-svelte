@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { inArray } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -411,5 +412,11 @@ describe('getUserTickets', () => {
 		selectResult = [];
 		const result = await getUserTickets('user-nonexistent');
 		expect(result).toEqual([]);
+	});
+
+	it('only returns paid tickets (excludes pending and cancelled)', async () => {
+		selectResult = [];
+		await getUserTickets('user-1');
+		expect(inArray).toHaveBeenCalledWith('status', ['valid', 'checked_in']);
 	});
 });
