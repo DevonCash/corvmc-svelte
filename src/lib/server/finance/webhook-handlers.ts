@@ -69,32 +69,14 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		return;
 	}
 
-	// Find the subscription line item (has subscription_item_details in parent).
-	// Filters out proration adjustments and tax lines.
-	// The subscription uses $5/unit pricing where each unit grants one hour of
-	// practice time = two credits (credits are 30-minute blocks).
-	const lines = invoice.lines?.data ?? [];
-	const contributionLine = lines.find(
-		(line) =>
-			line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
-	);
-
-	if (!contributionLine || !contributionLine.quantity) {
+	const contributionLine = findContributionLine(invoice);
+	if (!contributionLine) {
 		console.warn(`invoice.paid: no contribution line item found for invoice ${invoice.id}`);
 		return;
 	}
 
-	// Derive from the line's dollar amount, not the raw quantity — a contribution
-	// may be billed as 12 × $5 or as a single 1 × $60 line. $5 = 1 hour = 2 credits.
-	const contributionCents = contributionLine.amount ?? 0;
-	const freeHoursCredits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 50));
-	const contributionUnits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 100));
-
-	// Use invoice ID as sourceId for idempotency — each invoice is unique
-	await creditService.allocateMonthlyCredits(member.id, freeHoursCredits, invoice.id);
-
-	// Equipment credits: 1:1 with contribution units, capped at 250
-	await creditService.allocateEquipmentCredits(member.id, contributionUnits, invoice.id);
+	// Allocate free-hour + equipment credits from this invoice (idempotent by id).
+	await allocateCreditsFromInvoice(member.id, invoice);
 
 	const [existing] = await db
 		.select({ subscription: user.subscription })
@@ -108,7 +90,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 
 	// A fee-coverage line is a second subscription line item alongside the
 	// contribution line. Renewals don't cancel, so preserve cancelAtPeriodEnd.
-	const coveringFees = lines.some(
+	const coveringFees = (invoice.lines?.data ?? []).some(
 		(line) =>
 			line !== contributionLine &&
 			line.parent?.subscription_item_details != null &&
@@ -122,7 +104,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 			typeof subDetails.subscription === 'string'
 				? subDetails.subscription
 				: (subDetails.subscription?.id ?? ''),
-		hoursPerReset: freeHoursCredits,
+		hoursPerReset: freeHoursCreditsFromLine(contributionLine),
 		creditsResetAt: nextReset,
 		coveringFees,
 		cancelAtPeriodEnd: existingSub?.cancelAtPeriodEnd ?? false
@@ -210,6 +192,68 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 	await cancelAllForUser(member.id);
 
 	await db.update(user).set({ subscription: null }).where(eq(user.id, member.id));
+}
+
+// ---------------------------------------------------------------------------
+// Credit allocation from an invoice (shared by webhook + subscription sync)
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the contribution line item on a subscription invoice — the line that has
+ * `subscription_item_details` and a positive quantity. Filters out proration
+ * adjustments and tax lines. The subscription uses $5/unit pricing where each
+ * unit grants one hour of practice time = two credits (30-minute blocks).
+ */
+function findContributionLine(invoice: Stripe.Invoice): Stripe.InvoiceLineItem | undefined {
+	const lines = invoice.lines?.data ?? [];
+	return lines.find(
+		(line) =>
+			line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
+	);
+}
+
+/**
+ * Free-hour credits granted by a contribution line. Derived from the line's
+ * dollar amount, not the raw quantity — a contribution may be billed as 12 × $5
+ * or as a single 1 × $60 line. $5 = 1 hour = 2 credits.
+ */
+function freeHoursCreditsFromLine(line: Stripe.InvoiceLineItem): number {
+	return Math.round((line.amount ?? 0) / (DOLLARS_PER_UNIT * 50));
+}
+
+/**
+ * Parse a subscription invoice's contribution line and allocate the matching
+ * free-hour + equipment credits. Idempotent by invoice id (a no-op if already
+ * applied, or if the invoice has no contribution line / id). Returns whether an
+ * allocation was newly applied — used for sync reporting and dry-run prediction.
+ *
+ * Shared by `handleInvoicePaid` (live webhook) and the staff subscription sync,
+ * so both derive credits the same way.
+ */
+export async function allocateCreditsFromInvoice(
+	memberId: string,
+	invoice: Stripe.Invoice,
+	opts: { dryRun?: boolean } = {}
+): Promise<{ reconciled: boolean }> {
+	const contributionLine = findContributionLine(invoice);
+	if (!contributionLine || !invoice.id) return { reconciled: false };
+
+	// Whether this invoice has already been allocated. Checked before writing so
+	// the return value reports what THIS run actually did (and powers dry-run).
+	const alreadyApplied = await creditService.hasTransaction('monthly_allocation', invoice.id);
+
+	if (opts.dryRun) return { reconciled: !alreadyApplied };
+
+	const contributionCents = contributionLine.amount ?? 0;
+	const freeHoursCredits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 50));
+	const contributionUnits = Math.round(contributionCents / (DOLLARS_PER_UNIT * 100));
+
+	// Use invoice ID as sourceId for idempotency — each invoice is unique.
+	await creditService.allocateMonthlyCredits(memberId, freeHoursCredits, invoice.id);
+	// Equipment credits: 1:1 with contribution units, capped at 250.
+	await creditService.allocateEquipmentCredits(memberId, contributionUnits, invoice.id);
+
+	return { reconciled: !alreadyApplied };
 }
 
 // ---------------------------------------------------------------------------

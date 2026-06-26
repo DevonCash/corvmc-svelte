@@ -6,23 +6,29 @@ import { band } from '$lib/server/db/schema/band';
 import type { Subscription } from '$lib/server/db/schema/authentication';
 import { stripe } from '$lib/server/stripe';
 import { buildMemberSubscriptionState } from './subscription-service';
+import { allocateCreditsFromInvoice } from './webhook-handlers';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 
 // ---------------------------------------------------------------------------
-// SubscriptionSyncService — reconcile Stripe subscription *status* into local D1
+// SubscriptionSyncService — reconcile Stripe subscriptions into local D1
 // ---------------------------------------------------------------------------
 // Used as a one-time backfill after the Postgres→D1 migration cutover, and as an
 // on-demand safety-net re-run (e.g. a missed webhook). Triggered from the staff
 // settings page.
 //
-// CRITICAL INVARIANT — STATUS SNAPSHOT ONLY, NEVER TOUCH CREDITS.
-// Credit balances (user.creditFreeHours / user.creditEquipment) and the
-// credit_transaction ledger are migrated from Postgres and owned by the webhook
-// handlers going forward. This module must NOT import credit-service or
-// recurring-series-service and must never allocate, reset, or modify any credit.
-// It only writes the subscription-status fields that are NOT migrated:
-// user.subscription, band.tier, band.subscription.
+// STATUS for everyone; CREDITS only for active members, via idempotent replay.
+// For every subscription it writes the subscription-status fields (user.subscription,
+// band.tier, band.subscription). For active/past_due *members* it additionally
+// replays the latest paid invoice through allocateCreditsFromInvoice — the same
+// allocation handleInvoicePaid performs, keyed by invoice id. Because that is
+// idempotent, it only fixes members whose webhook was missed and NEVER reduces a
+// balance already spent down this month.
+//
+// Stale/canceled members are deliberately NOT touched on the credit side: step 4
+// only clears their subscription JSON, never their creditFreeHours/creditEquipment
+// (unlike handleSubscriptionDeleted). This module still must NOT call
+// recurring-series-service.
 // ---------------------------------------------------------------------------
 
 /** Sanity cap — far above expected membership; aborts a runaway sweep. */
@@ -64,6 +70,7 @@ export async function syncAllSubscriptions(
 		bandsUpdated: 0,
 		bandsCleared: 0,
 		skipped: 0,
+		creditsReconciled: 0,
 		totalScanned: 0,
 		dryRun,
 		errors: []
@@ -201,15 +208,30 @@ async function applyUser(
 	}
 
 	if (WRITE_STATUSES.has(sub.status)) {
-		// Status snapshot only — `hoursPerReset` is in credits (30-min blocks) and
-		// `startedAt` is preserved for idempotency. NO creditService.* calls (unlike
-		// handleInvoicePaid).
+		// Status snapshot — `hoursPerReset` is in credits (30-min blocks) and
+		// `startedAt` is preserved for idempotency.
 		const existingSub = member.subscription as Subscription | null;
 		const subscription = await buildMemberSubscriptionState(sub, existingSub);
 
 		if (!dryRun) await db.update(user).set({ subscription }).where(eq(user.id, member.id));
 		seenUserIds.add(member.id);
 		summary.usersUpdated++;
+
+		// Credit reconciliation — replay the latest paid invoice through the same
+		// allocation handleInvoicePaid performs (idempotent by invoice id, so it
+		// only tops up a missed webhook and never reduces a spent-down balance).
+		// Isolated in its own try so a credit failure can't roll back the status
+		// write above or abort the sweep; it's recorded as a per-user error instead.
+		try {
+			await reconcileUserCredits(sub, member.id, dryRun, summary);
+		} catch (err) {
+			summary.errors.push({
+				kind: 'user',
+				ref: member.id,
+				stripeSubscriptionId: sub.id,
+				message: `Credit reconciliation failed: ${err instanceof Error ? err.message : String(err)}`
+			});
+		}
 	} else {
 		// Non-terminal but ambiguous (trialing / incomplete / paused) — terminal
 		// statuses already returned above. Keep local state, don't overwrite.
@@ -218,7 +240,30 @@ async function applyUser(
 	}
 	// Clearing of users with no non-terminal sub happens in step 4 — deliberately
 	// WITHOUT creditService.setBalance / cancelAllForUser (unlike
-	// handleSubscriptionDeleted, webhook-handlers.ts:156-177).
+	// handleSubscriptionDeleted, webhook-handlers.ts).
+}
+
+/**
+ * Replay the member's latest paid invoice to allocate any missed monthly credits.
+ * No-op when the member has no paid invoice yet. Increments `creditsReconciled`
+ * only when an allocation was newly applied (i.e. the webhook had been missed).
+ */
+async function reconcileUserCredits(
+	sub: Stripe.Subscription,
+	memberId: string,
+	dryRun: boolean,
+	summary: SubscriptionSyncSummary
+): Promise<void> {
+	const { data } = await stripe.invoices.list({
+		subscription: sub.id,
+		status: 'paid',
+		limit: 1
+	});
+	const paid = data[0];
+	if (!paid) return;
+
+	const { reconciled } = await allocateCreditsFromInvoice(memberId, paid, { dryRun });
+	if (reconciled) summary.creditsReconciled++;
 }
 
 // ---------------------------------------------------------------------------
