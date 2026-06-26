@@ -23,6 +23,8 @@ export interface MemberSummary {
 	email?: string;
 	pronouns?: string | null;
 	role?: string | null;
+	/** Sustaining status, derived from the subscription snapshot (source of truth). */
+	sustaining?: boolean | null;
 	userId?: string;
 	avatarUrl?: string;
 }

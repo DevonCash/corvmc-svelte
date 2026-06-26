@@ -21,11 +21,23 @@
 		member: IconUser
 	} as const;
 
+	// An explicit admin/staff role wins; otherwise a sustaining subscriber gets the heart.
+	// `member.role` may carry the legacy 'sustaining member' role name, which we ignore in
+	// favour of the subscription-derived `member.sustaining` flag.
+	const effectiveRole = $derived(
+		member.role === 'admin' || member.role === 'staff'
+			? member.role
+			: member.sustaining
+				? 'sustaining'
+				: null
+	);
+
 	const RoleIcon = $derived(
-		member.role && member.role in roleIcons
-			? roleIcons[member.role as keyof typeof roleIcons]
+		effectiveRole && effectiveRole in roleIcons
+			? roleIcons[effectiveRole as keyof typeof roleIcons]
 			: IconUser
 	);
+	const roleLabel = $derived(effectiveRole === 'sustaining' ? 'sustaining member' : member.role);
 </script>
 
 <a
@@ -37,8 +49,8 @@
 	{/if}
 	<div class="min-w-0">
 		<p class="flex items-center gap-1 font-medium">
-			{#if member.role}
-				<span class="tooltip tooltip-right" data-tip={member.role ?? 'member'}>
+			{#if effectiveRole}
+				<span class="tooltip tooltip-right" data-tip={roleLabel ?? 'member'}>
 					<RoleIcon size={14}></RoleIcon>
 				</span>
 			{/if}

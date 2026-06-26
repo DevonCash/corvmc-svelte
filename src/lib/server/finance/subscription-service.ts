@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { eq } from 'drizzle-orm';
+import { eq, sql, type SQL } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
@@ -245,6 +245,27 @@ export async function getMemberSubscription(userId: string): Promise<Subscriptio
 		.where(eq(user.id, userId))
 		.limit(1);
 	return (row?.subscription as Subscription | null) ?? null;
+}
+
+/**
+ * Whether a user is a sustaining member. A non-null `user.subscription` snapshot is
+ * the single source of truth — the legacy `sustaining member` role is not maintained
+ * by the Stripe flow and must not be used for status checks.
+ */
+export async function isSustainingMember(userId: string): Promise<boolean> {
+	return (await getMemberSubscription(userId)) != null;
+}
+
+/**
+ * SQL fragment that evaluates to a boolean: true when the user has a subscription
+ * snapshot. Use inside a drizzle `.select()` to compute the flag inline for list/detail
+ * queries, e.g. `sustaining: isSustainingMemberSql(user.id)`. Mirrors `primaryRoleFor`.
+ */
+export function isSustainingMemberSql(userIdCol: SQL | typeof user.id) {
+	return sql<boolean>`(
+		select case when u.subscription is not null then 1 else 0 end
+		from ${user} u where u.id = ${userIdCol}
+	)`;
 }
 
 /**

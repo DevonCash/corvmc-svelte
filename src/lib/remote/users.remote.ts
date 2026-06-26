@@ -23,6 +23,7 @@ import {
 	and
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
+import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
@@ -115,7 +116,8 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 			email: user.email,
 			pronouns: user.pronouns,
 			deletedAt: user.deletedAt,
-			createdAt: user.createdAt
+			createdAt: user.createdAt,
+			sustaining: isSustainingMemberSql(user.id)
 		})
 		.from(user)
 		.where(where)
@@ -146,7 +148,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	}
 
 	return {
-		rows: users.map((u) => ({ ...u, roles: roleMap[u.id] ?? [] })),
+		rows: users.map((u) => ({ ...u, sustaining: !!u.sustaining, roles: roleMap[u.id] ?? [] })),
 		pagination
 	};
 });

@@ -2,6 +2,8 @@ import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
 import { eq, and, like, or, sql, inArray, asc } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
+import { getUserRoles } from '$lib/server/authorization';
+import { isSustainingMember } from '$lib/server/finance/subscription-service';
 
 const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
 
@@ -10,6 +12,24 @@ function accessibleRoles(userRole: string): string[] {
 	return Object.entries(ROLE_LEVEL)
 		.filter(([, l]) => l >= level)
 		.map(([r]) => r);
+}
+
+/**
+ * Resolve a user's effective help-access tier. Admin/staff role grants win; otherwise an
+ * active subscription lifts the member to the `sustaining` tier. The legacy `sustaining
+ * member` role is not consulted — `user.subscription` is the source of truth for sustaining
+ * status (see subscription-service).
+ */
+export async function resolveUserHelpRole(userId: string): Promise<string> {
+	const roles = await getUserRoles(userId);
+	let best = 'member';
+	for (const r of roles) {
+		if ((ROLE_LEVEL[r] ?? 4) < (ROLE_LEVEL[best] ?? 4)) best = r;
+	}
+	if ((ROLE_LEVEL[best] ?? 4) > ROLE_LEVEL.sustaining && (await isSustainingMember(userId))) {
+		best = 'sustaining';
+	}
+	return best;
 }
 
 // ---------------------------------------------------------------------------
