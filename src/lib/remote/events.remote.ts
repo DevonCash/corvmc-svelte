@@ -662,12 +662,33 @@ export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), asy
 	return { success: true };
 });
 
+// Resolves the attendee's name and email for a ticket/RSVP form. Logged-in users don't
+// have to re-type their details — their account values fill in any field left blank —
+// while guests must still supply both. Reports validation through the form's `issue` API.
+function resolveAttendee(
+	data: { attendeeName?: string; attendeeEmail?: string },
+	user: { name?: string | null; email?: string | null } | undefined,
+	issue: { attendeeName: (msg: string) => void; attendeeEmail: (msg: string) => void }
+): { name: string; email: string } {
+	const name = (data.attendeeName ?? '').trim() || user?.name?.trim() || '';
+	const email = (data.attendeeEmail ?? '').trim() || user?.email?.trim() || '';
+
+	if (!name) issue.attendeeName('Name is required');
+	if (!email) {
+		issue.attendeeEmail('Email is required');
+	} else if (!z.string().email().safeParse(email).success) {
+		issue.attendeeEmail('Valid email is required');
+	}
+
+	return { name, email };
+}
+
 export const rsvpForEvent = form(
 	z.object({
 		eventId: z.string(),
 		quantity: z.string().transform(Number),
-		attendeeName: z.string().min(1),
-		attendeeEmail: z.string().email()
+		attendeeName: z.string().optional(),
+		attendeeEmail: z.string().optional()
 	}),
 	async (data, issue) => {
 		const { locals } = getRequestEvent();
@@ -675,6 +696,9 @@ export const rsvpForEvent = form(
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
 			issue.quantity('Quantity must be between 1 and 10');
 		}
+
+		// Logged-in attendees needn't re-enter their details; fall back to their account.
+		const attendee = resolveAttendee(data, locals.user, issue);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
@@ -697,8 +721,8 @@ export const rsvpForEvent = form(
 			purchaseId,
 			quantity: data.quantity,
 			userId: locals.user?.id ?? undefined,
-			attendeeName: data.attendeeName,
-			attendeeEmail: data.attendeeEmail,
+			attendeeName: attendee.name,
+			attendeeEmail: attendee.email,
 			status: 'valid'
 		});
 
@@ -744,8 +768,8 @@ export const purchaseTickets = form(
 	z.object({
 		eventId: z.string(),
 		quantity: z.string().transform(Number),
-		attendeeName: z.string().min(1),
-		attendeeEmail: z.string().email(),
+		attendeeName: z.string().optional(),
+		attendeeEmail: z.string().optional(),
 		coverFees: z.boolean().default(false)
 	}),
 	async (data, issue) => {
@@ -754,6 +778,9 @@ export const purchaseTickets = form(
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
 			issue.quantity('Quantity must be between 1 and 10');
 		}
+
+		// Logged-in buyers needn't re-enter their details; fall back to their account.
+		const attendee = resolveAttendee(data, locals.user, issue);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
@@ -776,8 +803,8 @@ export const purchaseTickets = form(
 			purchaseId,
 			quantity: data.quantity,
 			userId: locals.user?.id ?? undefined,
-			attendeeName: data.attendeeName,
-			attendeeEmail: data.attendeeEmail,
+			attendeeName: attendee.name,
+			attendeeEmail: attendee.email,
 			status: 'pending'
 		});
 
@@ -793,7 +820,7 @@ export const purchaseTickets = form(
 
 		const result = await checkout({
 			stripeCustomerId: locals.user?.stripeId ?? undefined,
-			customerEmail: locals.user?.email ?? data.attendeeEmail,
+			customerEmail: locals.user?.email ?? attendee.email,
 			userId: locals.user?.id ?? undefined,
 			mode: 'payment',
 			lineItems: [lineItem],
