@@ -43,7 +43,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
-import { event } from '$lib/server/db/schema/event';
+import { event, createEventSchema } from '$lib/server/db/schema/event';
 import { hasAnyRole } from '$lib/server/authorization';
 import { randomUUID } from 'crypto';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -473,67 +473,49 @@ export const checkRebook = query(
 // Forms
 // ---------------------------------------------------------------------------
 
-export const createEvent = form(
-	z.object({
-		title: z.string().min(1, 'Title is required'),
-		description: z.string().optional(),
-		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
-		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-		doorsTime: z.string().optional(),
-		tags: z.string().optional(),
-		ticketingEnabled: z.boolean().default(false),
-		ticketPrice: z.string().optional(),
-		ticketQuantity: z.string().optional(),
-		reserveSpace: z.boolean().default(false),
-		reservationStartTime: z.string().optional(),
-		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.boolean().default(false)
-	}),
-	async (data, issue) => {
-		const staff = await requireStaff();
+export const createEvent = form(createEventSchema, async (data, issue) => {
+	const staff = await requireStaff();
 
-		const ticketingEnabled = data.ticketingEnabled;
-		const reserveSpace = data.reserveSpace;
-		const overrideConflicts = data.overrideConflicts;
-		const ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : undefined;
-		const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
+	const ticketingEnabled = data.ticketingEnabled;
+	const reserveSpace = data.reserveSpace;
+	const overrideConflicts = data.overrideConflicts;
+	const ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : undefined;
+	const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
 
-		if (!data.title) {
-			issue.title('Title is required');
-		}
-
-		const tz = DEFAULT_TIMEZONE;
-		const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-		const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
-		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
-
-		const reservation =
-			reserveSpace && data.reservationStartTime && data.reservationEndTime
-				? {
-						startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-						endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
-						overrideConflicts
-					}
-				: undefined;
-
-		const event = await create({
-			title: data.title,
-			description: data.description || undefined,
-			startsAt,
-			endsAt,
-			doorsAt,
-			tags: data.tags || undefined,
-			ticketingEnabled,
-			ticketPrice: ticketingEnabled ? ticketPrice : undefined,
-			ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
-			createdByUserId: staff.id,
-			reservation
-		});
-
-		return { eventId: event.id };
+	if (!data.title) {
+		issue.title('Title is required');
 	}
-);
+
+	const tz = DEFAULT_TIMEZONE;
+	const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
+	const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
+
+	const reservation =
+		reserveSpace && data.reservationStartTime && data.reservationEndTime
+			? {
+					startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
+					endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+					overrideConflicts
+				}
+			: undefined;
+
+	const event = await create({
+		title: data.title,
+		description: data.description || undefined,
+		startsAt,
+		endsAt,
+		doorsAt,
+		tags: data.tags || undefined,
+		ticketingEnabled,
+		ticketPrice: ticketingEnabled ? ticketPrice : undefined,
+		ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
+		createdByUserId: staff.id,
+		reservation
+	});
+
+	return { eventId: event.id };
+});
 
 export const updateEvent = form(
 	z.object({

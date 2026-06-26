@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { user } from './authentication';
 import { band } from './band';
 import { reservation } from './reservation';
@@ -51,6 +52,43 @@ export const event = sqliteTable(
 		check('event_time_order', sql`ends_at > starts_at`)
 	]
 );
+
+// ---------------------------------------------------------------------------
+// Form schemas
+// ---------------------------------------------------------------------------
+
+export const createEventSchema = z
+	.object({
+		title: z.string().min(1, 'Title is required'),
+		description: z.string().optional(),
+		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+		doorsTime: z.string().optional(),
+		tags: z.string().optional(),
+		ticketingEnabled: z.boolean().default(false),
+		ticketPrice: z.string().optional(),
+		ticketQuantity: z.string().optional(),
+		reserveSpace: z.boolean().default(false),
+		reservationStartTime: z.string().optional(),
+		reservationEndTime: z.string().optional(),
+		overrideConflicts: z.boolean().default(false)
+	})
+	.superRefine((data, ctx) => {
+		// Ticketing requires a positive price. Surfacing this here turns what would
+		// otherwise be a thrown Error in the event service (→ 500 "Internal Error")
+		// into a graceful form validation failure.
+		if (data.ticketingEnabled) {
+			const cents = data.ticketPrice ? parseInt(data.ticketPrice, 10) : NaN;
+			if (!Number.isFinite(cents) || cents <= 0) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['ticketPrice'],
+					message: 'Ticket price is required when ticketing is enabled'
+				});
+			}
+		}
+	});
 
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
