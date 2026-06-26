@@ -1,7 +1,24 @@
 import { env } from '$env/dynamic/private';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+const MAX_SIZE_LABEL = `${Math.round(MAX_SIZE_BYTES / 1024 / 1024)}MB`;
+
+/**
+ * Validate an upload's type and size. Returns a human-readable reason when the
+ * file is invalid, or `null` when it's acceptable. Callers should surface the
+ * reason as a 4xx so it isn't treated as a server bug (see hooks.server.ts).
+ */
+export function validateUpload(file: File): string | null {
+	if (!ALLOWED_TYPES.includes(file.type)) {
+		return `File type "${file.type}" is not allowed. Accepted: ${ALLOWED_TYPES.join(', ')}`;
+	}
+	if (file.size > MAX_SIZE_BYTES) {
+		return `File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds the ${MAX_SIZE_LABEL} limit`;
+	}
+	return null;
+}
 
 let _bucket: R2Bucket;
 
@@ -28,7 +45,7 @@ export async function uploadFile(
 
 	if (buffer.byteLength > MAX_SIZE_BYTES) {
 		throw new Error(
-			`File size ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB exceeds the 5MB limit`
+			`File size ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB exceeds the ${MAX_SIZE_LABEL} limit`
 		);
 	}
 
