@@ -296,6 +296,10 @@
 								Sustaining members pay {formatCents(Math.round(evt.ticketPrice / 2))}.
 								<a href={resolve('/contribute')} class="link link-primary">Become a member →</a>
 							</p>
+						{:else if data.isSustainingMember && evt.ticketPrice}
+							<p class="edet__upsell">
+								Sustaining members get 50% off — thanks for your contribution!
+							</p>
 						{/if}
 					{:else}
 						<!-- Non-ticketed event: RSVP requires a member account -->
