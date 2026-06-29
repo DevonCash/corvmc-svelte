@@ -3,8 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { randomUUID } from 'crypto';
 import { requireStaff } from '$lib/server/authorization';
 import { buildAuthorizeUrl, getUtecClientId } from '$lib/server/lock/ultraloc-client';
-
-export const STATE_COOKIE = 'utec_oauth_state';
+import { STATE_COOKIE } from '$lib/server/lock/utec-oauth';
 
 // Begins the U-tec OAuth authorization-code flow: redirects the staff user to
 // U-tec's consent screen. The callback route completes the exchange.

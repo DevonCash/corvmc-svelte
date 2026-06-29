@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/authorization';
 import { exchangeAuthorizationCode } from '$lib/server/lock/ultraloc-client';
 import { updateSiteConfig } from '$lib/server/site-config/site-config-service';
-import { STATE_COOKIE } from '../authorize/+server';
+import { STATE_COOKIE } from '$lib/server/lock/utec-oauth';
 
 // Completes the U-tec OAuth flow: validates the CSRF state, exchanges the code
 // for tokens, and persists the refresh token so the lock client can use it.
