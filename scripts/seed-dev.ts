@@ -722,6 +722,10 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
 			const member = pick(users);
 
+			// Today's confirmed reservations have a provisioned door code, mirroring
+			// the daily lock job (codes are issued the morning of the reservation).
+			const lockCode = day === 0 && status === 'confirmed' ? String(randomInt(1000, 9999)) : null;
+
 			const [r] = await db
 				.insert(reservation)
 				.values({
@@ -731,6 +735,7 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					status,
 					startsAt,
 					endsAt,
+					lockCode,
 					notes:
 						Math.random() > 0.6
 							? pick(['Drum practice', 'Guitar lesson prep', 'Recording session'])

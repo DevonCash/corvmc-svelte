@@ -6,6 +6,7 @@
 	} from '$lib/components/shared/actions';
 	import ReservationSummary from '$lib/components/shared/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
+	import { resolve } from '$app/paths';
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
@@ -41,7 +42,17 @@
 		<span>{format(reservation.startsAt, 'MMM')}</span>
 	</div>
 	<div class="flex flex-1 flex-col">
-		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
+		<a
+			href={resolve('/member/reservations/[id]', { id: reservation.id })}
+			class="block hover:bg-base-200/40"
+		>
+			<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
+			{#if reservation.status === 'confirmed' && reservation.lockCode}
+				<p class="px-3 pb-1 text-sm">
+					Door code: <span class="font-mono font-bold tracking-wider">{reservation.lockCode}</span>
+				</p>
+			{/if}
+		</a>
 		<span class="reservation-status">{reservation.status}</span>
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
 			{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}

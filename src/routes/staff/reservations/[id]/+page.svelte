@@ -188,6 +188,20 @@
 		{/if}
 	</div>
 
+	<!-- Door access -->
+	{#if r.bookerType !== 'event'}
+		<InfoCard title="Door Access">
+			{#if r.lockCode}
+				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
+				<p class="text-sm opacity-60">Keypad code for this reservation.</p>
+			{:else}
+				<p class="text-sm opacity-60">
+					Not provisioned yet — codes are issued the morning of the reservation.
+				</p>
+			{/if}
+		</InfoCard>
+	{/if}
+
 	<!-- Notes -->
 	{#if r.notes}
 		<InfoCard title="Notes">
