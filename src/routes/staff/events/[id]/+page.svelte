@@ -19,7 +19,9 @@
 		getStaffEventDetail,
 		updateEvent,
 		checkRebook,
-		checkConflicts
+		checkConflicts,
+		getEventRecurringSeries,
+		cancelEventSeries
 	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
@@ -32,6 +34,7 @@
 	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
+	const recurringSeries = $derived(await getEventRecurringSeries(id));
 
 	// ── Edit state ────────────────────────────────────────────────────────
 	let editing = $state(false);
@@ -204,6 +207,32 @@
 			<span class="text-sm opacity-50">Published {fullDate(evt.publishedAt)}</span>
 		{/if}
 	</div>
+
+	<!-- Recurring series -->
+	{#if recurringSeries}
+		<div class="flex flex-wrap items-center gap-2">
+			<Badge class="badge-info">Recurring · {recurringSeries.frequencyLabel}</Badge>
+			{#if recurringSeries.cancelledAt}
+				<span class="text-sm opacity-50">Series cancelled — no new occurrences</span>
+			{:else}
+				<span class="text-sm opacity-50">
+					{#if recurringSeries.endsAt}
+						Repeats until {fullDate(recurringSeries.endsAt)}
+					{:else}
+						New occurrences are generated automatically
+					{/if}
+				</span>
+				<Form
+					remote={cancelEventSeries}
+					successToast="Series cancelled"
+					onsuccess={() => void getEventRecurringSeries(id).refresh()}
+				>
+					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
+					<SubmitButton label="Cancel series" class="btn-xs btn-ghost text-error" />
+				</Form>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Edit form -->
 	{#if editing}

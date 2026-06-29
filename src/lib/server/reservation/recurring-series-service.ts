@@ -1,6 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -112,6 +113,56 @@ export async function create(params: CreateSeriesParams): Promise<SeriesRow> {
 }
 
 // ---------------------------------------------------------------------------
+// createEventSeries() — link a new series to a prototype event
+// ---------------------------------------------------------------------------
+
+export interface CreateEventSeriesParams {
+	/** The prototype event that was just created */
+	prototypeEventId: string;
+	/** Recurrence frequency */
+	frequency: RecurringFrequency;
+	/** The prototype's startsAt — used to derive the recurrence rule */
+	prototypeStartsAt: Date;
+	/** For monthly series: repeat on the nth weekday (default) or a fixed day of the month */
+	monthlyMode?: MonthlyMode;
+	/** Optional scheduled end date for the series */
+	endsAt?: Date;
+}
+
+export async function createEventSeries(params: CreateEventSeriesParams): Promise<SeriesRow> {
+	const { prototypeEventId, frequency, prototypeStartsAt, endsAt } = params;
+
+	const [proto] = await db
+		.select({ createdByUserId: event.createdByUserId })
+		.from(event)
+		.where(eq(event.id, prototypeEventId))
+		.limit(1);
+	if (!proto) throw new RecurringSeriesError('Prototype event not found');
+
+	const rruleString = buildRRule(prototypeStartsAt, frequency, params.monthlyMode ?? 'weekday');
+
+	const seriesId = crypto.randomUUID();
+
+	await db.batch([
+		db.insert(recurringSeries).values({
+			id: seriesId,
+			prototypeType: 'event',
+			prototypeId: prototypeEventId,
+			rrule: rruleString,
+			createdBy: proto.createdByUserId,
+			endsAt: endsAt ?? null
+		}),
+		db
+			.update(event)
+			.set({ recurringSeriesId: seriesId, updatedAt: new Date() })
+			.where(eq(event.id, prototypeEventId))
+	]);
+
+	const [series] = await db.select().from(recurringSeries).where(eq(recurringSeries.id, seriesId));
+	return series;
+}
+
+// ---------------------------------------------------------------------------
 // cancel() — stop a series from generating new instances
 // ---------------------------------------------------------------------------
 
@@ -211,6 +262,74 @@ export async function getByReservation(reservationId: string): Promise<SeriesRow
 		.limit(1);
 
 	return rows[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// getByEvent() — find the series an event belongs to
+// ---------------------------------------------------------------------------
+
+export async function getByEvent(eventId: string): Promise<SeriesRow | null> {
+	const rows = await db
+		.select({
+			id: recurringSeries.id,
+			supersededBy: recurringSeries.supersededBy,
+			prototypeType: recurringSeries.prototypeType,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
+			cancelledAt: recurringSeries.cancelledAt
+		})
+		.from(recurringSeries)
+		.innerJoin(event, eq(event.recurringSeriesId, recurringSeries.id))
+		.where(eq(event.id, eventId))
+		.limit(1);
+
+	return rows[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// getEventSeries() — single event series with prototype details
+// ---------------------------------------------------------------------------
+
+export interface EventSeriesWithPrototype extends SeriesRow {
+	frequencyLabel: string;
+	monthlyMode: MonthlyMode | null;
+	prototypeEventId: string;
+	prototypeTitle: string;
+	prototypeStartsAt: Date;
+	prototypeCreatedByUserId: string;
+}
+
+export async function getEventSeries(seriesId: string): Promise<EventSeriesWithPrototype | null> {
+	const rows = await db
+		.select({
+			id: recurringSeries.id,
+			supersededBy: recurringSeries.supersededBy,
+			prototypeType: recurringSeries.prototypeType,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
+			cancelledAt: recurringSeries.cancelledAt,
+			prototypeEventId: event.id,
+			prototypeTitle: event.title,
+			prototypeStartsAt: event.startsAt,
+			prototypeCreatedByUserId: event.createdByUserId
+		})
+		.from(recurringSeries)
+		.innerJoin(event, eq(recurringSeries.prototypeId, event.id))
+		.where(eq(recurringSeries.id, seriesId))
+		.limit(1);
+
+	const row = rows[0];
+	if (!row) return null;
+
+	return {
+		...row,
+		frequencyLabel: describeFrequency(row.rrule),
+		monthlyMode: monthlyModeOf(row.rrule)
+	};
 }
 
 // ---------------------------------------------------------------------------

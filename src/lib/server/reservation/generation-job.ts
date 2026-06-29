@@ -2,11 +2,16 @@ import { db } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
+import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
+import { staffCreate } from './reservation-service';
+import { hasConflict } from './conflict-service';
+import { copyObject } from '$lib/server/storage';
 import { domainEvents } from '$lib/server/events/event-bus';
+import { captureException } from '$lib/server/sentry';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -68,6 +73,25 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 	}
 
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// Combined entry point — events first, then reservations
+// ---------------------------------------------------------------------------
+
+/**
+ * Expand all active recurring series. Events are processed BEFORE reservations:
+ * recurring events book `bookerType: 'event'` reservations that the reservation
+ * pass treats as hard blocks, so generating events first lets the reservation
+ * pass step aside instead of grabbing a slot a recurring event needs.
+ */
+export async function generateRecurring(): Promise<{
+	events: GenerationResult;
+	reservations: GenerationResult;
+}> {
+	const events = await generateRecurringEvents();
+	const reservations = await generateRecurringReservations();
+	return { events, reservations };
 }
 
 // ---------------------------------------------------------------------------
@@ -289,4 +313,224 @@ async function checkReservationConflict(
 		.limit(1);
 
 	return conflicts.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Event generation — expand active recurring series into draft events
+// ---------------------------------------------------------------------------
+
+/**
+ * Processes all active series with prototype_type = 'event'. Each occurrence is
+ * materialized as an independent draft event copying the prototype's details. If
+ * the prototype reserved space, each occurrence books and links its own
+ * reservation; when that slot conflicts the draft event is still created without
+ * a reservation and staff are notified.
+ *
+ * `instancesCreated` counts draft events created. `instancesSkipped` counts
+ * occurrences whose space reservation could not be booked (the event still exists).
+ */
+export async function generateRecurringEvents(): Promise<GenerationResult> {
+	const result: GenerationResult = {
+		seriesProcessed: 0,
+		instancesCreated: 0,
+		instancesWaitlisted: 0,
+		instancesSkipped: 0,
+		errors: []
+	};
+
+	const activeSeries = await db
+		.select({
+			id: recurringSeries.id,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			endsAt: recurringSeries.endsAt
+		})
+		.from(recurringSeries)
+		.where(
+			and(
+				eq(recurringSeries.prototypeType, 'event'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy),
+				or(isNull(recurringSeries.endsAt), gt(recurringSeries.endsAt, sql`(current_timestamp)`))
+			)
+		);
+
+	for (const series of activeSeries) {
+		try {
+			const counts = await processEventSeries(series);
+			result.instancesCreated += counts.created;
+			result.instancesSkipped += counts.skipped;
+			result.seriesProcessed++;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			result.errors.push(`Series ${series.id}: ${msg}`);
+		}
+	}
+
+	return result;
+}
+
+async function processEventSeries(
+	series: SeriesInfo
+): Promise<{ created: number; skipped: number }> {
+	// Load the prototype event
+	const [prototype] = await db
+		.select()
+		.from(event)
+		.where(eq(event.id, series.prototypeId))
+		.limit(1);
+
+	if (!prototype) {
+		throw new Error('Prototype event not found');
+	}
+
+	// Load creator info for staff notifications
+	const [owner] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, prototype.createdByUserId))
+		.limit(1);
+
+	// Offsets relative to the prototype event, applied to every occurrence
+	const durationMs = prototype.endsAt.getTime() - prototype.startsAt.getTime();
+	const doorsLeadMs = prototype.doorsAt
+		? prototype.startsAt.getTime() - prototype.doorsAt.getTime()
+		: null;
+
+	// If the prototype reserved space, capture the reservation's lead/tail so each
+	// occurrence reserves an equivalent window (reservation times can differ from
+	// event times for setup/teardown).
+	let resLeadMs: number | null = null;
+	let resTailMs: number | null = null;
+	if (prototype.reservationId) {
+		const [protoRes] = await db
+			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+			.from(reservation)
+			.where(eq(reservation.id, prototype.reservationId))
+			.limit(1);
+		if (protoRes) {
+			resLeadMs = prototype.startsAt.getTime() - protoRes.startsAt.getTime();
+			resTailMs = protoRes.endsAt.getTime() - prototype.endsAt.getTime();
+		}
+	}
+
+	// Generate occurrences within the window
+	const now = new Date();
+	let windowEnd = await generationWindowEnd(now);
+	if (series.endsAt && series.endsAt < windowEnd) {
+		windowEnd = series.endsAt;
+	}
+	const occurrences = getOccurrences(series.rrule, now, windowEnd);
+
+	// Skip occurrences already materialized for this series
+	const existingInstances =
+		occurrences.length > 0
+			? await db
+					.select({ startsAt: event.startsAt })
+					.from(event)
+					.where(
+						and(
+							eq(event.recurringSeriesId, series.id),
+							gte(event.startsAt, occurrences[0]),
+							lte(event.startsAt, occurrences[occurrences.length - 1])
+						)
+					)
+			: [];
+	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
+
+	let created = 0;
+	let skipped = 0;
+
+	for (const occStart of occurrences) {
+		if (existingTimes.has(occStart.getTime())) continue;
+
+		const occEnd = new Date(occStart.getTime() + durationMs);
+		const occDoors = doorsLeadMs != null ? new Date(occStart.getTime() - doorsLeadMs) : null;
+
+		const newEventId = crypto.randomUUID();
+
+		// Insert the draft event first (no reservation), so a failed space booking
+		// never leaves an orphan reservation.
+		await db.insert(event).values({
+			id: newEventId,
+			title: prototype.title,
+			description: prototype.description,
+			startsAt: occStart,
+			endsAt: occEnd,
+			doorsAt: occDoors,
+			tags: prototype.tags,
+			ticketingEnabled: prototype.ticketingEnabled,
+			ticketPrice: prototype.ticketPrice,
+			ticketQuantity: prototype.ticketQuantity,
+			source: 'cmc',
+			status: 'draft',
+			createdByUserId: prototype.createdByUserId,
+			recurringSeriesId: series.id
+		});
+		created++;
+
+		// Give the occurrence its own copy of the prototype's poster, so each
+		// occurrence is independently editable/cancellable without affecting others.
+		if (prototype.posterKey) {
+			try {
+				const ext = prototype.posterKey.split('.').pop() ?? 'bin';
+				const destKey = `events/posters/${newEventId}.${ext}`;
+				const copied = await copyObject(prototype.posterKey, destKey);
+				if (copied) {
+					await db
+						.update(event)
+						.set({ posterKey: copied, updatedAt: new Date() })
+						.where(eq(event.id, newEventId));
+				}
+			} catch (err) {
+				// Best-effort: the draft event remains; staff can add a poster manually.
+				captureException(err, { event: 'event.recurring.poster', eventId: newEventId });
+			}
+		}
+
+		// Book space for this occurrence if the prototype reserved space
+		if (resLeadMs != null && resTailMs != null) {
+			const occResStart = new Date(occStart.getTime() - resLeadMs);
+			const occResEnd = new Date(occEnd.getTime() + resTailMs);
+
+			try {
+				const conflict = await hasConflict(occResStart, occResEnd);
+				if (conflict) {
+					skipped++;
+					if (owner) {
+						await domainEvents.emit('event.recurring_reservation_skipped', {
+							seriesId: series.id,
+							eventId: newEventId,
+							eventTitle: prototype.title,
+							userId: prototype.createdByUserId,
+							userName: owner.name,
+							userEmail: owner.email,
+							date: formatDateInTz(occStart, TZ),
+							startTime: formatTimeInTz(occResStart, TZ),
+							endTime: formatTimeInTz(occResEnd, TZ),
+							reason: 'Time slot is currently booked'
+						});
+					}
+				} else {
+					const res = await staffCreate({
+						userId: prototype.createdByUserId,
+						bookerType: 'event',
+						bookerId: newEventId,
+						startsAt: occResStart,
+						endsAt: occResEnd,
+						status: 'scheduled'
+					});
+					await db
+						.update(event)
+						.set({ reservationId: res.id, updatedAt: new Date() })
+						.where(eq(event.id, newEventId));
+				}
+			} catch (err) {
+				// Best-effort: the draft event remains; staff can book space manually.
+				captureException(err, { event: 'event.recurring.reserve', eventId: newEventId });
+			}
+		}
+	}
+
+	return { created, skipped };
 }

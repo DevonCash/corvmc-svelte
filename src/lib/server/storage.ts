@@ -60,6 +60,20 @@ export async function deleteObject(key: string): Promise<void> {
 	await getBucket().delete(key);
 }
 
+/**
+ * Copy an existing object to a new key, preserving its content type. Returns the
+ * destination key, or null when the source object does not exist. Used to give
+ * generated recurring-event occurrences their own independent copy of the
+ * prototype's poster (so re-postering or cancelling one never affects others).
+ */
+export async function copyObject(srcKey: string, destKey: string): Promise<string | null> {
+	const bucket = getBucket();
+	const src = await bucket.get(srcKey);
+	if (!src) return null;
+	await bucket.put(destKey, src.body, { httpMetadata: src.httpMetadata });
+	return destKey;
+}
+
 export function getPublicUrl(key: string): string {
 	if (/^https?:\/\//i.test(key)) return key; // already resolved — don't double-prefix
 

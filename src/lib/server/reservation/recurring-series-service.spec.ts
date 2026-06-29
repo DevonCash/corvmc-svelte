@@ -29,6 +29,10 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	reservation: { id: 'reservation.id' }
 }));
 
+vi.mock('$lib/server/db/schema/event', () => ({
+	event: { id: 'event.id' }
+}));
+
 vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'user.id' }
 }));
@@ -172,6 +176,47 @@ describe('recurring-series-service', () => {
 			const result = await svc.create(params);
 
 			expect(result).toMatchObject({ id: 'series-new', prototypeId: 'res-1' });
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// createEventSeries()
+	// -------------------------------------------------------------------------
+
+	describe('createEventSeries()', () => {
+		const params = {
+			prototypeEventId: 'evt-1',
+			frequency: 'weekly' as const,
+			prototypeStartsAt: new Date('2026-06-01T19:00:00Z')
+		};
+
+		it('builds the rule and inserts a series with prototypeType "event"', async () => {
+			setupBatchMock();
+
+			await svc.createEventSeries(params);
+
+			expect(buildRRule).toHaveBeenCalledWith(
+				params.prototypeStartsAt,
+				params.frequency,
+				'weekday'
+			);
+			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					prototypeType: 'event',
+					prototypeId: 'evt-1',
+					rrule: 'FREQ=WEEKLY;BYDAY=MO'
+				})
+			);
+		});
+
+		it('back-links the prototype event and returns the series row', async () => {
+			setupBatchMock();
+
+			const result = await svc.createEventSeries(params);
+
+			expect(db.batch).toHaveBeenCalled();
+			expect(db.update).toHaveBeenCalled();
+			expect(result).toMatchObject({ id: 'series-new' });
 		});
 	});
 

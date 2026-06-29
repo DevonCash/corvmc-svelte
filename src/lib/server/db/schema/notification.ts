@@ -70,6 +70,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'event_recurring_reservation_skipped',
+		label: 'Recurring event could not reserve space (staff)',
+		description:
+			'Notification when a generated recurring event could not reserve the practice space due to a conflict',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'recurring_waitlisted',
 		label: 'Recurring reservation waitlisted',
 		description:
