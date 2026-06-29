@@ -36,6 +36,29 @@ async function getConfig() {
 	return { clientId, clientSecret, deviceId, refreshToken };
 }
 
+interface UtecTokenPayload {
+	access_token?: string;
+	refresh_token?: string;
+	expires_in?: number;
+}
+
+/**
+ * Unwrap U-tec's non-standard token envelope.
+ *
+ * The token endpoint wraps the OAuth fields under `data`:
+ *   { "code": 200, "data": { "access_token": …, "expires_in": …, "refresh_token": … } }
+ * rather than returning them at the top level. Accept both shapes (and pass an
+ * already-flat response through unchanged).
+ */
+function unwrapTokenResponse(body: unknown): UtecTokenPayload {
+	if (body && typeof body === 'object') {
+		if ('access_token' in body) return body as UtecTokenPayload;
+		const data = (body as { data?: unknown }).data;
+		if (data && typeof data === 'object') return data as UtecTokenPayload;
+	}
+	return {};
+}
+
 async function getAccessToken(): Promise<string> {
 	const cached = await getJson<{ accessToken: string; expiresAt: number }>(TOKEN_KEY);
 	if (cached && Date.now() < cached.expiresAt - 60_000) {
@@ -52,7 +75,10 @@ async function getAccessToken(): Promise<string> {
 		throw new Error(`Ultraloc token refresh failed: ${res.status} ${await res.text()}`);
 	}
 
-	const data: { access_token: string; expires_in: number } = await res.json();
+	const data = unwrapTokenResponse(await res.json());
+	if (!data.access_token || !data.expires_in) {
+		throw new Error('Ultraloc token refresh returned no access_token');
+	}
 	const expiresAt = Date.now() + data.expires_in * 1000;
 	const ttlSeconds = Math.max(Math.floor(data.expires_in - 60), 60);
 
@@ -241,8 +267,7 @@ export async function exchangeAuthorizationCode(
 		throw new Error(`Ultraloc code exchange failed: ${res.status} ${await res.text()}`);
 	}
 
-	const data: { access_token?: string; refresh_token?: string; expires_in?: number } =
-		await res.json();
+	const data = unwrapTokenResponse(await res.json());
 	if (!data.refresh_token) {
 		throw new Error('Ultraloc code exchange returned no refresh_token');
 	}
@@ -271,7 +296,7 @@ export async function testConnection(): Promise<{ ok: boolean; error?: string }>
 			return { ok: false, error: `Token refresh failed (${res.status}): ${text}` };
 		}
 
-		const data: { access_token: string } = await res.json();
+		const data = unwrapTokenResponse(await res.json());
 		if (!data.access_token) {
 			return { ok: false, error: 'No access token in response' };
 		}
