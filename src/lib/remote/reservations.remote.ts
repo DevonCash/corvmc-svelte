@@ -276,14 +276,14 @@ export const searchMembers = query(z.string(), async (q) => {
 /** Staff: available slots + config for a given date. */
 export const getStaffSlots = query(z.string(), async (dateParam) => {
 	await requireStaff();
-	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(date),
+		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
 
 	return {
-		date: date.toISOString().split('T')[0],
+		date: dateStr,
 		slots,
 		config: {
 			hourlyRateCents: reservationConfig.hourlyRateCents,
@@ -299,16 +299,16 @@ export const getAvailableDates = query(async () => {
 	const config = await getReservationConfig();
 	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
 	const days = Math.ceil(config.maxAdvanceDaysOneoff);
-	const today = new Date();
 	const tz = DEFAULT_TIMEZONE;
-	const todayStr = today.toLocaleDateString('en-CA', { timeZone: tz });
+	const todayStr = formatDateInTz(new Date(), tz);
 
 	const results: string[] = [];
 	for (let i = 0; i <= days; i++) {
-		const d = new Date(todayStr + 'T00:00:00');
-		d.setDate(d.getDate() + i);
-		const dateStr = d.toISOString().split('T')[0];
-		const slots = await getAvailableSlots(d);
+		// Advance the calendar date by `i` days without relying on runtime-local
+		// Date math: anchor noon-LA of today, step in whole days, re-read in LA.
+		const anchor = buildDateInTz(todayStr, '12:00', tz);
+		const dateStr = formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz);
+		const slots = await getAvailableSlots(dateStr);
 
 		let maxRun = 0;
 		let run = 0;
@@ -327,14 +327,14 @@ export const getAvailableDates = query(async () => {
 
 /** Member: available slots + config + recurring frequencies for a given date. */
 export const getMemberSlots = query(z.string(), async (dateParam) => {
-	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(date),
+		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
 
 	return {
-		date: date.toISOString().split('T')[0],
+		date: dateStr,
 		slots,
 		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {
@@ -348,9 +348,9 @@ export const getMemberSlots = query(z.string(), async (dateParam) => {
 
 /** Available start times for a given date, with pricing config. */
 export const getReservationStartTimes = query(z.string(), async (dateParam) => {
-	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(date),
+		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
 
@@ -373,9 +373,9 @@ export const getReservationStartTimes = query(z.string(), async (dateParam) => {
 export const getReservationEndTimes = query(
 	z.object({ date: z.string(), startTime: z.string() }),
 	async ({ date: dateParam, startTime }) => {
-		const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+		const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 		const [slots, reservationConfig] = await Promise.all([
-			getAvailableSlots(date),
+			getAvailableSlots(dateStr),
 			getReservationConfig()
 		]);
 
@@ -541,14 +541,14 @@ export const getBandSlots = query(z.string(), async (dateParam) => {
 	await requireFeature('bandReservations');
 	await requireBandMember();
 
-	const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date();
+	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(date),
+		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
 
 	return {
-		date: date.toISOString().split('T')[0],
+		date: dateStr,
 		slots,
 		recurringFrequencies: RECURRING_FREQUENCIES,
 		config: {

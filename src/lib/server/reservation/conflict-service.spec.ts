@@ -201,9 +201,39 @@ describe('getAvailableSlots', () => {
 		timeZone: 'America/Los_Angeles'
 	});
 
+	// Regression: the day must be anchored to the literal date string, independent of
+	// the runtime timezone. Previously the remote layer passed a `Date` parsed at
+	// midnight in the runtime TZ (UTC on Cloudflare Workers); getAvailableSlots then
+	// re-derived the day in America/Los_Angeles, shifting it to the *previous* day.
+	// That made displayed availability belong to the wrong day (open slots rejected on
+	// submit) and made today's staff view show every slot as blocked (all in the past).
+	it('keeps future slots available for the current day regardless of runtime TZ', async () => {
+		// 09:30 LA on 2026-06-29 (= 16:30 UTC). If the day were shifted back to 06-28,
+		// every slot would be in the past and marked unavailable — the staff "all
+		// blocked" bug.
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-06-29T16:30:00Z'));
+		try {
+			selectResultQueue = [[], []]; // day reservations, day closures
+			const slots = await getAvailableSlots('2026-06-29');
+
+			expect(slots).toHaveLength(26);
+			expect(slots[0].startTime).toBe('09:00');
+			// Cutoff is 09:30 + 60min advance = 10:30 LA; afternoon slots stay open.
+			expect(slots.find((s) => s.startTime === '14:00')?.available).toBe(true);
+			expect(slots.some((s) => s.available)).toBe(true);
+
+			// And the window opens at 09:00 *on 2026-06-29* in LA, not the prior day.
+			const firstAvailable = slots.find((s) => s.available);
+			expect(firstAvailable).toBeDefined();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('returns slots within operating hours when no reservations or closures', async () => {
 		selectResultQueue = [[], []]; // day reservations, day closures
-		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
+		const slots = await getAvailableSlots(futureDate);
 		// Operating hours 09:00 - 22:00 = 13 hours = 26 half-hour slots
 		expect(slots).toHaveLength(26);
 		expect(slots[0].startTime).toBe('09:00');
@@ -219,7 +249,7 @@ describe('getAvailableSlots', () => {
 			[{ startsAt: resStart, endsAt: resEnd }], // reservations
 			[] // closures
 		];
-		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
+		const slots = await getAvailableSlots(futureDate);
 		// Slots at 10:00 and 10:30 should be blocked
 		const slot1000 = slots.find((s) => s.startTime === '10:00');
 		const slot1030 = slots.find((s) => s.startTime === '10:30');
@@ -237,7 +267,7 @@ describe('getAvailableSlots', () => {
 			[], // reservations
 			[{ startsAt: closureStart, endsAt: closureEnd }] // closures
 		];
-		const slots = await getAvailableSlots(makeDate(futureDate, '12:00'));
+		const slots = await getAvailableSlots(futureDate);
 		const slot1400 = slots.find((s) => s.startTime === '14:00');
 		const slot1430 = slots.find((s) => s.startTime === '14:30');
 		const slot1500 = slots.find((s) => s.startTime === '15:00');
