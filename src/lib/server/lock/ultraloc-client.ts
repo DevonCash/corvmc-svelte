@@ -1,7 +1,9 @@
 import { env } from '$env/dynamic/private';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { getJson, putJson } from '$lib/server/kv';
 import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
+import { DEFAULT_TIMEZONE } from '$lib/config';
+import { formatDateInTz, formatTimeInTz } from '$lib/server/reservation/timezone';
 
 // ---------------------------------------------------------------------------
 // Ultraloc API client
@@ -102,39 +104,85 @@ async function apiCall(
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+// Lock users are managed through the `st.lockUser` capability on the
+// `Uhome.Device` / `Command` envelope. Reservations get a *temporary* user
+// (type 2) carrying a 4-digit keypad passcode and a daterange window. The
+// passcode IS the door code shown to the member.
+
+/** How long after a reservation ends the door code keeps working. */
+export const LOCK_GRACE_MINUTES = 30;
+
+const USER_TYPE_TEMPORARY = 2;
 
 export interface TempUserParams {
 	name: string;
 	startTime: Date;
 	endTime: Date;
+	/** 4–8 digit keypad passcode (the door code). */
+	code: number;
 }
 
-export async function createTemporaryUser(params: TempUserParams): Promise<string> {
-	const { deviceId } = await getConfig();
-
-	const startTimestamp = Math.floor(params.startTime.getTime() / 1000);
-	const endTimestamp = Math.floor(params.endTime.getTime() / 1000);
-
-	const result = await apiCall('Uhome.Device', 'AddUser', {
-		deviceId,
-		user: {
-			name: params.name,
-			type: 'temporary',
-			startTime: startTimestamp,
-			endTime: endTimestamp
-		}
-	});
-
-	return result.user?.id ?? result.userId ?? randomUUID();
+export interface LockUser {
+	id: number;
+	name: string;
+	type: number;
+	daterange?: [string, string];
 }
 
-export async function removeTemporaryUser(tempUserId: string): Promise<void> {
+/** Generate a random 4-digit keypad PIN (U-tec passcodes are 4–8 digits). */
+export function generateLockCode(): number {
+	return randomInt(1000, 10000);
+}
+
+/** Format a Date as the lock's local "YYYY-MM-DD HH:mm" daterange string. */
+function lockDateTime(date: Date): string {
+	return `${formatDateInTz(date, DEFAULT_TIMEZONE)} ${formatTimeInTz(date, DEFAULT_TIMEZONE)}`;
+}
+
+/** Run a single `st.lockUser` command against the configured lock. */
+async function lockUserCommand(name: string, args?: Record<string, unknown>): Promise<any> {
 	const { deviceId } = await getConfig();
 
-	await apiCall('Uhome.Device', 'RemoveUser', {
-		deviceId,
-		userId: tempUserId
+	return apiCall('Uhome.Device', 'Command', {
+		devices: [
+			{
+				id: deviceId,
+				command: {
+					capability: 'st.lockUser',
+					name,
+					...(args ? { arguments: args } : {})
+				}
+			}
+		]
 	});
+}
+
+/**
+ * Create a temporary lock user for a reservation.
+ *
+ * The `add` command returns a deferred ack (no user id), so this resolves once
+ * the command is accepted. The door code is the caller-supplied `code`.
+ */
+export async function createTemporaryUser(params: TempUserParams): Promise<void> {
+	const graceEnd = new Date(params.endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
+
+	await lockUserCommand('add', {
+		name: params.name,
+		type: USER_TYPE_TEMPORARY,
+		password: params.code,
+		daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)]
+	});
+}
+
+/** Remove a lock user by its lock-assigned id. */
+export async function removeTemporaryUser(userId: number): Promise<void> {
+	await lockUserCommand('delete', { id: userId });
+}
+
+/** List all users currently on the lock. */
+export async function listLockUsers(): Promise<LockUser[]> {
+	const result = await lockUserCommand('list');
+	return result.devices?.[0]?.users ?? [];
 }
 
 // ---------------------------------------------------------------------------
