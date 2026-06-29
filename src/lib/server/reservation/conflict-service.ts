@@ -54,13 +54,17 @@ export async function hasConflict(
 /**
  * Generate all time slots for a given date and mark availability.
  * Returns slots within operating hours with their booked/blocked status.
+ *
+ * @param dateStr  Calendar day as "YYYY-MM-DD". The day is anchored directly to
+ *   this string in {@link DEFAULT_TIMEZONE} — never re-derived from a `Date` — so
+ *   the result is independent of the runtime timezone and stays consistent with
+ *   the submit/validation path, which builds instants the same way.
  */
-export async function getAvailableSlots(date: Date): Promise<TimeSlot[]> {
+export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
 	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
 
-	// Build day boundaries in local time
-	const dateStr = date.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
+	// Build day boundaries from the literal date string in the configured timezone.
 	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
 	const dayEnd = buildDateInTz(dateStr, config.operatingHoursEnd, tz);
 
