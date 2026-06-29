@@ -112,6 +112,30 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	};
 });
 
+/**
+ * Owner-only detail view for a single reservation — backs the member detail
+ * page that gets linked in communications (and surfaces the door code).
+ */
+export const getReservationDetail = query(z.string(), async (id) => {
+	const currentUser = requireUser();
+
+	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
+
+	if (!row) throw error(404, 'Reservation not found');
+	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+
+	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+
+	return {
+		reservation: row,
+		durationHours,
+		totalCents,
+		hourlyRateCents
+	};
+});
+
 export const getBandReservations = query(z.string(), async (slug) => {
 	await requireFeature('bandReservations');
 	requireUser();
