@@ -154,12 +154,18 @@ describe('buildAuthorizeUrl', () => {
 });
 
 describe('exchangeAuthorizationCode', () => {
-	it('exchanges the code and returns the refresh token', async () => {
-		mockFetchUrl({ access_token: 'at', refresh_token: 'rt', expires_in: 3600 });
+	it("unwraps U-tec's {code,data} envelope and returns the refresh token", async () => {
+		// U-tec nests the OAuth fields under `data`.
+		mockFetchUrl({
+			code: 200,
+			data: { access_token: 'at', refresh_token: 'rt', expires_in: 601200 }
+		});
 
 		const result = await exchangeAuthorizationCode('the-code', 'https://corvmc.org/cb');
 
 		expect(result.refreshToken).toBe('rt');
+		expect(result.accessToken).toBe('at');
+		expect(result.expiresIn).toBe(601200);
 		const url = new URL(lastUrl!);
 		expect(url.origin + url.pathname).toBe('https://oauth.u-tec.com/token');
 		expect(url.searchParams.get('grant_type')).toBe('authorization_code');
@@ -169,8 +175,14 @@ describe('exchangeAuthorizationCode', () => {
 		expect(url.searchParams.get('client_secret')).toBe('secret');
 	});
 
+	it('also accepts an already-flat token response', async () => {
+		mockFetchUrl({ access_token: 'at', refresh_token: 'rt', expires_in: 3600 });
+		const result = await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
+		expect(result.refreshToken).toBe('rt');
+	});
+
 	it('throws when no refresh token is returned', async () => {
-		mockFetchUrl({ access_token: 'at' });
+		mockFetchUrl({ code: 400, data: {} });
 		await expect(exchangeAuthorizationCode('c', 'https://corvmc.org/cb')).rejects.toThrow(
 			/no refresh_token/
 		);
