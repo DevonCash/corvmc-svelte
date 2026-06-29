@@ -1,13 +1,13 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { generateRecurringReservations } from '$lib/server/reservation/generation-job';
+import { generateRecurring } from '$lib/server/reservation/generation-job';
 
 /**
- * Cron endpoint for generating recurring reservation instances.
- * Runs daily (e.g., midnight Pacific). For each active recurring series
- * with prototype_type = 'reservation', expands the RRULE into concrete
- * reservations within the 2.5-week generation window.
+ * Cron endpoint for generating recurring instances.
+ * Runs daily (e.g., midnight Pacific). Expands active recurring series into
+ * concrete rows within the 2.5-week generation window — events first (so their
+ * space reservations are in place), then reservations.
  *
  * Call from an external scheduler:
  *   POST /api/cron/generate-recurring-reservations
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		throw error(401, 'Unauthorized');
 	}
 
-	const result = await generateRecurringReservations();
+	const result = await generateRecurring();
 
 	return json(result);
 };

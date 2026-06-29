@@ -270,6 +270,33 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Recurring event could not reserve space (notify staff creator) ---
+	domainEvents.on('event.recurring_reservation_skipped', async ({ data: event }) => {
+		await dispatch({
+			type: 'event_recurring_reservation_skipped',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Recurring event could not reserve space',
+			body: `${event.eventTitle} on ${event.date} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			href: `/staff/events/${event.eventId}`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Recurring event needs space: ${event.eventTitle} on ${event.date}`,
+					heading: 'Recurring event could not reserve space',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `The recurring event "${event.eventTitle}" was created as a draft for ${event.date} from ${event.startTime} – ${event.endTime}, but the practice space could not be reserved due to: ${event.reason}.`
+						},
+						{ text: 'Open the event to resolve the conflict or book the space manually.' }
+					],
+					cta: { url: `${siteUrl}/staff/events/${event.eventId}`, label: 'View the event' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// --- Equipment loan scheduled (notify member) ---
 	domainEvents.on('equipment.loan_scheduled', async ({ data: event }) => {
 		await dispatch({

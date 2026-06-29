@@ -8,7 +8,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { checkConflicts, createEvent } from '$lib/remote/events.remote';
+	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
 	import { responseErrorMessage } from '$lib/api';
 
 	const { fields } = createEvent;
@@ -30,6 +30,37 @@
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
 	let hasConflicts = $state(false);
+	let recurring = $state(false);
+	let recurringFrequency = $state('weekly');
+	let monthlyMode = $state('weekday');
+	let recurringEndsAt = $state('');
+	let recurringPreview = $state<{ dates: string[]; totalInWindow: number } | null>(null);
+
+	const isMonthly = $derived(recurringFrequency === 'monthly');
+
+	$effect(() => {
+		if (recurring && recurringFrequency && eventDate && eventStartTime) {
+			recurringPreview = null;
+			previewRecurringEvents({
+				date: eventDate,
+				startTime: eventStartTime,
+				frequency: recurringFrequency as 'weekly' | 'biweekly' | 'monthly',
+				monthlyMode: isMonthly ? (monthlyMode as 'weekday' | 'monthday') : undefined
+			}).then((result) => {
+				recurringPreview = result;
+			});
+		} else {
+			recurringPreview = null;
+		}
+	});
+
+	function formatOccurrence(iso: string): string {
+		return new Date(iso).toLocaleDateString(undefined, {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
 
 	// Compute the ticket price in cents for the hidden field
 	const ticketPriceCents = $derived(
@@ -91,6 +122,11 @@
 		reservationStartTime = '';
 		reservationEndTime = '';
 		posterFile = null;
+		recurring = false;
+		recurringFrequency = 'weekly';
+		monthlyMode = 'weekday';
+		recurringEndsAt = '';
+		recurringPreview = null;
 	}
 </script>
 
@@ -192,6 +228,69 @@
 							{checkConflicts}
 							bind:hasConflicts
 						/>
+					{/if}
+				</div>
+			{/if}
+
+			<Field
+				name="recurring"
+				type="toggle"
+				bind:value={recurring}
+				checkboxLabel="Repeat this event"
+			/>
+
+			{#if recurring}
+				<div class="card bg-base-200 p-4 space-y-4">
+					<Field
+						name="recurringFrequency"
+						type="select"
+						label="Frequency"
+						bind:value={recurringFrequency}
+						options={[
+							{ value: 'weekly', label: 'Weekly' },
+							{ value: 'biweekly', label: 'Every 2 weeks' },
+							{ value: 'monthly', label: 'Monthly' }
+						]}
+					/>
+
+					{#if isMonthly}
+						<Field
+							name="monthlyMode"
+							type="select"
+							label="Monthly pattern"
+							bind:value={monthlyMode}
+							options={[
+								{ value: 'weekday', label: 'Same weekday each month (e.g. 2nd Tuesday)' },
+								{ value: 'monthday', label: 'Same date each month (e.g. the 15th)' }
+							]}
+						/>
+					{/if}
+
+					<Field
+						name="recurringEndsAt"
+						type="date"
+						label="Repeat until (optional)"
+						bind:value={recurringEndsAt}
+					/>
+
+					<p class="text-sm opacity-60">
+						Occurrences are created as drafts ahead of time; publish each one when ready. Each
+						occurrence starts with a copy of this event's poster, editable per occurrence.
+					</p>
+
+					{#if recurringPreview}
+						{#if recurringPreview.dates.length > 0}
+							<div class="text-sm">
+								<p class="font-medium">Next occurrences:</p>
+								<ul class="opacity-70 mt-1">
+									{#each recurringPreview.dates as iso (iso)}
+										<li>{formatOccurrence(iso)}</li>
+									{/each}
+								</ul>
+							</div>
+						{:else}
+							<p class="text-sm opacity-60">No upcoming occurrences in the next 60 days.</p>
+						{/if}
 					{/if}
 				</div>
 			{/if}

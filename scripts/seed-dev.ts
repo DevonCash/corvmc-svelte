@@ -947,6 +947,82 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		.returning();
 	rows.push(cancelledNoRes);
 
+	// Recurring CMC event: a weekly open mic. Prototype is a published past
+	// occurrence; future occurrences are materialized as drafts (as the
+	// generation job would produce), each with its own space reservation.
+	{
+		const creator = pick(staffUsers);
+		const protoDay = -7;
+		const hour = 19;
+		const duration = 3;
+		const protoStart = ptDate(protoDay, hour);
+
+		const protoResId = await createEventReservation(
+			protoDay,
+			hour,
+			hour + duration,
+			creator.id,
+			'completed'
+		);
+
+		const [proto] = await db
+			.insert(event)
+			.values({
+				title: 'Weekly Open Mic',
+				description: 'Sign up at the door — all skill levels welcome.',
+				startsAt: protoStart,
+				endsAt: ptDate(protoDay, hour + duration),
+				doorsAt: ptDate(protoDay, hour - 0.5),
+				status: 'published',
+				publishedAt: new Date(protoStart.getTime() - 14 * 86400000),
+				tags: 'open mic, all ages, community',
+				reservationId: protoResId,
+				createdByUserId: creator.id
+			})
+			.returning();
+		rows.push(proto);
+
+		const rrule = seedRRule(protoStart, 'weekly');
+		const [series] = await db
+			.insert(recurringSeries)
+			.values({
+				prototypeType: 'event',
+				prototypeId: proto.id,
+				rrule,
+				createdBy: creator.id
+			})
+			.returning();
+
+		await db.run(sql`UPDATE event SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
+
+		for (let w = 1; w <= 2; w++) {
+			const instDay = protoDay + w * 7;
+			const instResId = await createEventReservation(
+				instDay,
+				hour,
+				hour + duration,
+				creator.id,
+				'scheduled'
+			);
+			const [inst] = await db
+				.insert(event)
+				.values({
+					title: proto.title,
+					description: proto.description,
+					startsAt: ptDate(instDay, hour),
+					endsAt: ptDate(instDay, hour + duration),
+					doorsAt: ptDate(instDay, hour - 0.5),
+					status: 'draft',
+					tags: proto.tags,
+					reservationId: instResId,
+					recurringSeriesId: series.id,
+					createdByUserId: creator.id
+				})
+				.returning();
+			rows.push(inst);
+		}
+	}
+
 	return rows;
 }
 

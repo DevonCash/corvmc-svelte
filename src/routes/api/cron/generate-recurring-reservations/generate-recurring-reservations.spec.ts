@@ -4,10 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockGenerateRecurringReservations = vi.fn();
+const mockGenerateRecurring = vi.fn();
 
 vi.mock('$lib/server/reservation/generation-job', () => ({
-	generateRecurringReservations: (...args: unknown[]) => mockGenerateRecurringReservations(...args)
+	generateRecurring: (...args: unknown[]) => mockGenerateRecurring(...args)
 }));
 
 vi.mock('$env/dynamic/private', () => ({
@@ -41,18 +41,18 @@ describe('POST /api/cron/generate-recurring-reservations', () => {
 		await expect(POST(req('wrong-secret'))).rejects.toThrow();
 	});
 
-	it('delegates to generateRecurringReservations', async () => {
-		mockGenerateRecurringReservations.mockResolvedValue({ created: 5, skipped: 2 });
+	it('delegates to generateRecurring', async () => {
+		mockGenerateRecurring.mockResolvedValue({ created: 5, skipped: 2 });
 
 		const { POST } = await import('./+server');
 		await POST(req());
 
-		expect(mockGenerateRecurringReservations).toHaveBeenCalled();
+		expect(mockGenerateRecurring).toHaveBeenCalled();
 	});
 
 	it('returns result from generation job', async () => {
-		const result = { created: 3, skipped: 1, errors: [] };
-		mockGenerateRecurringReservations.mockResolvedValue(result);
+		const result = { events: {}, reservations: { created: 3, skipped: 1, errors: [] } };
+		mockGenerateRecurring.mockResolvedValue(result);
 
 		const { POST } = await import('./+server');
 		const response = await POST(req());

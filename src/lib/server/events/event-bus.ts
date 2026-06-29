@@ -128,6 +128,21 @@ export interface RecurringSkippedEvent {
 	reason: string;
 }
 
+export interface EventRecurringReservationSkippedEvent {
+	seriesId: string;
+	/** The generated draft event that could not reserve space */
+	eventId: string;
+	eventTitle: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** The date that could not be reserved (YYYY-MM-DD in America/Los_Angeles) */
+	date: string;
+	startTime: string;
+	endTime: string;
+	reason: string;
+}
+
 export interface EquipmentLoanRequestedEvent {
 	loanId: string;
 	userId: string;
@@ -246,6 +261,7 @@ export type DomainEvents = {
 	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'event.cancelled': EventCancelledEvent;
+	'event.recurring_reservation_skipped': EventRecurringReservationSkippedEvent;
 	'band.invitation_sent': BandInvitationSentEvent;
 	'band.invitation_accepted': BandInvitationAcceptedEvent;
 	'contact.form_submitted': ContactFormSubmittedEvent;

@@ -20,6 +20,14 @@ import {
 } from '$lib/server/reservation/conflict-service';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
+	createEventSeries,
+	getByEvent,
+	getEventSeries,
+	cancel as cancelSeries
+} from '$lib/server/reservation/recurring-series-service';
+import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
+import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
+import {
 	getTicketsRemaining,
 	getTicketsSold,
 	getEventTickets,
@@ -516,7 +524,54 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 		reservation
 	});
 
+	// Recurring: register a series so the generation job materializes occurrences.
+	if (data.recurring && data.recurringFrequency) {
+		await createEventSeries({
+			prototypeEventId: event.id,
+			frequency: data.recurringFrequency as RecurringFrequency,
+			prototypeStartsAt: startsAt,
+			monthlyMode: data.monthlyMode,
+			endsAt: data.recurringEndsAt ? buildDateInTz(data.recurringEndsAt, '23:59', tz) : undefined
+		});
+	}
+
 	return { eventId: event.id };
+});
+
+/** Preview the next handful of occurrences for a recurring event series. */
+export const previewRecurringEvents = query(
+	z.object({
+		date: z.string(),
+		startTime: z.string(),
+		frequency: z.enum(RECURRING_FREQUENCIES),
+		monthlyMode: z.enum(['weekday', 'monthday']).optional()
+	}),
+	async ({ date, startTime, frequency, monthlyMode }) => {
+		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
+		const rruleString = buildRRule(startsAt, frequency, monthlyMode ?? 'weekday');
+		const now = new Date();
+		const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		const occurrences = getOccurrences(rruleString, now, windowEnd);
+		return {
+			dates: occurrences.slice(0, 8).map((d) => d.toISOString()),
+			totalInWindow: occurrences.length
+		};
+	}
+);
+
+/** The recurring series an event belongs to, if any (staff). */
+export const getEventRecurringSeries = query(z.string(), async (eventId) => {
+	await requireStaff();
+	const series = await getByEvent(eventId);
+	if (!series) return null;
+	return getEventSeries(series.id);
+});
+
+/** Stop a recurring event series; existing occurrences remain (staff). */
+export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
+	await requireStaff();
+	await cancelSeries(data.seriesId);
+	return { success: true };
 });
 
 export const updateEvent = form(
