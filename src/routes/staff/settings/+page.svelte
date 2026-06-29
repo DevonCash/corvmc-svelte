@@ -28,8 +28,12 @@
 	import type { CommunityStats } from '$lib/server/db/schema/finance';
 	import { formatDollars } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		IconPlugConnected,
+		IconCopy,
 		IconMail,
 		IconMessageCircle,
 		IconWorld,
@@ -51,6 +55,33 @@
 
 	let connectionTestResult = $state<{ ok: boolean; error?: string } | null>(null);
 	let connectionTesting = $state(false);
+
+	// U-tec is "connected" once a refresh token has been minted (via OAuth or
+	// pasted manually). Until then, only the Connect flow makes sense.
+	const utecConnected = $derived(!!integrationSettings.refreshToken);
+	const utecCanConnect = $derived(
+		!!integrationSettings.clientId && !!integrationSettings.clientSecret
+	);
+	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
+
+	// Surface the result of the OAuth round-trip (?utec=… set by the callback).
+	$effect(() => {
+		const result = page.url.searchParams.get('utec');
+		if (!result) return;
+		activeTab = 'integrations';
+
+		const messages: Record<string, [type: 'success' | 'error', msg: string]> = {
+			connected: ['success', 'Connected to U-tec.'],
+			denied: ['error', 'Authorization was declined.'],
+			state_error: ['error', 'Security check failed — please try connecting again.'],
+			exchange_failed: ['error', 'Could not complete the connection. Check the credentials.'],
+			missing_config: ['error', 'Enter and save the Client ID and Secret first.']
+		};
+		const m = messages[result];
+		if (m) toast[m[0]](m[1]);
+
+		replaceState(resolve('/staff/settings'), {});
+	});
 
 	const tabs = [
 		{ key: 'pricing', label: 'Pricing' },
@@ -530,21 +561,46 @@
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">U-tec Smart Lock</h3>
+							<div class="flex items-center gap-2">
+								<h3 class="card-title text-base">U-tec Smart Lock</h3>
+								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
+									{utecConnected ? 'Connected' : 'Not connected'}
+								</span>
+							</div>
 							<div class="flex gap-2">
-								<button
-									type="button"
-									class="btn btn-sm btn-ghost"
-									onclick={handleTestConnection}
-									disabled={connectionTesting}
-								>
-									{#if connectionTesting}
-										<span class="loading loading-spinner loading-xs"></span>
-									{:else}
+								{#if utecConnected}
+									<!-- Test Connection only matters once a refresh token exists. -->
+									<button
+										type="button"
+										class="btn btn-sm btn-ghost"
+										onclick={handleTestConnection}
+										disabled={connectionTesting}
+									>
+										{#if connectionTesting}
+											<span class="loading loading-spinner loading-xs"></span>
+										{:else}
+											<IconPlugConnected class="size-4" />
+										{/if}
+										Test Connection
+									</button>
+									<a
+										href={resolve('/api/integrations/utec/authorize')}
+										class="btn btn-sm btn-ghost"
+										data-sveltekit-reload
+									>
+										Reconnect
+									</a>
+								{:else}
+									<a
+										href={resolve('/api/integrations/utec/authorize')}
+										class="btn btn-sm btn-primary"
+										class:btn-disabled={!utecCanConnect}
+										data-sveltekit-reload
+									>
 										<IconPlugConnected class="size-4" />
-									{/if}
-									Test Connection
-								</button>
+										Connect to U-tec
+									</a>
+								{/if}
 								<SubmitButton
 									label="Save"
 									successLabel="Saved"
@@ -553,6 +609,12 @@
 								/>
 							</div>
 						</div>
+
+						{#if !utecConnected && !utecCanConnect}
+							<p class="text-xs opacity-60">
+								Enter and save your Client ID and Secret, then connect to authorize the lock.
+							</p>
+						{/if}
 
 						{#if connectionTestResult}
 							<div
@@ -595,9 +657,32 @@
 							/>
 						</div>
 
+						<div class="mt-2">
+							<p class="text-xs opacity-70">
+								Redirect URI — register this exact value in the U-tec developer console:
+							</p>
+							<div class="mt-1 flex items-center gap-2">
+								<code class="flex-1 truncate rounded bg-base-200 px-2 py-1 font-mono text-xs">
+									{utecRedirectUri}
+								</code>
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs"
+									title="Copy redirect URI"
+									onclick={() => {
+										navigator.clipboard.writeText(utecRedirectUri);
+										toast.success('Redirect URI copied');
+									}}
+								>
+									<IconCopy class="size-3.5" />
+								</button>
+							</div>
+						</div>
+
 						<p class="mt-2 text-xs opacity-50">
-							Credentials can also be set via environment variables (ULTRALOC_CLIENT_ID, etc.).
-							Values saved here take precedence over environment variables.
+							Click "Connect to U-tec" to authorize and fill the Refresh Token automatically, or set
+							credentials via environment variables (ULTRALOC_CLIENT_ID, etc.). Values saved here
+							take precedence over environment variables.
 						</p>
 					</div>
 				</div>
