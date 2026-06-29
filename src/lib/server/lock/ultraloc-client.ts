@@ -186,6 +186,75 @@ export async function listLockUsers(): Promise<LockUser[]> {
 }
 
 // ---------------------------------------------------------------------------
+// OAuth authorization-code flow — used by the in-app "Connect to U-tec" flow
+// to mint and persist the refresh token (rather than pasting one in by hand).
+// ---------------------------------------------------------------------------
+
+const AUTHORIZE_URL = 'https://oauth.u-tec.com/authorize';
+const OAUTH_SCOPE = 'openapi';
+
+/** The configured client ID (DB config, falling back to env), or null if unset. */
+export async function getUtecClientId(): Promise<string | null> {
+	const dbConfig = await getConfigsByPrefix('integration.utec');
+	return (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID || null;
+}
+
+/** Build the U-tec authorization URL that begins the OAuth code flow. */
+export function buildAuthorizeUrl(clientId: string, redirectUri: string, state: string): string {
+	const params = new URLSearchParams({
+		response_type: 'code',
+		client_id: clientId,
+		redirect_uri: redirectUri,
+		scope: OAUTH_SCOPE,
+		state
+	});
+	return `${AUTHORIZE_URL}?${params.toString()}`;
+}
+
+/**
+ * Exchange an authorization code for tokens. Returns the refresh token to
+ * persist (the access token is short-lived and re-minted on demand). Throws if
+ * the client credentials are missing or U-tec returns no refresh token.
+ */
+export async function exchangeAuthorizationCode(
+	code: string,
+	redirectUri: string
+): Promise<{ refreshToken: string; accessToken: string; expiresIn: number }> {
+	const dbConfig = await getConfigsByPrefix('integration.utec');
+	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
+	const clientSecret = (dbConfig.clientSecret as string) || env.ULTRALOC_CLIENT_SECRET;
+
+	if (!clientId || !clientSecret) {
+		throw new Error('Ultraloc client ID/secret not configured');
+	}
+
+	const params = new URLSearchParams({
+		grant_type: 'authorization_code',
+		client_id: clientId,
+		client_secret: clientSecret,
+		code,
+		redirect_uri: redirectUri
+	});
+
+	const res = await fetch(`${TOKEN_URL}?${params.toString()}`);
+	if (!res.ok) {
+		throw new Error(`Ultraloc code exchange failed: ${res.status} ${await res.text()}`);
+	}
+
+	const data: { access_token?: string; refresh_token?: string; expires_in?: number } =
+		await res.json();
+	if (!data.refresh_token) {
+		throw new Error('Ultraloc code exchange returned no refresh_token');
+	}
+
+	return {
+		refreshToken: data.refresh_token,
+		accessToken: data.access_token ?? '',
+		expiresIn: data.expires_in ?? 0
+	};
+}
+
+// ---------------------------------------------------------------------------
 // Connection test — used by the settings page
 // ---------------------------------------------------------------------------
 

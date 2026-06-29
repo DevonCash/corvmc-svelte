@@ -27,10 +27,13 @@ const {
 	createTemporaryUser,
 	removeTemporaryUser,
 	listLockUsers,
-	LOCK_GRACE_MINUTES
+	LOCK_GRACE_MINUTES,
+	buildAuthorizeUrl,
+	exchangeAuthorizationCode
 } = await import('./ultraloc-client');
 
 let lastBody: any = null;
+let lastUrl: string | null = null;
 
 function mockFetch(payload: Record<string, unknown>) {
 	lastBody = null;
@@ -43,9 +46,27 @@ function mockFetch(payload: Record<string, unknown>) {
 	);
 }
 
+// Captures the request URL (token endpoint calls are GETs with query params).
+function mockFetchUrl(json: Record<string, unknown>, ok = true) {
+	lastUrl = null;
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(async (url: string) => {
+			lastUrl = url;
+			return {
+				ok,
+				status: ok ? 200 : 400,
+				json: async () => json,
+				text: async () => ''
+			} as Response;
+		})
+	);
+}
+
 beforeEach(() => {
 	vi.unstubAllGlobals();
 	lastBody = null;
+	lastUrl = null;
 });
 
 describe('generateLockCode', () => {
@@ -113,5 +134,45 @@ describe('listLockUsers', () => {
 	it('returns an empty array when no users are present', async () => {
 		mockFetch({ devices: [{ id: 'DEV-1' }] });
 		expect(await listLockUsers()).toEqual([]);
+	});
+});
+
+describe('buildAuthorizeUrl', () => {
+	it('builds the authorize URL with the OAuth params', () => {
+		const url = new URL(
+			buildAuthorizeUrl('cid', 'https://corvmc.org/api/integrations/utec/callback', 'st8')
+		);
+		expect(url.origin + url.pathname).toBe('https://oauth.u-tec.com/authorize');
+		expect(url.searchParams.get('response_type')).toBe('code');
+		expect(url.searchParams.get('client_id')).toBe('cid');
+		expect(url.searchParams.get('redirect_uri')).toBe(
+			'https://corvmc.org/api/integrations/utec/callback'
+		);
+		expect(url.searchParams.get('scope')).toBe('openapi');
+		expect(url.searchParams.get('state')).toBe('st8');
+	});
+});
+
+describe('exchangeAuthorizationCode', () => {
+	it('exchanges the code and returns the refresh token', async () => {
+		mockFetchUrl({ access_token: 'at', refresh_token: 'rt', expires_in: 3600 });
+
+		const result = await exchangeAuthorizationCode('the-code', 'https://corvmc.org/cb');
+
+		expect(result.refreshToken).toBe('rt');
+		const url = new URL(lastUrl!);
+		expect(url.origin + url.pathname).toBe('https://oauth.u-tec.com/token');
+		expect(url.searchParams.get('grant_type')).toBe('authorization_code');
+		expect(url.searchParams.get('code')).toBe('the-code');
+		expect(url.searchParams.get('redirect_uri')).toBe('https://corvmc.org/cb');
+		expect(url.searchParams.get('client_id')).toBe('cid');
+		expect(url.searchParams.get('client_secret')).toBe('secret');
+	});
+
+	it('throws when no refresh token is returned', async () => {
+		mockFetchUrl({ access_token: 'at' });
+		await expect(exchangeAuthorizationCode('c', 'https://corvmc.org/cb')).rejects.toThrow(
+			/no refresh_token/
+		);
 	});
 });
