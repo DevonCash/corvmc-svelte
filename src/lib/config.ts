@@ -50,6 +50,28 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
 };
 
 // ---------------------------------------------------------------------------
+// Reservations
+// ---------------------------------------------------------------------------
+
+/**
+ * How many days before its start a member may confirm a reservation *without* a
+ * Stripe prepayment. Outside this window only a real Stripe charge (or staff)
+ * can confirm. Bounds how far ahead reservations sit confirmed (the single lock
+ * has finite user slots) and cuts no-shows.
+ */
+export const CONFIRMATION_WINDOW_DAYS = 3;
+
+/** The earliest instant a member may confirm a reservation starting at `startsAt`. */
+export function confirmWindowOpensAt(startsAt: Date): Date {
+	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/** Whether `now` is inside the member confirmation window for `startsAt`. */
+export function withinConfirmationWindow(startsAt: Date, now: Date = new Date()): boolean {
+	return now.getTime() >= confirmWindowOpensAt(startsAt).getTime();
+}
+
+// ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------
 

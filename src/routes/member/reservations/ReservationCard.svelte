@@ -7,6 +7,7 @@
 	import ReservationSummary from '$lib/components/shared/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
 	import { resolve } from '$app/paths';
+	import { withinConfirmationWindow, confirmWindowOpensAt } from '$lib/config';
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
@@ -14,6 +15,9 @@
 
 	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
+	// Members may only confirm (without paying) within the window; before then we
+	// show when it opens and offer paying to lock the slot in early.
+	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
 
 	function cents(n: number): string {
 		return (n / 100).toFixed(2);
@@ -64,7 +68,23 @@
 				{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
 					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} class="btn-xs btn-success" />
 				{:else if reservation.status === 'scheduled'}
-					<ConfirmReservationAction {reservation} onsuccess={onchange} class="btn-xs btn-primary" />
+					{#if canConfirm}
+						<ConfirmReservationAction
+							{reservation}
+							onsuccess={onchange}
+							class="btn-xs btn-primary"
+						/>
+					{:else}
+						<span class="text-xs opacity-60">
+							Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
+						</span>
+						<a
+							href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
+							class="btn btn-outline btn-xs btn-primary"
+						>
+							Pay to reserve
+						</a>
+					{/if}
 				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents ?? 0) > 0}
 					<span class="text-xs font-medium"
 						>${cents(reservation.cashDueCents ?? 0)} due at door</span
