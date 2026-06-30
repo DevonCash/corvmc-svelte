@@ -33,6 +33,7 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 import {
 	create,
 	cancel,
+	cancelUnconfirmedReservations,
 	staffCreate,
 	confirm,
 	markComplete,
@@ -413,6 +414,87 @@ describe('ReservationService', () => {
 			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(
 				'Expected status "scheduled" or "confirmed", got "completed"'
 			);
+		});
+	});
+
+	describe('cancelUnconfirmedReservations', () => {
+		const past = new Date(Date.now() - 60 * 60 * 1000);
+		const pastEnd = new Date(past.getTime() + 2 * 60 * 60 * 1000);
+
+		// First db.select is the sweep (returns ids); the rest are cancel()'s internal
+		// lookups (return the full row). Mirrors the blanket select used in cancel tests.
+		function setupSweep(ids: Array<{ id: string }>, row: Record<string, unknown>) {
+			const sweepWhere = vi.fn().mockResolvedValue(ids);
+			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
+			const limit = vi.fn().mockResolvedValue([row]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select)
+				.mockReturnValueOnce({ from: sweepFrom } as any)
+				.mockReturnValue({ from } as any);
+		}
+
+		function setupUpdateMock(rowCount: number) {
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+			return set;
+		}
+
+		it('cancels a scheduled reservation whose start has passed', async () => {
+			setupSweep([{ id: 'res-1' }], {
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null,
+				startsAt: past,
+				endsAt: pastEnd
+			});
+			const set = setupUpdateMock(1);
+
+			const result = await cancelUnconfirmedReservations(new Date());
+
+			expect(result.cancelled).toBe(1);
+			expect(result.errors).toHaveLength(0);
+			expect(set).toHaveBeenCalledWith(
+				expect.objectContaining({
+					status: 'cancelled',
+					cancellationReason: 'Not confirmed before start'
+				})
+			);
+			// No payment on a scheduled reservation → no refund.
+			expect(refund).not.toHaveBeenCalled();
+		});
+
+		it('returns zero when nothing is unconfirmed', async () => {
+			const sweepWhere = vi.fn().mockResolvedValue([]);
+			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
+			vi.mocked(db.select).mockReturnValue({ from: sweepFrom } as any);
+
+			const result = await cancelUnconfirmedReservations(new Date());
+
+			expect(result.cancelled).toBe(0);
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('records an error and continues when a cancel fails', async () => {
+			setupSweep([{ id: 'res-1' }], {
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null,
+				startsAt: past,
+				endsAt: pastEnd
+			});
+			setupUpdateMock(0); // concurrent change → cancel() throws
+
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const result = await cancelUnconfirmedReservations(new Date());
+
+			expect(result.cancelled).toBe(0);
+			expect(result.errors).toHaveLength(1);
+			expect(result.errors[0]).toContain('res-1');
+			consoleSpy.mockRestore();
 		});
 	});
 

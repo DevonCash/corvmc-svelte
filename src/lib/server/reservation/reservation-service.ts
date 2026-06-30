@@ -264,6 +264,43 @@ export async function cancel(
 }
 
 // ---------------------------------------------------------------------------
+// cancelUnconfirmedReservations — release slots never confirmed by their start
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancel every `scheduled` reservation whose start time has passed without being
+ * confirmed, freeing the slot. Members must confirm within the confirmation
+ * window (or prepay via Stripe); anything still `scheduled` at start was never
+ * committed. Delegates to `cancel()` with `staffOverride` so the already-started
+ * guard is bypassed and any refund/credit reversal runs idempotently (a still-
+ * scheduled reservation has neither, so they are no-ops). The emitted
+ * `reservation.cancelled` event cascades waitlist promotion for the freed slot.
+ */
+export async function cancelUnconfirmedReservations(
+	now: Date = new Date()
+): Promise<{ cancelled: number; errors: string[] }> {
+	const errors: string[] = [];
+	const rows = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(and(eq(reservation.status, 'scheduled'), lt(reservation.startsAt, now)));
+
+	let cancelled = 0;
+	for (const row of rows) {
+		try {
+			await cancel(row.id, '', 'Not confirmed before start', { staffOverride: true });
+			cancelled++;
+		} catch (err) {
+			const msg = `Failed to auto-cancel unconfirmed reservation ${row.id}: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+		}
+	}
+
+	return { cancelled, errors };
+}
+
+// ---------------------------------------------------------------------------
 // Staff resolution actions
 // ---------------------------------------------------------------------------
 
