@@ -102,6 +102,11 @@ describe('createTemporaryUser', () => {
 		const expectedEnd = `${formatDateInTz(graceEnd, DEFAULT_TIMEZONE)} ${formatTimeInTz(graceEnd, DEFAULT_TIMEZONE)}`;
 		const expectedStart = `${formatDateInTz(startTime, DEFAULT_TIMEZONE)} ${formatTimeInTz(startTime, DEFAULT_TIMEZONE)}`;
 		expect(cmd.arguments.daterange).toEqual([expectedStart, expectedEnd]);
+
+		// Temporary users require the full schedule quartet or U-tec returns BAD-REQUEST.
+		expect(cmd.arguments.weeks).toEqual([0, 1, 2, 3, 4, 5, 6]);
+		expect(cmd.arguments.timerange).toEqual(['00:00', '23:59']);
+		expect(cmd.arguments.limit).toBe(0);
 	});
 });
 
