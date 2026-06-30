@@ -7,7 +7,8 @@ import {
 	createTemporaryUser,
 	removeTemporaryUser,
 	listLockUsers,
-	generateLockCode
+	generateLockCode,
+	LOCK_GRACE_MINUTES
 } from './ultraloc-client';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -158,4 +159,85 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+// ---------------------------------------------------------------------------
+// One-click self-test — exercise the real st.lockUser command path end to end
+// (create → list), beyond the token-only "Test Connection". Issues a temporary
+// code valid for a short window so staff can physically try the door.
+// ---------------------------------------------------------------------------
+
+const SELF_TEST_NAME = 'CMC Self-Test';
+const SELF_TEST_WINDOW_MINUTES = 15;
+
+export interface LockSelfTestStep {
+	name: 'create' | 'list';
+	ok: boolean;
+	detail: string;
+}
+
+export interface LockSelfTestResult {
+	ok: boolean;
+	code?: number;
+	/** When the issued code stops working (window + the client's grace period). */
+	expiresAt?: Date;
+	steps: LockSelfTestStep[];
+}
+
+/**
+ * Issue a short-lived test code and verify the lock command path works.
+ *
+ * `add` returns a deferred ack (no id) and the lock applies it asynchronously,
+ * so the new user may not appear in the immediate `list`. We therefore assert
+ * each command returns without an API error rather than requiring the new user
+ * to be listed. Each step is captured (not thrown) so partial failures report.
+ */
+export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
+	const steps: LockSelfTestStep[] = [];
+	const code = generateLockCode();
+	const now = new Date();
+	const endTime = new Date(now.getTime() + SELF_TEST_WINDOW_MINUTES * 60_000);
+	// createTemporaryUser extends the window by the grace period.
+	const expiresAt = new Date(endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
+
+	try {
+		await createTemporaryUser({ name: SELF_TEST_NAME, startTime: now, endTime, code });
+		steps.push({
+			name: 'create',
+			ok: true,
+			detail: `Issued test code on the lock (valid until ${expiresAt.toLocaleTimeString('en-US', { timeZone: DEFAULT_TIMEZONE, hour: 'numeric', minute: '2-digit' })}).`
+		});
+	} catch (err) {
+		steps.push({ name: 'create', ok: false, detail: (err as Error).message });
+		return { ok: false, steps };
+	}
+
+	try {
+		const users = await listLockUsers();
+		steps.push({ name: 'list', ok: true, detail: `Lock returned ${users.length} user(s).` });
+	} catch (err) {
+		steps.push({ name: 'list', ok: false, detail: (err as Error).message });
+		return { ok: false, code, expiresAt, steps };
+	}
+
+	return { ok: true, code, expiresAt, steps };
+}
+
+/** Remove any lingering self-test users from the lock. */
+export async function revokeLockSelfTest(): Promise<{ removed: number; errors: string[] }> {
+	const errors: string[] = [];
+	let removed = 0;
+
+	const users = await listLockUsers();
+	for (const u of users) {
+		if (u.type !== 2 || u.name !== SELF_TEST_NAME) continue;
+		try {
+			await removeTemporaryUser(u.id);
+			removed++;
+		} catch (err) {
+			errors.push(`Failed to remove self-test user ${u.id}: ${(err as Error).message}`);
+		}
+	}
+
+	return { removed, errors };
 }
