@@ -192,11 +192,18 @@ async function lockUserCommand(name: string, args?: Record<string, unknown>): Pr
 export async function createTemporaryUser(params: TempUserParams): Promise<void> {
 	const graceEnd = new Date(params.endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
 
+	// A temporary user (type 2) requires the full schedule quartet: U-tec rejects
+	// the command with BAD-REQUEST if `weeks`/`timerange`/`limit` are omitted. The
+	// `daterange` already pins the exact window, so we leave every weekday and the
+	// whole day open and set no open-count limit.
 	await lockUserCommand('add', {
 		name: params.name,
 		type: USER_TYPE_TEMPORARY,
 		password: params.code,
-		daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)]
+		daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)],
+		weeks: [0, 1, 2, 3, 4, 5, 6],
+		timerange: ['00:00', '23:59'],
+		limit: 0
 	});
 }
 
