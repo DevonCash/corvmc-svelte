@@ -77,7 +77,13 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '$lib/config';
+import {
+	DEFAULT_TIMEZONE,
+	SEARCH_LIMIT,
+	LIST_LIMIT,
+	CONFIRMATION_WINDOW_DAYS,
+	withinConfirmationWindow
+} from '$lib/config';
 
 // ===========================================================================
 // Queries
@@ -886,6 +892,25 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 	return { reservationId: res.id, waitlisted };
 });
 
+const CONFIRM_WINDOW_MSG = `Confirmation opens ${CONFIRMATION_WINDOW_DAYS} days before your reservation — pay now to lock it in earlier.`;
+
+/** Whether the member's free-hour balance fully covers the reservation (nothing to charge). */
+async function isFullyCreditCovered(
+	userId: string,
+	durationHours: number,
+	totalCents: number,
+	hourlyRateCents: number
+): Promise<boolean> {
+	const freeHoursBalance = await getBalance(userId, 'free_hours');
+	const { remainingCents } = computeReservationCredit({
+		totalCents,
+		durationHours,
+		hourlyRateCents,
+		freeHoursBalance
+	});
+	return remainingCents <= 0;
+}
+
 /**
  * Commit free-hour credits to a reservation. If credits fully cover it, settle it
  * as a credit payment (status confirmed, creditsUsed set, cashDueCents 0, paidAt
@@ -1113,9 +1138,15 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
+	// Only a real Stripe charge (or staff) confirms a reservation outside the
+	// confirmation window.
+	const staff = await isStaff(locals.user.id);
+	const outsideWindow = !staff && !withinConfirmationWindow(startsAt);
+
 	if (data.skipPayment === 'on') {
 		// Confirm: commit free hours now. If fully covered, it's settled; otherwise
 		// the cash remainder is collected at the door.
+		if (outsideWindow) throw error(400, CONFIRM_WINDOW_MSG);
 		const { settled } = await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
@@ -1133,6 +1164,14 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
+
+	// Pay Ahead: a fully credit-covered booking would confirm without a charge, so
+	// it's blocked outside the window — only a real charge commits early.
+	if (
+		outsideWindow &&
+		(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents))
+	)
+		throw error(400, CONFIRM_WINDOW_MSG);
 
 	// Pay Ahead: commit free hours, then charge any cash remainder online now.
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
@@ -1302,12 +1341,17 @@ export const payForReservation = form(
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
 
+		const staff = await isStaff(currentUser.id);
+		const reservationConfig = await getReservationConfig();
+		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+		const outsideWindow = !staff && !withinConfirmationWindow(row.startsAt);
+
 		if (data.skipPayment === 'on') {
 			// Confirm: commit free hours; settle if fully covered, else cash at door.
-			const reservationConfig = await getReservationConfig();
-			const hourlyRateCents = reservationConfig.hourlyRateCents;
-			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-			const totalCents = Math.round(durationHours * hourlyRateCents);
+			// Only a real Stripe charge confirms outside the window.
+			if (outsideWindow) throw error(400, CONFIRM_WINDOW_MSG);
 			const { settled } = await commitCreditsAndSettleIfCovered({
 				reservationId: row.id,
 				userId: currentUser.id,
@@ -1320,6 +1364,14 @@ export const payForReservation = form(
 			if (!settled && row.status === 'scheduled') await confirm(row.id);
 			return { confirmed: true };
 		}
+
+		// Pay online: outside the window this is only allowed when there is a real
+		// charge — a fully credit-covered "payment" is just a credit confirmation.
+		if (
+			outsideWindow &&
+			(await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
+		)
+			throw error(400, CONFIRM_WINDOW_MSG);
 
 		const result = await payReservationRemainder({
 			row,
@@ -1354,6 +1406,18 @@ export const payReservation = form(
 		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
+
+		// Outside the confirmation window a fully credit-covered "payment" is just a
+		// credit confirmation — only a real Stripe charge confirms early.
+		const staff = await isStaff(currentUser.id);
+		if (!staff && !withinConfirmationWindow(row.startsAt)) {
+			const reservationConfig = await getReservationConfig();
+			const hourlyRateCents = reservationConfig.hourlyRateCents;
+			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+			const totalCents = Math.round(durationHours * hourlyRateCents);
+			if (await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
+				throw error(400, CONFIRM_WINDOW_MSG);
+		}
 
 		const result = await payReservationRemainder({
 			row,
@@ -1394,6 +1458,10 @@ export const confirmReservation = form(z.object({ id: z.string() }), async (data
 	const isOwner = currentUser.id === row.createdByUserId;
 	const staff = await isStaff(currentUser.id);
 	if (!isOwner && !staff) throw error(403, 'Not authorized');
+
+	// Members may only confirm (without a Stripe charge) within the window; staff
+	// override anytime.
+	if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
 
 	// Commit the owner's free hours; settle if fully covered, else confirm with
 	// the cash remainder owed at the door.

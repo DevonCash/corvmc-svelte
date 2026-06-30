@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
+import { isStaff } from '$lib/server/authorization';
 
 // Regression: staff confirming/pricing a reservation on a member's behalf must key
 // free hours to the reservation OWNER, never the acting staff user. The staff
@@ -131,6 +132,52 @@ describe('staff confirm commits the owner credits, not the staff member', () => 
 		const arg = commitReservationCredits.mock.calls[0][0];
 		expect(arg.userId).toBe(ownerId);
 		expect(arg.userId).not.toBe(staffUser.id);
+	});
+});
+
+describe('confirmation window gating', () => {
+	const DAY = 24 * 60 * 60 * 1000;
+	// currentUser is staffUser; making them the OWNER lets us test the member path.
+	function scheduledRow(startsAt: Date) {
+		return {
+			id: 'res-w',
+			createdByUserId: staffUser.id,
+			startsAt,
+			endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+			status: 'scheduled'
+		};
+	}
+
+	it('blocks a member confirming more than 3 days out', async () => {
+		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		selectResults.push([scheduledRow(new Date(Date.now() + 10 * DAY))]);
+
+		await expect(confirmReservation({ id: 'res-w' }, undefined)).rejects.toMatchObject({
+			status: 400
+		});
+		expect(commitReservationCredits).not.toHaveBeenCalled();
+	});
+
+	it('allows a member confirming within 3 days', async () => {
+		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		selectResults.push(
+			[scheduledRow(new Date(Date.now() + 2 * DAY))],
+			[{ email: 'member@example.com', name: 'Test Member' }]
+		);
+
+		await confirmReservation({ id: 'res-w' }, undefined);
+		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
+	});
+
+	it('lets staff confirm outside the window', async () => {
+		// isStaff defaults to true in this suite.
+		selectResults.push(
+			[{ ...scheduledRow(new Date(Date.now() + 10 * DAY)), createdByUserId: ownerId }],
+			[{ email: 'member@example.com', name: 'Test Member' }]
+		);
+
+		await confirmReservation({ id: 'res-w' }, undefined);
+		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
 	});
 });
 
