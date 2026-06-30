@@ -80,10 +80,11 @@ vi.mock('./ultraloc-client', () => ({
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
-	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args)
+	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
+	LOCK_GRACE_MINUTES: 30
 }));
 
-const { runDailyLockJob } = await import('./lock-service');
+const { runDailyLockJob, issueLockSelfTest, revokeLockSelfTest } = await import('./lock-service');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -227,5 +228,53 @@ describe('runDailyLockJob', () => {
 		expect(result.errors).toHaveLength(1);
 
 		consoleSpy.mockRestore();
+	});
+});
+
+describe('issueLockSelfTest', () => {
+	it('issues a named test code and reports both steps ok', async () => {
+		mockListLockUsers.mockResolvedValue([{ id: 1, name: 'Someone', type: 2 }]);
+
+		const result = await issueLockSelfTest();
+
+		expect(result.ok).toBe(true);
+		expect(result.code).toBe(4242);
+		expect(result.expiresAt).toBeInstanceOf(Date);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'CMC Self-Test', code: 4242 })
+		);
+		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
+		expect(result.steps.every((s) => s.ok)).toBe(true);
+	});
+
+	it('reports a failed create step without throwing', async () => {
+		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('device offline'));
+
+		const result = await issueLockSelfTest();
+
+		expect(result.ok).toBe(false);
+		expect(result.steps).toHaveLength(1);
+		expect(result.steps[0]).toMatchObject({ name: 'create', ok: false });
+		expect(result.steps[0].detail).toContain('device offline');
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+	});
+});
+
+describe('revokeLockSelfTest', () => {
+	it('removes only type-2 users named CMC Self-Test', async () => {
+		mockListLockUsers.mockResolvedValue([
+			{ id: 1, name: 'CMC Self-Test', type: 2 },
+			{ id: 2, name: 'CMC Self-Test', type: 0 }, // not temporary
+			{ id: 3, name: 'A Member', type: 2 }, // not a self-test
+			{ id: 4, name: 'CMC Self-Test', type: 2 }
+		]);
+
+		const result = await revokeLockSelfTest();
+
+		expect(result.removed).toBe(2);
+		expect(result.errors).toHaveLength(0);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledTimes(2);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(1);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(4);
 	});
 });

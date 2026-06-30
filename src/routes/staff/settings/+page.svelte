@@ -9,6 +9,8 @@
 		getIntegrationSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
+		runLockSelfTest,
+		revokeLockTest,
 		getFeatureFlags,
 		updateFeatureFlag,
 		syncSubscriptions,
@@ -33,6 +35,8 @@
 	import { resolve } from '$app/paths';
 	import {
 		IconPlugConnected,
+		IconCircleCheck,
+		IconCircleX,
 		IconCopy,
 		IconMail,
 		IconMessageCircle,
@@ -55,6 +59,10 @@
 
 	let connectionTestResult = $state<{ ok: boolean; error?: string } | null>(null);
 	let connectionTesting = $state(false);
+
+	let selfTestResult = $state<Awaited<ReturnType<typeof runLockSelfTest>> | null>(null);
+	let selfTesting = $state(false);
+	let revokingTest = $state(false);
 
 	// U-tec is "connected" once a refresh token has been minted (via OAuth or
 	// pasted manually). Until then, only the Connect flow makes sense.
@@ -174,6 +182,34 @@
 			connectionTestResult = await testUtecConnection();
 		} finally {
 			connectionTesting = false;
+		}
+	}
+
+	async function handleSelfTest() {
+		selfTesting = true;
+		selfTestResult = null;
+		try {
+			selfTestResult = await runLockSelfTest();
+		} catch (err) {
+			selfTestResult = {
+				ok: false,
+				steps: [{ name: 'create', ok: false, detail: (err as Error).message }]
+			};
+		} finally {
+			selfTesting = false;
+		}
+	}
+
+	async function handleRevokeTest() {
+		revokingTest = true;
+		try {
+			const { removed } = await revokeLockTest();
+			selfTestResult = null;
+			toast.success(removed > 0 ? `Removed ${removed} test code(s)` : 'No test codes to remove');
+		} catch (err) {
+			toast.error((err as Error).message);
+		} finally {
+			revokingTest = false;
 		}
 	}
 </script>
@@ -626,6 +662,69 @@
 									Connection successful — token refresh verified.
 								{:else}
 									Connection failed: {connectionTestResult.error}
+								{/if}
+							</div>
+						{/if}
+
+						{#if utecConnected}
+							<div class="mt-2 border-t border-base-200 pt-3">
+								<div class="flex items-start justify-between gap-2">
+									<div>
+										<p class="text-sm font-medium">Lock self-test</p>
+										<p class="text-xs opacity-60">
+											Issues a 15-minute test code and exercises the lock commands. Try the code on
+											the door, then revoke it.
+										</p>
+									</div>
+									<div class="flex shrink-0 gap-2">
+										<button
+											type="button"
+											class="btn btn-outline btn-sm"
+											onclick={handleSelfTest}
+											disabled={selfTesting}
+										>
+											{#if selfTesting}
+												<span class="loading loading-spinner loading-xs"></span>
+											{/if}
+											Run lock self-test
+										</button>
+										<button
+											type="button"
+											class="btn btn-ghost btn-sm"
+											onclick={handleRevokeTest}
+											disabled={revokingTest}
+										>
+											{#if revokingTest}
+												<span class="loading loading-spinner loading-xs"></span>
+											{/if}
+											Revoke test codes
+										</button>
+									</div>
+								</div>
+
+								{#if selfTestResult}
+									<div class="mt-3 rounded-lg border border-base-300 p-3">
+										{#if selfTestResult.code}
+											<div class="mb-2 flex items-baseline gap-2">
+												<span class="text-xs opacity-60">Test code</span>
+												<span class="font-mono text-2xl font-bold tracking-[0.2em]">
+													{selfTestResult.code}
+												</span>
+											</div>
+										{/if}
+										<ul class="space-y-1 text-sm">
+											{#each selfTestResult.steps as step (step.name)}
+												<li class="flex items-start gap-2">
+													{#if step.ok}
+														<IconCircleCheck class="size-4 shrink-0 text-success" />
+													{:else}
+														<IconCircleX class="size-4 shrink-0 text-error" />
+													{/if}
+													<span class="opacity-80">{step.detail}</span>
+												</li>
+											{/each}
+										</ul>
+									</div>
 								{/if}
 							</div>
 						{/if}

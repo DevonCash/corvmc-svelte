@@ -13,6 +13,7 @@ import {
 	updateSiteConfig
 } from '$lib/server/site-config/site-config-service';
 import { testConnection } from '$lib/server/lock/ultraloc-client';
+import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireStaff } from '$lib/server/authorization';
 import { getAllFeatureFlags, type FeatureFlag } from '$lib/server/feature-flags';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
@@ -72,6 +73,18 @@ export const getIntegrationSettings = query(async () => {
 
 export const testUtecConnection = query(async () => {
 	return testConnection();
+});
+
+// Exercise the real st.lockUser command path (create + list) and issue a
+// short-lived test code so staff can physically verify the door.
+export const runLockSelfTest = command(async () => {
+	await requireStaff();
+	return issueLockSelfTest();
+});
+
+export const revokeLockTest = command(async () => {
+	await requireStaff();
+	return revokeLockSelfTest();
 });
 
 // ---------------------------------------------------------------------------
