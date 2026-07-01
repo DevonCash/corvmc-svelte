@@ -121,10 +121,12 @@
 
 	function handleFormSuccess(result?: unknown) {
 		// A wizard can signal a recoverable, in-place outcome (e.g. a booking slot
-		// taken between selection and submit) that must keep the modal open so the
-		// user can adjust and retry. The form's own components handle the recovery.
-		if (result && typeof result === 'object' && (result as { conflict?: boolean }).conflict) {
-			return;
+		// taken between selection and submit, or an out-of-window date) that must
+		// keep the modal open so the user can adjust and retry. The form's own
+		// components handle the recovery.
+		if (result && typeof result === 'object') {
+			const r = result as { conflict?: boolean; validationError?: string };
+			if (r.conflict || r.validationError) return;
 		}
 		dialogOpen = false;
 		if (typeof onsuccess === 'function') onsuccess(result);

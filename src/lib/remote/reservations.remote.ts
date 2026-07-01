@@ -48,7 +48,8 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	ReservationConflictError
+	ReservationConflictError,
+	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { getReservationConfig } from '$lib/server/reservation/config';
@@ -328,12 +329,20 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 export const getAvailableDates = query(async () => {
 	const config = await getReservationConfig();
 	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
-	const days = Math.ceil(config.maxAdvanceDaysOneoff);
+	// Floor, not ceil: the validator (validateBooking) rejects any start *instant*
+	// more than `maxAdvanceDaysOneoff * 24h` past now. A whole calendar day is only
+	// fully bookable when its latest instant is still within that window, i.e. up to
+	// offset `floor(maxAdvanceDays) - 1`. Using ceil could offer a day whose later
+	// slots exceed a fractional limit (e.g. 14.5), recreating the "dead zone" where
+	// the picker shows a date that then 500s on Book & Pay.
+	const days = Math.floor(config.maxAdvanceDaysOneoff);
 	const tz = DEFAULT_TIMEZONE;
 	const todayStr = formatDateInTz(new Date(), tz);
 
 	const results: string[] = [];
-	for (let i = 0; i <= days; i++) {
+	// Offer today (i=0) through today + (days - 1). Stopping at `i < days` keeps the
+	// last offered day strictly inside the window, so every one of its slots validates.
+	for (let i = 0; i < days; i++) {
 		// Advance the calendar date by `i` days without relying on runtime-local
 		// Date math: anchor noon-LA of today, step in whole days, re-read in LA.
 		const anchor = buildDateInTz(todayStr, '12:00', tz);
@@ -876,7 +885,10 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 			});
 			waitlisted = true;
 		} else {
-			throw err;
+			// Non-wizard form: map domain errors to proper HTTP responses
+			// (conflict → 409, out-of-window/bad-time → 400) so the caller sees a
+			// real status and message instead of a generic 500.
+			mapDomainError(err);
 		}
 	}
 
@@ -1114,6 +1126,12 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 				// rather than surfacing a 500.
 				return { conflict: true as const };
 			}
+		} else if (err instanceof ReservationValidationError) {
+			// Wizard form: return the message in-band (not via mapDomainError's
+			// thrown 400) so the multi-step modal can show it, reset to the date/time
+			// step, and reload availability — see BookingConflict.svelte. A thrown
+			// HTTP error would only surface a generic toast and lose that recovery.
+			return { validationError: err.message };
 		} else {
 			throw err;
 		}
@@ -1274,7 +1292,10 @@ export const bookBandReservation = form(bandBookingSchema, async (data, _issue) 
 			});
 			waitlisted = true;
 		} else {
-			throw err;
+			// Non-wizard form: map domain errors to proper HTTP responses
+			// (conflict → 409, out-of-window/bad-time → 400) so the caller sees a
+			// real status and message instead of a generic 500.
+			mapDomainError(err);
 		}
 	}
 
