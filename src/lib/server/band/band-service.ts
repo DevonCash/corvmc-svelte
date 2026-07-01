@@ -390,31 +390,34 @@ export async function declineInvitation(memberId: string, userId: string) {
 	return result;
 }
 
-export async function revokeInvitation(memberId: string) {
-	return db
-		.delete(bandMember)
-		.where(and(eq(bandMember.id, memberId), eq(bandMember.status, 'pending')));
+// When `bandId` is provided (band-context callers), the row must belong to
+// that band — a band admin's authority stops at their own band, and the
+// memberId comes from the client. Staff-context callers omit it.
+function memberScope(memberId: string, bandId?: string) {
+	return bandId
+		? and(eq(bandMember.id, memberId), eq(bandMember.bandId, bandId))
+		: eq(bandMember.id, memberId);
 }
 
-export async function removeMember(memberId: string) {
-	const [row] = await db
-		.select({ role: bandMember.role })
-		.from(bandMember)
-		.where(eq(bandMember.id, memberId))
-		.limit(1);
+export async function revokeInvitation(memberId: string, bandId?: string) {
+	return db
+		.delete(bandMember)
+		.where(and(memberScope(memberId, bandId), eq(bandMember.status, 'pending')));
+}
+
+export async function removeMember(memberId: string, bandId?: string) {
+	const scope = memberScope(memberId, bandId);
+	const [row] = await db.select({ role: bandMember.role }).from(bandMember).where(scope).limit(1);
 
 	if (!row) throw new Error('Member not found');
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
-	return db.delete(bandMember).where(eq(bandMember.id, memberId));
+	return db.delete(bandMember).where(scope);
 }
 
-export async function updateMember(memberId: string, data: UpdateMemberData) {
-	const [row] = await db
-		.select({ role: bandMember.role })
-		.from(bandMember)
-		.where(eq(bandMember.id, memberId))
-		.limit(1);
+export async function updateMember(memberId: string, data: UpdateMemberData, bandId?: string) {
+	const scope = memberScope(memberId, bandId);
+	const [row] = await db.select({ role: bandMember.role }).from(bandMember).where(scope).limit(1);
 
 	if (!row) throw new Error('Member not found');
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
@@ -423,7 +426,7 @@ export async function updateMember(memberId: string, data: UpdateMemberData) {
 	if (data.role !== undefined) updates.role = data.role;
 	if (data.position !== undefined) updates.position = data.position;
 
-	return db.update(bandMember).set(updates).where(eq(bandMember.id, memberId));
+	return db.update(bandMember).set(updates).where(scope);
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {

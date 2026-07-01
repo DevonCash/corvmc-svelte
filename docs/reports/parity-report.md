@@ -237,13 +237,15 @@ Chosen libraries for platform concerns. Preference is for small, focused package
 
 Features that exist in the Svelte app but not in the Laravel production app are gated behind KV-backed feature flags. All flags default to **off** and can be toggled from Staff Settings > Features.
 
-| Flag             | Feature                                    | Routes gated                                                             |
-| ---------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `staffInbox`     | Multi-channel unified inbox                | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
-| `bandPremium`    | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
-| `emailMarketing` | Audiences, campaigns, broadcasts           | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
-| `equipment`      | Equipment catalog, loans, credits          | `/staff/equipment/**`, `/member/equipment/**`                            |
-| `helpArticles`   | Help center for staff and members          | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
+| Flag               | Feature                                    | Routes gated                                                             |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `staffInbox`       | Multi-channel unified inbox                | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
+| `bandPremium`      | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
+| `bandReservations` | Band-context practice-space booking        | `/band/[slug]/reservations/**`                                           |
+| `bandEvents`       | Band-managed events                        | `/band/[slug]/events/**`                                                 |
+| `emailMarketing`   | Audiences, campaigns, broadcasts           | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
+| `equipment`        | Equipment catalog, loans, credits          | `/staff/equipment/**`, `/member/equipment/**`                            |
+| `helpArticles`     | Help center for staff and members          | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
 
 Implementation: `src/lib/server/feature-flags.ts` reads `feature.*` keys from the site config KV store. Navigation items are conditionally rendered in panel layouts. Route data queries call `requireFeature()` which throws 404 when disabled.
 

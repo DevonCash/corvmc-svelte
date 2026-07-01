@@ -7,7 +7,6 @@ import {
 	type ProductKey
 } from '$lib/server/finance/product-config-service';
 import {
-	config as getConfig,
 	getConfigsByPrefix,
 	updateSiteConfigs,
 	updateSiteConfig
@@ -42,26 +41,27 @@ export const getOrgAddress = query(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Queries
+// Staff queries — remote queries are directly addressable endpoints, so each
+// one must self-guard; the staff layout guard does not cover them.
 // ---------------------------------------------------------------------------
 
-export const config = query(z.string(), async (key) => {
-	return getConfig(key);
-});
-
 export const getProducts = query(async () => {
+	await requireStaff();
 	return getAllProductConfigs();
 });
 
 export const getReservationSettings = query(async () => {
+	await requireStaff();
 	return getConfigsByPrefix('reservation');
 });
 
 export const getOrgSettings = query(async () => {
+	await requireStaff();
 	return getConfigsByPrefix('org');
 });
 
 export const getIntegrationSettings = query(async () => {
+	await requireStaff();
 	const raw = await getConfigsByPrefix('integration.utec');
 	return {
 		clientId: raw.clientId ? String(raw.clientId) : '',
@@ -72,6 +72,7 @@ export const getIntegrationSettings = query(async () => {
 });
 
 export const testUtecConnection = query(async () => {
+	await requireStaff();
 	return testConnection();
 });
 
@@ -99,6 +100,7 @@ const updateProductSchema = z.object({
 });
 
 export const updateProduct = form(updateProductSchema, async (raw) => {
+	await requireStaff();
 	const data = raw as z.infer<typeof updateProductSchema>;
 
 	await updateProductConfig(data.key as ProductKey, {
@@ -136,6 +138,7 @@ const reservationSettingsSchema = z.object({
 });
 
 export const updateReservationSettings = form(reservationSettingsSchema, async (raw) => {
+	await requireStaff();
 	const data = raw as z.infer<typeof reservationSettingsSchema>;
 
 	await updateSiteConfigs([
@@ -174,6 +177,7 @@ const orgSettingsSchema = z.object({
 });
 
 export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
+	await requireStaff();
 	const data = raw as z.infer<typeof orgSettingsSchema>;
 
 	await updateSiteConfigs([
@@ -256,6 +260,7 @@ export const refreshCommunityStats = command(async () => {
 });
 
 export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {
+	await requireStaff();
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
 	await updateSiteConfigs([
