@@ -418,8 +418,8 @@ export const removeMember = form(
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireBandAdmin();
-		await removeMemberService(data.memberId);
+		const { band } = await requireBandAdmin();
+		await removeMemberService(data.memberId, band.id);
 		return { success: true };
 	}
 );
@@ -429,8 +429,8 @@ export const revokeInvitation = form(
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireBandAdmin();
-		await revokeInvitationService(data.memberId);
+		const { band } = await requireBandAdmin();
+		await revokeInvitationService(data.memberId, band.id);
 		return { success: true };
 	}
 );
@@ -442,11 +442,15 @@ export const updateMemberRemote = form(
 		position: z.string().max(100).optional()
 	}),
 	async (data) => {
-		await requireBandAdmin();
-		await updateMember(data.memberId, {
-			role: data.role,
-			position: data.position !== undefined ? data.position || null : undefined
-		});
+		const { band } = await requireBandAdmin();
+		await updateMember(
+			data.memberId,
+			{
+				role: data.role,
+				position: data.position !== undefined ? data.position || null : undefined
+			},
+			band.id
+		);
 		return { success: true };
 	}
 );

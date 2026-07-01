@@ -110,6 +110,21 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
 
+// Walk a drizzle SQL condition (real `and`/`eq` operators — only `db` is
+// mocked) and collect the column names it references, so tests can assert a
+// WHERE clause is band-scoped without a real database.
+function collectColumnNames(condition: unknown): string[] {
+	const names: string[] = [];
+	const visit = (node: unknown) => {
+		if (!node || typeof node !== 'object') return;
+		const record = node as Record<string, unknown>;
+		if (typeof record.name === 'string' && record.table) names.push(record.name);
+		if (Array.isArray(record.queryChunks)) record.queryChunks.forEach(visit);
+	};
+	visit(condition);
+	return names;
+}
+
 describe('BandService', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -279,6 +294,13 @@ describe('BandService', () => {
 			await revokeInvitation('member-1');
 			expect(db.delete).toHaveBeenCalled();
 		});
+
+		it('scopes the delete to the given band', async () => {
+			const { db } = await import('$lib/server/db');
+			await revokeInvitation('member-1', 'band-1');
+			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
+			expect(collectColumnNames(condition)).toContain('band_id');
+		});
 	});
 
 	// -----------------------------------------------------------------------
@@ -305,6 +327,28 @@ describe('BandService', () => {
 
 			await expect(removeMember('member-999')).rejects.toThrow('Member not found');
 		});
+
+		// Regression (cross-band IDOR): a band admin's memberId comes from the
+		// client, so band-context callers pass their band id and the row must be
+		// invisible when it belongs to another band.
+		it('treats a memberId from another band as not found when scoped', async () => {
+			selectResult = []; // the band-scoped lookup finds nothing
+			const { db } = await import('$lib/server/db');
+
+			await expect(removeMember('other-bands-member', 'band-1')).rejects.toThrow(
+				'Member not found'
+			);
+			expect(db.delete).not.toHaveBeenCalled();
+		});
+
+		it('scopes the delete to the given band', async () => {
+			selectResult = [{ role: 'member' }];
+			const { db } = await import('$lib/server/db');
+
+			await removeMember('member-1', 'band-1');
+			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
+			expect(collectColumnNames(condition)).toContain('band_id');
+		});
 	});
 
 	// -----------------------------------------------------------------------
@@ -326,6 +370,27 @@ describe('BandService', () => {
 			await expect(updateMember('member-1', { role: 'member' })).rejects.toThrow(
 				CannotRemoveOwnerError
 			);
+		});
+
+		// Regression (cross-band IDOR): see removeMember above.
+		it('treats a memberId from another band as not found when scoped', async () => {
+			selectResult = [];
+			const { db } = await import('$lib/server/db');
+
+			await expect(updateMember('other-bands-member', { role: 'admin' }, 'band-1')).rejects.toThrow(
+				'Member not found'
+			);
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('scopes the update to the given band', async () => {
+			selectResult = [{ role: 'member' }];
+			const { db } = await import('$lib/server/db');
+
+			await updateMember('member-1', { role: 'admin' }, 'band-1');
+			const setResult = (db.update as any).mock.results[0].value.set.mock.results[0].value;
+			const condition = setResult.where.mock.calls[0][0];
+			expect(collectColumnNames(condition)).toContain('band_id');
 		});
 	});
 

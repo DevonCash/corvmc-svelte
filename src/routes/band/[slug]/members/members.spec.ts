@@ -141,36 +141,42 @@ describe('inviteMember', () => {
 	});
 });
 
+// The memberId comes from the client, so these forms must scope the service
+// call to the slug's band (cross-band IDOR regression).
 describe('removeMember', () => {
-	it('calls removeMember with memberId', async () => {
+	it('calls removeMember scoped to the current band', async () => {
 		const result = await removeMember({ memberId: 'member-42' });
 
-		expect(bandServiceMock.removeMember).toHaveBeenCalledWith('member-42');
+		expect(bandServiceMock.removeMember).toHaveBeenCalledWith('member-42', 'band-1');
 		expect(result.success).toBe(true);
 	});
 });
 
 describe('revokeInvitation', () => {
-	it('calls revokeInvitation with memberId', async () => {
+	it('calls revokeInvitation scoped to the current band', async () => {
 		const result = await revokeInvitation({ memberId: 'member-42' });
 
-		expect(bandServiceMock.revokeInvitation).toHaveBeenCalledWith('member-42');
+		expect(bandServiceMock.revokeInvitation).toHaveBeenCalledWith('member-42', 'band-1');
 		expect(result.success).toBe(true);
 	});
 });
 
 describe('updateMemberRemote', () => {
-	it('calls updateMember with role and position', async () => {
+	it('calls updateMember with role and position scoped to the current band', async () => {
 		const result = await updateMemberRemote({
 			memberId: 'member-42',
 			role: 'admin',
 			position: 'Bass'
 		});
 
-		expect(bandServiceMock.updateMember).toHaveBeenCalledWith('member-42', {
-			role: 'admin',
-			position: 'Bass'
-		});
+		expect(bandServiceMock.updateMember).toHaveBeenCalledWith(
+			'member-42',
+			{
+				role: 'admin',
+				position: 'Bass'
+			},
+			'band-1'
+		);
 		expect(result.success).toBe(true);
 	});
 });
