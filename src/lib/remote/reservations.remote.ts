@@ -48,7 +48,8 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	ReservationConflictError
+	ReservationConflictError,
+	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { getReservationConfig } from '$lib/server/reservation/config';
@@ -333,7 +334,13 @@ export const getAvailableDates = query(async () => {
 	const todayStr = formatDateInTz(new Date(), tz);
 
 	const results: string[] = [];
-	for (let i = 0; i <= days; i++) {
+	// Offer today (i=0) through today + (days - 1). We stop at `i < days`, not
+	// `i <= days`: the validator (validateBooking) rejects any start *instant* more
+	// than `days * 24h` past now, so on day `today + days` every slot later than the
+	// current wall-clock time is un-bookable. Offering that day produced a "dead
+	// zone" — the picker showed it, then Book & Pay 500'd. Any slot on the last
+	// offered day here is < days*24h ahead, so it always validates.
+	for (let i = 0; i < days; i++) {
 		// Advance the calendar date by `i` days without relying on runtime-local
 		// Date math: anchor noon-LA of today, step in whole days, re-read in LA.
 		const anchor = buildDateInTz(todayStr, '12:00', tz);
@@ -875,6 +882,8 @@ export const bookMemberReservation = form(memberBookingSchema, async (data, _iss
 				notes: data.notes
 			});
 			waitlisted = true;
+		} else if (err instanceof ReservationValidationError) {
+			return { validationError: err.message };
 		} else {
 			throw err;
 		}
@@ -1114,6 +1123,10 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue)
 				// rather than surfacing a 500.
 				return { conflict: true as const };
 			}
+		} else if (err instanceof ReservationValidationError) {
+			// Out-of-window / bad-time input: surface a friendly message the wizard
+			// can show instead of letting it bubble up as a generic 500.
+			return { validationError: err.message };
 		} else {
 			throw err;
 		}
@@ -1273,6 +1286,8 @@ export const bookBandReservation = form(bandBookingSchema, async (data, _issue) 
 				notes: data.notes
 			});
 			waitlisted = true;
+		} else if (err instanceof ReservationValidationError) {
+			return { validationError: err.message };
 		} else {
 			throw err;
 		}

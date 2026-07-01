@@ -14,6 +14,15 @@ class ReservationConflictError extends Error {
 	}
 }
 
+// Real error class so the remote's `instanceof ReservationValidationError` check
+// matches what create() throws (both resolve to this same mocked export).
+class ReservationValidationError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'ReservationValidationError';
+	}
+}
+
 const reservationServiceMock = {
 	staffCreate: vi.fn(),
 	create: vi.fn(async () => {
@@ -30,7 +39,8 @@ const reservationServiceMock = {
 	markComplete: vi.fn(),
 	markNoShow: vi.fn(),
 	recordCashAndComplete: vi.fn(),
-	ReservationConflictError
+	ReservationConflictError,
+	ReservationValidationError
 };
 
 vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
@@ -120,6 +130,25 @@ describe('bookAndPayReservation slot conflict', () => {
 
 		expect(result).toEqual({ conflict: true });
 		// No fallback write: create() conflicts before inserting, so nothing is created.
+		expect(reservationServiceMock.createWaitlisted).not.toHaveBeenCalled();
+	});
+
+	it('surfaces a validation error (not a 500) when the slot is out of the booking window', async () => {
+		reservationServiceMock.create.mockImplementation(async () => {
+			throw new ReservationValidationError('Cannot book more than 14 days in advance');
+		});
+
+		const result = await bookAndPayReservation({
+			date: '2026-08-01',
+			startTime: '09:00',
+			endTime: '10:00',
+			skipPayment: 'on'
+		});
+
+		expect(result).toEqual({
+			validationError: 'Cannot book more than 14 days in advance'
+		});
+		// Nothing was created, so no waitlist fallback either.
 		expect(reservationServiceMock.createWaitlisted).not.toHaveBeenCalled();
 	});
 
