@@ -13,6 +13,9 @@ import { mockUser } from '$lib/server/db/test-factory';
 
 const MAX_ADVANCE_DAYS = 14;
 
+// Mutable so a test can exercise a fractional advance-day config.
+let maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
+
 // Deterministic, UTC-based tz helpers so day-stepping is exact in the test.
 vi.mock('$lib/server/reservation/timezone', () => ({
 	formatDateInTz: vi.fn((d: Date) => d.toISOString().slice(0, 10)),
@@ -21,7 +24,7 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 
 vi.mock('$lib/server/reservation/config', () => ({
 	getReservationConfig: vi.fn(async () => ({
-		maxAdvanceDaysOneoff: MAX_ADVANCE_DAYS,
+		maxAdvanceDaysOneoff,
 		minDurationHours: 1,
 		timeSlotMinutes: 30
 	}))
@@ -78,5 +81,21 @@ describe('getAvailableDates window', () => {
 		const lastOffered = new Date(`${dates[dates.length - 1]}T23:59:59Z`);
 		const maxMs = MAX_ADVANCE_DAYS * 24 * 60 * 60 * 1000;
 		expect(lastOffered.getTime() - Date.now()).toBeLessThan(maxMs);
+	});
+
+	it('does not reopen a dead zone for a fractional advance-day config', async () => {
+		// floor(14.5) = 14 → offsets 0..13. Offering offset 14 would put a late slot
+		// (~15 days out) past the 14.5-day limit, recreating the dead zone.
+		maxAdvanceDaysOneoff = 14.5;
+		try {
+			const dates: string[] = await getAvailableDates();
+			expect(dates).toHaveLength(14);
+
+			const lastOffered = new Date(`${dates[dates.length - 1]}T23:59:59Z`);
+			const maxMs = 14.5 * 24 * 60 * 60 * 1000;
+			expect(lastOffered.getTime() - Date.now()).toBeLessThan(maxMs);
+		} finally {
+			maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
+		}
 	});
 });

@@ -22,16 +22,13 @@
 
 	$effect(() => {
 		if (!result || result === handled) return;
-		if (result.conflict) {
-			handled = result;
-			toast.error('That time slot was just taken. Please choose another.');
-			ctx.goToStep(0);
-			onconflict();
-		} else if (result.validationError) {
-			handled = result;
-			toast.error(result.validationError);
-			ctx.goToStep(0);
-			onconflict();
-		}
+		const message = result.conflict
+			? 'That time slot was just taken. Please choose another.'
+			: result.validationError;
+		if (!message) return;
+		handled = result;
+		toast.error(message);
+		ctx.goToStep(0);
+		onconflict();
 	});
 </script>
