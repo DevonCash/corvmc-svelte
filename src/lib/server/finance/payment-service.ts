@@ -135,19 +135,17 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			const maxDiscountCents = balance * eligible.unitValueCents;
 			const applicableDiscount = Math.min(maxDiscountCents, cartTotalCents - creditsAppliedCents);
 
-			if (applicableDiscount > 0) {
-				const unitsToUse = Math.ceil(applicableDiscount / eligible.unitValueCents);
-				// Cap cents so credit discount never exceeds remaining cart total
-				const actualCents = Math.min(
-					unitsToUse * eligible.unitValueCents,
-					cartTotalCents - creditsAppliedCents
-				);
+			// Whole units only, rounded down: a member is never charged a full
+			// credit unit for a partial-unit discount. Any sub-unit remainder is
+			// paid in cash and the credit stays in their wallet.
+			const unitsToUse = Math.floor(applicableDiscount / eligible.unitValueCents);
+			if (unitsToUse > 0) {
 				creditDeductions.push({
 					type: eligible.type,
 					units: unitsToUse,
-					cents: actualCents
+					cents: unitsToUse * eligible.unitValueCents
 				});
-				creditsAppliedCents += actualCents;
+				creditsAppliedCents += unitsToUse * eligible.unitValueCents;
 			}
 
 			if (creditsAppliedCents >= cartTotalCents) break;
@@ -229,11 +227,10 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	// 5. Build Checkout Session
 	const finalLineItems = [...lineItems];
 
-	// Add fee coverage line item if requested.
-	// Note: for very small remaining amounts, the fee (2.9% + 30¢) can exceed the
-	// base charge. This is mathematically correct but callers should consider a
-	// minimum charge threshold if the UX matters.
-	if (coverFees && remainingCents > 0) {
+	// Add fee coverage line item if requested. Below 100¢ the grossed-up fee
+	// (2.9% + 30¢) rivals or exceeds the base charge and looks absurd on the
+	// receipt, so the org absorbs it for sub-$1 remainders.
+	if (coverFees && remainingCents >= 100) {
 		const { feeCents } = calculateTotalWithFeeCoverage(remainingCents);
 		const feeProductId = await getFeeProductId();
 		const feeLineItem: CheckoutLineItem = {
@@ -275,6 +272,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 
 	// Credits were already deducted (step 3); if the coupon or session creation
 	// fails they must be returned, or an aborted checkout silently burns them.
+	let couponId: string | undefined;
 	try {
 		// Apply coupon for credit discount (one-time payments only — subscription
 		// mode with credits is rejected up front)
@@ -285,6 +283,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 				max_redemptions: 1,
 				name: 'Credit discount'
 			});
+			couponId = coupon.id;
 			sessionParams.discounts = [{ coupon: coupon.id }];
 		}
 
@@ -303,6 +302,14 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 				metadata.checkout_ref,
 				'checkout_failed'
 			);
+		}
+		// Best-effort: don't leave an orphaned coupon behind a failed session.
+		if (couponId) {
+			try {
+				await stripe.coupons.del(couponId);
+			} catch (delErr) {
+				console.error('[payment-service] Failed to delete orphaned coupon:', delErr);
+			}
 		}
 		throw err;
 	}

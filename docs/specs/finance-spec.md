@@ -24,35 +24,24 @@ Every payment — card or cash — is represented in Stripe.
 
 Both paths produce a Stripe Payment Record. The purchasable stores the Payment Record ID locally as its proof of payment.
 
-**Products and prices live in Stripe.** Each purchasable type (rehearsal reservation, event ticket, equipment loan) has a corresponding Stripe Product. Prices are configured in Stripe — hourly rates, ticket prices, loan fees. The app references Stripe Price IDs when creating Checkout Sessions.
+**Products live in Stripe; prices live in app config (KV).** Each purchasable type (rehearsal reservation, event ticket, equipment loan, contribution, fee coverage) has a corresponding Stripe Product, created on demand and tagged with `metadata.corvmc_key` (see `product-config-service`). Unit amounts are stored in Cloudflare KV (editable from staff settings) and passed to Checkout Sessions as inline `price_data` — the app does not reference stored Stripe Price IDs.
 
-**Credit eligibility lives in Stripe Product metadata.** Each Stripe Product has an `eligible_wallets` metadata field (comma-separated wallet type keys, e.g., `"free_hours"` or `"free_hours,equipment_credits"`). The payment service reads this when calculating discounts, so it doesn't need to know about specific product types.
+**Credit eligibility is passed by the caller.** `checkout()` takes an `eligibleCredits` array (credit type + unit value in cents) from the domain module initiating the purchase. Reservations commit free-hour credits themselves before checkout (see `reservation-credit-service`) and pass an empty list.
 
 ---
 
 ## Credits
 
-Credits are the one thing Stripe doesn't handle. The app tracks them with a JSON column on the user table for current balances and a single audit log table for history.
+Credits are the one thing Stripe doesn't handle. The app tracks them with two integer columns on the user table for current balances and a single audit log table for history.
 
-### Credit balances (user.credits column)
+### Credit balances (user.creditFreeHours / user.creditEquipment columns)
 
-A JSONB column on the `user` table holds the running total per credit type:
+Two integer columns on the `user` table hold the running totals: `credit_free_hours` (30-minute blocks — one credit covers half an hour of room time) and `credit_equipment` (cents, spendable 1:1 against equipment-loan charges). Max balances per credit type live in app config (`creditTypeConfig`): free hours are uncapped (the monthly reset overwrites them), equipment credits cap at $250.
 
-```json
-{
-	"free_hours": { "balance": 4, "maxBalance": null },
-	"equipment_credits": { "balance": 12, "maxBalance": 250 }
-}
-```
+The database is Cloudflare D1 (SQLite), which has no interactive transactions, so the CreditService uses two race-free write shapes:
 
-Defaults to `{}` for users with no credits. The CreditService reads and writes this column. For atomic deductions, use Postgres `jsonb_set` with a balance check in the `WHERE` clause to prevent concurrent checkouts from over-spending:
-
-```sql
-UPDATE "user"
-SET credits = jsonb_set(credits, '{free_hours,balance}', to_jsonb((credits->'free_hours'->>'balance')::int - $1))
-WHERE id = $2
-AND (credits->'free_hours'->>'balance')::int >= $1
-```
+- **Deductions** are a single relative decrement guarded in the `WHERE` clause (`SET col = col - ? WHERE id = ? AND col >= ?`) — a concurrent over-spend simply matches zero rows and surfaces as `InsufficientCreditsError`.
+- **Additions and resets** use optimistic compare-and-swap: read the balance, compute the next value, write with `WHERE col = <read value>`, and retry (bounded) if a concurrent writer changed it.
 
 ### CreditTransaction
 
@@ -100,36 +89,32 @@ A purchasable is **locked** (immutable except for status) when `stripe_payment_r
 
 ## Payment service
 
-A single service handles all payment operations. It's generic — it doesn't know about reservations, tickets, or equipment. Callers pass a Stripe Price ID, quantity, and a reference to the purchasable.
+A single service handles all payment operations. It's generic — it doesn't know about reservations, tickets, or equipment. Callers build cart line items (inline `price_data` or a Stripe price reference), declare which credit types may discount the cart, and pass opaque metadata used for post-checkout linking.
 
 ### checkout(options)
 
 ```ts
 checkout(options: {
-  userId: string;
-  stripePriceId: string;
-  quantity: number;
-  purchasableType: string;    // e.g., 'reservation', 'ticket'
-  purchasableId: string;
+  stripeCustomerId?: string;      // required for subscriptions
+  customerEmail?: string;         // pre-fills Stripe Checkout when no customer
+  userId?: string;                // absent = anonymous purchase, no credits
+  mode: 'payment' | 'subscription';
+  lineItems: CheckoutLineItem[];  // passed through to Stripe Checkout
+  eligibleCredits?: EligibleCredit[]; // credit type + unit value in cents
+  coverFees?: boolean;            // adds a fee-coverage line item (skipped under $1)
+  metadata?: Record<string, string>;
   successUrl: string;
   cancelUrl: string;
-}): Promise<{ paid: boolean; checkoutUrl?: string }>
+}): Promise<{ paid: boolean; checkoutUrl?: string; stripePaymentRecordId?: string }>
 ```
 
-1. Fetch the Stripe Product (via the Price) to read `eligible_wallets` from metadata.
-2. For each eligible wallet, check the user's credit balance and calculate the discount in cents.
-3. If credits fully cover the price:
-   - Deduct credits (creates CreditTransaction entries).
-   - Call Stripe `report_payment` with $0 amount and metadata `{ credits_applied_cents, purchasable_type, purchasable_id }`.
-   - Set `stripe_payment_record_id` on the purchasable.
-   - Return `{ paid: true }`.
-4. If partially or not covered:
-   - Deduct whatever credits apply (creates CreditTransaction entries).
-   - Create a one-time Stripe Coupon for the credit discount amount (if any).
-   - Create a Stripe Checkout Session with the Price, quantity, coupon, and metadata `{ credits_applied_cents, purchasable_type, purchasable_id }`.
-   - Return `{ paid: false, checkoutUrl: session.url }`.
+1. Resolve the cart total from the line items.
+2. For each eligible credit type, apply whole units (rounded down — a member is never charged a full unit for a partial-unit discount).
+3. Deduct the applied credits (CreditTransaction entries), reversing them if anything later fails.
+4. If credits fully cover the cart: call Stripe `report_payment` with a $0 amount, return `{ paid: true, stripePaymentRecordId }` — no redirect.
+5. Otherwise: create a one-time Stripe Coupon for the credit discount (payment mode only; subscription mode rejects `eligibleCredits`), create the Checkout Session, and return `{ paid: false, checkoutUrl }`. On session-creation failure the deducted credits are reversed and the coupon deleted.
 
-Credits are deducted when the Checkout Session is created (not on completion). If the session is abandoned, `cancelAbandoned()` reverses them.
+Credits are deducted when the Checkout Session is created (not on completion). `cancel()` reverses them for abandoned sessions (and refuses to reverse a completed one). Note: reservations do NOT use this credit path — they commit free-hour credits at Confirm time via `reservation-credit-service` and pass `eligibleCredits: []`.
 
 ### onCheckoutComplete(sessionId)
 
@@ -181,17 +166,12 @@ For unpaid/abandoned items (e.g., checkout session expired before payment).
 
 ### Card payment (with partial credits)
 
-1. Member clicks "Confirm & Pay" on a reservation.
-2. Domain module calls `paymentService.checkout()` with the Stripe Price ID and reservation details.
-3. Payment service fetches the Stripe Product, sees `eligible_wallets: "free_hours"`.
-4. User has 2 hours of free_hours credits. Reservation is 3 hours at $10/hr = $30. Credits cover $20.
-5. Service deducts 2 hours from UserCredit, records CreditTransaction.
-6. Service creates a Stripe Coupon for $20 off (`amount_off: 2000, currency: 'usd', max_redemptions: 1`).
-7. Service creates a Checkout Session: 3 hours × $10 price, $20 coupon, metadata `{ purchasable_type: 'reservation', purchasable_id: '...' }`.
-8. Member is redirected to Stripe Checkout, pays $10.
-9. Stripe fires `checkout.session.completed` webhook.
-10. `onCheckoutComplete()` sets `stripe_payment_record_id` on the reservation.
-11. `PaymentCompleted` event fires. SpaceManagement confirms the reservation.
+1. Member clicks "Pay Ahead" on a reservation.
+2. The reservation module commits the member's free-hour credits (`commitReservationCredits`): e.g. 2 hours of credits against a 3-hour, $45 booking leaves a $15 remainder stored in `cashDueCents`.
+3. It calls `paymentService.checkout()` with a single "Practice Room Rental" line item for the $15 remainder and `eligibleCredits: []` (credits already committed).
+4. Member is redirected to Stripe Checkout, pays $15.
+5. Stripe fires `checkout.session.completed`; the webhook emits `checkout.completed` on the domain bus.
+6. The reservation listener reads `reservation_id` from session metadata, sets `stripe_payment_record_id`/`paidAt`, and confirms the reservation.
 
 ### Fully covered by credits
 
@@ -228,7 +208,7 @@ For unpaid/abandoned items (e.g., checkout session expired before payment).
 
 Subscriptions use Stripe Billing directly. The app creates Stripe Checkout Sessions in subscription mode. Stripe manages billing cycles, invoicing, and payment collection.
 
-**Local state:** The `user` table already has `stripe_id`, `pm_type`, `pm_last_four`, and `trial_ends_at`. Subscription status is read from Stripe via the API (or cached locally if performance demands it).
+**Local state:** The `user` table has `stripe_id`, `pm_type`, `pm_last_four`, and a `subscription` JSON snapshot (subscription id, `hoursPerReset` — denominated in credits, i.e. 30-minute blocks — `creditsResetAt`, `coveringFees`, `cancelAtPeriodEnd`). The snapshot is the app's source of truth for "is this a sustaining member"; webhooks keep it in sync and mutations write through to it.
 
 **Credit allocation:** When a subscription webhook fires (`invoice.paid`), the app calculates monthly free hours based on the contribution amount (1 hour per $5) and calls `CreditService.allocateMonthlyCredits()`.
 
@@ -238,9 +218,9 @@ Subscriptions use Stripe Billing directly. The app creates Stripe Checkout Sessi
 
 ---
 
-## No event system
+## Event system
 
-The app doesn't use a domain event bus. The payment service returns results to its caller, and the calling code (in the domain module) handles what comes next — confirming a reservation, activating a ticket, etc. This keeps the flow explicit and easy to follow. If cross-cutting concerns grow, an event system can be added later.
+Synchronous purchase paths return results to their caller (the domain module decides what happens next). Webhook-driven completion fans out through a small domain event bus: `checkout.session.completed` emits `checkout.completed`, which the reservation, ticket, and band listeners consume (see `register-listeners.ts`). Notification-type events (`ticket.purchased`, `event.cancelled`, `reservation.cancelled`, …) ride the same bus.
 
 ---
 
@@ -279,10 +259,10 @@ The app doesn't use a domain event bus. The payment service returns results to i
 
 ### Modified tables
 
-| Table                                                           | New columns                                               |
-| --------------------------------------------------------------- | --------------------------------------------------------- |
-| `user`                                                          | `credits` (jsonb, default '{}') — running credit balances |
-| Each purchasable table (reservations, tickets, equipment_loans) | `stripe_payment_record_id` (text, nullable)               |
+| Table                                                           | New columns                                                                      |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `user`                                                          | `credit_free_hours`, `credit_equipment` (integers, default 0) — running balances |
+| Each purchasable table (reservations, tickets, equipment_loans) | `stripe_payment_record_id` (text, nullable)                                      |
 
 ### Removed (vs. Laravel app)
 
@@ -296,16 +276,16 @@ The app doesn't use a domain event bus. The payment service returns results to i
 
 ## Stripe configuration
 
-### Products (created in Stripe dashboard or via seed script)
+### Products (created on demand by product-config-service)
 
-| Product                   | Metadata                                  |
-| ------------------------- | ----------------------------------------- |
-| Rehearsal Space           | `eligible_wallets: "free_hours"`          |
-| Event Ticket              | `eligible_wallets: ""` (no credits apply) |
-| Equipment Loan            | `eligible_wallets: "equipment_credits"`   |
-| Membership (subscription) | N/A — not a one-time purchase             |
+| Product (`corvmc_key`) | Pricing source                                      |
+| ---------------------- | --------------------------------------------------- |
+| `contribution`         | KV config, $5/unit/month default                    |
+| `fee_coverage`         | Computed per checkout (gross-up of the base charge) |
+| `ticket`               | Per-event price (cents) on the event row            |
+| `band_premium`         | KV config, $15/month default                        |
 
-Each Product has one or more Prices (hourly rate, per-ticket, per-day, etc.).
+Each product is tagged `metadata.corvmc_key` so the service reuses it instead of creating duplicates; unit amounts are passed as inline `price_data` at checkout time. Reservations and equipment loans charge via generic line items / payment records rather than dedicated products.
 
 ### Webhooks
 

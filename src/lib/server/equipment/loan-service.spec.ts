@@ -85,7 +85,12 @@ import {
 	InsufficientQuantityError
 } from './loan-service';
 import { getAvailableQuantity } from './equipment-service';
-import { getBalance } from '$lib/server/finance/credit-service';
+import {
+	getBalance,
+	deductCredits,
+	InsufficientCreditsError
+} from '$lib/server/finance/credit-service';
+import { recordCashPayment } from '$lib/server/finance/payment-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -296,6 +301,44 @@ describe('LoanService lifecycle', () => {
 			selectResultQueue = [[{ id: 'loan-1', status: 'requested', userId: 'user-1' }]];
 
 			await expect(returnLoan('loan-1')).rejects.toThrow(InvalidLoanTransitionError);
+		});
+
+		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {
+			// 12h ago → exactly one chargeable day at 500¢/day.
+			const checkedOutAt = new Date(Date.now() - 12 * 60 * 60 * 1000);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						equipmentId: 'eq-1',
+						userId: 'user-1',
+						dailyRateCents: 500,
+						checkedOutAt,
+						staffNotes: null
+					}
+				],
+				[{ name: 'Test User', stripeId: 'cus_test' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+			selectResultQueue.push([{ name: 'SM58' }]);
+
+			// First read sees 300¢ of credits but a concurrent spend wins the
+			// deduction; the retry re-reads 200¢ and settles 200 credits + 300 cash
+			// instead of abandoning the member's remaining credits for full cash.
+			vi.mocked(getBalance).mockResolvedValueOnce(300).mockResolvedValueOnce(200);
+			vi.mocked(deductCredits)
+				.mockRejectedValueOnce(new InsufficientCreditsError('equipment_credits', 300, 200))
+				.mockResolvedValueOnce(0);
+
+			await returnLoan('loan-1');
+
+			expect(vi.mocked(deductCredits)).toHaveBeenCalledTimes(2);
+			expect(vi.mocked(deductCredits).mock.calls[0][2]).toBe(300);
+			expect(vi.mocked(deductCredits).mock.calls[1][2]).toBe(200);
+			expect(vi.mocked(recordCashPayment)).toHaveBeenCalledWith(
+				expect.objectContaining({ amountCents: 300 })
+			);
 		});
 	});
 

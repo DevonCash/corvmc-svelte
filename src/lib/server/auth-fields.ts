@@ -21,6 +21,5 @@ export const userAdditionalFields = {
 	pmType: { type: 'string', required: false },
 	pmLastFour: { type: 'string', required: false },
 	subscription: { type: 'string', required: false },
-	trialEndsAt: { type: 'date', required: false },
 	deletedAt: { type: 'date', required: false }
 } as const;

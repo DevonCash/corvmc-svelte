@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Each awaited db.select() chain consumes the next queued result.
 let dbQueryResults: unknown[][] = [];
+// Payloads passed to db.update(...).set(...) in call order.
+const updateSetPayloads: Record<string, unknown>[] = [];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -14,6 +16,12 @@ function chainable() {
 			if (prop === 'then') {
 				const result = dbQueryResults.shift() ?? [];
 				return (resolve: (v: unknown) => void) => resolve(result);
+			}
+			if (prop === 'set') {
+				return (payload: Record<string, unknown>) => {
+					updateSetPayloads.push(payload);
+					return proxy;
+				};
 			}
 			return () => proxy;
 		}
@@ -37,7 +45,7 @@ const mockCreditService = {
 };
 vi.mock('$lib/server/finance/credit-service', () => mockCreditService);
 
-const { computeReservationCredit, reverseReservationCredits } =
+const { computeReservationCredit, commitReservationCredits, reverseReservationCredits } =
 	await import('./reservation-credit-service');
 
 // hourlyRateCents 1500 ($15/hr) → creditValueCents = 750 (30-min block),
@@ -180,5 +188,55 @@ describe('reverseReservationCredits', () => {
 		await reverseReservationCredits('user-1', 'res-1');
 
 		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// commitReservationCredits — partial coverage must record creditsUsed too.
+// Query order: reservation row (cashDueCents null = uncommitted), then the
+// mocked balance; the UPDATE payload is captured via updateSetPayloads.
+// ---------------------------------------------------------------------------
+describe('commitReservationCredits', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		dbQueryResults = [];
+		updateSetPayloads.length = 0;
+	});
+
+	it('records creditsUsed (hours) on a partially covered commit', async () => {
+		dbQueryResults = [[{ cashDueCents: null }]];
+		mockCreditService.getBalance.mockResolvedValue(2); // 2 credits = 1 hour
+
+		const result = await commitReservationCredits({
+			userId: 'user-1',
+			reservationId: 'res-1',
+			totalCents: 3000,
+			durationHours: 2,
+			hourlyRateCents: RATE
+		});
+
+		expect(result).toMatchObject({
+			creditUnits: 2,
+			creditDiscountCents: 1500,
+			remainingCents: 1500,
+			alreadyCommitted: false
+		});
+		expect(updateSetPayloads[0]).toMatchObject({ cashDueCents: 1500, creditsUsed: 1 });
+	});
+
+	it('leaves creditsUsed null when no credits apply', async () => {
+		dbQueryResults = [[{ cashDueCents: null }]];
+		mockCreditService.getBalance.mockResolvedValue(0);
+
+		await commitReservationCredits({
+			userId: 'user-1',
+			reservationId: 'res-1',
+			totalCents: 3000,
+			durationHours: 2,
+			hourlyRateCents: RATE
+		});
+
+		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
+		expect(updateSetPayloads[0]).toMatchObject({ cashDueCents: 3000, creditsUsed: null });
 	});
 });

@@ -106,6 +106,7 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((...args: unknown[]) => ['eq', ...args]),
 	and: vi.fn((...args: unknown[]) => ['and', ...args]),
 	inArray: vi.fn((...args: unknown[]) => ['inArray', ...args]),
+	lt: vi.fn((...args: unknown[]) => ['lt', ...args]),
 	sql: vi.fn(),
 	asc: vi.fn((col: unknown) => ['asc', col]),
 	desc: vi.fn((col: unknown) => ['desc', col])
@@ -116,6 +117,7 @@ const {
 	createTickets,
 	fulfillPurchase,
 	cancelPurchase,
+	cancelStalePendingTickets,
 	cancelTicket,
 	checkIn,
 	getTicketsSold,
@@ -239,6 +241,23 @@ describe('cancelPurchase', () => {
 		updateResult = { rowCount: 2 };
 		const count = await cancelPurchase('purchase-1');
 		expect(count).toBe(2);
+	});
+});
+
+describe('cancelStalePendingTickets', () => {
+	it('cancels only pending tickets older than the cutoff', async () => {
+		updateResult = { rowCount: 3 };
+
+		const count = await cancelStalePendingTickets(24);
+		expect(count).toBe(3);
+
+		// Filter must target pending status with a created-at cutoff ~24h back.
+		const { eq, lt } = await import('drizzle-orm');
+		expect(vi.mocked(eq)).toHaveBeenCalledWith('status', 'pending');
+		const [col, cutoff] = vi.mocked(lt).mock.calls[0];
+		expect(col).toBe('created_at');
+		const expectedCutoff = Date.now() - 24 * 60 * 60 * 1000;
+		expect(Math.abs((cutoff as Date).getTime() - expectedCutoff)).toBeLessThan(5000);
 	});
 });
 

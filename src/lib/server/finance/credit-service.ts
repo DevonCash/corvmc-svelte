@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, sql, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
+import { eq, and, sql, gt, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { creditTypeConfig, DEFAULT_TIMEZONE } from '$lib/config';
@@ -257,6 +257,48 @@ export async function allocateEquipmentCredits(
 	}
 
 	return addCredits(userId, 'equipment_credits', amount, 'monthly_allocation', sourceId);
+}
+
+/**
+ * Net credits used since the user's most recent monthly allocation, from the
+ * ledger: deductions minus reversals after the allocation row. Unlike the
+ * `allocated − balance` shortcut, this stays correct when a mid-cycle
+ * contribution change bumps the allocation before the next invoice re-allocates.
+ * Returns null when no allocation row exists (caller decides the fallback).
+ */
+export async function getUsageSinceLastAllocation(
+	userId: string,
+	creditType: CreditType
+): Promise<number | null> {
+	assertCreditType(creditType);
+
+	const [alloc] = await db
+		.select({ createdAt: creditTransaction.createdAt })
+		.from(creditTransaction)
+		.where(
+			and(
+				eq(creditTransaction.userId, userId),
+				eq(creditTransaction.creditType, creditType),
+				eq(creditTransaction.source, 'monthly_allocation')
+			)
+		)
+		.orderBy(desc(creditTransaction.createdAt))
+		.limit(1);
+
+	if (!alloc) return null;
+
+	const [row] = await db
+		.select({ used: sql<number>`coalesce(-sum(${creditTransaction.amount}), 0)` })
+		.from(creditTransaction)
+		.where(
+			and(
+				eq(creditTransaction.userId, userId),
+				eq(creditTransaction.creditType, creditType),
+				gt(creditTransaction.createdAt, alloc.createdAt)
+			)
+		);
+
+	return Math.max(0, row?.used ?? 0);
 }
 
 // ---------------------------------------------------------------------------

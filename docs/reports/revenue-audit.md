@@ -7,7 +7,8 @@ cancel) for logical errors. Donations are external (Zeffy) and merch is display-
 carries in-app money logic.
 
 Findings are ranked by severity. **High and medium items were fixed in the same change as this
-report**; minor items are documented here as known issues.
+report** (PR #130); the minor items were fixed in a follow-up change, except the two
+explicitly accepted leftovers noted at the end.
 
 ---
 
@@ -88,26 +89,39 @@ report**; minor items are documented here as known issues.
 - **M6** `/staff/payments` silently showed only cash/credit-settled records — card revenue
   lives in Stripe. The page now says so.
 
-## Minor — known issues, not fixed
+## Minor — fixed in follow-up
 
-- Fee-coverage can exceed the base for tiny charges (acknowledged in `payment-service.ts`).
-- `Math.ceil` on credit units can burn a whole credit for a partial-unit discount in
-  `payment-service.checkout()` — latent (no production caller passes `eligibleCredits`).
-- `usedThisMonth` on the membership page distorts after a mid-month quantity change (the
-  write-through bumps `hoursPerReset` before the next invoice reallocates credits).
-- Equipment `settleReturn` falls back to **full cash** on an `InsufficientCreditsError` race
-  instead of applying partial credits (`loan-service.ts`).
-- Loan billing `ceil`s raw milliseconds to days, so the charge depends on time-of-day and can
-  diverge from the quoted estimate (`loan-service.ts` vs `estimateLoanCost` in `config.ts`).
-- DST-day quote vs charge divergence (wall-clock vs timestamp duration in
-  `reservations.remote.ts`); unreachable while operating hours are 09:00–22:00.
-- `getStaffReservations` date filters parse in runtime-local TZ instead of
-  `America/Los_Angeles`.
-- Orphan `pending` tickets accumulate from abandoned checkouts (cleanup is spec-deferred);
-  the ticket capacity check is non-atomic under concurrency (spec accepts oversell).
-- Partially credit-covered reservations never get `reservation.creditsUsed` set (only the
-  fully-covered path writes it), so staff views under-report credit usage.
-- `docs/specs/finance-spec.md` describes Postgres JSONB wallets and Stripe Price IDs; the
-  implementation uses D1 integer columns and KV-backed inline pricing — doc drift.
-- Stray one-time coupons from abandoned checkouts are never deleted; `user.trialEndsAt`
-  appears vestigial.
+- Fee-coverage line is skipped for sub-$1 remainders, where the grossed-up fee rivals the
+  base charge (`payment-service.ts`).
+- Credit units are applied with `Math.floor` — a whole credit is never burned for a
+  partial-unit discount; the sub-unit remainder is paid in cash (`payment-service.ts`).
+- `usedThisMonth` is derived from the credit ledger (net deductions since the last
+  `monthly_allocation`) instead of `allocated − balance`, so a mid-month quantity change no
+  longer distorts it (`credit-service.getUsageSinceLastAllocation`, used by
+  `membership.remote.ts` and `users.remote.ts`).
+- Equipment `settleReturn` retries with a fresh balance on an `InsufficientCreditsError`
+  race instead of abandoning the member's remaining credits for full cash (`loan-service.ts`).
+- Loan estimate and settlement share one formula (`loanDailyRateCents` / `loanChargeDays` in
+  `config.ts`); 24h-block day counting kept — estimate vs actual can now differ only by real
+  checkout/return times.
+- `getReservationPricing` computes duration from `buildDateInTz` timestamps (the same
+  arithmetic as booking/settlement), eliminating the DST-day quote/charge divergence.
+- `getStaffReservations` date filters anchor to `America/Los_Angeles` via `buildDateInTz`
+  (was runtime-local `new Date(...)` parsing).
+- Orphan `pending` tickets are swept by `cancelStalePendingTickets` via
+  `POST /api/cron/cancel-stale-tickets` (register with the external scheduler).
+- `commitReservationCredits` records `creditsUsed` (hours) for partially covered
+  reservations too, so staff views report credit usage accurately.
+- `docs/specs/finance-spec.md` updated to match the implementation (D1 integer wallets with
+  CAS/atomic-decrement writes, KV-backed inline pricing, caller-declared credit eligibility,
+  domain event bus, `subscription` snapshot).
+- Orphaned coupons from failed session creation are deleted best-effort; the vestigial
+  `user.trialEndsAt` column was removed (schema + better-auth additional field — requires a
+  drizzle-kit migration).
+
+## Accepted leftovers (by design)
+
+- The ticket capacity check is non-atomic under concurrency — tickets-spec explicitly
+  accepts oversell.
+- A loan's final charge can differ from its estimate when actual checkout/return times
+  differ from the requested dates; the formula itself is now shared.

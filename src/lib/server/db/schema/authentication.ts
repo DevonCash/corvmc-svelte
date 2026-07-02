@@ -74,7 +74,6 @@ export const user = sqliteTable(
 		creditFreeHours: integer('credit_free_hours').notNull().default(0),
 		creditEquipment: integer('credit_equipment').notNull().default(0),
 		subscription: text('subscription', { mode: 'json' }),
-		trialEndsAt: integer('trial_ends_at', { mode: 'timestamp' }),
 		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 
 		// directory profile
