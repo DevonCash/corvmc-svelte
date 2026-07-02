@@ -17,7 +17,6 @@ export const UserSchema = z.object({
 	stripeId: z.string().nullable(),
 	pmType: z.string().nullable(),
 	pmLastFour: z.string().nullable(),
-	trialEndsAt: z.date().nullable(),
 	deletedAt: z.date().nullable(),
 	createdAt: z.date(),
 	updatedAt: z.date()

@@ -6,6 +6,7 @@ const env = { ORIGIN: 'https://corvmc.test', CRON_SECRET: 'test-secret' };
 
 const ALL_ENDPOINTS = [
 	'/api/cron/auto-complete',
+	'/api/cron/cancel-stale-tickets',
 	'/api/cron/cancel-unconfirmed',
 	'/api/cron/expire-waitlisted',
 	'/api/cron/confirmation-reminders',
@@ -32,7 +33,8 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/generate-recurring-reservations',
 			'/api/cron/lock-access',
 			'/api/cron/confirmation-reminders',
-			'/api/cron/reservation-reminders'
+			'/api/cron/reservation-reminders',
+			'/api/cron/cancel-stale-tickets'
 		]);
 	});
 });
@@ -70,7 +72,7 @@ describe('runScheduledJobs', () => {
 
 		await runScheduledJobs('0 16 * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(4);
+		expect(fetcher).toHaveBeenCalledTimes(CRON_SCHEDULE['0 16 * * *'].length);
 		expect(maxInFlight).toBe(1);
 	});
 

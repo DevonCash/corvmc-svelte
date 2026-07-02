@@ -14,7 +14,7 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { and, eq, sql } from 'drizzle-orm';
 import * as creditService from '$lib/server/finance/credit-service';
-import { creditValueCents, hoursToCredits } from '$lib/config';
+import { creditValueCents, creditsToHours, hoursToCredits } from '$lib/config';
 
 export interface ReservationCreditResult {
 	/** Free-hour credit units applied to this reservation (committed or already-committed). */
@@ -117,7 +117,14 @@ export async function commitReservationCredits(params: {
 
 	await db
 		.update(reservation)
-		.set({ cashDueCents: remainingCents, updatedAt: new Date() })
+		.set({
+			cashDueCents: remainingCents,
+			// Record applied credits (in hours) for partial coverage too — the
+			// fully-covered settle path writes the same value, but without this a
+			// partially covered reservation under-reports credit usage in staff views.
+			creditsUsed: creditUnits > 0 ? creditsToHours(creditUnits) : null,
+			updatedAt: new Date()
+		})
 		.where(eq(reservation.id, reservationId));
 
 	return { creditUnits, creditDiscountCents, remainingCents, alreadyCommitted: false };

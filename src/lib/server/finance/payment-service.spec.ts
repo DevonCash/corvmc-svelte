@@ -31,7 +31,8 @@ const mockStripe = {
 		retrieve: vi.fn()
 	},
 	coupons: {
-		create: vi.fn()
+		create: vi.fn(),
+		del: vi.fn()
 	},
 	checkout: {
 		sessions: {
@@ -404,6 +405,64 @@ describe('checkout', () => {
 			undefined,
 			expect.any(String)
 		);
+		// And the orphaned coupon is cleaned up (best-effort).
+		expect(mockStripe.coupons.del).toHaveBeenCalledWith('coup_1');
+	});
+
+	it('applies whole credit units only, never burning a unit for a partial discount', async () => {
+		// Cart 500¢, unit value 1000¢: flooring applies 0 units — the member
+		// pays cash and keeps the credit instead of losing 1000¢ of value for
+		// a 500¢ discount.
+		mockCreditService.getBalance.mockResolvedValue(3);
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_small'
+		});
+
+		const result = await checkout({
+			...baseOptions,
+			lineItems: [
+				{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 500 }, quantity: 1 }
+			],
+			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+		});
+
+		expect(result.paid).toBe(false);
+		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
+		expect(mockStripe.coupons.create).not.toHaveBeenCalled();
+	});
+
+	it('skips the fee-coverage line for sub-$1 remainders', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_tiny'
+		});
+
+		await checkout({
+			...baseOptions,
+			lineItems: [
+				{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 99 }, quantity: 1 }
+			],
+			coverFees: true
+		});
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.line_items).toHaveLength(1);
+	});
+
+	it('adds the fee-coverage line at $1 and above', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			url: 'https://checkout.stripe.com/sess_fee'
+		});
+
+		await checkout({
+			...baseOptions,
+			lineItems: [
+				{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 100 }, quantity: 1 }
+			],
+			coverFees: true
+		});
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.line_items).toHaveLength(2);
 	});
 
 	it('rejects subscription mode with eligible credits (deduction would never discount)', async () => {

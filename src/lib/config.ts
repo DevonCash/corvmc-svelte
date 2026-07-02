@@ -78,17 +78,29 @@ export function withinConfirmationWindow(startsAt: Date, now: Date = new Date())
 export const DAILY_RATE_MAJOR = 500;
 export const DAILY_RATE_ACCESSORY = 100;
 
+/** Daily loan rate in cents; accessories are free for sustaining members. */
+export function loanDailyRateCents(pricingTier: PricingTier, isSustainingMember: boolean): number {
+	if (pricingTier === 'accessory' && isSustainingMember) return 0;
+	return pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
+}
+
+/** Chargeable loan days: started 24-hour blocks from pickup, minimum one day. */
+export function loanChargeDays(from: Date, to: Date): number {
+	return Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+// Single formula shared with settlement (loan-service calculateLoanCharge) so
+// the quoted estimate and the final charge can only differ by actual
+// checkout/return times, never by a different rate or rounding rule.
 export function estimateLoanCost(
 	pickupDate: Date,
 	returnDate: Date,
 	pricingTier: PricingTier,
 	isSustainingMember: boolean
 ): number {
-	if (pricingTier === 'accessory' && isSustainingMember) return 0;
-	const dailyRate = pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
-	const ms = returnDate.getTime() - pickupDate.getTime();
-	const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-	return dailyRate * days;
+	return (
+		loanDailyRateCents(pricingTier, isSustainingMember) * loanChargeDays(pickupDate, returnDate)
+	);
 }
 
 // ---------------------------------------------------------------------------

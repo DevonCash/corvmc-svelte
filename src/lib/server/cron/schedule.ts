@@ -22,7 +22,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/generate-recurring-reservations',
 		'/api/cron/lock-access',
 		'/api/cron/confirmation-reminders',
-		'/api/cron/reservation-reminders'
+		'/api/cron/reservation-reminders',
+		'/api/cron/cancel-stale-tickets'
 	]
 };
 

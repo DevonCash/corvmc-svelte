@@ -19,6 +19,7 @@ import {
 	and,
 	lt,
 	gt,
+	gte,
 	lte,
 	inArray,
 	notInArray,
@@ -452,13 +453,16 @@ export const getReservationPricing = query(
 		// create flow, which has no reservation yet and keys to the acting user.
 		reservationId: z.string().optional()
 	}),
-	async ({ startTime, endTime, reservationId }) => {
+	async ({ date, startTime, endTime, reservationId }) => {
 		const { locals } = getRequestEvent();
 		const config = await getReservationConfig();
 
-		const [sh, sm] = startTime.split(':').map(Number);
-		const [eh, em] = endTime.split(':').map(Number);
-		const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+		// Duration from real timestamps — the same arithmetic booking and
+		// settlement use — so the quote can't diverge from the charge on a
+		// DST-transition day (wall-clock minute subtraction would).
+		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
+		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
+		const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 
 		const hourlyRateCents = config.hourlyRateCents;
 		const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -693,11 +697,18 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		if (valid.length > 0) conditions.push(inArray(reservation.status, valid));
 	}
 
+	// Day bounds anchored to the app timezone (a bare `new Date(...)` parses in
+	// the runtime zone — UTC on Workers — shifting the window vs the LA-anchored
+	// data). Same pattern as credit-service listTransactions.
 	if (filters.dateFrom) {
-		conditions.push(gt(reservation.startsAt, new Date(filters.dateFrom + 'T00:00:00')));
+		conditions.push(
+			gte(reservation.startsAt, buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE))
+		);
 	}
 	if (filters.dateTo) {
-		conditions.push(lt(reservation.startsAt, new Date(filters.dateTo + 'T23:59:59')));
+		conditions.push(
+			lte(reservation.startsAt, buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE))
+		);
 	}
 
 	if (filters.search) {
