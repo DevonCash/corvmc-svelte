@@ -56,6 +56,10 @@
 
 <PageHeader title="Payments" />
 <PageContent>
+	<p class="text-sm text-base-content/60 mb-4">
+		Cash and credit-settled payments only — card payments (tickets, online reservation payments) are
+		recorded in the Stripe dashboard.
+	</p>
 	<div class="flex flex-wrap items-end gap-2 mb-4">
 		<input
 			type="text"

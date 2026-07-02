@@ -246,6 +246,14 @@ export async function checkRebookNeeded(
 	};
 }
 
+/** A stored ticket price is either null (no price) or a positive whole-cent integer. */
+function assertValidTicketPrice(price: number | null | undefined): void {
+	if (price == null) return;
+	if (!Number.isInteger(price) || price <= 0) {
+		throw new Error('Ticket price must be a positive amount');
+	}
+}
+
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
@@ -263,7 +271,8 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.ticketingEnabled !== undefined) {
 		updates.ticketingEnabled = params.ticketingEnabled;
 		if (params.ticketingEnabled) {
-			if (params.ticketPrice == null || params.ticketPrice <= 0) {
+			assertValidTicketPrice(params.ticketPrice);
+			if (params.ticketPrice == null) {
 				throw new Error('Ticket price is required when ticketing is enabled');
 			}
 			updates.ticketPrice = params.ticketPrice;
@@ -273,7 +282,12 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			updates.ticketQuantity = null;
 		}
 	} else {
-		if (params.ticketPrice !== undefined) updates.ticketPrice = params.ticketPrice;
+		// Same price rules apply when the price is edited without toggling
+		// ticketing — otherwise a zero/negative/NaN price slips through here.
+		if (params.ticketPrice !== undefined) {
+			assertValidTicketPrice(params.ticketPrice);
+			updates.ticketPrice = params.ticketPrice;
+		}
 		if (params.ticketQuantity !== undefined) updates.ticketQuantity = params.ticketQuantity;
 	}
 
@@ -402,19 +416,27 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 		await deleteObject(existing.posterKey);
 	}
 
+	// Capture ticket holders before voiding their tickets (the query below
+	// filters on live statuses), then mark the tickets cancelled so they can't
+	// be checked in against a cancelled event. Checked-in tickets are left as-is.
+	const tickets = await db
+		.select({
+			attendeeName: ticket.attendeeName,
+			attendeeEmail: ticket.attendeeEmail,
+			userId: ticket.userId
+		})
+		.from(ticket)
+		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'pending'])))
+		.limit(5000);
+
+	await db
+		.update(ticket)
+		.set({ status: 'cancelled', updatedAt: new Date() })
+		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'pending'])));
+
 	// Emit domain event for ticket holder notifications (fire-and-forget)
 	Promise.resolve().then(async () => {
 		try {
-			const tickets = await db
-				.select({
-					attendeeName: ticket.attendeeName,
-					attendeeEmail: ticket.attendeeEmail,
-					userId: ticket.userId
-				})
-				.from(ticket)
-				.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'pending'])))
-				.limit(5000);
-
 			// Deduplicate by email (one notification per buyer)
 			const seen = new Set<string>();
 			const holders = tickets.filter((t) => {
@@ -433,7 +455,10 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 						attendeeEmail: h.attendeeEmail,
 						userId: h.userId ?? undefined
 					})),
-					refundNote: 'Refunds will be processed automatically. Please allow a few business days.'
+					// Refunds are handled manually by staff — do not promise automatic
+					// processing (no auto-refund flow exists; see tickets-spec deferred).
+					refundNote:
+						'If you purchased tickets, CMC staff will reach out about your refund. Questions? Reply to this email.'
 				});
 			}
 		} catch (err) {

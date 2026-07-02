@@ -11,6 +11,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { creditTransaction } from '$lib/server/db/schema/finance';
+import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { and, eq, sql } from 'drizzle-orm';
 import * as creditService from '$lib/server/finance/credit-service';
 import { creditValueCents, hoursToCredits } from '$lib/config';
@@ -126,6 +127,13 @@ export async function commitReservationCredits(params: {
  * Reverse the free-hour credits committed to a reservation, exactly once.
  * No-op when nothing was committed (e.g. comped reservations, or legacy
  * reservations whose credits live under a Stripe payment record instead).
+ *
+ * The reversal is capped so the resulting balance never exceeds the member's
+ * current monthly allocation (`subscription.hoursPerReset`, in credits). Free
+ * hours have no rollover: the monthly `invoice.paid` reset overwrites the
+ * balance, so an uncapped reversal after a reset would mint credits on top of
+ * a full allocation (confirm → reset → cancel). Non-subscribers reverse to 0 —
+ * their wallet was already reset by `subscription.deleted`.
  */
 export async function reverseReservationCredits(
 	userId: string,
@@ -135,14 +143,25 @@ export async function reverseReservationCredits(
 	if (await creditService.hasTransaction('cancelled', reservationId, 'free_hours')) return;
 
 	const units = await sumCommittedUnits(reservationId);
-	if (units > 0) {
+	if (units <= 0) return;
+
+	const [row] = await db
+		.select({ subscription: user.subscription })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	const allocation = (row?.subscription as Subscription | null)?.hoursPerReset ?? 0;
+	const balance = await creditService.getBalance(userId, 'free_hours');
+	const unitsToAdd = Math.min(units, Math.max(0, allocation - balance));
+
+	if (unitsToAdd > 0) {
 		await creditService.addCredits(
 			userId,
 			'free_hours',
-			units,
+			unitsToAdd,
 			'cancelled',
 			reservationId,
-			`Reversed ${units} free_hours from cancelled reservation`
+			`Reversed ${unitsToAdd} free_hours from cancelled reservation`
 		);
 	}
 }

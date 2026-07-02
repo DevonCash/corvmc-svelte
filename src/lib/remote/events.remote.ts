@@ -43,10 +43,7 @@ import {
 	getUserRsvp,
 	countRsvps
 } from '$lib/server/event/rsvp-service';
-import {
-	getSubscription,
-	isSustainingMember as checkSustainingMember
-} from '$lib/server/finance/subscription-service';
+import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -255,11 +252,8 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 
 	const remaining = await getTicketsRemaining(id);
 
-	let isSustainingMember = false;
-	if (locals.user?.stripeId) {
-		const sub = await getSubscription(locals.user.stripeId);
-		isSustainingMember = sub !== null;
-	}
+	// DB snapshot is the single membership source (matches the purchase path).
+	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
 
@@ -863,12 +857,12 @@ export const purchaseTickets = form(
 			status: 'pending'
 		});
 
+		// Member discount keyed off the DB subscription snapshot — the same source
+		// every other flow uses (a live Stripe read can disagree after webhook lag
+		// or past_due, showing one price and charging another).
 		let unitPrice = evt.ticketPrice;
-		if (locals.user?.stripeId) {
-			const sub = await getSubscription(locals.user.stripeId);
-			if (sub) {
-				unitPrice = Math.round(unitPrice / 2);
-			}
+		if (locals.user && (await checkSustainingMember(locals.user.id))) {
+			unitPrice = Math.round(unitPrice / 2);
 		}
 
 		const lineItem = await buildLineItem('ticket', unitPrice, data.quantity);

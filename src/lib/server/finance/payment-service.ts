@@ -113,6 +113,12 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	if (mode === 'subscription' && !stripeCustomerId) {
 		throw new Error('Subscription checkouts require a Stripe customer');
 	}
+	// Credit coupons are only wired for one-time payments (see step 5). In
+	// subscription mode the deduction would happen but the discount never
+	// applied — the member's credits would silently vanish.
+	if (mode === 'subscription' && eligibleCredits.length > 0) {
+		throw new Error('Credit discounts are not supported on subscription checkouts');
+	}
 
 	// 1. Calculate cart total by resolving each line item's amount.
 	const cartTotalCents = await resolveCartTotal(lineItems);
@@ -267,25 +273,39 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		sessionParams.customer_email = customerEmail;
 	}
 
-	// Apply coupon for credit discount (one-time payments only — subscriptions
-	// handle credits differently since coupons interact with recurring billing)
-	if (creditsAppliedCents > 0 && mode === 'payment') {
-		const coupon = await stripe.coupons.create({
-			amount_off: creditsAppliedCents,
-			currency: 'usd',
-			max_redemptions: 1,
-			name: 'Credit discount'
-		});
-		sessionParams.discounts = [{ coupon: coupon.id }];
+	// Credits were already deducted (step 3); if the coupon or session creation
+	// fails they must be returned, or an aborted checkout silently burns them.
+	try {
+		// Apply coupon for credit discount (one-time payments only — subscription
+		// mode with credits is rejected up front)
+		if (creditsAppliedCents > 0 && mode === 'payment') {
+			const coupon = await stripe.coupons.create({
+				amount_off: creditsAppliedCents,
+				currency: 'usd',
+				max_redemptions: 1,
+				name: 'Credit discount'
+			});
+			sessionParams.discounts = [{ coupon: coupon.id }];
+		}
+
+		const session = await stripe.checkout.sessions.create(sessionParams as any);
+
+		if (!session.url) {
+			throw new Error('Stripe did not return a checkout URL');
+		}
+
+		return { paid: false, checkoutUrl: session.url };
+	} catch (err) {
+		if (userId) {
+			await reverseDeductions(
+				userId,
+				completedDeductions,
+				metadata.checkout_ref,
+				'checkout_failed'
+			);
+		}
+		throw err;
 	}
-
-	const session = await stripe.checkout.sessions.create(sessionParams as any);
-
-	if (!session.url) {
-		throw new Error('Stripe did not return a checkout URL');
-	}
-
-	return { paid: false, checkoutUrl: session.url };
 }
 
 // ---------------------------------------------------------------------------
@@ -454,6 +474,10 @@ export async function cancel(options: CancelOptions): Promise<void> {
 	if (!stripeCheckoutSessionId) return;
 
 	const session = await stripe.checkout.sessions.retrieve(stripeCheckoutSessionId);
+
+	// A completed session was paid — its credits were spent, not abandoned.
+	// Reversing here would hand them back on top of the delivered purchase.
+	if (session.status === 'complete') return;
 
 	if (userId) {
 		const deductions = parseBreakdown(session.metadata);

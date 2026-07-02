@@ -1,6 +1,6 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, or, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
+import { eq, ne, and, or, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
@@ -106,6 +106,26 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 			notes: notes ?? null
 		})
 		.returning();
+
+	// Post-insert re-check narrows the check-then-insert race: two concurrent
+	// bookings can both pass the check above, but at least one of them sees the
+	// other here and backs out (compensating delete — no transactions on D1).
+	const raced = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				ne(reservation.id, row.id),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
+				lt(reservation.startsAt, endsAt),
+				gt(reservation.endsAt, startsAt)
+			)
+		);
+
+	if (raced.length > 0) {
+		await db.delete(reservation).where(eq(reservation.id, row.id));
+		throw new ReservationConflictError();
+	}
 
 	return row;
 }
@@ -218,6 +238,11 @@ export async function cancel(
 		.set({
 			status: 'cancelled',
 			cancellationReason: reason ?? null,
+			// Clear the credit-commit marker: credits are reversed below, so a stale
+			// cashDueCents/creditsUsed must not survive into any later path
+			// (commitReservationCredits treats non-null cashDueCents as committed).
+			cashDueCents: null,
+			creditsUsed: null,
 			updatedAt: new Date()
 		})
 		.where(and(eq(reservation.id, reservationId), inArray(reservation.status, cancellable)));
@@ -233,7 +258,9 @@ export async function cancel(
 	// nothing applies.
 	if (row.stripePaymentRecordId) {
 		await refund({
-			userId,
+			// Owner, not the canceller: any checkout credits_breakdown reversal must
+			// credit the member who paid (the canceller may be staff or the cron).
+			userId: row.createdByUserId,
 			stripePaymentRecordId: row.stripePaymentRecordId
 		});
 		await db

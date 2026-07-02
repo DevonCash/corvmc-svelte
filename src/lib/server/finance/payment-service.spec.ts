@@ -377,24 +377,46 @@ describe('checkout', () => {
 		);
 	});
 
-	it('does not create coupon for subscription mode credits', async () => {
-		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
-		mockCreditService.getBalance.mockResolvedValue(1);
+	it('reverses deductions when session creation fails', async () => {
+		mockCreditService.getBalance.mockResolvedValue(1); // free_hours
 		mockCreditService.deductCredits.mockResolvedValue(0);
-		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_sub'
-		});
+		mockCreditService.addCredits.mockResolvedValue(1);
+		mockStripe.coupons.create.mockResolvedValue({ id: 'coup_1' });
+		mockStripe.checkout.sessions.create.mockRejectedValue(new Error('Stripe unavailable'));
 
-		await checkout({
-			...baseOptions,
-			mode: 'subscription',
-			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
-		});
+		await expect(
+			checkout({
+				...baseOptions,
+				lineItems: [
+					{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 5000 }, quantity: 1 }
+				],
+				eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+			})
+		).rejects.toThrow('Stripe unavailable');
 
-		expect(mockStripe.coupons.create).not.toHaveBeenCalled();
-		expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
-			expect.not.objectContaining({ discounts: expect.anything() })
+		// The already-deducted credits must come back — otherwise an aborted
+		// checkout silently burns them.
+		expect(mockCreditService.addCredits).toHaveBeenCalledWith(
+			'user-1',
+			'free_hours',
+			1,
+			'checkout_failed',
+			undefined,
+			expect.any(String)
 		);
+	});
+
+	it('rejects subscription mode with eligible credits (deduction would never discount)', async () => {
+		await expect(
+			checkout({
+				...baseOptions,
+				mode: 'subscription',
+				eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+			})
+		).rejects.toThrow('Credit discounts are not supported on subscription checkouts');
+
+		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
+		expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
 	});
 });
 
@@ -645,6 +667,20 @@ describe('cancel', () => {
 		});
 
 		expect(mockStripe.checkout.sessions.retrieve).not.toHaveBeenCalled();
+		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+
+	it('does not reverse credits when the session completed (it was paid, not abandoned)', async () => {
+		mockStripe.checkout.sessions.retrieve.mockResolvedValue({
+			status: 'complete',
+			metadata: {
+				credits_applied_cents: '2000',
+				credits_breakdown: JSON.stringify([{ type: 'free_hours', units: 2, cents: 2000 }])
+			}
+		});
+
+		await cancel({ userId: 'user-1', stripeCheckoutSessionId: 'cs_done' });
+
 		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
 	});
 

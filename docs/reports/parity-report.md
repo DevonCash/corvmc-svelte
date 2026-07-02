@@ -124,7 +124,7 @@ Of 43 notification classes in the Laravel app, only ~13 were actually wired and 
 **Previously unbuilt but clearly needed (now built):**
 
 - ✅ Ticket purchase confirmation — emitted from checkout listener after fulfillment, email to buyer
-- ✅ Event cancellation to ticket holders — emitted from event-service.cancel(), email + in-app per holder
+- ✅ Event cancellation to ticket holders — emitted from event-service.cancel(), email + in-app per holder; live (pending/valid) tickets are voided on cancel, refunds handled manually by staff
 - Event reschedule to ticket holders — not yet wired (needs event update detection)
 
 **Never wired and probably not needed:**
