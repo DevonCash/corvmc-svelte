@@ -108,6 +108,11 @@ vi.mock('$lib/server/reservation/conflict-service', () => ({
 	hasConflict: vi.fn().mockResolvedValue(false)
 }));
 
+const mockEmit = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/events/event-bus', () => ({
+	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
+}));
+
 vi.mock('$lib/server/storage', () => ({
 	uploadFile: vi.fn().mockResolvedValue('events/posters/evt-1.jpg'),
 	deleteObject: vi.fn().mockResolvedValue(undefined)
@@ -376,6 +381,31 @@ describe('EventService', () => {
 			// Should not throw — error from cancelReservation is caught
 			await expect(cancel('evt-1', 'staff-1')).resolves.toBeUndefined();
 		});
+
+		it('voids live tickets and notifies holders without promising automatic refunds', async () => {
+			const holder = { attendeeName: 'Ana', attendeeEmail: 'ana@example.com', userId: 'u-1' };
+			selectResultQueue = [
+				[{ ...mockEventRow, status: 'published' }], // getById
+				[holder] // ticket holders (valid/pending)
+			];
+
+			await cancel('evt-1', 'staff-1');
+
+			// The last update is the ticket sweep: valid/pending → cancelled.
+			expect(lastUpdateSet?.status).toBe('cancelled');
+
+			// Flush the fire-and-forget notification.
+			await new Promise((resolve) => setTimeout(resolve, 0));
+
+			expect(mockEmit).toHaveBeenCalledWith(
+				'event.cancelled',
+				expect.objectContaining({
+					eventId: 'evt-1',
+					ticketHolders: [{ attendeeName: 'Ana', attendeeEmail: 'ana@example.com', userId: 'u-1' }],
+					refundNote: expect.not.stringContaining('automatically')
+				})
+			);
+		});
 	});
 
 	// -----------------------------------------------------------------------
@@ -624,7 +654,20 @@ describe('EventService', () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 0 })).rejects.toThrow(
-				'Ticket price is required'
+				'Ticket price must be a positive amount'
+			);
+		});
+
+		it('throws when editing the price to a non-positive value without toggling ticketing', async () => {
+			selectResult = [
+				{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 1500 }
+			];
+
+			await expect(update('evt-1', { ticketPrice: -100 })).rejects.toThrow(
+				'Ticket price must be a positive amount'
+			);
+			await expect(update('evt-1', { ticketPrice: NaN })).rejects.toThrow(
+				'Ticket price must be a positive amount'
 			);
 		});
 

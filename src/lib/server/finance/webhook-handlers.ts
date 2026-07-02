@@ -8,6 +8,7 @@ import { cancelAllForUser } from '$lib/server/reservation/recurring-series-servi
 import { buildMemberSubscriptionState } from './subscription-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
+import { getStripeProductId } from './product-config-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import type { Subscription } from '$lib/server/db/schema/authentication';
 
@@ -69,7 +70,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		return;
 	}
 
-	const contributionLine = findContributionLine(invoice);
+	const contributionLine = await findContributionLine(invoice);
 	if (!contributionLine) {
 		console.warn(`invoice.paid: no contribution line item found for invoice ${invoice.id}`);
 		return;
@@ -89,13 +90,9 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 		: new Date(Date.now() + 30 * 86400_000).toISOString();
 
 	// A fee-coverage line is a second subscription line item alongside the
-	// contribution line. Renewals don't cancel, so preserve cancelAtPeriodEnd.
-	const coveringFees = (invoice.lines?.data ?? []).some(
-		(line) =>
-			line !== contributionLine &&
-			line.parent?.subscription_item_details != null &&
-			(line.quantity ?? 0) > 0
-	);
+	// contribution line (prorations excluded — they aren't fee lines). Renewals
+	// don't cancel, so preserve cancelAtPeriodEnd.
+	const coveringFees = contributionCandidates(invoice).some((line) => line !== contributionLine);
 
 	const existingSub = existing?.subscription as Subscription | null;
 	const subscription: Subscription = {
@@ -198,18 +195,59 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 // Credit allocation from an invoice (shared by webhook + subscription sync)
 // ---------------------------------------------------------------------------
 
+/** Product id on an invoice line (v22: `pricing.price_details.product`). */
+function lineProductId(line: Stripe.InvoiceLineItem): string | undefined {
+	return line.pricing?.price_details?.product ?? undefined;
+}
+
+/** Whether an invoice line is a proration adjustment (quantity/plan changes). */
+function isProrationLine(line: Stripe.InvoiceLineItem): boolean {
+	return line.parent?.subscription_item_details?.proration === true;
+}
+
 /**
- * Find the contribution line item on a subscription invoice — the line that has
- * `subscription_item_details` and a positive quantity. Filters out proration
- * adjustments and tax lines. The subscription uses $5/unit pricing where each
- * unit grants one hour of practice time = two credits (30-minute blocks).
+ * Subscription lines that can carry the member's contribution: non-proration
+ * subscription-item lines with a positive quantity. Excludes proration
+ * adjustments (mid-cycle quantity changes) and one-off invoice items.
  */
-function findContributionLine(invoice: Stripe.Invoice): Stripe.InvoiceLineItem | undefined {
-	const lines = invoice.lines?.data ?? [];
-	return lines.find(
+function contributionCandidates(invoice: Stripe.Invoice): Stripe.InvoiceLineItem[] {
+	return (invoice.lines?.data ?? []).filter(
 		(line) =>
-			line.parent?.subscription_item_details != null && line.quantity != null && line.quantity > 0
+			line.parent?.subscription_item_details != null &&
+			line.quantity != null &&
+			line.quantity > 0 &&
+			!isProrationLine(line)
 	);
+}
+
+/**
+ * Find the contribution line item on a subscription invoice. A fee-coverage
+ * subscription also matches the naive "subscription line with quantity > 0"
+ * predicate and Stripe does not guarantee line ordering, so when several
+ * candidates exist the fee line is excluded by product id and the
+ * largest-amount line wins (the fee — ~3% + 30¢ — is always smaller than the
+ * contribution it covers). Mirrors `findContributionItem` in
+ * subscription-service.ts, which fixed the same bug for subscription items.
+ */
+async function findContributionLine(
+	invoice: Stripe.Invoice
+): Promise<Stripe.InvoiceLineItem | undefined> {
+	const candidates = contributionCandidates(invoice);
+	if (candidates.length <= 1) return candidates[0];
+
+	let feeProductId: string | undefined;
+	try {
+		feeProductId = await getStripeProductId('fee_coverage');
+	} catch {
+		// Fee product unresolvable (KV/Stripe hiccup) — the largest-amount
+		// fallback below still picks the contribution over the smaller fee line.
+	}
+
+	const nonFee = candidates.filter(
+		(line) => feeProductId == null || lineProductId(line) !== feeProductId
+	);
+	const pool = nonFee.length > 0 ? nonFee : candidates;
+	return pool.reduce((best, line) => ((line.amount ?? 0) > (best.amount ?? 0) ? line : best));
 }
 
 /**
@@ -235,7 +273,7 @@ export async function allocateCreditsFromInvoice(
 	invoice: Stripe.Invoice,
 	opts: { dryRun?: boolean } = {}
 ): Promise<{ reconciled: boolean }> {
-	const contributionLine = findContributionLine(invoice);
+	const contributionLine = await findContributionLine(invoice);
 	if (!contributionLine || !invoice.id) return { reconciled: false };
 
 	// Whether this invoice has already been allocated. Checked before writing so

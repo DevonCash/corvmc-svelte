@@ -973,6 +973,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 		console.error('[reservation] $0 credit settlement record failed (settling anyway):', err);
 	}
 
+	// Guarded by status so a cancelled/completed/no_show row can never be
+	// flipped back to confirmed by a late or repeated settle call.
 	await db
 		.update(reservation)
 		.set({
@@ -985,7 +987,12 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
-		.where(eq(reservation.id, opts.reservationId));
+		.where(
+			and(
+				eq(reservation.id, opts.reservationId),
+				inArray(reservation.status, ['scheduled', 'confirmed'])
+			)
+		);
 
 	return { remainingCents: 0, settled: true };
 }
@@ -1480,6 +1487,12 @@ export const confirmReservation = form(z.object({ id: z.string() }), async (data
 	const staff = await isStaff(currentUser.id);
 	if (!isOwner && !staff) throw error(403, 'Not authorized');
 
+	// Only live reservations can be confirmed. Without this, a cancelled
+	// reservation (credits already reversed, cashDueCents possibly 0) would be
+	// resurrected to confirmed for free by the settle path below.
+	if (row.status !== 'scheduled' && row.status !== 'confirmed')
+		throw error(400, 'Not eligible for confirmation');
+
 	// Members may only confirm (without a Stripe charge) within the window; staff
 	// override anytime.
 	if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
@@ -1679,6 +1692,30 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, data.id));
+
+	// Post-update re-check narrows the check-then-write race (no transactions on
+	// D1): if a competing booking landed between the check above and our update,
+	// back out to waitlisted rather than leave a double-booked slot.
+	const raced = await db
+		.select({ id: reservation.id })
+		.from(reservation)
+		.where(
+			and(
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
+				lt(reservation.startsAt, row.endsAt),
+				gt(reservation.endsAt, row.startsAt),
+				ne(reservation.id, data.id)
+			)
+		)
+		.limit(1);
+
+	if (raced.length > 0) {
+		await db
+			.update(reservation)
+			.set({ status: 'waitlisted', updatedAt: new Date() })
+			.where(eq(reservation.id, data.id));
+		throw error(409, 'Slot is no longer available');
+	}
 
 	return { success: true };
 });

@@ -189,6 +189,12 @@ function setupUpdate() {
 // Tests
 // ---------------------------------------------------------------------------
 
+// Import once at module scope (mocks above are hoisted by vi.mock). Importing
+// inside each test made the first test pay the cold module-graph load within
+// its 5s budget — on a loaded CI runner that times out, and the timed-out
+// test's still-pending run then drains the next test's select queue.
+const { generateRecurringReservations, generateRecurringEvents } = await import('./generation-job');
+
 describe('generateRecurringReservations', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -204,7 +210,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result).toEqual({
@@ -230,7 +235,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.seriesProcessed).toBe(1);
@@ -262,7 +266,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.instancesCreated).toBe(0);
@@ -282,7 +285,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.instancesCreated).toBe(0);
@@ -314,7 +316,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.instancesCreated).toBe(0);
@@ -350,7 +351,6 @@ describe('generateRecurringReservations', () => {
 		// series-2 gets one occurrence
 		mockGetOccurrences.mockReturnValueOnce([OCC2]); // called only for series-2
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.seriesProcessed).toBe(1);
@@ -380,7 +380,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.seriesProcessed).toBe(1);
@@ -421,7 +420,6 @@ describe('generateRecurringReservations', () => {
 		setupInsert();
 		// getOccurrences should not be called; no need to configure it
 
-		const { generateRecurringReservations } = await import('./generation-job');
 		const result = await generateRecurringReservations();
 
 		expect(result.seriesProcessed).toBe(0);
@@ -491,7 +489,6 @@ describe('generateRecurringEvents', () => {
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringEvents } = await import('./generation-job');
 		const result = await generateRecurringEvents();
 
 		expect(result.seriesProcessed).toBe(1);
@@ -536,7 +533,6 @@ describe('generateRecurringEvents', () => {
 		mockGetOccurrences.mockReturnValue([OCC1]);
 		mockHasConflict.mockResolvedValue(true);
 
-		const { generateRecurringEvents } = await import('./generation-job');
 		const result = await generateRecurringEvents();
 
 		expect(result.instancesCreated).toBe(1); // event still created
@@ -567,7 +563,6 @@ describe('generateRecurringEvents', () => {
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringEvents } = await import('./generation-job');
 		const result = await generateRecurringEvents();
 
 		expect(result.instancesCreated).toBe(0);
@@ -588,7 +583,6 @@ describe('generateRecurringEvents', () => {
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
 
-		const { generateRecurringEvents } = await import('./generation-job');
 		const result = await generateRecurringEvents();
 
 		expect(result.instancesCreated).toBe(1);
@@ -609,7 +603,6 @@ describe('generateRecurringEvents', () => {
 		mockGetOccurrences.mockReturnValue([OCC1]);
 		mockCopyObject.mockResolvedValue('events/posters/copied.webp');
 
-		const { generateRecurringEvents } = await import('./generation-job');
 		await generateRecurringEvents();
 
 		// Copied from the prototype key to a key under the new event id, preserving ext

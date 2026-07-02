@@ -80,6 +80,13 @@ const amountSchema = z
 
 export const createSubscription = form(amountSchema, async (data) => {
 	const user = await requireMember();
+
+	// Server-side duplicate guard: a stale tab or double submit must not create
+	// a second live Stripe subscription (mirrors the band premium flow).
+	if (await getMemberSubscription(user.id)) {
+		throw error(400, 'You already have an active membership — update your contribution instead.');
+	}
+
 	// A brand-new member legitimately has no Stripe customer yet — create it on
 	// demand (returns the existing id when present) rather than failing.
 	const stripeId = await ensureStripeCustomer(user.id, user.email, user.name);
