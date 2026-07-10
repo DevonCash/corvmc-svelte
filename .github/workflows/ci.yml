@@ -61,8 +61,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test
+      # Browser-based tests (vitest client/storybook projects, playwright e2e)
+      # are run locally only — CI runs just the node server project.
+      - run: pnpm test:ci
 
   docs:
     name: Docs integrity
