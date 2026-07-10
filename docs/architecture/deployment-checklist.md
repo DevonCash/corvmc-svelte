@@ -2,6 +2,10 @@
 
 First-time production deployment for corvmc-svelte — a rewrite of corvmc-redux (Laravel/Postgres) on Cloudflare Workers + D1.
 
+> This checklist covers **first-time provisioning**. For day-to-day operations (routine
+> deploys, migrations, secrets, integration upkeep, cron, monitoring), see the
+> [operations manual](operations-manual.md).
+
 ---
 
 ## Prerequisites
