@@ -98,6 +98,11 @@
 	}
 
 	function handleClickOutside(e: MouseEvent) {
+		// This handler can be invoked by the very click that unmounts the component
+		// (navigation), after its reactive state is torn down — even reading `open`
+		// then throws (JAVASCRIPT-SVELTEKIT-Q, JAVASCRIPT-SVELTEKIT-1A). `destroyed`
+		// is a plain boolean, safe to read at any point in the lifecycle.
+		if (destroyed) return;
 		// Only react when the dropdown is open — avoids a reactive write on every
 		// document click and skips the case where the target is detached/null.
 		if (!open) return;

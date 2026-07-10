@@ -1,16 +1,19 @@
 import * as Sentry from '@sentry/sveltekit';
 
 /**
- * Expected, user-facing failures we don't want cluttering Sentry: 4xx responses
- * (bad input, auth, not-found, conflicts surfaced as HTTP errors). Genuine bugs
- * — 5xx, network failures, and thrown exceptions without an HTTP status — are
- * reported. Client-side form *validation* never reaches here; the `Form`
- * component handles that inline.
+ * Failures we don't want cluttering Sentry: anything carrying an HTTP status.
+ * 4xx are expected user-facing outcomes (bad input, auth, not-found, conflicts);
+ * 5xx are already captured server-side by `handleError` with full request
+ * context — re-capturing the bare `{ status, body }` object here only produced
+ * an unreadable duplicate issue (JAVASCRIPT-SVELTEKIT-D). Genuine client bugs —
+ * network failures and thrown exceptions without an HTTP status — are reported.
+ * Client-side form *validation* never reaches here; the `Form` component
+ * handles that inline.
  */
 function isExpected(err: unknown): boolean {
 	if (!err || typeof err !== 'object') return false;
 	const status = (err as { status?: unknown }).status;
-	return typeof status === 'number' && status >= 400 && status < 500;
+	return typeof status === 'number' && status >= 400;
 }
 
 /**
