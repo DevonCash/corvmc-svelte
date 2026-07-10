@@ -28,6 +28,9 @@ export default defineConfig({
 				extends: './vite.config.ts',
 				test: {
 					name: 'client',
+					// First dynamic import() in a test can exceed 5s while the
+					// server and client projects compete for CPU during transform
+					testTimeout: 20000,
 					browser: {
 						enabled: true,
 						provider: playwright(),
@@ -46,6 +49,9 @@ export default defineConfig({
 				extends: './vite.config.ts',
 				test: {
 					name: 'server',
+					// First dynamic import() in a test can exceed 5s while the
+					// server and client projects compete for CPU during transform
+					testTimeout: 20000,
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
