@@ -3,16 +3,24 @@
 This folder holds all project documentation, grouped by type. Developer docs describe how the
 system is designed and built; the user manual (`manual/`) describes how to use it.
 
-| Folder                           | What's in it                                                          | Audience            |
-| -------------------------------- | --------------------------------------------------------------------- | ------------------- |
-| [`specs/`](#specs)               | Domain & design specs — the source of truth for how a feature behaves | Developers          |
-| [`plans/`](#plans)               | Sequenced implementation plans (PR-by-PR); historical once shipped    | Developers          |
-| [`architecture/`](#architecture) | Infra proposals, migrations, and deployment runbooks                  | DevOps / Developers |
-| [`development/`](#development)   | Contributor guides — UI patterns, component testing                   | Developers          |
-| [`reports/`](#reports)           | Living status reports                                                 | Team / Stakeholders |
-| [`manual/`](#manual)             | End-user manual manifest & public-site articles                       | End users           |
+| Folder                           | What's in it                                                                  | Audience            |
+| -------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
+| [`specs/`](#specs)               | Domain & design specs — the source of truth for how a feature behaves         | Developers          |
+| [`plans/`](#plans)               | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
+| [`architecture/`](#architecture) | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
+| [`development/`](#development)   | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
+| [`reports/`](#reports)           | Living status reports                                                         | Team / Stakeholders |
+| [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
 
 **Status legend:** ✅ Current · 🔧 In progress · 📦 Historical (shipped) · ⚠️ Action needed
+
+**New maintainer? Read in this order:**
+[local-dev-quickstart](development/local-dev-quickstart.md) →
+[architecture overview](architecture/overview.md) →
+[business-workflows](development/business-workflows.md) →
+[conventions](development/conventions.md) →
+[operations-manual](architecture/operations-manual.md) →
+[deployment-checklist](architecture/deployment-checklist.md) (first deploy only).
 
 ---
 
@@ -53,21 +61,26 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## architecture
 
-| Doc                                                                               | Status | Notes                                                   |
-| --------------------------------------------------------------------------------- | ------ | ------------------------------------------------------- |
-| [deployment-checklist.md](architecture/deployment-checklist.md)                   | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron |
-| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                 | ✅     | Postgres → Cloudflare D1 proposal                       |
-| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md) | ✅     | API layer for SSR/SPA + kiosk parity (proposal)         |
-| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)     | ⚠️     | product_config → KV — migration pending user action     |
+| Doc                                                                               | Status | Notes                                                                                                |
+| --------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| [overview.md](architecture/overview.md)                                           | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
+| [operations-manual.md](architecture/operations-manual.md)                         | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
+| [deployment-checklist.md](architecture/deployment-checklist.md)                   | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
+| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                 | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
+| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md) | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
+| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)     | ⚠️     | product_config → KV — migration pending user action                                                  |
 
 ## development
 
-| Doc                                                                          | Status | Notes                                                               |
-| ---------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
-| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition |
-| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                      |
-| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                      |
-| [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug         |
+| Doc                                                                          | Status | Notes                                                                  |
+| ---------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
+| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode       |
+| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes       |
+| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference |
+| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition    |
+| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                         |
+| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                         |
+| [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug            |
 
 ## reports
 

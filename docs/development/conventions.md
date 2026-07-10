@@ -1,0 +1,153 @@
+# Codebase Conventions
+
+The rules this codebase follows — some enforced by tooling, some by discipline. This is the
+human-maintained companion to [ui-patterns.md](ui-patterns.md) (read that before touching
+any page) and the [architecture overview](../architecture/overview.md).
+
+## The feature checklist
+
+When building a new feature, work through these phases in order:
+
+1. **Design** — understand the domain and map the workflows before proposing models. For
+   anything that touches multiple files or introduces schema, write a spec in
+   `docs/specs/` first (the existing specs are good templates).
+2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
+   migration yourself with `pnpm db:generate` and **review the SQL** before committing.
+   Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
+   shapes, enums).
+3. **Services** — server logic in `src/lib/server/<domain>/`. Keep query functions and
+   mutation functions separated. Validate inputs in the service layer with explicit limits
+   (max lengths, max item counts).
+4. **Routes & UI** — build pages using [ui-patterns.md](ui-patterns.md). Data access via
+   remote functions (`query()`/`form()` in `src/lib/remote/`). Add nav links in the
+   relevant layout (member / band / staff).
+5. **Seed data** — extend `scripts/seed-dev.ts` so the feature has realistic local data.
+   Use pools of sample values and randomized assignment for domain-specific fields.
+6. **Tests** — write tests that describe **intended behavior**, not the current
+   implementation. Service-level mocks where direct DB access isn't practical. A failing
+   test that reflects unfinished business logic is acceptable.
+7. **Verify** — `pnpm check` and confirm no new type errors in files you touched
+   (pre-existing errors in unrelated files can be ignored).
+8. **Document** — add the feature row to `docs/reports/parity-report.md`; update/add help
+   articles and run the docs checks (see
+   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below).
+9. **Commit** — descriptive message summarizing what the feature adds. **No co-author
+   lines.**
+
+## Layering rules
+
+```
++page.svelte → src/lib/remote/*.remote.ts → src/lib/server/<domain>/ → db
+```
+
+- Components never import from `$lib/server/` directly; they call remote functions.
+- Every remote function starts with a **guard** (`requireUser`, `requireStaff`,
+  `requireBandMember`, `requireFeature`, ...) and validates its input with a **Zod
+  schema**. A guard in the layout is not a guard on the data — the remote function is the
+  security boundary.
+- Business logic lives in services; remotes are thin (guard + validate + orchestrate).
+- Services throw typed domain errors; remotes map them via `mapDomainError()`
+  (`src/lib/server/errors.ts`).
+- Prefer DTO-shaped return values over passing raw rows to the UI; never return
+  string-indexed grab-bag objects from services.
+- Side effects (emails, notifications, cascades) go through the event bus
+  (`src/lib/server/events/`) and must be idempotent.
+
+## Forms: no raw elements
+
+Every form in a route file uses the shared components from
+`$lib/components/shared/Form/` — `Form`, `FormField`, `SubmitButton` — never raw `<form>`,
+`<input>`, or `<select>` elements, even for small inline forms. Mutations use `form()` from
+`$app/server` in a `.remote.ts` file so `<Form>` wires up validation and dirty tracking
+automatically. Full patterns and component API: [ui-patterns.md](ui-patterns.md).
+
+## Custom ESLint rules
+
+Three project-specific rules live in `eslint-rules/` and are registered once as the
+`custom` plugin in `eslint.config.js` (note the comment there: registering the plugin in
+more than one config object crashes eslint with "Cannot redefine plugin custom").
+
+| Rule                              | Severity / scope                                        | What it flags → what to do instead                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `custom/no-db-transaction`        | **error** on `src/lib/server/**/*.ts` (excluding specs) | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                           |
+| `custom/no-raw-form-elements`     | **warn** on `+page.svelte` files                        | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                         |
+| `custom/no-duplicate-field-names` | **error** on all `*.svelte`                             | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one. |
+
+Other lint posture (see `eslint.config.js`): `no-explicit-any` and
+`svelte/no-navigation-without-resolve` are downgraded to warnings; unused vars error unless
+prefixed with `_`.
+
+## Git hooks
+
+Installed by `pnpm install` (via `prepare` → `lefthook install`), defined in `lefthook.yml`:
+
+- **pre-commit** — prettier `--write` and eslint `--fix` on staged files, auto-restaged.
+  Warn-only: it fixes what it can and never blocks the commit.
+- **pre-push** — `pnpm check || true`: prints type errors as a heads-up but doesn't block.
+
+The blocking gates are in CI, not the hooks.
+
+## Style
+
+- Interfaces/UI: **no gradients**.
+- Match the surrounding code's comment density, naming, and idioms. Comments state
+  constraints the code can't show — this codebase does that well (see
+  `src/lib/server/auth.ts` or `reservation-service.ts` for the house style).
+- Prettier (with the svelte + tailwind plugins) is the formatter; don't hand-format.
+
+## pnpm script reference
+
+Every script in `package.json`:
+
+| Script                          | What it does                                                                                                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev`                           | Vite dev server on :5173                                                                                                                                              |
+| `build`                         | Compile MJML email layout, then `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                      |
+| `preview`                       | Serve the production build on :4173                                                                                                                                   |
+| `prepare`                       | (auto on install) svelte-kit sync + email-layout compile + lefthook install                                                                                           |
+| `check` / `check:watch`         | svelte-check type checking                                                                                                                                            |
+| `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                                                                                             |
+| `test:components`               | One-shot client (browser) + storybook vitest projects                                                                                                                 |
+| `test:e2e`                      | Install Chromium + run Playwright `e2e/**/*.e2e.ts`                                                                                                                   |
+| `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                                                                                        |
+| `test:report`                   | Vitest with JSON output → `test-results.json`                                                                                                                         |
+| `lint`                          | prettier `--check` + eslint over everything                                                                                                                           |
+| `lint:changed`                  | Lint only files changed vs `origin/main` (`scripts/lint-changed.sh`; PR CI uses this)                                                                                 |
+| `format`                        | prettier `--write` everything                                                                                                                                         |
+| `db:generate`                   | drizzle-kit: generate a migration from schema changes                                                                                                                 |
+| `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                                                                                                |
+| `db:migrate:local`              | Replay all migration files into the local D1                                                                                                                          |
+| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                                                                                            |
+| `db:reset`                      | Wipe local D1 + migrate + seed                                                                                                                                        |
+| `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                                    |
+| `db:sync`                       | Pre-cutover: reload remote D1 data from Postgres (destructive — see [operations manual](../architecture/operations-manual.md#6-the-postgres-bridge-pre-cutover-only)) |
+| `ci:migrate`                    | Remote migrate, but only on `main` (used by Cloudflare Workers Builds)                                                                                                |
+| `storybook` / `build-storybook` | Storybook on :6006 / static build                                                                                                                                     |
+| `stripe:sync-webhooks`          | Sync the Stripe webhook endpoint's event list to the code registry                                                                                                    |
+| `help:sync`                     | Upsert `src/content/help/**` articles into the D1 help tables                                                                                                         |
+| `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                                                                                                      |
+| `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                                                                                          |
+| `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                                                                                                 |
+
+## Docs workflow (when you change routes or help content)
+
+Before opening a PR that adds/removes/moves a route or touches help articles:
+
+1. Update or add the help article(s) in `src/content/help/` and the manifest in
+   `docs/manual/README.md`.
+2. `pnpm docs:routes` — regenerate and commit `docs/manual/route-inventory.json`.
+3. `pnpm docs:check` — must pass; CI fails the PR on integrity errors.
+4. New feature shipped? Add its row to `docs/reports/parity-report.md` (checklist phase 8)
+   and index any new doc in `docs/README.md`.
+
+A nightly GitHub Action may also open docs-update PRs automatically (it uses the same
+deterministic detector, then drafts changes with an LLM). Review those PRs like any
+other — the full picture is in the
+[operations manual §7](../architecture/operations-manual.md#7-keeping-the-docs-healthy).
+
+## Dependency posture
+
+Prefer existing libraries and managed services over new bespoke code — the goal is to
+minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
+Cloudflare primitives rather than re-creating vendor features in app code. When adding a
+dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
