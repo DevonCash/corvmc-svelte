@@ -44,6 +44,30 @@ describe('captureException wrapper', () => {
 		});
 	});
 
+	it('forwards an explicit severity level alongside context', async () => {
+		isInitialized.mockReturnValue(true);
+		const { captureException: wrapped } = await import('./sentry');
+		const err = new Error('auth.sign_in: user_not_found');
+
+		wrapped(err, { stage: 'user_not_found' }, 'warning');
+
+		expect(captureException).toHaveBeenCalledWith(err, {
+			extra: { stage: 'user_not_found' },
+			level: 'warning'
+		});
+	});
+
+	it('omits the level key entirely when no level is given', async () => {
+		isInitialized.mockReturnValue(true);
+		const { captureException: wrapped } = await import('./sentry');
+		const err = new Error('boom');
+
+		wrapped(err, { stage: 'x' });
+
+		const hint = captureException.mock.calls[0][1] as Record<string, unknown>;
+		expect('level' in hint).toBe(false);
+	});
+
 	it('does not forward when the client is uninitialized', async () => {
 		isInitialized.mockReturnValue(false);
 		const { captureException: wrapped } = await import('./sentry');

@@ -66,13 +66,26 @@ suspect shape despite #102's seed-once fix:
 - `bind:value` editors (`RichTextEditor`, `FreeformTagInput`,
   `LinkListEditor`) writing into `$state` seeded from that data.
 
-A `refresh()` re-resolving the async `$derived` while an editor writes back is
-the remaining candidate cycle. **Recommended next step (code change, separate
-branch):** pull the replays for the exact interaction sequence
-([replay d38ffcc1](https://corvallis-music-collective.sentry.io/explore/replays/d38ffcc10a714a2ea18f0bedffde7c5c/)),
-reproduce locally, and restructure so editor state never participates in the
-async-derived graph (e.g. snapshot the profile into a plain object once and
-render entirely from `$state`).
+**Root cause (confirmed by local reproduction, 2026-07-27):** the top-level
+`await getMemberProfile()` used to seed the editable `$state` marked every
+later declaration in the instance script as _blocked_, which compiles every
+`bind:value` and `fields.X.as(...)` expression in the template into an async
+derived; combined with the query cache's ref/deref churn this recursed the
+batch processor past the 1000-flush guard. Reproduced deterministically in dev
+on the pre-fix code (crash banner on page load, zero interaction — matching
+the replay evidence of crashes at T+1s) and gone after the fix.
+
+**Fixed in this branch:** the form is extracted into
+[ProfileForm.svelte](src/routes/member/profile/ProfileForm.svelte), which
+receives the resolved profile as a plain prop and keeps its script fully
+synchronous; [+page.svelte](src/routes/member/profile/+page.svelte) is a thin
+shell that awaits the queries. The redundant client-side
+`getMemberProfile().refresh()` after avatar upload is removed, the Form
+dirty-tracking `$effect` is folded into the mutation site
+([Form.svelte](src/lib/components/shared/Form/Form.svelte)), and
+[RichTextEditor.svelte](src/lib/components/shared/Form/RichTextEditor.svelte)
+treats an empty value and Tiptap's empty document as equal content. Verified
+in the browser: load, edit, save, and reload-with-data all clean.
 
 ### 10 — bcrypt migration rejections: different branch than the "fixed" 07-10 issue
 
@@ -91,10 +104,13 @@ Two readings:
    members cannot log in at all.
 
 One event is `hannah@corvmc.org` — a staff address, easy to check directly.
-**Recommended:** ask/verify whether Hannah eventually logged in (a successful
-scrypt login after the event would prove reading 1). If it's reading 1,
-downgrade this capture to `warning` level so real migration faults still
-surface without error-level noise per typo.
+Decidable from data: a successful bcrypt verify rewrites the hash to `scrypt:`
+([auth.ts:237](src/lib/server/auth.ts:237)), so
+`SELECT substr(password,1,7)` for the affected accounts settles it —
+`scrypt:` means they later logged in fine (noise), `$2` means they're stuck
+(real bug). The check was attempted 2026-07-27 but is **blocked on wrangler
+auth** in this environment (`wrangler login` or `CLOUDFLARE_API_TOKEN`
+needed). Capture level left at error until the data says otherwise.
 
 ### 1F — Instagram in-app webview bridge crash (not our code)
 
@@ -106,12 +122,11 @@ in its webview — attributed to `https://corvmc.org/:1` because injected
 scripts inherit the document URL. Nothing in this repo references
 `webkit.messageHandlers`.
 
-**Recommended (code change, separate branch):** add an
-`isWebviewBridgeError` guard alongside `isStaleChunkError` /
-`isNetworkAbortError` in [hooks.client.ts](src/hooks.client.ts:35) — drop
-events whose top frame function is `sendDataToNative`/`sendPageHideMessage` or
-whose message references `window.webkit.messageHandlers` when we never define
-them. Quiet since 07-15; low urgency.
+**Fixed in this branch:** `isWebviewBridgeError` in
+[hooks.client.ts](src/hooks.client.ts) drops events whose message references
+`window.webkit.messageHandlers` or whose crashing frame is a known bridge
+entry point (`sendDataToNative`/`sendPageHideMessage`); regression spec in
+[hooks.client.spec.ts](src/hooks.client.spec.ts).
 
 ## Resolved in Sentry during this pass
 
@@ -129,8 +144,10 @@ them. Quiet since 07-15; low urgency.
   doing exactly its job: the 4 events are people typing addresses that have no
   account (e.g. `kevin@thenettles.com`, `hasCredentialAccount: false`).
   Resolved as working-as-intended; Sentry will auto-reopen on regression-style
-  volume. **Recommended (code change):** capture this anomaly at `warning`
-  level instead of `error` so future occurrences don't page as faults.
+  volume. **Fixed in this branch:** the `user_not_found` anomaly now captures
+  at `warning` level ([auth.ts](src/lib/server/auth.ts) via a new optional
+  `level` param on the [sentry.ts](src/lib/server/sentry.ts) wrapper); the
+  structural anomalies (`no_credential_account`, `no_password`) stay at error.
 
 ## Report-only
 
