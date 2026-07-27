@@ -78,11 +78,15 @@
 	let totalSteps = $state(0);
 	let stepValidity = $state<boolean[]>([]);
 
-	$effect(() => {
-		if (status === 'idle' && changeCount > 0) status = 'dirty';
-	});
-
 	let status = $state<FormStatus>('idle');
+
+	// Mark the form dirty at the mutation site rather than via an $effect that
+	// reads and writes `status` — an effect here re-scheduled on every keystroke
+	// and was one contributor to reactive churn (JAVASCRIPT-SVELTEKIT-W).
+	function markChanged() {
+		changeCount++;
+		if (status === 'idle') status = 'dirty';
+	}
 
 	const ctx = {
 		get status() {
@@ -107,7 +111,7 @@
 			currentStep = 0;
 		},
 		changed() {
-			changeCount++;
+			markChanged();
 		},
 		get currentStep() {
 			return currentStep;
@@ -128,7 +132,7 @@
 		next() {
 			if (currentStep < totalSteps - 1) {
 				currentStep++;
-				changeCount++;
+				markChanged();
 			}
 		},
 		back() {
@@ -225,7 +229,10 @@
 			}
 
 			setTimeout(() => {
-				status = 'idle';
+				// Restore dirty-awareness after the flash: edits made during the
+				// flash (or a failed submit that kept changeCount) must keep the
+				// unsaved-changes guard active.
+				status = changeCount > 0 ? 'dirty' : 'idle';
 			}, flashDuration);
 		})
 	);
@@ -256,7 +263,7 @@
 		}
 
 		setTimeout(() => {
-			status = 'idle';
+			status = changeCount > 0 ? 'dirty' : 'idle';
 		}, flashDuration);
 	}
 </script>

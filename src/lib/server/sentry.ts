@@ -5,11 +5,23 @@
 // always read `false` here and every server capture fell through to
 // `console.error` instead of reaching Sentry.
 import { captureException as sentryCaptureException, isInitialized } from '@sentry/sveltekit';
+import type { SeverityLevel } from '@sentry/sveltekit';
 
-export function captureException(err: unknown, context?: Record<string, unknown>) {
+export function captureException(
+	err: unknown,
+	context?: Record<string, unknown>,
+	level?: SeverityLevel
+) {
 	if (!isInitialized()) {
 		console.error(err);
 		return;
 	}
-	sentryCaptureException(err, context ? { extra: context } : undefined);
+	if (!context && !level) {
+		sentryCaptureException(err);
+		return;
+	}
+	sentryCaptureException(err, {
+		...(context ? { extra: context } : {}),
+		...(level ? { level } : {})
+	});
 }

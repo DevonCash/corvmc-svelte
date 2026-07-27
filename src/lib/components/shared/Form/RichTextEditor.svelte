@@ -54,10 +54,25 @@
 		};
 	});
 
+	// Tiptap renders an empty document as '<p></p>', so a falsy external value
+	// and an empty editor are the same content — without this equivalence the
+	// reconcile effect below fires a spurious setContent on every mount with an
+	// empty value.
+	function sameContent(a: string, b: string): boolean {
+		const norm = (s: string) => (s === '' || s === '<p></p>' ? '' : s);
+		return norm(a) === norm(b);
+	}
+
 	// Reflect external value changes (e.g. async profile load, form reset).
 	$effect(() => {
-		const v = value;
-		if (editor && v !== untrack(() => editor!.getHTML())) {
+		const v = value ?? '';
+		if (
+			editor &&
+			!sameContent(
+				v,
+				untrack(() => editor!.getHTML())
+			)
+		) {
 			editor.commands.setContent(v || '', { emitUpdate: false });
 		}
 	});

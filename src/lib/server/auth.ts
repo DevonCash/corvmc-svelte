@@ -327,15 +327,23 @@ async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
 
 	if (!reason) return;
 
-	captureException(new Error(`auth.sign_in: ${reason}`), {
-		event: 'auth.sign_in',
-		stage: reason,
-		email,
-		emailVerified: userRow?.emailVerified ?? null,
-		hasCredentialAccount: Boolean(acctRow),
-		// prefix only — never log the full hash or the password
-		hashPrefix: acctRow?.password ? acctRow.password.slice(0, 7) : null
-	});
+	captureException(
+		new Error(`auth.sign_in: ${reason}`),
+		{
+			event: 'auth.sign_in',
+			stage: reason,
+			email,
+			emailVerified: userRow?.emailVerified ?? null,
+			hasCredentialAccount: Boolean(acctRow),
+			// prefix only — never log the full hash or the password
+			hashPrefix: acctRow?.password ? acctRow.password.slice(0, 7) : null
+		},
+		// An unknown email is a routine visitor typo, not a fault — keep the
+		// telemetry but don't page at error level (JAVASCRIPT-SVELTEKIT-1E).
+		// The structural anomalies (credential/password missing on a real user)
+		// stay at the default error level.
+		reason === 'user_not_found' ? 'warning' : undefined
+	);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,142 +1,173 @@
-# Sentry Triage — 2026-07-10
+# Sentry Triage — 2026-07-27
 
-All 14 unresolved issues in
+All 9 unresolved issues in
 [corvallis-music-collective/javascript-sveltekit](https://corvallis-music-collective.sentry.io/issues/?project=javascript-sveltekit&query=is%3Aunresolved)
-collected via the Sentry MCP and traced to root cause. Environment: production
-only. Short IDs below link to Sentry; timestamps UTC.
+collected via the Sentry MCP and traced to root cause. Supersedes the
+2026-07-10 pass (see git history of this file); the delta against that
+report's conclusions is called out per issue. Environment: production only.
+Short IDs below link to Sentry; timestamps UTC.
 
 ## Summary
 
-| Sentry issue                                                                      | Title                                            | Events/Users | Last seen                | Classification                            | Action                                                 |
-| --------------------------------------------------------------------------------- | ------------------------------------------------ | ------------ | ------------------------ | ----------------------------------------- | ------------------------------------------------------ |
-| [18](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-18) | Postmark: Template 'Alias' not valid             | 10/5         | **2026-07-10 (ongoing)** | **Active ops bug**                        | Push templates to Postmark (see below)                 |
-| [Q](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-Q)   | NotificationBell: `e is undefined`               | 1/1          | 2026-06-18               | Clear bug                                 | **Fixed** — teardown guard in `handleClickOutside`     |
-| [1A](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1A) | NotificationBell: reading 'f' of undefined       | 1/1          | 2026-06-27               | Clear bug (same root as Q)                | **Fixed** — same guard                                 |
-| [D](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-D)   | "x" — `{status:500, body}` captured as exception | 4/3          | 2026-07-01               | Clear telemetry bug                       | **Fixed** — `report-error.ts` drops HTTP-shaped errors |
-| [1B](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1B) | Cannot book more than 14 days in advance (500)   | 1/1          | 2026-07-01               | Already fixed by #128                     | Resolve in Sentry                                      |
-| [15](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-15) | Balance cannot be negative                       | 7/3          | 2026-06-28               | Already fixed by #130                     | Resolve in Sentry                                      |
-| [11](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-11) | SubtleCryptoProvider in synchronous context      | 3/2          | 2026-06-24               | Already fixed (constructEventAsync)       | Resolve in Sentry                                      |
-| [10](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-10) | bcrypt migration: Laravel returned 404           | 1/1          | 2026-06-22               | Already fixed by #99                      | Resolve in Sentry                                      |
-| [12](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-12) | Expired Stripe API key                           | 1/1          | 2026-06-25               | Transient ops (key rotated)               | Resolve in Sentry                                      |
-| [W](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-W)   | effect_update_depth_exceeded on /member/profile  | 12/4         | 2026-06-25               | Partially fixed (#102); remnant ambiguous | Monitor (quiet 15 days)                                |
-| [19](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-19) | `t.b.error` null on tickets/success              | 2/2          | 2026-06-27               | Ambiguous (Svelte async internals)        | Report-only, see hypothesis                            |
-| [1E](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1E) | auth.sign_in: user_not_found                     | 1/1          | 2026-07-07               | Working as intended (anomaly telemetry)   | Optional: downgrade to warning                         |
-| [1D](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1D) | Blocking Operation (AI-detected perf)            | 1/0          | 2026-07-05               | Perf observation                          | Report-only                                            |
-| [1C](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1C) | Degraded UI Performance (AI-detected perf)       | 1/0          | 2026-07-02               | Perf observation                          | Report-only                                            |
+| Sentry issue                                                                      | Title                                           | Events/Users | Last seen                | Classification                              | Action                                  |
+| --------------------------------------------------------------------------------- | ----------------------------------------------- | ------------ | ------------------------ | ------------------------------------------- | --------------------------------------- |
+| [18](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-18) | Postmark: Template 'Alias' not valid            | 14/6         | **2026-07-26 (ongoing)** | **Active ops bug** (unchanged since 07-10)  | Push templates to Postmark (see below)  |
+| [W](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-W)   | effect_update_depth_exceeded on /member/profile | 17/6         | **2026-07-24**           | **Live client crash** — 07-10 verdict wrong | Fix in code (see below)                 |
+| [10](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-10) | bcrypt migration: Laravel rejected credentials  | 3/3          | 2026-07-25               | New branch, not the fixed 404               | Investigate affected members            |
+| [1F](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1F) | `window.webkit.messageHandlers` undefined       | 3/1          | 2026-07-15               | Third-party (Instagram webview bridge)      | Filter in `beforeSend`                  |
+| [1E](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1E) | auth.sign_in: user_not_found                    | 4/4          | 2026-07-26               | Working as intended (anomaly telemetry)     | **Resolved in Sentry**; downgrade level |
+| [1B](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1B) | Cannot book more than 14 days in advance (500)  | 1/1          | 2026-07-01               | Fixed by #128, quiet since                  | **Resolved in Sentry**                  |
+| [15](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-15) | Balance cannot be negative                      | 7/3          | 2026-06-28               | Fixed by #130, quiet since                  | **Resolved in Sentry**                  |
+| [1D](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1D) | Blocking Operation (AI-detected perf)           | 1/0          | 2026-07-05               | Perf observation                            | Report-only                             |
+| [1C](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1C) | Degraded UI Performance (AI-detected perf)      | 1/0          | 2026-07-02               | Perf observation                            | Report-only                             |
 
-## Active — needs an ops action
+## Active — needs action
 
-### 18 — Postmark rejects the `ticket-confirmation` template alias (ongoing, customer-facing)
+### 18 — Postmark template aliases still missing on the production server (ongoing, customer-facing)
 
-Every ticket purchase since 2026-06-26 has failed to send the confirmation
-email with the ticket codes (10 events, 5 buyers; latest 2026-07-10 02:06 UTC).
-The `ticket.purchased` listener
-([notification-listeners.ts:53](src/lib/server/notification/notification-listeners.ts:53))
-sends via `dispatchEmailOnly` with alias `ticket-confirmation`; Postmark
-returns `ApiInputError: The Template's 'Alias' … not valid or was not found`.
+Unchanged root cause from 07-10, still firing 16 days later — and the blast
+radius has grown. The 07-10 events were all ticket confirmations
+(`ticket-confirmation` alias); the latest event (2026-07-26 20:02 UTC) is a
+**reservation-cancellation notice** failing on the generic `notification`
+alias, thrown from `cancelReservation` via `sendEmailWithTemplate` (extra data:
+`tag: reservation_cancelled`, `templateAlias: notification`, recipient
+`dylanneuhaus@icloud.com`). So it is not just the post-#96 templates: the
+production Postmark server token in use appears to have **no matching
+templates at all** (or the token points at the wrong Postmark server).
 
-The repo's template is correct
-([postmark/templates/ticket-confirmation/meta.json](postmark/templates/ticket-confirmation/meta.json)
-has `"Alias": "ticket-confirmation"`), so the template is missing on the
-Postmark **server** — the push never ran (or ran against a different server
-token) after #96 consolidated templates. The generic `notification` alias
-predates that consolidation, which is why other transactional mail still works.
+**Fix (operator):** run `pnpm email:push` against the production
+`POSTMARK_SERVER_TOKEN`, then verify in Postmark's template preview that both
+`notification` and `ticket-confirmation` aliases exist on the same server the
+runtime token targets. If they already exist on _a_ server, compare the
+server ID against the deployed token — the mismatch theory fits the
+`notification` alias failing despite predating #96.
 
-**Fix:** `pnpm email:push` with the production `POSTMARK_SERVER_TOKEN`
-(not present in local `.env` — I could not run it). Verify with a test
-purchase or Postmark's template preview.
+**Follow-up:** 6 affected users never received transactional mail (ticket
+codes, a cancellation notice). Codes are recoverable from the success page/DB;
+consider re-sending once templates resolve.
 
-**Follow-up:** the 5 affected buyers never got their ticket codes (codes are
-still visible on the success page and in the DB). Consider re-triggering their
-confirmation emails once the template exists.
+### W — effect_update_depth_exceeded on /member/profile is NOT gone (07-10 verdict falsified)
 
-## Fixed in this branch
+The 07-10 report left this as "monitor; quiet 15 days, remnant probably rode
+the error path #128/#130 eliminated." That hypothesis is now falsified: 5 new
+events (2026-07-21 → 07-24, latest on **release `5b1a882` — the current
+deploy**, Edge/Windows, Corvallis user). Total now 17 events / 6 users, with 9
+attached replays.
 
-### Q + 1A — NotificationBell crash when the click-outside handler outlives the component
+The infinite loop guard trips inside Svelte's batch processing
+(`batch.js #process` recursion) with no first-party frame, so the trigger is
+reactive write-back, not an event handler. The page
+([+page.svelte](src/routes/member/profile/+page.svelte)) still has the
+suspect shape despite #102's seed-once fix:
 
-Two generations of the same bug ([NotificationBell.svelte:100](src/lib/components/shared/NotificationBell.svelte:100)):
-the `svelte:window` click handler can be invoked by the very click that
-unmounts the component (navigation), after Svelte has torn down its reactive
-state. Q (release 9f74d7d) crashed writing `open = false`; #102's guard
-`if (!open) return` then crashed _reading_ `open` (1A, release 0954375,
-`runtime.js: var flags = signal.f` with `signal === undefined`).
+- `let profile = $derived(await getMemberProfile())` (line 24) plus a second
+  top-level `await getMemberProfile()` for `initial` (line 34), plus a
+  `refresh()` of the same query after avatar upload (line 61).
+- `bind:value` editors (`RichTextEditor`, `FreeformTagInput`,
+  `LinkListEditor`) writing into `$state` seeded from that data.
 
-**Fix:** first-line guard on the existing plain (non-reactive) `destroyed`
-boolean, which `onDestroy` already sets — safe to read at any lifecycle point.
-Component test added
-([NotificationBell.svelte.spec.ts](src/lib/components/shared/NotificationBell.svelte.spec.ts)):
-click-outside behavior plus an unmount-mid-click-dispatch case. Honest caveat:
-the production teardown race does not reproduce in the vitest browser harness
-(listener removal is synchronous there), so the new test guards behavior
-rather than failing before the fix.
+**Root cause (confirmed by local reproduction, 2026-07-27):** the top-level
+`await getMemberProfile()` used to seed the editable `$state` marked every
+later declaration in the instance script as _blocked_, which compiles every
+`bind:value` and `fields.X.as(...)` expression in the template into an async
+derived; combined with the query cache's ref/deref churn this recursed the
+batch processor past the 1000-flush guard. Reproduced deterministically in dev
+on the pre-fix code (crash banner on page load, zero interaction — matching
+the replay evidence of crashes at T+1s) and gone after the fix.
 
-### D — server 500s re-captured client-side as an unreadable "x" issue
+**Fixed in this branch:** the form is extracted into
+[ProfileForm.svelte](src/routes/member/profile/ProfileForm.svelte), which
+receives the resolved profile as a plain prop and keeps its script fully
+synchronous; [+page.svelte](src/routes/member/profile/+page.svelte) is a thin
+shell that awaits the queries. The redundant client-side
+`getMemberProfile().refresh()` after avatar upload is removed, the Form
+dirty-tracking `$effect` is folded into the mutation site
+([Form.svelte](src/lib/components/shared/Form/Form.svelte)), and
+[RichTextEditor.svelte](src/lib/components/shared/Form/RichTextEditor.svelte)
+treats an empty value and Tiptap's empty document as equal content. Verified
+in the browser: load, edit, save, and reload-with-data all clean.
 
-Remote-function 500s surface in `Form.svelte`'s catch as a bare
-`{ status: 500, body: { message: 'Internal Error' } }` object;
-`reportError` forwarded it to Sentry, producing an issue titled "x" (minified
-frame name) with no stack — duplicating the server-side capture that already
-has full request context. (The 2026-07-01 event is literally the client echo
-of 1B's server 500, same user and second.)
+### 10 — bcrypt migration rejections: different branch than the "fixed" 07-10 issue
 
-**Fix:** [report-error.ts](src/lib/report-error.ts) now drops _any_
-HTTP-shaped error (numeric `status` ≥ 400): 4xx are expected outcomes, 5xx are
-already captured by the server `handleError` hook. Non-HTTP client errors
-(TypeErrors, network failures) still report. Regression test in
-[report-error.spec.ts](src/lib/report-error.spec.ts) (failed before the fix).
+The 07-10 report resolved this as the trailing-slash 404 fixed by #99. The 3
+new events (2026-06-22 → 07-25) are a **different code path**: the deliberate
+`captureException` at [auth.ts:242](src/lib/server/auth.ts:242) — Laravel was
+reached, answered 200, and said the credentials are **invalid**. That capture
+exists precisely because this used to fail silently.
 
-## Already fixed — resolve in Sentry
+Two readings:
 
-- **1B** — `ReservationValidationError` thrown as a 500 from
-  `bookAndPayReservation`. The event (2026-07-01 17:56 UTC) predates #128
-  (merged 19:55 UTC the same day), which returns validation errors in-band
-  ([reservations.remote.ts:1136](src/lib/remote/reservations.remote.ts:1136)).
+1. **Noise** — legacy-bcrypt members simply typing a wrong password; Laravel
+   correctly rejects, and each attempt emits an error-level Sentry event.
+2. **Real bug** — a known-good password rejected (hash drift between the
+   Laravel DB export and what members actually use), which would mean these 3
+   members cannot log in at all.
+
+One event is `hannah@corvmc.org` — a staff address, easy to check directly.
+Decidable from data: a successful bcrypt verify rewrites the hash to `scrypt:`
+([auth.ts:237](src/lib/server/auth.ts:237)), so
+`SELECT substr(password,1,7)` for the affected accounts settles it —
+`scrypt:` means they later logged in fine (noise), `$2` means they're stuck
+(real bug). The check was attempted 2026-07-27 but is **blocked on wrangler
+auth** in this environment (`wrangler login` or `CLOUDFLARE_API_TOKEN`
+needed). Capture level left at error until the data says otherwise.
+
+### 1F — Instagram in-app webview bridge crash (not our code)
+
+New since 07-10. `TypeError: undefined is not an object (evaluating
+'window.webkit.messageHandlers')` on `/contact`, 3 events from 1 user,
+`browser: Instagram 438.0.0` on iOS. The frames (`sendDataToNative`,
+`sendPageHideMessage`) are Instagram's injected native-bridge script running
+in its webview — attributed to `https://corvmc.org/:1` because injected
+scripts inherit the document URL. Nothing in this repo references
+`webkit.messageHandlers`.
+
+**Fixed in this branch:** `isWebviewBridgeError` in
+[hooks.client.ts](src/hooks.client.ts) drops events whose message references
+`window.webkit.messageHandlers` or whose crashing frame is a known bridge
+entry point (`sendDataToNative`/`sendPageHideMessage`); regression spec in
+[hooks.client.spec.ts](src/hooks.client.spec.ts).
+
+## Resolved in Sentry during this pass
+
+- **1B** — `ReservationValidationError` surfaced as a 500 from
+  `bookAndPayReservation`. Single event 2026-07-01 17:56 UTC, two hours before
+  #128 merged (validation errors now returned in-band,
+  [reservations.remote.ts:1136](src/lib/remote/reservations.remote.ts:1136)).
+  26 days quiet → resolved.
 - **15** — negative `freeHours` reached `setBalance` because the invoice
-  contribution-line picker could select a negative proration line. #130
-  excludes prorations and the fee product. Last event 2026-06-28 < fix 07-01.
-- **11** — Stripe's sync `constructEvent` is unusable on Workers; the webhook
-  now uses `await constructEventAsync`
-  ([webhook/+server.ts:25](src/routes/api/stripe/webhook/+server.ts:25)).
-  Last event 2026-06-24.
-- **10** — Laravel verify-password 404 caused by a trailing slash in
-  `LARAVEL_URL`. Fixed by #99 (`buildVerifyPasswordUrl`,
-  [auth.ts:155](src/lib/server/auth.ts:155)) — merged ~50 minutes _after_ the
-  single event, none since.
-- **12** — a live Stripe key had expired on 2026-06-25; later successful
-  purchases (tickets on 06-27 and 07-10) show the key was rotated. One-off.
+  contribution-line picker could select a negative proration line; #130
+  excludes prorations and the fee product. Last event 2026-06-28, 29 days
+  quiet → resolved.
+- **1E** — `auth.sign_in: user_not_found` is the intentional sign-in anomaly
+  telemetry (`deriveSignInAnomaly`, [auth.ts:304](src/lib/server/auth.ts:304))
+  doing exactly its job: the 4 events are people typing addresses that have no
+  account (e.g. `kevin@thenettles.com`, `hasCredentialAccount: false`).
+  Resolved as working-as-intended; Sentry will auto-reopen on regression-style
+  volume. **Fixed in this branch:** the `user_not_found` anomaly now captures
+  at `warning` level ([auth.ts](src/lib/server/auth.ts) via a new optional
+  `level` param on the [sentry.ts](src/lib/server/sentry.ts) wrapper); the
+  structural anomalies (`no_credential_account`, `no_password`) stay at error.
 
 ## Report-only
 
-- **W** — `effect_update_depth_exceeded` on /member/profile. #102 fixed the
-  main loop (effect re-clobbering editor state) but 3 events on Chrome Mobile
-  iOS occurred on the release _containing_ that fix (4c8bdac). The attached
-  replay shows those events co-occurring with the issue-D server 500s in the
-  same session, suggesting the remnant rides the error path that #128/#130
-  eliminated. No events in 15 days. Recommendation: leave unresolved and
-  monitor; if it recurs, pull the replay for the interaction sequence
-  (suspects: `RichTextEditor`/`FreeformTagInput` write-back under iOS
-  autocorrect).
-- **19** — `TypeError: null is not an object (t.b.error)` inside Svelte's
-  `error-handling.js` on the public tickets/success page: an async rejection
-  (the page top-level-awaits `getTicketPurchaseSuccess`) reached
-  `invoke_error_boundary` with a null boundary. Framework-internal crash path,
-  2 events on one day, iOS Safari. Recommendation: bump Svelte 5.56.x when a
-  fix lands, and/or wrap the public layout in the same error-boundary used in
-  the member layout so async query failures render a fallback instead of dying
-  in internals.
-- **1E** — intentional sign-in anomaly telemetry (`deriveSignInAnomaly`,
-  [auth.ts:304](src/lib/server/auth.ts:304)). Working as designed; if the
-  error-level noise bothers, capture at `warning` level.
-- **1D / 1C** — Sentry AI-detected long-animation-frame warnings on `/` and
-  `/contribute` during page load, 1 event each, 0 users impacted. Nothing
-  actionable yet; revisit if they recur with real user impact.
+- **1D / 1C** — Sentry AI-detected long-animation-frame observations on
+  `/(public)` and `/contribute`, 1 event each, 0 users impacted, none in 3+
+  weeks. Nothing actionable; revisit only if they recur with real user impact.
 
-## Recommended Sentry actions (not performed)
+## Resolved-issue watchlist (from the 07-10 pass)
 
-1. Resolve 1B, 15, 11, 10, 12 (fixed/transient; all quiet since their fixes).
-2. Resolve Q, 1A, D when this branch deploys (or use `Fixes JAVASCRIPT-…` in
-   the merge commit).
-3. Keep W, 19 unresolved to catch regressions; they auto-escalate on new
-   events.
-4. After `pnpm email:push`, resolve 18 and consider re-sending the 5 lost
-   ticket confirmations.
+Q, 1A (NotificationBell teardown), D (HTTP-shaped client echo), 11
+(constructEventAsync), 12 (rotated Stripe key) — all remain quiet; no
+regressions observed in this pass.
+
+## Recommended follow-ups (in priority order)
+
+1. **Ops:** `pnpm email:push` with the prod `POSTMARK_SERVER_TOKEN`; verify
+   both aliases; re-send lost mail (issue 18).
+2. **Code:** fix the `/member/profile` reactive loop (issue W) — replays are
+   attached and it reproduces on the current release.
+3. **Check:** confirm whether the bcrypt-rejected members (issue 10, incl.
+   `hannah@corvmc.org`) can log in; downgrade capture level if they can.
+4. **Code (low):** filter Instagram webview bridge errors in `beforeSend`
+   (issue 1F); downgrade `user_not_found` anomaly to warning (issue 1E).
