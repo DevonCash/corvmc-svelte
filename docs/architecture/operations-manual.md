@@ -195,6 +195,9 @@ is the always-pass test key.
 
 - SDK events: DSN hardcoded in `src/lib/sentry-dsn.ts`, initialized per-request in
   `src/hooks.server.ts`. Releases are tagged from the Worker version metadata binding.
+- Cron check-ins: every scheduled job reports Sentry Crons check-ins over the plain HTTP
+  check-in API (`src/lib/server/cron/sentry-check-in.ts` — no SDK involved; the per-request
+  SDK client doesn't exist when a `scheduled` invocation starts). See §5 for the monitors.
 - Platform traces/logs: `wrangler.toml [observability.*]` exports OTel data to
   destinations named `sentry-traces` / `sentry-logs`, which must exist in the Cloudflare
   dashboard (Workers & Pages → Observability → Destinations) pointing at Sentry's OTLP
@@ -246,10 +249,25 @@ curl -s -X POST https://corvmc.org/api/cron/cancel-unconfirmed \
 
 A `401` means the secret doesn't match; a `500 CRON_SECRET not configured` means the
 Worker secret is missing. If reservations pile up unresolved, reminders stop, or recurring
-series stop generating: check the Worker's cron events in the Cloudflare dashboard
-(Workers & Pages → corvmc → Settings → Triggers shows the schedules; the logs show
-`[cron]`-prefixed per-job lines) and confirm the latest deploy succeeded — triggers only
-update on deploy. The endpoints themselves have unit tests.
+series stop generating: check **Sentry → Insights → Crons** first (see below), then the
+Worker's cron events in the Cloudflare dashboard (Workers & Pages → corvmc → Settings →
+Triggers shows the schedules; the logs show `[cron]`-prefixed per-job lines) and confirm
+the latest deploy succeeded — triggers only update on deploy. The endpoints themselves
+have unit tests.
+
+**Monitoring (Sentry Crons).** The `scheduled` handler brackets every job with
+`in_progress` → `ok`/`error` check-ins over Sentry's HTTP check-in API
+(`src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed **and missed**
+runs. One monitor per endpoint, slugged by basename (`auto-complete`, `send-campaigns`,
+…), visible under Sentry → Insights → Crons. Monitors are **upserted from the check-ins
+themselves** — schedule changes in `wrangler.toml [triggers]` propagate on the next run;
+nothing to configure in the Sentry dashboard. Check-ins go to the `production` monitor
+environment by default; when testing locally, keep test noise out of production
+missed-run detection by passing a different environment:
+
+```bash
+npx wrangler dev --test-scheduled --var CRON_SECRET:local-test --var SENTRY_ENVIRONMENT:development
+```
 
 ## 6. The Postgres bridge (pre-cutover only)
 
@@ -346,7 +364,7 @@ Failure signatures by symptom:
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Paid but not confirmed (reservation/ticket) | Stripe → webhook deliveries; Sentry `stage: 'handler'`. See [workflows §1/§5](../development/business-workflows.md).                                               |
 | Credits missing after renewal               | Stripe `invoice.paid` delivery; `creditTransaction` ledger. [Workflows §3](../development/business-workflows.md#3-membership-signup-subscription-monthly-credits). |
-| Reservations stuck / reminders silent       | External cron scheduler (§5), then the endpoint's JSON result.                                                                                                     |
+| Reservations stuck / reminders silent       | Sentry → Insights → Crons (missed/failed monitors), then Cloudflare cron events and the endpoint's JSON result (§5).                                               |
 | Sign-in failures for old accounts           | Sentry `auth.bcrypt_migration` events; is the Laravel app up? (pre-cutover)                                                                                        |
 | Emails not arriving                         | Postmark activity stream (transactional vs broadcast), then Sentry.                                                                                                |
 | Site-wide 500s right after a deploy         | `wrangler tail`; consider `wrangler rollback`; check whether a migration ran.                                                                                      |
