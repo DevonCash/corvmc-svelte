@@ -1465,61 +1465,78 @@ export const payReservation = form(
 // Forms — staff actions (converted from API routes)
 // ===========================================================================
 
-/** Staff/owner: confirm a reservation. */
-export const confirmReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	const currentUser = requireUser();
+/**
+ * Staff/owner: confirm a reservation. Staff may submit with comp=on to waive
+ * payment entirely instead of committing the owner's credits.
+ */
+export const confirmReservation = form(
+	z.object({ id: z.string(), comp: z.enum(['', 'on']).optional() }),
+	async (data, _issue) => {
+		const currentUser = requireUser();
 
-	const [row] = await db
-		.select({
-			id: reservation.id,
-			createdByUserId: reservation.createdByUserId,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			status: reservation.status
-		})
-		.from(reservation)
-		.where(eq(reservation.id, data.id))
-		.limit(1);
-	if (!row) throw error(404, 'Reservation not found');
+		const [row] = await db
+			.select({
+				id: reservation.id,
+				createdByUserId: reservation.createdByUserId,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt,
+				status: reservation.status
+			})
+			.from(reservation)
+			.where(eq(reservation.id, data.id))
+			.limit(1);
+		if (!row) throw error(404, 'Reservation not found');
 
-	// Allow if staff or the owner of the reservation
-	const isOwner = currentUser.id === row.createdByUserId;
-	const staff = await isStaff(currentUser.id);
-	if (!isOwner && !staff) throw error(403, 'Not authorized');
+		// Allow if staff or the owner of the reservation
+		const isOwner = currentUser.id === row.createdByUserId;
+		const staff = await isStaff(currentUser.id);
+		if (!isOwner && !staff) throw error(403, 'Not authorized');
 
-	// Only live reservations can be confirmed. Without this, a cancelled
-	// reservation (credits already reversed, cashDueCents possibly 0) would be
-	// resurrected to confirmed for free by the settle path below.
-	if (row.status !== 'scheduled' && row.status !== 'confirmed')
-		throw error(400, 'Not eligible for confirmation');
+		// Only live reservations can be confirmed. Without this, a cancelled
+		// reservation (credits already reversed, cashDueCents possibly 0) would be
+		// resurrected to confirmed for free by the settle path below.
+		if (row.status !== 'scheduled' && row.status !== 'confirmed')
+			throw error(400, 'Not eligible for confirmation');
 
-	// Members may only confirm (without a Stripe charge) within the window; staff
-	// override anytime.
-	if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
+		// Members may only confirm (without a Stripe charge) within the window; staff
+		// override anytime.
+		if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
 
-	// Commit the owner's free hours; settle if fully covered, else confirm with
-	// the cash remainder owed at the door.
-	const [owner] = await db
-		.select({ email: user.email, name: user.name })
-		.from(user)
-		.where(eq(user.id, row.createdByUserId))
-		.limit(1);
-	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-	const totalCents = Math.round(durationHours * hourlyRateCents);
-	const { settled } = await commitCreditsAndSettleIfCovered({
-		reservationId: row.id,
-		userId: row.createdByUserId,
-		email: owner?.email ?? '',
-		name: owner?.name ?? null,
-		durationHours,
-		totalCents,
-		hourlyRateCents
-	});
-	if (!settled && row.status === 'scheduled') await confirm(row.id);
-	return { success: true };
-});
+		if (data.comp === 'on') {
+			// Comp is a staff-only choice: fully free, no credits committed.
+			if (!staff) throw error(403, 'Not authorized');
+			if (row.status === 'scheduled') await confirm(row.id);
+			await db
+				.update(reservation)
+				.set({ cashDueCents: 0, updatedAt: new Date() })
+				.where(eq(reservation.id, row.id));
+			return { success: true };
+		}
+
+		// Commit the owner's free hours; settle if fully covered, else confirm with
+		// the cash remainder owed at the door.
+		const [owner] = await db
+			.select({ email: user.email, name: user.name })
+			.from(user)
+			.where(eq(user.id, row.createdByUserId))
+			.limit(1);
+		const reservationConfig = await getReservationConfig();
+		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+		const { settled } = await commitCreditsAndSettleIfCovered({
+			reservationId: row.id,
+			userId: row.createdByUserId,
+			email: owner?.email ?? '',
+			name: owner?.name ?? null,
+			durationHours,
+			totalCents,
+			hourlyRateCents
+		});
+		if (!settled && row.status === 'scheduled') await confirm(row.id);
+		return { success: true };
+	}
+);
 
 /** Cancel a reservation (staff can override). */
 export const cancelReservation = form(

@@ -24,10 +24,18 @@ function chain() {
 	return c;
 }
 
+// Payloads passed to `db.update(...).set(...)`, in call order.
+const updateSets: Record<string, unknown>[] = [];
+
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chain(),
-		update: () => ({ set: () => ({ where: () => Promise.resolve() }) })
+		update: () => ({
+			set: (values: Record<string, unknown>) => {
+				updateSets.push(values);
+				return { where: () => Promise.resolve() };
+			}
+		})
 	}
 }));
 
@@ -108,6 +116,7 @@ beforeEach(() => {
 	confirm.mockClear();
 	getBalance.mockClear();
 	selectResults.length = 0;
+	updateSets.length = 0;
 });
 
 describe('staff confirm commits the owner credits, not the staff member', () => {
@@ -178,6 +187,42 @@ describe('confirmation window gating', () => {
 
 		await confirmReservation({ id: 'res-w' }, undefined);
 		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('staff comp choice on confirm', () => {
+	function scheduledRow() {
+		return {
+			id: 'res-c',
+			createdByUserId: ownerId,
+			startsAt: new Date('2026-06-15T17:00:00Z'),
+			endsAt: new Date('2026-06-15T18:00:00Z'),
+			status: 'scheduled'
+		};
+	}
+
+	it('comp=on waives payment without committing the owner credits', async () => {
+		selectResults.push([scheduledRow()]);
+
+		await confirmReservation({ id: 'res-c', comp: 'on' }, undefined);
+
+		expect(commitReservationCredits).not.toHaveBeenCalled();
+		expect(confirm).toHaveBeenCalledWith('res-c');
+		expect(updateSets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
+	});
+
+	it('rejects comp from a non-staff owner', async () => {
+		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		// Owned by the acting (non-staff) user, within the confirmation window.
+		selectResults.push([
+			{ ...scheduledRow(), createdByUserId: staffUser.id, startsAt: new Date(Date.now() + 60_000) }
+		]);
+
+		await expect(confirmReservation({ id: 'res-c', comp: 'on' }, undefined)).rejects.toMatchObject({
+			status: 403
+		});
+		expect(confirm).not.toHaveBeenCalled();
+		expect(commitReservationCredits).not.toHaveBeenCalled();
 	});
 });
 
