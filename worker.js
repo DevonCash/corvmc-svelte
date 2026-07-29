@@ -8,6 +8,7 @@
 // `pnpm check` without building.
 import worker from './.svelte-kit/cloudflare/_worker.js';
 import { runScheduledJobs } from './src/lib/server/cron/schedule.ts';
+import { createSentryCheckIn } from './src/lib/server/cron/sentry-check-in.ts';
 
 export default {
 	...worker,
@@ -17,6 +18,11 @@ export default {
 	 * @param {ExecutionContext} ctx
 	 */
 	async scheduled(controller, env, ctx) {
-		await runScheduledJobs(controller.cron, env, (request) => worker.fetch(request, env, ctx));
+		await runScheduledJobs(
+			controller.cron,
+			env,
+			(request) => worker.fetch(request, env, ctx),
+			createSentryCheckIn(env.SENTRY_ENVIRONMENT)
+		);
 	}
 };
