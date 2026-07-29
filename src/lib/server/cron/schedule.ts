@@ -1,0 +1,83 @@
+// Cron dispatch map + runner for the `scheduled` handler in worker.js (the
+// wrangler `main` entry). Bundled by wrangler's esbuild OUTSIDE the SvelteKit
+// build, so this module must not import `$app`/`$env` or anything else that
+// only resolves inside the kit build.
+
+/**
+ * Cron expression → ordered list of /api/cron/* endpoints to run, sequentially,
+ * when that trigger fires. Must stay in sync with `[triggers]` in wrangler.toml.
+ *
+ * The daily batch order is deliberate: generation runs first so freshly
+ * generated occurrences are visible to lock provisioning and the reminders.
+ */
+export const CRON_SCHEDULE: Record<string, string[]> = {
+	'*/5 * * * *': ['/api/cron/send-campaigns'],
+	'*/15 * * * *': [
+		'/api/cron/auto-complete',
+		'/api/cron/cancel-unconfirmed',
+		'/api/cron/expire-waitlisted'
+	],
+	'0 16 * * *': [
+		'/api/cron/generate-recurring-reservations',
+		'/api/cron/lock-access',
+		'/api/cron/confirmation-reminders',
+		'/api/cron/reservation-reminders'
+	]
+};
+
+export interface CronEnv {
+	ORIGIN: string;
+	CRON_SECRET?: string;
+}
+
+export interface CronJobResult {
+	path: string;
+	ok: boolean;
+	status?: number;
+	error?: string;
+}
+
+/**
+ * Run every job mapped to `cron`, in order, by POSTing to the endpoint through
+ * `fetcher` (in production: the generated worker's own `fetch` export — an
+ * in-process call, not a network request). A failing job is logged and does not
+ * stop the jobs after it.
+ *
+ * The request URL must use the real `env.ORIGIN`: the generated worker caches
+ * its origin from the first request URL it sees, and on a cold start the
+ * scheduled invocation can be that first request.
+ */
+export async function runScheduledJobs(
+	cron: string,
+	env: CronEnv,
+	fetcher: (request: Request) => Promise<Response>
+): Promise<CronJobResult[]> {
+	const paths = CRON_SCHEDULE[cron];
+	if (!paths) {
+		console.warn(`[cron] no jobs mapped for expression "${cron}"`);
+		return [];
+	}
+
+	const results: CronJobResult[] = [];
+	for (const path of paths) {
+		try {
+			const response = await fetcher(
+				new Request(`${env.ORIGIN}${path}`, {
+					method: 'POST',
+					headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` }
+				})
+			);
+			const body = await response.text();
+			if (response.ok) {
+				console.log(`[cron] ${path} ${response.status}: ${body}`);
+			} else {
+				console.error(`[cron] ${path} failed with ${response.status}: ${body}`);
+			}
+			results.push({ path, ok: response.ok, status: response.status });
+		} catch (err) {
+			console.error(`[cron] ${path} threw:`, err);
+			results.push({ path, ok: false, error: err instanceof Error ? err.message : String(err) });
+		}
+	}
+	return results;
+}

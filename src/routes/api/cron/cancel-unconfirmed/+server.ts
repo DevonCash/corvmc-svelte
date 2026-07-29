@@ -9,7 +9,8 @@ import { cancelUnconfirmedReservations } from '$lib/server/reservation/reservati
  * anything still `scheduled` once it starts was never committed, so we cancel it
  * and free the slot (which cascades waitlist promotion).
  *
- * Call from an external scheduler:
+ * Invoked every 15 minutes by the Worker's cron `scheduled` handler
+ * (worker.js → src/lib/server/cron/schedule.ts); callable manually:
  *   POST /api/cron/cancel-unconfirmed
  *   Authorization: Bearer <CRON_SECRET>
  */

@@ -7,7 +7,8 @@ import { autoCompleteExpired } from '$lib/server/reservation/reservation-service
  * Cron endpoint for auto-completing paid reservations past their end time.
  * Protected by a shared secret in the Authorization header.
  *
- * Call from an external scheduler every 15 minutes:
+ * Invoked every 15 minutes by the Worker's cron `scheduled` handler
+ * (worker.js → src/lib/server/cron/schedule.ts); callable manually:
  *   POST /api/cron/auto-complete
  *   Authorization: Bearer <CRON_SECRET>
  */

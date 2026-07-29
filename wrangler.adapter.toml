@@ -1,0 +1,17 @@
+# Read ONLY by @sveltejs/adapter-cloudflare (via `adapter({ config })` in
+# svelte.config.js) — never by `wrangler deploy`, which uses wrangler.toml.
+#
+# The adapter writes the generated worker to whatever `main` points at in the
+# config it reads, and DELETES that path first. wrangler.toml's `main` is our
+# hand-written wrapper (worker.js), so the adapter must read this file instead,
+# keeping its output at the conventional generated path below. Keep `name`,
+# `compatibility_date`, `compatibility_flags`, and [assets] in sync with
+# wrangler.toml.
+name = "corvmc"
+compatibility_date = "2025-11-07"
+compatibility_flags = ["nodejs_compat"]
+main = ".svelte-kit/cloudflare/_worker.js"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"

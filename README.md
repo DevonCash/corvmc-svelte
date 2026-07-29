@@ -15,19 +15,19 @@ SvelteKit app running entirely on Cloudflare Workers.
 
 ## Stack at a glance
 
-| Piece            | Choice                                               | Why it matters to a maintainer                                                                      |
-| ---------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Framework        | SvelteKit 2 / Svelte 5 (runes)                       | Data flows through **remote functions** (`query()`/`form()`), not load functions — see the overview |
-| Runtime          | Cloudflare Workers (`@sveltejs/adapter-cloudflare`)  | One Worker, no servers; deploys happen via Cloudflare Workers Builds watching this repo             |
-| Database         | Cloudflare D1 (SQLite) + Drizzle ORM                 | **No transactions** — `db.batch()` only (lint-enforced); migrations are generated, forward-only     |
-| Storage / config | R2 (media), KV (runtime site config + feature flags) | Feature flags are KV keys; staff toggle them without a deploy                                       |
-| Auth             | better-auth (email+password, scrypt)                 | Custom hashing for Workers; legacy bcrypt verifies via the old Laravel app until cutover            |
-| Payments         | Stripe (Checkout, subscriptions, one webhook)        | Fulfillment is webhook-driven → event bus → per-domain listeners                                    |
-| Email            | Postmark (transactional + broadcast streams)         | Templates live in `postmark/`, synced with `pnpm email:push/pull`                                   |
-| SMS              | Twilio (support inbox)                               | Phone number not yet provisioned; outbound dormant                                                  |
-| Door locks       | U-Tec/Ultraloc API                                   | Daily provisioning via a cron endpoint                                                              |
-| Errors/traces    | Sentry (+ Cloudflare native OTLP export)             | Initialized per-request in `hooks.server.ts`                                                        |
-| Scheduled jobs   | Plain HTTP endpoints under `/api/cron/*`             | Triggered by an **external scheduler**, not Cloudflare cron — see the operations manual             |
+| Piece            | Choice                                               | Why it matters to a maintainer                                                                           |
+| ---------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Framework        | SvelteKit 2 / Svelte 5 (runes)                       | Data flows through **remote functions** (`query()`/`form()`), not load functions — see the overview      |
+| Runtime          | Cloudflare Workers (`@sveltejs/adapter-cloudflare`)  | One Worker, no servers; deploys happen via Cloudflare Workers Builds watching this repo                  |
+| Database         | Cloudflare D1 (SQLite) + Drizzle ORM                 | **No transactions** — `db.batch()` only (lint-enforced); migrations are generated, forward-only          |
+| Storage / config | R2 (media), KV (runtime site config + feature flags) | Feature flags are KV keys; staff toggle them without a deploy                                            |
+| Auth             | better-auth (email+password, scrypt)                 | Custom hashing for Workers; legacy bcrypt verifies via the old Laravel app until cutover                 |
+| Payments         | Stripe (Checkout, subscriptions, one webhook)        | Fulfillment is webhook-driven → event bus → per-domain listeners                                         |
+| Email            | Postmark (transactional + broadcast streams)         | Templates live in `postmark/`, synced with `pnpm email:push/pull`                                        |
+| SMS              | Twilio (support inbox)                               | Phone number not yet provisioned; outbound dormant                                                       |
+| Door locks       | U-Tec/Ultraloc API                                   | Daily provisioning via a cron endpoint                                                                   |
+| Errors/traces    | Sentry (+ Cloudflare native OTLP export)             | Initialized per-request in `hooks.server.ts`                                                             |
+| Scheduled jobs   | Plain HTTP endpoints under `/api/cron/*`             | Triggered by native Cloudflare cron triggers (`worker.js` scheduled handler) — see the operations manual |
 
 ## Quickstart
 

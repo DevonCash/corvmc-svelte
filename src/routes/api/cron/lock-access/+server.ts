@@ -7,7 +7,8 @@ import { runDailyLockJob } from '$lib/server/lock/lock-service';
  * Cron endpoint for daily lock access provisioning and cleanup.
  * Protected by a shared secret in the Authorization header.
  *
- * Call from an external scheduler (e.g., cron-job.org, Railway cron):
+ * Invoked daily (16:00 UTC batch) by the Worker's cron `scheduled` handler
+ * (worker.js → src/lib/server/cron/schedule.ts); callable manually:
  *   POST /api/cron/lock-access
  *   Authorization: Bearer <CRON_SECRET>
  */

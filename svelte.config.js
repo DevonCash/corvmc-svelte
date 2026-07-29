@@ -23,10 +23,12 @@ const config = {
 		experimental: {
 			remoteFunctions: true
 		},
-		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter(),
+		// The adapter reads wrangler.adapter.toml (not wrangler.toml) because it
+		// rimrafs + overwrites whatever `main` points at in the config it reads,
+		// and wrangler.toml's `main` is the hand-written worker.js wrapper that
+		// adds the cron `scheduled` handler. Dev-time platform emulation is
+		// unaffected — getPlatformProxy still discovers wrangler.toml.
+		adapter: adapter({ config: 'wrangler.adapter.toml' }),
 
 		// Poll for new deploys so a stale client reloads before it tries to import a
 		// chunk that no longer exists (the "error loading dynamically imported module"

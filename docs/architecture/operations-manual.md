@@ -108,7 +108,7 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 | Secret                                                                    | Used by                                                                                                                                               |
 | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BETTER_AUTH_SECRET`                                                      | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                        |
-| `CRON_SECRET`                                                             | Bearer token every `/api/cron/*` endpoint requires; must match the external scheduler                                                                 |
+| `CRON_SECRET`                                                             | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations         |
 | `MIGRATION_SECRET`                                                        | Shared secret for the legacy-Laravel `verify-password` proxy (pre-cutover only)                                                                       |
 | `DATABASE_URL`                                                            | **Not read by the Worker** (no references in `src/`). The Postgres bridge scripts read it from `.env` locally. Remove from Worker secrets at cutover. |
 | `MARKETING_UNSUBSCRIBE_SECRET`                                            | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                   |
@@ -216,20 +216,26 @@ POST https://corvmc.org/api/cron/<name>
 Authorization: Bearer <CRON_SECRET>
 ```
 
-**The schedule itself lives in an external scheduler, not in this repo or in Cloudflare.**
-(Source comments mention cron-job.org / Railway cron as the intended kind of service.)
-Record the real configuration here when you verify it:
+**The schedule lives in this repo, on native Cloudflare cron triggers.** The `[triggers]`
+block in `wrangler.toml` defines the cron expressions; the `scheduled` handler in
+`worker.js` (the wrangler `main` entry) maps each firing to its endpoints via
+`src/lib/server/cron/schedule.ts` and calls them **in-process** through the generated
+worker's own `fetch` export — no external scheduler, no network hop. Deploying the Worker
+registers the triggers; trigger changes take up to 15 minutes to propagate.
 
-| Endpoint                                    | Intended cadence (from source) | Actual scheduler & schedule (fill in) |
-| ------------------------------------------- | ------------------------------ | ------------------------------------- |
-| `/api/cron/auto-complete`                   | every 15 min                   | _TODO_                                |
-| `/api/cron/cancel-unconfirmed`              | every 15 min                   | _TODO_                                |
-| `/api/cron/expire-waitlisted`               | every 15 min                   | _TODO_                                |
-| `/api/cron/confirmation-reminders`          | daily 09:00 Pacific            | _TODO_                                |
-| `/api/cron/reservation-reminders`           | daily 10:00 Pacific            | _TODO_                                |
-| `/api/cron/generate-recurring-reservations` | daily, midnight Pacific        | _TODO_                                |
-| `/api/cron/lock-access`                     | daily                          | _TODO_                                |
-| `/api/cron/send-campaigns`                  | every 1–5 min                  | _TODO_                                |
+Cron expressions are **UTC only** (no DST handling), so the Pacific wall-clock times below
+shift an hour when DST flips:
+
+| Cron (UTC)     | Endpoints, in order                                                                                                                         | Pacific                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                  | every 5 min              |
+| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`                                                    | every 15 min             |
+| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/confirmation-reminders`, `/api/cron/reservation-reminders` | daily, 8am PST / 9am PDT |
+
+The daily batch runs its jobs sequentially in the order listed — generation first, so
+freshly generated occurrences are visible to lock provisioning and the reminder sweeps.
+Keep the table above, `wrangler.toml [triggers]`, and `CRON_SCHEDULE` in
+`src/lib/server/cron/schedule.ts` in sync (the schedule spec pins the map).
 
 Manual invocation (safe — every job is idempotent and returns a JSON summary):
 
@@ -240,12 +246,10 @@ curl -s -X POST https://corvmc.org/api/cron/cancel-unconfirmed \
 
 A `401` means the secret doesn't match; a `500 CRON_SECRET not configured` means the
 Worker secret is missing. If reservations pile up unresolved, reminders stop, or recurring
-series stop generating, suspect the external scheduler **first** — the endpoints
-themselves have unit tests.
-
-An alternative worth considering post-cutover: native Cloudflare cron triggers
-(`[triggers]` in `wrangler.toml` + a `scheduled` handler) would bring the schedule into the
-repo, but that's a code change, not configuration.
+series stop generating: check the Worker's cron events in the Cloudflare dashboard
+(Workers & Pages → corvmc → Settings → Triggers shows the schedules; the logs show
+`[cron]`-prefixed per-job lines) and confirm the latest deploy succeeded — triggers only
+update on deploy. The endpoints themselves have unit tests.
 
 ## 6. The Postgres bridge (pre-cutover only)
 
