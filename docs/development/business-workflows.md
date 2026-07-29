@@ -66,8 +66,9 @@ Stripe → POST /api/stripe/webhook            src/routes/api/stripe/webhook/+se
 The listener is idempotent (only transitions `scheduled`/`confirmed` rows), and the webhook
 route returns 500 on handler failure so Stripe re-delivers.
 
-**The other half of the lifecycle — cron.** Three endpoints under `src/routes/api/cron/`
-(all `POST` with `Authorization: Bearer <CRON_SECRET>`, called by the external scheduler):
+**The other half of the lifecycle — cron.** Four endpoints under `src/routes/api/cron/`
+(all `POST` with `Authorization: Bearer <CRON_SECRET>`, invoked by the Worker's own
+`scheduled` handler on native Cloudflare cron triggers — see the operations manual):
 
 - `cancel-unconfirmed` → `cancelUnconfirmedReservations()` in `reservation-service.ts` —
   cancels every reservation still `scheduled` at its start time.
@@ -128,7 +129,7 @@ one is offered the slot with a 24-hour window to confirm.
   `create()` in `src/lib/server/reservation/recurring-series-service.ts` with the prototype
   reservation id and an RRULE built by `buildRRule()` in `rrule-helpers.ts`. If the first
   slot itself conflicts, the booking is created via `createWaitlisted()` instead of failing.
-- **Nightly generation:** cron `generate-recurring-reservations` → `generateRecurring()` in
+- **Daily generation:** cron `generate-recurring-reservations` → `generateRecurring()` in
   `src/lib/server/reservation/generation-job.ts`. Events are expanded **before**
   reservations (recurring events book their own space reservations, which the reservation
   pass must treat as hard blocks — see the doc comment in that file). Occurrences that
@@ -153,7 +154,7 @@ one is offered the slot with a 24-hour window to confirm.
 
 ### Where it breaks
 
-- **No new occurrences appearing** → the nightly cron isn't firing. Hit the endpoint
+- **No new occurrences appearing** → the daily cron isn't firing. Hit the endpoint
   manually (see the [operations manual](../architecture/operations-manual.md#5-cron)) and
   check its JSON result — it reports per-series errors without aborting the batch.
 - **Series stopped after subscription cancelled** → intentional:

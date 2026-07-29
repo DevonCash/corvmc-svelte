@@ -5,11 +5,12 @@ import { generateRecurring } from '$lib/server/reservation/generation-job';
 
 /**
  * Cron endpoint for generating recurring instances.
- * Runs daily (e.g., midnight Pacific). Expands active recurring series into
- * concrete rows within the 2.5-week generation window — events first (so their
- * space reservations are in place), then reservations.
+ * Runs daily, first in the 16:00 UTC cron batch. Expands active recurring
+ * series into concrete rows within the 2.5-week generation window — events
+ * first (so their space reservations are in place), then reservations.
  *
- * Call from an external scheduler:
+ * Invoked by the Worker's cron `scheduled` handler
+ * (worker.js → src/lib/server/cron/schedule.ts); callable manually:
  *   POST /api/cron/generate-recurring-reservations
  *   Authorization: Bearer <CRON_SECRET>
  */

@@ -24,8 +24,8 @@ server build. There is no separate API server, no queue worker, no VM.
   Postmark inbound ▶│  Bindings:                                   │──▶ Postmark (email)
   Twilio inbound ──▶│   DB        → D1 (SQLite database)           │──▶ Twilio (SMS)
                     │   R2_BUCKET → R2 (media/file storage)        │──▶ U-Tec API (door locks)
-  External cron ───▶│   KV        → KV (site config cache)         │──▶ Sentry (errors/traces)
-  scheduler         │   ASSETS    → static files                   │──▶ Legacy Laravel app
+  Cron triggers ───▶│   KV        → KV (site config cache)         │──▶ Sentry (errors/traces)
+  (wrangler.toml)   │   ASSETS    → static files                   │──▶ Legacy Laravel app
   (POST /api/cron/*)└──────────────────────────────────────────────┘    (bcrypt verify, pre-cutover)
 ```
 
@@ -327,38 +327,45 @@ the pattern: write, re-check for a race, back out if one landed.
 
 ## Scheduled work (cron)
 
-There are **no Cloudflare cron triggers** (`wrangler.toml` has no `[triggers]` block). All
-scheduled work is plain HTTP endpoints under `src/routes/api/cron/*/+server.ts`, called by
-an **external scheduler that lives outside this repo** (the source comments suggest
-cron-job.org or Railway cron). Each endpoint requires:
+Scheduled work runs on **native Cloudflare cron triggers**. The `[triggers]` block in
+`wrangler.toml` defines three cron expressions; the `scheduled` handler in `worker.js`
+(the wrangler `main` entry, a thin wrapper around the adapter-generated SvelteKit worker)
+maps each firing to plain HTTP endpoints under `src/routes/api/cron/*/+server.ts` via
+`CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts`, and calls them **in-process**
+through the generated worker's own `fetch` export — the full hooks chain (Sentry, auth)
+runs, and nothing leaves the Worker. Each endpoint requires:
 
 ```
 POST /api/cron/<name>
 Authorization: Bearer <CRON_SECRET>
 ```
 
-The eight endpoints and their intended cadence (from each file's doc comment):
+The eight endpoints and their schedule (cron expressions are UTC — Pacific wall-clock
+times shift an hour with DST):
 
-| Endpoint                                    | Purpose                                                                                | Intended cadence        |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------- |
-| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | Every 15 min            |
-| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot  | Every 15 min            |
-| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | Every 15 min            |
-| `/api/cron/confirmation-reminders`          | Emit confirmation-reminder events for unconfirmed reservations starting within 24h     | Daily 09:00 Pacific     |
-| `/api/cron/reservation-reminders`           | Emit reminder events for confirmed reservations starting within 24h                    | Daily 10:00 Pacific     |
-| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)  | Daily, midnight Pacific |
-| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                   | Daily                   |
-| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived (gated by `emailMarketing` flag) | Every 1–5 min           |
+| Endpoint                                    | Purpose                                                                                | Cron (UTC)     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
+| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
+| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot  | `*/15 * * * *` |
+| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
+| `/api/cron/confirmation-reminders`          | Emit confirmation-reminder events for unconfirmed reservations starting within 24h     | `0 16 * * *`   |
+| `/api/cron/reservation-reminders`           | Emit reminder events for confirmed reservations starting within 24h                    | `0 16 * * *`   |
+| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)  | `0 16 * * *`   |
+| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                   | `0 16 * * *`   |
+| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived (gated by `emailMarketing` flag) | `*/5 * * * *`  |
 
-The actual live schedule is configured in the external scheduler, not in code — see the
-cron section of the [operations manual](operations-manual.md) for the runbook and a place
-to record it.
+The `0 16 * * *` batch (8am PST / 9am PDT) runs its four jobs sequentially, generation
+first, so freshly generated occurrences are visible to lock provisioning and the reminder
+sweeps. See the cron section of the [operations manual](operations-manual.md) for the
+runbook.
 
 ## Configuration: three tiers
 
 1. **`wrangler.toml [vars]`** — non-secret deploy-time config: `ORIGIN`, public URLs, email
    sender identity, the public Turnstile site key, `LARAVEL_URL`. Changing these requires a
-   deploy.
+   deploy. (`wrangler.toml` also carries the cron `[triggers]` and points `main` at
+   `worker.js`, the cron-aware wrapper; `wrangler.adapter.toml` is a build-only config read
+   by the SvelteKit adapter — see the comments in both files.)
 2. **Worker secrets** — everything sensitive (Stripe keys, Postmark tokens, `CRON_SECRET`,
    `BETTER_AUTH_SECRET`, ...). Managed with `wrangler secret`; the full inventory is
    `secrets.template.json` and the table in the [operations manual](operations-manual.md).

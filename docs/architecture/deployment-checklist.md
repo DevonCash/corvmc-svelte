@@ -161,6 +161,12 @@ pnpm build        # Production build for Cloudflare Workers
 wrangler deploy
 ```
 
+The deploy also registers the cron triggers from `wrangler.toml [triggers]` (propagation
+can take up to 15 minutes). Verify under Workers & Pages → corvmc → Settings → Triggers
+that the three schedules appear, and that subsequent cron events run clean (logs are
+prefixed `[cron]`). `CRON_SECRET` must be set — it's part of the `wrangler secret bulk`
+step — or every job returns `500 CRON_SECRET not configured`.
+
 ---
 
 ## 6. Stripe Webhook Setup

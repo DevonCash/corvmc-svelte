@@ -1,11 +1,30 @@
 name = "corvmc"
 compatibility_date = "2025-11-07"
 compatibility_flags = ["nodejs_compat"]
-main = ".svelte-kit/cloudflare/_worker.js"
+# The deployed entry is a thin wrapper that re-exports the adapter-generated
+# worker and adds the `scheduled` handler for the [triggers] below. The adapter
+# writes its output to .svelte-kit/cloudflare/_worker.js per wrangler.adapter.toml
+# (it rimrafs whatever `main` points at in the config it reads, so it must not
+# read this file — see svelte.config.js).
+main = "worker.js"
 
 [assets]
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
+
+# Native cron triggers, handled by the `scheduled` export in worker.js, which
+# dispatches in-process to the /api/cron/* endpoints (see
+# src/lib/server/cron/schedule.ts for the expression → endpoint map — keep the
+# two in sync). Times are UTC only (no DST), so Pacific wall-clock times shift
+# an hour twice a year.
+[triggers]
+crons = [
+  "*/5 * * * *",  # send-campaigns
+  "*/15 * * * *", # auto-complete, cancel-unconfirmed, expire-waitlisted
+  "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
+                  #   generate-recurring-reservations, lock-access,
+                  #   confirmation-reminders, reservation-reminders
+]
 
 # ---------------------------------------------------------------------------
 # Single deploy target — deploys as `corvmc` (corvmc.devon-cash.workers.dev)

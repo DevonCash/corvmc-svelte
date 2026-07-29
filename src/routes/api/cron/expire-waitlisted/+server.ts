@@ -8,7 +8,8 @@ import { expireWaitlisted } from '$lib/server/reservation/waitlist-service';
  * Runs every 15 minutes. Cancelled waitlisted reservations cascade promotion
  * to the next person in line.
  *
- * Call from an external scheduler:
+ * Invoked by the Worker's cron `scheduled` handler
+ * (worker.js → src/lib/server/cron/schedule.ts); callable manually:
  *   POST /api/cron/expire-waitlisted
  *   Authorization: Bearer <CRON_SECRET>
  */
