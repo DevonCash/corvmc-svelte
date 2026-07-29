@@ -2,19 +2,25 @@ import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq, and, sql, inArray, type SQL } from 'drizzle-orm';
+import { eq, and, getColumnTable, getTableName, sql, inArray } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
 
 /**
  * Correlated subquery returning the highest-priority role name for a given user ID column.
  * Priority: admin > staff > sustaining > member (fallback).
  * Use inside a drizzle `.select()` as a computed column, e.g. `primaryRole: primaryRoleFor(user.id)`.
+ *
+ * The outer reference is qualified manually: drizzle renders an interpolated Column
+ * unqualified in single-table select lists, and inside this subquery the bare name
+ * would bind to `roles.id`, so the predicate could never match a user id. Mirrors
+ * `isSustainingMemberSql`.
  */
-export function primaryRoleFor(userIdCol: SQL | typeof user.id) {
+export function primaryRoleFor(userIdCol: typeof user.id) {
+	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	return sql<string>`(
 		select r.name from roles r
 		inner join model_has_roles mhr on mhr.role_id = r.id
-		where mhr.user_id = ${userIdCol}
+		where mhr.user_id = ${outerRef}
 		order by case r.name
 			when 'admin' then 0
 			when 'staff' then 1

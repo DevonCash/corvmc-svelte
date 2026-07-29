@@ -1,0 +1,63 @@
+import { describe, it, expect, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/d1';
+import { user } from './db/schema/authentication';
+
+// ---------------------------------------------------------------------------
+// Regression: correlated SQL fragments must qualify their outer reference.
+//
+// When a drizzle Column is interpolated into a sql`` fragment in the select
+// list of a SINGLE-TABLE query, drizzle renders it unqualified ("id", not
+// "user"."id"). Inside a correlated subquery that re-selects the same table
+// under an alias, SQLite resolves the bare name against the INNER table, so
+// the correlation collapses to `u.id = u.id` — always true — and every outer
+// row gets the first table row's value. This is the bug that marked every
+// user on the staff Users page as a sustaining member in production.
+//
+// These tests pin the rendered SQL of both correlated helpers when used from
+// a single-table select (the shape of getStaffUsers). Joined queries render
+// columns qualified and were never affected.
+// ---------------------------------------------------------------------------
+
+vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('$app/server', () => ({ getRequestEvent: vi.fn() }));
+vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
+vi.mock('$lib/server/finance/product-config-service', () => ({
+	getProductConfig: vi.fn(),
+	getStripeProductId: vi.fn(),
+	buildSubscriptionLineItem: vi.fn()
+}));
+
+const { isSustainingMemberSql } = await import('./finance/subscription-service');
+const { primaryRoleFor } = await import('./authorization');
+
+// A bare drizzle instance is enough to render SQL — no D1 binding needed.
+const db = drizzle({} as never);
+
+describe('isSustainingMemberSql', () => {
+	it('correlates to the OUTER user row in a single-table select', () => {
+		const { sql: rendered } = db
+			.select({ id: user.id, sustaining: isSustainingMemberSql(user.id) })
+			.from(user)
+			.toSQL();
+
+		// The subquery's where-clause must reference the outer table explicitly.
+		// An unqualified `u.id = "id"` binds to the inner alias and is always true.
+		expect(rendered).toContain('u.id = "user"."id"');
+		expect(rendered).not.toMatch(/u\.id = "id"/);
+	});
+});
+
+describe('primaryRoleFor', () => {
+	it('correlates to the OUTER user row in a single-table select', () => {
+		const { sql: rendered } = db
+			.select({ id: user.id, role: primaryRoleFor(user.id) })
+			.from(user)
+			.toSQL();
+
+		// Unqualified, the bare "id" would resolve to roles.id inside the
+		// subquery and the predicate could never match a user id.
+		expect(rendered).toContain('mhr.user_id = "user"."id"');
+		expect(rendered).not.toMatch(/mhr\.user_id = "id"/);
+	});
+});

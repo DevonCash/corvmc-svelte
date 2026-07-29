@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { eq, sql, type SQL } from 'drizzle-orm';
+import { eq, getColumnTable, getTableName, sql } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
@@ -260,11 +260,17 @@ export async function isSustainingMember(userId: string): Promise<boolean> {
  * SQL fragment that evaluates to a boolean: true when the user has a subscription
  * snapshot. Use inside a drizzle `.select()` to compute the flag inline for list/detail
  * queries, e.g. `sustaining: isSustainingMemberSql(user.id)`. Mirrors `primaryRoleFor`.
+ *
+ * The outer reference is qualified manually: drizzle renders an interpolated Column
+ * unqualified in single-table select lists, and inside this subquery the bare name
+ * would bind to the inner `u` alias (`u.id = u.id`, always true), giving every outer
+ * row the first table row's flag.
  */
-export function isSustainingMemberSql(userIdCol: SQL | typeof user.id) {
+export function isSustainingMemberSql(userIdCol: typeof user.id) {
+	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	return sql<boolean>`(
 		select case when u.subscription is not null then 1 else 0 end
-		from ${user} u where u.id = ${userIdCol}
+		from ${user} u where u.id = ${outerRef}
 	)`;
 }
 
