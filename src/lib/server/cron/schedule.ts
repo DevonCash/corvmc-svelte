@@ -2,6 +2,7 @@
 // wrangler `main` entry). Bundled by wrangler's esbuild OUTSIDE the SvelteKit
 // build, so this module must not import `$app`/`$env` or anything else that
 // only resolves inside the kit build.
+import type { CronCheckIn } from './sentry-check-in';
 
 /**
  * Cron expression → ordered list of /api/cron/* endpoints to run, sequentially,
@@ -28,6 +29,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 export interface CronEnv {
 	ORIGIN: string;
 	CRON_SECRET?: string;
+	/** Sentry Crons monitor environment; defaults to 'production' in the reporter. */
+	SENTRY_ENVIRONMENT?: string;
 }
 
 export interface CronJobResult {
@@ -43,6 +46,11 @@ export interface CronJobResult {
  * in-process call, not a network request). A failing job is logged and does not
  * stop the jobs after it.
  *
+ * When a `checkIn` reporter is provided (see sentry-check-in.ts), each job is
+ * bracketed with Sentry Crons check-ins — in_progress before, ok/error after,
+ * paired by the id the opening check-in returns — so Sentry can alert on
+ * missed and failed runs. The monitor slug is the endpoint basename.
+ *
  * The request URL must use the real `env.ORIGIN`: the generated worker caches
  * its origin from the first request URL it sees, and on a cold start the
  * scheduled invocation can be that first request.
@@ -50,7 +58,8 @@ export interface CronJobResult {
 export async function runScheduledJobs(
 	cron: string,
 	env: CronEnv,
-	fetcher: (request: Request) => Promise<Response>
+	fetcher: (request: Request) => Promise<Response>,
+	checkIn?: CronCheckIn
 ): Promise<CronJobResult[]> {
 	const paths = CRON_SCHEDULE[cron];
 	if (!paths) {
@@ -60,6 +69,9 @@ export async function runScheduledJobs(
 
 	const results: CronJobResult[] = [];
 	for (const path of paths) {
+		const slug = path.split('/').at(-1) ?? path;
+		const checkInId = await checkIn?.({ slug, status: 'in_progress', cron });
+		let result: CronJobResult;
 		try {
 			const response = await fetcher(
 				new Request(`${env.ORIGIN}${path}`, {
@@ -73,11 +85,13 @@ export async function runScheduledJobs(
 			} else {
 				console.error(`[cron] ${path} failed with ${response.status}: ${body}`);
 			}
-			results.push({ path, ok: response.ok, status: response.status });
+			result = { path, ok: response.ok, status: response.status };
 		} catch (err) {
 			console.error(`[cron] ${path} threw:`, err);
-			results.push({ path, ok: false, error: err instanceof Error ? err.message : String(err) });
+			result = { path, ok: false, error: err instanceof Error ? err.message : String(err) };
 		}
+		await checkIn?.({ slug, status: result.ok ? 'ok' : 'error', checkInId });
+		results.push(result);
 	}
 	return results;
 }
