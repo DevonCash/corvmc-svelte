@@ -86,6 +86,8 @@ Track grant applications, deadlines, award status, and reporting obligations. Co
 
 A regional music calendar with three event layers: venue events auto-populated from internal systems, community-submitted events moderated by staff, and partner feeds batch-imported from sponsors and affiliated venues. On the export side, syndicate events out to other local aggregators via standardized feeds, API, or formatted blasts — positioning the venue as a two-way hub for the local music scene.
 
+**Progress:** Phase 1 shipped — public `/calendar` unifies CMC venue events and member bands' gigs (month grid + agenda, band rows behind the `bandEvents` flag, band events now render on `/events/[id]` with band attribution). Design in `docs/specs/community-calendar-spec.md`, which also marks the extension point for a `source='community'` layer. Still to come: community submissions with staff moderation, partner feed imports, and `.ics`/RSS syndication (no calendar UI package was needed — the grid is ~150 lines on `@internationalized/date`).
+
 ### Club Management
 
 Tools for member-run clubs (jazz night, open mic, songwriter circle, etc.). Each club gets a dedicated space for managing a recurring event series, a member roster, and a simplified email/announcement system for communicating with club members. Club organizers can also share resources (files, links, lesson materials) with their members, similar to the teacher panel. Builds on top of the existing event and email marketing infrastructure without requiring club organizers to use the full staff tools.
