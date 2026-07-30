@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import { getPublicEvents } from '$lib/remote/events.remote';
+
+	let { upcoming } = $derived(await getPublicEvents());
 
 	const features = [
 		{
@@ -69,6 +73,23 @@
 				Upcoming Events
 			</h2>
 		</div>
+		{#if upcoming.length > 0}
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+				{#each upcoming as evt (evt.id)}
+					<PosterCard
+						href="/events/{evt.id}"
+						title={evt.title}
+						posterUrl={evt.posterUrl}
+						startsAt={evt.startsAt}
+						ticketingEnabled={evt.ticketingEnabled}
+						ticketPrice={evt.ticketPrice}
+						tags={evt.tags}
+					/>
+				{/each}
+			</div>
+		{:else}
+			<p class="text-center opacity-60">No upcoming events right now. Check back soon!</p>
+		{/if}
 		<div class="text-center mt-8">
 			<Button href="/events" class="btn-ghost">View All Events &rarr;</Button>
 		</div>

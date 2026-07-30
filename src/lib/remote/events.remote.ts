@@ -52,6 +52,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
 import { event, createEventSchema } from '$lib/server/db/schema/event';
+import { band } from '$lib/server/db/schema/band';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -166,21 +168,23 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	};
 });
 
+/** Next few CMC shows as poster cards — the /events hero and home-page section. */
 export const getPublicEvents = query(async () => {
-	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
-	const mapEvent = (e: (typeof upcoming)[number]) => ({
-		id: e.id,
-		title: e.title,
-		description: e.description,
-		startsAt: e.startsAt,
-		endsAt: e.endsAt,
-		doorsAt: e.doorsAt ?? null,
-		tags: e.tags as string | null,
-		posterUrl: resolveImageUrl(e.posterKey),
-		ticketingEnabled: e.ticketingEnabled,
-		ticketPrice: e.ticketPrice
-	});
-	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
+	const upcoming = await listUpcoming(3);
+	return {
+		upcoming: upcoming.map((e) => ({
+			id: e.id,
+			title: e.title,
+			description: e.description,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ?? null,
+			tags: e.tags as string | null,
+			posterUrl: resolveImageUrl(e.posterKey),
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice
+		}))
+	};
 });
 
 export const getPublicEventDetail = query(z.string(), async (id) => {
@@ -188,6 +192,22 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
+
+	// Band events are public only while the bandEvents feature is on, matching
+	// the gate on the band listing queries.
+	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
+		throw error(404, 'Event not found');
+	}
+
+	let bandInfo: { name: string; slug: string } | null = null;
+	if (evt.bandId) {
+		const [row] = await db
+			.select({ name: band.name, slug: band.slug })
+			.from(band)
+			.where(eq(band.id, evt.bandId))
+			.limit(1);
+		bandInfo = row ?? null;
+	}
 
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
@@ -231,7 +251,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
-			ticketQuantity: evt.ticketQuantity
+			ticketQuantity: evt.ticketQuantity,
+			source: evt.source,
+			externalTicketUrl: evt.externalTicketUrl,
+			bandName: bandInfo?.name ?? null,
+			bandSlug: bandInfo?.slug ?? null
 		},
 		remaining,
 		sold,
