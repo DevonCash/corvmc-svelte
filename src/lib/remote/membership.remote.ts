@@ -11,7 +11,7 @@ import {
 	updateQuantity,
 	resume
 } from '$lib/server/finance/subscription-service';
-import { getAllBalances } from '$lib/server/finance/credit-service';
+import { getAllBalances, getUsageSinceLastAllocation } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
 import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
@@ -37,9 +37,13 @@ export const getMemberMembership = query(async () => {
 	const subscription = mapDbSubscription(dbSubscription);
 
 	// Allocation/usage are tracked in credits (30-min blocks); the UI converts to
-	// hours for display via creditsToHours.
+	// hours for display via creditsToHours. Usage comes from the ledger so a
+	// mid-cycle contribution change (which bumps hoursPerReset before the next
+	// invoice re-allocates) doesn't distort it; fall back to the balance
+	// shortcut when no allocation has ever run.
 	const allocatedThisMonth = dbSubscription?.hoursPerReset ?? 0;
-	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
+	const ledgerUsage = await getUsageSinceLastAllocation(user.id, 'free_hours');
+	const usedThisMonth = ledgerUsage ?? Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {
 		subscription,

@@ -29,6 +29,7 @@ import { paginate } from '$lib/server/db/paginate';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
+	getUsageSinceLastAllocation,
 	addCredits,
 	deductCredits,
 	listTransactions
@@ -467,9 +468,12 @@ export const getMemberDashboard = query(async () => {
 		(a, b) => a.startsAt.getTime() - b.startsAt.getTime()
 	);
 
-	// Allocation/usage tracked in credits (30-min blocks); the UI converts to hours.
+	// Allocation/usage tracked in credits (30-min blocks); the UI converts to
+	// hours. Usage comes from the ledger (see getMemberMembership) with the
+	// balance shortcut as fallback when no allocation has ever run.
 	const allocatedThisMonth = dbSubscription?.hoursPerReset ?? 0;
-	const usedThisMonth = Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
+	const ledgerUsage = await getUsageSinceLastAllocation(currentUser.id, 'free_hours');
+	const usedThisMonth = ledgerUsage ?? Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {
 		weekReservations: allReservations.map((r) => ({

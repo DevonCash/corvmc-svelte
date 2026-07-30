@@ -65,7 +65,13 @@ vi.mock('$lib/server/db/schema/finance', () => ({
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
 	and: vi.fn(),
+	gt: vi.fn(),
 	gte: vi.fn(),
+	lte: vi.fn(),
+	desc: vi.fn(),
+	like: vi.fn(),
+	or: vi.fn(),
+	count: vi.fn(),
 	sql: vi.fn()
 }));
 
@@ -78,6 +84,7 @@ const {
 	setBalance,
 	allocateMonthlyCredits,
 	allocateEquipmentCredits,
+	getUsageSinceLastAllocation,
 	hasTransaction,
 	InsufficientCreditsError
 } = await import('./credit-service');
@@ -381,5 +388,38 @@ describe('allocateEquipmentCredits', () => {
 		const result = await allocateEquipmentCredits('user-1', 50, 'inv_dup');
 		expect(result).toBe(100);
 		expect(insertedRows).toHaveLength(0);
+	});
+});
+
+describe('getUsageSinceLastAllocation', () => {
+	beforeEach(() => {
+		selectResults = [];
+		updateResults = [];
+		insertedRows.length = 0;
+		setPayloads.length = 0;
+	});
+
+	it('returns null when the user has never had an allocation', async () => {
+		selectResults = [[]]; // no monthly_allocation row
+
+		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
+		expect(result).toBeNull();
+	});
+
+	it('sums net deductions after the latest allocation', async () => {
+		selectResults = [
+			[{ createdAt: new Date('2026-07-01T00:00:00Z') }], // latest allocation
+			[{ used: 4 }] // -sum(amount) after it
+		];
+
+		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
+		expect(result).toBe(4);
+	});
+
+	it('clamps to zero when reversals outweigh deductions', async () => {
+		selectResults = [[{ createdAt: new Date('2026-07-01T00:00:00Z') }], [{ used: -2 }]];
+
+		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
+		expect(result).toBe(0);
 	});
 });

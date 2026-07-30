@@ -10,7 +10,7 @@ import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './equipment-service';
-import { DAILY_RATE_MAJOR, DAILY_RATE_ACCESSORY, estimateLoanCost } from '$lib/config';
+import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
 import type { PricingTier, LoanStatus } from '$lib/server/db/schema/equipment';
 
@@ -43,9 +43,11 @@ export class InsufficientQuantityError extends Error {
 // Pricing helpers
 // ---------------------------------------------------------------------------
 
+// Rate and day-count rules live in $lib/config (loanDailyRateCents /
+// loanChargeDays) so the member-facing estimate and this settlement can never
+// drift apart. These wrappers keep the established server-side names.
 export function calculateDailyRate(pricingTier: PricingTier, isSustainingMember: boolean): number {
-	if (pricingTier === 'accessory' && isSustainingMember) return 0;
-	return pricingTier === 'major' ? DAILY_RATE_MAJOR : DAILY_RATE_ACCESSORY;
+	return loanDailyRateCents(pricingTier, isSustainingMember);
 }
 
 export function calculateLoanCharge(
@@ -53,9 +55,7 @@ export function calculateLoanCharge(
 	checkedOutAt: Date,
 	returnedAt: Date
 ): number {
-	const ms = returnedAt.getTime() - checkedOutAt.getTime();
-	const days = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-	return dailyRateCents * days;
+	return dailyRateCents * loanChargeDays(checkedOutAt, returnedAt);
 }
 
 async function settleReturn(
@@ -66,11 +66,16 @@ async function settleReturn(
 ): Promise<{ creditsCents: number; cashCents: number }> {
 	if (totalCents <= 0) return { creditsCents: 0, cashCents: 0 };
 
-	const creditBalance = await getBalance(userId, 'equipment_credits');
-	const creditsToUse = Math.min(creditBalance, totalCents);
-	const cashRemaining = totalCents - creditsToUse;
+	// Apply as many equipment credits as the wallet holds, cash for the rest.
+	// The read-then-deduct pair can race a concurrent spend; on
+	// InsufficientCreditsError re-read and retry with the fresh balance rather
+	// than abandoning the member's remaining credits.
+	let creditsUsed = 0;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		const creditBalance = await getBalance(userId, 'equipment_credits');
+		const creditsToUse = Math.min(creditBalance, totalCents);
+		if (creditsToUse <= 0) break;
 
-	if (creditsToUse > 0) {
 		try {
 			await deductCredits(
 				userId,
@@ -80,23 +85,15 @@ async function settleReturn(
 				loanId,
 				`Equipment loan ${loanId}`
 			);
+			creditsUsed = creditsToUse;
+			break;
 		} catch (err) {
-			if (err instanceof InsufficientCreditsError) {
-				// Race condition — fall back to full cash
-				if (stripeCustomerId) {
-					await recordCashPayment({
-						userId,
-						stripeCustomerId,
-						amountCents: totalCents,
-						metadata: { equipment_loan_id: loanId }
-					});
-				}
-				return { creditsCents: 0, cashCents: totalCents };
-			}
+			if (err instanceof InsufficientCreditsError) continue; // balance moved — retry
 			throw err;
 		}
 	}
 
+	const cashRemaining = totalCents - creditsUsed;
 	if (cashRemaining > 0 && stripeCustomerId) {
 		await recordCashPayment({
 			userId,
@@ -106,7 +103,7 @@ async function settleReturn(
 		});
 	}
 
-	return { creditsCents: creditsToUse, cashCents: cashRemaining };
+	return { creditsCents: creditsUsed, cashCents: cashRemaining };
 }
 
 // ---------------------------------------------------------------------------

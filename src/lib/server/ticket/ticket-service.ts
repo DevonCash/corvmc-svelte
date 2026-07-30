@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, inArray, sql, asc, desc } from 'drizzle-orm';
+import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,6 +109,28 @@ export async function cancelPurchase(purchaseId: string): Promise<number> {
 		.update(ticket)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(and(eq(ticket.purchaseId, purchaseId), inArray(ticket.status, ['pending', 'valid'])))
+		.returning({ id: ticket.id });
+
+	return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// Cancel stale pending tickets (cron sweep)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancel `pending` tickets whose checkout was abandoned. Pending rows are
+ * created before the Stripe redirect and flipped to `valid` by the
+ * checkout.session.completed webhook; a Checkout Session lives at most 24h,
+ * so anything still pending past that is an orphan. Returns the count.
+ */
+export async function cancelStalePendingTickets(olderThanHours = 24): Promise<number> {
+	const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+
+	const rows = await db
+		.update(ticket)
+		.set({ status: 'cancelled', updatedAt: new Date() })
+		.where(and(eq(ticket.status, 'pending'), lt(ticket.createdAt, cutoff)))
 		.returning({ id: ticket.id });
 
 	return rows.length;

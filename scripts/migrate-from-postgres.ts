@@ -372,7 +372,6 @@ async function migrateUsers() {
 				pmLastFour: u.pm_last_four,
 				creditFreeHours: 0,
 				creditEquipment: 0,
-				trialEndsAt: ts(u.trial_ends_at),
 				deletedAt: null,
 				memberNumber: Number.isInteger(Number(u.id)) ? Number(u.id) : null,
 				bio: u.bio,

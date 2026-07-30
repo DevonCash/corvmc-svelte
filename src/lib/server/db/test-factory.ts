@@ -21,7 +21,6 @@ export const factory = createWorld({ seed: 42 })
 			stripeId: () => null,
 			pmType: () => null,
 			pmLastFour: () => null,
-			trialEndsAt: () => null,
 			deletedAt: () => null
 		}
 	})
