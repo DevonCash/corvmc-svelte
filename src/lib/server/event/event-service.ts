@@ -792,6 +792,33 @@ export async function listPublicCalendarEvents(
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
 }
 
+/**
+ * Published events from `from` forward, across sources, ordered soonest-first,
+ * band info joined. Fetches limit+1 rows so callers can derive hasMore; band
+ * events are excluded unless includeBandEvents (the bandEvents feature flag).
+ */
+export async function listPublicUpcomingEvents(
+	from: Date,
+	opts: { includeBandEvents: boolean; limit: number; offset: number }
+): Promise<CalendarEventRow[]> {
+	const rows = await db
+		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(
+			and(
+				eq(event.status, 'published'),
+				gte(event.startsAt, from),
+				opts.includeBandEvents ? undefined : eq(event.source, 'cmc')
+			)
+		)
+		.orderBy(asc(event.startsAt))
+		.limit(opts.limit + 1)
+		.offset(opts.offset);
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

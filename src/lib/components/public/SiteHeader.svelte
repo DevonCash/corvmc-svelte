@@ -10,7 +10,6 @@
 
 	const links = [
 		{ href: '/events', label: 'Events' },
-		{ href: '/calendar', label: 'Calendar' },
 		{ href: '/directory', label: 'Directory' },
 		{ href: '/programs', label: 'Programs' },
 		{ href: '/membership', label: 'Membership' },

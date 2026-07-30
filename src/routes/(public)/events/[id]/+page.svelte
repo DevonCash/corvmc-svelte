@@ -66,7 +66,7 @@
 	// Band gigs are ticketed off-site (if at all); CMC events sell through /tickets.
 	const ticketsHref = $derived(
 		isBandEvent
-			? (evt.externalTicketUrl ?? bandHref ?? resolve('/calendar'))
+			? (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
 			: resolve(`/events/${evt.id}/tickets`)
 	);
 

@@ -1,7 +1,19 @@
 import { z } from 'zod';
 
-/** ?month= query param for the public calendar: "YYYY-MM". */
+/** ?month= query param for the mini-calendar: "YYYY-MM". */
 export const monthSchema = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
+
+/** Gig guide query input: optional "YYYY-MM-DD" anchor date + page offset. */
+export const gigGuideSchema = z.object({
+	from: z
+		.string()
+		.regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+		.optional(),
+	offset: z.number().int().min(0).default(0)
+});
+
+/** Page size for the gig guide list. */
+export const GIG_GUIDE_PAGE_SIZE = 20;
 
 /** One event on the public calendar, shaped for the client. */
 export interface CalendarEntry {

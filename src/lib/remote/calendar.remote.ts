@@ -1,10 +1,19 @@
 import { query } from '$app/server';
-import { listPublicCalendarEvents } from '$lib/server/event/event-service';
+import {
+	listPublicCalendarEvents,
+	listPublicUpcomingEvents,
+	type CalendarEventRow
+} from '$lib/server/event/event-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { DEFAULT_TIMEZONE } from '$lib/config';
-import { monthSchema, type CalendarEntry } from '$lib/types/calendar';
+import {
+	monthSchema,
+	gigGuideSchema,
+	GIG_GUIDE_PAGE_SIZE,
+	type CalendarEntry
+} from '$lib/types/calendar';
 
 // ---------------------------------------------------------------------------
 // Public calendar — unified month view across CMC and band events
@@ -21,6 +30,48 @@ function monthBounds(month: string): { start: string; end: string } {
 	};
 }
 
+function toCalendarEntry(e: CalendarEventRow): CalendarEntry {
+	return {
+		id: e.id,
+		title: e.title,
+		startsAt: e.startsAt,
+		endsAt: e.endsAt,
+		source: e.source,
+		location: e.location,
+		bandName: e.bandName,
+		bandSlug: e.bandSlug,
+		posterUrl: resolveImageUrl(e.posterKey),
+		ticketingEnabled: e.ticketingEnabled,
+		ticketPrice: e.ticketPrice,
+		externalTicketUrl: e.externalTicketUrl,
+		href: `/events/${e.id}`
+	};
+}
+
+/**
+ * Continuous upcoming list for the gig guide: events from `from` (default
+ * today, venue time) forward, paged by offset.
+ */
+export const getPublicGigGuide = query(gigGuideSchema, async ({ from, offset }) => {
+	const anchor = from ?? formatDateInTz(new Date(), DEFAULT_TIMEZONE);
+	const windowStart = buildDateInTz(anchor, '00:00', DEFAULT_TIMEZONE);
+
+	const bandEventsEnabled = await isFeatureEnabled('bandEvents');
+	const rows = await listPublicUpcomingEvents(windowStart, {
+		includeBandEvents: bandEventsEnabled,
+		limit: GIG_GUIDE_PAGE_SIZE,
+		offset
+	});
+
+	const hasMore = rows.length > GIG_GUIDE_PAGE_SIZE;
+	return {
+		from: anchor,
+		bandEventsEnabled,
+		hasMore,
+		events: rows.slice(0, GIG_GUIDE_PAGE_SIZE).map(toCalendarEntry)
+	};
+});
+
 export const getPublicCalendar = query(monthSchema, async ({ month }) => {
 	// The window is computed in venue time so events land on the venue-local month.
 	const { start, end } = monthBounds(month);
@@ -35,22 +86,6 @@ export const getPublicCalendar = query(monthSchema, async ({ month }) => {
 	return {
 		month,
 		bandEventsEnabled,
-		events: rows.map(
-			(e): CalendarEntry => ({
-				id: e.id,
-				title: e.title,
-				startsAt: e.startsAt,
-				endsAt: e.endsAt,
-				source: e.source,
-				location: e.location,
-				bandName: e.bandName,
-				bandSlug: e.bandSlug,
-				posterUrl: resolveImageUrl(e.posterKey),
-				ticketingEnabled: e.ticketingEnabled,
-				ticketPrice: e.ticketPrice,
-				externalTicketUrl: e.externalTicketUrl,
-				href: `/events/${e.id}`
-			})
-		)
+		events: rows.map(toCalendarEntry)
 	};
 });

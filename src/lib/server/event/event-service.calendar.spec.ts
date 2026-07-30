@@ -1,26 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
-// Mocks — a select chain that records the where clause so the source filter
-// can be asserted, and resolves to configurable joined rows.
+// Mocks — a select chain that records the where clause and limit/offset so the
+// filters can be asserted, and resolves to configurable joined rows.
 // ---------------------------------------------------------------------------
 
 let capturedWhere: unknown;
+let capturedLimit: number | undefined;
+let capturedOffset: number | undefined;
 let selectRows: unknown[] = [];
 
+function chain(): unknown {
+	const proxy: unknown = new Proxy(() => proxy, {
+		get(_, prop) {
+			if (prop === 'then') {
+				return (resolve: (v: unknown[]) => void) => resolve(selectRows);
+			}
+			if (prop === 'where') {
+				return (clause: unknown) => {
+					capturedWhere = clause;
+					return proxy;
+				};
+			}
+			if (prop === 'limit') {
+				return (n: number) => {
+					capturedLimit = n;
+					return proxy;
+				};
+			}
+			if (prop === 'offset') {
+				return (n: number) => {
+					capturedOffset = n;
+					return proxy;
+				};
+			}
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+
 vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => ({
-			from: () => ({
-				leftJoin: () => ({
-					where: (clause: unknown) => {
-						capturedWhere = clause;
-						return { orderBy: () => Promise.resolve(selectRows) };
-					}
-				})
-			})
-		})
-	},
+	db: { select: () => chain() },
 	getRowCount: () => 0
 }));
 
@@ -33,7 +54,7 @@ vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn(
 vi.mock('$lib/server/events/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
 
-import { listPublicCalendarEvents } from './event-service';
+import { listPublicCalendarEvents, listPublicUpcomingEvents } from './event-service';
 
 /** Depth-first search of a drizzle SQL tree for a bound parameter value. */
 function containsParam(node: unknown, value: unknown): boolean {
@@ -62,12 +83,14 @@ const bandEvent = {
 const windowStart = new Date('2026-08-01T07:00:00Z');
 const windowEnd = new Date('2026-09-01T07:00:00Z');
 
-describe('listPublicCalendarEvents', () => {
-	beforeEach(() => {
-		capturedWhere = undefined;
-		selectRows = [];
-	});
+beforeEach(() => {
+	capturedWhere = undefined;
+	capturedLimit = undefined;
+	capturedOffset = undefined;
+	selectRows = [];
+});
 
+describe('listPublicCalendarEvents', () => {
 	it('maps joined band info onto rows, null for CMC rows', async () => {
 		selectRows = [
 			{ event: cmcEvent, bandName: null, bandSlug: null },
@@ -100,5 +123,31 @@ describe('listPublicCalendarEvents', () => {
 	it('always filters to published events', async () => {
 		await listPublicCalendarEvents(windowStart, windowEnd, { includeBandEvents: true });
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
+	});
+});
+
+describe('listPublicUpcomingEvents', () => {
+	it('maps joined band info and filters to published', async () => {
+		selectRows = [{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes' }];
+
+		const result = await listPublicUpcomingEvents(windowStart, {
+			includeBandEvents: true,
+			limit: 20,
+			offset: 0
+		});
+
+		expect(result[0]).toMatchObject({ id: 'evt-band', bandName: 'The Shakes' });
+		expect(containsParam(capturedWhere, 'published')).toBe(true);
+	});
+
+	it('fetches limit+1 rows at the given offset (hasMore probe)', async () => {
+		await listPublicUpcomingEvents(windowStart, { includeBandEvents: true, limit: 20, offset: 40 });
+		expect(capturedLimit).toBe(21);
+		expect(capturedOffset).toBe(40);
+	});
+
+	it('filters to CMC-only when band events are excluded', async () => {
+		await listPublicUpcomingEvents(windowStart, { includeBandEvents: false, limit: 20, offset: 0 });
+		expect(containsParam(capturedWhere, 'cmc')).toBe(true);
 	});
 });

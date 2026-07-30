@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
-import { listUpcoming } from '$lib/server/event/event-service';
+import { listPublicUpcomingEvents } from '$lib/server/event/event-service';
 import { listPublicBands } from '$lib/server/directory/directory-service';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const STATIC_ROUTES = [
 	'/',
@@ -8,7 +9,6 @@ const STATIC_ROUTES = [
 	'/about/privacy',
 	'/about/bylaws',
 	'/events',
-	'/calendar',
 	'/directory',
 	'/programs',
 	'/contribute',
@@ -20,11 +20,15 @@ const STATIC_ROUTES = [
 export const GET: RequestHandler = async ({ url }) => {
 	const origin = url.origin;
 
-	const [events, bands] = await Promise.all([listUpcoming(), listPublicBands()]);
+	const includeBandEvents = await isFeatureEnabled('bandEvents');
+	const [events, bands] = await Promise.all([
+		listPublicUpcomingEvents(new Date(), { includeBandEvents, limit: 500, offset: 0 }),
+		listPublicBands()
+	]);
 
 	const urls = [
 		...STATIC_ROUTES.map((path) => `<url><loc>${origin}${path}</loc></url>`),
-		...events.map((e) => `<url><loc>${origin}/events/${e.id}/tickets</loc></url>`),
+		...events.map((e) => `<url><loc>${origin}/events/${e.id}</loc></url>`),
 		...bands.map((b) => `<url><loc>${origin}/directory/bands/${b.slug}</loc></url>`)
 	];
 

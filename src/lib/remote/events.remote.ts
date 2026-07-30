@@ -168,21 +168,23 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	};
 });
 
+/** Next few CMC shows as poster cards — the /events hero and home-page section. */
 export const getPublicEvents = query(async () => {
-	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
-	const mapEvent = (e: (typeof upcoming)[number]) => ({
-		id: e.id,
-		title: e.title,
-		description: e.description,
-		startsAt: e.startsAt,
-		endsAt: e.endsAt,
-		doorsAt: e.doorsAt ?? null,
-		tags: e.tags as string | null,
-		posterUrl: resolveImageUrl(e.posterKey),
-		ticketingEnabled: e.ticketingEnabled,
-		ticketPrice: e.ticketPrice
-	});
-	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
+	const upcoming = await listUpcoming(3);
+	return {
+		upcoming: upcoming.map((e) => ({
+			id: e.id,
+			title: e.title,
+			description: e.description,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			doorsAt: e.doorsAt ?? null,
+			tags: e.tags as string | null,
+			posterUrl: resolveImageUrl(e.posterKey),
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice
+		}))
+	};
 });
 
 export const getPublicEventDetail = query(z.string(), async (id) => {
