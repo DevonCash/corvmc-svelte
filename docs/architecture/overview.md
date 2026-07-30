@@ -356,8 +356,9 @@ times shift an hour with DST):
 
 The `0 16 * * *` batch (8am PST / 9am PDT) runs its four jobs sequentially, generation
 first, so freshly generated occurrences are visible to lock provisioning and the reminder
-sweeps. See the cron section of the [operations manual](operations-manual.md) for the
-runbook.
+sweeps. Each job is bracketed with Sentry Crons check-ins (plain HTTP,
+`src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed and missed runs.
+See the cron section of the [operations manual](operations-manual.md) for the runbook.
 
 ## Configuration: three tiers
 

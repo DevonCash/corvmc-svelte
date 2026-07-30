@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CRON_SCHEDULE, runScheduledJobs } from './schedule';
+import type { CronCheckIn } from './sentry-check-in';
 
 const env = { ORIGIN: 'https://corvmc.test', CRON_SECRET: 'test-secret' };
 
@@ -104,6 +105,59 @@ describe('runScheduledJobs', () => {
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 }
 		]);
+	});
+
+	it('brackets each job with paired in_progress → ok check-ins', async () => {
+		const fetcher = okFetcher();
+		let n = 0;
+		const checkIn = vi.fn(async ({ status }: { status: string }) =>
+			status === 'in_progress' ? `ci-${++n}` : undefined
+		);
+
+		await runScheduledJobs('*/15 * * * *', env, fetcher, checkIn);
+
+		expect(checkIn.mock.calls.map(([opts]) => opts)).toEqual([
+			{ slug: 'auto-complete', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'auto-complete', status: 'ok', checkInId: 'ci-1' },
+			{ slug: 'cancel-unconfirmed', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'cancel-unconfirmed', status: 'ok', checkInId: 'ci-2' },
+			{ slug: 'expire-waitlisted', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' }
+		]);
+	});
+
+	it('reports error check-ins for thrown and non-2xx jobs', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const fetcher = vi
+			.fn<(request: Request) => Promise<Response>>()
+			.mockRejectedValueOnce(new Error('boom'))
+			.mockImplementationOnce(async () => new Response('nope', { status: 500 }))
+			.mockImplementation(async () => new Response('{}', { status: 200 }));
+		const checkIn = vi.fn(async ({ status }: { status: string }) =>
+			status === 'in_progress' ? 'ci-x' : undefined
+		);
+
+		await runScheduledJobs('*/15 * * * *', env, fetcher, checkIn);
+
+		const closes = checkIn.mock.calls
+			.map(([opts]) => opts as { status: string; checkInId?: string })
+			.filter((o) => o.status !== 'in_progress');
+		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok']);
+		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
+	});
+
+	it('still closes the check-in when the opening check-in returned no id', async () => {
+		const fetcher = okFetcher();
+		const checkIn = vi.fn<CronCheckIn>(async () => undefined);
+
+		await runScheduledJobs('*/5 * * * *', env, fetcher, checkIn);
+
+		expect(checkIn).toHaveBeenCalledTimes(2);
+		expect(checkIn.mock.calls[1][0]).toEqual({
+			slug: 'send-campaigns',
+			status: 'ok',
+			checkInId: undefined
+		});
 	});
 
 	it('runs nothing for an unmapped cron expression', async () => {
