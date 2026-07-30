@@ -82,14 +82,13 @@ export function buildDateInTz(dateStr: string, timeStr: string, tz: string): Dat
  * Positive = behind UTC, negative = ahead (matching getTimezoneOffset convention).
  */
 function getUtcOffsetMinutes(date: Date, tz: string): number {
-	// Format the date in the target timezone and in UTC, then diff
+	// Read the wall clock in the target timezone, reinterpret it as UTC, and
+	// diff against the actual instant. Uses full year/month/day so the result
+	// is correct when the local and UTC dates fall in different months/years.
 	const inTz = getPartsInTz(date, tz);
-	const inUtc = getPartsInTz(date, 'UTC');
+	const wallClockAsUtc = Date.UTC(inTz.year, inTz.month - 1, inTz.day, inTz.hour, inTz.minute);
 
-	const tzMinutes = inTz.hour * 60 + inTz.minute + inTz.day * 1440;
-	const utcMinutes = inUtc.hour * 60 + inUtc.minute + inUtc.day * 1440;
-
-	return utcMinutes - tzMinutes;
+	return Math.round((date.getTime() - wallClockAsUtc) / 60_000);
 }
 
 /**

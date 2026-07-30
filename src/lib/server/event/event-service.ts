@@ -757,6 +757,42 @@ export async function countMemberPastShows(userId: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Public calendar
+// ---------------------------------------------------------------------------
+
+export interface CalendarEventRow extends EventRow {
+	bandName: string | null;
+	bandSlug: string | null;
+}
+
+/**
+ * Published events with startsAt in [start, end), across sources, band info
+ * joined for attribution. Band events are excluded unless includeBandEvents
+ * (the bandEvents feature flag) is set.
+ */
+export async function listPublicCalendarEvents(
+	start: Date,
+	end: Date,
+	opts: { includeBandEvents: boolean }
+): Promise<CalendarEventRow[]> {
+	const rows = await db
+		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(
+			and(
+				eq(event.status, 'published'),
+				gte(event.startsAt, start),
+				lt(event.startsAt, end),
+				opts.includeBandEvents ? undefined : eq(event.source, 'cmc')
+			)
+		)
+		.orderBy(asc(event.startsAt));
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

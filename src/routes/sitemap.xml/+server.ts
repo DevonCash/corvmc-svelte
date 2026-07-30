@@ -8,6 +8,7 @@ const STATIC_ROUTES = [
 	'/about/privacy',
 	'/about/bylaws',
 	'/events',
+	'/calendar',
 	'/directory',
 	'/programs',
 	'/contribute',

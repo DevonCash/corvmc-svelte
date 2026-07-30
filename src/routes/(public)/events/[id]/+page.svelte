@@ -60,7 +60,15 @@
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 
-	const ticketsHref = $derived(resolve(`/events/${evt.id}/tickets`));
+	const isBandEvent = $derived(evt.source === 'band');
+	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
+
+	// Band gigs are ticketed off-site (if at all); CMC events sell through /tickets.
+	const ticketsHref = $derived(
+		isBandEvent
+			? (evt.externalTicketUrl ?? bandHref ?? resolve('/calendar'))
+			: resolve(`/events/${evt.id}/tickets`)
+	);
 
 	async function share() {
 		try {
@@ -148,6 +156,17 @@
 
 				<h1 class="edet__title">{evt.title}</h1>
 
+				{#if isBandEvent && evt.bandName}
+					<p class="edet__byline">
+						by
+						{#if bandHref}
+							<a href={bandHref} class="link">{evt.bandName}</a>
+						{:else}
+							{evt.bandName}
+						{/if}
+					</p>
+				{/if}
+
 				<div class="edet__facts">
 					<div class="edet__fact">
 						<span class="edet__fact-label">
@@ -214,41 +233,43 @@
 							<span class="edet__fact-value">{evt.location}</span>
 						</div>
 					{/if}
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><path
-									d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
-								/><path d="M13 6v12" /></svg
-							>
-							Price
-						</span>
-						<span class="edet__fact-value">
-							{#if !evt.ticketingEnabled}
-								Free
-							{:else if evt.ticketPrice}
-								{#if data.isSustainingMember && discountedPrice}
-									{formatCents(discountedPrice)}
-									<span
-										style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
-										>{formatCents(evt.ticketPrice)}</span
-									>
+					{#if !isBandEvent}
+						<div class="edet__fact">
+							<span class="edet__fact-label">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									style="width:13px;height:13px"
+									><path
+										d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
+									/><path d="M13 6v12" /></svg
+								>
+								Price
+							</span>
+							<span class="edet__fact-value">
+								{#if !evt.ticketingEnabled}
+									Free
+								{:else if evt.ticketPrice}
+									{#if data.isSustainingMember && discountedPrice}
+										{formatCents(discountedPrice)}
+										<span
+											style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
+											>{formatCents(evt.ticketPrice)}</span
+										>
+									{:else}
+										{formatCents(evt.ticketPrice)}
+									{/if}
 								{:else}
-									{formatCents(evt.ticketPrice)}
+									Free
 								{/if}
-							{:else}
-								Free
-							{/if}
-						</span>
-					</div>
+							</span>
+						</div>
+					{/if}
 				</div>
 
 				{#if descriptionHtml}
@@ -277,6 +298,16 @@
 						<span class="text-base font-medium" style="color: var(--fg-2)"
 							>This event has ended.</span
 						>
+					{:else if isBandEvent}
+						<!-- Band gigs are handled by the venue — no internal RSVP or ticketing. -->
+						{#if evt.externalTicketUrl}
+							<a
+								href={evt.externalTicketUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="btn btn-primary btn-lg">Get Tickets</a
+							>
+						{/if}
 					{:else if evt.ticketingEnabled}
 						{#if soldOut}
 							<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
@@ -340,6 +371,16 @@
 	/* Layout (.edet, .edet__poster/main/tags/title/facts/fact/desc/ctas) is
 	   shared with the member event detail page and lives in routes/layout.css.
 	   Only the rules unique to this page are defined locally below. */
+	.edet__byline {
+		font-size: 0.95rem;
+		color: var(--fg-2);
+		margin-top: -0.5rem;
+	}
+
+	.edet__byline a {
+		font-weight: 600;
+	}
+
 	.edet__capacity {
 		display: flex;
 		flex-direction: column;

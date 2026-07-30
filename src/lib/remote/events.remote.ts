@@ -52,6 +52,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
 import { event, createEventSchema } from '$lib/server/db/schema/event';
+import { band } from '$lib/server/db/schema/band';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -189,6 +191,22 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 
+	// Band events are public only while the bandEvents feature is on, matching
+	// the gate on the band listing queries.
+	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
+		throw error(404, 'Event not found');
+	}
+
+	let bandInfo: { name: string; slug: string } | null = null;
+	if (evt.bandId) {
+		const [row] = await db
+			.select({ name: band.name, slug: band.slug })
+			.from(band)
+			.where(eq(band.id, evt.bandId))
+			.limit(1);
+		bandInfo = row ?? null;
+	}
+
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -231,7 +249,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
-			ticketQuantity: evt.ticketQuantity
+			ticketQuantity: evt.ticketQuantity,
+			source: evt.source,
+			externalTicketUrl: evt.externalTicketUrl,
+			bandName: bandInfo?.name ?? null,
+			bandSlug: bandInfo?.slug ?? null
 		},
 		remaining,
 		sold,
