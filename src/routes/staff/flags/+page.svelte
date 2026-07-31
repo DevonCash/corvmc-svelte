@@ -10,7 +10,8 @@
 
 	const entityLabels: Record<string, string> = {
 		member_profile: 'Member',
-		band_profile: 'Band'
+		band_profile: 'Band',
+		event: 'Event'
 	};
 
 	let search = $state('');
@@ -105,7 +106,7 @@
 								<td class="w-px text-sm">{entityLabels[f.entityType] ?? f.entityType}</td>
 								<td class="font-medium">{f.entityLabel}</td>
 								<td class="max-w-xs truncate">{f.reason}</td>
-								<td class="text-sm">{f.reportedByName}</td>
+								<td class="text-sm">{f.reportedByName ?? 'Anonymous visitor'}</td>
 								<td class="w-px"><StatusBadge status={f.status} label /></td>
 								<td class="w-px whitespace-nowrap text-sm">{formatDateTime(f.createdAt)}</td>
 							</tr>

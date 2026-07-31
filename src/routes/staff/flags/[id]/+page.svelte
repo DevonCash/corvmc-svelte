@@ -12,7 +12,8 @@
 
 	const entityLabels: Record<string, string> = {
 		member_profile: 'Member profile',
-		band_profile: 'Band profile'
+		band_profile: 'Band profile',
+		event: 'Event listing'
 	};
 
 	let id = $derived(page.params.id!);
@@ -21,7 +22,15 @@
 	let entityHref = $derived(
 		flag.entityType === 'band_profile'
 			? resolve(`/staff/bands/${flag.entityId}`)
-			: resolve(`/staff/users/${flag.entityId}`)
+			: flag.entityType === 'event'
+				? resolve(`/events/${flag.entityId}`)
+				: resolve(`/staff/users/${flag.entityId}`)
+	);
+
+	// Staff can pull a still-published flagged event off the public guide while
+	// resolving; the band's admins are notified with the resolution note.
+	let canUnpublish = $derived(
+		flag.entityType === 'event' && flag.eventContext?.status === 'published'
 	);
 
 	const { fields } = resolveFlag;
@@ -53,12 +62,52 @@
 				{/if}
 
 				<dt class="opacity-60">Reported by</dt>
-				<dd>{flag.reportedByName} <span class="opacity-60">({flag.reportedByEmail})</span></dd>
+				<dd>
+					{#if flag.reportedByName}
+						{flag.reportedByName} <span class="opacity-60">({flag.reportedByEmail})</span>
+					{:else}
+						Anonymous visitor
+					{/if}
+				</dd>
 
 				<dt class="opacity-60">Reported</dt>
 				<dd>{formatDateTime(flag.createdAt)}</dd>
 			</dl>
 		</InfoCard>
+
+		{#if flag.eventContext}
+			<InfoCard title="Event details">
+				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
+					<dt class="opacity-60">Title</dt>
+					<dd class="font-medium">{flag.eventContext.title}</dd>
+
+					<dt class="opacity-60">Date</dt>
+					<dd>{formatDateTime(flag.eventContext.startsAt)}</dd>
+
+					{#if flag.eventContext.location}
+						<dt class="opacity-60">Venue</dt>
+						<dd>{flag.eventContext.location}</dd>
+					{/if}
+
+					<dt class="opacity-60">By</dt>
+					<dd>
+						{#if flag.eventContext.band}
+							<a class="link" href={resolve(`/directory/bands/${flag.eventContext.band.slug}`)}>
+								{flag.eventContext.band.name}
+							</a>
+						{:else}
+							CMC
+						{/if}
+					</dd>
+
+					<dt class="opacity-60">Status</dt>
+					<dd><StatusBadge status={flag.eventContext.status} label /></dd>
+				</dl>
+				<div class="mt-3">
+					<Button href={entityHref} class="btn-outline btn-sm">View public listing</Button>
+				</div>
+			</InfoCard>
+		{/if}
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
@@ -100,6 +149,15 @@
 										bind:value={notes}
 									></textarea>
 								</label>
+								{#if canUnpublish && resolution === 'resolved'}
+									<label class="label cursor-pointer justify-start gap-2">
+										<input class="checkbox checkbox-sm" {...fields.unpublishEvent.as('checkbox')} />
+										<span class="label-text text-wrap">
+											Also unpublish this event (removes it from the public gig guide; the band's
+											admins are notified with your note)
+										</span>
+									</label>
+								{/if}
 							</div>
 						{/snippet}
 					</Action>

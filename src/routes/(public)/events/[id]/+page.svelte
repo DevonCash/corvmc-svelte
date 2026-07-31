@@ -6,6 +6,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import ReportEventAction from '$lib/components/shared/actions/ReportEventAction.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
@@ -125,6 +126,9 @@
 						<IconShare3 size={18} />
 					{/if}
 				</button>
+				{#if data.canReport}
+					<ReportEventAction eventId={evt.id} eventTitle={evt.title} />
+				{/if}
 			</div>
 		</PageHeader>
 

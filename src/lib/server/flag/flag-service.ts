@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import { user } from '$lib/server/db/schema/authentication';
-import { band } from '$lib/server/db/schema/band';
+import { band, bandMember } from '$lib/server/db/schema/band';
+import { event } from '$lib/server/db/schema/event';
 import { eq, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -45,7 +46,16 @@ export class FlagAlreadyResolvedError extends Error {
 // ---------------------------------------------------------------------------
 
 function entityHref(entityType: FlagEntityType, entityId: string): string {
-	return entityType === 'band_profile' ? `/staff/bands/${entityId}` : `/staff/users/${entityId}`;
+	switch (entityType) {
+		case 'band_profile':
+			return `/staff/bands/${entityId}`;
+		// Events have no staff record page for band events; the public listing is
+		// the canonical URL for both sources.
+		case 'event':
+			return `/events/${entityId}`;
+		default:
+			return `/staff/users/${entityId}`;
+	}
 }
 
 /** Resolve a display name for a flagged entity, or null if it no longer exists. */
@@ -60,6 +70,14 @@ async function resolveEntityLabel(
 			.where(eq(band.id, entityId))
 			.limit(1);
 		return row?.name ?? null;
+	}
+	if (entityType === 'event') {
+		const [row] = await db
+			.select({ title: event.title })
+			.from(event)
+			.where(eq(event.id, entityId))
+			.limit(1);
+		return row?.title ?? null;
 	}
 	const [row] = await db
 		.select({ name: user.name })
@@ -76,8 +94,9 @@ async function resolveEntityLabel(
 export interface CreateFlagParams {
 	entityType: FlagEntityType;
 	entityId: string;
-	reportedByUserId: string;
-	reportedByName: string;
+	/** Absent for anonymous public reports (event listings). */
+	reportedByUserId?: string;
+	reportedByName?: string;
 	reason: string;
 	description?: string;
 }
@@ -86,33 +105,49 @@ export async function createFlag(params: CreateFlagParams) {
 	const entityLabel = await resolveEntityLabel(params.entityType, params.entityId);
 	if (entityLabel === null) throw new FlagTargetNotFoundError();
 
+	// If this entity already has a pending flag, repeat reports pile onto the
+	// existing queue item without re-notifying every staff member.
+	const [duplicate] = await db
+		.select({ id: contentFlag.id })
+		.from(contentFlag)
+		.where(
+			and(
+				eq(contentFlag.entityType, params.entityType),
+				eq(contentFlag.entityId, params.entityId),
+				eq(contentFlag.status, 'pending')
+			)
+		)
+		.limit(1);
+
 	const [flag] = await db
 		.insert(contentFlag)
 		.values({
 			entityType: params.entityType,
 			entityId: params.entityId,
-			reportedByUserId: params.reportedByUserId,
+			reportedByUserId: params.reportedByUserId ?? null,
 			reason: params.reason.slice(0, FLAG_REASON_MAX),
 			description: params.description?.slice(0, FLAG_DESCRIPTION_MAX) || null
 		})
 		.returning();
 
 	// Fire-and-forget: notify staff without blocking the reporter's request.
-	Promise.resolve().then(async () => {
-		try {
-			await domainEvents.emit('content.flagged', {
-				flagId: flag.id,
-				entityType: flag.entityType,
-				entityId: flag.entityId,
-				entityLabel,
-				reason: flag.reason,
-				reportedByUserId: params.reportedByUserId,
-				reportedByName: params.reportedByName
-			});
-		} catch (err) {
-			captureException(err, { event: 'content.flagged', flagId: flag.id });
-		}
-	});
+	if (!duplicate) {
+		Promise.resolve().then(async () => {
+			try {
+				await domainEvents.emit('content.flagged', {
+					flagId: flag.id,
+					entityType: flag.entityType,
+					entityId: flag.entityId,
+					entityLabel,
+					reason: flag.reason,
+					reportedByUserId: params.reportedByUserId ?? null,
+					reportedByName: params.reportedByName ?? 'Anonymous visitor'
+				});
+			} catch (err) {
+				captureException(err, { event: 'content.flagged', flagId: flag.id });
+			}
+		});
+	}
 
 	return flag;
 }
@@ -121,11 +156,17 @@ export interface ResolveFlagParams {
 	resolution: Extract<FlagStatus, 'resolved' | 'dismissed'>;
 	notes?: string;
 	staffId: string;
+	/** For event flags: also drop the event back to draft (off the public guide). */
+	unpublishEvent?: boolean;
 }
 
 export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 	const [existing] = await db
-		.select({ status: contentFlag.status })
+		.select({
+			status: contentFlag.status,
+			entityType: contentFlag.entityType,
+			entityId: contentFlag.entityId
+		})
 		.from(contentFlag)
 		.where(eq(contentFlag.id, flagId))
 		.limit(1);
@@ -145,7 +186,73 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		.where(eq(contentFlag.id, flagId))
 		.returning();
 
+	if (
+		params.unpublishEvent &&
+		params.resolution === 'resolved' &&
+		existing.entityType === 'event'
+	) {
+		await unpublishFlaggedEvent(existing.entityId, params.notes);
+	}
+
 	return row;
+}
+
+/**
+ * Unpublish a flagged event and, for band events, notify the band's admins so
+ * they can fix the listing and republish.
+ */
+async function unpublishFlaggedEvent(eventId: string, notes?: string): Promise<void> {
+	const [row] = await db
+		.select({
+			id: event.id,
+			title: event.title,
+			status: event.status,
+			source: event.source,
+			bandId: event.bandId,
+			bandName: band.name
+		})
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(eq(event.id, eventId))
+		.limit(1);
+
+	// Already off the guide (unpublished/cancelled since the flag was filed).
+	if (!row || row.status !== 'published') return;
+
+	const { unpublish } = await import('$lib/server/event/event-service');
+	await unpublish(eventId);
+
+	if (row.source !== 'band' || !row.bandId || !row.bandName) return;
+
+	const admins = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(bandMember)
+		.innerJoin(user, eq(user.id, bandMember.userId))
+		.where(
+			and(
+				eq(bandMember.bandId, row.bandId),
+				inArray(bandMember.role, ['owner', 'admin']),
+				eq(bandMember.status, 'active')
+			)
+		);
+
+	const payload = {
+		eventId: row.id,
+		eventTitle: row.title,
+		bandId: row.bandId,
+		bandName: row.bandName,
+		notes: notes || null,
+		bandAdmins: admins.map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
+	};
+
+	// Fire-and-forget: don't block the staff resolution on notification fan-out.
+	Promise.resolve().then(async () => {
+		try {
+			await domainEvents.emit('event.unpublished_by_staff', payload);
+		} catch (err) {
+			captureException(err, { event: 'event.unpublished_by_staff', eventId });
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +283,7 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 			reportedByName: user.name
 		})
 		.from(contentFlag)
-		.innerJoin(user, eq(user.id, contentFlag.reportedByUserId))
+		.leftJoin(user, eq(user.id, contentFlag.reportedByUserId))
 		.where(where)
 		.orderBy(desc(contentFlag.createdAt))
 		.$dynamic();
@@ -185,9 +292,10 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 
 	const { rows, pagination: pageInfo } = await paginate(dataQ, countQ, pagination);
 
-	// Resolve entity labels in two batched lookups (no N+1).
+	// Resolve entity labels in batched per-type lookups (no N+1).
 	const memberIds = rows.filter((r) => r.entityType === 'member_profile').map((r) => r.entityId);
 	const bandIds = rows.filter((r) => r.entityType === 'band_profile').map((r) => r.entityId);
+	const eventIds = rows.filter((r) => r.entityType === 'event').map((r) => r.entityId);
 
 	const memberNames = memberIds.length
 		? await db
@@ -198,10 +306,17 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	const bandNames = bandIds.length
 		? await db.select({ id: band.id, name: band.name }).from(band).where(inArray(band.id, bandIds))
 		: [];
+	const eventTitles = eventIds.length
+		? await db
+				.select({ id: event.id, title: event.title })
+				.from(event)
+				.where(inArray(event.id, eventIds))
+		: [];
 
 	const labelMap = new Map<string, string>();
 	for (const m of memberNames) labelMap.set(`member_profile:${m.id}`, m.name);
 	for (const b of bandNames) labelMap.set(`band_profile:${b.id}`, b.name);
+	for (const e of eventTitles) labelMap.set(`event:${e.id}`, e.title);
 
 	return {
 		rows: rows.map((r) => ({
@@ -213,6 +328,15 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	};
 }
 
+export interface FlaggedEventContext {
+	title: string;
+	startsAt: Date;
+	location: string | null;
+	status: string;
+	source: string;
+	band: { id: string; name: string; slug: string } | null;
+}
+
 export async function getFlag(flagId: string) {
 	const [row] = await db
 		.select({
@@ -221,19 +345,55 @@ export async function getFlag(flagId: string) {
 			reportedByEmail: user.email
 		})
 		.from(contentFlag)
-		.innerJoin(user, eq(user.id, contentFlag.reportedByUserId))
+		.leftJoin(user, eq(user.id, contentFlag.reportedByUserId))
 		.where(eq(contentFlag.id, flagId))
 		.limit(1);
 
 	if (!row) throw new FlagNotFoundError();
 
 	const entityLabel = await resolveEntityLabel(row.flag.entityType, row.flag.entityId);
+	const eventContext =
+		row.flag.entityType === 'event' ? await resolveEventContext(row.flag.entityId) : null;
 
 	return {
 		...row.flag,
 		reportedByName: row.reportedByName,
 		reportedByEmail: row.reportedByEmail,
 		entityLabel: entityLabel ?? '(deleted)',
-		entityHref: entityHref(row.flag.entityType, row.flag.entityId)
+		entityHref: entityHref(row.flag.entityType, row.flag.entityId),
+		eventContext
+	};
+}
+
+/** Event details shown on the flag triage page so staff can judge in place. */
+async function resolveEventContext(eventId: string): Promise<FlaggedEventContext | null> {
+	const [row] = await db
+		.select({
+			title: event.title,
+			startsAt: event.startsAt,
+			location: event.location,
+			status: event.status,
+			source: event.source,
+			bandId: band.id,
+			bandName: band.name,
+			bandSlug: band.slug
+		})
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(eq(event.id, eventId))
+		.limit(1);
+
+	if (!row) return null;
+
+	return {
+		title: row.title,
+		startsAt: row.startsAt,
+		location: row.location,
+		status: row.status,
+		source: row.source,
+		band:
+			row.bandId && row.bandName && row.bandSlug
+				? { id: row.bandId, name: row.bandName, slug: row.bandSlug }
+				: null
 	};
 }
