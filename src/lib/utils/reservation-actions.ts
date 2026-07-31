@@ -17,11 +17,18 @@ export type ReservationPaymentState =
 	| 'refunded'
 	| 'no_show';
 
+/** Statuses that end a reservation's lifecycle (no further member actions). */
+export function isTerminalStatus(status: string): boolean {
+	return status === 'completed' || status === 'cancelled' || status === 'no_show';
+}
+
 /**
  * Derive a reservation's payment state for display. Order matters:
  * paidAt (cash/online) → cash owed → not-yet-settled → credit-settled → comped.
  * Credit-settled and comped share `paidAt null & cashDueCents 0`; `creditsUsed`
- * is what distinguishes them.
+ * is what distinguishes them. A null `cashDueCents` means credits were never
+ * committed (plain scheduled, or a staff-created confirm) — that's `unpaid`,
+ * never `comped`.
  */
 export function reservationPaymentState(r: {
 	status: string;
@@ -34,7 +41,7 @@ export function reservationPaymentState(r: {
 	if (r.status === 'cancelled') return r.stripePaymentRecordId ? 'refunded' : 'cancelled';
 	if (r.paidAt) return 'paid';
 	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
-	if (r.status === 'scheduled') return 'unpaid';
+	if (r.cashDueCents == null) return 'unpaid';
 	if ((r.creditsUsed ?? 0) > 0) return 'credits';
 	return 'comped';
 }
@@ -50,7 +57,10 @@ export function visibleActions(
 	const actions = new Set<ReservationActionKey>();
 	const start = startsAt;
 	const end = endsAt;
-	const cashOwed = !opts?.paidAt && (opts?.cashDueCents ?? 0) > 0;
+	// Owed = not paid and not settled: either committed cash due (> 0) or credits
+	// never committed at all (null, e.g. staff-created confirms). Only an explicit
+	// 0 (comped / credit-settled) clears the debt.
+	const cashOwed = opts != null && !opts.paidAt && opts.cashDueCents !== 0;
 
 	if (status === 'scheduled') {
 		actions.add('confirm');

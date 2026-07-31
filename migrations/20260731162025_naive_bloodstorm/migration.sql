@@ -1,0 +1,1 @@
+ALTER TABLE `reservation` ADD `created_by_staff_id` text REFERENCES user(id) ON DELETE SET NULL;

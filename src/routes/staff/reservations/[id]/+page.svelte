@@ -209,6 +209,13 @@
 		</InfoCard>
 	{/if}
 
+	<!-- Audit -->
+	{#if data.reservation.createdByStaffName}
+		<p class="text-sm opacity-60">
+			Booked by staff: {data.reservation.createdByStaffName}
+		</p>
+	{/if}
+
 	<!-- Cancellation -->
 	{#if status === 'cancelled'}
 		<InfoCard title="Cancelled" class="border-l-4 border-error">
