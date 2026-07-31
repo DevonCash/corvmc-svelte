@@ -17,12 +17,26 @@
  * src/lib/server/sentry.ts for why carrier alignment matters).
  */
 
-const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
+// No bare '::1': WHATWG URL hostname always keeps IPv6 brackets ('[::1]'),
+// and 'http://::1/' does not even parse — so only the bracketed form can occur.
+const LOCAL_HOSTNAMES = new Set([
+	'localhost',
+	'127.0.0.1',
+	'0.0.0.0',
+	'[::1]',
+	'host.docker.internal'
+]);
+
+// RFC 1918 private ranges plus 169.254 link-local: a preview started with
+// --host and visited from another device on the LAN (phone testing) is still
+// a local server, not production.
+const PRIVATE_IPV4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/;
 
 /**
- * True when `url` points at a local development or preview server. Subdomains of
- * `.localhost` count too — band sites are served per-subdomain, so local runs
- * hit hostnames like `some-band.localhost`.
+ * True when `url` points at a local development or preview server. Subdomains
+ * of `.localhost` count too — band sites are served per-subdomain, so local
+ * runs hit hostnames like `some-band.localhost` — as do `.local` mDNS names
+ * and private-range LAN IPs (testing the preview from a phone).
  *
  * Unparseable or missing URLs return false: when in doubt, let the event through
  * rather than silently dropping a real production error.
@@ -35,5 +49,10 @@ export function isLocalOrigin(url: string | undefined | null): boolean {
 	} catch {
 		return false;
 	}
-	return LOCAL_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost');
+	return (
+		LOCAL_HOSTNAMES.has(hostname) ||
+		hostname.endsWith('.localhost') ||
+		hostname.endsWith('.local') ||
+		PRIVATE_IPV4.test(hostname)
+	);
 }

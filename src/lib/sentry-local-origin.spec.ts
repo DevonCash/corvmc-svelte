@@ -18,10 +18,31 @@ describe('isLocalOrigin', () => {
 		expect(isLocalOrigin('http://some-band.localhost:5173/')).toBe(true);
 	});
 
+	it('drops LAN-reachable local servers (preview started with --host, tested from a phone)', () => {
+		expect(isLocalOrigin('http://192.168.1.20:4173/')).toBe(true);
+		expect(isLocalOrigin('http://10.0.0.5:4173/')).toBe(true);
+		expect(isLocalOrigin('http://172.16.0.1:4173/')).toBe(true);
+		expect(isLocalOrigin('http://172.31.255.1:4173/')).toBe(true);
+		expect(isLocalOrigin('http://169.254.10.10:4173/')).toBe(true);
+	});
+
+	it('drops mDNS and Docker host names', () => {
+		expect(isLocalOrigin('http://work-2.local:4173/')).toBe(true);
+		expect(isLocalOrigin('http://host.docker.internal:4173/')).toBe(true);
+	});
+
 	it('keeps production traffic', () => {
 		expect(isLocalOrigin('https://corvmc.org/events/abc')).toBe(false);
 		expect(isLocalOrigin('https://some-band.corvmc.org/')).toBe(false);
 		expect(isLocalOrigin('https://corvmc.devon-cash.workers.dev/')).toBe(false);
+	});
+
+	it('keeps public IPs, including those just outside the private ranges', () => {
+		expect(isLocalOrigin('https://172.32.0.1/')).toBe(false);
+		expect(isLocalOrigin('https://172.15.0.1/')).toBe(false);
+		expect(isLocalOrigin('https://8.8.8.8/')).toBe(false);
+		// 1918-range octets appearing later in the address must not match.
+		expect(isLocalOrigin('https://8.10.0.1/')).toBe(false);
 	});
 
 	it('does not match a host that merely contains "localhost"', () => {

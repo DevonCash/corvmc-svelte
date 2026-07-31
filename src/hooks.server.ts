@@ -71,9 +71,12 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 // A local dev/preview server must never report to production Sentry. The
-// `enabled` flag below already gates on SENTRY_ENVIRONMENT, but that env var is
-// only set when Playwright starts the preview server itself — a reused or
-// hand-started one on :4173 slips through. See $lib/sentry-local-origin.
+// primary gate is `enabled` below, which checks ORIGIN — that also silences
+// transactions and logs, which never pass through beforeSend. This per-event
+// check is the backstop for request-scoped events when ORIGIN looks
+// production-like but the request URL says otherwise. Events with no request
+// context fail open here (better a stray event than a dropped production
+// error); the ORIGIN gate is what actually covers them.
 export function isLocalOriginEvent(event: { request?: { url?: string } }): boolean {
 	return isLocalOrigin(event.request?.url);
 }
@@ -86,8 +89,16 @@ export const handle: Handle = sequence(
 	Sentry.initCloudflareSentryHandle({
 		dsn: SENTRY_DSN,
 		environment: process.env.SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
-		// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
-		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci',
+		// Don't report from local dev or the Playwright/preview e2e run (env set in
+		// playwright.config.ts). The env-var gate fails open when a preview server
+		// is reused or hand-started outside Playwright, so also check ORIGIN, which
+		// every local server has set (the preview refuses to boot without it) —
+		// this silences transactions and logs too, which beforeSend never sees, and
+		// covers request-less events (uncaught exceptions from background work)
+		// that carry no URL to check. In production Workers, ORIGIN is either the
+		// real domain or absent from process.env — isLocalOrigin fails open on
+		// both, so reporting stays enabled.
+		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(process.env.ORIGIN),
 		beforeSend(event, hint) {
 			if (isLocalOriginEvent(event)) return null;
 			if (isNotFoundError(hint?.originalException)) return null;

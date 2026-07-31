@@ -86,19 +86,29 @@ describe('createSentryCheckIn', () => {
 		expect(warn).not.toHaveBeenCalled();
 	});
 
-	it('retries a closing check-in rejected with a non-2xx', async () => {
-		let calls = 0;
-		const fetchMock = stubFetch(async () => {
-			calls++;
-			return calls === 1
-				? new Response('rate limited', { status: 429 })
-				: new Response(JSON.stringify({ id: 'ci-10' }), { status: 201 });
+	it('does not retry a close the server rejected — Sentry answered, an identical POST fares no better', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const fetchMock = stubFetch(new Response('rate limited', { status: 429 }));
+
+		const id = await createSentryCheckIn()({
+			slug: 'lock-access',
+			status: 'error',
+			checkInId: 'ci-10'
 		});
+
+		expect(id).toBeUndefined();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(console.warn).toHaveBeenCalledOnce();
+	});
+
+	it('does not retry an id-less close — without check_in_id a retry could record a duplicate', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const fetchMock = stubFetch(() => Promise.reject(new Error('network down')));
 
 		const id = await createSentryCheckIn()({ slug: 'lock-access', status: 'error' });
 
-		expect(id).toBe('ci-10');
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(id).toBeUndefined();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
 	it('does not retry an opening check-in', async () => {
@@ -110,15 +120,32 @@ describe('createSentryCheckIn', () => {
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
-	it('gives up after the retry without throwing', async () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => {});
-		const fetchMock = stubFetch(() => Promise.reject(new Error('network down')));
+	it('gives up after the retry without throwing, keeping the error object for the logs', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const boom = new Error('network down');
+		const fetchMock = stubFetch(() => Promise.reject(boom));
 
-		const id = await createSentryCheckIn()({ slug: 'auto-complete', status: 'ok' });
+		const id = await createSentryCheckIn()({
+			slug: 'auto-complete',
+			status: 'ok',
+			checkInId: 'ci-11'
+		});
 
 		expect(id).toBeUndefined();
 		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(console.warn).toHaveBeenCalledOnce();
+		// One warn after all attempts, with the Error object as a structured
+		// argument so Workers logs keep its stack.
+		expect(warn).toHaveBeenCalledOnce();
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('auto-complete'), boom);
+	});
+
+	it('bounds every attempt with an abort signal so a stalled connection cannot eat the cron budget', async () => {
+		const fetchMock = stubFetch(new Response(JSON.stringify({ id: 'ci-12' }), { status: 201 }));
+
+		await createSentryCheckIn()({ slug: 'auto-complete', status: 'in_progress' });
+
+		const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(init.signal).toBeInstanceOf(AbortSignal);
 	});
 
 	it('returns undefined on a rejected fetch without throwing', async () => {

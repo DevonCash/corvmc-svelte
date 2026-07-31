@@ -51,19 +51,8 @@ export function isWebviewBridgeError(event: Sentry.ErrorEvent, error: unknown): 
 	return Boolean(top?.function && WEBVIEW_BRIDGE_FUNCTIONS.includes(top.function));
 }
 
-/**
- * A local dev/preview server must never report to production Sentry. The
- * `enabled` flag below already gates on PUBLIC_SENTRY_ENVIRONMENT, but that env
- * var is only set when Playwright starts the preview server itself — a reused or
- * hand-started one on :4173 slips through. See $lib/sentry-local-origin.
- */
-export function isLocalOriginEvent(event: Sentry.ErrorEvent): boolean {
-	return isLocalOrigin(event.request?.url ?? globalThis.location?.href);
-}
-
 Sentry.init({
 	beforeSend(event, hint) {
-		if (isLocalOriginEvent(event)) return null;
 		if (isStaleChunkError(hint?.originalException)) return null;
 		if (isNetworkAbortError(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
@@ -74,8 +63,15 @@ Sentry.init({
 
 	environment: env.PUBLIC_SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
 
-	// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
-	enabled: !dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci',
+	// Don't report from local dev or the Playwright/preview e2e run (env set in
+	// playwright.config.ts). The env-var gate fails open when a preview server is
+	// reused or hand-started outside Playwright, so also check the page origin —
+	// gating `enabled` (not beforeSend) is what silences EVERY envelope type:
+	// beforeSend only sees error events, while transactions, logs, and session
+	// replays ship through channels it never touches. The origin is fixed for the
+	// life of the page, so one check at init is complete.
+	enabled:
+		!dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(globalThis.location?.href),
 
 	tracesSampleRate: 1.0,
 
