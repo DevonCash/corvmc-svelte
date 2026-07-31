@@ -185,6 +185,27 @@ describe('hooks.server handle', () => {
 	});
 });
 
+describe('hooks.server isLocalOriginEvent', () => {
+	it('drops events from the local preview server (JAVASCRIPT-SVELTEKIT-1Y)', async () => {
+		const { isLocalOriginEvent } = await import('./hooks.server');
+		expect(
+			isLocalOriginEvent({ request: { url: 'http://localhost:4173/_app/version.json' } })
+		).toBe(true);
+	});
+
+	it('keeps events from production', async () => {
+		const { isLocalOriginEvent } = await import('./hooks.server');
+		expect(isLocalOriginEvent({ request: { url: 'https://corvmc.org/api/stripe/webhook' } })).toBe(
+			false
+		);
+	});
+
+	it('keeps events with no request URL rather than dropping them blind', async () => {
+		const { isLocalOriginEvent } = await import('./hooks.server');
+		expect(isLocalOriginEvent({})).toBe(false);
+	});
+});
+
 describe('hooks.server handleError', () => {
 	it('does not report 4xx client errors (e.g. bot /.well-known probes)', async () => {
 		const { handleError } = await import('./hooks.server');

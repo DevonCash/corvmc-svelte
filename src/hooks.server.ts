@@ -11,6 +11,7 @@ import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { isLocalOrigin } from '$lib/sentry-local-origin';
 
 const resolvedSessions = new Set<string>();
 
@@ -69,6 +70,17 @@ function isNotFoundError(error: unknown): boolean {
 	return message.startsWith('Not found:');
 }
 
+// A local dev/preview server must never report to production Sentry. The
+// primary gate is `enabled` below, which checks ORIGIN — that also silences
+// transactions and logs, which never pass through beforeSend. This per-event
+// check is the backstop for request-scoped events when ORIGIN looks
+// production-like but the request URL says otherwise. Events with no request
+// context fail open here (better a stray event than a dropped production
+// error); the ORIGIN gate is what actually covers them.
+export function isLocalOriginEvent(event: { request?: { url?: string } }): boolean {
+	return isLocalOrigin(event.request?.url);
+}
+
 // On Cloudflare Workers, Sentry must be initialised per-request via
 // initCloudflareSentryHandle. The Node-style `Sentry.init()` in an
 // instrumentation file pulls in Node/OpenTelemetry APIs the Workers runtime
@@ -77,9 +89,18 @@ export const handle: Handle = sequence(
 	Sentry.initCloudflareSentryHandle({
 		dsn: SENTRY_DSN,
 		environment: process.env.SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
-		// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
-		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci',
+		// Don't report from local dev or the Playwright/preview e2e run (env set in
+		// playwright.config.ts). The env-var gate fails open when a preview server
+		// is reused or hand-started outside Playwright, so also check ORIGIN, which
+		// every local server has set (the preview refuses to boot without it) —
+		// this silences transactions and logs too, which beforeSend never sees, and
+		// covers request-less events (uncaught exceptions from background work)
+		// that carry no URL to check. In production Workers, ORIGIN is either the
+		// real domain or absent from process.env — isLocalOrigin fails open on
+		// both, so reporting stays enabled.
+		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(process.env.ORIGIN),
 		beforeSend(event, hint) {
+			if (isLocalOriginEvent(event)) return null;
 			if (isNotFoundError(hint?.originalException)) return null;
 			return event;
 		},

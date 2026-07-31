@@ -31,6 +31,33 @@ function eventWithTopFrame(fn: string | undefined): ErrorEvent {
 
 const emptyEvent = { type: undefined } as unknown as ErrorEvent;
 
+describe('local-origin gating', () => {
+	// The guard lives in `enabled`, not beforeSend: only a disabled SDK also
+	// silences transactions, logs, and replays from a local preview server.
+	async function initWithOrigin(origin: string) {
+		vi.resetModules();
+		vi.stubGlobal('location', new URL(origin));
+		try {
+			const sentry = await import('@sentry/sveltekit');
+			await import('./hooks.client');
+			return sentry.init as ReturnType<typeof vi.fn>;
+		} finally {
+			vi.unstubAllGlobals();
+			vi.resetModules();
+		}
+	}
+
+	it('disables the SDK entirely on a local preview origin (JAVASCRIPT-SVELTEKIT-1W/1X)', async () => {
+		const init = await initWithOrigin('http://localhost:4173/directory');
+		expect(init).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+	});
+
+	it('stays enabled on the production origin', async () => {
+		const init = await initWithOrigin('https://corvmc.org/');
+		expect(init).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+	});
+});
+
 describe('isWebviewBridgeError', () => {
 	it('drops the Instagram webkit bridge crash (JAVASCRIPT-SVELTEKIT-1F)', () => {
 		const err = new TypeError(

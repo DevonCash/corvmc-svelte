@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/sveltekit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { isLocalOrigin } from '$lib/sentry-local-origin';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
@@ -62,8 +63,15 @@ Sentry.init({
 
 	environment: env.PUBLIC_SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
 
-	// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
-	enabled: !dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci',
+	// Don't report from local dev or the Playwright/preview e2e run (env set in
+	// playwright.config.ts). The env-var gate fails open when a preview server is
+	// reused or hand-started outside Playwright, so also check the page origin —
+	// gating `enabled` (not beforeSend) is what silences EVERY envelope type:
+	// beforeSend only sees error events, while transactions, logs, and session
+	// replays ship through channels it never touches. The origin is fixed for the
+	// life of the page, so one check at init is complete.
+	enabled:
+		!dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(globalThis.location?.href),
 
 	tracesSampleRate: 1.0,
 
