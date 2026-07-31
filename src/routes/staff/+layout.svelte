@@ -52,7 +52,7 @@
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
 		{#if layout.features.staffInbox}
-			<Nav.Item href="/staff/inbox" label="Inbox">
+			<Nav.Item href="/staff/inbox" label="Inbox" badge={layout.inboxUnread}>
 				{#snippet icon()}<IconInbox />{/snippet}
 			</Nav.Item>
 		{/if}

@@ -6,11 +6,13 @@
 		href,
 		label,
 		icon,
+		badge,
 		...rest
 	}: {
 		href: string;
 		label: string;
 		icon?: Snippet;
+		badge?: number;
 		[key: string]: unknown;
 	} = $props();
 
@@ -20,7 +22,10 @@
 <li>
 	<a {href} class:active {...rest}>
 		{@render icon?.()}
-		{label}
+		<span class="grow">{label}</span>
+		{#if badge}
+			<span class="badge badge-primary badge-sm">{badge > 99 ? '99+' : badge}</span>
+		{/if}
 	</a>
 </li>
 
