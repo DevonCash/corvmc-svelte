@@ -90,7 +90,7 @@ test('members-only band is withheld publicly but renders in the member directory
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
 });
 
-test('sidebar Create Band links target the bands page, not a 404', async ({ page }) => {
+test('sidebar Create Band links open the create-band modal', async ({ page }) => {
 	await login(page);
 
 	// Both nav entries pointed at /member/bands/create, a 404; they must point
@@ -98,13 +98,14 @@ test('sidebar Create Band links target the bands page, not a 404', async ({ page
 	const createLink = page.getByRole('link', { name: 'Create Band' }).first();
 	await expect(createLink).toHaveAttribute('href', '/member/bands?create=1');
 
-	// The target resolves to the bands page (the old href rendered the 404 page).
-	await page.goto('/member/bands?create=1');
-	await expect(page.getByRole('heading', { name: 'My Bands' })).toBeVisible({ timeout: 15000 });
-	await expect(page.getByText('404')).toHaveCount(0);
-
-	// NOTE: the ?create=1 param opening the bits-ui modal is verified manually —
-	// in headless Chromium the dialog's presence layer flakily never mounts
-	// (even via the page-header button), while headed browsers work on the same
-	// build. See the "modal not opening in headless Chromium" follow-up task.
+	// Clicking the link (immediately after login, while the layout's async
+	// queries are still settling) opens the create-band modal. The link carries
+	// data-sveltekit-reload because a client-side navigation in that window can
+	// leave the modal permanently unmounted — a svelte experimental-async
+	// scheduling gap still present in 5.56.8; e2e/create-band-modal.e2e.ts
+	// covers the related client-side-nav + button regression.
+	await createLink.click();
+	await page.waitForURL(/\/member\/bands\?create=1/, { timeout: 15000 });
+	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
+	await expect(page.getByRole('dialog').locator('input[name="name"]')).toBeVisible();
 });
