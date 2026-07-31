@@ -64,6 +64,30 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test
 
+  schema-drift:
+    name: Schema drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `check` catches migration collisions (two branches generating from the same
+      # snapshot); `generate` diffs schema files against the committed snapshots, so
+      # neither needs the CLOUDFLARE_* credentials that drizzle.config.ts references.
+      - run: pnpm exec drizzle-kit check
+      - name: Verify schema changes have a committed migration
+        run: |
+          pnpm exec drizzle-kit generate
+          if [ -n "$(git status --porcelain migrations/)" ]; then
+            git status --porcelain migrations/
+            echo "::error::Schema changed without a migration. Run 'pnpm db:generate' and commit the result — Cloudflare deploys apply committed migrations only."
+            exit 1
+          fi
+
   docs:
     name: Docs integrity
     runs-on: ubuntu-latest
