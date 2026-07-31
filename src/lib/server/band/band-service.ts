@@ -71,7 +71,7 @@ export class OwnerCannotLeaveError extends Error {
 
 export async function create(ownerId: string, data: CreateBandData) {
 	const baseSlug = generateSlug(data.name);
-	const slug = await ensureUniqueSlug(baseSlug, band, band.slug, isReservedSlug);
+	const slug = await ensureUniqueSlug(baseSlug, band, band.slug, undefined, isReservedSlug);
 
 	const bandId = crypto.randomUUID();
 
@@ -101,7 +101,15 @@ export async function update(bandId: string, data: UpdateBandData) {
 	if (data.name !== undefined) {
 		updates.name = data.name;
 		const baseSlug = generateSlug(data.name);
-		updates.slug = await ensureUniqueSlug(baseSlug, band, band.slug, isReservedSlug);
+		// Exclude this band so an unchanged name keeps its slug instead of
+		// rotating to '-2' on every save.
+		updates.slug = await ensureUniqueSlug(
+			baseSlug,
+			band,
+			band.slug,
+			{ column: band.id, value: bandId },
+			isReservedSlug
+		);
 	}
 
 	if (data.bio !== undefined) {

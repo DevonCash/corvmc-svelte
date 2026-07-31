@@ -1,9 +1,50 @@
 <script lang="ts">
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import { getPublicEvents } from '$lib/remote/events.remote';
 	import { page } from '$app/state';
+	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
+	import GigList from '$lib/components/public/calendar/GigList.svelte';
+	import { getPublicEvents } from '$lib/remote/events.remote';
+	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
+	import { toLocalDate } from '$lib/utils/format';
+	import type { CalendarEntry } from '$lib/types/calendar';
 
-	let { upcoming, past } = $derived(await getPublicEvents());
+	const FROM_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+	const today = toLocalDate(new Date());
+
+	// Malformed ?from= params fall back to today before querying.
+	const from = $derived.by(() => {
+		const param = page.url.searchParams.get('from');
+		return param && FROM_RE.test(param) ? param : today;
+	});
+
+	let { upcoming } = $derived(await getPublicEvents());
+	let guide = $derived(await getPublicGigGuide({ from, offset: 0 }));
+
+	// "Show more" appends pages client-side; reset when the anchor changes.
+	let extra: CalendarEntry[] = $state([]);
+	let extraHasMore = $state<boolean | null>(null);
+	let loadingMore = $state(false);
+	let extraFor = $state('');
+
+	const allEvents = $derived(extraFor === from ? [...guide.events, ...extra] : guide.events);
+	const hasMore = $derived(
+		extraFor === from && extraHasMore !== null ? extraHasMore : guide.hasMore
+	);
+
+	async function showMore() {
+		loadingMore = true;
+		try {
+			const next = await getPublicGigGuide({
+				from,
+				offset: extraFor === from ? guide.events.length + extra.length : guide.events.length
+			});
+			extra = extraFor === from ? [...extra, ...next.events] : next.events;
+			extraFor = from;
+			extraHasMore = next.hasMore;
+		} finally {
+			loadingMore = false;
+		}
+	}
 
 	let dismissed = $state(false);
 	let showNotice = $derived(
@@ -15,12 +56,12 @@
 	<title>Events | Corvallis Music Collective</title>
 	<meta
 		name="description"
-		content="Upcoming shows, jams, and meetups from the Corvallis Music Collective."
+		content="Shows at the Collective and gigs from our member bands around the region."
 	/>
 	<meta property="og:title" content="Events | Corvallis Music Collective" />
 	<meta
 		property="og:description"
-		content="Upcoming shows, jams, and meetups from the Corvallis Music Collective."
+		content="Shows at the Collective and gigs from our member bands around the region."
 	/>
 </svelte:head>
 
@@ -29,7 +70,9 @@
 		<div class="text-center mb-10">
 			<h1 class="text-4xl font-bold tracking-tight mb-2" style="color: var(--cmc-navy)">Events</h1>
 			<p class="text-base" style="color: var(--fg-2)">
-				Shows, jams, and meetups from the Collective
+				Shows at the Collective{guide.bandEventsEnabled
+					? ' and gigs from our member bands around the region'
+					: ''}
 			</p>
 		</div>
 
@@ -53,8 +96,7 @@
 		{/if}
 
 		{#if upcoming.length > 0}
-			<h2 class="text-xl font-semibold mb-4" style="color: var(--cmc-navy)">Upcoming</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
 				{#each upcoming as evt (evt.id)}
 					<PosterCard
 						href="/events/{evt.id}"
@@ -67,27 +109,63 @@
 					/>
 				{/each}
 			</div>
-		{:else}
-			<div class="text-center py-8 mb-8 opacity-60">
-				<p class="text-base">No upcoming events right now. Check back soon!</p>
-			</div>
 		{/if}
 
-		{#if past.length > 0}
-			<h2 class="text-xl font-semibold mb-4" style="color: var(--fg-2)">Past Events</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-75">
-				{#each past as evt (evt.id)}
-					<PosterCard
-						href="/events/{evt.id}"
-						title={evt.title}
-						posterUrl={evt.posterUrl}
-						startsAt={evt.startsAt}
-						ticketingEnabled={evt.ticketingEnabled}
-						ticketPrice={evt.ticketPrice}
-						tags={evt.tags}
-					/>
-				{/each}
+		<div class="guide">
+			<aside class="guide__side">
+				<MiniCalendar anchor={from} />
+				{#if from !== today}
+					<a href="/events" class="btn btn-ghost btn-sm mt-3">← Back to today</a>
+				{/if}
+			</aside>
+			<div class="guide__main">
+				{#if allEvents.length === 0}
+					<div class="text-center py-12 opacity-60">
+						<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+					</div>
+				{:else}
+					<GigList events={allEvents} />
+					{#if hasMore}
+						<div class="text-center mt-8">
+							<button type="button" class="btn btn-ghost" disabled={loadingMore} onclick={showMore}>
+								{loadingMore ? 'Loading…' : 'Show more'}
+							</button>
+						</div>
+					{/if}
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</div>
 </section>
+
+<style>
+	.guide {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	.guide__side {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.guide__main {
+		flex: 1;
+		min-width: 0;
+	}
+
+	@media (min-width: 768px) {
+		.guide {
+			flex-direction: row;
+			align-items: flex-start;
+		}
+
+		.guide__side {
+			position: sticky;
+			top: 5rem;
+			align-items: flex-start;
+		}
+	}
+</style>

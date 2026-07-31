@@ -17,12 +17,13 @@
 	{:then membership}
 		{#if membership.isSustainingMember}
 			{@const hasHours = membership.freeHoursBalance > 0}
+			{@const hoursRemaining = creditsToHours(membership.freeHoursBalance)}
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
-				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
-					>{creditsToHours(membership.freeHoursBalance)}</span
+				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}>{hoursRemaining}</span>
+				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}"
+					>free {hoursRemaining === 1 ? 'hour' : 'hours'} remaining</span
 				>
-				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">free hours remaining</span>
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">

@@ -17,13 +17,19 @@ export function generateSlug(name: string): string {
 
 /**
  * Ensure a slug is unique within a table by appending -2, -3, etc. if needed.
- * An optional `isDisallowed` predicate lets callers block additional slugs
- * (e.g. reserved subdomains) — disallowed values are skipped like collisions.
+ *
+ * Pass `exclude` when re-slugging an existing row so its own current slug does
+ * not count as a collision — without it, every save that touches the name
+ * rotates the slug (e.g. 'my-band' → 'my-band-2'), breaking inbound links.
+ *
+ * Pass `isDisallowed` to block additional slugs (e.g. reserved subdomains) —
+ * disallowed values are skipped like collisions.
  */
 export async function ensureUniqueSlug(
 	baseSlug: string,
 	table: SQLiteTable,
 	column: SQLiteColumn,
+	exclude?: { column: SQLiteColumn; value: string },
 	isDisallowed?: (slug: string) => boolean
 ): Promise<string> {
 	let slug = baseSlug;
@@ -34,7 +40,11 @@ export async function ensureUniqueSlug(
 			const [existing] = await db
 				.select({ count: sql<number>`count(*)` })
 				.from(table)
-				.where(sql`${column} = ${slug}`);
+				.where(
+					exclude
+						? sql`${column} = ${slug} and ${exclude.column} != ${exclude.value}`
+						: sql`${column} = ${slug}`
+				);
 
 			if (!existing || Number(existing.count) === 0) return slug;
 		}

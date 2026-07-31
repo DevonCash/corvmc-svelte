@@ -145,6 +145,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Content flagged (staff)',
 		description: 'Notification when a member reports a profile for review',
 		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'band_event_unpublished',
+		label: 'Event unlisted by staff',
+		description: 'Notification when staff unpublish one of your band’s events after a report',
+		defaults: { email: true, inApp: true, sms: false }
 	}
 ];
 
