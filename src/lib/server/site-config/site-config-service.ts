@@ -41,7 +41,8 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'feature.bandEvents': false,
 	'feature.emailMarketing': false,
 	'feature.equipment': false,
-	'feature.helpArticles': false
+	'feature.helpArticles': false,
+	'feature.contentFlags': false
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;
