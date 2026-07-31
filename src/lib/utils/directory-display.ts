@@ -75,6 +75,20 @@ export function isMemberRowPrivate(
 }
 
 /**
+ * Whether a band's detail page should be withheld (404) from a view. `hidden`
+ * bands are not shown anywhere; `members` bands only resolve in the members
+ * view. Band admins are unaffected — they manage the band via /band/[slug],
+ * which authorizes by membership, not directory visibility.
+ */
+export function isBandProfileHidden(
+	viewVisibility: 'members' | 'public',
+	bandVisibility: string | null | undefined
+): boolean {
+	if (bandVisibility === 'public') return false;
+	return viewVisibility === 'public' || bandVisibility !== 'members';
+}
+
+/**
  * A member's personal directory contact details (email/phone/social) are
  * members-only by default. They are only exposed in the public view when the
  * member has explicitly opted the contact block to `public` via

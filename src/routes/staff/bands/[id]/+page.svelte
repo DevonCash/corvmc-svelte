@@ -1,22 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 
 	import {
 		getStaffBand as getBand,
 		getStaffBandMembers as getBandMembers,
 		getBandReservations,
-		updateStaffBand as updateBand,
 		updateMemberRole,
-		getStaffPlatformInvites as getPlatformInvites,
-		deactivateBand,
-		reactivateBand
+		getStaffPlatformInvites as getPlatformInvites
 	} from '$lib/remote/bands.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -26,7 +17,6 @@
 	import { resolve } from '$app/paths';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/shared/Action.svelte';
 	import {
 		InviteByEmailAction,
 		InviteMemberAction,
@@ -35,115 +25,20 @@
 		RemoveBandMemberAction,
 		RevokePlatformInviteAction
 	} from '$lib/components/shared/actions';
-
-	const { fields: reactivateFields } = reactivateBand;
-	const { fields: deactivateFields } = deactivateBand;
-	const { fields: bandFields } = updateBand;
+	import StaffBandForm from './StaffBandForm.svelte';
 
 	let id = $derived(page.params.id!);
 	let band = $derived(await getBand(id));
 	let members = $derived(await getBandMembers(id));
 	let reservations = $derived(await getBandReservations(id));
 	let platformInvites = $derived(await getPlatformInvites(id));
-
-	let isDeactivated = $derived(!!band.deletedAt);
-
-	let bioHtml = $derived(band.bio ?? '');
 </script>
 
-<Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
-	<PageHeader subtitle="Band" title={band.name} backHref="/staff/bands">
-		{#if isDeactivated}
-			<Badge variant="error" size="md">Deactivated</Badge>
-		{/if}
-		<SubmitButton shortcut="mod+s">
-			{#snippet icon()}
-				<IconDeviceFloppy size={20} />
-			{/snippet}
-		</SubmitButton>
-	</PageHeader>
-	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
-			<InfoCard title="Band Info">
-				<div class="grid grid-cols-1 gap-x-2">
-					<Field name="name" type="text" value={band.name} />
-					<Field name="bio" label="Bio">
-						<input {...bandFields.bio.as('hidden', bioHtml)} />
-						<RichTextEditor bind:value={bioHtml} placeholder="Tell people about this band..." />
-					</Field>
-				</div>
-			</InfoCard>
-
-			<InfoCard title="Details" class="bg-base-200 shadow-none">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Band ID</dt>
-					<dd class="font-mono text-xs">{band.id}</dd>
-
-					<dt class="opacity-60">Slug</dt>
-					<dd class="font-mono text-xs">{band.slug}</dd>
-
-					<dt class="opacity-60">Owner</dt>
-					<dd>
-						<MemberLink
-							member={{
-								name: band.ownerName,
-								email: band.ownerEmail,
-								pronouns: band.ownerPronouns,
-								role: band.ownerRole,
-								userId: band.ownerId
-							}}
-						/>
-					</dd>
-
-					<dt class="opacity-60">Members</dt>
-					<dd>{band.memberCount} active</dd>
-
-					<dt class="opacity-60">Created</dt>
-					<dd>{new Date(band.createdAt).toLocaleDateString()}</dd>
-
-					{#if band.deletedAt}
-						<dt class="opacity-60">Deactivated</dt>
-						<dd>{new Date(band.deletedAt).toLocaleDateString()}</dd>
-					{/if}
-				</dl>
-
-				<div class="mt-4 flex gap-2">
-					{#if isDeactivated}
-						<Action
-							action={reactivateBand}
-							label="Reactivate"
-							successToast="Band reactivated"
-							class="btn-success btn-sm"
-							onsuccess={() => {
-								void getBand(id).refresh();
-							}}
-						>
-							{#snippet form()}
-								<input {...reactivateFields.id.as('hidden', id)} />
-								<p class="py-4">Reactivate this band?</p>
-							{/snippet}
-						</Action>
-					{:else}
-						<Action
-							action={deactivateBand}
-							label="Deactivate"
-							successToast="Band deactivated"
-							class="btn-error btn-sm"
-							onsuccess={() => {
-								void getBand(id).refresh();
-							}}
-						>
-							{#snippet form()}
-								<input {...deactivateFields.id.as('hidden', id)} />
-								<p class="py-4">Deactivate this band? All future reservations will be cancelled.</p>
-							{/snippet}
-						</Action>
-					{/if}
-				</div>
-			</InfoCard>
-		</div>
-	</PageContent>
-</Form>
+<!-- The band info form lives in a fully synchronous component: a top-level
+     await here marks later declarations "blocked", compiling its bind:value /
+     fields expressions into async deriveds — the churn behind the
+     effect_update_depth_exceeded crash (same bug as /member/profile). -->
+<StaffBandForm {band} {id} />
 
 <PageContent width="3xl">
 	<InfoCard title="Members">

@@ -7,7 +7,8 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -24,6 +25,22 @@
 	const active = $derived(data.active);
 
 	let showCreateModal = $state(false);
+
+	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
+	// Deliberately an $effect, not a writable $derived: during a fast SPA
+	// navigation the derived can evaluate against the pre-navigation URL and the
+	// modal binding pins the stale false; the effect re-applies whenever the URL
+	// settles, so the param reliably opens the modal.
+	$effect(() => {
+		if (page.url.searchParams.has('create')) showCreateModal = true;
+	});
+
+	// Drop the param on close so the nav link re-triggers and refresh stays clean.
+	function onCreateModalClose() {
+		if (page.url.searchParams.has('create')) {
+			replaceState(resolve('/member/bands'), {});
+		}
+	}
 </script>
 
 <PageHeader title="My Bands" subtitle="Member">
@@ -118,7 +135,7 @@
 </PageContent>
 
 <!-- Create Band Modal -->
-<Modal title="Create Band" bind:open={showCreateModal}>
+<Modal title="Create Band" bind:open={showCreateModal} onclose={onCreateModalClose}>
 	<Form
 		remote={createBand}
 		onfailure={() => toast.error('Failed to create band')}

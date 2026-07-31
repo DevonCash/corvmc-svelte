@@ -1137,6 +1137,44 @@ async function seedBands(users: SeedUser[]) {
 		}
 	}
 
+	// Onboarding-state bands: a bare just-created band (name only, as the
+	// create-band modal produces) and non-public visibilities, so the
+	// sparse-profile rendering and directoryVisibility gating paths have local
+	// data. Kept out of BAND_NAMES so the fully-filled pool stays untouched.
+	const onboardingStates = [
+		{ name: 'Fresh Coat', slug: 'fresh-coat', directoryVisibility: 'public' as const },
+		{
+			name: 'Basement Sessions',
+			slug: 'basement-sessions',
+			directoryVisibility: 'hidden' as const,
+			bio: 'We keep to ourselves — hidden from the directory.',
+			hometown: pick(HOMETOWNS)
+		},
+		{
+			name: 'The Quiet Regulars',
+			slug: 'the-quiet-regulars',
+			directoryVisibility: 'members' as const,
+			bio: 'Members-only listing: visible to logged-in members, not the public.',
+			hometown: pick(HOMETOWNS),
+			foundedYear: String(randomInt(2015, 2024))
+		}
+	];
+	for (let i = 0; i < onboardingStates.length; i++) {
+		const owner = users[(BAND_NAMES.length + 1 + i) % users.length];
+		const [b] = await db
+			.insert(band)
+			.values({ ownerId: owner.id, ...onboardingStates[i] })
+			.returning();
+		await db.insert(bandMember).values({
+			bandId: b.id,
+			userId: owner.id,
+			role: 'owner',
+			position: pick(BAND_POSITIONS),
+			status: 'active'
+		});
+		bands.push(b);
+	}
+
 	const deactivatedOwner = users[BAND_NAMES.length % users.length];
 	const [deactivated] = await db
 		.insert(band)

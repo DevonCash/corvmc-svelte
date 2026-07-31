@@ -352,30 +352,6 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 	}
 }
 
-/** Single band profile by slug */
-export async function getBandProfile(slug: string, visibility: 'members' | 'public') {
-	const conditions: BandWhere[] = [{ slug }, { deletedAt: { isNull: true } }];
-
-	if (visibility === 'public') {
-		conditions.push({ directoryVisibility: 'public' });
-	} else {
-		conditions.push({ directoryVisibility: { in: ['members', 'public'] } });
-	}
-
-	const row = await db.query.band.findFirst({
-		where: { AND: conditions },
-		with: {
-			genres: true,
-			members: { columns: { status: true } }
-		},
-		columns: bandColumns
-	});
-
-	if (!row) return null;
-
-	return mapBandRow(row);
-}
-
 // ---------------------------------------------------------------------------
 // Tag suggestions
 // ---------------------------------------------------------------------------

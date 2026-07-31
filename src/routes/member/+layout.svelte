@@ -55,7 +55,11 @@
 
 		<Nav.Group title="My Bands">
 			{#snippet action()}
-				<Button href="/member/bands/create" class="btn-ghost btn-xs btn-square" title="Create Band">
+				<Button
+					href="/member/bands?create=1"
+					class="btn-ghost btn-xs btn-square"
+					title="Create Band"
+				>
 					<IconPlus size={14} />
 				</Button>
 			{/snippet}
@@ -66,7 +70,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href="/member/bands/create" label="Create Band">
+			<Nav.Item href="/member/bands?create=1" label="Create Band">
 				{#snippet icon()}<IconPlus />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
