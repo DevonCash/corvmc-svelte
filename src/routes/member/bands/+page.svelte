@@ -19,21 +19,21 @@
 		getMemberBands
 	} from '$lib/remote/bands.remote';
 
-	let data = $derived(await getMemberBands());
-
-	const pending = $derived(data.pending);
-	const active = $derived(data.active);
-
-	let showCreateModal = $state(false);
-
 	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
-	// Deliberately an $effect, not a writable $derived: during a fast SPA
-	// navigation the derived can evaluate against the pre-navigation URL and the
-	// modal binding pins the stale false; the effect re-applies whenever the URL
-	// settles, so the param reliably opens the modal.
-	$effect(() => {
-		if (page.url.searchParams.has('create')) showCreateModal = true;
-	});
+	//
+	// Two constraints, both svelte experimental-async related (still present in
+	// 5.56.8; covered by the band-onboarding e2e test):
+	// - This declaration must sit BEFORE the top-level await. Declarations after
+	//   it compile as "blocked" and the modal wiring goes dead.
+	// - No wiring here survives a client-side navigation that lands while the
+	//   member layout's async queries are still settling (init-time effects are
+	//   skipped and an initially-open bits-ui dialog never mounts its portal),
+	//   so the sidebar links carry data-sveltekit-reload and arrive as a full
+	//   document load, which initializes deterministically.
+	// A writable derived keeps the wiring passive: closing writes false into the
+	// binding, then onCreateModalClose strips the param so the dependency change
+	// keeps the derived in sync.
+	let showCreateModal = $derived(page.url.searchParams.has('create'));
 
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {
@@ -41,6 +41,11 @@
 			replaceState(resolve('/member/bands'), {});
 		}
 	}
+
+	let data = $derived(await getMemberBands());
+
+	const pending = $derived(data.pending);
+	const active = $derived(data.active);
 </script>
 
 <PageHeader title="My Bands" subtitle="Member">
