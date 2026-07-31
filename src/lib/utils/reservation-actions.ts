@@ -22,6 +22,33 @@ export function isTerminalStatus(status: string): boolean {
 	return status === 'completed' || status === 'cancelled' || status === 'no_show';
 }
 
+export interface OverlapCandidate {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	status: string;
+}
+
+/**
+ * Rows from `others` that double-book the current reservation's time range.
+ * Cancelled and waitlisted rows don't hold the slot, and a terminal or
+ * waitlisted current reservation can't be double-booked, so both report empty.
+ */
+export function overlappingReservations<T extends OverlapCandidate>(
+	current: OverlapCandidate,
+	others: T[]
+): T[] {
+	if (isTerminalStatus(current.status) || current.status === 'waitlisted') return [];
+	return others.filter(
+		(o) =>
+			o.id !== current.id &&
+			o.status !== 'cancelled' &&
+			o.status !== 'waitlisted' &&
+			o.startsAt < current.endsAt &&
+			o.endsAt > current.startsAt
+	);
+}
+
 /**
  * Derive a reservation's payment state for display. Order matters:
  * paidAt (cash/online) → cash owed → not-yet-settled → credit-settled → comped.

@@ -304,7 +304,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			memberName: '',
 			bookerType: r.bookerType,
 			startsAt: r.startsAt,
-			endsAt: r.endsAt
+			endsAt: r.endsAt,
+			status: r.status
 		})),
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
