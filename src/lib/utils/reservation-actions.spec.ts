@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isTerminalStatus, reservationPaymentState, visibleActions } from './reservation-actions';
+import {
+	isTerminalStatus,
+	overlappingReservations,
+	reservationPaymentState,
+	visibleActions
+} from './reservation-actions';
 
 describe('reservationPaymentState', () => {
 	const base = { status: 'confirmed' as const };
@@ -106,5 +111,38 @@ describe('visibleActions cash tracking', () => {
 				paidAt: new Date()
 			}).has('cashReceived')
 		).toBe(false);
+	});
+});
+
+describe('overlappingReservations', () => {
+	const at = (h: number) => new Date(2026, 7, 1, h, 0, 0);
+	const current = { id: 'me', startsAt: at(12), endsAt: at(14), status: 'confirmed' };
+
+	it('returns rows whose time range intersects the current reservation', () => {
+		const others = [
+			{ id: 'a', startsAt: at(13), endsAt: at(15), status: 'confirmed' },
+			{ id: 'b', startsAt: at(10), endsAt: at(12), status: 'confirmed' }, // touches, no overlap
+			{ id: 'c', startsAt: at(14), endsAt: at(16), status: 'scheduled' } // touches, no overlap
+		];
+		expect(overlappingReservations(current, others).map((o) => o.id)).toEqual(['a']);
+	});
+
+	it('ignores cancelled and waitlisted rows — they do not hold the slot', () => {
+		const others = [
+			{ id: 'a', startsAt: at(12), endsAt: at(14), status: 'cancelled' },
+			{ id: 'b', startsAt: at(12), endsAt: at(14), status: 'waitlisted' }
+		];
+		expect(overlappingReservations(current, others)).toEqual([]);
+	});
+
+	it('reports nothing when the current reservation is terminal or waitlisted', () => {
+		const others = [{ id: 'a', startsAt: at(12), endsAt: at(14), status: 'confirmed' }];
+		expect(overlappingReservations({ ...current, status: 'cancelled' }, others)).toEqual([]);
+		expect(overlappingReservations({ ...current, status: 'waitlisted' }, others)).toEqual([]);
+	});
+
+	it('never reports the reservation itself', () => {
+		const others = [{ id: 'me', startsAt: at(12), endsAt: at(14), status: 'confirmed' }];
+		expect(overlappingReservations(current, others)).toEqual([]);
 	});
 });

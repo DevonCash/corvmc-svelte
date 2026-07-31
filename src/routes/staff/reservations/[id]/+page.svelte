@@ -24,7 +24,11 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMail, IconPhone } from '@tabler/icons-svelte';
-	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
+	import {
+		visibleActions,
+		reservationPaymentState,
+		overlappingReservations
+	} from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
 
@@ -39,11 +43,18 @@
 		})
 	);
 
+	// Double-bookings for this slot — surfaced so staff see the collision before
+	// confirming or comping (creation warns, but detail-page actions didn't).
+	const conflicts = $derived(overlappingReservations(r, data.sameDayReservations));
+
 	// Derived formatting
 	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
 	const durationLabel = $derived(hours === 1 ? '1 hour' : `${hours} hours`);
 	const amountFormatted = $derived(formatCents(Math.round(hours * data.hourlyRateCents)));
 	const rateFormatted = $derived(formatCents(data.hourlyRateCents));
+	const creditsDiscountFormatted = $derived(
+		formatCents(Math.round((r.creditsUsed ?? 0) * data.hourlyRateCents))
+	);
 
 	const paymentStatus = $derived.by((): { label: string; class: string } => {
 		switch (reservationPaymentState(r)) {
@@ -88,6 +99,20 @@
 					endLabel="Last of the day"
 				/>
 			</header>
+
+			{#if conflicts.length > 0}
+				<div role="alert" class="alert alert-warning py-2 text-sm">
+					<span>
+						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
+						{conflicts
+							.map(
+								(c) =>
+									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${c.bookerType === 'event' ? 'event' : c.status})`
+							)
+							.join(', ')}
+					</span>
+				</div>
+			{/if}
 
 			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
 				<div class="flex flex-wrap items-center gap-2 border-t border-base-200 pt-3">
@@ -161,6 +186,12 @@
 					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
 				</div>
 				<p class="text-sm opacity-60">{durationLabel} × {rateFormatted}/hr</p>
+				{#if (r.creditsUsed ?? 0) > 0}
+					<p class="text-sm text-success">
+						Free hours applied: {r.creditsUsed}
+						{r.creditsUsed === 1 ? 'hr' : 'hrs'} (−{creditsDiscountFormatted})
+					</p>
+				{/if}
 
 				{#if r.stripePaymentRecordId}
 					<div class="mt-3 border-t border-base-200 pt-3">
