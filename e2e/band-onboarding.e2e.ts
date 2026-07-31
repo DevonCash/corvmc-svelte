@@ -71,7 +71,8 @@ test('saving the profile preserves hometown and founded year', async ({ page }) 
 // boundary's "Band not found" state with no profile content rendered.
 test('hidden band detail page is not publicly readable', async ({ page }) => {
 	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
-	await expect(page.getByText('Band not found')).toBeVisible({ timeout: 15000 });
+	// .first(): the message renders in both the boundary alert and the error toast.
+	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText('E2E Hidden Band')).toHaveCount(0);
 	await expect(page.getByText('opted out of the directory')).toHaveCount(0);
 });
@@ -80,7 +81,8 @@ test('members-only band is withheld publicly but renders in the member directory
 	page
 }) => {
 	await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	await expect(page.getByText('Band not found')).toBeVisible({ timeout: 15000 });
+	// .first(): the message renders in both the boundary alert and the error toast.
+	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
 
 	await login(page);
