@@ -5,18 +5,20 @@
 	let {
 		href,
 		label,
-		icon
+		icon,
+		...rest
 	}: {
 		href: string;
 		label: string;
 		icon?: Snippet;
+		[key: string]: unknown;
 	} = $props();
 
 	let active = $derived(page.url.pathname === href);
 </script>
 
 <li>
-	<a {href} class:active>
+	<a {href} class:active {...rest}>
 		{@render icon?.()}
 		{label}
 	</a>

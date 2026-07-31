@@ -55,8 +55,15 @@
 
 		<Nav.Group title="My Bands">
 			{#snippet action()}
+				<!-- data-sveltekit-reload: a client-side navigation that lands on the
+				     bands page while this layout's async queries are still settling can
+				     leave the ?create=1 modal permanently unmounted (svelte
+				     experimental-async scheduling gap, still present in 5.56.8 — see
+				     the band-onboarding e2e test). A full-document load initializes the
+				     dialog deterministically. -->
 				<Button
 					href="/member/bands?create=1"
+					data-sveltekit-reload
 					class="btn-ghost btn-xs btn-square"
 					title="Create Band"
 				>
@@ -70,7 +77,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href="/member/bands?create=1" label="Create Band">
+			<Nav.Item href="/member/bands?create=1" label="Create Band" data-sveltekit-reload>
 				{#snippet icon()}<IconPlus />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

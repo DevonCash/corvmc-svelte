@@ -161,6 +161,20 @@ Q, 1A (NotificationBell teardown), D (HTTP-shaped client echo), 11
 (constructEventAsync), 12 (rotated Stripe key) — all remain quiet; no
 regressions observed in this pass.
 
+> **Correction (2026-07-31):** Q/1A's root cause was misdiagnosed. The crash
+> was not a teardown-after-destroy race — it fires when the window click
+> handler runs _before_ NotificationBell's post-`await` continuation
+> initializes its state: with `experimental.async`, every declaration after a
+> top-level `await` is "blocked", so an early click read `get(undefined)`
+> (→ `reading 'f'`), and the `destroyed` guard variable was itself still
+> `undefined`, so the guard never protected anything. Reproduced ~60% of the
+> time in headless Chromium by clicking within ~1s of login. The same
+> svelte runtime bug family also silently prevented async template blocks from
+> committing after a client-side navigation (dead create-band modal on
+> /member/bands). Both fixed upstream by svelte 5.56.4 (#18453, "always unset
+> reactivity context after restoring it"); we upgraded to 5.56.8 and added
+> e2e/create-band-modal.e2e.ts as a regression test.
+
 ## Recommended follow-ups (in priority order)
 
 1. **Ops:** `pnpm email:push` with the prod `POSTMARK_SERVER_TOKEN`; verify
