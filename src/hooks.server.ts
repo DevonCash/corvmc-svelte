@@ -11,6 +11,7 @@ import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
 import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { isLocalOrigin } from '$lib/sentry-local-origin';
 
 const resolvedSessions = new Set<string>();
 
@@ -69,6 +70,14 @@ function isNotFoundError(error: unknown): boolean {
 	return message.startsWith('Not found:');
 }
 
+// A local dev/preview server must never report to production Sentry. The
+// `enabled` flag below already gates on SENTRY_ENVIRONMENT, but that env var is
+// only set when Playwright starts the preview server itself — a reused or
+// hand-started one on :4173 slips through. See $lib/sentry-local-origin.
+export function isLocalOriginEvent(event: { request?: { url?: string } }): boolean {
+	return isLocalOrigin(event.request?.url);
+}
+
 // On Cloudflare Workers, Sentry must be initialised per-request via
 // initCloudflareSentryHandle. The Node-style `Sentry.init()` in an
 // instrumentation file pulls in Node/OpenTelemetry APIs the Workers runtime
@@ -80,6 +89,7 @@ export const handle: Handle = sequence(
 		// Don't report from local dev or the Playwright/preview e2e run (env set in playwright.config.ts)
 		enabled: !dev && process.env.SENTRY_ENVIRONMENT !== 'ci',
 		beforeSend(event, hint) {
+			if (isLocalOriginEvent(event)) return null;
 			if (isNotFoundError(hint?.originalException)) return null;
 			return event;
 		},

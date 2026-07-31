@@ -11,7 +11,12 @@ vi.mock('@sentry/sveltekit', () => ({
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$env/dynamic/public', () => ({ env: {} }));
 
-import { isStaleChunkError, isNetworkAbortError, isWebviewBridgeError } from './hooks.client';
+import {
+	isStaleChunkError,
+	isNetworkAbortError,
+	isWebviewBridgeError,
+	isLocalOriginEvent
+} from './hooks.client';
 
 function eventWithTopFrame(fn: string | undefined): ErrorEvent {
 	return {
@@ -30,6 +35,26 @@ function eventWithTopFrame(fn: string | undefined): ErrorEvent {
 }
 
 const emptyEvent = { type: undefined } as unknown as ErrorEvent;
+
+describe('isLocalOriginEvent', () => {
+	function eventFromUrl(url: string | undefined): ErrorEvent {
+		return { type: undefined, request: url ? { url } : undefined } as unknown as ErrorEvent;
+	}
+
+	it('drops events from the local preview server (JAVASCRIPT-SVELTEKIT-1W/1X)', () => {
+		expect(
+			isLocalOriginEvent(eventFromUrl('http://localhost:4173/directory/members/does-not-exist-xyz'))
+		).toBe(true);
+	});
+
+	it('keeps events from production', () => {
+		expect(isLocalOriginEvent(eventFromUrl('https://corvmc.org/events/abc'))).toBe(false);
+	});
+
+	it('keeps events with no request URL rather than dropping them blind', () => {
+		expect(isLocalOriginEvent(eventFromUrl(undefined))).toBe(false);
+	});
+});
 
 describe('isWebviewBridgeError', () => {
 	it('drops the Instagram webkit bridge crash (JAVASCRIPT-SVELTEKIT-1F)', () => {

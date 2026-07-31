@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/sveltekit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { isLocalOrigin } from '$lib/sentry-local-origin';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
@@ -50,8 +51,19 @@ export function isWebviewBridgeError(event: Sentry.ErrorEvent, error: unknown): 
 	return Boolean(top?.function && WEBVIEW_BRIDGE_FUNCTIONS.includes(top.function));
 }
 
+/**
+ * A local dev/preview server must never report to production Sentry. The
+ * `enabled` flag below already gates on PUBLIC_SENTRY_ENVIRONMENT, but that env
+ * var is only set when Playwright starts the preview server itself — a reused or
+ * hand-started one on :4173 slips through. See $lib/sentry-local-origin.
+ */
+export function isLocalOriginEvent(event: Sentry.ErrorEvent): boolean {
+	return isLocalOrigin(event.request?.url ?? globalThis.location?.href);
+}
+
 Sentry.init({
 	beforeSend(event, hint) {
+		if (isLocalOriginEvent(event)) return null;
 		if (isStaleChunkError(hint?.originalException)) return null;
 		if (isNetworkAbortError(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
