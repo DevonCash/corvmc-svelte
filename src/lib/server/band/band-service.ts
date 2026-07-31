@@ -100,7 +100,12 @@ export async function update(bandId: string, data: UpdateBandData) {
 	if (data.name !== undefined) {
 		updates.name = data.name;
 		const baseSlug = generateSlug(data.name);
-		updates.slug = await ensureUniqueSlug(baseSlug, band, band.slug);
+		// Exclude this band so an unchanged name keeps its slug instead of
+		// rotating to '-2' on every save.
+		updates.slug = await ensureUniqueSlug(baseSlug, band, band.slug, {
+			column: band.id,
+			value: bandId
+		});
 	}
 
 	if (data.bio !== undefined) {

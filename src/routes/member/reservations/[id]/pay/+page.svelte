@@ -18,13 +18,24 @@
 
 	let coverFees = $state(false);
 
-	// freeHoursBalance is in credits (30-min blocks); convert to hours for the preview.
+	// A non-null cashDueCents means credits are already committed (confirmed
+	// bookings): show the stored remainder. Otherwise preview against the live
+	// balance — freeHoursBalance is in credits (30-min blocks).
+	const committed = $derived(data.cashDueCents != null);
 	const availableHours = $derived(creditsToHours(freeHoursBalance));
-	const creditsApplicable = $derived(Math.min(availableHours, durationHours));
-	const creditDiscountCents = $derived(
-		durationHours > 0 ? creditsApplicable * (totalCents / durationHours) : 0
+	const creditsApplicable = $derived(
+		committed ? (data.creditsUsedHours ?? 0) : Math.min(availableHours, durationHours)
 	);
-	const remainingCents = $derived(totalCents - creditDiscountCents);
+	const creditDiscountCents = $derived(
+		committed
+			? totalCents - (data.cashDueCents ?? 0)
+			: durationHours > 0
+				? creditsApplicable * (totalCents / durationHours)
+				: 0
+	);
+	const remainingCents = $derived(
+		committed ? (data.cashDueCents ?? 0) : totalCents - creditDiscountCents
+	);
 
 	function formatDate(d: Date): string {
 		return d.toLocaleDateString('en-US', {
@@ -82,7 +93,13 @@
 
 			{#if creditsApplicable > 0}
 				<div class="flex justify-between text-success">
-					<span>Free hours ({creditsApplicable} of {availableHours} available)</span>
+					<span>
+						{#if committed}
+							Free hours applied ({creditsApplicable} hr)
+						{:else}
+							Free hours ({creditsApplicable} of {availableHours} available)
+						{/if}
+					</span>
 					<span>−${cents(creditDiscountCents)}</span>
 				</div>
 			{/if}
@@ -120,13 +137,11 @@
 			/>
 		{/if}
 
-		<SubmitButton class="btn-primary w-full mt-4">
-			{#if remainingCents <= 0}
-				Confirm (Free Hours)
-			{:else}
-				Pay ${cents(chargeTotal)}
-			{/if}
-		</SubmitButton>
+		<!-- SubmitButton renders its `label` prop, not children. -->
+		<SubmitButton
+			class="btn-primary w-full mt-4"
+			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${cents(chargeTotal)}`}
+		/>
 	</Form>
 
 	<Button href="/member/reservations" class="btn-ghost w-full">Back to Reservations</Button>

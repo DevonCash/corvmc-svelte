@@ -43,9 +43,7 @@ test('covering processing fees submits without a Zod validation error', async ({
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
 
 	// Page rendered the pay form for a balance-due ($15.00) reservation. The
-	// balance summary and the cover-fees checkbox are both present. (The submit
-	// button label is "Save" — the pay page's SubmitButton renders its `label`
-	// prop, not slotted children.)
+	// balance summary and the cover-fees checkbox are both present.
 	await expect(page.getByText('$15.00').first()).toBeVisible();
 
 	// The cover-fees checkbox is the boolean field rendered with the SvelteKit
@@ -55,7 +53,9 @@ test('covering processing fees submits without a Zod validation error', async ({
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
 
-	const submit = page.getByRole('button', { name: 'Save' });
+	// The submit button shows the charge amount (with the processing fee once
+	// cover-fees is checked), e.g. "Pay $15.44".
+	const submit = page.getByRole('button', { name: /^Pay \$/ });
 	await expect(submit).toBeVisible();
 
 	// Capture the POST to the payReservation remote form so we can confirm the

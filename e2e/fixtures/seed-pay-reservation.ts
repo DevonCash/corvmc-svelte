@@ -28,7 +28,7 @@ import { reservation } from '../../src/lib/server/db/schema/reservation';
 // app's scryptVerify accepts it: "scrypt:N:r:p:salt_hex:key_hex".
 const SCRYPT_PARAMS = { N: 16384, r: 16, p: 1, keylen: 64, maxmem: 128 * 16384 * 16 * 2 };
 
-function scryptHash(password: string): Promise<string> {
+export function scryptHash(password: string): Promise<string> {
 	const salt = randomBytes(16);
 	const { N, r, p, keylen, maxmem } = SCRYPT_PARAMS;
 	return new Promise((resolve, reject) => {

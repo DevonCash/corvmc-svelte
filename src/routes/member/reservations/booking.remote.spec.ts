@@ -31,6 +31,18 @@ class ReservationStateError extends Error {
 		this.name = 'ReservationStateError';
 	}
 }
+class ReservationNotFoundError extends Error {
+	constructor() {
+		super('Reservation not found');
+		this.name = 'ReservationNotFoundError';
+	}
+}
+class ReservationAuthorizationError extends Error {
+	constructor(message = 'Not authorized') {
+		super(message);
+		this.name = 'ReservationAuthorizationError';
+	}
+}
 
 const reservationServiceMock = {
 	staffCreate: vi.fn(),
@@ -50,7 +62,9 @@ const reservationServiceMock = {
 	recordCashAndComplete: vi.fn(),
 	ReservationConflictError,
 	ReservationValidationError,
-	ReservationStateError
+	ReservationStateError,
+	ReservationNotFoundError,
+	ReservationAuthorizationError
 };
 
 vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);

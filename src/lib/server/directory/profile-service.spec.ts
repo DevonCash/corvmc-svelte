@@ -227,6 +227,28 @@ describe('updateBandProfile', () => {
 		});
 		expect(insertedRows).toHaveLength(1); // genres
 	});
+
+	it('round-trips hometown and foundedYear', async () => {
+		selectResults.push([{ role: 'owner' }]);
+
+		await updateBandProfile('band-1', 'user-1', {
+			hometown: 'Corvallis, OR',
+			foundedYear: '2019'
+		});
+
+		expect(updatedData[0]).toMatchObject({
+			hometown: 'Corvallis, OR',
+			foundedYear: '2019'
+		});
+	});
+
+	it('nulls hometown and foundedYear when omitted (why the edit form must submit them)', async () => {
+		selectResults.push([{ role: 'owner' }]);
+
+		await updateBandProfile('band-1', 'user-1', { tagline: 'Only tagline' });
+
+		expect(updatedData[0]).toMatchObject({ hometown: null, foundedYear: null });
+	});
 });
 
 describe('setUserAvatar', () => {

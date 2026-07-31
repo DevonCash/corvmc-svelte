@@ -10,7 +10,9 @@ import {
 import {
 	ReservationConflictError,
 	ReservationValidationError,
-	ReservationStateError
+	ReservationStateError,
+	ReservationNotFoundError,
+	ReservationAuthorizationError
 } from './reservation/reservation-service';
 import { SubscriptionStateError } from './finance/subscription-service';
 import { RecurringSeriesError } from './reservation/recurring-series-service';
@@ -75,9 +77,15 @@ export function mapDomainError(err: unknown): never {
 		err instanceof BandNotFoundError ||
 		err instanceof EquipmentNotFoundError ||
 		err instanceof CategoryNotFoundError ||
-		err instanceof LoanNotFoundError
+		err instanceof LoanNotFoundError ||
+		err instanceof ReservationNotFoundError
 	) {
 		error(404, (err as Error).message);
+	}
+
+	// --- 403 Forbidden ---
+	if (err instanceof ReservationAuthorizationError) {
+		error(403, (err as Error).message);
 	}
 
 	// --- 409 Conflict ---

@@ -4,6 +4,7 @@ import {
 	orderEmbeddableServices,
 	isStreamingPlatform,
 	isMemberRowPrivate,
+	isBandProfileHidden,
 	contactForView,
 	toPublicMemberProfile
 } from './directory-display';
@@ -81,6 +82,23 @@ describe('isMemberRowPrivate', () => {
 		expect(isMemberRowPrivate('public', 'public')).toBe(false);
 		expect(isMemberRowPrivate('members', 'members')).toBe(false);
 		expect(isMemberRowPrivate('members', 'hidden')).toBe(false);
+	});
+});
+
+describe('isBandProfileHidden', () => {
+	it('hides hidden bands from every view', () => {
+		expect(isBandProfileHidden('public', 'hidden')).toBe(true);
+		expect(isBandProfileHidden('members', 'hidden')).toBe(true);
+	});
+
+	it('hides members-only bands from the public view but not the members view', () => {
+		expect(isBandProfileHidden('public', 'members')).toBe(true);
+		expect(isBandProfileHidden('members', 'members')).toBe(false);
+	});
+
+	it('shows public bands in every view', () => {
+		expect(isBandProfileHidden('public', 'public')).toBe(false);
+		expect(isBandProfileHidden('members', 'public')).toBe(false);
 	});
 });
 

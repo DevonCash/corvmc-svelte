@@ -47,6 +47,9 @@
 				Paid {format(reservation.paidAt, 'PP')}
 			{:else if reservation.status === 'cancelled'}
 				Payment Cancelled
+			{:else if reservation.status === 'completed' || reservation.status === 'no_show'}
+				<!-- Session is over but the balance was never settled. -->
+				<span class="font-medium text-error">Overdue</span>
 			{:else}
 				Due {formatDistanceToNow(reservation.startsAt, { addSuffix: true })}
 			{/if}

@@ -27,8 +27,19 @@
 	// Bump on every editor transaction so toolbar active-states stay reactive.
 	let tick = $state(0);
 
+	// The last external value this editor applied (or produced via onUpdate).
+	// Tiptap normalizes content on parse — plain text 'foo' becomes '<p>foo</p>'
+	// — so a stored plain-text value can NEVER equal getHTML(). Without this
+	// guard the reconcile effect below re-fires setContent (whose transactions
+	// write `tick`) on every flush, and Svelte's flush guard throws
+	// effect_update_depth_exceeded — the crash that took down the profile and
+	// band edit pages for any profile with a plain-text bio. Deliberately a
+	// plain (non-reactive) variable.
+	let lastApplied: string | null = null;
+
 	$effect(() => {
 		if (!browser || !element) return;
+		lastApplied = untrack(() => value) ?? '';
 		const ed = new Editor({
 			element,
 			extensions: [StarterKit.configure({ heading: { levels: [3] } })],
@@ -40,6 +51,7 @@
 			},
 			onUpdate: ({ editor }) => {
 				value = editor.getHTML();
+				lastApplied = value;
 				// Notify the surrounding FormField/Form so dirty tracking fires.
 				element?.dispatchEvent(new Event('input', { bubbles: true }));
 			},
@@ -64,10 +76,12 @@
 	}
 
 	// Reflect external value changes (e.g. async profile load, form reset).
+	// Each distinct external value is applied at most once (see lastApplied).
 	$effect(() => {
 		const v = value ?? '';
+		if (!editor || v === lastApplied) return;
+		lastApplied = v;
 		if (
-			editor &&
 			!sameContent(
 				v,
 				untrack(() => editor!.getHTML())
