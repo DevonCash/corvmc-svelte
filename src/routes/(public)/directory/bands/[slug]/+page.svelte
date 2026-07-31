@@ -18,8 +18,17 @@
 
 	const MEMBERS_BASE = '/directory/members';
 
-	let data = $derived(await getPublicBandProfile(page.params.slug!));
-	let shows = $derived(await getBandShows(data.band.id));
+	// `shows` is chained off the profile promise rather than written as a
+	// sibling `$derived(await getBandShows(data.band.id))`: in prod builds, a
+	// sibling derived reading a rejected async derived surfaces a minified
+	// Svelte-internals TypeError to the boundary instead of the 404 message
+	// (e2e/directory-profile-404.e2e.ts).
+	let { data, shows } = $derived(
+		await getPublicBandProfile(page.params.slug!).then(async (profile) => ({
+			data: profile,
+			shows: await getBandShows(profile.band.id)
+		}))
+	);
 
 	const band = $derived(data.band);
 	const contact = $derived(band.directoryContact ?? {});
