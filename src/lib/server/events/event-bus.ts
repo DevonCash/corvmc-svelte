@@ -245,8 +245,24 @@ export interface ContentFlaggedEvent {
 	entityId: string;
 	entityLabel: string;
 	reason: string;
-	reportedByUserId: string;
+	/** Null for anonymous public reports (event listings). */
+	reportedByUserId: string | null;
 	reportedByName: string;
+}
+
+export interface EventUnpublishedByStaffEvent {
+	eventId: string;
+	eventTitle: string;
+	bandId: string;
+	bandName: string;
+	/** Staff resolution note, shared with the band so they can fix and republish. */
+	notes: string | null;
+	/** Band owner/admins to notify */
+	bandAdmins: Array<{
+		userId: string;
+		userName: string;
+		userEmail: string;
+	}>;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +293,7 @@ export type DomainEvents = {
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
+	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 };
 
 // ---------------------------------------------------------------------------

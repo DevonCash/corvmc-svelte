@@ -6,7 +6,7 @@ import { user } from './authentication';
 // Content flag domain types
 // ---------------------------------------------------------------------------
 
-export const flagEntityTypes = ['member_profile', 'band_profile'] as const;
+export const flagEntityTypes = ['member_profile', 'band_profile', 'event'] as const;
 export type FlagEntityType = (typeof flagEntityTypes)[number];
 
 export const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
@@ -23,15 +23,17 @@ export const contentFlag = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 
-		// Polymorphic target (member profile or band profile). Drizzle v1 lacks
-		// polymorphic relations, so we store a type discriminator + entity id,
-		// matching the reservation.bookerType / bookerId pattern.
+		// Polymorphic target (member profile, band profile, or event). Drizzle v1
+		// lacks polymorphic relations, so we store a type discriminator + entity
+		// id, matching the reservation.bookerType / bookerId pattern.
 		entityType: text('entity_type', { enum: flagEntityTypes }).notNull(),
 		entityId: text('entity_id').notNull(),
 
-		reportedByUserId: text('reported_by_user_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
+		// Null for anonymous public reports (event listings are reportable by
+		// anyone, Turnstile-gated). set-null keeps reports through account deletion.
+		reportedByUserId: text('reported_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
 		reason: text('reason').notNull(),
 		description: text('description'),
 

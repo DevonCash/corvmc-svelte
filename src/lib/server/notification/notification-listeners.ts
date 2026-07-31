@@ -570,4 +570,45 @@ export function registerAllNotificationListeners(): void {
 			}
 		}
 	});
+
+	// --- Event unpublished by staff (notify band admins) ---
+	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {
+		for (const admin of event.bandAdmins) {
+			try {
+				await dispatch({
+					type: 'band_event_unpublished',
+					userId: admin.userId,
+					userEmail: admin.userEmail,
+					title: `"${event.eventTitle}" was unlisted`,
+					body: event.notes
+						? `CMC staff removed this event from the public gig guide: ${event.notes}`
+						: 'CMC staff removed this event from the public gig guide following a report.',
+					href: `/member/bands/${event.bandId}`,
+					emailTemplate: {
+						alias: GENERIC_ALIAS,
+						model: {
+							subject: `Your event "${event.eventTitle}" was unlisted`,
+							heading: 'Event unlisted from the gig guide',
+							greeting: `Hi ${admin.userName},`,
+							paragraphs: [
+								{
+									text: `CMC staff reviewed a report about ${event.bandName}'s event "${event.eventTitle}" and removed it from the public gig guide. It is back in draft — it has not been deleted.`
+								},
+								...(event.notes ? [{ text: `Staff note: ${event.notes}` }] : []),
+								{
+									text: 'You can edit the event and publish it again once the issue is addressed, or reply to CMC staff if you have questions.'
+								}
+							],
+							cta: { url: `${siteUrl}/member/bands/${event.bandId}`, label: 'View your band' }
+						} satisfies NotificationEmailModel
+					}
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.band_event_unpublished',
+					to: admin.userEmail
+				});
+			}
+		}
+	});
 }
