@@ -26,7 +26,11 @@ import {
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
-import { isMemberRowPrivate, toPublicMemberProfile } from '$lib/utils/directory-display';
+import {
+	isMemberRowPrivate,
+	isBandProfileHidden,
+	toPublicMemberProfile
+} from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -197,6 +201,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			lookingForMembers: band.lookingForMembers,
 			directoryContact: band.directoryContact,
 			links: band.links,
+			directoryVisibility: band.directoryVisibility,
 			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
 		})
 		.from(band)
@@ -204,7 +209,11 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
 		.groupBy(band.id);
 
-	if (!row) throw error(404, 'Band not found');
+	// A band that opted out of this view's directory must not resolve by URL
+	// either — same 404 contract as member profiles.
+	if (!row || isBandProfileHidden(visibility, row.directoryVisibility)) {
+		throw error(404, 'Band not found');
+	}
 
 	const genres = await db
 		.select({ genre: bandGenre.genre })

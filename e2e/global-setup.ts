@@ -9,6 +9,7 @@
  */
 import { execSync } from 'node:child_process';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
+import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 
 export default async function globalSetup() {
 	// CI starts from a fresh checkout with no local D1, so create + migrate it
@@ -19,4 +20,5 @@ export default async function globalSetup() {
 		execSync('pnpm db:migrate:local', { stdio: 'inherit' });
 	}
 	await seedPayReservation();
+	await seedBandOnboarding();
 }
