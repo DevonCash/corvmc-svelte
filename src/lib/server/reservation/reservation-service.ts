@@ -40,6 +40,20 @@ export class ReservationStateError extends Error {
 	}
 }
 
+export class ReservationNotFoundError extends Error {
+	constructor() {
+		super('Reservation not found');
+		this.name = 'ReservationNotFoundError';
+	}
+}
+
+export class ReservationAuthorizationError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'ReservationAuthorizationError';
+	}
+}
+
 // ---------------------------------------------------------------------------
 // create()
 // ---------------------------------------------------------------------------
@@ -164,10 +178,21 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 
 export interface StaffCreateReservationParams extends CreateReservationParams {
 	status?: ReservationStatus;
+	/** The staff member performing the booking — recorded as the audit trail. */
+	staffUserId?: string;
 }
 
 export async function staffCreate(params: StaffCreateReservationParams): Promise<ReservationRow> {
-	const { userId, bookerType, bookerId, startsAt, endsAt, notes, status = 'confirmed' } = params;
+	const {
+		userId,
+		bookerType,
+		bookerId,
+		startsAt,
+		endsAt,
+		notes,
+		status = 'confirmed',
+		staffUserId
+	} = params;
 
 	if (startsAt >= endsAt)
 		throw new ReservationValidationError('Reservation must end after it starts');
@@ -178,6 +203,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 			bookerType,
 			bookerId,
 			createdByUserId: userId,
+			createdByStaffId: staffUserId ?? null,
 			status,
 			startsAt,
 			endsAt,
@@ -214,11 +240,11 @@ export async function cancel(
 		.limit(1);
 
 	if (!row) {
-		throw new Error('Reservation not found');
+		throw new ReservationNotFoundError();
 	}
 
 	if (!options?.staffOverride && row.createdByUserId !== userId) {
-		throw new Error('Not authorized to cancel this reservation');
+		throw new ReservationAuthorizationError('Not authorized to cancel this reservation');
 	}
 
 	const status = row.status as ReservationStatus;

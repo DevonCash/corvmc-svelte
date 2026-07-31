@@ -8,12 +8,13 @@
 	import type { Reservation } from '$lib/server/db/schema';
 	import { resolve } from '$app/paths';
 	import { withinConfirmationWindow, confirmWindowOpensAt } from '$lib/config';
+	import { isTerminalStatus } from '$lib/utils/reservation-actions';
 
 	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
 	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
-	let isTerminal = $derived(['completed', 'cancelled', 'no-show'].includes(reservation.status));
+	let isTerminal = $derived(isTerminalStatus(reservation.status));
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
 	// Members may only confirm (without paying) within the window; before then we
 	// show when it opens and offer paying to lock the slot in early.
@@ -57,7 +58,13 @@
 				</p>
 			{/if}
 		</a>
-		<span class="reservation-status">{reservation.status}</span>
+		<span class="reservation-status">{reservation.status.replace('_', ' ')}</span>
+		{#if !isPast && reservation.status === 'scheduled' && !canConfirm}
+			<!-- Hint lives above the action row so it never wraps behind the buttons. -->
+			<p class="px-3 text-right text-xs opacity-60">
+				Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
+			</p>
+		{/if}
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
 			{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
 				<CancelReservationAction
@@ -75,9 +82,6 @@
 							class="btn-xs btn-primary"
 						/>
 					{:else}
-						<span class="text-xs opacity-60">
-							Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
-						</span>
 						<a
 							href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 							class="btn btn-outline btn-xs btn-primary"
@@ -85,10 +89,18 @@
 							Pay to reserve
 						</a>
 					{/if}
-				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents ?? 0) > 0}
-					<span class="text-xs font-medium"
-						>${cents(reservation.cashDueCents ?? 0)} due at door</span
+				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
+					{#if (reservation.cashDueCents ?? 0) > 0}
+						<span class="text-xs font-medium"
+							>${cents(reservation.cashDueCents ?? 0)} due at door</span
+						>
+					{/if}
+					<a
+						href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
+						class="btn btn-outline btn-xs btn-primary"
 					>
+						Pay online
+					</a>
 				{/if}
 			{/if}
 		</div>
@@ -118,7 +130,8 @@
 		@apply bg-success text-success-content;
 	}
 
-	.no-show .date-block {
+	/* Class comes from the raw status value, so underscore — not hyphen. */
+	.no_show .date-block {
 		@apply bg-base-300 text-error;
 	}
 

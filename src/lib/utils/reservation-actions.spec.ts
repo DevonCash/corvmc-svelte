@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reservationPaymentState } from './reservation-actions';
+import { isTerminalStatus, reservationPaymentState, visibleActions } from './reservation-actions';
 
 describe('reservationPaymentState', () => {
 	const base = { status: 'confirmed' as const };
@@ -46,5 +46,65 @@ describe('reservationPaymentState', () => {
 
 	it('no_show → no_show', () => {
 		expect(reservationPaymentState({ status: 'no_show', paidAt: new Date() })).toBe('no_show');
+	});
+
+	it('confirmed with credits never committed (staff-created) → unpaid, not comped', () => {
+		expect(reservationPaymentState({ ...base, paidAt: null, cashDueCents: null })).toBe('unpaid');
+	});
+
+	it('completed with credits never committed → unpaid, not comped', () => {
+		expect(reservationPaymentState({ status: 'completed', paidAt: null, cashDueCents: null })).toBe(
+			'unpaid'
+		);
+	});
+});
+
+describe('isTerminalStatus', () => {
+	it('treats completed, cancelled, and no_show as terminal', () => {
+		expect(isTerminalStatus('completed')).toBe(true);
+		expect(isTerminalStatus('cancelled')).toBe(true);
+		expect(isTerminalStatus('no_show')).toBe(true);
+	});
+
+	it('treats live statuses as non-terminal', () => {
+		expect(isTerminalStatus('scheduled')).toBe(false);
+		expect(isTerminalStatus('confirmed')).toBe(false);
+		expect(isTerminalStatus('waitlisted')).toBe(false);
+	});
+});
+
+describe('visibleActions cash tracking', () => {
+	const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+
+	it('offers cashReceived for confirmed rows with committed cash due', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, null, new Date(), {
+			cashDueCents: 1500,
+			paidAt: null
+		});
+		expect(actions.has('cashReceived')).toBe(true);
+	});
+
+	it('offers cashReceived for confirmed rows with credits never committed (staff-created)', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, null, new Date(), {
+			cashDueCents: null,
+			paidAt: null
+		});
+		expect(actions.has('cashReceived')).toBe(true);
+	});
+
+	it('does not offer cashReceived once settled or paid', () => {
+		expect(
+			visibleActions('confirmed', past, pastEnd, null, new Date(), {
+				cashDueCents: 0,
+				paidAt: null
+			}).has('cashReceived')
+		).toBe(false);
+		expect(
+			visibleActions('confirmed', past, pastEnd, null, new Date(), {
+				cashDueCents: 1500,
+				paidAt: new Date()
+			}).has('cashReceived')
+		).toBe(false);
 	});
 });

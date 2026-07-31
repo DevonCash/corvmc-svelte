@@ -63,31 +63,11 @@ import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/d
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import { inboxThread, inboxMessage, inboxNote } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
+// JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
+import { buildSeedRRule as seedRRule } from './seed-rrule';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
-
-function seedRRule(startsAt: Date, freq: 'weekly' | 'biweekly' | 'monthly'): string {
-	const pad = (n: number) => String(n).padStart(2, '0');
-	const y = startsAt.getUTCFullYear();
-	const m = pad(startsAt.getUTCMonth() + 1);
-	const d = pad(startsAt.getUTCDate());
-	const h = pad(startsAt.getUTCHours());
-	const min = pad(startsAt.getUTCMinutes());
-	const dtstart = `DTSTART;TZID=America/Los_Angeles:${y}${m}${d}T${h}${min}00`;
-	const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-	const day = days[startsAt.getDay()];
-	switch (freq) {
-		case 'weekly':
-			return `${dtstart}\nRRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=${day}`;
-		case 'biweekly':
-			return `${dtstart}\nRRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=${day}`;
-		case 'monthly': {
-			const nth = Math.ceil(startsAt.getDate() / 7);
-			return `${dtstart}\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=${nth}${day}`;
-		}
-	}
-}
 
 // ---------------------------------------------------------------------------
 // Helpers

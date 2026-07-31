@@ -63,6 +63,12 @@ export const reservation = sqliteTable(
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
+		// Audit trail: set only when a staff member books on the member's behalf.
+		// `createdByUserId` stays the owning member (it drives owner authorization
+		// and list joins throughout the app).
+		createdByStaffId: text('created_by_staff_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
 		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
 		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
 		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),

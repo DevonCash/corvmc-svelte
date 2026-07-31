@@ -53,6 +53,7 @@ import {
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
+import { isTerminalStatus } from '$lib/utils/reservation-actions';
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
@@ -98,7 +99,13 @@ export const getReservationPayment = query(z.string(), async (id) => {
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-	if (row.status !== 'scheduled') throw error(400, 'This reservation is not awaiting payment');
+	// Payable: awaiting confirmation, or already confirmed with a balance still
+	// owed ("cash at door" bookings can settle online too). cashDueCents null on
+	// a confirmed row means credits were never committed — still owed in full.
+	const confirmedUnpaid =
+		row.status === 'confirmed' && !row.paidAt && (row.cashDueCents == null || row.cashDueCents > 0);
+	if (row.status !== 'scheduled' && !confirmedUnpaid)
+		throw error(400, 'This reservation is not awaiting payment');
 
 	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
@@ -116,7 +123,12 @@ export const getReservationPayment = query(z.string(), async (id) => {
 		durationHours,
 		totalCents,
 		hourlyRateCents,
-		freeHoursBalance
+		freeHoursBalance,
+		// Committed settlement state — when cashDueCents is non-null the credits
+		// are locked in and the page must show the stored remainder, not a
+		// re-projection from the live balance.
+		cashDueCents: row.cashDueCents,
+		creditsUsedHours: row.creditsUsed
 	};
 });
 
@@ -216,13 +228,25 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 	if (!rows[0]) throw error(404, 'Reservation not found');
 
+	// Audit: who at the front desk created this booking, if it wasn't the member.
+	let createdByStaffName: string | null = null;
+	if (rows[0].reservation.createdByStaffId) {
+		const [staffRow] = await db
+			.select({ name: user.name })
+			.from(user)
+			.where(eq(user.id, rows[0].reservation.createdByStaffId))
+			.limit(1);
+		createdByStaffName = staffRow?.name ?? null;
+	}
+
 	const row = {
 		...rows[0].reservation,
 		memberName: rows[0].memberName,
 		memberEmail: rows[0].memberEmail,
 		memberPhone: rows[0].memberPhone,
 		memberPronouns: rows[0].memberPronouns,
-		memberImage: resolveImageUrl(rows[0].memberImage)
+		memberImage: resolveImageUrl(rows[0].memberImage),
+		createdByStaffName
 	};
 
 	const tz = DEFAULT_TIMEZONE;
@@ -618,6 +642,22 @@ export const checkConflicts = query(
 	}
 );
 
+/**
+ * Booking policy facts for the info strip — live config, so staff changes to
+ * `reservation.*` site-config show up instead of drifting from hard-coded copy.
+ */
+export const getReservationPolicy = query(async () => {
+	const reservationConfig = await getReservationConfig();
+	return {
+		hourlyRateCents: reservationConfig.hourlyRateCents,
+		operatingHoursStart: reservationConfig.operatingHoursStart,
+		operatingHoursEnd: reservationConfig.operatingHoursEnd,
+		minDurationHours: reservationConfig.minDurationHours,
+		maxDurationHours: reservationConfig.maxDurationHours,
+		minAdvanceMinutes: reservationConfig.minAdvanceMinutes
+	};
+});
+
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
@@ -828,7 +868,7 @@ const staffCreateSchema = z.object({
 });
 
 export const createReservation = form(staffCreateSchema, async (data, _issue) => {
-	await requireStaff();
+	const staffUser = await requireStaff();
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
@@ -839,7 +879,24 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 		startsAt,
 		endsAt,
 		notes: data.notes,
-		status: 'confirmed'
+		status: 'confirmed',
+		staffUserId: staffUser.id
+	});
+
+	// The row lands directly in `confirmed`, so settle like the member confirm
+	// path would: commit the member's free hours and record the cash remainder.
+	// Without this, cashDueCents stays null and the reservation reads as comped
+	// with no way to record a door payment.
+	const reservationConfig = await getReservationConfig();
+	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
+	const totalCents = Math.round(durationHours * hourlyRateCents);
+	await commitReservationCredits({
+		userId: data.memberId,
+		reservationId: res.id,
+		totalCents,
+		durationHours,
+		hourlyRateCents
 	});
 
 	return { reservationId: res.id };
@@ -1792,7 +1849,7 @@ export const getReservations = query(
 		return rows.map((value: Reservation) => {
 			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
 			const totalCents = Math.round(durationHours * rateInCents);
-			const isTerminal = ['completed', 'cancelled', 'no-show'].includes(value.status);
+			const isTerminal = isTerminalStatus(value.status);
 
 			// Committed rows owe their stored remainder; everything else owes full price.
 			const netCents = value.cashDueCents ?? totalCents;
