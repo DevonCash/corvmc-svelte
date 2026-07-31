@@ -263,6 +263,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		isSustainingMember,
 		isPast,
 		isAuthenticated: !!locals.user,
+		canReport: await isFeatureEnabled('contentFlags'),
 		upcoming
 	};
 });

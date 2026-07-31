@@ -42,6 +42,11 @@ vi.mock('$lib/server/events/event-bus', () => ({
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+const unpublishMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/event/event-service', () => ({
+	unpublish: (...args: unknown[]) => unpublishMock(...args)
+}));
+
 import {
 	createFlag,
 	resolveFlag,
@@ -55,6 +60,7 @@ beforeEach(() => {
 	insertResult = [];
 	updateResult = [];
 	emitMock.mockClear();
+	unpublishMock.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -111,6 +117,67 @@ describe('createFlag', () => {
 		// against schema overflow. Covered indirectly by createFlag succeeding.
 		expect(insertResult).toBeTruthy();
 	});
+
+	it('flags an event using its title as the label', async () => {
+		selectResultQueue = [
+			[{ title: 'Loud Show' }], // entity label lookup (event.title)
+			[] // duplicate pending-flag check
+		];
+		insertResult = [{ id: 'f2', entityType: 'event', entityId: 'e1', reason: 'fake' }];
+
+		await createFlag({
+			entityType: 'event',
+			entityId: 'e1',
+			reportedByUserId: 'u1',
+			reportedByName: 'Reporter',
+			reason: 'fake'
+		});
+
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(emitMock).toHaveBeenCalledWith(
+			'content.flagged',
+			expect.objectContaining({ flagId: 'f2', entityLabel: 'Loud Show' })
+		);
+	});
+
+	it('accepts anonymous reports and emits a placeholder reporter name', async () => {
+		selectResultQueue = [[{ title: 'Loud Show' }], []];
+		insertResult = [{ id: 'f3', entityType: 'event', entityId: 'e1', reason: 'spam' }];
+
+		const flag = await createFlag({
+			entityType: 'event',
+			entityId: 'e1',
+			reason: 'spam'
+		});
+
+		expect(flag).toMatchObject({ id: 'f3' });
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(emitMock).toHaveBeenCalledWith(
+			'content.flagged',
+			expect.objectContaining({ reportedByUserId: null, reportedByName: 'Anonymous visitor' })
+		);
+	});
+
+	it('still inserts but skips staff notification when a pending flag already exists', async () => {
+		selectResultQueue = [
+			[{ title: 'Loud Show' }],
+			[{ id: 'existing-flag' }] // duplicate pending-flag check hits
+		];
+		insertResult = [{ id: 'f4', entityType: 'event', entityId: 'e1', reason: 'spam again' }];
+
+		const flag = await createFlag({
+			entityType: 'event',
+			entityId: 'e1',
+			reason: 'spam again'
+		});
+
+		expect(flag).toMatchObject({ id: 'f4' });
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(emitMock).not.toHaveBeenCalled();
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -137,5 +204,68 @@ describe('resolveFlag', () => {
 		updateResult = [{ id: 'f1', status: 'resolved' }];
 		const row = await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 		expect(row).toMatchObject({ status: 'resolved' });
+	});
+
+	it('unpublishes a flagged band event and notifies its admins when requested', async () => {
+		selectResultQueue = [
+			[{ status: 'pending', entityType: 'event', entityId: 'e1' }], // flag lookup
+			[
+				{
+					id: 'e1',
+					title: 'Loud Show',
+					status: 'published',
+					source: 'band',
+					bandId: 'b1',
+					bandName: 'The Squares'
+				}
+			], // event + band lookup
+			[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }] // band admins
+		];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+
+		await resolveFlag('f1', {
+			resolution: 'resolved',
+			staffId: 's1',
+			notes: 'Poster violated guidelines',
+			unpublishEvent: true
+		});
+
+		expect(unpublishMock).toHaveBeenCalledWith('e1');
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(emitMock).toHaveBeenCalledWith(
+			'event.unpublished_by_staff',
+			expect.objectContaining({
+				eventId: 'e1',
+				eventTitle: 'Loud Show',
+				bandId: 'b1',
+				notes: 'Poster violated guidelines',
+				bandAdmins: [{ userId: 'u9', userName: 'Admin', userEmail: 'admin@example.com' }]
+			})
+		);
+	});
+
+	it('does not unpublish when the option is not set', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
+
+		expect(unpublishMock).not.toHaveBeenCalled();
+	});
+
+	it('skips unpublish when the event is no longer published', async () => {
+		selectResultQueue = [
+			[{ status: 'pending', entityType: 'event', entityId: 'e1' }],
+			[{ id: 'e1', title: 'Loud Show', status: 'draft', source: 'band', bandId: 'b1' }]
+		];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1', unpublishEvent: true });
+
+		expect(unpublishMock).not.toHaveBeenCalled();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(emitMock).not.toHaveBeenCalled();
 	});
 });

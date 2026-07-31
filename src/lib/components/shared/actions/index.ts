@@ -56,6 +56,7 @@ export { default as AdjustCreditsAction } from './AdjustCreditsAction.svelte';
 
 // Moderation
 export { default as ReportContentAction } from './ReportContentAction.svelte';
+export { default as ReportEventAction } from './ReportEventAction.svelte';
 
 // Cross-domain
 export { default as ActivateToggleAction } from './ActivateToggleAction.svelte';
