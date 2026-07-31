@@ -39,7 +39,9 @@ The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 
 GitHub Actions (`.github/workflows/ci.yml`) run **checks only**, on PRs and pushes to
 `main`: prettier+eslint (`lint` on push, `lint:changed` on PRs), `svelte-check`, the full
-test suite (unit + Playwright e2e), and the docs-integrity gate
+test suite (unit + Playwright e2e), a schema-drift gate (`drizzle-kit check` +
+`drizzle-kit generate` must produce no new files under `migrations/` — i.e. every schema
+change has its migration committed), and the docs-integrity gate
 (`node scripts/docs/check-docs-drift.mjs --ci`). CI failing does not block the Cloudflare
 deploy mechanically — treat a red CI on `main` as an incident.
 
