@@ -2,6 +2,7 @@
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
 	import { formatDate, formatTime } from '$lib/utils/format';
+	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
@@ -14,7 +15,7 @@
 
 <div class="max-w-3xl mx-auto px-6 py-12">
 	<a
-		href={`/${page.params.slug ? `?__band_subdomain=${page.params.slug}` : ''}`}
+		href={bandSiteHref(page.params.slug!, '', page.url)}
 		class="link text-sm opacity-60 mb-6 block"
 	>
 		&larr; Back to {data.band.name}

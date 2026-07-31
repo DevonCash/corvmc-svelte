@@ -1,16 +1,40 @@
 <script lang="ts">
 	import '$lib/themes/band-site/index.css';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
+	import { bandSitePath, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import { env } from '$env/dynamic/public';
 	import { page } from '$app/state';
 
 	let { children } = $props();
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const themeClass = $derived(`theme-${data.config?.theme ?? 'default'}`);
+
+	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
+	const canonicalUrl = $derived(
+		`https://${page.params.slug}.${baseDomain}${bandSitePath(page.params.slug!, page.url).replace(/\/$/, '')}`
+	);
+	const description = $derived(data.band.tagline || `${data.band.name} — official site`);
+	const heroBlock = $derived(data.config?.blocks.find((b) => b.type === 'hero'));
+	const ogImage = $derived(
+		(heroBlock?.type === 'hero' ? heroBlock.imageKey : null) || data.band.avatarUrl
+	);
 </script>
 
 <svelte:head>
 	<title>{data.band.name}</title>
-	<meta name="description" content={data.band.tagline || data.band.name} />
+	<meta name="description" content={description} />
+	<link rel="canonical" href={canonicalUrl} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={data.band.name} />
+	<meta property="og:title" content={data.band.name} />
+	<meta property="og:description" content={description} />
+	<meta property="og:url" content={canonicalUrl} />
+	{#if ogImage}
+		<meta property="og:image" content={ogImage} />
+		<meta name="twitter:card" content="summary_large_image" />
+	{:else}
+		<meta name="twitter:card" content="summary" />
+	{/if}
 </svelte:head>
 
 <div class="band-site-container {themeClass} min-h-screen">

@@ -1,19 +1,60 @@
 import { Marked } from 'marked';
-import createDOMPurify, { type DOMPurify as DOMPurifyInstance } from 'dompurify';
-import { parseHTML } from 'linkedom';
+// Default-import + destructure: `xss` is CJS, and Vite's SSR module runner
+// can't statically resolve all of its named exports.
+import xssModule from 'xss';
 
-// `isomorphic-dompurify` bundles jsdom, which throws at import time on the
-// Cloudflare Workers runtime (no DOM globals) and crashed the whole worker.
-// Drive plain DOMPurify with linkedom's Workers-compatible DOM instead, and
-// initialise lazily so merely importing this module never touches the DOM.
-let _purify: DOMPurifyInstance | undefined;
-function purify(): DOMPurifyInstance {
-	if (!_purify) {
-		const { window } = parseHTML('<!DOCTYPE html><html><body></body></html>');
-		_purify = createDOMPurify(window as unknown as Window & typeof globalThis);
+const { FilterXSS, getDefaultWhiteList } = xssModule as unknown as typeof import('xss');
+
+// Sanitization uses js-xss, a pure-JS allowlist sanitizer that needs no DOM.
+// (The previous DOMPurify + linkedom setup silently no-opped: DOMPurify
+// requires a real DOM implementation and returns input UNCHANGED when it
+// detects an unsupported environment — linkedom is one. jsdom-based options
+// crash on the Cloudflare Workers runtime, so a parser-based sanitizer it is.)
+
+function extendedWhiteList() {
+	const wl = getDefaultWhiteList();
+	// marked emits ids on headings (for the help TOC) and target/rel on links
+	for (const h of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) wl[h] = [...(wl[h] ?? []), 'id'];
+	wl.a = [...(wl.a ?? []), 'rel'];
+	// fenced code blocks carry language-* classes
+	wl.code = [...(wl.code ?? []), 'class'];
+	wl.pre = [...(wl.pre ?? []), 'class'];
+	// inline styles pass through js-xss's CSS filter (safe properties only)
+	for (const tag of ['div', 'span', 'p', 'section', 'blockquote', 'figure', 'td', 'th']) {
+		wl[tag] = [...(wl[tag] ?? []), 'style'];
 	}
-	return _purify;
+	// class is safe everywhere (band sites target it from sanitized custom CSS)
+	for (const tag of Object.keys(wl)) {
+		wl[tag] = [...(wl[tag] ?? []), 'class'];
+	}
+	return wl;
 }
+
+const htmlFilter = new FilterXSS({
+	whiteList: extendedWhiteList(),
+	stripIgnoreTag: true,
+	stripIgnoreTagBody: ['script', 'style']
+});
+
+const bioFilter = new FilterXSS({
+	whiteList: {
+		p: [],
+		br: [],
+		strong: [],
+		em: [],
+		u: [],
+		s: [],
+		a: ['href', 'target', 'rel'],
+		ul: [],
+		ol: [],
+		li: [],
+		h3: ['id'],
+		h4: ['id'],
+		blockquote: []
+	},
+	stripIgnoreTag: true,
+	stripIgnoreTagBody: ['script', 'style']
+});
 
 export interface Heading {
 	id: string;
@@ -46,7 +87,7 @@ const renderer = {
 const marked = new Marked({ renderer });
 
 export function sanitizeHtml(html: string): string {
-	return purify().sanitize(html);
+	return htmlFilter.process(html);
 }
 
 /**
@@ -55,24 +96,7 @@ export function sanitizeHtml(html: string): string {
  */
 export function sanitizeBio(html: string | null | undefined): string {
 	if (!html) return '';
-	return purify().sanitize(html, {
-		ALLOWED_TAGS: [
-			'p',
-			'br',
-			'strong',
-			'em',
-			'u',
-			's',
-			'a',
-			'ul',
-			'ol',
-			'li',
-			'h3',
-			'h4',
-			'blockquote'
-		],
-		ALLOWED_ATTR: ['href', 'target', 'rel']
-	});
+	return bioFilter.process(html);
 }
 
 export function renderMarkdown(content: string): string {

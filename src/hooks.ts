@@ -1,12 +1,13 @@
 import type { Reroute } from '@sveltejs/kit';
+import { env } from '$env/dynamic/public';
+import { isReservedSlug } from '$lib/reserved-slugs';
+import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 
 /**
  * Reroute subdomain requests to the band-site route group.
  * e.g. the-neons.corvmc.org/events → /band-site/the-neons/events
  */
 export const reroute: Reroute = ({ url }) => {
-	const hostname = url.hostname;
-
 	// In dev, we can't use real subdomains easily, so support a query param override:
 	// http://localhost:5173?__band_subdomain=the-neons
 	const devOverride = url.searchParams.get('__band_subdomain');
@@ -14,18 +15,19 @@ export const reroute: Reroute = ({ url }) => {
 		return `/band-site/${devOverride}${url.pathname}`;
 	}
 
-	// Production: detect band subdomains
-	// BASE_DOMAIN should match the production domain (e.g. corvmc.org)
-	const BASE_DOMAIN = 'corvmc.org';
+	// Production: detect band subdomains. The base domain derives from
+	// PUBLIC_SITE_URL so staging/preview deploys use their own domain.
+	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
+	const hostname = url.hostname;
 
 	if (
-		hostname !== BASE_DOMAIN &&
-		hostname !== `www.${BASE_DOMAIN}` &&
-		hostname.endsWith(`.${BASE_DOMAIN}`)
+		hostname !== baseDomain &&
+		hostname !== `www.${baseDomain}` &&
+		hostname.endsWith(`.${baseDomain}`)
 	) {
-		const slug = hostname.replace(`.${BASE_DOMAIN}`, '');
-		// Don't reroute known system subdomains (media = R2 public bucket)
-		if (['www', 'api', 'mail', 'staging', 'media'].includes(slug)) {
+		const slug = hostname.slice(0, -(baseDomain.length + 1));
+		// Don't reroute system subdomains (e.g. media = R2 public bucket)
+		if (slug.includes('.') || isReservedSlug(slug)) {
 			return url.pathname;
 		}
 		return `/band-site/${slug}${url.pathname}`;

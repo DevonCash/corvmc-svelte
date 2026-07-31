@@ -107,16 +107,15 @@
 		"clsx": "^2.1.1",
 		"daisyui": "^5.5.20",
 		"date-fns": "^4.3.0",
-		"dompurify": "^3.4.11",
 		"emittery": "^2.0.0",
-		"linkedom": "^0.18.12",
 		"marked": "^18.0.4",
 		"postmark": "^4.0.7",
 		"qrcode-svg": "^1.1.0",
 		"stripe": "^22.2.0",
 		"svelte-sonner": "^1.1.1",
 		"svelte-turnstile": "^0.11.0",
-		"twilio": "^6.0.2"
+		"twilio": "^6.0.2",
+		"xss": "^1.0.15"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [

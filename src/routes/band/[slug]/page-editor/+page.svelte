@@ -430,7 +430,27 @@
 														}}
 													></textarea>
 												</label>
-											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'contact' || block.type === 'tech_rider'}
+											{:else if block.type === 'contact'}
+												<label class="flex items-center gap-2">
+													<input
+														type="checkbox"
+														class="checkbox checkbox-sm"
+														checked={block.showForm ?? true}
+														onchange={(e) => {
+															block.showForm = e.currentTarget.checked;
+														}}
+													/>
+													<span class="text-sm"
+														>Show contact form (messages are emailed to your booking contact)</span
+													>
+												</label>
+												<p class="text-sm opacity-60">
+													Contact people render from your EPK.
+													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
+														>Edit EPK data &rarr;</a
+													>
+												</p>
+											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
 												<p class="text-sm opacity-60">
 													This block renders data from your EPK.
 													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
@@ -535,7 +555,7 @@
 			<!-- Save -->
 			<div class="flex justify-between items-center">
 				<a
-					href={resolve(`/?__band_subdomain=${band.slug}`)}
+					href={resolve(`/band-site/${band.slug}`)}
 					target="_blank"
 					rel="noopener"
 					class="link text-sm"

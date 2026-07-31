@@ -6,6 +6,7 @@ import { requireFeature } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import { getBySlug } from '$lib/server/band/band-service';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
+import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
 import { bandPageConfig, bandPageConfigSchema, type Block } from '$lib/server/db/schema/band-page';
 import { eq } from 'drizzle-orm';
@@ -66,7 +67,13 @@ export const saveBandPageConfig = form(
 				if (!result.success) {
 					throw error(400, 'Invalid blocks configuration');
 				}
-				blocks = result.data as Block[];
+				// Sanitize user-authored HTML at rest (the renderer sanitizes again on read)
+				blocks = (result.data as Block[]).map((block) => {
+					if (block.type === 'bio') return { ...block, content: sanitizeBio(block.content) };
+					if (block.type === 'custom_html')
+						return { ...block, content: sanitizeHtml(block.content) };
+					return block;
+				});
 			} catch (e) {
 				if (e instanceof Error && e.message.includes('JSON')) {
 					throw error(400, 'Invalid blocks JSON');

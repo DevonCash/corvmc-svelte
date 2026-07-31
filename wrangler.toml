@@ -32,6 +32,24 @@ crons = [
 # via `wrangler deploy`.
 # ---------------------------------------------------------------------------
 
+# Zone routes for the production domain, including the wildcard that serves
+# premium band sites at {slug}.corvmc.org (rerouted to /band-site/{slug} by
+# src/hooks.ts). Requires a proxied wildcard DNS record (*.corvmc.org) in the
+# zone. media.corvmc.org is the R2 bucket's custom domain — R2 custom-domain
+# routes take precedence over Worker routes, so it is not intercepted; verify
+# after the first deploy.
+[[routes]]
+pattern = "corvmc.org/*"
+zone_name = "corvmc.org"
+
+[[routes]]
+pattern = "www.corvmc.org/*"
+zone_name = "corvmc.org"
+
+[[routes]]
+pattern = "*.corvmc.org/*"
+zone_name = "corvmc.org"
+
 [vars]
 # ORIGIN is required — better-auth uses it as baseURL and throws if unset
 # (src/lib/server/auth.ts). Differs per environment.

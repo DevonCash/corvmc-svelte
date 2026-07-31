@@ -12,8 +12,14 @@ import { uploadFile, deleteObject } from '$lib/server/storage';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES_PER_UPLOAD = 10;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+// Tech riders and stage plots may also be PDFs
+const DOCUMENT_TYPES = [...IMAGE_TYPES, 'application/pdf'];
 const ALLOWED_MEDIA_TYPES = ['image', 'hero', 'rider', 'stage_plot'] as const;
+
+function allowedTypesFor(mediaType: string): string[] {
+	return mediaType === 'rider' || mediaType === 'stage_plot' ? DOCUMENT_TYPES : IMAGE_TYPES;
+}
 
 async function requireAdminOfBand(bandId: string, userId: string) {
 	const role = await getUserRole(bandId, userId);
@@ -27,7 +33,8 @@ function extensionFromType(contentType: string): string {
 		'image/jpeg': 'jpg',
 		'image/png': 'png',
 		'image/webp': 'webp',
-		'image/gif': 'gif'
+		'image/gif': 'gif',
+		'application/pdf': 'pdf'
 	};
 	return map[contentType] ?? 'jpg';
 }
@@ -75,12 +82,18 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	// Validate all files before uploading any
+	const allowedTypes = allowedTypesFor(mediaType);
 	for (const file of files) {
 		if (file.size > MAX_FILE_SIZE) {
 			throw error(400, `File "${file.name}" exceeds maximum size of 10MB`);
 		}
-		if (!ALLOWED_TYPES.includes(file.type)) {
-			throw error(400, `File "${file.name}" has unsupported type. Allowed: JPEG, PNG, WebP, GIF`);
+		if (!allowedTypes.includes(file.type)) {
+			throw error(
+				400,
+				`File "${file.name}" has unsupported type. Allowed: JPEG, PNG, WebP, GIF${
+					allowedTypes.includes('application/pdf') ? ', PDF' : ''
+				}`
+			);
 		}
 	}
 
@@ -105,7 +118,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		const fileId = crypto.randomUUID();
 		const key = `bands/${bandId}/media/${mediaType}/${fileId}.${ext}`;
 
-		await uploadFile(buffer, key, file.type);
+		await uploadFile(buffer, key, file.type, allowedTypes);
 
 		await db.insert(bandMedia).values({
 			bandId,
