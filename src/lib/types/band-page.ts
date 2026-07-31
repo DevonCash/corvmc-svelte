@@ -34,7 +34,7 @@ export type Block =
 	| { id: string; type: 'embed'; platform: string; url: string; cssClass?: string }
 	| { id: string; type: 'press'; cssClass?: string }
 	| { id: string; type: 'achievements'; cssClass?: string }
-	| { id: string; type: 'contact'; cssClass?: string }
+	| { id: string; type: 'contact'; showForm?: boolean; cssClass?: string }
 	| { id: string; type: 'tech_rider'; cssClass?: string }
 	| { id: string; type: 'custom_html'; content: string; cssClass?: string }
 	| { id: string; type: 'merch'; items: MerchItem[]; cssClass?: string }

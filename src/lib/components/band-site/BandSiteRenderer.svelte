@@ -3,7 +3,8 @@
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { sanitizeBio } from '$lib/utils/markdown';
-	import { resolve } from '$app/paths';
+	import { bandSiteHref } from '$lib/utils/band-site-url';
+	import BandContactForm from './BandContactForm.svelte';
 	import { page } from '$app/state';
 
 	interface BandData {
@@ -75,7 +76,9 @@
 		<section class="band-site-block {block.cssClass ?? ''}">
 			{#if block.type === 'hero'}
 				<div class="band-site-hero relative h-64 md:h-96 overflow-hidden">
-					<img src={block.imageKey} alt="" class="absolute inset-0 w-full h-full object-cover" />
+					{#if block.imageKey}
+						<img src={block.imageKey} alt="" class="absolute inset-0 w-full h-full object-cover" />
+					{/if}
 					<div
 						class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4"
 					>
@@ -90,7 +93,7 @@
 			{:else if block.type === 'bio'}
 				<div class="max-w-3xl mx-auto px-6 py-8">
 					<div class="prose prose-lg">
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (bio block) -->
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
 						{@html block.content}
 					</div>
 				</div>
@@ -170,9 +173,15 @@
 					</div>
 				{/if}
 			{:else if block.type === 'gallery'}
+				{@const galleryImages =
+					block.imageKeys.length > 0
+						? block.imageKeys.map((url) => ({ url, caption: null as string | null }))
+						: media
+								.filter((m) => m.type === 'image')
+								.map((m) => ({ url: m.url, caption: m.caption }))}
 				<div class="max-w-4xl mx-auto px-6 py-8">
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-						{#each media.filter((m) => m.type === 'image') as img (img.id)}
+						{#each galleryImages as img, i (img.url ?? i)}
 							{#if img.url}
 								<div class="aspect-square overflow-hidden rounded-lg">
 									<img src={img.url} alt={img.caption ?? ''} class="w-full h-full object-cover" />
@@ -232,41 +241,47 @@
 					</div>
 				{/if}
 			{:else if block.type === 'contact'}
-				{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
+				{@const showForm = block.showForm ?? true}
+				{#if showForm || epk?.bookingContact || epk?.managementContact || epk?.prContact}
 					<div class="max-w-3xl mx-auto px-6 py-8">
 						<h2 class="text-2xl font-bold mb-4">Contact</h2>
-						<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-							{#if epk.bookingContact}
-								<div>
-									<h3 class="font-semibold text-sm uppercase opacity-60">Booking</h3>
-									<p class="font-medium">{epk.bookingContact.name}</p>
-									<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
-										>{epk.bookingContact.email}</a
-									>
-									{#if epk.bookingContact.phone}
-										<p class="text-sm opacity-70">{epk.bookingContact.phone}</p>
-									{/if}
-								</div>
-							{/if}
-							{#if epk.managementContact}
-								<div>
-									<h3 class="font-semibold text-sm uppercase opacity-60">Management</h3>
-									<p class="font-medium">{epk.managementContact.name}</p>
-									<a href="mailto:{epk.managementContact.email}" class="link text-sm"
-										>{epk.managementContact.email}</a
-									>
-								</div>
-							{/if}
-							{#if epk.prContact}
-								<div>
-									<h3 class="font-semibold text-sm uppercase opacity-60">Press</h3>
-									<p class="font-medium">{epk.prContact.name}</p>
-									<a href="mailto:{epk.prContact.email}" class="link text-sm"
-										>{epk.prContact.email}</a
-									>
-								</div>
-							{/if}
-						</div>
+						{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
+							<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+								{#if epk.bookingContact}
+									<div>
+										<h3 class="font-semibold text-sm uppercase opacity-60">Booking</h3>
+										<p class="font-medium">{epk.bookingContact.name}</p>
+										<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
+											>{epk.bookingContact.email}</a
+										>
+										{#if epk.bookingContact.phone}
+											<p class="text-sm opacity-70">{epk.bookingContact.phone}</p>
+										{/if}
+									</div>
+								{/if}
+								{#if epk.managementContact}
+									<div>
+										<h3 class="font-semibold text-sm uppercase opacity-60">Management</h3>
+										<p class="font-medium">{epk.managementContact.name}</p>
+										<a href="mailto:{epk.managementContact.email}" class="link text-sm"
+											>{epk.managementContact.email}</a
+										>
+									</div>
+								{/if}
+								{#if epk.prContact}
+									<div>
+										<h3 class="font-semibold text-sm uppercase opacity-60">Press</h3>
+										<p class="font-medium">{epk.prContact.name}</p>
+										<a href="mailto:{epk.prContact.email}" class="link text-sm"
+											>{epk.prContact.email}</a
+										>
+									</div>
+								{/if}
+							</div>
+						{/if}
+						{#if showForm}
+							<BandContactForm slug={page.params.slug!} bandName={band.name} />
+						{/if}
 					</div>
 				{/if}
 			{:else if block.type === 'tech_rider'}
@@ -317,7 +332,7 @@
 				</div>
 			{:else if block.type === 'custom_html'}
 				<div class="max-w-4xl mx-auto px-6 py-8">
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin custom_html block) -->
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
 					{@html block.content}
 				</div>
 			{:else if block.type === 'merch'}
@@ -412,13 +427,13 @@
 <nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
 	{#if events.length > 0}
 		<a
-			href={resolve('/band-site/[slug]/events', { slug: page.params.slug! })}
+			href={bandSiteHref(page.params.slug!, '/events', page.url)}
 			class="hover:opacity-100 transition-opacity">All Events</a
 		>
 	{/if}
 	{#if epk}
 		<a
-			href={resolve('/band-site/[slug]/epk', { slug: page.params.slug! })}
+			href={bandSiteHref(page.params.slug!, '/epk', page.url)}
 			class="hover:opacity-100 transition-opacity">Press Kit</a
 		>
 	{/if}

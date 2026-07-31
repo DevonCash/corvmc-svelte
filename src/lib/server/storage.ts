@@ -35,11 +35,12 @@ function getBucket(): R2Bucket {
 export async function uploadFile(
 	buffer: ArrayBuffer,
 	key: string,
-	contentType: string
+	contentType: string,
+	allowedTypes: string[] = ALLOWED_TYPES
 ): Promise<string> {
-	if (!ALLOWED_TYPES.includes(contentType)) {
+	if (!allowedTypes.includes(contentType)) {
 		throw new Error(
-			`File type "${contentType}" is not allowed. Accepted: ${ALLOWED_TYPES.join(', ')}`
+			`File type "${contentType}" is not allowed. Accepted: ${allowedTypes.join(', ')}`
 		);
 	}
 

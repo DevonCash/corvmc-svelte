@@ -1249,7 +1249,12 @@ async function seedBandPageConfigs(bands: any[]) {
 				imageKeys: ['bands/gallery-1.jpg', 'bands/gallery-2.jpg', 'bands/gallery-3.jpg'],
 				downloadable: true
 			},
-			{ id: randomUUID(), type: 'contact' },
+			{ id: randomUUID(), type: 'contact', showForm: true },
+			{
+				id: randomUUID(),
+				type: 'custom_html',
+				content: `<div style="text-align:center"><em>${b.name} is booking now for summer shows.</em></div>`
+			},
 			{ id: randomUUID(), type: 'tech_rider' },
 			{ id: randomUUID(), type: 'spacer', height: 'md' }
 		];
@@ -1299,7 +1304,7 @@ async function seedBandPageConfigs(bands: any[]) {
 		configs.push(config);
 
 		// Add some band media entries
-		const mediaTypes = ['image', 'image', 'image', 'hero', 'stage_plot'];
+		const mediaTypes = ['image', 'image', 'image', 'hero', 'stage_plot', 'rider'];
 		for (let m = 0; m < mediaTypes.length; m++) {
 			await db.insert(bandMedia).values({
 				bandId: b.id,

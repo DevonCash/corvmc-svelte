@@ -6,6 +6,7 @@ import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } fro
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
+import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
 import { sanitizeBio } from '$lib/utils/markdown';
@@ -70,7 +71,7 @@ export class OwnerCannotLeaveError extends Error {
 
 export async function create(ownerId: string, data: CreateBandData) {
 	const baseSlug = generateSlug(data.name);
-	const slug = await ensureUniqueSlug(baseSlug, band, band.slug);
+	const slug = await ensureUniqueSlug(baseSlug, band, band.slug, isReservedSlug);
 
 	const bandId = crypto.randomUUID();
 
@@ -100,7 +101,7 @@ export async function update(bandId: string, data: UpdateBandData) {
 	if (data.name !== undefined) {
 		updates.name = data.name;
 		const baseSlug = generateSlug(data.name);
-		updates.slug = await ensureUniqueSlug(baseSlug, band, band.slug);
+		updates.slug = await ensureUniqueSlug(baseSlug, band, band.slug, isReservedSlug);
 	}
 
 	if (data.bio !== undefined) {

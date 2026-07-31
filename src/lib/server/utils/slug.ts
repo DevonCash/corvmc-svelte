@@ -17,22 +17,27 @@ export function generateSlug(name: string): string {
 
 /**
  * Ensure a slug is unique within a table by appending -2, -3, etc. if needed.
+ * An optional `isDisallowed` predicate lets callers block additional slugs
+ * (e.g. reserved subdomains) — disallowed values are skipped like collisions.
  */
 export async function ensureUniqueSlug(
 	baseSlug: string,
 	table: SQLiteTable,
-	column: SQLiteColumn
+	column: SQLiteColumn,
+	isDisallowed?: (slug: string) => boolean
 ): Promise<string> {
 	let slug = baseSlug;
 	let suffix = 2;
 
 	while (true) {
-		const [existing] = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(table)
-			.where(sql`${column} = ${slug}`);
+		if (!isDisallowed?.(slug)) {
+			const [existing] = await db
+				.select({ count: sql<number>`count(*)` })
+				.from(table)
+				.where(sql`${column} = ${slug}`);
 
-		if (!existing || Number(existing.count) === 0) return slug;
+			if (!existing || Number(existing.count) === 0) return slug;
+		}
 		slug = `${baseSlug}-${suffix}`;
 		suffix++;
 	}
