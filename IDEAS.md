@@ -42,9 +42,13 @@ Partner with gear shops and music businesses in the local resources directory fo
 
 External bands and promoters submit booking inquiries through a public form. Staff review, negotiate, and track from inquiry to confirmed event. Replaces scattered emails with a structured pipeline.
 
+**Progress:** The staff-side half is designed in `docs/specs/production-workflow-spec.md` — a production moves `draft → offered → confirmed`, with per-slot offer terms (guarantee, door split) and invited/confirmed/declined status. The public inquiry form is explicitly deferred there; it would land as a `draft` production.
+
 ### Tech Rider Management
 
 Bands submit stage plots and backline requirements ahead of events. Staff match against available gear and flag gaps before load-in. Cuts down day-of surprises.
+
+**Progress:** Designed as the advance stage of `docs/specs/production-workflow-spec.md` — per-slot `techNotes`/`backlineNeeds`, an advance checklist, and reuse of the rider/stage-plot/backline fields already on `BandEpk` and `band_media` for premium member bands. Matching against the equipment catalog is not in that spec.
 
 ### Annual Report Generator
 
@@ -73,6 +77,8 @@ Staff log noise complaints, safety incidents, or property damage for liability, 
 ### Event Settlement
 
 After an event, calculate door splits, bar revenue, and band payouts. Automates end-of-night accounting and ties into the existing payments system.
+
+**Progress:** Designed as the settlement stage of `docs/specs/production-workflow-spec.md` — ticket revenue read from `ticket` + `payment_cache`, a `production_expense` table, suggested payouts from `max(guarantee, door split %)`, and a frozen snapshot on settle. Deliberately a worksheet, not a disbursement system: no Stripe payouts.
 
 ### Mentorship Matching
 

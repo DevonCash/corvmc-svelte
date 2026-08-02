@@ -1,6 +1,6 @@
 # Laravel → Svelte Parity Report
 
-Last updated: 2026-06-13
+Last updated: 2026-08-02
 
 This document tracks feature coverage between the Laravel app (corvmc-redux) and the Svelte rebuild (corvmc-svelte). Use it to plan what to build next and to avoid re-discovering gaps.
 
@@ -33,7 +33,8 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Volunteering               | VolunteerReportPage, PendingHourLogs | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Sponsors                   | Sponsors resource                    | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Site pages / CMS           | SitePages with block builder         | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Venues                     | Venues resource                      | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Venues                     | Venues resource                      | 📋 Spec'd                   | Design only — `venue` table (CMC room + external venues, capacity, contact, load-in notes, backline) plus `event.venueId` alongside the existing free-text `event.location`. Specified as part of Productions; see `docs/specs/production-workflow-spec.md`                                                                                                                                                                                                                                                   |
+| Productions                | — (new)                              | 📋 Spec'd                   | Design only, not built. Back-of-house layer for CMC-produced shows: `production` 1:1 with `event`, run-of-show slots with set lengths/order and computed set times, advance + close-out checklists, door/expense/payout settlement reading from `ticket` + `payment_cache`. Non-member touring acts are `band` rows with `claimStatus: 'unclaimed'`, claimable later via the existing platform-invite flow. Behind a `productions` flag; see `docs/specs/production-workflow-spec.md`                         |
 | Kiosk devices              | KioskDevices resource                | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Activity log               | ActivityLog resource                 | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Reports                    | Reports resource                     | —                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -206,7 +207,7 @@ Laravel has 5 observers (Reservation, Event, User, SpaceClosure, Tag) handling c
 
 The Svelte app has 29 tables: auth (user, session, account, verification), authorization (permission, role, model_has_permission, model_has_role, role_has_permission), reservations (reservation, closure, recurring_series), events (event), finance (product_config, credit_transaction, payment_cache), bands (band, band_member), tickets (ticket), notifications (notification, notification_preference), marketing (subscriber, audience, audience_member, campaign, campaign_audience), and equipment (equipment_category, equipment, equipment_loan).
 
-Tables that would need to be added for missing features: volunteer_hour_log, sponsor, venue, site_page, kiosk_device.
+Tables that would need to be added for missing features: volunteer_hour_log, sponsor, site_page, kiosk_device, plus the five specified for Productions — venue, production, production_slot, production_task, production_expense (which would take the app to 34 tables, along with `band.claimStatus` and `event.venueId` column additions).
 
 ## Library decisions
 
@@ -238,15 +239,16 @@ Chosen libraries for platform concerns. Preference is for small, focused package
 
 Features that exist in the Svelte app but not in the Laravel production app are gated behind KV-backed feature flags. All flags default to **off** and can be toggled from Staff Settings > Features.
 
-| Flag               | Feature                                    | Routes gated                                                             |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `staffInbox`       | Multi-channel unified inbox                | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
-| `bandPremium`      | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
-| `bandReservations` | Band-context practice-space booking        | `/band/[slug]/reservations/**`                                           |
-| `bandEvents`       | Band-managed events                        | `/band/[slug]/events/**`                                                 |
-| `emailMarketing`   | Audiences, campaigns, broadcasts           | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
-| `equipment`        | Equipment catalog, loans, credits          | `/staff/equipment/**`, `/member/equipment/**`                            |
-| `helpArticles`     | Help center for staff and members          | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
+| Flag               | Feature                                       | Routes gated                                                             |
+| ------------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
+| `staffInbox`       | Multi-channel unified inbox                   | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
+| `bandPremium`      | Premium tier, page editor, EPK, band sites    | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
+| `bandReservations` | Band-context practice-space booking           | `/band/[slug]/reservations/**`                                           |
+| `bandEvents`       | Band-managed events                           | `/band/[slug]/events/**`                                                 |
+| `emailMarketing`   | Audiences, campaigns, broadcasts              | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
+| `equipment`        | Equipment catalog, loans, credits             | `/staff/equipment/**`, `/member/equipment/**`                            |
+| `helpArticles`     | Help center for staff and members             | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
+| `productions`      | Show productions + venues (spec'd, not built) | `/staff/productions/**`, `/staff/venues/**`                              |
 
 Implementation: `src/lib/server/feature-flags.ts` reads `feature.*` keys from the site config KV store. Navigation items are conditionally rendered in panel layouts. Route data queries call `requireFeature()` which throws 404 when disabled.
 
@@ -263,7 +265,8 @@ Features are grouped by dependency. The notification system is foundational — 
 7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
 8. **Volunteering module** — New tables (volunteer_hour_log). Hour submission, approval workflow, reporting.
 9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
-10. **Everything else** — Sponsors, CMS, venues, kiosk, activity log, reports, bylaws.
+10. **Productions + venues** — 📋 Designed, not built. Five tables, staff-only, behind the `productions` flag. Unifies four IDEAS.md entries (Booking Request Pipeline, Tech Rider Management, Event Settlement, Venues) into one workflow from booking through cleanup. Spec: `docs/specs/production-workflow-spec.md`.
+11. **Everything else** — Sponsors, CMS, kiosk, activity log, reports, bylaws.
 
 ## Enhancements / tech debt
 

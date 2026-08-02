@@ -14,7 +14,8 @@ When building a new feature, work through these phases in order:
 2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
    migration yourself with `pnpm db:generate` and **review the SQL** before committing.
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
-   shapes, enums).
+   shapes, enums). If the migration rebuilds a table, read
+   [table rebuilds on D1](#table-rebuilds-on-d1) below.
 3. **Services** — server logic in `src/lib/server/<domain>/`. Keep query functions and
    mutation functions separated. Validate inputs in the service layer with explicit limits
    (max lengths, max item counts).
@@ -33,6 +34,51 @@ When building a new feature, work through these phases in order:
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below).
 9. **Commit** — descriptive message summarizing what the feature adds. **No co-author
    lines.**
+
+## Table rebuilds on D1
+
+Some schema changes can't be expressed as `ALTER TABLE` — relaxing `NOT NULL`, changing a
+foreign-key action, adding a check. For those, drizzle-kit emits a **table rebuild**:
+create `__new_x`, copy the rows, `DROP TABLE x`, rename. It wraps that in
+`PRAGMA foreign_keys=OFF` so the drop doesn't cascade.
+
+**That pragma does nothing on D1.** D1 runs each migration inside a transaction, and
+SQLite treats `PRAGMA foreign_keys` as a no-op inside one — the statement succeeds and the
+value never changes (it reads back `1` immediately after being set to `OFF`). So
+`DROP TABLE x` performs its implicit delete: every `ON DELETE CASCADE` child loses its
+rows and every `ON DELETE SET NULL` child is nulled, silently and without an error.
+
+No pragma avoids this. `defer_foreign_keys` delays _reporting of violations_ but doesn't
+stop FK _actions_; `legacy_alter_table` does register on D1, but preserving child
+references through a rename also needs `foreign_keys=OFF`. This is
+[drizzle-orm#4089](https://github.com/drizzle-team/drizzle-orm/issues/4089), open with no
+fix, so assume it stays.
+
+**You don't need to do anything special** — `pnpm db:generate` runs
+`scripts/db/d1-safe-rebuild.mjs`, which rewrites an unsafe rebuild into
+detach → rebuild → reattach: each cascade child is rebuilt with its FK demoted to
+`NO ACTION` (deepest descendants first), then the real table is rebuilt, then the children
+are restored with their actions intact. `defer_foreign_keys` holds the transient violation
+until commit.
+
+What this means in practice:
+
+- **Review the rewritten SQL.** It's longer than drizzle's output and rebuilds tables your
+  change didn't mention. That's expected — those are the cascade children.
+- **CI enforces it.** `pnpm db:check-migrations` runs in the Schema drift job and fails on
+  an unsafe rebuild — one generated with plain `drizzle-kit generate`, or hand-written.
+- **Dropping a parent table is also caught.** Any `DROP TABLE` on a table with foreign-key
+  children fails the check, since it cascades the same way. If you really are removing the
+  table for good, say so in the migration and the check will allow it:
+
+  ```sql
+  -- d1-safe-rebuild: intentional drop `band`
+  ```
+
+- **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
+  the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
+- **Verify against local D1** for anything touching a table with children:
+  `pnpm db:reset && pnpm db:seed`, then check row counts in the child tables.
 
 ## Layering rules
 
@@ -114,7 +160,9 @@ Every script in `package.json`:
 | `lint`                          | prettier `--check` + eslint over everything                                                                                                                           |
 | `lint:changed`                  | Lint only files changed vs `origin/main` (`scripts/lint-changed.sh`; PR CI uses this)                                                                                 |
 | `format`                        | prettier `--write` everything                                                                                                                                         |
-| `db:generate`                   | drizzle-kit: generate a migration from schema changes                                                                                                                 |
+| `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe                                                                            |
+| `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                                                                                    |
+| `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                                                                                        |
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                                                                                                |
 | `db:migrate:local`              | Replay all migration files into the local D1                                                                                                                          |
 | `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                                                                                            |
