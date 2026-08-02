@@ -156,32 +156,67 @@ band (additions)
 - **`claim_pending`** — a `platformInvite` has been sent to the act's contact.
 - **`claimed`** — a normal member band. Every band today is `claimed`.
 
-**`ownerId` stays `NOT NULL`.** An unclaimed band is owned by a dedicated CMC service
-user seeded alongside the existing seed users. This was the pivotal decision, and it is
-worth stating why, because the obvious alternative — making `ownerId` nullable — is
-considerably more expensive:
+**`ownerId` becomes nullable.** An unclaimed band has no owner, and the schema should say
+so. The considered alternative — keeping `ownerId NOT NULL` and pointing unclaimed bands
+at a CMC service user — buys a cheaper migration at the cost of encoding a falsehood:
+every "who owns this band" query would return a robot, and the service user would need
+special-casing in exactly the places the null would have been caught by the type system.
+Rejected.
+
+The migration is a full table rebuild, because SQLite cannot relax `NOT NULL` in place.
+That is a known, rehearsed operation in this repo rather than new ground — `band` itself
+has already been rebuilt twice, by `migrations/20260604012148_material_spiral` (which
+changed `owner_id`'s FK action) and by `20260524210008_sloppy_apocalypse` (which rebuilt
+28 tables at once, `user` and `band` among them).
+
+**The real hazard is not the pragma.** `material_spiral`'s header comment records the
+finding, and it is the single most important thing to carry into this migration:
+
+> On D1 the migration runs in a transaction where `PRAGMA foreign_keys=OFF` is ignored,
+> so `DROP TABLE band` performs an implicit DELETE that fires the child FK actions: every
+> table that references `band(id)` ON DELETE CASCADE would lose its rows, and
+> `event.band_id` would be nulled.
+
+So the drizzle-kit output is **not safe to apply as generated**. It must be hand-edited
+into the snapshot-rebuild-restore shape `material_spiral` already establishes:
+
+1. `CREATE TABLE _bk_<child> AS SELECT * FROM <child>` for `band_member`, `band_genre`,
+   `band_media`, `band_page_config`, `platform_invite`, plus
+   `_bk_event_band` holding `(id, band_id)` for events with a non-null `band_id`.
+2. The generated rebuild — new `band` with `owner_id text` (no `NOT NULL`) and the new
+   `claim_status` column, copy, drop, rename, recreate `idx_band_slug`.
+3. `DELETE FROM <child>` then `INSERT INTO <child> SELECT * FROM _bk_<child>` for each,
+   and an `UPDATE event SET band_id = ...` from the snapshot. The delete-before-restore
+   makes it idempotent whether or not the cascade actually fired.
+4. Drop the `_bk_` tables.
+
+That is ~60 lines, and `material_spiral` can be copied almost verbatim — the only
+differences are the two column changes in the `__new_band` definition. The `Schema drift`
+CI job guards against the schema and migration falling out of step.
+
+The code changes the null forces are small and mechanical, roughly eight sites:
 
 - Three queries in `band-service.ts` (`listAll`'s data and count queries, and
-  `getByIdWithDetails`) use `.innerJoin(user, eq(user.id, band.ownerId))`. A null owner
-  never matches, so external bands would silently vanish from `/staff/bands` and 404 on
-  their own detail page.
+  `getByIdWithDetails`) use `.innerJoin(user, eq(user.id, band.ownerId))`. These must
+  become `leftJoin`, with `ownerName`, `ownerEmail`, `ownerPronouns`, and `ownerRole`
+  typed nullable — otherwise unclaimed bands silently vanish from `/staff/bands` and 404
+  on their own detail page.
 - `deleteBand` and `deactivate` pass `row.ownerId` into `cancelReservation(id, userId)`,
-  which requires a string.
-- `band.ownerId` is picked into `BandLayoutResponse` in `db/schema/api.ts`, so the null
-  would propagate across the remote boundary into every band-panel consumer.
-- SQLite cannot relax `NOT NULL` in place. Drizzle would emit a full table rebuild of
-  `band` — the table with the most FK children in the schema (`band_genre`,
-  `band_member`, `platform_invite`, `event`, `band_page_config`, `band_media`) — with
-  `PRAGMA foreign_keys=OFF` for the duration.
+  which requires a string. Unclaimed bands need a different acting user — the staff member
+  performing the action, which is the more correct attribution anyway.
+- `band.ownerId` is picked into `BandLayoutResponse` in `db/schema/api.ts`; the type
+  widens to `string | null` and ripples to band-panel consumers.
+- `band-site.remote.ts` selects and matches on `ownerId` when resolving a contact email.
+- `scripts/seed-dev.ts` passes `b.ownerId` as `event.createdByUserId`, which is NOT NULL.
+- The staff bands list and `StaffBandForm` render `MemberLink` from the owner; it already
+  tolerates a null `userId` but would show an empty name.
 
-`claimStatus` is a pure `ALTER TABLE ADD COLUMN`. None of the above applies, `/staff/bands`
-keeps working untouched, and the staff list even gains useful information: the owner
-column shows which staffer stubbed the act until it's claimed.
-
-**Authorization is unaffected.** Every band access decision routes through `bandMember`
-(`getUserRole()` in `band/band-context.ts`, `requireBandAdmin`/`requireBandOwner`), and an
-unclaimed band has zero `bandMember` rows, so it is inaccessible to everyone by
-construction. The service user owning the row grants nothing.
+**Authorization is unaffected either way.** Every band access decision routes through
+`bandMember` (`getUserRole()` in `band/band-context.ts`,
+`requireBandAdmin`/`requireBandOwner`), and an unclaimed band has zero `bandMember` rows,
+so it is inaccessible to everyone by construction. No check compares against `ownerId`,
+and the two SQL comparisons that mention it put a non-null string on the other side, where
+SQL `NULL` semantics exclude rather than match.
 
 **Claiming** reuses the existing platform-invite machinery: staff send a `platformInvite`
 to the act's contact email with `role: 'owner'`, which flips the band to `claim_pending`.
@@ -193,8 +228,12 @@ a precondition the invite has just satisfied — and setting `claimStatus: 'clai
 
 Note that `resolvePendingInvites()` today only inserts the `bandMember` row; it never
 touches `band.ownerId` or `claimStatus`. Accepting an owner invite on an unclaimed band
-would otherwise leave a `bandMember` with `role: 'owner'` while the band still points at
-the service user — split-brain. The claim step must set all three fields together.
+would otherwise leave a `bandMember` with `role: 'owner'` while `band.ownerId` is still
+null — split-brain. The claim step must set all three fields together.
+
+`transferOwnership()` also guards that the new owner is an active `bandMember` and reads
+the current owner as the actor; both need to tolerate a null current owner so a claim can
+be the first ownership this band has ever had.
 
 ### Production slot (run of show)
 
@@ -533,7 +572,8 @@ Five new tables — `production`, `production_slot`, `production_task`,
 `production_expense`, `venue` — plus two column additions:
 
 ```
-band (additions)
+band (changes)
+  ownerId       text? references user(id) on delete restrict   — was NOT NULL
   claimStatus   text not null default 'claimed'   — claimed | unclaimed | claim_pending
   index on (claimStatus)
 
@@ -557,9 +597,15 @@ Checks: `production_slot.setLengthMinutes > 0`, `changeoverMinutes >= 0`,
 Enum tuples and the task templates go in `src/lib/config.ts` alongside the equipment and
 inbox tuples; zod form schemas sit next to their tables, following the house convention.
 
-Per CLAUDE.md, migrations are generated with `drizzle-kit` by hand, not written here. All
-of the above is additive — `ALTER TABLE ADD COLUMN` plus `CREATE TABLE` — with no table
-rebuild, which is the main practical payoff of keeping `band.ownerId` non-null.
+Per CLAUDE.md, migrations are generated with `drizzle-kit` by hand, not written here.
+Everything except `band.ownerId` is additive — `CREATE TABLE` plus `ALTER TABLE ADD
+COLUMN`. Relaxing `ownerId` to nullable forces a full `band` rebuild, and **the generated
+migration must not be applied as-is**: D1 ignores `PRAGMA foreign_keys=OFF` inside the
+migration transaction, so `DROP TABLE band` cascades the child tables away. Hand-edit it
+into the snapshot-restore shape of `migrations/20260604012148_material_spiral`, as
+described under "Bands, extended to cover external acts". Splitting this into its own
+migration, applied and verified before the productions tables land, keeps the risky change
+isolated.
 
 ---
 
@@ -641,7 +687,11 @@ phase: a band sees its booked shows only through the existing public event listi
 
 ## What changes
 
-- Five new tables; `band.claimStatus` and `event.venueId` added.
+- Five new tables; `band.claimStatus` and `event.venueId` added; `band.ownerId` relaxed to
+  nullable via a hand-edited rebuild migration.
+- `band-service.ts`'s three owner `innerJoin`s become `leftJoin`s with nullable owner
+  fields; `deleteBand`/`deactivate` stop attributing reservation cancellations to the
+  owner; `transferOwnership()` tolerates a null current owner.
 - `band-service.create()` gains an unclaimed-act path that requires an explicit
   `directoryVisibility: 'hidden'`, and `create()`/`update()` gain graceful duplicate-name
   handling via `BandNameTakenError`.
@@ -683,10 +733,10 @@ phase: a band sees its booked shows only through the existing public event listi
    profile and sets `directoryVisibility: 'public'` retroactively exposes every past
    production it played. Probably desirable — it's a gig history — but it should be a
    deliberate call, not a side effect of claiming.
-2. **Who owns unclaimed bands?** This spec says a dedicated CMC service user, so that
-   `purgeUser`'s "refuses to delete a band owner" guard never blocks a real staff account.
-   The alternative — the creating staffer — is more informative in the staff list but
-   makes that staffer un-purgeable. The service user seems right; worth confirming.
+2. **What does `/staff/bands` show in the owner column for an unclaimed act?** With a null
+   owner there is nothing to render. "Unclaimed" as a badge is the obvious answer, but the
+   staff list arguably wants to know who stubbed the act — which argues for surfacing
+   `createdBy` on `band`, a column it does not currently have.
 3. **Should `venue.isPrimary` be a column or config?** A boolean column allows more than
    one primary venue if the Collective ever runs a second room; a KV config key naming the
    venue id is stricter. This spec picks the column.
