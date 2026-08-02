@@ -164,58 +164,27 @@ special-casing in exactly the places the null would have been caught by the type
 Rejected.
 
 The migration is a full table rebuild, because SQLite cannot relax `NOT NULL` in place.
-That is a known, rehearsed operation in this repo rather than new ground — `band` itself
-has already been rebuilt twice, by `migrations/20260604012148_material_spiral` (which
-changed `owner_id`'s FK action) and by `20260524210008_sloppy_apocalypse` (which rebuilt
-28 tables at once, `user` and `band` among them).
+A rebuild is dangerous on D1 — the generated `DROP TABLE` cascade-deletes the rebuilt
+table's children — but that is a solved, general problem rather than something this
+feature has to solve: `pnpm db:generate` rewrites the rebuild automatically. The mechanism
+and what to check are in
+[table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1); don't
+duplicate the reasoning here.
 
-**The real hazard is not the pragma.** `material_spiral`'s header comment records the
-finding, and it is the single most important thing to carry into this migration:
+What matters for this migration specifically:
 
-> On D1 the migration runs in a transaction where `PRAGMA foreign_keys=OFF` is ignored,
-> so `DROP TABLE band` performs an implicit DELETE that fires the child FK actions: every
-> table that references `band(id)` ON DELETE CASCADE would lose its rows, and
-> `event.band_id` would be nulled.
-
-This is upstream drizzle-kit behaviour, not something a config option can turn off. The
-`recreate_table` convertor emits `PRAGMA foreign_keys=OFF` unconditionally and is shared
-by every SQLite driver including `d1-http`; `defer_foreign_keys` appears nowhere in the
-package. It is filed as
-[drizzle-orm#4089](https://github.com/drizzle-team/drizzle-orm/issues/4089), open since
-February 2025 with `bug` + `priority` labels, zero comments and no maintainer response —
-so assume the generated output will keep needing a hand-edit.
-
-**`defer_foreign_keys=true` does not fix this case**, despite being the workaround
-suggested in that issue. It delays _reporting of constraint violations_ until commit; it
-does not stop foreign-key _actions_ from firing. Verified against `node:sqlite` with a
-`band` / `band_member` (cascade) / `event` (set null) fixture:
-
-| Rebuild run with                                          | `band_member` rows | `event.band_id` |
-| --------------------------------------------------------- | ------------------ | --------------- |
-| `foreign_keys=OFF`, no transaction (what drizzle assumes) | preserved          | preserved       |
-| `foreign_keys=OFF`, inside a transaction (what D1 does)   | **0**              | **null**        |
-| `defer_foreign_keys=true`, inside a transaction           | **0**              | **null**        |
-
-The issue's reporter hit intermediate constraint violations that resolve by commit time,
-which deferral does fix. This repo hits cascade actions deleting child rows, which nothing
-pragma-based fixes. The snapshot-restore below is required.
-
-So the drizzle-kit output is **not safe to apply as generated**. It must be hand-edited
-into the snapshot-rebuild-restore shape `material_spiral` already establishes:
-
-1. `CREATE TABLE _bk_<child> AS SELECT * FROM <child>` for `band_member`, `band_genre`,
-   `band_media`, `band_page_config`, `platform_invite`, plus
-   `_bk_event_band` holding `(id, band_id)` for events with a non-null `band_id`.
-2. The generated rebuild — new `band` with `owner_id text` (no `NOT NULL`) and the new
-   `claim_status` column, copy, drop, rename, recreate `idx_band_slug`.
-3. `DELETE FROM <child>` then `INSERT INTO <child> SELECT * FROM _bk_<child>` for each,
-   and an `UPDATE event SET band_id = ...` from the snapshot. The delete-before-restore
-   makes it idempotent whether or not the cascade actually fired.
-4. Drop the `_bk_` tables.
-
-That is ~60 lines, and `material_spiral` can be copied almost verbatim — the only
-differences are the two column changes in the `__new_band` definition. The `Schema drift`
-CI job guards against the schema and migration falling out of step.
+- **`band` has eight descendants to protect**, not six. The direct children are
+  `band_genre`, `band_media`, `band_member`, `band_page_config`, `event`, and
+  `platform_invite` — but `event` is itself a parent, so `ticket` and `event_rsvp` are
+  pulled in too. The rewrite walks that transitively and orders the work deepest-first.
+- **Review the generated SQL** rather than skimming it. It will rebuild all eight of those
+  tables around the `band` rebuild, which is correct and looks alarming.
+- **Land it on its own**, ahead of the productions tables, so the one risky migration in
+  this feature can be applied and verified in isolation.
+- **Verify against local D1** before it goes near production: `pnpm db:reset && pnpm db:seed`,
+  then confirm row counts in `band_member`, `band_genre`, `band_media`,
+  `band_page_config`, `platform_invite`, `ticket`, and `event_rsvp`, plus non-null
+  `event.band_id` values.
 
 The code changes the null forces are small and mechanical, roughly eight sites:
 
@@ -620,15 +589,13 @@ Checks: `production_slot.setLengthMinutes > 0`, `changeoverMinutes >= 0`,
 Enum tuples and the task templates go in `src/lib/config.ts` alongside the equipment and
 inbox tuples; zod form schemas sit next to their tables, following the house convention.
 
-Per CLAUDE.md, migrations are generated with `drizzle-kit` by hand, not written here.
+Per CLAUDE.md, migrations are generated with `pnpm db:generate`, not written here.
 Everything except `band.ownerId` is additive — `CREATE TABLE` plus `ALTER TABLE ADD
-COLUMN`. Relaxing `ownerId` to nullable forces a full `band` rebuild, and **the generated
-migration must not be applied as-is**: D1 ignores `PRAGMA foreign_keys=OFF` inside the
-migration transaction, so `DROP TABLE band` cascades the child tables away. Hand-edit it
-into the snapshot-restore shape of `migrations/20260604012148_material_spiral`, as
-described under "Bands, extended to cover external acts". Splitting this into its own
-migration, applied and verified before the productions tables land, keeps the risky change
-isolated.
+COLUMN`. Relaxing `ownerId` to nullable forces a full `band` rebuild, which
+`pnpm db:generate` makes D1-safe automatically; see "Bands, extended to cover external
+acts" above and [table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1).
+Split it into its own migration, applied and verified before the productions tables land,
+so the risky change stays isolated.
 
 ---
 
@@ -711,7 +678,7 @@ phase: a band sees its booked shows only through the existing public event listi
 ## What changes
 
 - Five new tables; `band.claimStatus` and `event.venueId` added; `band.ownerId` relaxed to
-  nullable via a hand-edited rebuild migration.
+  nullable via a table rebuild, landed as its own migration.
 - `band-service.ts`'s three owner `innerJoin`s become `leftJoin`s with nullable owner
   fields; `deleteBand`/`deactivate` stop attributing reservation cancellations to the
   owner; `transferOwnership()` tolerates a null current owner.
