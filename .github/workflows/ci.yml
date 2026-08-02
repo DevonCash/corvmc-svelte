@@ -87,6 +87,12 @@ jobs:
             echo "::error::Schema changed without a migration. Run 'pnpm db:generate' and commit the result — Cloudflare deploys apply committed migrations only."
             exit 1
           fi
+      # D1 ignores `PRAGMA foreign_keys=OFF` inside its migration transaction, so a
+      # drizzle-generated table rebuild silently cascade-deletes the rebuilt table's
+      # children. `pnpm db:generate` rewrites those automatically; this catches a
+      # migration that was hand-written or generated with plain `drizzle-kit`.
+      - name: Verify table rebuilds are safe on D1
+        run: pnpm db:check-migrations
 
   docs:
     name: Docs integrity
