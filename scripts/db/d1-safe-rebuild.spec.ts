@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error -- plain .mjs helper, no types
-import { rewriteMigration, findRebuiltTables } from './d1-safe-rebuild.mjs';
+import { rewriteMigration, findRebuiltTables, findUnsafeDrops } from './d1-safe-rebuild.mjs';
 // @ts-expect-error -- plain .mjs helper, no types
 import { childGraph, descendantsDeepestFirst, readSnapshot } from './d1-ddl.mjs';
 
@@ -115,6 +115,46 @@ describe('descendant ordering', () => {
 	it('excludes tables that do not reference the rebuilt table', () => {
 		const order = descendantsDeepestFirst('parent', childGraph(readSnapshot(snapshot)));
 		expect(order).not.toContain('sibling');
+	});
+});
+
+describe('findUnsafeDrops', () => {
+	const kids = childGraph(readSnapshot(snapshot));
+	const find = (sql: string) => findUnsafeDrops(sql, kids, findRebuiltTables(sql));
+
+	it('flags a hand-written rebuild that uses its own temp-table name', () => {
+		// The `__new_` detector misses this, but it destroys child rows identically.
+		expect(
+			find(
+				'CREATE TABLE `parent_tmp` (`id` text);\nDROP TABLE `parent`;\n' +
+					'ALTER TABLE `parent_tmp` RENAME TO `parent`;'
+			)
+		).toEqual(['parent']);
+	});
+
+	it('flags a bare drop of a table with children', () => {
+		expect(find('DROP TABLE `parent`;')).toEqual(['parent']);
+	});
+
+	it('flags DROP TABLE IF EXISTS too', () => {
+		expect(find('DROP TABLE IF EXISTS `parent`;')).toEqual(['parent']);
+	});
+
+	it('allows dropping a table that nothing references', () => {
+		expect(find('DROP TABLE `sibling`;')).toEqual([]);
+	});
+
+	it('allows a drop that is explicitly marked intentional', () => {
+		expect(find('-- d1-safe-rebuild: intentional drop `parent`\nDROP TABLE `parent`;')).toEqual([]);
+	});
+
+	it('does not flag the drops inside its own rewritten output', () => {
+		const out = rewriteMigration(generated, snapshot) as string;
+		expect(findUnsafeDrops(out, kids, findRebuiltTables(out))).toEqual([]);
+	});
+
+	it('ignores scratch tables created by the rewrite', () => {
+		expect(find('DROP TABLE `__detach_child`;\nDROP TABLE `__reattach_child`;')).toEqual([]);
 	});
 });
 

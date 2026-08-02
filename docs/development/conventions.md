@@ -66,8 +66,15 @@ What this means in practice:
 - **Review the rewritten SQL.** It's longer than drizzle's output and rebuilds tables your
   change didn't mention. That's expected — those are the cascade children.
 - **CI enforces it.** `pnpm db:check-migrations` runs in the Schema drift job and fails on
-  an unsafe rebuild, which catches hand-written migrations or ones generated with plain
-  `drizzle-kit generate`.
+  an unsafe rebuild — one generated with plain `drizzle-kit generate`, or hand-written.
+- **Dropping a parent table is also caught.** Any `DROP TABLE` on a table with foreign-key
+  children fails the check, since it cascades the same way. If you really are removing the
+  table for good, say so in the migration and the check will allow it:
+
+  ```sql
+  -- d1-safe-rebuild: intentional drop `band`
+  ```
+
 - **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
   the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
 - **Verify against local D1** for anything touching a table with children:

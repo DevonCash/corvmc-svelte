@@ -87,6 +87,40 @@ export function findRebuiltTables(sql) {
 }
 
 /**
+ * Any `DROP TABLE x` where `x` has foreign-key children, beyond the rebuilds
+ * handled above.
+ *
+ * The rebuild detector keys off drizzle's `__new_` naming, so it only sees
+ * migrations drizzle generated. A hand-written migration that drops a parent —
+ * either to remove it for good, or via a rebuild using its own temp-table name —
+ * destroys child rows on D1 in exactly the same way and would otherwise sail
+ * through.
+ *
+ * These can't be auto-fixed: dropping a parent on purpose is legitimate, and
+ * only the author knows which it is. So this is check-only, and the opt-out is
+ * a comment naming the table, which keeps the decision visible in the diff:
+ *
+ *   -- d1-safe-rebuild: intentional drop `band`
+ */
+export function findUnsafeDrops(sql, kids, rebuilt = []) {
+	// A rewritten migration drops its children on purpose, as part of the
+	// detach/reattach dance, and restores them before commit. Those drops are
+	// safe by construction — without this, every correctly-rewritten migration
+	// would fail the check.
+	if (sql.includes(SAFE_MARKER)) return [];
+	const out = [];
+	for (const m of sql.matchAll(/DROP TABLE\s+(?:IF EXISTS\s+)?`([A-Za-z0-9_]+)`/gi)) {
+		const table = m[1];
+		if (rebuilt.includes(table)) continue; // the rewrite path already covers it
+		if (/^__(new|detach|reattach)_/.test(table)) continue; // our own scratch tables
+		if (!kids.get(table)?.size) continue; // no children, nothing can cascade
+		if (new RegExp(`intentional drop\\s+\`?${table}\`?`, 'i').test(sql)) continue;
+		out.push(table);
+	}
+	return [...new Set(out)];
+}
+
+/**
  * Split a migration into statements, dropping the pragma lines drizzle emits
  * around a rebuild — we supply our own framing.
  */
@@ -170,7 +204,8 @@ function main() {
 		process.exit(2);
 	}
 
-	const unsafe = [];
+	const unsafeRebuilds = [];
+	const unsafeDrops = [];
 	for (const dir of migrationDirs()) {
 		if (GRANDFATHERED.has(dir)) continue;
 		const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
@@ -178,27 +213,50 @@ function main() {
 		if (!existsSync(sqlPath) || !existsSync(snapPath)) continue;
 
 		const sql = readFileSync(sqlPath, 'utf8');
-		const rewritten = rewriteMigration(sql, JSON.parse(readFileSync(snapPath, 'utf8')));
-		if (!rewritten) continue;
+		const snapshot = JSON.parse(readFileSync(snapPath, 'utf8'));
+		const rewritten = rewriteMigration(sql, snapshot);
 
-		if (write) {
+		if (rewritten && write) {
 			writeFileSync(sqlPath, rewritten);
 			console.log(`rewritten: ${dir}`);
-		} else {
-			unsafe.push(dir);
+		} else if (rewritten) {
+			unsafeRebuilds.push(dir);
 		}
+
+		// Checked against the post-rewrite SQL so the rewrite's own drops don't
+		// register. --write can't repair these, so they're reported in both modes.
+		const finalSql = rewritten && write ? rewritten : sql;
+		const kids = childGraph(readSnapshot(snapshot));
+		const drops = findUnsafeDrops(finalSql, kids, findRebuiltTables(finalSql));
+		if (drops.length) unsafeDrops.push({ dir, drops });
 	}
 
-	if (check && unsafe.length) {
+	if (unsafeRebuilds.length) {
 		console.error(
 			'\nUnsafe table rebuilds found — these would silently delete child rows on D1:\n'
 		);
-		for (const d of unsafe) console.error(`  migrations/${d}/migration.sql`);
+		for (const d of unsafeRebuilds) console.error(`  migrations/${d}/migration.sql`);
 		console.error('\nFix with:  pnpm db:fix-migrations');
-		console.error('Background: the comment at the top of scripts/db/d1-safe-rebuild.mjs\n');
+	}
+
+	if (unsafeDrops.length) {
+		console.error('\nDROP TABLE on a table with foreign-key children:\n');
+		for (const { dir, drops } of unsafeDrops) {
+			console.error(`  migrations/${dir}/migration.sql -> ${drops.join(', ')}`);
+		}
+		console.error(
+			'\nOn D1 this cascade-deletes their child rows. Either rebuild using the\n' +
+				'detach/reattach shape (see the header of scripts/db/d1-safe-rebuild.mjs),\n' +
+				'or, if the table really is being removed for good, mark it in the migration:\n' +
+				'  -- d1-safe-rebuild: intentional drop `<table>`'
+		);
+	}
+
+	if (unsafeRebuilds.length || unsafeDrops.length) {
+		console.error('');
 		process.exit(1);
 	}
-	if (check) console.log('No unsafe table rebuilds.');
+	if (check) console.log('No unsafe table rebuilds or drops.');
 }
 
 // Only run when invoked directly, so the functions above stay unit-testable.
