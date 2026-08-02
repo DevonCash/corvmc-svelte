@@ -177,6 +177,29 @@ finding, and it is the single most important thing to carry into this migration:
 > table that references `band(id)` ON DELETE CASCADE would lose its rows, and
 > `event.band_id` would be nulled.
 
+This is upstream drizzle-kit behaviour, not something a config option can turn off. The
+`recreate_table` convertor emits `PRAGMA foreign_keys=OFF` unconditionally and is shared
+by every SQLite driver including `d1-http`; `defer_foreign_keys` appears nowhere in the
+package. It is filed as
+[drizzle-orm#4089](https://github.com/drizzle-team/drizzle-orm/issues/4089), open since
+February 2025 with `bug` + `priority` labels, zero comments and no maintainer response —
+so assume the generated output will keep needing a hand-edit.
+
+**`defer_foreign_keys=true` does not fix this case**, despite being the workaround
+suggested in that issue. It delays _reporting of constraint violations_ until commit; it
+does not stop foreign-key _actions_ from firing. Verified against `node:sqlite` with a
+`band` / `band_member` (cascade) / `event` (set null) fixture:
+
+| Rebuild run with                                          | `band_member` rows | `event.band_id` |
+| --------------------------------------------------------- | ------------------ | --------------- |
+| `foreign_keys=OFF`, no transaction (what drizzle assumes) | preserved          | preserved       |
+| `foreign_keys=OFF`, inside a transaction (what D1 does)   | **0**              | **null**        |
+| `defer_foreign_keys=true`, inside a transaction           | **0**              | **null**        |
+
+The issue's reporter hit intermediate constraint violations that resolve by commit time,
+which deferral does fix. This repo hits cascade actions deleting child rows, which nothing
+pragma-based fixes. The snapshot-restore below is required.
+
 So the drizzle-kit output is **not safe to apply as generated**. It must be hand-edited
 into the snapshot-rebuild-restore shape `material_spiral` already establishes:
 
