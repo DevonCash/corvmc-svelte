@@ -95,11 +95,11 @@ Notes:
 
 Three places hold configuration; know which is which before changing anything:
 
-| Where                  | What                                                                                         | How to change                                |
-| ---------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `wrangler.toml [vars]` | Non-secret deploy-time config (URLs, sender identity, Turnstile **site** key, `LARAVEL_URL`) | Edit the file, deploy                        |
-| Worker secrets         | Everything sensitive (table below)                                                           | `wrangler secret put NAME`, or bulk (below)  |
-| KV site config         | Runtime settings + feature flags (`site-config:*` keys)                                      | Staff settings UI, or `wrangler kv` directly |
+| Where                  | What                                                                                                                   | How to change                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `wrangler.toml [vars]` | Non-secret deploy-time config (URLs, sender identity, Postmark message streams, Turnstile **site** key, `LARAVEL_URL`) | Edit the file, deploy                        |
+| Worker secrets         | Everything sensitive (table below)                                                                                     | `wrangler secret put NAME`, or bulk (below)  |
+| KV site config         | Runtime settings + feature flags (`site-config:*` keys)                                                                | Staff settings UI, or `wrangler kv` directly |
 
 Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored), fill in,
 **delete the `_README` key** (or wrangler creates a secret literally named `_README`), then
@@ -159,9 +159,17 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
 
 ### Postmark (email)
 
-- Two message streams on one server token: `corvmc-transactional` (receipts, reminders)
-  and `corvmc-broadcast` (marketing campaigns). Client:
-  `src/lib/server/notification/email/postmark-client.ts`.
+- Two message streams on one server token: one for receipts and reminders, one for
+  marketing campaigns. Their ids come from `POSTMARK_TRANSACTIONAL_STREAM` and
+  `POSTMARK_BROADCAST_STREAM` in `wrangler.toml [vars]` (currently
+  `corvmc-transactional` / `corvmc-broadcast`). Both are **required** — there is no
+  fallback, and every send throws `POSTMARK_<...>_STREAM is not configured` when unset.
+  Because these are custom streams rather than Postmark's defaults
+  (`outbound`/`broadcast`), a Postmark server pointed at by a different
+  `POSTMARK_SERVER_TOKEN` must have streams with the configured ids or every send is
+  rejected. Client: `src/lib/server/notification/email/postmark-client.ts`.
+  Note the id `corvmc-transactional` is also, coincidentally, the alias of the Postmark
+  **layout template** under `postmark/templates/_layouts/` — unrelated concepts.
 - **Transactional templates** live in the repo under `postmark/templates/` and are synced
   with Postmark's CLI: `pnpm email:push` (repo → Postmark) / `pnpm email:pull`
   (Postmark → repo), both using `$POSTMARK_SERVER_TOKEN` from your shell. The repo is the

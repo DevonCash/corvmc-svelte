@@ -9,9 +9,10 @@ import { captureException } from '$lib/server/sentry';
 // so the server token isn't required during build/test.
 // ---------------------------------------------------------------------------
 
-// Postmark message streams. Both must exist on the configured server.
-const BROADCAST_STREAM = 'corvmc-broadcast';
-const TRANSACTIONAL_STREAM = 'corvmc-transactional';
+// Postmark message streams, read from the environment. These are custom streams
+// rather than Postmark's defaults (`outbound` / `broadcast`), so both must exist
+// with the configured ids on the server POSTMARK_SERVER_TOKEN belongs to —
+// otherwise Postmark rejects every send. Required: there is no fallback.
 
 let client: ServerClient | null = null;
 
@@ -25,6 +26,18 @@ function getClient(): ServerClient {
 
 	client = new ServerClient(token);
 	return client;
+}
+
+function getBroadcastStream(): string {
+	const stream = env.POSTMARK_BROADCAST_STREAM;
+	if (!stream) throw new Error('POSTMARK_BROADCAST_STREAM is not configured');
+	return stream;
+}
+
+function getTransactionalStream(): string {
+	const stream = env.POSTMARK_TRANSACTIONAL_STREAM;
+	if (!stream) throw new Error('POSTMARK_TRANSACTIONAL_STREAM is not configured');
+	return stream;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +65,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
+	const messageStream = getBroadcastStream();
 
 	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
 		const chunk = messages.slice(i, i + BATCH_SIZE);
@@ -66,7 +80,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					Tag: msg.tag,
 					Metadata: msg.metadata,
 					Headers: msg.headers,
-					MessageStream: BROADCAST_STREAM
+					MessageStream: messageStream
 				}))
 			);
 		} catch (err) {
@@ -101,6 +115,7 @@ export interface SendTemplateParams {
 export async function sendEmailWithTemplate(params: SendTemplateParams): Promise<void> {
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const messageStream = getTransactionalStream();
 
 	try {
 		await getClient().sendEmailWithTemplate({
@@ -110,7 +125,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 			TemplateModel: params.model,
 			Tag: params.tag,
 			Metadata: params.metadata,
-			MessageStream: TRANSACTIONAL_STREAM
+			MessageStream: messageStream
 		});
 	} catch (err) {
 		captureException(err, {
@@ -144,6 +159,7 @@ export interface SendInboxReplyTemplateParams {
 export async function sendInboxReply(params: SendInboxReplyTemplateParams): Promise<string> {
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const messageStream = getTransactionalStream();
 
 	const headers: Array<{ Name: string; Value: string }> = [];
 	if (params.inReplyTo) {
@@ -163,7 +179,7 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 			Tag: 'inbox-reply',
 			Metadata: params.metadata,
 			Headers: headers.length > 0 ? headers : undefined,
-			MessageStream: TRANSACTIONAL_STREAM
+			MessageStream: messageStream
 		});
 		return result.MessageID;
 	} catch (err) {
