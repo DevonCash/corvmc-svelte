@@ -2,15 +2,21 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
 
-	let me = $derived(await getMe());
+	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
+	// behind an async boundary, and on a direct load of ?register that stops the
+	// Turnstile widget from ever mounting — signup then fails with "Verification
+	// failed" because no token is produced. Reading `.current` keeps the redirect
+	// check without gating the markup.
+	const me = getMe();
 	$effect(() => {
-		if (me) goto(resolve('/member'));
+		if (me.current) goto(resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -21,7 +27,9 @@
 		email: string;
 	} | null>(null);
 
-	let mode = $state<'login' | 'register'>(
+	// Mode lives in the URL, not in local state, so a refresh or a shared link
+	// keeps whichever form the visitor was on. An invite always implies register.
+	let mode = $derived<'login' | 'register'>(
 		page.url.searchParams.has('invite') || page.url.searchParams.has('register')
 			? 'register'
 			: 'login'
@@ -31,9 +39,27 @@
 	let turnstileToken = $state('');
 	let resetTurnstile = $state<() => void>();
 
+	/** Same-page href for the other mode, preserving `redirect` and `invite`. */
+	function modeHref(target: 'login' | 'register') {
+		const params = new SvelteURLSearchParams(page.url.searchParams);
+		params.delete('register');
+		const rest = params.toString();
+		const query =
+			target === 'register' ? (rest ? `?register&${rest}` : '?register') : rest ? `?${rest}` : '';
+		return `${resolve('/login')}${query}`;
+	}
+
+	function toggleMode() {
+		error = '';
+		goto(modeHref(mode === 'login' ? 'register' : 'login'), {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+	}
+
 	$effect(() => {
 		if (inviteToken) {
-			mode = 'register';
 			fetch(`/api/invites/${inviteToken}`)
 				.then((r) => (r.ok ? r.json() : null))
 				.then((data) => {
@@ -162,13 +188,7 @@
 
 				<div class="divider my-0 text-xs">OR</div>
 
-				<button
-					class="btn btn-ghost btn-sm"
-					onclick={() => {
-						mode = mode === 'login' ? 'register' : 'login';
-						error = '';
-					}}
-				>
+				<button class="btn btn-ghost btn-sm" onclick={toggleMode}>
 					{mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
 				</button>
 			</div>

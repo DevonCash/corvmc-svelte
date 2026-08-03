@@ -52,7 +52,7 @@
 			local musicians to grow, collaborate, and thrive together.
 		</p>
 		<div class="flex flex-col items-center gap-3 mt-4">
-			<Button href="/login?redirect=/member" class="btn-primary btn-wide"
+			<Button href="/login?register&redirect=/member" class="btn-primary btn-wide"
 				>Join Our Community!</Button
 			>
 			<Button href="/about" class="btn-ghost btn-wide">Learn More About Us</Button>
@@ -149,7 +149,7 @@
 					opportunities.
 				</p>
 				<Button
-					href="/login?redirect=/member"
+					href="/login?register&redirect=/member"
 					class="btn-sm mt-2"
 					style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)"
 					>Join Now</Button

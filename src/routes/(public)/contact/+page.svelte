@@ -120,8 +120,9 @@
 							>How do I become a member?</summary
 						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							<a href={resolve('/login?redirect=/member')} class="link">Create an account</a> to get started.
-							Free memberships are available.
+							<a href={resolve('/login?register&redirect=/member')} class="link"
+								>Create an account</a
+							> to get started. Free memberships are available.
 						</div>
 					</details>
 					<details class="collapse collapse-arrow bg-base-200">
