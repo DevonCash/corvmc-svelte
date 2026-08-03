@@ -123,7 +123,7 @@ Push: `postmark templates push postmark/templates --server-token $POSTMARK_SERVE
 - [x] 10. Trim `scripts/compile-email-layouts.ts` to campaign-only (+ TODO for future campaign migration) — **superseded**: the script and the `mjml` dep are gone, replaced by `src/lib/server/marketing/campaign-layout.ts`
 - [x] 11. Update tests — dispatcher.spec + notification-listeners.spec rewritten to assert template alias + model (25 tests pass)
 - [x] 12. `pnpm check` — transactional-layout error gone; only the pre-existing `email-layout-campaign` build-artifact error remains. **Now also resolved** by the campaign-layout move: `pnpm check` reports 0 errors.
-- [ ] 13. **(needs Postmark creds)** First `pnpm email:push` to the prod Postmark server; send-test each alias. Run `pnpm email:validate` first — it renders every template through real Mustachio without sending.
+- [ ] 13. **(needs Postmark creds)** First `pnpm email:push` to the prod Postmark server; send-test each alias. Run `pnpm email:validate` first — it renders every template through real Mustachio without sending, reading `POSTMARK_SERVER_TOKEN` from `.env`. Note `email:push`/`email:pull` do **not** read `.env` (they shell out to `postmark-cli`), so those still need the token exported.
 - [ ] 14. **(deploy is manual)** Run `pnpm email:push` BEFORE `wrangler deploy` — otherwise transactional sends fail with template-not-found. Make this a deploy-runbook step.
 - [ ] 15. **(deploy sequencing)** Deploy static assets BEFORE `email:push`. The layout hardcodes `https://corvmc.org/email/cmc-speaker.png` (Postmark templates can't read env), so the logo 404s in every email until `static/email/` is live.
 

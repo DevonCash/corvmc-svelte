@@ -1,7 +1,9 @@
 /**
  * Validate every template against Postmark's real Mustachio engine.
  *
- * Run: POSTMARK_SERVER_TOKEN=<token> pnpm email:validate
+ * Run: pnpm email:validate
+ *
+ * Reads POSTMARK_SERVER_TOKEN from .env (or the environment, which wins).
  *
  * `validateTemplate` renders without sending — it reports syntax errors and
  * any model field the template references but the fixture does not supply.
@@ -10,6 +12,7 @@
  *
  * Run this before every `pnpm email:push`.
  */
+import 'dotenv/config';
 import { ServerClient } from 'postmark';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,7 +21,11 @@ import { readMeta } from '../src/lib/server/notification/email/render-preview';
 
 const token = process.env.POSTMARK_SERVER_TOKEN;
 if (!token) {
-	console.error('POSTMARK_SERVER_TOKEN is required (validation runs against the Postmark API).');
+	console.error(
+		'POSTMARK_SERVER_TOKEN is not set.\n' +
+			'Add it to .env, or pass it inline:\n' +
+			'  POSTMARK_SERVER_TOKEN=<token> pnpm email:validate'
+	);
 	process.exit(1);
 }
 
