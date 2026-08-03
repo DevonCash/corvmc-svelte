@@ -1,0 +1,1 @@
+ALTER TABLE `ticket` ADD `stripe_payment_record_id` text;
