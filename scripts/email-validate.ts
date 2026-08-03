@@ -33,19 +33,28 @@ const client = new ServerClient(token);
 const root = 'postmark/templates';
 let failed = 0;
 
-for (const fixture of FIXTURES) {
-	const meta = readMeta(fixture.alias);
-	const dir = join(root, fixture.alias);
-	const layoutDir = meta.LayoutTemplate ? join(root, '_layouts', meta.LayoutTemplate) : null;
-
-	const result = await client.validateTemplate({
-		Subject: meta.Subject ?? '',
-		HtmlBody: readFileSync(join(dir, 'content.html'), 'utf8'),
-		TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
-		TemplateType: 'Standard',
-		LayoutTemplate: layoutDir ? readFileSync(join(layoutDir, 'content.html'), 'utf8') : undefined,
-		TestRenderModel: fixture.model
-	});
+/**
+ * Run one validate call and report it.
+ *
+ * Note the layout is checked on its own rather than via `LayoutTemplate`: that
+ * field takes the *alias* of a layout already stored on the server, so using it
+ * would make validation depend on a prior `email:push` — exactly backwards. The
+ * layout and each template are valid Mustachio independently, which is what we
+ * need to know before pushing anything.
+ */
+async function validate(
+	label: string,
+	body: Parameters<typeof client.validateTemplate>[0],
+	model: Record<string, unknown>
+): Promise<void> {
+	let result: Awaited<ReturnType<typeof client.validateTemplate>>;
+	try {
+		result = await client.validateTemplate(body);
+	} catch (err) {
+		failed++;
+		console.error(`✗ ${label}\n    API error: ${(err as Error).message}`);
+		return;
+	}
 
 	const parts = [
 		['Subject', result.Subject],
@@ -54,24 +63,63 @@ for (const fixture of FIXTURES) {
 	] as const;
 
 	const errors = parts.flatMap(([name, part]) =>
-		part?.ContentIsValid === false
+		part && part.ContentIsValid === false
 			? (part.ValidationErrors ?? []).map((e) => `${name}: ${e.Message} (line ${e.Line})`)
 			: []
 	);
 
 	if (errors.length > 0) {
 		failed++;
-		console.error(`✗ ${fixture.name} (${fixture.alias})`);
+		console.error(`✗ ${label}`);
 		for (const e of errors) console.error(`    ${e}`);
-		continue;
+		return;
 	}
 
-	// Fields the template references but the fixture never supplied — usually a typo.
+	// Fields the template references but the model never supplied — usually a typo.
 	const suggested = (result.SuggestedTemplateModel ?? {}) as Record<string, unknown>;
-	const unsupplied = Object.keys(suggested).filter((k) => !(k in fixture.model));
+	const unsupplied = Object.keys(suggested).filter((k) => !(k in model));
 
-	console.log(
-		`✓ ${fixture.name} (${fixture.alias})${unsupplied.length ? ` — unsupplied: ${unsupplied.join(', ')}` : ''}`
+	console.log(`✓ ${label}${unsupplied.length ? ` — unsupplied: ${unsupplied.join(', ')}` : ''}`);
+}
+
+// --- Layouts ---
+const layoutAliases = [...new Set(FIXTURES.map((f) => readMeta(f.alias).LayoutTemplate))].filter(
+	(a): a is string => Boolean(a)
+);
+
+for (const alias of layoutAliases) {
+	const dir = join(root, '_layouts', alias);
+	// The layout renders `{{{@content}}}`, which only resolves when Postmark
+	// composes it with a template — substitute a marker so it validates alone.
+	const model = { preview_text: 'Preview text sample' };
+	await validate(
+		`layout: ${alias}`,
+		{
+			Subject: '',
+			HtmlBody: readFileSync(join(dir, 'content.html'), 'utf8'),
+			TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
+			TemplateType: 'Layout',
+			TestRenderModel: model
+		},
+		model
+	);
+}
+
+// --- Templates ---
+for (const fixture of FIXTURES) {
+	const meta = readMeta(fixture.alias);
+	const dir = join(root, fixture.alias);
+
+	await validate(
+		`${fixture.name} (${fixture.alias})`,
+		{
+			Subject: meta.Subject ?? '',
+			HtmlBody: readFileSync(join(dir, 'content.html'), 'utf8'),
+			TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
+			TemplateType: 'Standard',
+			TestRenderModel: fixture.model
+		},
+		fixture.model
 	);
 }
 
