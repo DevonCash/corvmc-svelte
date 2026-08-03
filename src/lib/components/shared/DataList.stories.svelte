@@ -4,7 +4,11 @@
 
 	const { Story } = defineMeta({
 		title: 'Shared/DataList',
-		component: DataList,
+		// No `component:` here. It makes svelte-csf render `<DataList {...args} />`
+		// in addition to each story's own children, and with no `result` arg that
+		// render throws on destructuring `{ rows }` — five unhandled errors that
+		// fail `pnpm test` while every assertion still passes. Each story below
+		// renders the component itself.
 		tags: ['autodocs'],
 		parameters: {
 			docs: {
