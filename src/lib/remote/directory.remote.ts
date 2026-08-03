@@ -35,7 +35,33 @@ import { db } from '$lib/server/db';
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
+import { profileLinkSchema } from '$lib/server/db/schema/authentication';
 import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
+import { jsonArrayField } from '$lib/utils/zod-json';
+
+// ---------------------------------------------------------------------------
+// JSON-encoded form/filter fields
+// ---------------------------------------------------------------------------
+//
+// These all used `.transform((s) => { try { JSON.parse(s) } catch { … } })`.
+// On the *save* forms the catch returned `[]`, which is destructive: the value
+// goes straight into updateMemberProfile/updateBandProfile, which replace the
+// stored array wholesale, so a malformed payload erased the member's
+// instruments/genres/links rather than failing. That is the same shape as the
+// role wipe fixed in #162. jsonArrayField() reports a field issue instead, so
+// the save is rejected and the stored value is left alone — deliberately no
+// `.catch([])`.
+
+/** An optional JSON-encoded string-array *filter*. Absent or empty = no filter. */
+const arrayFilter = z
+	.union([z.literal('').transform(() => undefined), jsonArrayField(z.string(), 'Invalid filter')])
+	.optional();
+
+/** A JSON-encoded array of profile links (label + url), as written by LinksField. */
+const linksField = jsonArrayField(profileLinkSchema, 'Invalid links');
+
+/** A JSON-encoded array of free-text tags (instruments, genres). */
+const tagsField = (message: string) => jsonArrayField(z.string(), message);
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -43,28 +69,8 @@ import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authen
 
 const filtersSchema = z.object({
 	search: z.string().optional(),
-	instruments: z
-		.string()
-		.optional()
-		.transform((s) => {
-			if (!s) return undefined;
-			try {
-				return JSON.parse(s) as string[];
-			} catch {
-				return undefined;
-			}
-		}),
-	genres: z
-		.string()
-		.optional()
-		.transform((s) => {
-			if (!s) return undefined;
-			try {
-				return JSON.parse(s) as string[];
-			} catch {
-				return undefined;
-			}
-		}),
+	instruments: arrayFilter,
+	genres: arrayFilter,
 	lookingForBand: z
 		.string()
 		.optional()
@@ -129,28 +135,8 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 
 const publicFiltersSchema = z.object({
 	search: z.string().optional(),
-	instruments: z
-		.string()
-		.optional()
-		.transform((s) => {
-			if (!s) return undefined;
-			try {
-				return JSON.parse(s) as string[];
-			} catch {
-				return undefined;
-			}
-		}),
-	genres: z
-		.string()
-		.optional()
-		.transform((s) => {
-			if (!s) return undefined;
-			try {
-				return JSON.parse(s) as string[];
-			} catch {
-				return undefined;
-			}
-		}),
+	instruments: arrayFilter,
+	genres: arrayFilter,
 	lookingForBand: z
 		.string()
 		.optional()
@@ -360,20 +346,8 @@ const memberProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
 	bio: z.string().max(2000).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
-	instruments: z.string().transform((s) => {
-		try {
-			return JSON.parse(s) as string[];
-		} catch {
-			return [];
-		}
-	}),
-	genres: z.string().transform((s) => {
-		try {
-			return JSON.parse(s) as string[];
-		} catch {
-			return [];
-		}
-	}),
+	instruments: tagsField('Invalid instruments'),
+	genres: tagsField('Invalid genres'),
 	lookingForBand: z.boolean().default(false),
 	availableForHire: z.boolean().default(false),
 	teachesLessons: z.boolean().default(false),
@@ -383,13 +357,7 @@ const memberProfileSchema = z.object({
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
 	contactPublic: z.boolean().default(false),
-	links: z.string().transform((s) => {
-		try {
-			return JSON.parse(s) as Array<{ label: string; url: string }>;
-		} catch {
-			return [];
-		}
-	})
+	links: linksField
 });
 
 export const saveMemberProfile = form(memberProfileSchema, async (data) => {
@@ -441,25 +409,13 @@ const bandProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	foundedYear: z.string().max(16).optional().default(''),
-	genres: z.string().transform((s) => {
-		try {
-			return JSON.parse(s) as string[];
-		} catch {
-			return [];
-		}
-	}),
+	genres: tagsField('Invalid genres'),
 	lookingForMembers: z.boolean().default(false),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('public'),
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
-	links: z.string().transform((s) => {
-		try {
-			return JSON.parse(s) as Array<{ label: string; url: string }>;
-		} catch {
-			return [];
-		}
-	})
+	links: linksField
 });
 
 export const saveBandProfile = form(bandProfileSchema, async (data) => {

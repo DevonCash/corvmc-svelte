@@ -90,10 +90,23 @@ export async function createTickets(options: CreateTicketsOptions) {
 // Fulfill purchase (webhook callback)
 // ---------------------------------------------------------------------------
 
-export async function fulfillPurchase(purchaseId: string) {
+/**
+ * Flip a purchase's `pending` tickets to `valid` and stamp them with the Stripe
+ * Payment Record ID that paid for them. Status and payment id are set in the
+ * same UPDATE so there is no window where a fulfilled ticket has no proof of
+ * payment, and no read-modify-write against concurrent webhook deliveries.
+ *
+ * `stripePaymentRecordId` is omitted for purchases that never touch Stripe —
+ * comped tickets (`comp-` prefix) and free RSVPs (`rsvp-` prefix).
+ */
+export async function fulfillPurchase(purchaseId: string, stripePaymentRecordId?: string) {
 	const rows = await db
 		.update(ticket)
-		.set({ status: 'valid', updatedAt: new Date() })
+		.set({
+			status: 'valid',
+			...(stripePaymentRecordId ? { stripePaymentRecordId } : {}),
+			updatedAt: new Date()
+		})
 		.where(and(eq(ticket.purchaseId, purchaseId), eq(ticket.status, 'pending')))
 		.returning();
 

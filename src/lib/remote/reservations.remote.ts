@@ -390,7 +390,11 @@ export const getAvailableDates = query(async () => {
 	return results;
 });
 
-/** Member: available slots + config + recurring frequencies for a given date. */
+/**
+ * Member: available slots + config + recurring frequencies for a given date.
+ * Deliberately unguarded — returns only which slots are free plus public
+ * booking config, never who booked them.
+ */
 export const getMemberSlots = query(z.string(), async (dateParam) => {
 	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
@@ -578,7 +582,11 @@ export const getRecurringTimeSlots = query(async () => {
 	};
 });
 
-/** Recurring: preview upcoming instances for a given schedule. */
+/**
+ * Recurring: preview upcoming instances for a given schedule.
+ * Deliberately unguarded — pure date arithmetic over caller-supplied input,
+ * reads no stored data.
+ */
 export const previewRecurringInstances = query(
 	z.object({
 		date: z.string(),

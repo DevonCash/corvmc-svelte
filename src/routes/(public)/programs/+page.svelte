@@ -83,7 +83,7 @@
 				<div class="text-sm mt-1" style="color: var(--fg-2)">All equipment included</div>
 			</div>
 			<a
-				href={resolve('/login?redirect=/member')}
+				href={resolve('/login?register&redirect=/member')}
 				class="program-block__cta rounded-lg p-6 text-center"
 				style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
 			>
@@ -298,7 +298,7 @@
 			{/each}
 		</div>
 		<div class="flex justify-center gap-4 mt-10">
-			<Button href="/login?redirect=/member" class="btn-lg">Become a Member</Button>
+			<Button href="/login?register&redirect=/member" class="btn-lg">Become a Member</Button>
 			<Button
 				href="/contact"
 				class="btn-outline"

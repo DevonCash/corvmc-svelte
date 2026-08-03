@@ -15,6 +15,7 @@
 	const { fields } = confirmWaitlisted;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -97,16 +98,20 @@
 				{#each await activeReservations as reservation (reservation.id)}
 					<ReservationCard {reservation} onchange={refreshReservations} />
 				{:else}
-					<p class="text-sm opacity-60">No upcoming reservations. Book your next practice slot!</p>
+					<EmptyState
+						message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
+						class="col-span-full"
+					/>
 				{/each}
 			</Tabs.Content>
 			<Tabs.Content value="all" class="card-grid">
 				{#each await allReservations as reservation (reservation.id)}
 					<ReservationCard {reservation} onchange={refreshReservations} />
 				{:else}
-					<p class="text-sm opacity-60">
-						No reservations found. Start by creating your first practice space reservation.
-					</p>
+					<EmptyState
+						message="No reservations yet. Use Reserve Space above to book your first practice slot."
+						class="col-span-full"
+					/>
 				{/each}
 			</Tabs.Content>
 		</Tabs.Root>

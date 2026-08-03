@@ -83,7 +83,7 @@
 </script>
 
 <svelte:head>
-	<title>{evt.title} | Corvallis Music Collective</title>
+	<!-- <title> comes from the PageHeader below, which renders the same text. -->
 	{#if evt.description}
 		<meta name="description" content={evt.description.replace(/<[^>]*>/g, '').slice(0, 160)} />
 	{/if}

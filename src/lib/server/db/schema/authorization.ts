@@ -5,6 +5,15 @@ import { user } from './authentication';
 // ---------------------------------------------------------------------------
 // Roles & permissions (translated from spatie/laravel-permission)
 // ---------------------------------------------------------------------------
+//
+// Only `roles` and `model_has_roles` are live: authorization in this app is
+// role-name based (see src/lib/server/authorization.ts). `permissions`,
+// `model_has_permissions` and `role_has_permissions` are **not read or written
+// by any application code** — they exist solely so scripts/migrate-from-postgres.ts
+// can carry the legacy Laravel grants across the cutover. Dropping them would
+// discard rows that exist in Postgres today and cannot be recovered afterwards,
+// so they stay until the cutover is done. Do not build features on them without
+// first wiring up a real permission check.
 
 export const permission = sqliteTable(
 	'permissions',

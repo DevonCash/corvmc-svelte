@@ -16,7 +16,6 @@
 		IconDots,
 		IconEye,
 		IconCopy,
-		IconUserUp,
 		IconUserOff
 	} from '@tabler/icons-svelte';
 	import { getStaffUsers, bulkDeactivateUsers } from '$lib/remote/users.remote';
@@ -34,6 +33,7 @@
 		searchTimer = setTimeout(() => {
 			searchDebounced = search;
 			page = 1;
+			selected.clear();
 		}, 300);
 	}
 
@@ -67,6 +67,13 @@
 	];
 
 	// Selection (active users only — deactivated rows can't be deactivated again).
+	//
+	// Scoped to the rows currently on screen: every navigation that changes which
+	// rows are visible (paging, searching, switching status filter) clears it.
+	// Selection used to survive paging, so "select all" on page 1 then paging to
+	// page 2 left the bar reading "20 selected" over rows the operator could not
+	// see — and Deactivate acted on all of them. Keeping the count equal to what
+	// is on screen makes the bulk action verifiable before it is confirmed.
 	let selected = new SvelteSet<string>();
 	const { fields: bulkFields } = bulkDeactivateUsers;
 
@@ -93,6 +100,12 @@
 	// change handler fires; reset paging + selection for the new filter.
 	function onStatusChange() {
 		page = 1;
+		selected.clear();
+	}
+
+	function goToPage(p: number) {
+		if (p === page) return;
+		page = p;
 		selected.clear();
 	}
 </script>
@@ -141,7 +154,8 @@
 					<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
 					<p class="py-2">
 						Deactivate {selected.size} selected user{selected.size === 1 ? '' : 's'}? Their future
-						personal reservations will be cancelled.
+						personal reservations and membership subscriptions will be cancelled, and reactivating
+						will not bring them back. Your own account is skipped.
 					</p>
 				{/snippet}
 			</Action>
@@ -238,11 +252,9 @@
 													><IconCopy size={16} />Copy email</button
 												>
 											</li>
-											<li>
-												<a href={resolve(`/staff/users/${row.id}/impersonate`)}
-													><IconUserUp size={16} />Impersonate</a
-												>
-											</li>
+											<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
+											     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
+											     Re-add this only alongside the route. -->
 										</ul>
 									</div>
 								</td>
@@ -251,11 +263,7 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
+			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={goToPage} />
 		{/if}
 	{/await}
 </PageContent>

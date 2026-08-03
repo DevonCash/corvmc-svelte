@@ -25,5 +25,4 @@ if applicable.
 
 ## Related
 
-- [Impersonate a user](/member/help/staff-impersonate)
 - [Reconcile payments & credits](/member/help/staff-payments-credits)

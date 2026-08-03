@@ -130,7 +130,9 @@ auto-creates any missing).
 - [x] `[P]` Staff dashboard & navigation (`/staff`)
 - [x] `[P]` Members & users overview (`/staff/users`, tiers, search)
 - [x] `[H]` Edit a user, manage roles & adjust credits (`/staff/users/[id]`)
-- [x] `[H]` Impersonate a user for support
+- [ ] `[H]` Impersonate a user for support — _blocked: the feature does not exist.
+      Impersonation is explicitly deferred (`docs/specs/staff-bands-spec.md`), and the
+      article that described it as working was removed._
 - [x] `[H]` Manage reservations & resolve issues _(expands seed `staff-managing-reservations`)_
 - [x] `[H]` Take payment / comp / refund a reservation (`/staff/reservations/[id]`)
 - [x] `[H]` Manage recurring reservation series (`/staff/recurring`)

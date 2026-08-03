@@ -61,6 +61,10 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * Deliberately unguarded despite the name: returns only the same public event
+ * fields the public listing shows (no attendee, ticket or purchaser data).
+ */
 export const getMemberEvents = query(async () => {
 	const [upcoming, past] = await Promise.all([listUpcoming(), listPast(12)]);
 	const mapEvent = (e: (typeof upcoming)[number]) => ({
@@ -300,6 +304,12 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	};
 });
 
+/**
+ * Deliberately unguarded: the post-checkout success page must work for guest
+ * buyers who have no account. `purchaseId` is a randomUUID minted at checkout,
+ * so it acts as an unguessable capability token for that one purchase. Do not
+ * widen this to accept an enumerable id (event id, email, ticket code).
+ */
 export const getTicketPurchaseSuccess = query(
 	z.object({ eventId: z.string(), purchaseId: z.string() }),
 	async ({ eventId, purchaseId }) => {
@@ -911,7 +921,10 @@ export const purchaseTickets = form(
 
 		if (result.paid) {
 			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');
-			await fulfillPurchase(purchaseId);
+			// Credits covered the whole cart — checkout() still records a Stripe
+			// payment record for it, so the tickets store that as their proof of
+			// payment just like a card purchase does.
+			await fulfillPurchase(purchaseId, result.stripePaymentRecordId);
 			return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
 		}
 

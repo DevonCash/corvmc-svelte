@@ -1,19 +1,42 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { pageTitle } from '$lib/config';
 
 	let {
 		title,
 		subtitle,
 		backHref,
+		documentTitle,
 		children
 	}: {
 		title: string;
 		backHref?: string;
 		children?: Snippet;
 		subtitle?: string;
+		/**
+		 * Overrides the browser tab title when the on-screen heading would make a
+		 * poor one (too long, or missing context outside the page). Defaults to
+		 * `title`; pass `null` to opt out and set `<title>` yourself.
+		 */
+		documentTitle?: string | null;
 	} = $props();
+
+	const resolvedTitle = $derived(documentTitle === undefined ? title : documentTitle);
 </script>
+
+<!--
+	Every panel page renders a PageHeader (ui-patterns.md requires it for the page
+	title), so owning <title> here gives the whole authenticated app tab titles
+	from one place. There is deliberately no fallback <title> in app.html or the
+	root layout: duplicate <title> elements are not deduped, and the layout's head
+	renders first, so a global fallback would win over every real title.
+-->
+<svelte:head>
+	{#if resolvedTitle}
+		<title>{pageTitle(resolvedTitle)}</title>
+	{/if}
+</svelte:head>
 
 <div
 	class="sticky top-0 z-10 -mx-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-4 mb-6"

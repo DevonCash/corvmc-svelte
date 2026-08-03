@@ -42,4 +42,4 @@ The Corvallis Music Collective is governed by a volunteer Board of Directors.
 
 Whether you're a seasoned performer or just picking up an instrument for the first time, there's a place for you here.
 
-[Become a Member](/login?redirect=/member) | [Contribute](/contribute)
+[Become a Member](/login?register&redirect=/member) | [Contribute](/contribute)

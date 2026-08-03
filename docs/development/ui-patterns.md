@@ -117,7 +117,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 <Form
 	remote={saveItem}
 	successToast="Saved"
-	errorToast="Save failed"
+	onfailure={() => toast.error('Save failed')}
 	onsuccess={(result) => {
 		/* navigate, refresh, etc. */
 	}}
@@ -132,8 +132,21 @@ Props:
 
 - `remote` — a remote form from `data.remote.ts`
 - `guard` — enables unsaved-changes protection (blocks navigation when form is dirty)
-- `successToast` / `errorToast` — toast messages
+- `successToast` — toast message shown after a successful submit
 - `onsuccess` / `onfailure` — callbacks
+- `flashDuration` — how long the success/error flash sticks before the button
+  returns to its idle state (default 1500ms)
+
+There is **no `errorToast` prop.** Passing one does nothing visible — it falls
+through the rest spread onto the `<form>` element. The default error handling is
+built in: a validation failure toasts "Please fix the highlighted fields and try
+again.", and a thrown error is reported to Sentry via the nearest
+`ErrorToastBoundary`. Supply `onfailure` to replace that with your own message —
+note that doing so suppresses the default toast.
+
+Toasts are rendered by the `<Toaster>` inside `AppShell`, so they only appear on
+panel routes (member/staff/band). A `toast.*` call from a `(public)` route or the
+login page is silently dropped.
 
 ### How dirty tracking works
 
@@ -466,13 +479,30 @@ The `others` array is optional. Each slot's `href` makes it clickable; `label` s
 
 ## EmptyState
 
-Consistent empty-state message for lists and tables.
+Consistent empty-state message for lists and tables. Prefer it over a bare
+`<p class="opacity-60">`, and give it a next action wherever one exists.
 
 ```svelte
 {#if items.length === 0}
-	<EmptyState message="No reservations found." />
+	<EmptyState
+		title="No reservations yet"
+		description="Book a room to get started."
+		actionLabel="Book a session"
+		actionHref="/member/reservations"
+	/>
 {/if}
 ```
+
+Props:
+
+- `title` — bold line above the message
+- `description` — the message (preferred; `message` is an older alias for the same slot)
+- `actionLabel` + `actionHref` — renders a link. **Both are required**; passing
+  only one renders nothing. Skip them when the only sensible action is a button
+  already visible on the page.
+- `children` — when provided, replaces the entire default body (title, message,
+  and action are all ignored)
+- `class` — useful inside a grid, e.g. `class="col-span-full"`
 
 ## DataTable
 

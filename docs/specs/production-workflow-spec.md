@@ -66,30 +66,37 @@ reach `closed` with unfinished close-out tasks.
 
 ---
 
-## Prerequisites: two fixes in existing code
+## Prerequisites: two fixes, both landed
 
-Neither is caused by this feature, but productions cannot be built correctly on top of
-either one.
+This design surfaced two bugs in shipped code. Neither was caused by productions and
+neither depended on it, so both were fixed separately in
+[#161](https://github.com/DevonCash/corvmc-svelte/pull/161) rather than being carried by
+this feature. They are recorded here because the design leans on both, and because the
+reasoning explains why parts of the spec below assume behavior that is newer than the rest
+of the codebase.
 
-**`event.cancelled` is emitted inside a ticket-holder guard.** In
+**`event.cancelled` was emitted inside a ticket-holder guard.** In
 `src/lib/server/event/event-service.ts`, `cancel()` collects ticket holders, dedupes them
-by email, and then emits the domain event inside `if (holders.length > 0)`. The emit is
-therefore skipped entirely for any show that sold no tickets. A production listening for
-`event.cancelled` — to mark its own status `cancelled` and release its slots — would miss
-every cancellation of an unticketed show, which is most of them at draft stage. The emit
-must move outside the guard, with `ticketHolders` becoming an empty array in the payload;
-the notification listener already has nothing to send in that case, so the guard buys
-nothing it doesn't cost.
+by email, and used to emit the domain event inside `if (holders.length > 0)` — so the emit
+was skipped entirely for any show that had sold no tickets. A production listening for
+`event.cancelled` to mark its own status `cancelled` and release its slots would have
+missed every cancellation of an unticketed show, which is most of them at draft stage. The
+emit now fires on every cancellation with an empty `ticketHolders` array; the notification
+listener iterates that array and so sends nothing when it is empty, which is why no
+listener change was needed. **A production may now rely on `event.cancelled` firing
+exactly once per cancellation**, which is what makes the event-as-parent cascade in "How a
+production feeds the rest of the app" sound.
 
-**Tickets don't record their Stripe payment.** `handleTicketCheckout` in
-`src/lib/server/ticket/checkout-listener.ts` flips the purchase's tickets `pending →
-valid` via `fulfillPurchase()` and emits `ticket.purchased` — and that is all. It never
-stores `session.payment_intent`. Compare `handleReservationCheckout` in
-`src/lib/server/reservation/checkout-listener.ts`, which resolves the payment record id
-from `session.payment_intent` (falling back to `session.id`) and writes it to
-`reservation.stripePaymentRecordId`. finance-spec's rule is that the purchasable stores
-the Payment Record ID locally as its proof of payment; every other purchasable does, and
-tickets are the gap. See "Settlement" for the column this adds.
+**Tickets didn't record their Stripe payment.** `handleTicketCheckout` in
+`src/lib/server/ticket/checkout-listener.ts` flipped the purchase's tickets `pending →
+valid` and emitted `ticket.purchased`, discarding `session.payment_intent` — unlike
+`handleReservationCheckout`, which resolves the payment record id (falling back to
+`session.id`) and writes it to `reservation.stripePaymentRecordId`. finance-spec's rule is
+that the purchasable stores the Payment Record ID locally as its proof of payment; every
+other purchasable did, and tickets were the gap. `ticket.stripePaymentRecordId` now exists
+and is populated on both the card path and the credits-covered path. **Settlement therefore
+inherits this column rather than adding it** — the schema section below counts it as
+existing, and the comp detection in "Reading ticket revenue" depends on it.
 
 ---
 
@@ -681,11 +688,12 @@ the obvious shortcut and it reintroduces precisely the local ledger that
 [finance-spec.md](finance-spec.md) removed. Stripe is the ledger; a second copy is a
 second thing to reconcile.
 
-**Do add `ticket.stripePaymentRecordId`** (text, nullable), set in `handleTicketCheckout`
-from `session.payment_intent` exactly as `handleReservationCheckout` already does. This is
-the bug fix described under Prerequisites, not a new requirement — it gives each ticket the
-same proof of payment every other purchasable has, and it makes the Stripe search
-cross-checkable against local rows.
+**`ticket.stripePaymentRecordId` already exists**, added by the prerequisite fix above
+rather than by this feature. It gives each ticket the same proof of payment every other
+purchasable has, and it is what makes the Stripe search cross-checkable against local rows:
+a PaymentIntent the search returns should have a matching ticket, and a ticket without one
+should be a comp or a free RSVP. Settlement can flag either mismatch instead of silently
+trusting one side.
 
 ### The snapshot
 
@@ -758,17 +766,18 @@ active productions unless the closed filter is on.
 - **`event`** — the parent. Created and owned by `/staff/events`; the production edits it
   through `event-service.update()` rather than writing `event` rows itself. Publish is
   gated on `confirmed`. Cancel routes through `event-service.cancel()` so ticket holders
-  are notified by the existing listener and the reservation is released — which is why the
-  `event.cancelled` emit fix is a prerequisite.
+  are notified by the existing listener and the reservation is released. The production
+  reacts to the `event.cancelled` domain event, which the prerequisite fix made reliable
+  for unticketed shows.
 - **`reservation`** — created with the event (`bookerType: 'event'`, the existing
   polymorphic hook in `reservation.ts`, no enum change needed) covering doors→close, and
   widened to load-in→load-out by the production. Owned by `event-service` throughout; the
   production never calls `reservation-service.staffCreate()`. Conflict checking is the
   existing code, so a production cannot widen into an occupied room without an explicit
   override.
-- **`ticket`** — gains `stripePaymentRecordId`. Purchase, check-in, and refunds keep their
-  current paths; the ticket checkout metadata gains `ticket_subtotal_cents`. Settlement
-  only reads.
+- **`ticket`** — unchanged apart from the checkout metadata, which gains
+  `ticket_subtotal_cents`. Purchase, check-in, and refunds keep their current paths, and
+  `stripePaymentRecordId` is already populated. Settlement only reads.
 - **`band`** — external acts become claimable directory bands the moment someone accepts
   an owner invite, at which point their entire production history is already attached.
   Member bands see their booked shows on their band dashboard.
@@ -882,10 +891,10 @@ band_member (addition)
 event (additions)
   venueId       uuid? references venue(id) on delete set null
   index on (venueId)
-
-ticket (addition)
-  stripePaymentRecordId  text?
 ```
+
+`ticket.stripePaymentRecordId` is not listed above because it already exists — see
+Prerequisites. This feature reads it; it does not add it.
 
 Indexes on the new tables:
 
@@ -1003,9 +1012,8 @@ phase: a band sees its booked shows only through the existing public event listi
 
 ## What changes
 
-- Five new tables; `event.venueId` and `ticket.stripePaymentRecordId` added;
-  `band.ownerId` and the `UNIQUE` on `band.name` both dropped in a single table rebuild,
-  landed as its own migration.
+- Five new tables; `event.venueId` added; `band.ownerId` and the `UNIQUE` on `band.name`
+  both dropped in a single table rebuild, landed as its own migration.
 - A partial unique index on `band_member (bandId) WHERE role = 'owner'` becomes the sole
   definition of band ownership.
 - `band-service.ts`'s three owner `innerJoin`s become left joins through `bandMember`;
@@ -1014,9 +1022,6 @@ phase: a band sees its booked shows only through the existing public event listi
   owner from `bandMember`.
 - `purgeUser()`, `BandLayoutResponse`, `band-site.remote.ts`, `bands.remote.ts`,
   `seed-dev.ts`, and `migrate-from-postgres.ts` stop referencing `ownerId`.
-- `event-service.cancel()` emits `event.cancelled` unconditionally, not only when tickets
-  were sold.
-- `handleTicketCheckout` records `session.payment_intent` on each ticket.
 - The ticket checkout metadata in `events.remote.ts` gains `ticket_subtotal_cents`.
 - `reservation-service` gains `adjustWindow()` so widening a window doesn't re-issue the
   reservation or its lock code.

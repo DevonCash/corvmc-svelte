@@ -24,15 +24,16 @@ import {
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
-import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
+import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
 	getUsageSinceLastAllocation,
 	addCredits,
 	deductCredits,
-	listTransactions
+	listTransactions,
+	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
@@ -47,6 +48,7 @@ import {
 	UserHasLinkedRecordsError
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { isProfileComplete } from '$lib/server/directory/directory-service';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -61,24 +63,24 @@ export const getStaffDashboard = query(async () => {
 	startOfMonth.setDate(1);
 	startOfMonth.setHours(0, 0, 0, 0);
 
-	const [totalUsersResult, totalRolesResult, totalPermissionsResult, newUsersResult, recentUsers] =
-		await Promise.all([
-			db.select({ value: count() }).from(user),
-			db.select({ value: count() }).from(role),
-			db.select({ value: count() }).from(permission),
-			db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
-			db
-				.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
-				.from(user)
-				.orderBy(desc(user.createdAt))
-				.limit(5)
-		]);
+	// No `permissions` count: the spatie-derived permission tables are populated by
+	// the Postgres migrator and read by nothing in this app, so the stat was always
+	// 0. See src/lib/server/db/schema/authorization.ts.
+	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers] = await Promise.all([
+		db.select({ value: count() }).from(user),
+		db.select({ value: count() }).from(role),
+		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
+		db
+			.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+			.from(user)
+			.orderBy(desc(user.createdAt))
+			.limit(5)
+	]);
 
 	return {
 		stats: {
 			totalUsers: totalUsersResult[0].value,
 			totalRoles: totalRolesResult[0].value,
-			totalPermissions: totalPermissionsResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
 		recentUsers
@@ -206,6 +208,7 @@ export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
 // ---------------------------------------------------------------------------
 
 export const getUser = query(z.string(), async (id) => {
+	await requireStaff();
 	const [found] = await db
 		.select({
 			id: user.id,
@@ -229,14 +232,17 @@ export const getUser = query(z.string(), async (id) => {
 });
 
 export const getAllRoles = query(async () => {
+	await requireStaff();
 	return db.select({ id: role.id, name: role.name }).from(role);
 });
 
 export const getUserPayments = query(z.string(), async (userId) => {
+	await requireStaff();
 	return listByUser(userId);
 });
 
 export const getUserCredits = query(z.string(), async (userId) => {
+	await requireStaff();
 	return getAllBalances(userId);
 });
 
@@ -245,21 +251,55 @@ export const getUserCredits = query(z.string(), async (userId) => {
 // ---------------------------------------------------------------------------
 
 const updateUserSchema = z.object({
+	// The target is an explicit, validated field rather than `params.id`: for a
+	// remote call SvelteKit derives params from the caller-supplied
+	// `x-sveltekit-pathname` header, so params are request input, not a
+	// trustworthy identifier. Matches deactivateUser/reactivateUser/purgeUser.
+	id: z.string().min(1),
 	name: z.string().trim().min(1).max(255),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
-	roles: z
-		.string()
-		.transform((s) => JSON.parse(s) as string[])
-		.pipe(z.array(z.string().regex(/^\d+$/, 'Invalid role ID')))
-		.default([])
+	// No `.catch([])` here: silently coercing a malformed roles field to an empty
+	// array would delete every role on the target user.
+	roles: jsonArrayField(
+		z.string().regex(/^\d+$/, 'Invalid role ID'),
+		'Invalid role selection'
+	).default([])
 });
 
 export const updateUser = form(updateUserSchema, async (rawData) => {
 	const data = rawData as z.infer<typeof updateUserSchema>;
-	const { params } = getRequestEvent();
-	const id = params.id!;
+	const actor = await requireStaff();
+	const id = data.id;
 	const roleIds = data.roles.map(Number);
+
+	// Role changes can lock people out of the panel, and nothing else can undo
+	// that from the UI. Two cases are refused outright.
+	const namesById = new Map(
+		(await db.select({ id: role.id, name: role.name }).from(role)).map((r) => [r.id, r.name])
+	);
+	const nextRoleNames = roleIds.map((rid) => namesById.get(rid)).filter(Boolean) as string[];
+	const targetCurrentRoles = await getUserRoles(id);
+
+	// 1. Don't let staff drop their own staff access.
+	if (id === actor.id && !nextRoleNames.some((n) => n === 'admin' || n === 'staff')) {
+		error(400, 'You cannot remove your own staff access.');
+	}
+
+	// 2. Don't let the last admin be demoted — that leaves nobody able to
+	//    restore the role.
+	if (targetCurrentRoles.includes('admin') && !nextRoleNames.includes('admin')) {
+		const adminRoleId = [...namesById.entries()].find(([, n]) => n === 'admin')?.[0];
+		if (adminRoleId !== undefined) {
+			const [{ value: adminCount }] = await db
+				.select({ value: count() })
+				.from(modelHasRole)
+				.where(and(eq(modelHasRole.roleId, adminRoleId), ne(modelHasRole.userId, id)));
+			if (adminCount === 0) {
+				error(409, 'This is the last admin — assign another admin before removing this role.');
+			}
+		}
+	}
 
 	// D1 has no interactive transactions; these writes are independent, so batch
 	// them for atomicity (db.batch runs in a single implicit transaction).
@@ -309,19 +349,27 @@ export const adjustCredits = form(
 		const amount = Number(data.amount);
 		const description = data.description as string;
 
+		if (!Number.isFinite(amount)) throw error(400, 'Amount must be a number');
 		if (amount === 0) throw error(400, 'Amount cannot be zero');
 
 		if (amount > 0) {
 			await addCredits(userId, type, amount, 'admin_adjustment', undefined, description);
 		} else {
-			await deductCredits(
-				userId,
-				type,
-				Math.abs(amount),
-				'admin_adjustment',
-				undefined,
-				description
-			);
+			try {
+				await deductCredits(
+					userId,
+					type,
+					Math.abs(amount),
+					'admin_adjustment',
+					undefined,
+					description
+				);
+			} catch (e) {
+				// Deducting more than the member holds is an ordinary staff mistake,
+				// not a server fault — surface the balance instead of a 500.
+				if (e instanceof InsufficientCreditsError) throw error(409, e.message);
+				throw e;
+			}
 		}
 
 		void getUserCredits(userId).refresh();
@@ -347,10 +395,9 @@ export const deactivateUser = form(
 );
 
 const bulkDeactivateSchema = z.object({
-	ids: z
-		.string()
-		.transform((s) => JSON.parse(s) as string[])
-		.pipe(z.array(z.string().min(1)).min(1).max(100))
+	ids: jsonArrayField(z.string().min(1), 'Invalid selection').pipe(
+		z.array(z.string().min(1)).min(1).max(100)
+	)
 });
 
 export const bulkDeactivateUsers = form(bulkDeactivateSchema, async (rawData) => {
@@ -427,40 +474,47 @@ export const getMemberDashboard = query(async () => {
 		.from(bandMember)
 		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
 
-	const [weekReservations, bandWeekReservations, upcomingEvents, credits, dbSubscription] =
-		await Promise.all([
-			db
-				.select()
-				.from(reservation)
-				.where(
-					and(
-						eq(reservation.createdByUserId, currentUser.id),
-						eq(reservation.bookerType, 'user'),
-						gte(reservation.startsAt, weekStart),
-						lte(reservation.startsAt, weekEnd),
-						ne(reservation.status, 'cancelled')
-					)
+	const [
+		weekReservations,
+		bandWeekReservations,
+		upcomingEvents,
+		credits,
+		dbSubscription,
+		profileComplete
+	] = await Promise.all([
+		db
+			.select()
+			.from(reservation)
+			.where(
+				and(
+					eq(reservation.createdByUserId, currentUser.id),
+					eq(reservation.bookerType, 'user'),
+					gte(reservation.startsAt, weekStart),
+					lte(reservation.startsAt, weekEnd),
+					ne(reservation.status, 'cancelled')
 				)
-				.orderBy(reservation.startsAt),
-			activeBandIds.length > 0
-				? db
-						.select()
-						.from(reservation)
-						.where(
-							and(
-								eq(reservation.bookerType, 'band'),
-								inArray(reservation.bookerId, activeBandIds),
-								gte(reservation.startsAt, weekStart),
-								lte(reservation.startsAt, weekEnd),
-								ne(reservation.status, 'cancelled')
-							)
+			)
+			.orderBy(reservation.startsAt),
+		activeBandIds.length > 0
+			? db
+					.select()
+					.from(reservation)
+					.where(
+						and(
+							eq(reservation.bookerType, 'band'),
+							inArray(reservation.bookerId, activeBandIds),
+							gte(reservation.startsAt, weekStart),
+							lte(reservation.startsAt, weekEnd),
+							ne(reservation.status, 'cancelled')
 						)
-						.orderBy(reservation.startsAt)
-				: Promise.resolve([]),
-			listUpcoming(4),
-			getAllBalances(currentUser.id),
-			getMemberSubscription(currentUser.id)
-		]);
+					)
+					.orderBy(reservation.startsAt)
+			: Promise.resolve([]),
+		listUpcoming(4),
+		getAllBalances(currentUser.id),
+		getMemberSubscription(currentUser.id),
+		isProfileComplete(currentUser.id)
+	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
 
@@ -498,6 +552,7 @@ export const getMemberDashboard = query(async () => {
 		subscription,
 		allocatedThisMonth,
 		usedThisMonth,
-		pendingInviteCount
+		pendingInviteCount,
+		profileComplete
 	};
 });

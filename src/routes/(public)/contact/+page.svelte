@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pageTitle } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
@@ -30,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<title>Contact — CorvMC</title>
+	<title>{pageTitle('Contact')}</title>
 	<meta name="description" content="Get in touch with the Corvallis Music Collective." />
 </svelte:head>
 
@@ -120,8 +121,9 @@
 							>How do I become a member?</summary
 						>
 						<div class="collapse-content text-sm" style="color: var(--fg-2)">
-							<a href={resolve('/login?redirect=/member')} class="link">Create an account</a> to get started.
-							Free memberships are available.
+							<a href={resolve('/login?register&redirect=/member')} class="link"
+								>Create an account</a
+							> to get started. Free memberships are available.
 						</div>
 					</details>
 					<details class="collapse collapse-arrow bg-base-200">
