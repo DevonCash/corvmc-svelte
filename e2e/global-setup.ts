@@ -12,6 +12,7 @@ import { readFile } from 'node:fs/promises';
 import type { FullConfig } from '@playwright/test';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
+import { seedStaffUser } from './fixtures/seed-staff-user';
 
 /**
  * Guard against a zombie `vite preview` serving a stale build.
@@ -81,4 +82,5 @@ export default async function globalSetup(config: FullConfig) {
 	}
 	await seedPayReservation();
 	await seedBandOnboarding();
+	await seedStaffUser();
 }

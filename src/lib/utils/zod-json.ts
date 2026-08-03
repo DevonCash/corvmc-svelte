@@ -28,3 +28,28 @@ export function jsonArrayField<T extends z.ZodTypeAny>(element: T, message = 'In
 		})
 		.pipe(z.array(element));
 }
+
+/**
+ * The object counterpart of {@link jsonArrayField}: a form field carrying a
+ * JSON-encoded object.
+ *
+ * Same rationale — a `JSON.parse` throw inside a transform escapes validation
+ * rather than surfacing as a field issue. Arrays and `null` are rejected too,
+ * since `typeof null === 'object'` and a caller sending `[]` for an object
+ * field is not sending an object.
+ */
+export function jsonObjectField(message = 'Invalid value') {
+	return z.string().transform((s, ctx): Record<string, unknown> => {
+		try {
+			const parsed: unknown = JSON.parse(s);
+			if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+				ctx.addIssue({ code: 'custom', message });
+				return z.NEVER;
+			}
+			return parsed as Record<string, unknown>;
+		} catch {
+			ctx.addIssue({ code: 'custom', message });
+			return z.NEVER;
+		}
+	});
+}

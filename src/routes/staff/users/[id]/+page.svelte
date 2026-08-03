@@ -26,6 +26,7 @@
 	import { Field } from '$lib/components/shared/Form';
 	import { formatDateTime, formatCents } from '$lib/utils/format';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 
@@ -47,7 +48,7 @@
 <Form remote={updateUser} guard successToast="Changes saved">
 	<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
 		{#if member.deletedAt}
-			<Badge variant="error" size="md">Deleted</Badge>
+			<Badge variant="error" size="md">Deactivated</Badge>
 		{/if}
 		<SubmitButton shortcut="mod+s">
 			{#snippet icon()}
@@ -56,8 +57,9 @@
 		</SubmitButton>
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
-			<!-- Profile card -->
+		<div class="mb-6">
+			<!-- Profile card. Single column: this is the only card in the row, and the
+			     field grid inside it already reflows on container width. -->
 			<InfoCard title="Account Info">
 				<!-- The mutation target travels as a validated field; `params.id` is
 				     caller-controlled for remote calls and must not identify the record. -->
@@ -128,7 +130,7 @@
 				<dd>{new Date(member.createdAt).toLocaleString()}</dd>
 
 				{#if member.deletedAt}
-					<dt class="opacity-60">Deleted</dt>
+					<dt class="opacity-60">Deactivated</dt>
 					<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
 				{/if}
 			</dl>
@@ -202,8 +204,15 @@
 			<span class="loading loading-spinner loading-sm"></span>
 		</div>
 	{:then payments}
-		{#if payments.length > 0}
-			<InfoCard title="Payment Records" class="mt-6">
+		<InfoCard title="Payment Records" class="mt-6">
+			{#if payments.length === 0}
+				<!-- Rendered even when empty: without it, "no payments" and "the query
+				     failed" were indistinguishable — both showed nothing at all. -->
+				<EmptyState
+					title="No payments yet"
+					description="Payments appear here once this member pays for a reservation or membership."
+				/>
+			{:else}
 				<div class="overflow-x-auto">
 					<table class="table">
 						<thead>
@@ -241,8 +250,8 @@
 						</tbody>
 					</table>
 				</div>
-			</InfoCard>
-		{/if}
+			{/if}
+		</InfoCard>
 	{:catch}
 		<Alert type="warning">Could not load payment records.</Alert>
 	{/await}

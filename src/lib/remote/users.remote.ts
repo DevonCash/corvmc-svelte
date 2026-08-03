@@ -24,7 +24,6 @@ import {
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
-import { permission } from '$lib/server/db/schema/authorization';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
@@ -64,24 +63,24 @@ export const getStaffDashboard = query(async () => {
 	startOfMonth.setDate(1);
 	startOfMonth.setHours(0, 0, 0, 0);
 
-	const [totalUsersResult, totalRolesResult, totalPermissionsResult, newUsersResult, recentUsers] =
-		await Promise.all([
-			db.select({ value: count() }).from(user),
-			db.select({ value: count() }).from(role),
-			db.select({ value: count() }).from(permission),
-			db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
-			db
-				.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
-				.from(user)
-				.orderBy(desc(user.createdAt))
-				.limit(5)
-		]);
+	// No `permissions` count: the spatie-derived permission tables are populated by
+	// the Postgres migrator and read by nothing in this app, so the stat was always
+	// 0. See src/lib/server/db/schema/authorization.ts.
+	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers] = await Promise.all([
+		db.select({ value: count() }).from(user),
+		db.select({ value: count() }).from(role),
+		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
+		db
+			.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+			.from(user)
+			.orderBy(desc(user.createdAt))
+			.limit(5)
+	]);
 
 	return {
 		stats: {
 			totalUsers: totalUsersResult[0].value,
 			totalRoles: totalRolesResult[0].value,
-			totalPermissions: totalPermissionsResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
 		recentUsers

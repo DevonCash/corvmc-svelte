@@ -109,11 +109,12 @@ available 60" — plus a 400 for a non-numeric amount.
 The row menu linked to `/staff/users/[id]/impersonate`, which does not exist (verified 404).
 Impersonation is explicitly deferred in `docs/specs/staff-bands-spec.md:206`.
 
-**Fix:** menu item removed. **Still outstanding:** `src/content/help/staff-guide/` documents
+**Fix:** menu item removed. ~~**Still outstanding:** `src/content/help/staff-guide/` documents
 impersonation as a working feature (`staff-impersonate.md`, referenced from
 `staff-users-overview.md` and `staff-edit-user.md`), and `docs/manual/README.md:133` ticks it
-off. That content should be removed or reworded — left alone here because deleting user-facing
-help is your call.
+off.~~ **Resolved in the follow-up change:** `staff-impersonate.md` deleted (the help sync
+removes orphaned static rows), both references dropped, and the manual entry unticked and
+marked blocked.
 
 ---
 
@@ -137,9 +138,12 @@ exports are intentionally public and were left alone:
 The four whose names don't self-document now carry a comment saying why they're unguarded, so
 the next sweep is cheap.
 
-**Drive-by, outside this scope:** `getUnsubscribeInfo` performs the unsubscribe as a side
+**Drive-by, outside this scope:** ~~`getUnsubscribeInfo` performs the unsubscribe as a side
 effect inside a `query` (a GET). Link-prefetching email clients and security scanners can
-unsubscribe someone who never clicked. It should be a `form`/`command`.
+unsubscribe someone who never clicked. It should be a `form`/`command`.~~
+**Resolved in the follow-up change:** split into a read-only `getUnsubscribeInfo` query and a
+`confirmUnsubscribe` form; the page now asks before writing. Regression test:
+`src/lib/remote/marketing.remote.spec.ts`.
 
 ---
 
@@ -165,36 +169,58 @@ unsubscribe someone who never clicked. It should be a `form`/`command`.
 
 ---
 
-## Follow-ups (not addressed)
+## Follow-ups
 
-1. **No audit trail.** Role grants, credit adjustments, deactivations and purges leave no
-   record of who did them. For a panel where staff can grant `admin` and move credit balances,
-   this is the highest-value gap now that the escalation hole is closed. Needs schema design.
-2. **Email is uneditable.** A typo'd signup email cannot be corrected from the panel — the most
-   common front-desk fix. Needs a staff email-change path with re-verification.
-3. **Reactivation doesn't restore what deactivation destroyed.** Copy is now honest; whether to
-   actually restore reservations/subscription is a product call.
-4. **User detail lacks the manager's context** — no reservations, no bands, no
-   subscription/membership state. Fielding "why was my booking cancelled?" means
-   cross-referencing `/staff/reservations` by hand. There is no user → bands navigation at all
-   (only band → members).
-5. **Selection persists across pages invisibly.** Selecting all on page 1, then paging to
-   page 2, leaves "20 selected" acting on rows you can't see. Consider scoping selection to the
-   page or listing the affected names in the dialog.
-6. **Dashboard "Permissions" stat is always 0.** It counts the `permissions` table, which the
-   spatie-style schema declares but nothing reads or writes. Drop the stat, or drop the unused
-   `permissions` / `model_has_permissions` / `role_has_permissions` tables.
-7. **"Deleted" vs "Deactivated" terminology.** The detail page badge says _Deleted_ for a
-   soft-deleted account while the list and body copy say _Deactivated_. A manager may think the
-   record is gone.
-8. **Payment Records card disappears when empty** — no empty state, so "no payments" and
-   "failed to load" look identical.
-9. **Detail page grid is half empty.** `lg:grid-cols-2` holds a single Account Info card, so
-   the right column is blank on wide screens.
-10. **No staff/admin e2e fixture.** Every Playwright fixture seeds a plain member, so no staff
-    route has e2e coverage. Worth adding alongside these unit tests.
-11. **`admin` and `staff` are interchangeable everywhere.** `requireStaff` accepts either and
-    nothing distinguishes them, so the `admin` role currently conveys no additional authority.
+### Resolved in the follow-up change (PR: staff audit follow-ups)
+
+5. ~~**Selection persists across pages invisibly.**~~ Selection is now scoped to the rows on
+   screen: paging, searching and changing the status filter all clear it, so the "N selected"
+   count always matches what the operator can see and verify before confirming. Covered by
+   `e2e/staff-users.e2e.ts`.
+6. ~~**Dashboard "Permissions" stat is always 0.**~~ Stat dropped; the grid is now 3-up. The
+   `permissions` / `model_has_permissions` / `role_has_permissions` tables were **kept** —
+   `scripts/migrate-from-postgres.ts` still copies the legacy Laravel grants into them, and
+   dropping them would discard rows that exist in Postgres today and cannot be recovered after
+   the cutover. `src/lib/server/db/schema/authorization.ts` now says so.
+7. ~~**"Deleted" vs "Deactivated" terminology.**~~ The detail page badge and the Details row
+   both say _Deactivated_. "Deleted" now appears only on purge, which does delete. `StatusBadge`
+   never had a deleted/deactivated variant, so nothing to change there.
+8. ~~**Payment Records card disappears when empty.**~~ The card always renders; empty shows an
+   `EmptyState`, so it is distinguishable from the `{:catch}` alert.
+9. ~~**Detail page grid is half empty.**~~ Dropped to one column.
+10. ~~**No staff/admin e2e fixture.**~~ `e2e/fixtures/seed-staff-user.ts` seeds a staff+admin
+    operator with a credential account, an edit target holding `member`, and 24 filler members
+    so the list paginates. `e2e/staff-users.e2e.ts` covers list access, a profile edit that
+    preserves roles (the end-to-end pin for defect #2), and the selection scoping above.
+
+Also resolved: the `getUnsubscribeInfo` drive-by above, the impersonation help content in
+defect #7, and the remaining `JSON.parse`-in-transform sites from defect #5 — nine in
+`directory.remote.ts` and two in `band-page-editor.remote.ts` now use `jsonArrayField()` /
+`jsonObjectField()`. The five save-form sites were the destructive ones: their `catch` returned
+`[]`, which erased the member's instruments/genres/links exactly the way defect #2 erased roles.
+Regression tests in `src/lib/remote/directory.remote.spec.ts`. The four filter sites returned
+`undefined` (non-destructive) and now report a validation issue instead.
+
+### Spec'd, not built
+
+Each of these now has a design doc in `docs/specs/`; none of them are implemented.
+
+1. **No audit trail.** → `docs/specs/audit-log-spec.md`
+2. **Email is uneditable.** → `docs/specs/staff-email-change-spec.md`
+3. **Reactivation doesn't restore what deactivation destroyed.** →
+   `docs/specs/reactivation-restore-spec.md`
+4. **User detail lacks the manager's context.** →
+   `docs/specs/staff-user-detail-context-spec.md`
+5. **`admin` and `staff` are interchangeable everywhere.** →
+   `docs/specs/admin-vs-staff-spec.md`
+
+### Found while writing those specs
+
+- **Help-article `minRole` is an exact membership test, not a hierarchy.**
+  `src/lib/server/help/help-service.ts` filters with `inArray(minRole, roles)`, so an article
+  marked `minRole: 'staff'` is invisible to a user holding only `admin`. Latent today because
+  everyone with panel access holds both; it becomes reachable the moment the `admin`/`staff`
+  split lands.
 
 ---
 

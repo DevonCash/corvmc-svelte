@@ -11,10 +11,9 @@
 
 <PageHeader title="Dashboard" />
 <PageContent>
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 		<StatCard title="Total Members" value={data.stats.totalUsers} />
 		<StatCard title="Active Roles" value={data.stats.totalRoles} />
-		<StatCard title="Permissions" value={data.stats.totalPermissions} />
 		<StatCard title="New This Month" value={data.stats.newUsersThisMonth} />
 	</div>
 
