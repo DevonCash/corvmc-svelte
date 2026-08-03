@@ -1,21 +1,12 @@
 import { marked } from 'marked';
-import { CAMPAIGN_LAYOUT } from '$lib/server/generated/email-layout-campaign';
+import { CAMPAIGN_LAYOUT } from './campaign-layout';
+import { escapeHtml } from '$lib/utils/html';
 
 // ---------------------------------------------------------------------------
 // Campaign email rendering
 // ---------------------------------------------------------------------------
-// Markdown → HTML → injected into pre-compiled MJML layout.
-// The MJML layout is compiled at build time by scripts/compile-email-layouts.ts.
+// Markdown → HTML → injected into the branded campaign layout.
 // ---------------------------------------------------------------------------
-
-function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;');
-}
 
 function markdownToHtml(markdown: string): string {
 	return marked.parse(markdown, { async: false }) as string;

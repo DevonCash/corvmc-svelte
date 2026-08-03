@@ -188,3 +188,90 @@ describe('dispatchEmailOnly', () => {
 		consoleSpy.mockRestore();
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Model normalization (generic `notification` alias only)
+// ---------------------------------------------------------------------------
+
+describe('notification model normalization', () => {
+	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
+	let dispatchEmailOnly: (params: any) => Promise<void>;
+
+	beforeEach(async () => {
+		vi.resetAllMocks();
+		sendEmailWithTemplate = (await import('./email/postmark-client'))
+			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
+		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
+	});
+
+	async function sentModel(model: Record<string, unknown>) {
+		await dispatchEmailOnly({
+			type: 'contact_form',
+			toEmail: 'staff@example.com',
+			templateAlias: 'notification',
+			model
+		});
+		return sendEmailWithTemplate.mock.calls[0][0].model;
+	}
+
+	it('derives preview_text from the first paragraph when unset', async () => {
+		const model = await sentModel({
+			subject: 's',
+			heading: 'Reservation Cancelled',
+			paragraphs: [{ text: 'Your reservation has been cancelled.' }]
+		});
+
+		expect(model.preview_text).toBe('Your reservation has been cancelled.');
+	});
+
+	it('falls back to the heading when there are no paragraphs', async () => {
+		const model = await sentModel({ subject: 's', heading: 'Reservation Cancelled' });
+
+		expect(model.preview_text).toBe('Reservation Cancelled');
+	});
+
+	it('does not overwrite a preview_text the caller wrote', async () => {
+		const model = await sentModel({
+			subject: 's',
+			heading: 'h',
+			preview_text: 'May 21, 10:00 AM – 11:00 AM',
+			paragraphs: [{ text: 'Generic opening line.' }]
+		});
+
+		expect(model.preview_text).toBe('May 21, 10:00 AM – 11:00 AM');
+	});
+
+	it('sets has_details only when there are rows', async () => {
+		expect((await sentModel({ subject: 's', heading: 'h' })).has_details).toBe(false);
+
+		vi.clearAllMocks();
+		const withRows = await sentModel({
+			subject: 's',
+			heading: 'h',
+			details: [{ label: 'Date', value: 'May 21' }]
+		});
+		expect(withRows.has_details).toBe(true);
+	});
+
+	it('escapes the quote and keeps a raw copy for the text part', async () => {
+		const model = await sentModel({
+			subject: 's',
+			heading: 'h',
+			quote: '<b>hi</b>\nsecond line'
+		});
+
+		expect(model.quote).toBe('&lt;b&gt;hi&lt;/b&gt;<br />second line');
+		expect(model.quote_text).toBe('<b>hi</b>\nsecond line');
+	});
+
+	it('leaves models for other templates untouched', async () => {
+		await dispatchEmailOnly({
+			type: 'ticket_confirmation',
+			toEmail: 'buyer@example.com',
+			templateAlias: 'ticket-confirmation',
+			model: { attendeeName: 'Ada' }
+		});
+
+		expect(sendEmailWithTemplate.mock.calls[0][0].model).toEqual({ attendeeName: 'Ada' });
+	});
+});

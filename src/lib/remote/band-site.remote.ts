@@ -120,10 +120,6 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 // Band Site Contact Form — public, delivers to the band's booking contact
 // ---------------------------------------------------------------------------
 
-function escapeHtml(text: string): string {
-	return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 const contactFormSchema = z.object({
 	slug: z.string().min(1).max(200),
 	name: z.string().trim().min(1).max(200),
@@ -176,14 +172,16 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	const model: NotificationEmailModel = {
 		subject: `New message from your band site — ${bandRow.name}`,
 		heading: 'New band site message',
+		preview_text: `${data.name}: ${data.message.slice(0, 100)}`,
 		paragraphs: [
-			{ text: `Someone sent a message through the contact form on your ${bandRow.name} site:` },
-			{ text: escapeHtml(data.message).replace(/\n/g, '<br>') }
+			{ text: `Someone sent a message through the contact form on your ${bandRow.name} site.` }
 		],
 		details: [
 			{ label: 'From', value: data.name },
 			{ label: 'Email', value: data.email }
 		],
+		// Raw — the dispatcher escapes it and preserves the line breaks.
+		quote: data.message,
 		footnote: 'Reply directly to the sender at the email address above.'
 	};
 

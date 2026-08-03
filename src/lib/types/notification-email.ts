@@ -16,18 +16,40 @@ export interface NotificationEmailCta {
 export interface NotificationEmailModel {
 	/** Email subject line (rendered by the template's `{{subject}}`) */
 	subject: string;
-	/** Hidden preview text shown in the inbox list */
+	/**
+	 * Hidden preview text shown in the inbox list beside the subject.
+	 * Left unset, `normalizeNotificationModel` derives one from the body.
+	 */
 	preview_text?: string;
-	/** Bold lead line at the top of the body */
+	/** Display headline at the top of the body */
 	heading: string;
 	/** Optional greeting line, e.g. "Hi Ada," */
 	greeting?: string;
-	/** Body paragraphs, rendered in order (inline HTML allowed) */
+	/** Body paragraphs, rendered in order. Plain text — the template escapes HTML. */
 	paragraphs?: { text: string }[];
-	/** Optional "Label: value" rows */
+	/** Optional rows for the "details" card. Plain text — the template escapes HTML. */
 	details?: NotificationEmailDetail[];
+	/**
+	 * Optional block of user-generated text, rendered in a callout box.
+	 *
+	 * Pass the **raw** string. `normalizeNotificationModel` escapes it and
+	 * converts newlines to `<br />`, so callers cannot forget to escape it.
+	 */
+	quote?: string;
 	/** Optional call-to-action button */
 	cta?: NotificationEmailCta;
 	/** Optional small footnote below the body */
 	footnote?: string;
+}
+
+/**
+ * The shape actually sent to Postmark: `NotificationEmailModel` plus the fields
+ * `normalizeNotificationModel` derives, which the templates need but callers
+ * should never have to set.
+ */
+export interface NotificationEmailPayload extends NotificationEmailModel {
+	/** True when `details` is a non-empty array — guards the card wrapper. */
+	has_details?: boolean;
+	/** Plain-text counterpart of `quote`, for the text/plain part. */
+	quote_text?: string;
 }

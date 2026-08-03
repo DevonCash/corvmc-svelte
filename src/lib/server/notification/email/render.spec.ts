@@ -1,0 +1,137 @@
+import { describe, it, expect } from 'vitest';
+import { renderTemplate } from './render-preview';
+import { FIXTURES } from './fixtures';
+import { normalizeNotificationModel } from './normalize-model';
+
+// ---------------------------------------------------------------------------
+// Postmark template rendering
+// ---------------------------------------------------------------------------
+// Renders the real files in postmark/templates/ with the local Handlebars
+// renderer. `pnpm email:validate` is the authoritative check (it runs Postmark's
+// own Mustachio), but that needs credentials and a network call — these tests
+// catch the same class of breakage in CI: broken loops, misspelled model keys,
+// unclosed blocks, and lost escaping.
+// ---------------------------------------------------------------------------
+
+const byName = (name: string) => {
+	const fixture = FIXTURES.find((f) => f.name === name);
+	if (!fixture) throw new Error(`No fixture named ${name}`);
+	return renderTemplate(fixture.alias, fixture.model);
+};
+
+describe.each(FIXTURES)('$name', (fixture) => {
+	const { html, text } = renderTemplate(fixture.alias, fixture.model);
+
+	it('leaves no unresolved template tags in the HTML part', () => {
+		expect(html).not.toMatch(/\{\{/);
+	});
+
+	it('leaves no unresolved template tags in the text part', () => {
+		expect(text).not.toMatch(/\{\{/);
+	});
+
+	it('populates the hidden preheader', () => {
+		// The preheader div is the first element in <body>; assert it has content.
+		const preheader = html.match(/mso-hide:all[^>]*>([^<]*)</)?.[1] ?? '';
+		expect(preheader.trim()).not.toBe('');
+	});
+
+	it('renders the brand chrome from the layout', () => {
+		// Tri-stripe, in order, plus the parchment footer.
+		expect(html).toMatch(/#00859b[\s\S]*#ffb500[\s\S]*#f84d13/);
+		expect(html).toContain('https://corvmc.org/email/cmc-speaker.png');
+		expect(html).toContain('6775 SW Philomath Blvd');
+	});
+
+	it('links to notification preferences in the footer', () => {
+		expect(html).toContain('https://corvmc.org/member/account');
+	});
+});
+
+describe('notification — optional blocks', () => {
+	it('omits the details card, CTA and quote when the model has none', () => {
+		const { html } = byName('notification-minimal');
+		expect(html).not.toContain('class="pass-card"');
+		expect(html).not.toContain('class="btn-cell"');
+		expect(html).not.toContain('class="quote-bg"');
+	});
+
+	it('renders one details card containing every row', () => {
+		const { html } = byName('notification-full');
+		expect(html.match(/class="pass-card"/g)).toHaveLength(1);
+		for (const value of ['Main Practice', 'Indigo Kiss', '7:00 PM – 9:00 PM']) {
+			expect(html).toContain(value);
+		}
+	});
+
+	it('puts the CTA url in an href in both parts', () => {
+		const { html, text } = byName('notification-full');
+		expect(html).toContain('href="https://corvmc.org/member/reservations"');
+		expect(text).toContain('https://corvmc.org/member/reservations');
+	});
+
+	it('renders the quote callout only when a quote is present', () => {
+		expect(byName('notification-with-quote').html).toContain('class="quote-bg"');
+		expect(byName('notification-full').html).not.toContain('class="quote-bg"');
+	});
+});
+
+describe('notification — escaping', () => {
+	const { html, text } = byName('notification-escaping');
+
+	it('escapes HTML in paragraphs, heading, details and footnote', () => {
+		// Assert the angle brackets are neutralised, not the exact entity soup —
+		// engines differ on which extra characters they escape (Handlebars also
+		// escapes `=`), and pinning that would make this a renderer test.
+		expect(html).not.toContain('<script>');
+		expect(html).not.toContain('<i>footnote</i>');
+		// The layout has a legitimate logo <img>; no injected one survives as a tag.
+		expect(html).not.toMatch(/<img[^>]*onerror/i);
+		expect(html).toContain('&lt;script&gt;');
+		expect(html).toContain('&lt;img');
+	});
+
+	it('escapes the text part too', () => {
+		expect(text).not.toContain('<script>');
+	});
+
+	it('escapes a quote through the normalizer and keeps its line breaks', () => {
+		const model = normalizeNotificationModel({
+			subject: 's',
+			heading: 'h',
+			quote: '<img onerror=x>\nline2'
+		});
+		expect(model.quote).toBe('&lt;img onerror=x&gt;<br />line2');
+		expect(model.quote_text).toBe('<img onerror=x>\nline2');
+	});
+});
+
+describe('ticket-confirmation', () => {
+	it('renders every ticket code', () => {
+		const { html, text } = byName('ticket-multiple');
+		for (const code of ['CMC-4K2P-9XQ1', 'CMC-7B3M-2LZ8', 'CMC-1N9V-6RT4']) {
+			expect(html).toContain(code);
+			expect(text).toContain(code);
+		}
+	});
+
+	it('uses plural copy for several tickets', () => {
+		const { html } = byName('ticket-multiple');
+		expect(html).toContain('3 tickets');
+		expect(html).toContain('these codes');
+	});
+
+	it('uses singular copy for one ticket', () => {
+		const { html } = byName('ticket-single');
+		expect(html).toContain('a ticket');
+		expect(html).toContain('this code');
+		expect(html).not.toContain('these codes');
+	});
+});
+
+describe('inbox-reply', () => {
+	it('renders the staff-authored body as HTML — the one documented raw field', () => {
+		const { html } = byName('inbox-reply');
+		expect(html).toContain('<p>Thanks for reaching out');
+	});
+});

@@ -120,11 +120,34 @@ Push: `postmark templates push postmark/templates --server-token $POSTMARK_SERVE
 - [x] 7. Refactor inbox `channel-dispatcher.ts`
 - [x] 8. Extend `checkEmailService()` to verify template aliases exist (`REQUIRED_TEMPLATE_ALIASES`)
 - [x] 9. Delete templates.ts / html-helpers.ts / compile-template.ts + generated transactional layout; update email/index.ts (also removed now-dead raw `sendEmail`)
-- [x] 10. Trim `scripts/compile-email-layouts.ts` to campaign-only (+ TODO for future campaign migration)
+- [x] 10. Trim `scripts/compile-email-layouts.ts` to campaign-only (+ TODO for future campaign migration) — **superseded**: the script and the `mjml` dep are gone, replaced by `src/lib/server/marketing/campaign-layout.ts`
 - [x] 11. Update tests — dispatcher.spec + notification-listeners.spec rewritten to assert template alias + model (25 tests pass)
-- [x] 12. `pnpm check` — transactional-layout error gone; only the pre-existing `email-layout-campaign` build-artifact error remains
-- [ ] 13. **(needs Postmark creds)** First `pnpm email:push` to the prod Postmark server; send-test each alias
+- [x] 12. `pnpm check` — transactional-layout error gone; only the pre-existing `email-layout-campaign` build-artifact error remains. **Now also resolved** by the campaign-layout move: `pnpm check` reports 0 errors.
+- [ ] 13. **(needs Postmark creds)** First `pnpm email:push` to the prod Postmark server; send-test each alias. Run `pnpm email:validate` first — it renders every template through real Mustachio without sending.
 - [ ] 14. **(deploy is manual)** Run `pnpm email:push` BEFORE `wrangler deploy` — otherwise transactional sends fail with template-not-found. Make this a deploy-runbook step.
+- [ ] 15. **(deploy sequencing)** Deploy static assets BEFORE `email:push`. The layout hardcodes `https://corvmc.org/email/cmc-speaker.png` (Postmark templates can't read env), so the logo 404s in every email until `static/email/` is live.
+
+## Brand redesign (2026-08)
+
+The templates were restyled onto the CMC identity — see
+`design-system/project/email_templates/` for the reference designs this ports.
+Notes that affect how you edit them:
+
+- **Palette**: the design-system hexes (`#e5771e`, `#00859b`, `#003b5c`, …), which
+  is what `cmc-speaker.png` is drawn in. Mirrored in `src/lib/email/brand.ts`;
+  `src/lib/email/brand.spec.ts` fails if a template introduces a non-brand hex or
+  reorders the tri-stripe.
+- **Iteration syntax**: Mustachio accepts both `{{#each xs}}` and `{{#xs}}`, but the
+  local preview renderer (Handlebars) only accepts `{{#each}}`. Use `{{#each}}`.
+- **`has_details`**: the details-card wrapper is guarded by a derived boolean, not by
+  `{{#details}}` — a bare section over an array _iterates_ in both engines and would
+  repeat the whole card per row. `normalizeNotificationModel` sets it.
+- **Escaping**: `{{{…}}}` survives in exactly two places — `notification`'s `quote`
+  (fed only through `normalizeNotificationModel`, which escapes it and converts
+  newlines to `<br />`) and `inbox-reply`'s `body` (staff-authored). Everything else
+  is escaped by the engine, so listeners must pass plain text.
+- **Preview locally**: `pnpm email:preview`, then open `.email-preview/index.html`.
+  It rewrites the logo URL to a local copy so the header renders before deploy.
 
 ## ⚠️ Deploy sequencing
 
