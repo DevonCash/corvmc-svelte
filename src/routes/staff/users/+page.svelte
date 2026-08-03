@@ -33,6 +33,7 @@
 		searchTimer = setTimeout(() => {
 			searchDebounced = search;
 			page = 1;
+			selected.clear();
 		}, 300);
 	}
 
@@ -66,6 +67,13 @@
 	];
 
 	// Selection (active users only — deactivated rows can't be deactivated again).
+	//
+	// Scoped to the rows currently on screen: every navigation that changes which
+	// rows are visible (paging, searching, switching status filter) clears it.
+	// Selection used to survive paging, so "select all" on page 1 then paging to
+	// page 2 left the bar reading "20 selected" over rows the operator could not
+	// see — and Deactivate acted on all of them. Keeping the count equal to what
+	// is on screen makes the bulk action verifiable before it is confirmed.
 	let selected = new SvelteSet<string>();
 	const { fields: bulkFields } = bulkDeactivateUsers;
 
@@ -92,6 +100,12 @@
 	// change handler fires; reset paging + selection for the new filter.
 	function onStatusChange() {
 		page = 1;
+		selected.clear();
+	}
+
+	function goToPage(p: number) {
+		if (p === page) return;
+		page = p;
 		selected.clear();
 	}
 </script>
@@ -249,11 +263,7 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
+			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={goToPage} />
 		{/if}
 	{/await}
 </PageContent>

@@ -75,6 +75,16 @@ export const subscribeToAudience = form(
 	}
 );
 
+/**
+ * Resolve an unsubscribe token for display. **Read-only.**
+ *
+ * This is a `query`, so it answers a GET. It used to call `unsubscribe()` here,
+ * which meant anything that fetches a URL without a person deciding to —
+ * link-prefetching mail clients, corporate URL-rewriting security scanners,
+ * chat unfurlers — silently unsubscribed the recipient just for receiving or
+ * forwarding the email. The write now lives in `confirmUnsubscribe` below and
+ * only happens on an explicit POST.
+ */
 export const getUnsubscribeInfo = query(z.string(), async (token) => {
 	await requireFeature('emailMarketing');
 	const decoded = verifyUnsubscribeToken(token);
@@ -83,9 +93,32 @@ export const getUnsubscribeInfo = query(z.string(), async (token) => {
 	const aud = await getAudience(decoded.audienceId);
 	if (!aud) return { valid: false as const, audienceName: null };
 
-	await unsubscribe(decoded.subscriberId, decoded.audienceId);
 	return { valid: true as const, audienceName: aud.name };
 });
+
+/**
+ * Perform the unsubscribe. POST-only, from the confirm button on the
+ * unsubscribe page.
+ *
+ * Separate from the RFC 8058 one-click handler in
+ * `src/routes/(public)/unsubscribe/[token]/+page.server.ts`: that one serves
+ * mail clients that POST the URL with no UI at all, and is deliberately not
+ * feature-gated. This one is the human-facing path.
+ */
+export const confirmUnsubscribe = form(
+	z.object({ token: z.string().min(1) }),
+	async ({ token }) => {
+		await requireFeature('emailMarketing');
+		const decoded = verifyUnsubscribeToken(token);
+		if (!decoded) return { valid: false as const, audienceName: null };
+
+		const aud = await getAudience(decoded.audienceId);
+		if (!aud) return { valid: false as const, audienceName: null };
+
+		await unsubscribe(decoded.subscriberId, decoded.audienceId);
+		return { valid: true as const, audienceName: aud.name };
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Staff queries

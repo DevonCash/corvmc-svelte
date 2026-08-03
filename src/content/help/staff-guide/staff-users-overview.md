@@ -26,8 +26,6 @@ Each row has a menu to:
 
 - **View details** — Open the [user detail page](/member/help/staff-edit-user).
 - **Copy email** — Grab the address.
-- **[Impersonate](/member/help/staff-impersonate)** — View the app as that user
-  for support.
 
 ## Related
 
