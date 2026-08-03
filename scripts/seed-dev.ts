@@ -1015,7 +1015,7 @@ async function seedCreditTransactions(users: SeedUser[]) {
 			creditType: 'free_hours',
 			amount: hours,
 			balanceAfter: hours,
-			source: 'subscription_allocation',
+			source: 'monthly_allocation',
 			description: 'Monthly free hours allocation',
 			metadata: { period: 'May 2026' }
 		});

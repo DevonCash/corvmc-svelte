@@ -24,7 +24,8 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import { Field } from '$lib/components/shared/Form';
-	import { formatDateTime, formatCents } from '$lib/utils/format';
+	import Table from '$lib/components/shared/Table.svelte';
+	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -204,43 +205,36 @@
 	{:then payments}
 		{#if payments.length > 0}
 			<InfoCard title="Payment Records" class="mt-6">
-				<div class="overflow-x-auto">
-					<table class="table">
-						<thead>
-							<tr>
-								<th>Date</th>
-								<th class="w-px">Amount</th>
-								<th class="w-px">Method</th>
-								<th class="w-px">Status</th>
-								<th class="w-px">Record</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each payments as p (p.id)}
-								<tr class="hover">
-									<td>{formatDateTime(new Date(p.paidAt))}</td>
-									<td class="w-px"><span class="font-medium">{formatCents(p.amountCents)}</span></td
-									>
-									<td class="w-px"><Badge variant="outline">{p.paymentMethod}</Badge></td>
-									<td class="w-px"><StatusBadge status={p.status} /></td>
-									<td class="w-px">
-										<div class="flex items-center gap-2">
-											<CopyableId value={p.id} label="Stripe" />
-											{#if p.reservationId}
-												<Button
-													href="/staff/reservations/{p.reservationId}"
-													class="btn-ghost btn-xs"
-												>
-													View
-												</Button>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">Status</span></th>
+						<th>Paid</th>
+						<th class="cell-num">Amount</th>
+						<th class="col-extra">Record</th>
+					{/snippet}
+					{#each payments as p (p.id)}
+						<tr class="hover">
+							<td class="w-px"><StatusBadge status={p.status} /></td>
+							<td class="cell-primary">
+								<div class="font-medium whitespace-nowrap">
+									{formatDateTimeShort(new Date(p.paidAt))}
+								</div>
+								<div class="text-sm opacity-60">{p.paymentMethod}</div>
+							</td>
+							<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
+							<td class="col-extra">
+								<div class="flex items-center gap-2">
+									<CopyableId value={p.id} label="Stripe" />
+									{#if p.reservationId}
+										<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+											View
+										</Button>
+									{/if}
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</Table>
 			</InfoCard>
 		{/if}
 	{:catch}

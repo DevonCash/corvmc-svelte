@@ -18,7 +18,10 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import Table from '$lib/components/shared/Table.svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
+	import { formatDateShort } from '$lib/utils/format';
 
 	let articles = $derived(await getStaffArticles());
 	let categories = $derived(await getStaffCategories());
@@ -108,38 +111,31 @@
 	{#if articles.length === 0}
 		<EmptyState message="No help articles yet. Create one to get started." />
 	{:else}
-		<div class="overflow-x-auto">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Title</th>
-						<th>Category</th>
-						<th class="w-px">Status</th>
-						<th class="w-px">Source</th>
-						<th class="w-px">Role</th>
-						<th class="w-px">Updated</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each articles as a (a.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() => (window.location.href = `/staff/help/${a.id}`)}
-						>
-							<td>{a.title}</td>
-							<td>{categoryMap[a.categoryId] ?? '—'}</td>
-							<td class="w-px"><StatusBadge status={a.published ? 'published' : 'draft'} /></td>
-							<td class="w-px">
-								<span class="badge badge-xs {a.source === 'static' ? 'badge-info' : 'badge-ghost'}"
-									>{a.source}</span
-								>
-							</td>
-							<td class="w-px"><span class="text-xs">{a.minRole}</span></td>
-							<td class="w-px">{formatDate(a.updatedAt)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th>Article</th>
+				<th class="col-support w-px">Source</th>
+				<th class="col-extra w-px">Role</th>
+				<th class="col-support whitespace-nowrap">Updated</th>
+			{/snippet}
+			{#each articles as a (a.id)}
+				{@const href = resolve(`/staff/help/${a.id}`)}
+				<tr class="hover cursor-pointer" use:rowLink={href}>
+					<td class="w-px"><StatusBadge status={a.published ? 'published' : 'draft'} /></td>
+					<!-- Category was its own column; it qualifies the title, so it is the
+					     subline. -->
+					<td class="cell-primary">
+						<a {href} class="block truncate font-medium hover:underline">{a.title}</a>
+						<div class="truncate text-sm opacity-60">{categoryMap[a.categoryId] ?? '—'}</div>
+					</td>
+					<td class="col-support w-px">
+						<Badge size="xs" variant={a.source === 'static' ? 'info' : 'ghost'}>{a.source}</Badge>
+					</td>
+					<td class="col-extra w-px"><span class="text-xs">{a.minRole}</span></td>
+					<td class="col-support whitespace-nowrap">{formatDateShort(a.updatedAt)}</td>
+				</tr>
+			{/each}
+		</Table>
 	{/if}
 </PageContent>

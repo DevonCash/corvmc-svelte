@@ -1,9 +1,13 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
+	import { relativeDay } from '$lib/utils/format';
 	import { inboxChannels, inboxThreadStatuses } from '$lib/config';
 	import { getInboxThreads, getInboxEnabledChannels } from '$lib/remote/inbox.remote';
 	import {
@@ -30,7 +34,9 @@
 		messenger: 'Messenger'
 	};
 
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let statusFilter = $state('');
 	let channelFilter = $state('');
 	let page = $state(1);
@@ -38,10 +44,10 @@
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -56,12 +62,12 @@
 	let result = $derived(getInboxThreads(filters));
 	let enabledChannels = $derived(getInboxEnabledChannels());
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || statusFilter || channelFilter);
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (statusFilter ? 1 : 0) + (channelFilter ? 1 : 0)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		statusFilter = '';
 		channelFilter = '';
@@ -71,17 +77,20 @@
 
 <PageHeader title="Inbox" />
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
-			placeholder="Search..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		{#await enabledChannels then channels}
 			<select
 				class="select select-bordered select-sm"
+				aria-label="Channel"
 				value={channelFilter}
 				onchange={(e) => {
 					channelFilter = (e.currentTarget as HTMLSelectElement).value;
@@ -96,6 +105,7 @@
 		{/await}
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Status"
 			value={statusFilter}
 			onchange={(e) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
@@ -107,74 +117,59 @@
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
 		</select>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: threads, pagination }}
-		{#if threads.length === 0}
-			<p class="text-center opacity-60 py-8">No conversations found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="w-px">Channel</th>
-							<th>Contact</th>
-							<th>Subject / Preview</th>
-							<th class="w-px">Status</th>
-							<th>Assigned</th>
-							<th class="w-px">Last Message</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each threads as t (t.id)}
-							{@const ChannelIcon = channelIcons[t.channel] ?? IconWorld}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/inbox/${t.id}`)}
-							>
-								<td class="w-px">
-									<span class="tooltip" data-tip={channelLabels[t.channel]}>
-										<ChannelIcon size={18} />
-									</span>
-								</td>
-								<td>
-									<div class="font-medium">
-										{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
-									</div>
-									{#if t.contactEmail && t.contactName}
-										<div class="text-xs opacity-60">{t.contactEmail}</div>
-									{/if}
-								</td>
-								<td>
-									{#if t.subject}
-										<div class="font-medium text-sm">{t.subject}</div>
-									{/if}
-									{#if t.preview}
-										<div class="text-xs opacity-60 max-w-xs truncate">{t.preview}</div>
-									{/if}
-								</td>
-								<td class="w-px"><StatusBadge status={t.status} label /></td>
-								<td class="text-sm">{t.assignedToName ?? '—'}</td>
-								<td class="w-px whitespace-nowrap text-sm">
-									{t.lastMessageAt ? formatDateTime(t.lastMessageAt) : '—'}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+	<DataList {result} empty="No conversations found" onpage={(p) => (page = p)}>
+		{#snippet children(threads)}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Channel</span></th>
+					<th>Conversation</th>
+					<th class="w-px">Status</th>
+					<th class="col-extra">Assigned</th>
+					<th class="col-support whitespace-nowrap">Last message</th>
+				{/snippet}
+
+				{#each threads as t (t.id)}
+					{@const ChannelIcon = channelIcons[t.channel] ?? IconWorld}
+					{@const href = resolve(`/staff/inbox/${t.id}`)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px">
+							<span class="tooltip" data-tip={channelLabels[t.channel]}>
+								<ChannelIcon size={18} />
+							</span>
+						</td>
+
+						<!--
+							Contact, subject and preview were three columns' worth of content
+							across two columns; as one cell they fit a phone. `min-w-0` +
+							`truncate` is what keeps the preview from forcing the table wide —
+							that overflow clipped the timestamp column even at 1280.
+						-->
+						<td class="cell-primary">
+							<div class="flex min-w-0 items-baseline gap-2">
+								<!-- The contact is the identifier, so it takes its full width and
+								     the subject absorbs the truncation. -->
+								<a {href} class="shrink-0 font-medium hover:underline">
+									{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
+								</a>
+								{#if t.subject}
+									<span class="truncate text-sm opacity-70">{t.subject}</span>
+								{/if}
+							</div>
+							{#if t.preview}
+								<div class="truncate text-sm opacity-60">{t.preview}</div>
+							{/if}
+						</td>
+
+						<td class="w-px"><StatusBadge status={t.status} label /></td>
+						<td class="col-extra text-sm">{t.assignedToName ?? '—'}</td>
+						<td class="col-support text-sm whitespace-nowrap">
+							{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>
