@@ -42,6 +42,11 @@ function parseFrontmatter(content: string): { meta: ArticleFrontmatter; body: st
 	return { meta: meta as unknown as ArticleFrontmatter, body: match[2].trim() };
 }
 
+// Mirrors ROLE_LEVEL in src/lib/server/help/help-service.ts: lower is more
+// privileged, so a higher number means a more permissive audience.
+const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
+const roleLevel = (role: string) => ROLE_LEVEL[role] ?? 3;
+
 function findMarkdownFiles(dir: string): string[] {
 	const files: string[] = [];
 	for (const entry of readdirSync(dir)) {
@@ -73,9 +78,25 @@ async function main() {
 		articles.push({ meta, body, file: relative(CONTENT_DIR, file) });
 	}
 
+	// A category is only as restricted as its most permissive article: a
+	// staff-only category (every article minRole=staff) must not be listed to
+	// members, but a mixed category should stay member-visible and simply hide
+	// the staff articles inside it. Without this the category row falls back to
+	// the schema default of 'member' and "Staff Guide" shows up on /member/help
+	// as an empty card.
+	const categoryMinRole = new Map<string, string>();
+	for (const { meta } of articles) {
+		const role = meta.minRole ?? 'member';
+		const current = categoryMinRole.get(meta.category);
+		if (current === undefined || roleLevel(role) > roleLevel(current)) {
+			categoryMinRole.set(meta.category, role);
+		}
+	}
+
 	// Upsert categories
 	const categoryIdMap = new Map<string, string>();
 	for (const slug of categorySlugs) {
+		const minRole = categoryMinRole.get(slug) ?? 'member';
 		const existing = await db
 			.select({ id: helpCategory.id })
 			.from(helpCategory)
@@ -83,19 +104,28 @@ async function main() {
 			.limit(1);
 
 		if (existing.length > 0) {
+			// Update rather than only mapping the id — categories created before
+			// minRole was derived would otherwise keep the 'member' default forever.
+			await db.update(helpCategory).set({ minRole }).where(eq(helpCategory.id, existing[0].id));
 			categoryIdMap.set(slug, existing[0].id);
 		} else {
 			const name = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 			const [cat] = await db
 				.insert(helpCategory)
-				.values({ name, slug, sortOrder: categoryIdMap.size })
+				.values({ name, slug, minRole, sortOrder: categoryIdMap.size })
 				.returning();
 			categoryIdMap.set(slug, cat.id);
-			console.log(`  Created category: ${name} (${slug})`);
+			console.log(`  Created category: ${name} (${slug}, minRole=${minRole})`);
 		}
 	}
 
-	// Upsert articles
+	// Upsert articles.
+	//
+	// Syncing never publishes. New articles land as drafts for a human to read
+	// and publish from Staff -> Help, and an update deliberately leaves the
+	// `published` column alone: re-syncing must not resurrect something a staff
+	// member unpublished, nor silently publish a draft the moment its markdown
+	// changes.
 	const syncedSlugs: string[] = [];
 	for (const { meta, body } of articles) {
 		const categoryId = categoryIdMap.get(meta.category)!;
@@ -117,7 +147,6 @@ async function main() {
 					content: body,
 					minRole: meta.minRole ?? 'member',
 					sortOrder: meta.sortOrder ?? 0,
-					published: true,
 					updatedAt: new Date()
 				})
 				.where(eq(helpArticle.id, existing[0].id));
@@ -131,10 +160,10 @@ async function main() {
 				content: body,
 				source: 'static',
 				minRole: meta.minRole ?? 'member',
-				published: true,
+				published: false,
 				sortOrder: meta.sortOrder ?? 0
 			});
-			console.log(`  Created: ${meta.title}`);
+			console.log(`  Created (draft): ${meta.title}`);
 		}
 	}
 

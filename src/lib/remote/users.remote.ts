@@ -49,6 +49,7 @@ import {
 	UserHasLinkedRecordsError
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { isProfileComplete } from '$lib/server/directory/directory-service';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -474,40 +475,47 @@ export const getMemberDashboard = query(async () => {
 		.from(bandMember)
 		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
 
-	const [weekReservations, bandWeekReservations, upcomingEvents, credits, dbSubscription] =
-		await Promise.all([
-			db
-				.select()
-				.from(reservation)
-				.where(
-					and(
-						eq(reservation.createdByUserId, currentUser.id),
-						eq(reservation.bookerType, 'user'),
-						gte(reservation.startsAt, weekStart),
-						lte(reservation.startsAt, weekEnd),
-						ne(reservation.status, 'cancelled')
-					)
+	const [
+		weekReservations,
+		bandWeekReservations,
+		upcomingEvents,
+		credits,
+		dbSubscription,
+		profileComplete
+	] = await Promise.all([
+		db
+			.select()
+			.from(reservation)
+			.where(
+				and(
+					eq(reservation.createdByUserId, currentUser.id),
+					eq(reservation.bookerType, 'user'),
+					gte(reservation.startsAt, weekStart),
+					lte(reservation.startsAt, weekEnd),
+					ne(reservation.status, 'cancelled')
 				)
-				.orderBy(reservation.startsAt),
-			activeBandIds.length > 0
-				? db
-						.select()
-						.from(reservation)
-						.where(
-							and(
-								eq(reservation.bookerType, 'band'),
-								inArray(reservation.bookerId, activeBandIds),
-								gte(reservation.startsAt, weekStart),
-								lte(reservation.startsAt, weekEnd),
-								ne(reservation.status, 'cancelled')
-							)
+			)
+			.orderBy(reservation.startsAt),
+		activeBandIds.length > 0
+			? db
+					.select()
+					.from(reservation)
+					.where(
+						and(
+							eq(reservation.bookerType, 'band'),
+							inArray(reservation.bookerId, activeBandIds),
+							gte(reservation.startsAt, weekStart),
+							lte(reservation.startsAt, weekEnd),
+							ne(reservation.status, 'cancelled')
 						)
-						.orderBy(reservation.startsAt)
-				: Promise.resolve([]),
-			listUpcoming(4),
-			getAllBalances(currentUser.id),
-			getMemberSubscription(currentUser.id)
-		]);
+					)
+					.orderBy(reservation.startsAt)
+			: Promise.resolve([]),
+		listUpcoming(4),
+		getAllBalances(currentUser.id),
+		getMemberSubscription(currentUser.id),
+		isProfileComplete(currentUser.id)
+	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
 
@@ -545,6 +553,7 @@ export const getMemberDashboard = query(async () => {
 		subscription,
 		allocatedThisMonth,
 		usedThisMonth,
-		pendingInviteCount
+		pendingInviteCount,
+		profileComplete
 	};
 });

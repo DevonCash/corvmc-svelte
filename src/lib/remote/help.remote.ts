@@ -5,6 +5,7 @@ import { requireStaff } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listCategories,
+	listNonEmptyCategories,
 	listArticlesByCategory,
 	getArticleBySlug,
 	searchArticles,
@@ -46,7 +47,7 @@ async function requireUserWithRole() {
 export const getMemberCategories = query(z.void(), async () => {
 	await requireFeature('helpArticles');
 	const { role } = await requireUserWithRole();
-	const categories = await listCategories(role);
+	const categories = await listNonEmptyCategories(role);
 
 	const categoriesWithArticles = await Promise.all(
 		categories.map(async (cat) => ({

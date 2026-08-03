@@ -109,7 +109,8 @@
 					<li>• Member directory access</li>
 					<li>• RSVP to events</li>
 				</ul>
-				<Button href="/login?redirect=/member" class="btn-outline mt-auto">Create an Account</Button
+				<Button href="/login?register&redirect=/member" class="btn-outline mt-auto"
+					>Create an Account</Button
 				>
 			</div>
 
@@ -133,7 +134,7 @@
 					<li>• Ticket discounts &amp; gear perks</li>
 				</ul>
 				<a
-					href={resolve('/login?redirect=/member/membership')}
+					href={resolve('/login?register&redirect=/member/membership')}
 					class="btn btn-sm mt-auto"
 					style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)"
 				>
@@ -203,7 +204,7 @@
 						{tier.body}
 					</p>
 					<a
-						href={resolve('/login?redirect=/member/membership')}
+						href={resolve('/login?register&redirect=/member/membership')}
 						class="btn btn-sm btn-wide mt-auto"
 						style={tier.featured
 							? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'

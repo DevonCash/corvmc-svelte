@@ -31,6 +31,15 @@
 		</Alert>
 	{/if}
 
+	<!-- Resolves itself the moment the profile has anything on it, so it needs no
+	     dismiss control and can't be permanently silenced by accident. States the
+	     consequence rather than issuing an instruction, and never blocks the page. -->
+	{#if !data.profileComplete}
+		<Alert type="info" href="/member/profile" class="shadow-sm">
+			Add your instruments or a short bio so other members can find you in the directory.
+		</Alert>
+	{/if}
+
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 		<Button href="/member/reservations" class="card bg-base-100 h-auto">
@@ -123,7 +132,11 @@
 	<!-- Upcoming events -->
 	<InfoCard title="Upcoming Events">
 		{#if data.upcomingEvents.length === 0}
-			<EmptyState message="No events on the horizon." />
+			<EmptyState
+				message="No events on the horizon."
+				actionLabel="Browse events"
+				actionHref="/member/events"
+			/>
 		{:else}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}

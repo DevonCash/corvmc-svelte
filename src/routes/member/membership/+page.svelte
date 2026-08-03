@@ -11,6 +11,7 @@
 		CancelledBanner
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { pageTitle } from '$lib/config';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import {
 		createSubscription,
@@ -34,6 +35,12 @@
 	const isCancelled = $derived(subscription != null && subscription.cancelAtPeriodEnd);
 	const isNonMember = $derived(subscription == null);
 </script>
+
+<!-- This page leads with MembershipHero instead of PageHeader, so it sets its
+     own title rather than inheriting one. -->
+<svelte:head>
+	<title>{pageTitle('Membership')}</title>
+</svelte:head>
 
 {#snippet bottomCta(id?: string)}
 	<div {id} class="rounded-xl bg-primary/5 p-8 text-center">
