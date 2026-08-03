@@ -1,11 +1,14 @@
 export {
 	findOrCreateThread,
+	findThreadById,
+	reopenThread,
 	listThreads,
 	getThread,
 	assignThread,
 	updateStatus,
 	getUnresolvedCount
 } from './thread-service';
+export { buildReplyToAddress, parseReplyMailboxHash } from './reply-address';
 export { addInboundMessage, addOutboundMessage, addNote } from './message-service';
 export {
 	handleContactForm,

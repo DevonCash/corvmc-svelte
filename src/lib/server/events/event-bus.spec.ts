@@ -19,6 +19,8 @@ describe('domainEvents', () => {
 
 		await domainEvents.emit('contact.form_submitted', {
 			name: 'Alice',
+			threadId: 'thread-1',
+			subject: 'General Inquiry',
 			email: 'alice@test.com',
 			message: 'Hello'
 		});
@@ -40,6 +42,8 @@ describe('domainEvents', () => {
 
 		await domainEvents.emit('contact.form_submitted', {
 			name: 'Bob',
+			threadId: 'thread-1',
+			subject: 'General Inquiry',
 			email: 'bob@test.com',
 			message: 'Hi'
 		});

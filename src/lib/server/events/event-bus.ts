@@ -110,8 +110,10 @@ export interface BandInvitationAcceptedEvent {
 }
 
 export interface ContactFormSubmittedEvent {
+	threadId: string;
 	name: string;
 	email: string;
+	subject: string;
 	message: string;
 }
 

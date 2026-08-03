@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
 import { sendSms } from './twilio-client';
 import { isChannelEnabled } from './channel-config-service';
+import { buildReplyToAddress } from './reply-address';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
 
 export interface DispatchReplyParams {
@@ -29,15 +30,18 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 	}
 
 	switch (params.channel) {
+		// Contact-form ('web') threads reply by email too: the submitter gave us
+		// their address, and the Reply-To below routes their response back into
+		// this same thread. Deliberately not gated on the 'email' channel toggle
+		// — that governs the inbound support mailbox, not outbound replies.
 		case 'email':
+		case 'web':
 			return dispatchEmailReply(params);
 		case 'sms':
 			return dispatchSmsReply(params);
 		case 'instagram':
 		case 'messenger':
 			return dispatchMetaReply(params);
-		case 'web':
-			return null;
 	}
 }
 
@@ -61,6 +65,10 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 			: `Re: ${params.subject}`
 		: 'Re: Your message to CorvMC';
 
+	// Falls back to the staff mailbox when no inbound reply address is
+	// configured, so a response still reaches a human rather than noreply@.
+	const replyTo = buildReplyToAddress(params.threadId) ?? env.STAFF_CONTACT_EMAIL ?? null;
+
 	const messageId = await sendInboxReply({
 		to: params.contactEmail,
 		model: {
@@ -69,6 +77,7 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 			staffName: params.staffName,
 			body: params.body
 		},
+		replyTo,
 		inReplyTo: params.lastInboundMessageId,
 		references: params.references,
 		metadata: { threadId: params.threadId }

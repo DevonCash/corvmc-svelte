@@ -25,4 +25,6 @@ your music, and your availability, and we'll follow up.
 
 ## Where it goes
 
-Messages land in the staff inbox, and staff reply by email.
+Messages land in the staff inbox, and staff reply by email. You can reply straight to
+that email — your response goes back to the same conversation, so you don't need to
+fill the form in again.

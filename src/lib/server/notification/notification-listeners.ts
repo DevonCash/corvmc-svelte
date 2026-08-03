@@ -541,13 +541,20 @@ export function registerAllNotificationListeners(): void {
 			toEmail: staffEmail,
 			templateAlias: GENERIC_ALIAS,
 			model: {
-				subject: `Contact form: ${event.name}`,
+				subject: `Contact form: ${event.subject}`,
 				heading: 'New contact form submission',
 				paragraphs: [
 					{ text: `<strong>From:</strong> ${event.name} (${event.email})` },
+					{ text: `<strong>Subject:</strong> ${event.subject}` },
 					{ text: event.message },
-					{ text: 'Reply directly to this email to respond to the sender.' }
-				]
+					{
+						text: 'Reply from the staff inbox — replies sent there go to the sender and thread their response back into the same conversation.'
+					}
+				],
+				cta: {
+					url: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`,
+					label: 'Open in staff inbox'
+				}
 			} satisfies NotificationEmailModel
 		});
 	});
