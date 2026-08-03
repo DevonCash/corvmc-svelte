@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { normalizeNotificationModel } from './email/normalize-model';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -39,6 +40,20 @@ function emit(event: string, payload: unknown): Promise<unknown> {
 
 function paragraphText(model: { paragraphs?: { text: string }[] }): string {
 	return (model.paragraphs ?? []).map((p) => p.text).join('\n');
+}
+
+interface Detail {
+	label: string;
+	value: string;
+}
+
+/** The details-card rows as "Label: value" lines, for substring assertions. */
+function detailText(model: { details?: Detail[] }): string {
+	return (model.details ?? []).map((d) => `${d.label}: ${d.value}`).join('\n');
+}
+
+function detailLabels(model: { details?: Detail[] }): string[] {
+	return (model.details ?? []).map((d) => d.label);
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +141,11 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.type).toBe('reservation_reminder');
 		expect(params.emailTemplate.alias).toBe(GENERIC);
 		expect(params.emailTemplate.model.subject).toBe('Reservation reminder: May 21');
-		expect(params.emailTemplate.model.heading).toBe('Upcoming reservation reminder');
+		expect(params.emailTemplate.model.heading).toBe('Upcoming Reservation');
+		expect(params.emailTemplate.model.details).toEqual([
+			{ label: 'Date', value: 'May 21' },
+			{ label: 'Time', value: '10:00 AM – 11:00 AM' }
+		]);
 		expect(params.emailTemplate.model.cta).toEqual({
 			url: 'https://test.corvmc.com/member/reservations',
 			label: 'View My Reservations'
@@ -194,8 +213,14 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.type).toBe('contact_form');
 		expect(params.toEmail).toBe('staff@test.com');
 		expect(params.templateAlias).toBe(GENERIC);
-		expect(paragraphText(params.model)).toContain('charlie@test.com');
-		expect(paragraphText(params.model)).toContain('Hello, I have a question');
+		expect(params.model.details).toEqual([
+			{ label: 'From', value: 'Charlie' },
+			{ label: 'Email', value: 'charlie@test.com' },
+			{ label: 'Subject', value: 'General Inquiry' }
+		]);
+		// The message is user-generated — it goes to `quote`, which the dispatcher
+		// escapes, not into a paragraph.
+		expect(params.model.quote).toBe('Hello, I have a question');
 		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/inbox/thread-9');
 	});
 
@@ -225,7 +250,7 @@ describe('collapsed listeners use the generic template', () => {
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
 		expect(params.templateAlias).toBe(GENERIC);
-		expect(paragraphText(params.model)).not.toContain('Notes:');
+		expect(detailLabels(params.model)).not.toContain('Notes');
 		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/equipment/loans/loan-1');
 	});
 });
@@ -359,7 +384,7 @@ describe('equipment.returned handler', () => {
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('equipment_returned');
 		expect(params.emailTemplate.alias).toBe(GENERIC);
-		const text = paragraphText(params.emailTemplate.model);
+		const text = detailText(params.emailTemplate.model);
 		expect(text).toContain('3 days');
 		expect(text).toContain('$15.00');
 		expect(text).toContain('credits $5.00, cash $10.00');
@@ -378,9 +403,9 @@ describe('equipment.returned handler', () => {
 			daysBorrowed: 1
 		});
 
-		const text = paragraphText(mockDispatch.mock.calls[0][0].emailTemplate.model);
-		expect(text).not.toContain('Total charge');
-		expect(text).toContain('1 day');
+		const model = mockDispatch.mock.calls[0][0].emailTemplate.model;
+		expect(detailLabels(model)).not.toContain('Total charge');
+		expect(detailText(model)).toContain('1 day');
 	});
 });
 
@@ -411,5 +436,147 @@ describe('reservation.cancelled handler', () => {
 		await emit('reservation.cancelled', { ...base, cancelledBy: 'member' });
 
 		expect(mockDispatch).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Blanket guards across every generic-alias email
+// ---------------------------------------------------------------------------
+// These two defects each shipped in ~19 emails at once because nothing checked
+// the whole set. Assert over every model any listener produces, so a new
+// listener can't reintroduce them.
+
+describe('every notification-alias model', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	/** Fire one representative event per listener and collect the email models. */
+	async function collectModels(): Promise<Record<string, unknown>[]> {
+		const when = { date: 'May 21', startTime: '10:00 AM', endTime: '11:00 AM' };
+		const member = { userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' };
+
+		await emit('reservation.reminder_due', { ...member, ...when });
+		await emit('reservation.confirmation_reminder_due', { ...member, ...when });
+		await emit('reservation.cancelled', { ...member, ...when, cancelledBy: 'staff' });
+		await emit('reservation.recurring_waitlisted', { ...member, ...when });
+		await emit('reservation.waitlist_expired', { ...member, ...when });
+		await emit('reservation.waitlist_slot_available', {
+			...member,
+			...when,
+			reservationId: 'r1',
+			confirmUrl: 'https://test.corvmc.com/confirm'
+		});
+		await emit('reservation.recurring_skipped', {
+			...member,
+			skippedDate: 'May 21',
+			startTime: when.startTime,
+			endTime: when.endTime,
+			reason: 'Space closed'
+		});
+		await emit('event.recurring_reservation_skipped', {
+			...member,
+			...when,
+			eventId: 'e1',
+			eventTitle: 'Open Jam',
+			reason: 'Conflict'
+		});
+		await emit('event.cancelled', {
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			refundNote: 'Full refund',
+			ticketHolders: [{ userId: 'user-1', attendeeName: 'Ada', attendeeEmail: 'a@test.com' }]
+		});
+		await emit('band.invitation_sent', {
+			invitedUserId: 'user-2',
+			invitedUserEmail: 'i@test.com',
+			invitedUserName: 'Ada',
+			invitedByName: 'Bob',
+			bandName: 'Indigo Kiss'
+		});
+		await emit('band.invitation_accepted', {
+			bandId: 'b1',
+			bandName: 'Indigo Kiss',
+			acceptedByName: 'Ada',
+			bandAdmins: [{ userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' }]
+		});
+		await emit('platform_invite.created', {
+			email: 'new@test.com',
+			token: 'tok',
+			role: 'member',
+			bandName: 'Indigo Kiss',
+			invitedByName: 'Bob'
+		});
+		await emit('equipment.loan_scheduled', {
+			...member,
+			equipmentName: 'SM58',
+			scheduledPickupDate: '2026-06-01'
+		});
+		await emit('equipment.loan_requested', {
+			userName: 'Bob',
+			equipmentName: 'SM58',
+			memberNotes: 'Ships Friday',
+			requestedPickupDate: '2026-06-01',
+			loanId: 'loan-1'
+		});
+		await emit('equipment.checked_out', { ...member, equipmentName: 'SM58' });
+		await emit('equipment.returned', {
+			...member,
+			loanId: 'l1',
+			equipmentName: 'SM58',
+			totalChargeCents: 1500,
+			creditsCents: 500,
+			cashCents: 1000,
+			daysBorrowed: 3
+		});
+		await emit('contact.form_submitted', {
+			threadId: 't9',
+			name: 'Charlie',
+			email: 'c@test.com',
+			subject: 'Hi',
+			message: 'Hello'
+		});
+		await emit('event.unpublished_by_staff', {
+			bandId: 'b1',
+			bandName: 'Indigo Kiss',
+			eventTitle: 'Show',
+			notes: 'Reported',
+			bandAdmins: [{ userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' }]
+		});
+
+		return [
+			...mockDispatch.mock.calls
+				.filter((c) => c[0].emailTemplate?.alias === GENERIC)
+				.map((c) => c[0].emailTemplate.model),
+			...mockDispatchEmailOnly.mock.calls
+				.filter((c) => c[0].templateAlias === GENERIC)
+				.map((c) => c[0].model)
+		];
+	}
+
+	it('never smuggles HTML into paragraphs or details', async () => {
+		const models = await collectModels();
+		expect(models.length).toBeGreaterThan(15);
+
+		for (const model of models) {
+			// The template escapes these fields, so any markup here would render
+			// literally as "<strong>Date:</strong>" in the member's inbox.
+			for (const p of (model.paragraphs ?? []) as { text: string }[]) {
+				expect(p.text).not.toMatch(/<[a-z/]/i);
+			}
+			for (const d of (model.details ?? []) as Detail[]) {
+				expect(`${d.label}${d.value}`).not.toMatch(/<[a-z/]/i);
+			}
+		}
+	});
+
+	it('produces a non-empty preheader for every email', async () => {
+		const models = await collectModels();
+
+		for (const model of models) {
+			// Either written deliberately, or derived by the dispatcher's normalizer.
+			const preview =
+				(model.preview_text as string | undefined) ??
+				(normalizeNotificationModel(model as never).preview_text as string);
+			expect(preview?.trim()).toBeTruthy();
+		}
 	});
 });

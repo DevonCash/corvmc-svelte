@@ -2,11 +2,13 @@
 
 {{/heading}}{{#greeting}}{{greeting}}
 
-{{/greeting}}{{#paragraphs}}{{text}}
+{{/greeting}}{{#each paragraphs}}{{text}}
 
-{{/paragraphs}}{{#details}}{{label}}: {{value}}
-{{/details}}{{#cta}}
-{{label}}: {{url}}
-{{/cta}}{{#footnote}}
-{{footnote}}
+{{/each}}{{#has_details}}{{#each details}}{{label}}: {{value}}
+{{/each}}
+{{/has_details}}{{#quote}}{{quote_text}}
+
+{{/quote}}{{#cta}}{{label}}: {{url}}
+
+{{/cta}}{{#footnote}}{{footnote}}
 {{/footnote}}

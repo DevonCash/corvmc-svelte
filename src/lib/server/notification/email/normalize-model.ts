@@ -1,0 +1,57 @@
+import { escapeHtmlWithBreaks } from '$lib/utils/html';
+import type { NotificationEmailPayload } from '$lib/types/notification-email';
+
+// ---------------------------------------------------------------------------
+// Notification model normalization
+// ---------------------------------------------------------------------------
+// Applied by the dispatcher to every `notification`-alias send, so the ~19
+// listeners that build a model don't each have to remember three things:
+//
+//  1. `preview_text` — the inbox preview snippet. Shipping it empty wastes the
+//     second most valuable line of copy after the subject, and no caller was
+//     setting it. Derived from the body unless the caller wrote a better one.
+//  2. `has_details` — the details card wrapper has to be guarded by something
+//     that is NOT the array itself: `{{#details}}` iterates in both Mustachio
+//     and Handlebars, which would repeat the whole card per row.
+//  3. `quote` escaping — the one field carrying user-generated text. Callers
+//     pass the raw string; escaping happens here so it cannot be forgotten.
+// ---------------------------------------------------------------------------
+
+/** Postmark's preview text is truncated by mail clients well before this. */
+const PREVIEW_TEXT_MAX = 140;
+
+function derivePreviewText(model: NotificationEmailPayload): string {
+	const source = model.paragraphs?.[0]?.text ?? model.greeting ?? model.heading ?? '';
+	const flat = source
+		.replace(/<[^>]+>/g, '')
+		.replace(/\s+/g, ' ')
+		.trim();
+	return flat.length > PREVIEW_TEXT_MAX
+		? `${flat.slice(0, PREVIEW_TEXT_MAX - 1).trimEnd()}…`
+		: flat;
+}
+
+/**
+ * Fill in the derived fields the `notification` template needs.
+ *
+ * Idempotent, and never overwrites a `preview_text` the caller set deliberately.
+ */
+export function normalizeNotificationModel(
+	model: NotificationEmailPayload
+): Record<string, unknown> {
+	const normalized: NotificationEmailPayload = {
+		...model,
+		preview_text: model.preview_text?.trim() || derivePreviewText(model),
+		has_details: (model.details?.length ?? 0) > 0
+	};
+
+	if (model.quote) {
+		// `quote` is the only field rendered unescaped ({{{quote}}}), because the
+		// line breaks have to survive as <br /> — Outlook's Word engine ignores
+		// white-space:pre-wrap. Escaping it here is what makes that safe.
+		normalized.quote = escapeHtmlWithBreaks(model.quote);
+		normalized.quote_text = model.quote;
+	}
+
+	return normalized as unknown as Record<string, unknown>;
+}

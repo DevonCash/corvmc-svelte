@@ -1,44 +1,103 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body style="margin: 0; padding: 0; background: #f3f4f6">
-    <span
-      style="display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all"
-      >{{preview_text}}</span
-    >
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6">
-      <tr>
-        <td align="center" style="padding: 20px 12px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px">
-            <tr>
-              <td
-                align="center"
-                style="padding: 8px 0 16px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 22px; font-weight: 700; color: #111827"
-              >
-                CorvMC
-              </td>
-            </tr>
-            <tr>
-              <td
-                style="background: #ffffff; border-radius: 8px; padding: 32px 24px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif"
-              >
-                {{{@content}}}
-              </td>
-            </tr>
-            <tr>
-              <td
-                align="center"
-                style="padding: 16px 8px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; color: #9ca3af"
-              >
-                You're receiving this because of your notification preferences.
-              </td>
-            </tr>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    /* @import, not <link> — Postmark rejects templates that reference an
+       external stylesheet via <link>. Clients that ignore web fonts (Gmail,
+       Outlook) fall back to Trebuchet MS, which the design tolerates. */
+    @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+
+    body, table, td, p, a, li { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+    table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
+    img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; }
+    body { margin:0 !important; padding:0 !important; width:100% !important; }
+
+    @media screen and (max-width:600px) {
+      .container { width:100% !important; }
+      .px-32 { padding-left:22px !important; padding-right:22px !important; }
+      h1 { font-size:26px !important; line-height:1.15 !important; }
+      /* Narrow the label column so dates and ticket codes stop wrapping.
+         Scoped to .label — the card's own inset lives on its wrapper cell. */
+      .pass-card .label { width:88px !important; padding-right:8px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body, .body-bg { background:#161b22 !important; }
+      .surface { background:#262d38 !important; color:#e6dcd0 !important; }
+      .surface-text { color:#e6dcd0 !important; }
+      .surface-muted { color:#b6b0a6 !important; }
+      .header-bg { background:#161b22 !important; }
+      .footer-bg { background:#1d232c !important; color:#b6b0a6 !important; }
+      .footer-bg a { color:#ff8c42 !important; }
+      .footer-fine { color:#b6b0a6 !important; }
+      .teal-text { color:#3eb5ca !important; }
+      .navy-text { color:#e6dcd0 !important; }
+      .pass-card { background:#1d232c !important; }
+      .pass-card td { color:#e6dcd0 !important; }
+      .pass-card .label { color:#ff8c42 !important; }
+      .quote-bg { background:#1d232c !important; }
+      .quote-bg td { color:#e6dcd0 !important; }
+      .btn-cell { background:#ff8c42 !important; border-color:#ff8c42 !important; border-right-color:#000000 !important; border-bottom-color:#000000 !important; }
+      .btn-cell a { color:#ffffff !important; }
+      .code-text { color:#e6dcd0 !important; }
+    }
+  </style>
+</head>
+<body class="body-bg" style="margin:0; padding:0; background-color:#fffbf6; font-family:'Lexend','Trebuchet MS','Helvetica Neue',Helvetica,Arial,sans-serif;">
+
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; visibility:hidden; opacity:0; color:transparent;">{{preview_text}}</div>
+
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="body-bg" style="background-color:#fffbf6;">
+    <tr><td align="center" style="padding:20px 10px;">
+
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="container" style="max-width:600px; width:100%;">
+
+        <!-- Header -->
+        <tr><td class="header-bg" style="background-color:#fffbf6; padding:24px 32px 18px; text-align:center;">
+          <a href="https://corvmc.org" target="_blank" style="text-decoration:none;">
+            <img src="https://corvmc.org/email/cmc-speaker.png" width="72" height="35" alt="Corvallis Music Collective" style="display:inline-block;">
+          </a>
+        </td></tr>
+
+        <!-- Tri-stripe -->
+        <tr><td style="padding:0; font-size:0; line-height:0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr><td height="4" style="height:4px; background-color:#00859b; font-size:0; line-height:0;">&nbsp;</td></tr>
+            <tr><td height="4" style="height:4px; background-color:#ffb500; font-size:0; line-height:0;">&nbsp;</td></tr>
+            <tr><td height="4" style="height:4px; background-color:#f84d13; font-size:0; line-height:0;">&nbsp;</td></tr>
           </table>
-        </td>
-      </tr>
-    </table>
-  </body>
+        </td></tr>
+
+        <!-- Content -->
+        <tr><td class="surface px-32" style="background-color:#fffbf6; padding:34px 32px 32px;">
+          {{{@content}}}
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td class="footer-bg" style="background-color:#ffe2cd; padding:24px 32px 28px; text-align:center;">
+          <div style="margin-bottom:12px;">
+            <a href="https://corvmc.org" target="_blank" style="font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:13px; color:#5a3d2b; text-decoration:none; padding:0 8px;">corvmc.org</a>
+            <span style="color:#5a3d2b;">&middot;</span>
+            <a href="https://corvmc.org/member" target="_blank" style="font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:13px; color:#5a3d2b; text-decoration:none; padding:0 8px;">Member Dashboard</a>
+            <span style="color:#5a3d2b;">&middot;</span>
+            <a href="https://corvmc.org/member/account" target="_blank" style="font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:13px; color:#5a3d2b; text-decoration:none; padding:0 8px;">Notification Settings</a>
+          </div>
+          <div class="footer-fine" style="font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:11px; line-height:1.6; color:#7a6248;">
+            You're receiving this because of your notification preferences.<br>
+            Corvallis Music Collective &middot; 6775 SW Philomath Blvd, Corvallis, OR 97333<br>
+            <a href="mailto:contact@corvmc.org" style="color:#7a6248; text-decoration:underline;">contact@corvmc.org</a>
+          </div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
 </html>

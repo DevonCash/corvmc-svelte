@@ -51,8 +51,8 @@ d1-delete.sql
 # Coverage
 coverage/
 
-# Generated email layouts
-src/lib/server/generated/
+# Local email previews (pnpm email:preview)
+.email-preview/
 
 # Claude Code
 .claude/worktrees/

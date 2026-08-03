@@ -1,8 +1,10 @@
 import { sendEmailWithTemplate } from './email/postmark-client';
+import { normalizeNotificationModel } from './email/normalize-model';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
 import { captureException } from '$lib/server/sentry';
+import type { NotificationEmailPayload } from '$lib/types/notification-email';
 
 // ---------------------------------------------------------------------------
 // Notification dispatcher
@@ -13,7 +15,20 @@ import { captureException } from '$lib/server/sentry';
 // The dispatcher does NOT know about specific notification types — callers
 // provide the type key, recipient, in-app content, and (for email) a Postmark
 // template alias plus its model. Email bodies/subjects live in Postmark.
+//
+// Models bound for the generic `notification` template are passed through
+// `normalizeNotificationModel` first, which fills in the derived fields every
+// listener would otherwise have to remember (see that module for why).
 // ---------------------------------------------------------------------------
+
+/** The generic template whose model gets normalized. */
+const GENERIC_ALIAS = 'notification';
+
+function prepareModel(alias: string, model: Record<string, unknown>): Record<string, unknown> {
+	return alias === GENERIC_ALIAS
+		? normalizeNotificationModel(model as unknown as NotificationEmailPayload)
+		: model;
+}
 
 export interface DispatchParams {
 	/** The notification type key (from schema/notification.ts) */
@@ -72,7 +87,7 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 			await sendEmailWithTemplate({
 				to: params.userEmail,
 				templateAlias: params.emailTemplate.alias,
-				model: params.emailTemplate.model,
+				model: prepareModel(params.emailTemplate.alias, params.emailTemplate.model),
 				tag: params.type
 			});
 		} catch (err) {
@@ -95,7 +110,7 @@ export async function dispatchEmailOnly(params: {
 		await sendEmailWithTemplate({
 			to: params.toEmail,
 			templateAlias: params.templateAlias,
-			model: params.model,
+			model: prepareModel(params.templateAlias, params.model),
 			tag: params.type
 		});
 	} catch (err) {
