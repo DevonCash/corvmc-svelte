@@ -1,9 +1,12 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import Badge from '$lib/components/shared/Badge.svelte';
+	import { resolve } from '$app/paths';
+	import { relativeDay } from '$lib/utils/format';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
 
 	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
@@ -14,17 +17,19 @@
 		event: 'Event'
 	};
 
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let statusFilter = $state<'pending' | 'resolved' | 'dismissed' | ''>('pending');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -37,12 +42,12 @@
 
 	let result = $derived(getFlagsQueue(filters));
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || statusFilter !== 'pending');
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (statusFilter === 'pending' ? 0 : 1)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		statusFilter = 'pending';
 		page = 1;
@@ -51,16 +56,19 @@
 
 <PageHeader title="Content Flags" />
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
-			placeholder="Search reason..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search reason..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Status"
 			value={statusFilter}
 			onchange={(e) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
@@ -72,53 +80,41 @@
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
 		</select>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: flags, pagination }}
-		{#if flags.length === 0}
-			<p class="text-center opacity-60 py-8">No flags found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="w-px">Type</th>
-							<th>Content</th>
-							<th>Reason</th>
-							<th>Reported by</th>
-							<th class="w-px">Status</th>
-							<th class="w-px">Reported</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each flags as f (f.id)}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/flags/${f.id}`)}
-							>
-								<td class="w-px text-sm">{entityLabels[f.entityType] ?? f.entityType}</td>
-								<td class="font-medium">{f.entityLabel}</td>
-								<td class="max-w-xs truncate">{f.reason}</td>
-								<td class="text-sm">{f.reportedByName ?? 'Anonymous visitor'}</td>
-								<td class="w-px"><StatusBadge status={f.status} label /></td>
-								<td class="w-px whitespace-nowrap text-sm">{formatDateTime(f.createdAt)}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+	<!--
+		Cards, not a table: the reason is unbounded prose, and a report only makes
+		sense read as a whole. Truncating it to a column width is what made this
+		queue unusable — you had to open every row to know what was reported.
+	-->
+	<DataList {result} empty="No flags found" onpage={(p) => (page = p)}>
+		{#snippet children(flags)}
+			<ul class="space-y-2">
+				{#each flags as f (f.id)}
+					<li class="card bg-base-100 shadow">
+						<div class="card-body gap-2 p-4">
+							<!-- No `flex-wrap`, and the title truncates: wrapping this row pushed
+							     the status badge and the timestamp onto ragged extra lines. -->
+							<div class="flex min-w-0 items-center gap-2">
+								<Badge size="sm" variant="outline" class="shrink-0">
+									{entityLabels[f.entityType] ?? f.entityType}
+								</Badge>
+								<a
+									href={resolve(`/staff/flags/${f.id}`)}
+									class="truncate font-medium hover:underline"
+								>
+									{f.entityLabel}
+								</a>
+								<span class="shrink-0"><StatusBadge status={f.status} label /></span>
+							</div>
+							<p class="text-sm">{f.reason}</p>
+							<p class="text-sm opacity-60">
+								Reported by {f.reportedByName ?? 'Anonymous visitor'} · {relativeDay(f.createdAt)}
+							</p>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{/snippet}
+	</DataList>
 </PageContent>

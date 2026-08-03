@@ -26,6 +26,7 @@
 	const { fields } = updateEvent;
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -533,28 +534,23 @@
 		<!-- Ticket list -->
 		{#if data.tickets.length > 0}
 			<InfoCard title="Tickets ({data.tickets.length})">
-				<div class="overflow-x-auto">
-					<table class="table">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Email</th>
-								<th class="w-px">Code</th>
-								<th class="w-px">Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each data.tickets as t (t.id)}
-								<tr class="hover">
-									<td>{t.attendeeName}</td>
-									<td><span class="text-sm opacity-70">{t.attendeeEmail}</span></td>
-									<td class="w-px"><span class="font-mono text-sm">{t.code}</span></td>
-									<td class="w-px"><StatusBadge status={t.status} /></td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">Status</span></th>
+						<th>Attendee</th>
+						<th class="col-support w-px">Code</th>
+					{/snippet}
+					{#each data.tickets as t (t.id)}
+						<tr class="hover">
+							<td class="w-px"><StatusBadge status={t.status} /></td>
+							<td class="cell-primary">
+								<div class="truncate font-medium">{t.attendeeName}</div>
+								<div class="truncate text-sm opacity-60">{t.attendeeEmail}</div>
+							</td>
+							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
+						</tr>
+					{/each}
+				</Table>
 			</InfoCard>
 		{/if}
 	{/if}

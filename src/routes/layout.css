@@ -258,6 +258,50 @@ p {
 }
 
 /* ---------------------------------------------------------------------------
+   Table column visibility tiers
+   ---------------------------------------------------------------------------
+   Container-query based: every panel page body is an `@container` (PageContent),
+   so these track the content column rather than the viewport and keep working
+   when the sidebar opens at `lg`. Measured content widths are 327 / 720 / 976px
+   at 375 / 768 / 1280px viewports.
+
+   Apply the same tier class to a column's `<th>` and every one of its `<td>`s.
+   See docs/development/ui-patterns.md for which columns earn which tier. */
+
+/* Supporting — money, counts, secondary dates. Hidden on phones. */
+@utility col-support {
+	@container (width < 32rem) {
+		display: none;
+	}
+}
+
+/* Diagnostic — resource IDs, created-at, provider record IDs.
+   Hidden on phones and narrow tablets. */
+@utility col-extra {
+	@container (width < 48rem) {
+		display: none;
+	}
+}
+
+/* Numeric table cell: right-aligned, tabular, never wraps. */
+@utility cell-num {
+	font-variant-numeric: tabular-nums lining-nums;
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* The row's primary cell — the one that absorbs the slack and truncates.
+   Under `table-layout: auto` a column is sized to its content, so `truncate`
+   alone never shrinks a cell: long text just widens the table until the last
+   column is clipped. `max-width: 0` makes the browser ignore the intrinsic
+   width so the inner `truncate` can do its job, and `width: 100%` claims the
+   space every other column doesn't need. Exactly one cell per row gets this. */
+@utility cell-primary {
+	width: 100%;
+	max-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
    Tri-stripe band — the 10px brand recall stripe under the site header.
    --------------------------------------------------------------------------- */
 .tri-stripe {

@@ -1,21 +1,22 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { getStaffCredits } from '$lib/remote/users.remote';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTimeShort, titleCase } from '$lib/utils/format';
+	import { creditSourceLabels } from '$lib/config';
 
-	const sourceLabels: Record<string, string> = {
-		monthly_allocation: 'Monthly Allocation',
-		checkout: 'Checkout',
-		refund: 'Refund',
-		cancelled: 'Cancelled',
-		admin_adjustment: 'Admin Adjustment'
-	};
+	function sourceLabel(source: string): string {
+		return creditSourceLabels[source] ?? titleCase(source);
+	}
 
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let creditType = $state('');
 	let source = $state('');
 	let dateFrom = $state('');
@@ -25,10 +26,10 @@
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -44,12 +45,16 @@
 
 	let result = $derived(getStaffCredits(filters));
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || creditType || source || dateFrom || dateTo);
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) +
+			(creditType ? 1 : 0) +
+			(source ? 1 : 0) +
+			(dateFrom ? 1 : 0) +
+			(dateTo ? 1 : 0)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		creditType = '';
 		source = '';
@@ -61,16 +66,19 @@
 
 <PageHeader title="Credit Transactions" />
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
-			placeholder="Search name or email..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search name or email..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Credit type"
 			value={creditType}
 			onchange={(e) => {
 				creditType = (e.currentTarget as HTMLSelectElement).value;
@@ -83,6 +91,7 @@
 		</select>
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Source"
 			value={source}
 			onchange={(e) => {
 				source = (e.currentTarget as HTMLSelectElement).value;
@@ -90,14 +99,13 @@
 			}}
 		>
 			<option value="">All sources</option>
-			<option value="monthly_allocation">Monthly Allocation</option>
-			<option value="checkout">Checkout</option>
-			<option value="refund">Refund</option>
-			<option value="cancelled">Cancelled</option>
-			<option value="admin_adjustment">Admin Adjustment</option>
+			{#each Object.entries(creditSourceLabels) as [value, label] (value)}
+				<option {value}>{label}</option>
+			{/each}
 		</select>
 		<input
 			type="date"
+			aria-label="From date"
 			class="input input-bordered input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -106,72 +114,60 @@
 		/>
 		<input
 			type="date"
+			aria-label="To date"
 			class="input input-bordered input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: transactions, pagination }}
-		{#if transactions.length === 0}
-			<p class="text-center opacity-60 py-8">No credit transactions found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Date</th>
-							<th>Member</th>
-							<th>Type</th>
-							<th class="w-px">Amount</th>
-							<th class="w-px">Balance</th>
-							<th>Source</th>
-							<th>Description</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each transactions as t (t.id)}
-							<tr class="hover">
-								<td>{formatDateTime(new Date(t.createdAt))}</td>
-								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink
-										member={{ name: t.userName ?? '', email: t.userEmail, userId: t.userId }}
-									/>
-								</td>
-								<td
-									><StatusBadge
-										status={t.creditType === 'free_hours' ? 'Free Hours' : 'Equipment'}
-									/></td
-								>
-								<td class="w-px">
-									<span
-										class={t.amount > 0 ? 'text-success font-medium' : 'text-error font-medium'}
-									>
-										{t.amount > 0 ? '+' : ''}{t.amount}
-									</span>
-								</td>
-								<td class="w-px">{t.balanceAfter}</td>
-								<td>{sourceLabels[t.source] ?? t.source}</td>
-								<td>{t.description}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+	<DataList {result} empty="No credit transactions found" onpage={(p) => (page = p)}>
+		{#snippet children(transactions)}
+			<Table>
+				{#snippet head()}
+					<th>Member</th>
+					<th class="col-extra whitespace-nowrap">Type</th>
+					<th class="cell-num">Amount</th>
+					<th class="col-support cell-num">Balance</th>
+					<th class="col-support">Date</th>
+				{/snippet}
+
+				{#each transactions as t (t.id)}
+					<tr class="hover">
+						<!--
+							Primary cell. The Source column is gone: `description` is the
+							human-readable form of the same fact ("Applied to reservation" vs
+							`reservation`), so it becomes the subline and the raw enum never
+							reaches the page. Source remains a filter.
+						-->
+						<td class="cell-primary">
+							<MemberLink
+								variant="inline"
+								member={{ name: t.userName ?? '', email: undefined, userId: t.userId }}
+							/>
+							<span class="block truncate text-sm opacity-60">
+								{t.description || sourceLabel(t.source)}
+							</span>
+						</td>
+						<td class="col-extra whitespace-nowrap">
+							<Badge size="sm" variant="ghost">
+								{t.creditType === 'free_hours' ? 'Free hours' : 'Equipment'}
+							</Badge>
+						</td>
+						<td class="cell-num">
+							<span class={t.amount > 0 ? 'font-medium text-success' : 'font-medium text-error'}>
+								{t.amount > 0 ? '+' : ''}{t.amount}
+							</span>
+						</td>
+						<td class="col-support cell-num">{t.balanceAfter}</td>
+						<td class="col-support whitespace-nowrap">
+							{formatDateTimeShort(new Date(t.createdAt))}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

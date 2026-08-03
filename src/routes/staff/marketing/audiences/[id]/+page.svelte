@@ -5,7 +5,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import Table from '$lib/components/shared/Table.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { formatDateShort } from '$lib/utils/format';
 	import {
 		DeleteAudienceAction,
 		BulkAddMembersAction,
@@ -99,44 +101,41 @@
 		<!-- Subscriber List -->
 		<InfoCard title="Subscribers ({audienceData.subscriberCount})">
 			{#if subscribers.length === 0}
-				<p class="text-center opacity-60 py-8">No subscribers yet</p>
+				<EmptyState description="No subscribers yet" />
 			{:else}
-				<div class="overflow-x-auto">
-					<table class="table">
-						<thead>
-							<tr>
-								<th>Email</th>
-								<th>Name</th>
-								<th class="w-px">Status</th>
-								<th class="w-px">Joined</th>
-								<th class="w-px"></th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each subscribers as s (s.subscriberId)}
-								<tr class="hover">
-									<td><span class="font-mono text-sm">{s.email}</span></td>
-									<td>{s.name ?? '—'}</td>
-									<td class="w-px">
-										{#if s.unsubscribedAt}
-											<Badge variant="ghost" size="xs">Unsubscribed</Badge>
-										{:else}
-											<Badge variant="success" size="xs">Active</Badge>
-										{/if}
-									</td>
-									<td class="w-px">{formatDate(s.createdAt)}</td>
-									<td class="w-px" onclick={(e) => e.stopPropagation()}>
-										<RemoveSubscriberAction
-											audienceId={id}
-											subscriberId={s.subscriberId}
-											email={s.email}
-										/>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<Table>
+					{#snippet head()}
+						<th>Subscriber</th>
+						<th class="col-support w-px">Status</th>
+						<th class="col-extra whitespace-nowrap">Joined</th>
+						<th class="w-px"><span class="sr-only">Actions</span></th>
+					{/snippet}
+					{#each subscribers as s (s.subscriberId)}
+						<tr class="hover">
+							<!-- Name was its own column; it qualifies the address, so it is the
+							     subline. -->
+							<td class="cell-primary">
+								<div class="truncate font-mono text-sm">{s.email}</div>
+								{#if s.name}
+									<div class="truncate text-sm opacity-60">{s.name}</div>
+								{/if}
+							</td>
+							<td class="col-support w-px">
+								<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
+									{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
+								</Badge>
+							</td>
+							<td class="col-extra whitespace-nowrap">{formatDateShort(s.createdAt)}</td>
+							<td class="w-px">
+								<RemoveSubscriberAction
+									audienceId={id}
+									subscriberId={s.subscriberId}
+									email={s.email}
+								/>
+							</td>
+						</tr>
+					{/each}
+				</Table>
 			{/if}
 		</InfoCard>
 	</PageContent>

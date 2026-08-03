@@ -4,7 +4,11 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import Table from '$lib/components/shared/Table.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
+	import { formatDateShort } from '$lib/utils/format';
 
 	let statusFilter = $state('');
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
@@ -14,8 +18,8 @@
 	<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
 </PageHeader>
 <PageContent>
-	<div class="flex gap-2 mb-4">
-		<select class="select select-bordered select-sm" bind:value={statusFilter}>
+	<div class="mb-4 flex gap-2">
+		<select class="select select-bordered select-sm" aria-label="Status" bind:value={statusFilter}>
 			<option value="">All statuses</option>
 			<option value="draft">Draft</option>
 			<option value="scheduled">Scheduled</option>
@@ -24,52 +28,36 @@
 	</div>
 
 	{#if campaigns.length === 0}
-		<p class="text-center opacity-60 py-8">No campaigns yet.</p>
+		<EmptyState description="No campaigns yet." />
 	{:else}
-		<div class="overflow-x-auto">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Subject</th>
-						<th class="w-px">Status</th>
-						<th>Audiences</th>
-						<th class="w-px">Recipients</th>
-						<th class="w-px">Date</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each campaigns as c (c.id)}
-						<tr
-							class="hover cursor-pointer"
-							onclick={() =>
-								(window.location.href =
-									c.status === 'draft'
-										? `/staff/marketing/campaigns/${c.id}/edit`
-										: `/staff/marketing/campaigns/${c.id}`)}
-						>
-							<td><span class="font-medium">{c.subject}</span></td>
-							<td class="w-px"><StatusBadge status={c.status} /></td>
-							<td>
-								{#if c.audienceNames.length > 0}
-									{c.audienceNames.join(', ')}
-								{:else}
-									<span class="opacity-40">—</span>
-								{/if}
-							</td>
-							<td class="w-px">{c.recipientCount ?? '—'}</td>
-							<td class="w-px">
-								{#if c.sentAt}
-									{formatDate(c.sentAt)}
-								{:else if c.scheduledFor}
-									{formatDate(c.scheduledFor)}
-								{:else}
-									{formatDate(c.createdAt)}
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th>Campaign</th>
+				<th class="col-support cell-num">Recipients</th>
+				<th class="col-support whitespace-nowrap">Date</th>
+			{/snippet}
+			{#each campaigns as c (c.id)}
+				{@const href =
+					c.status === 'draft'
+						? resolve(`/staff/marketing/campaigns/${c.id}/edit`)
+						: resolve(`/staff/marketing/campaigns/${c.id}`)}
+				<tr class="hover cursor-pointer" use:rowLink={href}>
+					<td class="w-px"><StatusBadge status={c.status} /></td>
+					<!-- Audiences was its own column; it qualifies the campaign, so it is
+					     the subline. -->
+					<td class="cell-primary">
+						<a {href} class="block truncate font-medium hover:underline">{c.subject}</a>
+						<div class="truncate text-sm opacity-60">
+							{c.audienceNames.length > 0 ? c.audienceNames.join(', ') : '—'}
+						</div>
+					</td>
+					<td class="col-support cell-num">{c.recipientCount ?? '—'}</td>
+					<td class="col-support whitespace-nowrap">
+						{formatDateShort(c.sentAt ?? c.scheduledFor ?? c.createdAt)}
+					</td>
+				</tr>
+			{/each}
+		</Table>
 	{/if}
 </PageContent>

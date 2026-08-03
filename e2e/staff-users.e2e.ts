@@ -41,7 +41,10 @@ test.describe('staff user management', () => {
 
 		// The row for the seeded edit target is reachable from the list.
 		await expect(page.getByRole('table')).toBeVisible();
-		await expect(page.getByText(/\d+ total/)).toBeVisible();
+		// The list states its size. This used to be a "N total" count in the page
+		// header; rebuilding the staff tables moved it into the pagination line,
+		// which states the visible range as well as the total.
+		await expect(page.getByText(/Showing \d+–\d+ of \d+/)).toBeVisible();
 	});
 
 	test('editing a profile field preserves the user’s roles', async ({ page }) => {

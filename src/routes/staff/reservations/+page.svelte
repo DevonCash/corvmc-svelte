@@ -3,7 +3,11 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
 	import {
 		ConfirmReservationAction,
 		CompleteReservationAction
@@ -37,7 +41,9 @@
 	type Reservation = Awaited<ReturnType<typeof getStaffReservations>>['rows'][number];
 
 	let tab = $state<'upcoming' | 'all'>('upcoming');
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
 	let page = $state(1);
@@ -45,10 +51,10 @@
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -104,12 +110,12 @@
 		return label;
 	}
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || dateFrom || dateTo);
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		dateFrom = '';
 		dateTo = '';
@@ -162,16 +168,19 @@
 		/>
 	{/await}
 
-	<div class="flex flex-wrap items-end gap-2">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
-			placeholder="Search name or email..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search name or email..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<input
 			type="date"
+			aria-label="From date"
 			class="input input-bordered input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -180,137 +189,133 @@
 		/>
 		<input
 			type="date"
+			aria-label="To date"
 			class="input input-bordered input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: reservations, pagination }}
-		{#if reservations.length === 0}
-			<p class="text-center opacity-60 py-8">No reservations found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
+	<DataList {result} empty="No reservations found" onpage={(p) => (page = p)}>
+		{#snippet children(reservations)}
+			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
+			<Table zebra={false}>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Reservation</th>
+					<th class="col-support cell-num">Payment</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+
+				{#each reservations as r, idx (r.id)}
+					{@const label = dayLabel(r)}
+					{@const prevLabel = idx > 0 ? dayLabel(reservations[idx - 1]) : null}
+					{#if label !== prevLabel}
 						<tr>
-							<th></th>
-							<th>Time</th>
-							<th>Reserved for</th>
-							<th class="text-center">Payment</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each reservations as r, idx (r.id)}
-							{@const label = dayLabel(r)}
-							{@const prevLabel = idx > 0 ? dayLabel(reservations[idx - 1]) : null}
-							{#if label !== prevLabel}
-								<tr>
-									<td
-										colspan="5"
-										class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
-									>
-										{label}
-									</td>
-								</tr>
-							{/if}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/reservations/${r.id}`)}
+							<td
+								colspan="4"
+								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
 							>
-								<td class="w-px">
-									<StatusBadge status={r.status} class="size-6" />
-								</td>
-								<td class="w-min">
-									<div class="flex items-center gap-1">
-										{formatTimeRange(r.startsAt, r.endsAt)}
-										{#if r.recurringSeriesId}
-											<span class="tooltip" data-tip="Recurring">
-												<IconRepeat size={14} class="text-base-content" />
-											</span>
-										{/if}
-									</div>
-									<div class="text-sm opacity-60">{formatDate(r.startsAt)}</div>
-								</td>
-								<td onclick={(e) => e.stopPropagation()} style="padding-inline: 0;">
-									<div class="flex items-center gap-1">
-										{#if r.bookerType !== 'user'}
-											<span class="tooltip" data-tip={r.bookerType}>
-												<BookerTypeIcon type={r.bookerType} size={16} />
-											</span>
-										{/if}
-										<MemberLink
-											hideAvatar
-											member={{
-												name: r.memberName,
-												email: r.memberEmail,
-												pronouns: r.memberPronouns,
-												role: r.memberRole,
-												sustaining: !!r.memberSustaining,
-												userId: r.createdByUserId
-											}}
-											class="p-7 px-4 w-full"
-										/>
-									</div>
-								</td>
-								<td>
-									{#await hourlyRate then rate}
-										{#if r.bookerType === 'event'}
-											<span class="text-sm opacity-40">—</span>
-										{:else}
-											{@const ps = paymentStatus(r)}
-											<div class="flex items-center justify-center gap-1">
-												{formatDurationAmount(r.startsAt, r.endsAt, rate)}
-												<span class="tooltip" data-tip={ps.label}>
-													<ps.icon size={16} class={ps.color} />
-												</span>
-											</div>
-										{/if}
-									{/await}
-								</td>
-								<td onclick={(e) => e.stopPropagation()}>
-									<div class="flex items-center gap-1">
-										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('confirm')}
-											<ConfirmReservationAction
-												reservation={r}
-												staff
-												class="btn-ghost btn-sm latched"
-											>
-												{#snippet icon()}<IconCheck size={16} />{/snippet}
-											</ConfirmReservationAction>
-										{/if}
-										{#if visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')}
-											<CompleteReservationAction
-												reservation={r}
-												class="btn-ghost btn-xs btn-square"
-											>
-												{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
-											</CompleteReservationAction>
-										{/if}
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+								{label}
+							</td>
+						</tr>
+					{/if}
+					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
+					{@const href = resolve(`/staff/reservations/${r.id}`)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px">
+							<StatusBadge status={r.status} class="size-6" />
+						</td>
+
+						<!--
+							Primary cell: the time is the ordering key, the member is its
+							closest qualifier. These were two columns; merging them is what
+							lets the row fit a phone without hiding the actions.
+							The day is not repeated — the group header above carries it.
+						-->
+						<td class="cell-primary">
+							<a
+								{href}
+								class="flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
+							>
+								{formatTimeRange(r.startsAt, r.endsAt)}
+								{#if r.recurringSeriesId}
+									<span class="tooltip" data-tip="Recurring">
+										<IconRepeat size={14} class="text-base-content" />
+									</span>
+								{/if}
+							</a>
+							<div class="flex min-w-0 items-center gap-1">
+								{#if r.bookerType !== 'user'}
+									<span class="tooltip" data-tip={r.bookerType}>
+										<BookerTypeIcon type={r.bookerType} size={14} />
+									</span>
+								{/if}
+								<!--
+									No email: the member is already the *subline* of this cell,
+									and a third line puts the row back over two. The email is one
+									click away on the reservation detail page.
+								-->
+								<MemberLink
+									variant="inline"
+									hideAvatar
+									member={{
+										name: r.memberName,
+										pronouns: r.memberPronouns,
+										role: r.memberRole,
+										sustaining: !!r.memberSustaining,
+										userId: r.createdByUserId
+									}}
+								/>
+							</div>
+						</td>
+
+						<td class="col-support cell-num">
+							{#await hourlyRate then rate}
+								{#if r.bookerType === 'event'}
+									<span class="opacity-40">—</span>
+								{:else}
+									{@const ps = paymentStatus(r)}
+									<span class="inline-flex items-center justify-end gap-1">
+										{formatDurationAmount(r.startsAt, r.endsAt, rate)}
+										<span class="tooltip" data-tip={ps.label}>
+											<ps.icon size={16} class={ps.color} />
+										</span>
+									</span>
+								{/if}
+							{/await}
+						</td>
+
+						<td class="w-px">
+							<div class="flex items-center justify-end gap-1">
+								{#if actions.has('confirm')}
+									<ConfirmReservationAction
+										reservation={r}
+										staff
+										iconOnly
+										class="btn-ghost btn-sm btn-square latched"
+									>
+										{#snippet icon()}<IconCheck size={16} />{/snippet}
+									</ConfirmReservationAction>
+								{/if}
+								{#if actions.has('complete')}
+									<CompleteReservationAction
+										reservation={r}
+										iconOnly
+										class="btn-ghost btn-sm btn-square"
+									>
+										{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
+									</CompleteReservationAction>
+								{/if}
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>
 
 {#await Promise.all([unresolved, hourlyRate]) then [unresolvedData, rate]}
