@@ -16,7 +16,6 @@
 		IconDots,
 		IconEye,
 		IconCopy,
-		IconUserUp,
 		IconUserOff
 	} from '@tabler/icons-svelte';
 	import { getStaffUsers, bulkDeactivateUsers } from '$lib/remote/users.remote';
@@ -141,7 +140,8 @@
 					<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
 					<p class="py-2">
 						Deactivate {selected.size} selected user{selected.size === 1 ? '' : 's'}? Their future
-						personal reservations will be cancelled.
+						personal reservations and membership subscriptions will be cancelled, and reactivating
+						will not bring them back. Your own account is skipped.
 					</p>
 				{/snippet}
 			</Action>
@@ -238,11 +238,9 @@
 													><IconCopy size={16} />Copy email</button
 												>
 											</li>
-											<li>
-												<a href={resolve(`/staff/users/${row.id}/impersonate`)}
-													><IconUserUp size={16} />Impersonate</a
-												>
-											</li>
+											<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
+											     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
+											     Re-add this only alongside the route. -->
 										</ul>
 									</div>
 								</td>
