@@ -6,7 +6,8 @@
 		getReservationEndTimes
 	} from '$lib/remote/reservations.remote';
 	import * as Form from '$lib/components/shared/Form';
-	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
 
 	let {
 		isSustaining = false,
@@ -19,7 +20,10 @@
 
 	const tz = getLocalTimeZone();
 
-	let date = $state(today(tz).toString());
+	// Left empty until availability loads, then preselected to the first bookable
+	// day (see the effect below). Defaulting to today opened the dialog on a dead
+	// end whenever today's slots were gone.
+	let date = $state('');
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
@@ -55,11 +59,18 @@
 		};
 	});
 
-	const minDate = today(tz);
-	const maxDate = today(tz).add({ days: 14 });
-
 	let availableDates = $state<string[]>([]);
 	let initialLoading = $state(true);
+
+	// Bound the calendar by what the server actually offers rather than
+	// recomputing the booking window on the client. That keeps the last
+	// selectable day honest (the server returns today..today+13, so a hardcoded
+	// +14 painted one extra day as struck-through) and sidesteps the skew
+	// between the browser's timezone and the server's DEFAULT_TIMEZONE.
+	const minDate = $derived(availableDates.length ? parseDate(availableDates[0]) : today(tz));
+	const maxDate = $derived(
+		availableDates.length ? parseDate(availableDates[availableDates.length - 1]) : today(tz)
+	);
 
 	let availSeen = 0;
 	let availGen = 0;
@@ -78,6 +89,12 @@
 			// conflict-triggered refresh already ran).
 			if (gen !== availGen) return;
 			availableDates = dates;
+			// Preselect the first bookable day, and re-pick if a conflict reload
+			// took the selected day away — otherwise the user is stranded on a
+			// date the server no longer offers. untrack: reading `date` here must
+			// not make this effect depend on it.
+			const current = untrack(() => date);
+			if (!current || !dates.includes(current)) date = dates[0] ?? '';
 			initialLoading = false;
 		})();
 	});
@@ -100,6 +117,12 @@
 		endTime = '';
 		startTimeOptions = null;
 		endTimeOptions = null;
+		// No date yet (availability still loading, or nothing bookable at all) —
+		// don't ask the server for times on an empty date.
+		if (!d) {
+			startTimeOptions = [];
+			return;
+		}
 		const q = getReservationStartTimes(d);
 		(async () => {
 			if (forceReload) await q.refresh();
@@ -137,6 +160,11 @@
 			</div>
 			<div class="skeleton h-20 w-full rounded-lg"></div>
 		</div>
+	{:else if availableDates.length === 0}
+		<EmptyState
+			title="No open practice times"
+			description="Every slot in the current booking window is taken. Check back soon — cancellations free up time regularly."
+		/>
 	{:else}
 		<Form.Field
 			name="date"
