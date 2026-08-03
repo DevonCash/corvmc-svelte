@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
-import { eq, and, like, or, sql, inArray, asc } from 'drizzle-orm';
+import { eq, and, like, or, sql, inArray, asc, exists } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
 import { getUserRoles } from '$lib/server/authorization';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
@@ -36,12 +36,50 @@ export async function resolveUserHelpRole(userId: string): Promise<string> {
 // Category Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * Every category the caller's tier allows, regardless of contents. This is the
+ * authoring view — staff need empty and draft-only categories so they have
+ * somewhere to file new articles. Reader-facing callers want
+ * `listNonEmptyCategories` instead.
+ */
 export async function listCategories(userRole: string) {
 	const roles = accessibleRoles(userRole);
 	return db
 		.select()
 		.from(helpCategory)
 		.where(inArray(helpCategory.minRole, roles))
+		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
+}
+
+/**
+ * Reader-facing categories: as above, but only those holding at least one
+ * article the caller can actually open. A category whose articles are all
+ * drafts or all above the caller's tier would otherwise render as a card
+ * reading "No articles yet" — which looks broken mid-review, and advertises
+ * categories (like Staff Guide) the caller can't read.
+ */
+export async function listNonEmptyCategories(userRole: string) {
+	const roles = accessibleRoles(userRole);
+	return db
+		.select()
+		.from(helpCategory)
+		.where(
+			and(
+				inArray(helpCategory.minRole, roles),
+				exists(
+					db
+						.select({ one: sql`1` })
+						.from(helpArticle)
+						.where(
+							and(
+								eq(helpArticle.categoryId, helpCategory.id),
+								eq(helpArticle.published, true),
+								inArray(helpArticle.minRole, roles)
+							)
+						)
+				)
+			)
+		)
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
 }
 

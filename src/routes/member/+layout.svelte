@@ -6,7 +6,10 @@
 		IconAddressBook,
 		IconPlus,
 		IconHelp,
-		IconMetronome
+		IconMetronome,
+		IconUser,
+		IconSettings,
+		IconUsersGroup
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -43,7 +46,7 @@
 		<Nav.Item href="/member" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/reservations" label="Practice">
+		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconMetronome />{/snippet}
 		</Nav.Item>
 		<Nav.Item href="/member/events" label="Events">
@@ -53,7 +56,7 @@
 			{#snippet icon()}<IconAddressBook />{/snippet}
 		</Nav.Item>
 
-		<Nav.Group title="My Bands">
+		<Nav.Group title="Bands">
 			{#snippet action()}
 				<!-- data-sveltekit-reload: a client-side navigation that lands on the
 				     bands page while this layout's async queries are still settling can
@@ -70,6 +73,9 @@
 					<IconPlus size={14} />
 				</Button>
 			{/snippet}
+			<Nav.Item href="/member/bands" label="My Bands">
+				{#snippet icon()}<IconUsersGroup />{/snippet}
+			</Nav.Item>
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
@@ -84,6 +90,12 @@
 
 		<div class="flex grow"></div>
 
+		<Nav.Item href="/member/profile" label="Profile">
+			{#snippet icon()}<IconUser />{/snippet}
+		</Nav.Item>
+		<Nav.Item href="/member/account" label="Account">
+			{#snippet icon()}<IconSettings />{/snippet}
+		</Nav.Item>
 		{#if layout.features.helpArticles}
 			<Nav.Item href="/member/help" label="Help">
 				{#snippet icon()}<IconHelp />{/snippet}
