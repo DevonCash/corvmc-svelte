@@ -70,7 +70,7 @@ describe('handleTicketCheckout', () => {
 			}
 		} as any);
 
-		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-abc');
+		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-abc', 'cs_test_123');
 	});
 
 	it('ignores sessions without ticket type', async () => {
@@ -106,6 +106,65 @@ describe('handleTicketCheckout', () => {
 		expect(mockFulfillPurchase).not.toHaveBeenCalled();
 	});
 
+	it('stores the payment intent id when payment_intent is a string', async () => {
+		mockFulfillPurchase.mockResolvedValue([
+			{
+				id: 't1',
+				eventId: 'event-1',
+				code: 'ABC',
+				attendeeName: 'Jo',
+				attendeeEmail: 'jo@test.com'
+			}
+		]);
+
+		await handleTicketCheckout({
+			id: 'cs_test_pi_string',
+			payment_intent: 'pi_abc123',
+			metadata: { type: 'ticket', purchase_id: 'purchase-abc' }
+		} as any);
+
+		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-abc', 'pi_abc123');
+	});
+
+	it('stores the payment intent id when payment_intent is an expanded object', async () => {
+		mockFulfillPurchase.mockResolvedValue([
+			{
+				id: 't1',
+				eventId: 'event-1',
+				code: 'ABC',
+				attendeeName: 'Jo',
+				attendeeEmail: 'jo@test.com'
+			}
+		]);
+
+		await handleTicketCheckout({
+			id: 'cs_test_pi_object',
+			payment_intent: { id: 'pi_expanded_456' },
+			metadata: { type: 'ticket', purchase_id: 'purchase-def' }
+		} as any);
+
+		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-def', 'pi_expanded_456');
+	});
+
+	it('falls back to the session id when the session has no payment_intent', async () => {
+		mockFulfillPurchase.mockResolvedValue([
+			{
+				id: 't1',
+				eventId: 'event-1',
+				code: 'ABC',
+				attendeeName: 'Jo',
+				attendeeEmail: 'jo@test.com'
+			}
+		]);
+
+		await handleTicketCheckout({
+			id: 'cs_test_no_pi',
+			metadata: { type: 'ticket', purchase_id: 'purchase-ghi' }
+		} as any);
+
+		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-ghi', 'cs_test_no_pi');
+	});
+
 	it('skips event emission when fulfillPurchase returns empty array', async () => {
 		mockFulfillPurchase.mockResolvedValue([]);
 
@@ -117,6 +176,6 @@ describe('handleTicketCheckout', () => {
 			}
 		} as any);
 
-		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-none');
+		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-none', 'cs_test_skip');
 	});
 });

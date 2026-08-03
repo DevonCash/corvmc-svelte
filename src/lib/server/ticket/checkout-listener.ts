@@ -21,9 +21,18 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 	const purchaseId = session.metadata?.purchase_id;
 	if (!purchaseId) return;
 
+	// The payment record ID comes from the session's payment_intent or the
+	// session ID itself — same resolution as handleReservationCheckout.
+	const paymentRecordId = session.payment_intent
+		? typeof session.payment_intent === 'string'
+			? session.payment_intent
+			: session.payment_intent.id
+		: session.id;
+
 	// fulfillPurchase returns the updated rows directly, avoiding a
-	// separate query that could race with concurrent writes.
-	const tickets = await fulfillPurchase(purchaseId);
+	// separate query that could race with concurrent writes. It writes the
+	// payment record id in the same UPDATE as the status flip.
+	const tickets = await fulfillPurchase(purchaseId, paymentRecordId);
 	if (tickets.length === 0) return;
 
 	// Emit ticket.purchased for notification dispatch

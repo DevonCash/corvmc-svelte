@@ -24,6 +24,7 @@ let selectResult: unknown[] = [];
 let selectResultQueue: unknown[][] = [];
 let updateResult: unknown = { rowCount: 1 };
 let insertResult: unknown[] = [{ ...mockTicket }];
+let lastUpdateSet: Record<string, unknown> | null = null;
 
 function chainable(result?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
@@ -49,21 +50,24 @@ const mockDb = {
 		}))
 	})),
 	update: vi.fn(() => ({
-		set: vi.fn(() => ({
-			where: vi.fn(() => {
-				const whereResult = Promise.resolve(updateResult);
-				(whereResult as any).returning = vi.fn(() =>
-					Promise.resolve(
-						typeof (updateResult as any).rowCount === 'number'
-							? Array.from({ length: (updateResult as any).rowCount }, (_, i) => ({
-									id: `id-${i}`
-								}))
-							: updateResult
-					)
-				);
-				return whereResult;
-			})
-		}))
+		set: vi.fn((vals: Record<string, unknown>) => {
+			lastUpdateSet = vals;
+			return {
+				where: vi.fn(() => {
+					const whereResult = Promise.resolve(updateResult);
+					(whereResult as any).returning = vi.fn(() =>
+						Promise.resolve(
+							typeof (updateResult as any).rowCount === 'number'
+								? Array.from({ length: (updateResult as any).rowCount }, (_, i) => ({
+										id: `id-${i}`
+									}))
+								: updateResult
+						)
+					);
+					return whereResult;
+				})
+			};
+		})
 	}))
 };
 
@@ -233,6 +237,28 @@ describe('fulfillPurchase', () => {
 		updateResult = [];
 		const rows = await fulfillPurchase('purchase-nonexistent');
 		expect(rows).toHaveLength(0);
+	});
+
+	it('writes the payment record id in the same update as the status flip', async () => {
+		updateResult = [{ ...mockTicket, status: 'valid' }];
+		lastUpdateSet = null;
+
+		await fulfillPurchase('purchase-1', 'pi_abc123');
+
+		expect(lastUpdateSet).toMatchObject({
+			status: 'valid',
+			stripePaymentRecordId: 'pi_abc123'
+		});
+	});
+
+	it('leaves the payment record id unset for purchases that never touch Stripe', async () => {
+		updateResult = [{ ...mockTicket, status: 'valid' }];
+		lastUpdateSet = null;
+
+		await fulfillPurchase('comp-1');
+
+		expect(lastUpdateSet).toMatchObject({ status: 'valid' });
+		expect(lastUpdateSet).not.toHaveProperty('stripePaymentRecordId');
 	});
 });
 

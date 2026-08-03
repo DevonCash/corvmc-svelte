@@ -21,6 +21,10 @@ export const ticket = sqliteTable(
 		attendeeEmail: text('attendee_email').notNull(),
 		code: text('code').notNull().unique(),
 		status: text('status', { enum: ticketStatuses }).notNull().default('pending'),
+		// Proof of payment, per finance-spec: the purchasable stores the Stripe
+		// Payment Record ID locally. Null for comped tickets and free RSVPs,
+		// which never go through Stripe, and for tickets still `pending`.
+		stripePaymentRecordId: text('stripe_payment_record_id'),
 		checkedInAt: integer('checked_in_at', { mode: 'timestamp' }),
 		checkedInByUserId: text('checked_in_by_user_id').references(() => user.id, {
 			onDelete: 'set null'

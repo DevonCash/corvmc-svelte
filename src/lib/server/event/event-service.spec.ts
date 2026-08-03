@@ -406,6 +406,26 @@ describe('EventService', () => {
 				})
 			);
 		});
+
+		it('emits event.cancelled with no ticket holders when nothing was sold', async () => {
+			selectResultQueue = [
+				[{ ...mockEventRow, status: 'published' }], // getById
+				[] // ticket holders — none
+			];
+
+			await cancel('evt-1', 'staff-1');
+
+			// Flush the fire-and-forget notification.
+			await new Promise((resolve) => setTimeout(resolve, 0));
+
+			const cancelledEmits = mockEmit.mock.calls.filter(([name]) => name === 'event.cancelled');
+			expect(cancelledEmits).toHaveLength(1);
+			expect(cancelledEmits[0][1]).toMatchObject({
+				eventId: 'evt-1',
+				eventTitle: 'Open Mic Night',
+				ticketHolders: []
+			});
+		});
 	});
 
 	// -----------------------------------------------------------------------
