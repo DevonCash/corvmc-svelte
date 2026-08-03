@@ -5,6 +5,7 @@
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { ReportContentAction } from '$lib/components/shared/actions';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import { pageTitle } from '$lib/config';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import ProfileHeader, {
@@ -72,6 +73,13 @@
 
 	let tags = $derived([...(member?.instruments ?? []), ...(member?.genres ?? [])]);
 </script>
+
+<!-- Leads with ProfileHeader rather than PageHeader, so the title is set here. -->
+<svelte:head>
+	{#if member}
+		<title>{pageTitle(member.name)}</title>
+	{/if}
+</svelte:head>
 
 {#if member}
 	<PageContent width="3xl">

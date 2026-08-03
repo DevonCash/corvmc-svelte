@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { pageTitle } from '$lib/config';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
@@ -107,7 +108,7 @@
 </script>
 
 <svelte:head>
-	<title>{mode === 'login' ? 'Sign in' : 'Create account'} — CorvMC</title>
+	<title>{pageTitle(mode === 'login' ? 'Sign in' : 'Create account')}</title>
 </svelte:head>
 
 <div class="flex items-center justify-center py-16 px-4">

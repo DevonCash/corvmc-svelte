@@ -5,6 +5,7 @@
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { ReportContentAction } from '$lib/components/shared/actions';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import { pageTitle } from '$lib/config';
 	import ProfileHeader, {
 		type ProfilePill
 	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
@@ -61,6 +62,11 @@
 		}))
 	);
 </script>
+
+<!-- Leads with ProfileHeader rather than PageHeader, so the title is set here. -->
+<svelte:head>
+	<title>{pageTitle(band.name)}</title>
+</svelte:head>
 
 <PageContent width="3xl">
 	<div class="flex items-center justify-between">

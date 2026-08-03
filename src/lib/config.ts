@@ -7,6 +7,14 @@ import type { PricingTier } from '$lib/server/db/schema/equipment';
 
 export const DEFAULT_TIMEZONE = 'America/Los_Angeles';
 
+/** Site name appended to every document title, as `<page> | <SITE_NAME>`. */
+export const SITE_NAME = 'Corvallis Music Collective';
+
+/** Build a document title. Pass nothing for the bare site name. */
+export function pageTitle(title?: string): string {
+	return title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+}
+
 // ---------------------------------------------------------------------------
 // Pagination
 // ---------------------------------------------------------------------------
