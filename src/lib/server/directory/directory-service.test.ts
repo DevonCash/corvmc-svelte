@@ -3,19 +3,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // getPublicDirectory aggregates listPublicMembers + listPublicBands, which hit
 // D1 via `db.query.*.findMany` and R2 via resolveImageUrl. Mock at those
 // boundaries so the real aggregation/try-catch runs without a DB or storage.
-const { userFindMany, bandFindMany, captureException } = vi.hoisted(() => ({
+const { userFindMany, userFindFirst, bandFindMany, captureException } = vi.hoisted(() => ({
 	userFindMany: vi.fn(),
+	userFindFirst: vi.fn(),
 	bandFindMany: vi.fn(),
 	captureException: vi.fn()
 }));
 
 vi.mock('$lib/server/db', () => ({
-	db: { query: { user: { findMany: userFindMany }, band: { findMany: bandFindMany } } }
+	db: {
+		query: {
+			user: { findMany: userFindMany, findFirst: userFindFirst },
+			band: { findMany: bandFindMany }
+		}
+	}
 }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
 vi.mock('$lib/server/sentry', () => ({ captureException }));
 
-import { getPublicDirectory, listMembers, listBands } from './directory-service';
+import { getPublicDirectory, listMembers, listBands, isProfileComplete } from './directory-service';
 
 /** Pull the `AND` condition array out of the `where` passed to a findMany mock. */
 function whereConditions(mock: ReturnType<typeof vi.fn>): Record<string, unknown>[] {
@@ -96,5 +102,39 @@ describe('getPublicDirectory', () => {
 		expect(result.bands).toEqual([]);
 		expect(result.failed).toBe(false);
 		expect(captureException).not.toHaveBeenCalled();
+	});
+});
+
+describe('isProfileComplete', () => {
+	const blank = { tagline: null, bio: null, image: null, instruments: [], genres: [] };
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('is false for a brand-new account with nothing filled in', async () => {
+		userFindFirst.mockResolvedValue(blank);
+		await expect(isProfileComplete('u1')).resolves.toBe(false);
+	});
+
+	it('is false when a missing user means there is no profile at all', async () => {
+		userFindFirst.mockResolvedValue(undefined);
+		await expect(isProfileComplete('nobody')).resolves.toBe(false);
+	});
+
+	it.each([
+		['a tagline', { tagline: 'Bassist | Post-punk' }],
+		['a bio', { bio: '<p>Moved here in 2025.</p>' }],
+		['an avatar', { image: 'avatars/u1.png' }],
+		['one instrument', { instruments: [{ instrument: 'bass' }] }],
+		['one genre', { genres: [{ genre: 'post-punk' }] }]
+	])('is true once the member has %s', async (_label, patch) => {
+		userFindFirst.mockResolvedValue({ ...blank, ...patch });
+		await expect(isProfileComplete('u1')).resolves.toBe(true);
+	});
+
+	it('treats whitespace-only text as still blank', async () => {
+		userFindFirst.mockResolvedValue({ ...blank, tagline: '   ', bio: '\n\t' });
+		await expect(isProfileComplete('u1')).resolves.toBe(false);
 	});
 });

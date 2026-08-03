@@ -170,6 +170,39 @@ export async function listPublicMembers(filters?: MemberFilters) {
 	return rows.map(mapMemberRow);
 }
 
+/**
+ * Whether a member has filled in enough of their profile to be worth showing in
+ * the directory. New accounts are directory-visible by default (the
+ * `directoryVisibility` column defaults to 'members'), so without something like
+ * this they appear as a card with nothing on it but a name.
+ *
+ * The bar is deliberately low — one instrument is enough — because this backs an
+ * ambient dashboard nudge, and a nudge that survives a genuine effort to answer
+ * it is worse than no nudge. Kept here, next to the directory queries, so a
+ * future "hide blank profiles from the directory" change can reuse the same
+ * definition rather than inventing a second one.
+ */
+export async function isProfileComplete(userId: string): Promise<boolean> {
+	const row = await db.query.user.findFirst({
+		where: { id: userId },
+		columns: { tagline: true, bio: true, image: true },
+		with: {
+			instruments: { columns: { instrument: true }, limit: 1 },
+			genres: { columns: { genre: true }, limit: 1 }
+		}
+	});
+	if (!row) return false;
+
+	const hasText = (v: string | null | undefined) => !!v && v.trim().length > 0;
+	return (
+		hasText(row.tagline) ||
+		hasText(row.bio) ||
+		hasText(row.image) ||
+		row.instruments.length > 0 ||
+		row.genres.length > 0
+	);
+}
+
 /** Single member profile */
 export async function getMemberProfile(userId: string, visibility: 'members' | 'public') {
 	const conditions: MemberWhere[] = [{ id: userId }, { deletedAt: { isNull: true } }];
