@@ -911,7 +911,10 @@ export const purchaseTickets = form(
 
 		if (result.paid) {
 			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');
-			await fulfillPurchase(purchaseId);
+			// Credits covered the whole cart — checkout() still records a Stripe
+			// payment record for it, so the tickets store that as their proof of
+			// payment just like a card purchase does.
+			await fulfillPurchase(purchaseId, result.stripePaymentRecordId);
 			return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
 		}
 

@@ -434,7 +434,11 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'pending'])));
 
-	// Emit domain event for ticket holder notifications (fire-and-forget)
+	// Emit domain event for every cancellation (fire-and-forget). This fires
+	// even when no tickets were sold — the event is the signal that a show was
+	// cancelled, not just a notification trigger, and cancelling before any
+	// tickets move is the common case. Listeners that only notify holders
+	// iterate `ticketHolders` and do nothing when it's empty.
 	Promise.resolve().then(async () => {
 		try {
 			// Deduplicate by email (one notification per buyer)
@@ -445,22 +449,20 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 				return true;
 			});
 
-			if (holders.length > 0) {
-				await domainEvents.emit('event.cancelled', {
-					eventId,
-					eventTitle: existing.title,
-					eventDate: formatDateFull(existing.startsAt, DEFAULT_TIMEZONE),
-					ticketHolders: holders.map((h) => ({
-						attendeeName: h.attendeeName,
-						attendeeEmail: h.attendeeEmail,
-						userId: h.userId ?? undefined
-					})),
-					// Refunds are handled manually by staff — do not promise automatic
-					// processing (no auto-refund flow exists; see tickets-spec deferred).
-					refundNote:
-						'If you purchased tickets, CMC staff will reach out about your refund. Questions? Reply to this email.'
-				});
-			}
+			await domainEvents.emit('event.cancelled', {
+				eventId,
+				eventTitle: existing.title,
+				eventDate: formatDateFull(existing.startsAt, DEFAULT_TIMEZONE),
+				ticketHolders: holders.map((h) => ({
+					attendeeName: h.attendeeName,
+					attendeeEmail: h.attendeeEmail,
+					userId: h.userId ?? undefined
+				})),
+				// Refunds are handled manually by staff — do not promise automatic
+				// processing (no auto-refund flow exists; see tickets-spec deferred).
+				refundNote:
+					'If you purchased tickets, CMC staff will reach out about your refund. Questions? Reply to this email.'
+			});
 		} catch (err) {
 			captureException(err, { event: 'event.cancelled', eventId });
 		}
