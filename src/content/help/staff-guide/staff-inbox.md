@@ -19,6 +19,11 @@ Messenger. Tabs separate the channels.
 - Open a thread to read its full history and the sender's details.
 - **Reply** from the thread, and update its **status** as you resolve it.
 
+Replies to contact-form threads are emailed to the person who wrote in, and their
+response comes back into the same thread — so keep the conversation here rather
+than switching to your own mail client. If a resolved thread gets a reply, it
+reopens automatically.
+
 ## Tips
 
 - Close threads once handled so the active list stays focused.

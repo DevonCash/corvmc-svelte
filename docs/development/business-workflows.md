@@ -417,10 +417,16 @@ unsubscribe link. Behind the `emailMarketing` feature flag.
 
 ### The story
 
-Inbound email (to the support address) and SMS both land in a unified staff inbox as
-threaded conversations. Staff reply from the app; replies go out through Postmark (email)
-or Twilio (SMS). Every inbound message notifies all staff. Behind the `staffInbox` feature
-flag. (A Meta/Messenger handler exists but the Meta integration is not provisioned.)
+Inbound email (to the support address), contact-form submissions, and SMS all land in a
+unified staff inbox as threaded conversations. Staff reply from the app; replies go out
+through Postmark (email) or Twilio (SMS). Every inbound message notifies all staff. Behind
+the `staffInbox` feature flag. (A Meta/Messenger handler exists but the Meta integration is
+not provisioned.)
+
+Contact-form ('web') threads reply **by email** — the submitter gave us their address, and
+the reply carries a plus-addressed `Reply-To` so their response threads back into the same
+conversation. The thread stays `channel: 'web'`; that provenance is what the staff UI shows,
+and re-labelling it `email` would let unrelated mail from the same address merge into it.
 
 ### Code path
 
@@ -429,7 +435,8 @@ flag. (A Meta/Messenger handler exists but the Meta integration is not provision
   `src/lib/server/inbox/inbound-handlers.ts`.
 - **Inbound SMS:** Twilio webhook → `src/routes/api/inbox/twilio/+server.ts` →
   `handleTwilioInbound()`.
-- **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`.
+- **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`,
+  which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`.
 - All three thread the message via `thread-service.ts` / `message-service.ts` (match on
   sender address/number, else create a thread) and emit `inbox.message_received` — the
   listener in `events/register-listeners.ts` notifies every staff user, linking to
@@ -437,6 +444,12 @@ flag. (A Meta/Messenger handler exists but the Meta integration is not provision
 - **Replies:** `staff/inbox` UI → `inbox.remote.ts` → outbound via the channel's client
   (`notification/email/postmark-client.ts` or `inbox/twilio-client.ts`), recorded with an
   `inbox.message_sent` event.
+- **Reply round trip (email + web):** `channel-dispatcher.ts` attaches a `Reply-To` built by
+  `inbox/reply-address.ts` (`reply+<threadId>.<hmac>@…`). The contact's response reaches
+  Postmark Inbound, which parses the part after the `+` into `MailboxHash`;
+  `handlePostmarkInbound()` verifies the signature and appends to that exact thread,
+  reopening it if it was resolved. No hash → find-or-create by sender address, but only when
+  the `email` channel is enabled.
 
 ### Where it breaks
 
@@ -447,6 +460,13 @@ flag. (A Meta/Messenger handler exists but the Meta integration is not provision
   the listener.
 - **Outbound SMS failing** → `TWILIO_PHONE_NUMBER` is intentionally unset until
   provisioned (see the comment in `wrangler.toml`).
+- **A contact's reply started a new thread instead of continuing theirs** → check the
+  message's `channelMetadata.unresolvedMailboxHash`. Present means the address survived but
+  the signature failed (usually `INBOX_REPLY_SECRET` / `POSTMARK_SERVER_TOKEN` changed since
+  the reply went out); absent means the `+hash` never made it back, so check the MX record
+  and Postmark's inbound activity view.
+- **Replies going to the wrong place** → `INBOX_REPLY_ADDRESS` unset silently degrades to
+  `Reply-To: STAFF_CONTACT_EMAIL`. That's the intended pre-MX state, not a bug.
 
 ---
 

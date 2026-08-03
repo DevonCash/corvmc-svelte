@@ -5,22 +5,41 @@ import {
 	handlePostmarkInbound,
 	type PostmarkInboundPayload
 } from '$lib/server/inbox/inbound-handlers';
-import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
+
+/**
+ * Postmark's inbound hook is a bare `InboundHookUrl` — unlike modular
+ * (message-event) webhooks it cannot send custom headers, so the only
+ * credential it can carry is HTTP Basic embedded in the URL:
+ *   https://postmark:<POSTMARK_INBOUND_TOKEN>@corvmc.org/api/inbox/postmark
+ * The `x-postmark-token` header is still accepted for local curl testing.
+ */
+function presentedToken(request: Request): string | null {
+	const header = request.headers.get('x-postmark-token');
+	if (header) return header;
+
+	const auth = request.headers.get('authorization');
+	if (!auth?.toLowerCase().startsWith('basic ')) return null;
+
+	try {
+		const decoded = Buffer.from(auth.slice(6).trim(), 'base64').toString('utf-8');
+		const colon = decoded.indexOf(':');
+		return colon === -1 ? null : decoded.slice(colon + 1);
+	} catch {
+		return null;
+	}
+}
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!(await isFeatureEnabled('staffInbox'))) {
 		return json({ ok: true, skipped: 'feature disabled' });
 	}
-	const enabled = await isChannelEnabled('email');
-	if (!enabled) {
-		return json({ ok: true, skipped: 'channel disabled' });
-	}
 
-	const token = request.headers.get('x-postmark-token');
+	// Note: the `email` channel toggle is checked inside handlePostmarkInbound,
+	// and only for mail from a new sender. A reply to a thread we started must
+	// land regardless of whether the support mailbox is switched on.
 	const expectedToken = env.POSTMARK_INBOUND_TOKEN;
-
-	if (expectedToken && token !== expectedToken) {
+	if (!expectedToken || presentedToken(request) !== expectedToken) {
 		error(401, 'Invalid inbound token');
 	}
 

@@ -183,8 +183,10 @@ describe('collapsed listeners use the generic template', () => {
 
 	it('contact.form_submitted → email-only notification alias to staff', async () => {
 		await emit('contact.form_submitted', {
+			threadId: 'thread-9',
 			name: 'Charlie',
 			email: 'charlie@test.com',
+			subject: 'General Inquiry',
 			message: 'Hello, I have a question'
 		});
 
@@ -194,6 +196,22 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.templateAlias).toBe(GENERIC);
 		expect(paragraphText(params.model)).toContain('charlie@test.com');
 		expect(paragraphText(params.model)).toContain('Hello, I have a question');
+		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/inbox/thread-9');
+	});
+
+	it('contact.form_submitted → points staff at the inbox, not at replying by email', async () => {
+		await emit('contact.form_submitted', {
+			threadId: 'thread-9',
+			name: 'Charlie',
+			email: 'charlie@test.com',
+			subject: 'General Inquiry',
+			message: 'Hello, I have a question'
+		});
+
+		// The alert is sent from noreply@ with no Reply-To — telling staff to reply
+		// to it would silently drop their response.
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(paragraphText(params.model)).not.toContain('Reply directly to this email');
 	});
 
 	it('loan_requested → notification alias, omits notes line when none', async () => {

@@ -8,8 +8,9 @@ import { getBySlug } from '$lib/server/band/band-service';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
-import { bandPageConfig, bandPageConfigSchema, type Block } from '$lib/server/db/schema/band-page';
+import { bandPageConfig, blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { eq } from 'drizzle-orm';
+import { jsonArrayField, jsonObjectField } from '$lib/utils/zod-json';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -43,12 +44,29 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 // Forms
 // ---------------------------------------------------------------------------
 
+/**
+ * JSON-encoded blocks array. Decoding + block validation happen in the schema so
+ * a malformed payload surfaces as a field issue on `blocks` instead of a
+ * whole-page 400 (and never as the 500 a bare `JSON.parse` transform throws).
+ * `''` means "not provided", matching the previous `if (data.blocks)` guard —
+ * `'[]'` still means "the user deleted every block".
+ */
+const blocksField = z
+	.union([
+		z.literal('').transform(() => undefined),
+		jsonArrayField(blockSchema, 'Invalid blocks configuration').refine(
+			(blocks) => blocks.length <= 50,
+			'A page can have at most 50 blocks'
+		)
+	])
+	.optional();
+
 export const saveBandPageConfig = form(
 	z.object({
 		slug: z.string().min(1),
 		theme: z.string().optional(),
 		customCss: z.string().max(51200).optional(),
-		blocks: z.string().optional() // JSON-encoded blocks array
+		blocks: blocksField
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
@@ -57,30 +75,12 @@ export const saveBandPageConfig = form(
 			throw error(403, 'Premium subscription required');
 		}
 
-		// Parse blocks if provided
-		let blocks: Block[] | undefined;
-		if (data.blocks) {
-			try {
-				const parsed = JSON.parse(data.blocks);
-				// Validate with schema
-				const result = bandPageConfigSchema.shape.blocks.safeParse(parsed);
-				if (!result.success) {
-					throw error(400, 'Invalid blocks configuration');
-				}
-				// Sanitize user-authored HTML at rest (the renderer sanitizes again on read)
-				blocks = (result.data as Block[]).map((block) => {
-					if (block.type === 'bio') return { ...block, content: sanitizeBio(block.content) };
-					if (block.type === 'custom_html')
-						return { ...block, content: sanitizeHtml(block.content) };
-					return block;
-				});
-			} catch (e) {
-				if (e instanceof Error && e.message.includes('JSON')) {
-					throw error(400, 'Invalid blocks JSON');
-				}
-				throw e;
-			}
-		}
+		// Sanitize user-authored HTML at rest (the renderer sanitizes again on read)
+		const blocks: Block[] | undefined = data.blocks?.map((block) => {
+			if (block.type === 'bio') return { ...block, content: sanitizeBio(block.content) };
+			if (block.type === 'custom_html') return { ...block, content: sanitizeHtml(block.content) };
+			return block;
+		});
 
 		// Sanitize custom CSS if provided
 		let customCss: string | null | undefined = undefined;
@@ -119,7 +119,9 @@ export const saveBandPageConfig = form(
 export const saveBandEpk = form(
 	z.object({
 		slug: z.string().min(1),
-		epk: z.string() // JSON-encoded BandEpk
+		// JSON-encoded BandEpk. Decoded in the schema so malformed input is a field
+		// issue on `epk` rather than a whole-page 400.
+		epk: jsonObjectField('Invalid EPK data')
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
@@ -128,12 +130,7 @@ export const saveBandEpk = form(
 			throw error(403, 'Premium subscription required');
 		}
 
-		let epk: Record<string, unknown>;
-		try {
-			epk = JSON.parse(data.epk);
-		} catch {
-			throw error(400, 'Invalid EPK JSON');
-		}
+		const epk = data.epk;
 
 		// Upsert
 		const [existing] = await db

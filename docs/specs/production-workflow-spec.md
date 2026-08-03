@@ -5,14 +5,13 @@ cleaned up. Today the app models only the public half of that — an `event` row
 title, times, a poster, and optional ticketing. Everything a producer actually does
 between "we should book this band" and "the room is reset" lives in spreadsheets and
 group chats: who's playing and in what order, how long each set runs, which touring act
-has no CMC account, whose venue it's at, what the door split was, and whether the load-out
-checklist got finished.
+has no CMC account, whose venue it's at, what the band cut came to, and whether the
+load-out checklist got finished.
 
-This feature adds that back-of-house layer. A `production` row sits behind exactly one
-`event`, carrying the lineup, the schedule, the checklists, and the settlement. It adds
-a real `venue` table, and it extends `band` so a touring act with no account can be a
-first-class lineup entry — and can later claim its own profile without the show history
-being rewritten.
+This feature adds that back-of-house layer. A `production` row hangs off exactly one
+existing `event`, carrying the lineup, the schedule, the checklists, and the settlement.
+It adds a real `venue` table, and it lets a touring act with no account be a first-class
+lineup entry — and later claim its own profile without the show history being rewritten.
 
 Everything here is staff-facing and gated behind a `productions` feature flag.
 
@@ -20,36 +19,84 @@ Everything here is staff-facing and gated behind a `productions` feature flag.
 
 ## Key concepts
 
-**The production is the back of house; the event is the front.** `production.eventId` is
-a NOT NULL unique FK — strictly one production per event, one event per production.
-Creating a production creates its event (reusing `create()` in
-`src/lib/server/event/event-service.ts`), which stays `draft` until the show is
-announced. Public concerns — title, poster, ticket price, gig-guide listing — stay on
-`event` and are edited through the production. Ops concerns — lineup, load-in, payouts,
+**The event is the parent; the production is a child record.** `/staff/events` stays the
+single front door for creating a CMC show. "Add production" is an action _on an event_,
+not a second way to create one. `production.eventId` is a NOT NULL unique FK — still
+strictly one production per event, one event per production — but the production never
+creates the event. An earlier draft of this spec had it the other way round, which gave
+staff two front doors for the same object and left an awkward backfill question for the
+events that already exist. Attaching to an event answers both: any event can gain a
+production at any time, and nothing needs migrating.
+
+Public concerns — title, poster, ticket price, gig-guide listing, venue — stay on `event`
+and are edited where they always were. Ops concerns — lineup, load-in, payouts,
 checklists — live on `production` and never leak to the public schema. Nothing is
 duplicated across the two tables.
 
+**The room is held from `draft`, not from `confirmed`.** The event is created with a
+`reservation` covering doors→close, exactly as `/staff/events` does today; the production
+widens that window to load-in→load-out once those times are known. The earlier design
+created the reservation only at `confirmed`, which meant the room stayed bookable by
+members for the entire stretch while a show was being booked into it. Holding early and
+widening later costs nothing and closes that window.
+
 **A lineup slot always points at a `band` row.** Touring and non-member acts get `band`
-rows too, marked unclaimed (see below). One reference type means a lineup can mix member
+rows too, with no members (see below). One reference type means a lineup can mix member
 and non-member acts without a polymorphic column, and an act that later joins the
 Collective keeps every production it ever played.
 
-**Set times are computed, then overridable.** A pure helper walks the lineup in order,
-laying each set out from the first set time plus preceding set lengths and changeovers —
-the same shape as `calculateDailyRate()` / `calculateLoanCharge()` at the top of
-`equipment/loan-service.ts`. The computed time is _stored_ on the slot, so staff can
-hand-edit one set without every later slot shifting underneath them.
+**Set times are derived, full stop.** A pure helper walks the lineup in order and the
+service recomputes on every lineup mutation. There is no override, no lock flag, and no
+"recalculate" button — the same treatment as `calculateDailyRate()` /
+`calculateLoanCharge()` at the top of `equipment/loan-service.ts`, where the number is
+always a function of its inputs. Day-of adjustments happen on a clipboard, not in the
+database.
 
-**Stripe stays the payment ledger.** Per [finance-spec.md](finance-spec.md), settlement
-creates no Order or Transaction tables. Ticket revenue is read from the existing `ticket`
-and `payment_cache` rows and snapshotted onto the production at settle time. Door cash,
-expenses, and band payouts are _recorded_ amounts — the app is a settlement worksheet and
-a record of what was handed over, not a disbursement system.
+**Stripe is the ledger and settlement only reads it.** Per
+[finance-spec.md](finance-spec.md), settlement creates no Order or Transaction tables and
+writes nothing back to Stripe. Ticket revenue is read live from Stripe at settle time and
+snapshotted onto the production. Door cash, expenses, and band payouts are _recorded_
+amounts — the app is a settlement worksheet and a record of what was handed over, not a
+disbursement system.
 
 **Checklists are data, not code.** Advance and close-out are rows in one
 `production_task` table separated by a `phase` column, seeded from default templates and
 editable per show. The close-out phase is the cleanup stage, and a production cannot
 reach `closed` with unfinished close-out tasks.
+
+---
+
+## Prerequisites: two fixes, both landed
+
+This design surfaced two bugs in shipped code. Neither was caused by productions and
+neither depended on it, so both were fixed separately in
+[#161](https://github.com/DevonCash/corvmc-svelte/pull/161) rather than being carried by
+this feature. They are recorded here because the design leans on both, and because the
+reasoning explains why parts of the spec below assume behavior that is newer than the rest
+of the codebase.
+
+**`event.cancelled` was emitted inside a ticket-holder guard.** In
+`src/lib/server/event/event-service.ts`, `cancel()` collects ticket holders, dedupes them
+by email, and used to emit the domain event inside `if (holders.length > 0)` — so the emit
+was skipped entirely for any show that had sold no tickets. A production listening for
+`event.cancelled` to mark its own status `cancelled` and release its slots would have
+missed every cancellation of an unticketed show, which is most of them at draft stage. The
+emit now fires on every cancellation with an empty `ticketHolders` array; the notification
+listener iterates that array and so sends nothing when it is empty, which is why no
+listener change was needed. **A production may now rely on `event.cancelled` firing
+exactly once per cancellation**, which is what makes the event-as-parent cascade in "How a
+production feeds the rest of the app" sound.
+
+**Tickets didn't record their Stripe payment.** `handleTicketCheckout` in
+`src/lib/server/ticket/checkout-listener.ts` flipped the purchase's tickets `pending →
+valid` and emitted `ticket.purchased`, discarding `session.payment_intent` — unlike
+`handleReservationCheckout`, which resolves the payment record id (falling back to
+`session.id`) and writes it to `reservation.stripePaymentRecordId`. finance-spec's rule is
+that the purchasable stores the Payment Record ID locally as its proof of payment; every
+other purchasable did, and tickets were the gap. `ticket.stripePaymentRecordId` now exists
+and is populated on both the card path and the credits-covered path. **Settlement therefore
+inherits this column rather than adding it** — the schema section below counts it as
+existing, and the comp detection in "Reading ticket revenue" depends on it.
 
 ---
 
@@ -63,7 +110,6 @@ The ops record. One per event.
 production
   id                  uuid pk
   eventId             uuid unique fk → event    — NOT NULL, one-to-one
-  venueId             uuid? fk → venue          — null falls back to event.location text
   status              text                      — see Status lifecycle
   producerUserId      uuid? fk → user           — staff lead
   loadInAt            timestamp?
@@ -74,11 +120,13 @@ production
   billingNotes        text                      — how the lineup is billed on the poster
   hospitalityNotes    text
   internalNotes       text
+  bandSplitPercent    int                       — default 70; the band cut of gross
   doorCount           int?                      — settlement snapshot below
   compCount           int?
   ticketRevenueCents  int?
   doorCashCents       int?
   otherRevenueCents   int?
+  bandPoolCents       int?
   totalExpenseCents   int?
   totalPayoutCents    int?
   netCents            int?
@@ -95,6 +143,10 @@ Settlement totals live directly on `production` because the relationship is 1:1 
 separate `production_settlement` table would buy nothing. Per-line detail lives in
 `production_expense`; per-act payouts live on `production_slot`.
 
+**There is no `production.venueId`.** Venue is a public fact about the show, so it lives
+on `event.venueId` and nowhere else. A column on both tables would be two answers to one
+question, and the production's copy would be the one nobody remembers to update.
+
 Public-facing times stay on `event`: `event.doorsAt`, `event.startsAt`, `event.endsAt`.
 The production's timestamps are the ones the public never sees. `firstSetAt` is
 deliberately separate from `event.startsAt` — the listing says "8pm", the first band
@@ -108,7 +160,7 @@ New table, closing the "Venues — not started" gap in
 ```
 venue
   id            uuid pk
-  name          text unique
+  name          text            — not unique; see below
   slug          text unique
   isPrimary     boolean         — the CMC room; exactly one row should have this
   address1      text?
@@ -128,46 +180,126 @@ venue
   updatedAt     timestamp
 ```
 
+`venue.name` is deliberately **not** unique. A raw uniqueness constraint on a
+human-entered name is the same trap being removed from `band.name` below: it turns a
+plausible data-entry situation into a 500 and a Sentry report, and there is no reason two
+rooms in two towns can't share a name. `slug` carries uniqueness, and
+`ensureUniqueSlug()` already handles collisions.
+
 `event.venueId` is added as a nullable set-null FK **alongside** the existing
 `event.location` free-text column. `location` stays exactly as it is — band-created
 off-site gigs keep typing a venue name, and the gig guide's venue line keeps working
 unchanged. `venueId` is the structured upgrade, used by productions and available to band
 events later.
 
-**Only productions at the primary venue hold space.** When `venue.isPrimary` is true,
-confirming a production creates a `reservation` with `bookerType: 'event'` — the existing
-polymorphic hook in `reservation.ts`, no enum change needed — covering `loadInAt` through
-`loadOutBy`, not just doors-to-close. Off-site productions create no reservation at all,
-which is the point of tracking the venue.
+**Only shows at the primary venue hold space.** Whether a reservation exists is already
+decided at event creation — `create()` in `event-service.ts` takes an optional
+`reservation` param and only creates one when given it. For a production at the primary
+venue the answer is always yes; for an off-site production it is always no, which is the
+point of tracking the venue.
 
 ### Bands, extended to cover external acts
 
 A touring act needs a name, a bio, genres, links, a photo, and a contact — which is
 exactly the `band` table. Rather than fork all of that into an `externalAct` table and
-face a painful merge the day the act joins, `band` gains a claim state:
+face a painful merge the day the act joins, external acts are simply `band` rows.
 
-```
-band (additions)
-  claimStatus   text   — 'claimed' | 'unclaimed' | 'claim_pending', default 'claimed'
-```
+**No new columns.** An earlier draft added `band.claimStatus` (`claimed` / `unclaimed` /
+`claim_pending`) and relaxed `band.ownerId` to nullable. Both are gone. `claimStatus` was
+a fourth copy of a fact already recorded three other ways — by `bandMember` rows, by
+`ownerId`, and by a pending `platform_invite` — and four copies of one fact is four
+chances to disagree.
 
-- **`unclaimed`** — a staff-created stub for an act with no CMC presence. No `bandMember`
-  rows. `directoryVisibility` **must be set explicitly to `'hidden'`** at creation.
-- **`claim_pending`** — a `platformInvite` has been sent to the act's contact.
-- **`claimed`** — a normal member band. Every band today is `claimed`.
+Instead, this spec **drops `band.ownerId` entirely.**
 
-**`ownerId` becomes nullable.** An unclaimed band has no owner, and the schema should say
-so. The considered alternative — keeping `ownerId NOT NULL` and pointing unclaimed bands
-at a CMC service user — buys a cheaper migration at the cost of encoding a falsehood:
-every "who owns this band" query would return a robot, and the service user would need
-special-casing in exactly the places the null would have been caught by the type system.
-Rejected.
+> **An unclaimed act is a band with zero `bandMember` rows.** One condition, one source of
+> truth. The owner is the `bandMember` row with `role: 'owner'`, enforced by a partial
+> unique index on `(bandId) WHERE role = 'owner'`. The split-brain the earlier draft
+> worried about — a `bandMember` with `role: 'owner'` while `band.ownerId` is still null —
+> becomes structurally impossible rather than something the claim step has to remember.
 
-The migration is a full table rebuild, because SQLite cannot relax `NOT NULL` in place.
-A rebuild is dangerous on D1 — the generated `DROP TABLE` cascade-deletes the rebuilt
-table's children — but that is a solved, general problem rather than something this
-feature has to solve: `pnpm db:generate` rewrites the rebuild automatically. The mechanism
-and what to check are in
+The evidence for dropping it:
+
+**Authorization never reads it.** `requireBandOwner()` in
+`src/lib/server/band/band-context.ts` delegates to `requireBandRole('owner')` →
+`requireBandMember()` → `getUserRole()`, and `getUserRole()` reads `bandMember` alone.
+There is no path from an access decision to `band.ownerId`. Every remaining use is
+display or bookkeeping, and every one of them is derivable from `bandMember`.
+
+**The atomicity objection doesn't apply.** The natural worry is that "who owns this band"
+becomes two writes on a platform with no interactive transactions. But
+`transferOwnership()` in `src/lib/server/band/band-service.ts` already performs three
+statements in a single `db.batch([...])`: demote the current owner's `bandMember` row to
+`admin`, promote the new owner's row to `owner`, and update `band.ownerId`. Dropping the
+column deletes the third statement from a batch that already exists and already spans the
+two `bandMember` writes. The atomicity guarantee is unchanged; there is simply less of it
+to guarantee.
+
+The call sites that change, all mechanical:
+
+- The three owner display joins in `band-service.ts` —
+  `.innerJoin(user, eq(user.id, band.ownerId))` in `listAll()`'s data query (~line 528),
+  `listAll()`'s count query (~line 536), and `getByIdWithDetails()` (~line 564) — join
+  through `bandMember` instead: `innerJoin(bandMember, and(eq(bandMember.bandId, band.id), eq(bandMember.role, 'owner')))`
+  then `innerJoin(user, eq(user.id, bandMember.userId))`. These must become **left** joins
+  on the way, or unclaimed acts silently vanish from `/staff/bands` and 404 on their own
+  detail page. `ownerName`, `ownerEmail`, `ownerPronouns`, and `ownerRole` all become
+  nullable.
+- `deleteBand()` (~line 143) and `deactivate()` (~line 593) pass `row.ownerId` into
+  `cancelReservation(id, userId)`, which requires a string. They should pass the staff
+  member performing the action, which is the more correct attribution anyway.
+- The `purgeUser()` owned-band guard in `src/lib/server/user/user-service.ts` (~line 165)
+  counts `band` rows where `ownerId = userId`; it counts `bandMember` rows with
+  `role: 'owner'` for that user instead.
+- The contact-email fallback in `src/lib/remote/band-site.remote.ts` selects `ownerId`
+  (~line 145) and looks the owner's email up by it (~line 170). Same substitution.
+- `BandLayoutResponse` in `src/lib/server/db/schema/api.ts` (~line 52) picks `ownerId`
+  into the band payload; the field is dropped, and band-panel consumers use `userRole`,
+  which is already in that response and already comes from `bandMember`.
+- `src/lib/remote/bands.remote.ts` — `createBandApi` takes an `ownerId` form field and
+  passes it to `create()` (~lines 225, 229), which is fine as a _parameter_ (it becomes
+  the initial `bandMember` row) but should be optional so staff can stub an external act
+  with no owner. `transferOwnership` reads `band.ownerId` off `getByIdWithDetails()` to
+  supply the actor (~line 301) and instead resolves the current owner from `bandMember`.
+- `scripts/seed-dev.ts` sets `ownerId` on three band inserts (~lines 1071, 1146, 1165) and
+  uses `b.ownerId` as an event's `createdByUserId` (~line 1217). The seed already inserts
+  the matching `bandMember` row in each case, so this is deletion plus one lookup.
+- `scripts/migrate-from-postgres.ts` maps the legacy `owner_id` (~lines 548, 575); it
+  emits the `bandMember` owner row instead.
+
+**Incidental win.** The live schema has `owner_id` declared `NOT NULL` with
+`ON DELETE SET NULL` — see the `CREATE TABLE band` block in
+`migrations/20260521230931_open_the_phantom/migration.sql`, where the column is
+`owner_id text NOT NULL` and the FK is
+`FOREIGN KEY (owner_id) REFERENCES user(id) ON DELETE SET NULL`. Those two clauses cannot
+both be satisfied: deleting a user who owns a band would try to write NULL into a NOT NULL
+column and fail at the constraint. `purgeUser()` guards this in application code, which is
+why nobody has hit it. (The drizzle definition in `src/lib/server/db/schema/band.ts` says
+`onDelete: 'restrict'`, so schema and migration also disagree about the intent.) Dropping
+the column retires the whole question.
+
+**Dropping `UNIQUE` on `band.name` at the same time.** Today `name` is
+`text NOT NULL UNIQUE` — an inline column constraint in the same `CREATE TABLE band`
+block. A global unique on band names was defensible when every band was a local member
+band. It is wrong once external and touring acts are first-class: two genuinely different
+acts share a name often enough that the constraint would leave staff simply unable to
+enter the second one. An earlier draft proposed catching the violation as a typed
+`BandNameTakenError` and offering a "did you mean" search; that turns a hard failure into
+a polite hard failure. Drop the constraint instead. `ensureUniqueSlug()` already
+guarantees the slug is distinct, which is the only uniqueness the app actually depends on,
+and `BandNameTakenError` is not needed anywhere.
+
+Dedupe moves into the UI, where it belongs: the inline-create flow searches existing bands
+by name **first** and shows matches, picking one reuses that row, and "create anyway"
+makes a second. That handles dedupe by intent, which is the only kind that works when two
+different bands really are called Mirage.
+
+**One migration, not two.** Both changes are to `band`, and both need a full table rebuild
+— an inline `UNIQUE` in `CREATE TABLE` is not a droppable index, and SQLite cannot drop a
+column in place while a constraint mentions it. A rebuild is dangerous on D1, because the
+generated `DROP TABLE` cascade-deletes the rebuilt table's children, but that is a solved,
+general problem rather than something this feature has to solve: `pnpm db:generate`
+rewrites the rebuild automatically. The mechanism and what to check are in
 [table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1); don't
 duplicate the reasoning here.
 
@@ -186,46 +318,25 @@ What matters for this migration specifically:
   `band_page_config`, `platform_invite`, `ticket`, and `event_rsvp`, plus non-null
   `event.band_id` values.
 
-The code changes the null forces are small and mechanical, roughly eight sites:
+**Claiming** reuses the existing platform-invite machinery and gets simpler as a result.
+Staff send a `platformInvite` to the act's contact email with `role: 'owner'` —
+`platform_invite.role` is already typed as the full `bandRoles` tuple
+(`['owner', 'admin', 'member']`), so no schema change. When that person signs up,
+`resolvePendingInvites()` — called from `src/hooks.server.ts`, defined in
+`band/platform-invite-service.ts` — inserts their `bandMember` row with the invited role
+on first login, and **that insert is the claim**. There is no second step to keep in sync,
+no `claimStatus` to flip, and no `ownerId` to backfill. The only thing left for the act to
+do is choose its `directoryVisibility`, which is a normal band-settings edit.
 
-- Three queries in `band-service.ts` (`listAll`'s data and count queries, and
-  `getByIdWithDetails`) use `.innerJoin(user, eq(user.id, band.ownerId))`. These must
-  become `leftJoin`, with `ownerName`, `ownerEmail`, `ownerPronouns`, and `ownerRole`
-  typed nullable — otherwise unclaimed bands silently vanish from `/staff/bands` and 404
-  on their own detail page.
-- `deleteBand` and `deactivate` pass `row.ownerId` into `cancelReservation(id, userId)`,
-  which requires a string. Unclaimed bands need a different acting user — the staff member
-  performing the action, which is the more correct attribution anyway.
-- `band.ownerId` is picked into `BandLayoutResponse` in `db/schema/api.ts`; the type
-  widens to `string | null` and ripples to band-panel consumers.
-- `band-site.remote.ts` selects and matches on `ownerId` when resolving a contact email.
-- `scripts/seed-dev.ts` passes `b.ownerId` as `event.createdByUserId`, which is NOT NULL.
-- The staff bands list and `StaffBandForm` render `MemberLink` from the owner; it already
-  tolerates a null `userId` but would show an empty name.
+The earlier draft's warning that `resolvePendingInvites()` leaves a split-brain because it
+"only inserts the `bandMember` row" no longer describes a problem — inserting the
+`bandMember` row is now the entire operation.
 
-**Authorization is unaffected either way.** Every band access decision routes through
-`bandMember` (`getUserRole()` in `band/band-context.ts`,
-`requireBandAdmin`/`requireBandOwner`), and an unclaimed band has zero `bandMember` rows,
-so it is inaccessible to everyone by construction. No check compares against `ownerId`,
-and the two SQL comparisons that mention it put a non-null string on the other side, where
-SQL `NULL` semantics exclude rather than match.
-
-**Claiming** reuses the existing platform-invite machinery: staff send a `platformInvite`
-to the act's contact email with `role: 'owner'`, which flips the band to `claim_pending`.
-When that person signs up, `resolvePendingInvites()` in `src/hooks.server.ts` inserts
-their `bandMember` row on first login. The claim then completes by reusing
-`transferOwnership()` — which already requires the new owner to be an active band member,
-a precondition the invite has just satisfied — and setting `claimStatus: 'claimed'` and
-`directoryVisibility` to the act's choice.
-
-Note that `resolvePendingInvites()` today only inserts the `bandMember` row; it never
-touches `band.ownerId` or `claimStatus`. Accepting an owner invite on an unclaimed band
-would otherwise leave a `bandMember` with `role: 'owner'` while `band.ownerId` is still
-null — split-brain. The claim step must set all three fields together.
-
-`transferOwnership()` also guards that the new owner is an active `bandMember` and reads
-the current owner as the actor; both need to tolerate a null current owner so a claim can
-be the first ownership this band has ever had.
+`transferOwnership()` needs one adjustment: it currently demotes the actor's owner row and
+takes the actor id from `band.ownerId` at the call site. With no owner row at all the
+demote simply matches zero rows, which is already the correct behaviour — but its
+precondition that the new owner be an active `bandMember` should stay, and the caller in
+`bands.remote.ts` must source the current owner from `bandMember`.
 
 ### Production slot (run of show)
 
@@ -236,16 +347,15 @@ production_slot
   id                 uuid pk
   productionId       uuid fk → production (cascade)
   bandId             uuid? fk → band (set null)
-  sortOrder          int              — 0 plays first; unique (productionId, sortOrder)
+  sortOrder          real             — fractional; lower plays first, no unique constraint
   billing            text             — headliner | support | opener | dj | host
   setLengthMinutes   int
   changeoverMinutes  int              — default 10
-  scheduledStartAt   timestamp?       — computed, then overridable
-  soundcheckAt       timestamp?
+  scheduledStartAt   timestamp?       — derived output, never hand-edited
+  soundcheckAt       timestamp?       — manually set, independent of the set-time walk
   status             text             — invited | confirmed | declined | cancelled
                                       —   | performed | no_show
-  guaranteeCents     int?
-  doorSplitPercent   int?
+  guaranteeCents     int?             — rare; a flat fee agreed in advance
   payoutCents        int?             — what was actually handed over
   payoutMethod       text?            — cash | check | venmo | none
   paidAt             timestamp?
@@ -261,6 +371,9 @@ production_slot
 
 `bandId` is nullable and set-null rather than cascade so a deleted band leaves the slot —
 and its payout record — intact for historical settlements.
+
+**There is no `doorSplitPercent`.** The split is a property of the deal for the whole
+show, not of each act, and it lives on `production.bandSplitPercent`. See "Settlement".
 
 Tech requirements are entered per show, but a member band with a premium page already has
 this on file: `BandEpk` in `src/lib/types/band-page.ts` carries `technicalRiderKey`,
@@ -284,7 +397,12 @@ production_task
   doneByUserId      uuid? fk → user
   assignedToUserId  uuid? fk → user
   createdAt         timestamp
+  updatedAt         timestamp
 ```
+
+`updatedAt` matters here more than on most tables: checkboxes get toggled constantly, and
+without it the only mutation the row records is the one that set `doneAt`. Un-checking a
+task would leave no trace at all.
 
 Default templates live in `src/lib/config.ts` next to the existing equipment and inbox
 tuples, and are copied into rows when a production is created so they can be edited per
@@ -311,6 +429,7 @@ production_expense
   paidAt        timestamp?
   notes         text?
   createdAt     timestamp
+  updatedAt     timestamp
 ```
 
 ---
@@ -323,15 +442,20 @@ draft ──▶ offered ──▶ confirmed ──▶ completed ──▶ settle
   └──────────┴────────────┴──────▶ cancelled
 ```
 
-| Transition                        | Trigger                                                       | Side effects                                                                                                                      |
-| --------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| → `draft`                         | Create production                                             | Creates the `draft` event; copies task templates                                                                                  |
-| `draft` → `offered`               | Offers sent                                                   | Slots move to `invited`; no public change                                                                                         |
-| `offered` → `confirmed`           | Lineup locked                                                 | Creates the space `reservation` if the venue is primary; unlocks event publish                                                    |
-| `confirmed` → `completed`         | Show happened (or the auto-complete cron passes the end time) | Slots default to `performed`; unlocks settlement                                                                                  |
-| `completed` → `settled`           | Staff settle                                                  | Snapshots ticket revenue and totals onto the production; freezes the money fields                                                 |
-| `settled` → `closed`              | Close-out done                                                | Requires every `closeout` task `done`; archives the production                                                                    |
-| any pre-`completed` → `cancelled` | Staff cancel                                                  | Cancels the event via `event-service.cancel()` (which notifies ticket holders), releases the reservation, marks slots `cancelled` |
+| Transition                        | Trigger                                                       | Side effects                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| → `draft`                         | Add a production to an existing event                         | Copies task templates; widens the event's reservation to load-in→load-out once those times are set                                        |
+| `draft` → `offered`               | Offers sent                                                   | Slots move to `invited`; no public change                                                                                                 |
+| `offered` → `confirmed`           | Lineup locked                                                 | Unlocks event publish; no reservation work — the room is already held                                                                     |
+| `confirmed` → `completed`         | Show happened (or the auto-complete cron passes the end time) | Slots **in `confirmed` status** move to `performed`; unlocks settlement                                                                   |
+| `completed` → `settled`           | Staff settle                                                  | Reads ticket revenue from Stripe, computes the band pool, snapshots the totals; freezes the money fields                                  |
+| `settled` → `closed`              | Close-out done                                                | Requires every `closeout` task `done`; archives the production                                                                            |
+| any pre-`completed` → `cancelled` | Staff cancel                                                  | Cancels the event via `event-service.cancel()` (which notifies ticket holders and releases the reservation); marks live slots `cancelled` |
+
+The `confirmed → completed` sweep must scope its slot update to `status = 'confirmed'`. A
+blanket "set all slots to `performed`" would resurrect acts that declined the offer or
+were cut from the bill, and the settlement worksheet would then invite a payout row for a
+band that never showed up.
 
 Publishing the event requires `confirmed` or later — you cannot announce a show whose
 lineup isn't locked. Unpublishing is always allowed.
@@ -346,41 +470,81 @@ mirroring `InvalidLoanTransitionError`.
 
 ## Booking and advance
 
-Staff create a production with a title, a date, and a venue. That single action creates
-the `draft` event and copies the task templates. From there:
+Staff create the show at `/staff/events` as they do today — title, date, doors, times,
+and, at the primary venue, a reservation covering doors→close. Then "Add production" on
+that event opens the back of house, copying the task templates. From there:
 
-1. **Build the lineup.** Add slots by picking a member band from a search, or by creating
-   an unclaimed band inline for a touring act — name, contact, and optionally bio, genres,
-   and links. `billing` and `sortOrder` set the running order.
-2. **Send offers.** Terms per slot: guarantee, door split, or both. Moving the production
+1. **Set the ops window.** `loadInAt` and `loadOutBy` widen the room hold. This goes
+   through `event-service.update({ rebook })`, never through
+   `reservation-service.staffCreate()` directly — `event.reservationId` is owned by
+   `event-service` and the production has no business writing it.
+2. **Build the lineup.** Add slots by picking a member band from a search, or by creating
+   an external band inline for a touring act — name, contact, and optionally bio, genres,
+   and links, with a name search shown first so the second show reuses the first show's
+   row. `billing` and `sortOrder` set the running order.
+3. **Send offers.** Terms per slot: a guarantee, if there is one. Moving the production
    to `offered` sets every slot to `invited`. Member bands get an in-app notification;
    external acts are contacted out-of-band (the staff inbox is the natural home for that
    thread, but the spec does not wire it — see Deferred).
-3. **Confirm.** Slots move to `confirmed` or `declined` as replies come in. Confirming the
-   production locks the lineup and reserves the room.
-4. **Advance.** Work the `advance` checklist: collect riders, confirm backline, set
+4. **Confirm.** Slots move to `confirmed` or `declined` as replies come in. Confirming the
+   production locks the lineup.
+5. **Advance.** Work the `advance` checklist: collect riders, confirm backline, set
    soundcheck times, finalize set lengths. Any slot pointing at a premium member band
    shows that band's EPK rider, stage plot, and backline inline.
 
-Creating an unclaimed band inline is the one flow that can collide with the global
-`UNIQUE` on `band.name`. Today nothing guards that — `create()` in `band-service.ts`
-dedupes only the slug via `ensureUniqueSlug()`, and a taken name raises a raw D1
-constraint violation that becomes a 500 and a Sentry report. This is rare for member
-bands and common for external acts, since touring acts collide with local names and staff
-will double-create the same act across shows. So this feature must add:
+### Widening the reservation window
 
-- a typed `BandNameTakenError` thrown from `create()` and `update()`, following the
-  existing precedent in `invite()` which already catches `unique` violations and rethrows
-  as `BandMemberExistsError`;
-- surfaced as a form issue on the name field, not a 500;
-- a "did you mean this existing act?" search in the inline-create UI so the second show
-  reuses the first show's band row.
+`checkRebookNeeded()` in `event-service.ts` works correctly under this design **without
+modification**, and it is worth saying so explicitly rather than leaving it implied. It
+returns `needed: true` only when the new event times fall _outside_ the current
+reservation window (`newStartsAt < res.startsAt || newEndsAt > res.endsAt`). The
+production's window is always a superset of the public window — load-in is before doors,
+load-out is after close — so once the reservation has been widened, no ordinary edit to
+`event.startsAt` / `event.endsAt` can escape it, and the function correctly reports no
+rebook needed. Editing the public times of a show whose room is held load-in→load-out is a
+no-op as far as the reservation is concerned, which is the right answer.
+
+**Design note: `rebook` is the wrong shape for widening a window.** `update()`'s `rebook`
+branch cancels the existing reservation via
+`cancelReservation(..., { staffOverride: true })` and creates a fresh one with
+`staffCreate()`. That means a new row, a new id written back to `event.reservationId`, and
+a lost `lock_code` — the door code that `lock/lock-service.ts` provisions on the morning
+of the show against `reservation.lockCode`, which it only assigns to reservations where
+that column is still null. Churning all of that because load-in moved thirty minutes
+earlier is disproportionate.
+
+Worse, the re-created reservation's status is
+`existing.status === 'draft' ? 'scheduled' : 'confirmed'`. A production holds the room from
+`draft`, so a draft event's rebooked reservation lands in `scheduled` — which is exactly
+what `cancelUnconfirmedReservations()` sweeps: it cancels every `scheduled` reservation
+whose `startsAt` has passed, with no exclusion for `bookerType: 'event'`, on the
+`*/15 * * * *` trigger.
+
+**And the downgrade is permanent.** `publish()` writes only `event.status` and
+`publishedAt`; it never revisits the reservation. A window widened while the event was
+still a draft therefore stays `scheduled` no matter what the event does afterwards —
+announce the show a week later, sell tickets to it, and the reservation is still swept the
+moment load-in passes. Because the sweep delegates to `cancel()`, it also emits
+`reservation.cancelled`, which cascades waitlist promotion: the room can be handed to a
+member while the show is loading in. This is not an edge case to note and move past; it is
+the reason the narrow adjustment below is required rather than merely tidier.
+
+The recommendation is a narrow addition to `reservation-service`:
+
+```
+adjustWindow(reservationId, startsAt, endsAt, opts?: { overrideConflicts?: boolean })
+```
+
+which conflict-checks the new window excluding the reservation itself (`hasConflict()`
+already takes an exclusion id) and updates `starts_at` / `ends_at` in place. Same row,
+same status, same lock code. The production calls it through `event-service`, which keeps
+`event.reservationId` correct by not needing to change it at all.
 
 ---
 
 ## Run of show
 
-Set times are derived, not typed. Given `firstSetAt` and the slots in `sortOrder`:
+Set times are derived. Given `firstSetAt` and the slots in `sortOrder`:
 
 ```
 cursor = firstSetAt
@@ -390,22 +554,53 @@ for slot in slots ordered by sortOrder:
 ```
 
 `computeSetTimes()` is a pure exported function in the production module — no DB access,
-directly unit-testable, the same treatment as the equipment pricing helpers. Staff hit
-"recalculate" to apply it and write the results to the slots; individual
-`scheduledStartAt` values can then be edited by hand without re-running the walk.
+directly unit-testable, the same treatment as the equipment pricing helpers. The service
+runs it and writes the results on **every** lineup mutation: add a slot, remove a slot,
+reorder, change a set length or changeover. There is no override field, no lock flag, and
+no "recalculate" button.
 
-Validation, surfaced as warnings rather than hard errors because real shows run late:
+This is a deliberate narrowing. The earlier design stored the computed time and let staff
+hand-edit one slot, on the theory that a single late set shouldn't shift everything after
+it. In practice that produces a column that is sometimes derived and sometimes not, with
+no way to tell which — and the moment anyone edits a set length the whole lineup silently
+disagrees with itself. Real day-of adjustments happen in the room, on a clipboard, at a
+granularity the database was never going to keep up with. A schedule that is always
+exactly a function of the lineup is more useful than one that is usually a function of the
+lineup.
+
+`soundcheckAt` stays a per-slot manually-set field. It is not part of the walk —
+soundcheck order is frequently the reverse of set order, and it happens hours earlier.
+
+Validation is computed on read and surfaced as warnings rather than hard errors, because
+real shows run late:
 
 - the last set's end plus its changeover exceeding `curfewAt`;
 - `firstSetAt` earlier than `event.doorsAt`;
 - a slot with `setLengthMinutes` of 0 or over 240;
 - `soundcheckAt` after `firstSetAt`.
 
-Reordering rewrites `sortOrder` for the affected slots. Because
-`unique (productionId, sortOrder)` would trip mid-rewrite and D1 has no transactions,
-reorders write to a temporary offset range first (`sortOrder + 1000`), then back down —
-or, more simply, the service renumbers the whole lineup in one pass from a supplied array
-of slot ids. The spec prefers the latter: one array in, one full renumber out.
+### Why `sortOrder` is fractional
+
+An earlier draft made `sortOrder` an integer with `unique (productionId, sortOrder)`, and
+proposed handling reorders by renumbering the whole lineup in one pass from a supplied
+array of slot ids.
+
+**That does not work on SQLite.** Unique indexes are enforced per-row as the `UPDATE`
+walks the table, not deferred to the end of the statement — SQLite has no
+`DEFERRABLE INITIALLY DEFERRED` for unique constraints. Swapping two slots therefore trips
+the constraint mid-statement no matter how the writes are grouped, and `db.batch()` does
+not help: batching controls atomicity, not constraint timing. The temporary-offset dance
+(`sortOrder + 1000`, then back down) does work, but it is extra round trips and a
+half-written state on every drag.
+
+So `sortOrder` is a `real` with no unique constraint, and insertion is fractional: to
+place a slot between two neighbours, average their `sortOrder` values. Inserting an act
+into the middle of a running order is one write. Reordering is one write. Nothing is
+renumbered, and there is no constraint to trip. Ties, if two clients ever produce one,
+break on `createdAt` — a stable order, and cosmetically wrong at worst.
+
+Documenting the rejected approach here is the point: `unique (productionId, sortOrder)`
+looks obviously correct, and without this note someone will add it back.
 
 ---
 
@@ -415,33 +610,143 @@ Available once the production is `completed`. The worksheet:
 
 ```
 grossRevenueCents  = ticketRevenueCents + doorCashCents + otherRevenueCents
+bandPoolCents      = round(grossRevenueCents * bandSplitPercent / 100)
 totalExpenseCents  = sum(production_expense.amountCents)
 totalPayoutCents   = sum(production_slot.payoutCents)
-netCents           = grossRevenueCents - totalExpenseCents - totalPayoutCents
+netCents           = grossRevenueCents - bandPoolCents - totalExpenseCents
 ```
 
-`ticketRevenueCents` is **read, not entered** — summed from `payment_cache` rows for the
-event's tickets, with `ticket` rows in `valid` or `checked_in` status giving the counts.
-Comps (`compCount`) come from tickets with no associated payment. Door count is the
-checked-in ticket count plus `doorCashCents` walk-ups, and staff can override it.
+### The 70/30 deal
 
-Payout suggestions per slot, computed but never auto-applied:
+The Collective's actual arrangement is **70% of gross to the bands, with no expenses taken
+off the top**, and the lead band on the bill divides the band cut among the acts. That is
+what `bandSplitPercent` (default 70) and `bandPoolCents` model, and it is why there is no
+per-slot split percentage: the Collective does not negotiate a split with each act, it
+hands one number to one band.
 
-```
-pool      = grossRevenueCents - totalExpenseCents
-suggested = max(guaranteeCents ?? 0, round(pool * doorSplitPercent / 100))
-```
+An earlier draft had `pool = gross - expenses` and
+`suggested = max(guarantee, pool * doorSplitPercent / 100)` per slot. Both are wrong for
+this room. Expenses are **recorded but do not feed the pool** — the bands' 70% is 70% of
+gross, and the Collective's 30% is what absorbs sound, staffing, and hospitality. That is
+why `netCents` subtracts expenses from what's left after the band pool, not from the pool
+itself.
 
-Staff enter the actual `payoutCents`, `payoutMethod`, and `paidAt` per slot. The suggestion
-is a number on the screen; the record is what was handed over.
+`guaranteeCents` survives on the slot for the rare case of a flat fee agreed in advance,
+and `payoutCents` / `payoutMethod` / `paidAt` record what actually changed hands. In the
+common case exactly one slot's payout row is filled: the lead band's. The worksheet
+displays `bandPoolCents` against `sum(slot.payoutCents)` side by side, so a mismatch is
+visible without anyone having to do the subtraction.
 
-Settling writes the snapshot onto the production and stamps `settledAt` / `settledByUserId`.
-After that the money fields are read-only — reopening requires a staff action that returns
-the production to `completed` and clears the snapshot, so an edited settlement is always
-visibly re-settled.
+### Reading ticket revenue
 
-**No Stripe writes.** No refunds, no transfers, no payouts through the API. Ticket refunds
-continue to go through the existing event-cancellation path in `event-service.cancel()`.
+`ticketRevenueCents` is **read, not entered** — but not from where an earlier draft
+claimed. That draft said it could be summed from `payment_cache` rows for the event's
+tickets. It cannot, for two independent reasons:
+
+- `paymentCache` in `src/lib/server/db/schema/finance.ts` has exactly one domain FK:
+  `reservationId`. There is no event, purchase, or ticket link, so there is no way to ask
+  it for a given show's revenue. Its `userId` is also `NOT NULL` referencing `user`, while
+  ticket buyers are frequently guests with no account.
+- **Ticket checkouts never write a `payment_cache` row at all.** The cache is populated in
+  `finance/payment-service.ts` on the credits-cover-everything path;
+  `handleTicketCheckout` only flips tickets `pending → valid`. The table would have been
+  empty for every ticket ever sold.
+
+The replacement reads Stripe directly at settle time: search PaymentIntents on
+`metadata['event_id']`, sum `amount_received`, subtract refunds. This works because
+`payment-service.ts` sets `payment_intent_data: { metadata: sessionMetadata }` for
+`mode: 'payment'` checkouts (~line 264), so the ticket metadata lands on the PaymentIntent
+as well as the Session. That distinction is load-bearing: Stripe cannot search Checkout
+Sessions by metadata, but it can search PaymentIntents.
+
+**One metadata key must be added.** Fee coverage is pushed as a _separate line item_
+(`payment-service.ts` ~line 233 — a `feeProductId` line at `feeCents`), so the
+PaymentIntent carries only a combined total and there is no way to tell tickets from fees
+after the fact. Fee coverage is a pass-through to Stripe: it is not ticket revenue and
+must not be split with the bands. So `src/lib/remote/events.remote.ts` adds
+`ticket_subtotal_cents` to the ticket checkout metadata alongside the existing `type`,
+`purchase_id`, `event_id`, and `ticket_quantity` (~line 900).
+
+**Payments predating that key need reconstruction.** Only four combinations are possible,
+and all four are computable:
+
+| Price paid                   | Fees not covered       | Fees covered                                          |
+| ---------------------------- | ---------------------- | ----------------------------------------------------- |
+| Full `event.ticketPrice`     | `price × qty`          | `calculateTotalWithFeeCoverage(price × qty)`          |
+| Sustaining-member half price | `round(price/2) × qty` | `calculateTotalWithFeeCoverage(round(price/2) × qty)` |
+
+using `event.ticketPrice`, the `ticket_quantity` metadata, and
+`calculateTotalWithFeeCoverage()` from `src/lib/finance/fees.ts` — the same helper the
+checkout used. The sustaining-member price is `Math.round(unitPrice / 2)`, applied before
+the line item is built. Match `amount_received` against those four exactly; flag anything
+that doesn't match for manual review rather than guessing which it was. There is no coupon
+to complicate the arithmetic: `purchaseTickets` passes no `eligibleCredits` to
+`checkout()`, so the credit-discount coupon branch never fires for tickets.
+
+**Do not add a local `ticket.pricePaidCents`.** Storing the amount on the ticket row is
+the obvious shortcut and it reintroduces precisely the local ledger that
+[finance-spec.md](finance-spec.md) removed. Stripe is the ledger; a second copy is a
+second thing to reconcile.
+
+**`ticket.stripePaymentRecordId` already exists**, added by the prerequisite fix above
+rather than by this feature. It gives each ticket the same proof of payment every other
+purchasable has, and it is what makes the Stripe search cross-checkable against local rows:
+a PaymentIntent the search returns should have a matching ticket, and a ticket without one
+should be a comp or a free RSVP. Settlement can flag either mismatch instead of silently
+trusting one side.
+
+### The snapshot
+
+`production.ticketRevenueCents` remains on the table, but as a **settlement snapshot**: one
+write at settle time, alongside `settledAt` and `settledByUserId`, recording what was
+settled and on what figures. That is an audit record, not a ledger. Reopening a settlement
+clears the snapshot and re-reads Stripe.
+
+**Settlement must fail cleanly.** If the Stripe search errors, rate-limits, or pages
+incompletely, the service must **not** write a partial snapshot — a settlement that
+silently under-reports revenue pays the bands too little and nobody finds out. Model an
+explicit "revenue could not be read" outcome: the transition to `settled` is refused, the
+worksheet shows the failure, and staff can retry or enter the figure manually as
+`otherRevenueCents` with a note.
+
+Comps (`compCount`) come from `ticket` rows with no `stripePaymentRecordId`, once that
+column exists.
+
+### Door cash, and why Stripe never hears about it
+
+`doorCashCents` is the counted drawer minus the float. `doorCount` is a staff-entered
+headcount. These are the only manually entered revenue numbers in the system, and they
+stay manual.
+
+**Reporting the door take to Stripe was considered and rejected.** Stripe's Payment
+Records API, which this app already uses via `reportPayment()` / `reportRefund()`, records
+_incoming payments and refunds to the payer_. There is no expense object and no debit
+object. The only mechanism Stripe offers for splitting revenue is Connect — every band a
+connected account, plus an actual disbursement — which is far out of scope and doesn't
+describe the transaction anyway: the Collective hands cash to a lead band who divides it
+in the parking lot.
+
+So reporting door income to Stripe would record the revenue with no way to record the
+offsetting payout, inflating apparent revenue by exactly the band cut — the largest single
+number in the whole settlement. finance-spec calls Stripe "the single view of all
+revenue", and that is the right reading: **revenue**, not net income. Cash the Collective
+takes in and immediately hands back out is not revenue it kept.
+
+This restores the earlier spec's **No Stripe writes** boundary, now with a reason attached.
+Settlement is strictly read-only against Stripe. Ticket refunds continue to go through the
+existing event-cancellation path in `event-service.cancel()`.
+
+### Getting the numbers out
+
+`production.netCents` is useless sitting in a staff table. Settlement adds a **CSV export**
+over settled productions — date, title, gross revenue, band pool, total expenses, net, and
+payout method — so the debit side reaches whoever does the Collective's books. Without it
+the app records the band cut and then loses it, which is worse than not recording it.
+
+Settling writes the snapshot and stamps `settledAt` / `settledByUserId`. After that the
+money fields are read-only — reopening requires a staff action that returns the production
+to `completed` and clears the snapshot, so an edited settlement is always visibly
+re-settled.
 
 ---
 
@@ -458,26 +763,31 @@ active productions unless the closed filter is on.
 
 ## How a production feeds the rest of the app
 
-- **`event`** — created with the production and updated through it. Title, description,
-  doors, start/end, poster, tags, ticketing config, and `venueId` are all written from the
-  production's edit form. Publish is gated on `confirmed`. Cancel routes through
-  `event-service.cancel()` so ticket holders are notified by the existing listener.
-- **`reservation`** — a `bookerType: 'event'` reservation covering load-in through
-  load-out is created on confirm at the primary venue, and released on cancel. This reuses
-  the existing conflict checking, so a production cannot be confirmed into an occupied
-  room without an explicit override, and the existing `checkRebookNeeded()` handles time
-  changes.
-- **`ticket`** — unchanged. Ticketing config is set through the production; purchase,
-  check-in, and refunds keep their current paths. Settlement only reads.
-- **`band`** — unclaimed acts become real directory bands on claim, at which point their
-  entire production history is already attached. Member bands see their booked shows on
-  their band dashboard.
+- **`event`** — the parent. Created and owned by `/staff/events`; the production edits it
+  through `event-service.update()` rather than writing `event` rows itself. Publish is
+  gated on `confirmed`. Cancel routes through `event-service.cancel()` so ticket holders
+  are notified by the existing listener and the reservation is released. The production
+  reacts to the `event.cancelled` domain event, which the prerequisite fix made reliable
+  for unticketed shows.
+- **`reservation`** — created with the event (`bookerType: 'event'`, the existing
+  polymorphic hook in `reservation.ts`, no enum change needed) covering doors→close, and
+  widened to load-in→load-out by the production. Owned by `event-service` throughout; the
+  production never calls `reservation-service.staffCreate()`. Conflict checking is the
+  existing code, so a production cannot widen into an occupied room without an explicit
+  override.
+- **`ticket`** — unchanged apart from the checkout metadata, which gains
+  `ticket_subtotal_cents`. Purchase, check-in, and refunds keep their current paths, and
+  `stripePaymentRecordId` is already populated. Settlement only reads.
+- **`band`** — external acts become claimable directory bands the moment someone accepts
+  an owner invite, at which point their entire production history is already attached.
+  Member bands see their booked shows on their band dashboard.
 - **`venue`** — reusable across productions and, later, band events. Backline and load-in
   notes carry into the advance checklist.
 - **Event bus** — `production.confirmed`, `production.slot_invited`,
   `production.cancelled`, `production.completed`, `production.settled` payloads added to
-  `events/event-bus.ts`, with listeners registered in `events/register-listeners.ts`. All
-  side effects stay idempotent, per the house rule.
+  `events/event-bus.ts`, with listeners registered in `events/register-listeners.ts`. The
+  production also **listens** for `event.cancelled` so a show killed from the events side
+  takes its production with it. All side effects stay idempotent, per the house rule.
 - **Public event page** — once the event is published and the production is `confirmed`,
   `/events/[id]` can render the run of show: act names in order with set times, showing
   only slots in `confirmed` or `performed` status.
@@ -489,7 +799,7 @@ band-authored events (`source: 'band'`); CMC lineups live entirely in `productio
 
 This matters because `listPublicCalendarEvents()` and `listPublicUpcomingEvents()` in
 `event-service.ts` left-join `band` and emit `bandSlug`, which the public event page
-renders as a link to `/directory/bands/[slug]`. An unclaimed act is
+renders as a link to `/directory/bands/[slug]`. An external act is
 `directoryVisibility: 'hidden'`, so that link would 404. Keeping external acts out of
 `event.bandId` avoids the problem entirely.
 
@@ -500,15 +810,19 @@ band is directory-visible, and plain text otherwise.
 
 ## Visibility audit
 
-Extending `band` means every existing filter that decides "is this band public?" has to
-account for unclaimed rows. The gates today, and what each needs:
+Putting external acts in `band` means every filter that decides "is this band public?" has
+to account for rows with no members. The gates today, and what each needs:
 
 | Location                                                   | Current gate                                                         | Required change                                                                                                                                                                                                                  |
 | ---------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | Add `claimStatus != 'unclaimed'`. Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses.                                                                                                     |
+| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | Add "has an active owner `bandMember`". Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses.                                                                                               |
 | `remote/directory.remote.ts` — `loadBandProfile()`         | slug + `deletedAt IS NULL`, then `isBandProfileHidden()`             | Same guard, so `/directory/bands/[slug]` 404s for stubs.                                                                                                                                                                         |
 | `remote/band-site.remote.ts` — `getBandSiteData()`         | `deletedAt IS NULL` + `tier === 'premium'` **only**                  | Pre-existing hole — no `directoryVisibility` check at all, so a hidden band with premium tier still renders a full public microsite. Add both checks.                                                                            |
 | `event-service.ts` — public calendar queries               | `event.status = 'published'` + source flag; no band visibility check | Pre-existing — a hidden member band's published event already leaks its name and a 404ing profile link. The attribution rule above avoids making it worse; fixing it properly means gating the emitted `bandSlug` on visibility. |
+
+The owner-membership guard is cheap to express now that ownership is a `bandMember` row:
+an `EXISTS` against `band_member` with `role = 'owner'` and `status = 'active'`, which the
+partial unique index already supports.
 
 Belt and braces: `directoryVisibility` defaults to `'public'` in the schema and `create()`
 never sets it, so the external-create path must pass `'hidden'` explicitly, and that
@@ -528,27 +842,30 @@ guard `ownerId` too.
 `src/lib/server/production/`:
 
 - `production-service.ts` — create, update, status transitions, queries
-- `slot-service.ts` — lineup CRUD, reorder, per-slot status
+- `slot-service.ts` — lineup CRUD, fractional reorder, per-slot status
 - `set-times.ts` — pure `computeSetTimes()` and its validation warnings
-- `settlement-service.ts` — revenue read, totals, snapshot, reopen
+- `settlement-service.ts` — Stripe revenue read, totals, snapshot, reopen, CSV export
 - `task-service.ts` — checklist CRUD and template seeding
 - `errors.ts` additions — `ProductionNotFoundError`, `InvalidProductionTransitionError`,
-  `CloseoutIncompleteError`, extending the `DomainError` base
+  `CloseoutIncompleteError`, `RevenueUnavailableError`, extending the `DomainError` base
 
 `src/lib/server/venue/venue-service.ts` — venue CRUD, kept separate because venues
 outlive any one production.
 
 ### Integration points
 
-- `event/event-service.ts` — `create()`, `update()`, `publish()`, `cancel()`,
-  `checkRebookNeeded()`, all reused, not reimplemented
-- `reservation/reservation-service.ts` — `staffCreate()` and `cancel()`
-- `band/band-service.ts` — `create()` extended for unclaimed acts; `transferOwnership()`
-  reused for claims
-- `band/platform-invite-service.ts` — `createInvite()` with `role: 'owner'`
-- `ticket/ticket-service.ts` and `finance/payment-cache-service.ts` — read-only, for
-  settlement
-- `events/event-bus.ts` — new `production.*` payloads
+- `event/event-service.ts` — `update()`, `publish()`, `cancel()`, `checkRebookNeeded()`,
+  all reused, not reimplemented. The production reaches the reservation only through here.
+- `reservation/reservation-service.ts` — a new `adjustWindow()`, called via
+  `event-service`; never called directly by the production
+- `band/band-service.ts` — `create()` extended so an external act can be created with no
+  initial member
+- `band/platform-invite-service.ts` — `createInvite()` with `role: 'owner'` for claims
+- `ticket/ticket-service.ts` — read-only, for counts and comps
+- `finance/payment-service.ts` and the Stripe client — a read-only PaymentIntent search at
+  settle time. Note that `finance/payment-cache-service.ts` is **not** an integration
+  point; see Settlement for why.
+- `events/event-bus.ts` — new `production.*` payloads, plus an `event.cancelled` listener
 
 ### What doesn't touch productions
 
@@ -561,41 +878,45 @@ still goes through the normal loan flow.
 ## Schema
 
 Five new tables — `production`, `production_slot`, `production_task`,
-`production_expense`, `venue` — plus two column additions:
+`production_expense`, `venue` — plus column changes on three existing ones:
 
 ```
 band (changes)
-  ownerId       text? references user(id) on delete restrict   — was NOT NULL
-  claimStatus   text not null default 'claimed'   — claimed | unclaimed | claim_pending
-  index on (claimStatus)
+  ownerId       DROPPED
+  name          UNIQUE dropped (stays not null)
+
+band_member (addition)
+  partial unique index on (bandId) where role = 'owner'
 
 event (additions)
   venueId       uuid? references venue(id) on delete set null
   index on (venueId)
 ```
 
+`ticket.stripePaymentRecordId` is not listed above because it already exists — see
+Prerequisites. This feature reads it; it does not add it.
+
 Indexes on the new tables:
 
-- `production` — unique on `eventId`; index on `(status, createdAt)`; index on `venueId`
-- `production_slot` — index on `productionId`; unique on `(productionId, sortOrder)`;
-  index on `bandId`
+- `production` — unique on `eventId`; index on `(status, createdAt)`
+- `production_slot` — index on `(productionId, sortOrder)`; index on `bandId`
 - `production_task` — index on `(productionId, phase)`
 - `production_expense` — index on `productionId`
-- `venue` — unique on `name` and `slug`; index on `slug`
+- `venue` — unique on `slug`; index on `slug`
 
 Checks: `production_slot.setLengthMinutes > 0`, `changeoverMinutes >= 0`,
-`doorSplitPercent between 0 and 100`, `production_expense.amountCents >= 0`.
+`production.bandSplitPercent between 0 and 100`, `production_expense.amountCents >= 0`.
 
 Enum tuples and the task templates go in `src/lib/config.ts` alongside the equipment and
 inbox tuples; zod form schemas sit next to their tables, following the house convention.
 
 Per CLAUDE.md, migrations are generated with `pnpm db:generate`, not written here.
-Everything except `band.ownerId` is additive — `CREATE TABLE` plus `ALTER TABLE ADD
-COLUMN`. Relaxing `ownerId` to nullable forces a full `band` rebuild, which
-`pnpm db:generate` makes D1-safe automatically; see "Bands, extended to cover external
-acts" above and [table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1).
-Split it into its own migration, applied and verified before the productions tables land,
-so the risky change stays isolated.
+Everything except the `band` changes is additive — `CREATE TABLE` plus
+`ALTER TABLE ADD COLUMN`. Dropping `ownerId` and the inline `UNIQUE` on `name` forces a
+full `band` rebuild, which `pnpm db:generate` makes D1-safe automatically; see "Bands,
+extended to cover external acts" above and
+[table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1). Both changes
+land in that one rebuild, applied and verified before the productions tables.
 
 ---
 
@@ -606,18 +927,22 @@ Everything follows [ui-patterns.md](../development/ui-patterns.md): `PageHeader`
 `Action` for row actions, `DataTable` with a `Filter.*` toolbar, and create flows in a
 modal on the list page rather than a `/new` route.
 
+- **`/staff/events/[id]`** — gains an "Add production" action when the `productions` flag
+  is on and the event has none. This is the only way a production comes into existence.
 - **`/staff/productions`** — `DataTable` of productions with date, title, venue, status,
-  lineup summary, and settlement state. Filters for status, venue, and date range.
-  `CreateProductionModal.svelte` on the list page.
+  lineup summary, and settlement state. Filters for status, venue, and date range, plus
+  the settlement CSV export.
 - **`/staff/productions/[id]`** — `PageHeader` with the status badge and the transition
   action, then a `TabBar`:
-  - **Overview** — event fields (title, description, poster, doors, times, ticketing),
-    venue, producer, ops timestamps, internal notes.
-  - **Run of show** — ordered slot list with inline add, reorder, recalculate set times,
-    and per-slot edit in an `Action` form modal.
+  - **Overview** — a summary of the parent event's public fields with a link back to
+    `/staff/events/[id]` for editing them, plus producer, ops timestamps, and internal
+    notes.
+  - **Run of show** — ordered slot list with inline add, drag reorder, and per-slot edit
+    in an `Action` form modal. Set times are displayed, never edited.
   - **Advance** — the `advance` and `day_of` checklists, with rider/stage-plot links
     pulled from each member band's EPK.
-  - **Settlement** — the worksheet, expense table, per-slot payout rows, settle action.
+  - **Settlement** — the worksheet, expense table, per-slot payout rows, the band pool
+    against the sum of payouts, and the settle action.
   - **Close-out** — the `closeout` checklist and the close action.
 - **`/staff/venues`** and **`/staff/venues/[id]`** — venue CRUD, same shape as
   `/staff/equipment`.
@@ -659,6 +984,16 @@ defaulting to in-app plus email for staff:
 | `production_settlement_ready` | Production reaches `completed`                       | Producer and staff                |
 | `production_cancelled`        | Production cancelled                                 | Band admins of non-declined slots |
 
+Four of these fire from domain events. `production_advance_due` is the exception: it is a
+time-based sweep with no triggering action, so it needs a cron job — which the earlier
+draft listed the notification without. Add `/api/cron/production-advance-due` to the daily
+`0 16 * * *` group in `src/lib/server/cron/schedule.ts`, after the reservation reminders.
+A once-a-day check is the right cadence for a seven-days-out warning, and the daily group
+is already where every other "remind somebody about a future date" job lives. (`schedule.ts`
+has three groups — `*/5`, `*/15`, and daily. `/api/cron/auto-complete` sits in the `*/15`
+group; there is no hourly trigger, and a seven-day lookahead would not want one.) The job
+must be idempotent per production per day, like every other job in that map.
+
 External acts have no user account, so they receive nothing in-app. Emailing them from
 their `directoryContact` is deferred.
 
@@ -677,43 +1012,61 @@ phase: a band sees its booked shows only through the existing public event listi
 
 ## What changes
 
-- Five new tables; `band.claimStatus` and `event.venueId` added; `band.ownerId` relaxed to
-  nullable via a table rebuild, landed as its own migration.
-- `band-service.ts`'s three owner `innerJoin`s become `leftJoin`s with nullable owner
-  fields; `deleteBand`/`deactivate` stop attributing reservation cancellations to the
-  owner; `transferOwnership()` tolerates a null current owner.
-- `band-service.create()` gains an unclaimed-act path that requires an explicit
-  `directoryVisibility: 'hidden'`, and `create()`/`update()` gain graceful duplicate-name
-  handling via `BandNameTakenError`.
+- Five new tables; `event.venueId` added; `band.ownerId` and the `UNIQUE` on `band.name`
+  both dropped in a single table rebuild, landed as its own migration.
+- A partial unique index on `band_member (bandId) WHERE role = 'owner'` becomes the sole
+  definition of band ownership.
+- `band-service.ts`'s three owner `innerJoin`s become left joins through `bandMember`;
+  `deleteBand`/`deactivate` attribute reservation cancellations to the acting staff
+  member; `transferOwnership()` drops its third batch statement and resolves the current
+  owner from `bandMember`.
+- `purgeUser()`, `BandLayoutResponse`, `band-site.remote.ts`, `bands.remote.ts`,
+  `seed-dev.ts`, and `migrate-from-postgres.ts` stop referencing `ownerId`.
+- The ticket checkout metadata in `events.remote.ts` gains `ticket_subtotal_cents`.
+- `reservation-service` gains `adjustWindow()` so widening a window doesn't re-issue the
+  reservation or its lock code.
 - `directory-service.bandWhereConditions()`, `loadBandProfile()`, and `getBandSiteData()`
-  gain claim/visibility guards.
+  gain owner-membership and visibility guards.
 - `StatusBadge` learns six new statuses.
-- New `productions` feature flag; new staff nav entries for Productions and Venues.
-- `event.venueId` becomes the structured venue reference for productions.
+- New `productions` feature flag; new staff nav entries for Productions and Venues; a new
+  daily cron job for the advance-due warning.
 
 ## What doesn't change
 
-- The `event` table's public shape and every existing event query.
-- Ticket purchase, check-in, and refunds.
+- The `event` table's public shape and every existing event query. Events are still
+  created at `/staff/events`.
+- Ticket purchase, check-in, and refunds — beyond recording the payment intent that should
+  already have been recorded.
 - The reservation lifecycle, conflict checking, and the recurring generation job.
-- Band membership, roles, invitations, and premium microsites.
-- Stripe integration — no new checkout paths, no payouts, no new webhook handlers.
+- Band membership, roles, invitations, and premium microsites. Claiming an act is an
+  ordinary owner invite.
+- Stripe integration — no new checkout paths, no payouts, no new webhook handlers, and no
+  writes of any kind from settlement.
 - `event.location`, which remains the free-text fallback for band events.
 
 ## Deferred
 
+- **A real box office.** Cash ticket sales recorded as `ticket` rows at the door would
+  make `doorCashCents` and `doorCount` derived rather than entered, and would unify both
+  sales channels behind one query. It needs a device, a workflow, and a
+  float-reconciliation story, so it is not this phase — but the schema above is
+  deliberately compatible with it.
+- **An accounting integration** for a true P&L. The CSV export is the stopgap; a real
+  ledger integration is where net income actually belongs.
 - **Multi-night runs and festivals.** The 1:1 production↔event rule makes a two-night
   booking two productions. Relaxing to 1:N is a schema change, not a rewrite — drop the
   unique on `eventId`.
 - **Public booking inquiries.** The IDEAS.md "Booking Request Pipeline" front door: a
-  public form that lands as a `draft` production. Staff-created productions come first.
+  public form that lands as a `draft` event with a production attached. Staff-created
+  productions come first.
 - **Recurring productions.** Weekly open mics could expand through the existing
   `recurring_series` machinery, but the lineup makes each occurrence genuinely different.
 - **Stage-plot drawing.** Uploading a rider image is in scope; a canvas plot builder is
   not.
 - **Emailing external acts** and threading those replies into the staff inbox.
 - **Automated payouts.** Recording what was paid is in scope; disbursing through Stripe
-  is not.
+  is not — see the door-cash reasoning above for why Connect is the only mechanism Stripe
+  offers and why it doesn't fit.
 - **Volunteer and staffing assignment** per production, pending the volunteering module.
 - **ASCAP/BMI setlist reporting**, which would need per-song data below the slot level.
 
@@ -723,10 +1076,12 @@ phase: a band sees its booked shows only through the existing public event listi
    profile and sets `directoryVisibility: 'public'` retroactively exposes every past
    production it played. Probably desirable — it's a gig history — but it should be a
    deliberate call, not a side effect of claiming.
-2. **What does `/staff/bands` show in the owner column for an unclaimed act?** With a null
-   owner there is nothing to render. "Unclaimed" as a badge is the obvious answer, but the
-   staff list arguably wants to know who stubbed the act — which argues for surfacing
-   `createdBy` on `band`, a column it does not currently have.
+2. **Should `band` gain a `createdBy` column?** The owner-column question is answered: an
+   unclaimed act has no owner `bandMember`, so `/staff/bands` shows an "Unclaimed" badge
+   and there is nothing else to render. But that leaves "who stubbed this act?"
+   unanswerable, and staff will ask. `createdBy` is a column `band` does not currently
+   have — and adding it to the same rebuild is nearly free, which argues for deciding now
+   rather than later.
 3. **Should `venue.isPrimary` be a column or config?** A boolean column allows more than
    one primary venue if the Collective ever runs a second room; a KV config key naming the
    venue id is stricter. This spec picks the column.
@@ -735,3 +1090,17 @@ phase: a band sees its booked shows only through the existing public event listi
 5. **How much of settlement should be locked after `settled`?** This spec freezes the
    money fields and requires an explicit reopen. A softer version — always editable, with
    an audit trail — may suit a small collective better.
+6. **How far back can the Stripe PaymentIntent search reach?** Stripe's search API has
+   indexing lag and pagination limits. For a show settled a week after the fact this is
+   fine; for a production reopened a year later it may not be. Does settlement need a
+   bounded date window, and what happens when a reopen can no longer reconstruct the
+   original figures?
+7. **What is `bandSplitPercent` allowed to be?** Default 70 is the standing deal, but if
+   staff can edit it per show, the worksheet needs to make an unusual split visible rather
+   than quietly settling at 50. A per-show override with a warning, or a locked value with
+   a config key, are both defensible.
+8. **Who divides the band pool when there is no lead band?** The model assumes one act
+   takes the cut and splits it. A four-band bill with no headliner, or a show where each
+   act wants paying separately, means multiple payout rows summing to `bandPoolCents` —
+   which the schema supports but the workflow doesn't describe.
+   </content>
