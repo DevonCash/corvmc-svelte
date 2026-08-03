@@ -1,27 +1,36 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
 	import { Field } from '$lib/components/shared/Form';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import {
 		addCategory,
 		editCategory,
 		getEquipmentCategories,
 		getStaffEquipmentList
 	} from '$lib/remote/equipment.remote';
-	import { equipmentStatuses, pricingTiers } from '$lib/config';
+	import { equipmentStatuses, pricingTiers, equipmentConditionBadge } from '$lib/config';
+	import type { EquipmentCondition } from '$lib/server/db/schema/equipment';
 	import type { PricingTier } from '$lib/server/db/schema/equipment';
 	import { AddEquipmentAction, RemoveCategoryAction } from '$lib/components/shared/actions';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { titleCase } from '$lib/utils/format';
 
 	const { fields: editCategoryFields } = editCategory;
 
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let categoryId = $state('');
 	let statusFilter = $state('');
 	let page = $state(1);
@@ -29,10 +38,10 @@
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -55,12 +64,12 @@
 		pricingTier: PricingTier;
 	}>(null);
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || categoryId || statusFilter);
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + (statusFilter ? 1 : 0)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		categoryId = '';
 		statusFilter = '';
@@ -80,16 +89,19 @@
 	</div>
 </PageHeader>
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm w-64"
-			placeholder="Search name, serial, resource ID..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search name, serial, resource ID..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Category"
 			value={categoryId}
 			onchange={(e) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
@@ -103,6 +115,7 @@
 		</select>
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Status"
 			value={statusFilter}
 			onchange={(e) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
@@ -111,107 +124,92 @@
 		>
 			<option value="">All statuses</option>
 			{#each equipmentStatuses as s (s)}
-				<option value={s}>{s}</option>
+				<option value={s}>{titleCase(s)}</option>
 			{/each}
 		</select>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: equipment, pagination }}
-		{#if equipment.length === 0}
-			<p class="text-center opacity-60 py-8">No equipment found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Category</th>
-							<th class="w-px">Status</th>
-							<th class="w-px">Condition</th>
-							<th class="w-px">Available</th>
-							<th class="w-px">Resource ID</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each equipment as e (e.id)}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/equipment/${e.id}`)}
+	<DataList {result} empty="No equipment found" onpage={(p) => (page = p)}>
+		{#snippet children(equipment)}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Equipment</th>
+					<th class="col-support">Condition</th>
+					<th class="cell-num">Available</th>
+					<th class="col-extra">Resource ID</th>
+				{/snippet}
+
+				{#each equipment as e (e.id)}
+					{@const href = resolve(`/staff/equipment/${e.id}`)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px"><StatusBadge status={e.status} /></td>
+						<!-- Category was its own column; as the subline it costs no width. -->
+						<td class="cell-primary">
+							<a {href} class="block truncate font-medium hover:underline">{e.name}</a>
+							<div class="truncate text-sm opacity-60">{e.category.name}</div>
+						</td>
+						<td class="col-support">
+							<Badge
+								size="sm"
+								class={equipmentConditionBadge[e.condition as EquipmentCondition] ?? 'badge-ghost'}
 							>
-								<td>{e.name}</td>
-								<td>{e.category.name}</td>
-								<td class="w-px"><StatusBadge status={e.status} /></td>
-								<td class="w-px"><Badge variant="outline">{e.condition}</Badge></td>
-								<td class="w-px">
-									<span class:text-error={e.availableQuantity <= 0}>
-										{e.availableQuantity} / {e.totalQuantity}
-									</span>
-								</td>
-								<td class="w-px">
-									{#if e.resourceId}
-										<span class="font-mono text-xs">{e.resourceId}</span>
-									{:else}
-										<span class="opacity-40">—</span>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+								{titleCase(e.condition)}
+							</Badge>
+						</td>
+						<td class="cell-num">
+							<span class:text-error={e.availableQuantity <= 0}>
+								{e.availableQuantity} / {e.totalQuantity}
+							</span>
+						</td>
+						<td class="col-extra">
+							{#if e.resourceId}
+								<span class="font-mono text-xs">{e.resourceId}</span>
+							{:else}
+								<span class="opacity-40">—</span>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>
 
 <Modal bind:open={showCategoryModal} title="Manage Categories" maxWidth="max-w-lg">
 	<div class="mb-4">
 		{#if categories.length === 0}
-			<p class="text-center opacity-60 py-4">No categories</p>
+			<EmptyState description="No categories" />
 		{:else}
-			<table class="table">
-				<thead>
+			<Table>
+				{#snippet head()}
+					<th>Name</th>
+					<th class="col-support">Pricing tier</th>
+					<th class="col-support cell-num">Order</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+				{#each categories as cat (cat.id)}
 					<tr>
-						<th>Name</th>
-						<th>Pricing Tier</th>
-						<th>Order</th>
-						<th class="w-px text-right"></th>
+						<td class="cell-primary truncate">{cat.name}</td>
+						<td class="col-support"><Badge size="sm" variant="outline">{cat.pricingTier}</Badge></td
+						>
+						<td class="col-support cell-num">{cat.displayOrder}</td>
+						<td class="w-px text-right">
+							<button
+								class="btn btn-ghost btn-xs"
+								onclick={() =>
+									(editingCategory = {
+										id: cat.id,
+										name: cat.name,
+										displayOrder: cat.displayOrder,
+										pricingTier: cat.pricingTier as PricingTier
+									})}>Edit</button
+							>
+							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
+						</td>
 					</tr>
-				</thead>
-				<tbody>
-					{#each categories as cat (cat.id)}
-						<tr>
-							<td>{cat.name}</td>
-							<td><Badge variant="outline">{cat.pricingTier}</Badge></td>
-							<td>{cat.displayOrder}</td>
-							<td class="w-px text-right">
-								<button
-									class="btn btn-ghost btn-xs"
-									onclick={() =>
-										(editingCategory = {
-											id: cat.id,
-											name: cat.name,
-											displayOrder: cat.displayOrder,
-											pricingTier: cat.pricingTier as PricingTier
-										})}>Edit</button
-								>
-								<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+				{/each}
+			</Table>
 		{/if}
 	</div>
 

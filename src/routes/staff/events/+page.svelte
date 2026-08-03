@@ -2,7 +2,10 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -35,73 +38,60 @@
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: events, pagination }}
-		{#if events.length === 0}
-			<p class="text-center opacity-60 py-8">No events yet</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
+	<DataList {result} empty="No events yet" onpage={(p) => (page = p)}>
+		{#snippet children(events)}
+			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
+			<Table zebra={false}>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Event</th>
+					<th class="col-support">Tags</th>
+					<th class="col-extra w-px">Space</th>
+				{/snippet}
+
+				{#each events as e, idx (e.id)}
+					{@const label = dayLabel(e)}
+					{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
+					{#if label !== prevLabel}
 						<tr>
-							<th class="w-px"></th>
-							<th>Title</th>
-							<th>Date</th>
-							<th>Tags</th>
-							<th>Space</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each events as e, idx (e.id)}
-							{@const label = dayLabel(e)}
-							{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
-							{#if label !== prevLabel}
-								<tr>
-									<td
-										colspan="5"
-										class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
-									>
-										{label}
-									</td>
-								</tr>
-							{/if}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/events/${e.id}`)}
+							<td
+								colspan="4"
+								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
 							>
-								<td class="w-px">
-									<StatusBadge status={e.status} />
-								</td>
-								<td>{e.title}</td>
-								<td>
-									<div>{formatDate(e.startsAt)}</div>
-									<div class="text-sm opacity-60">{formatTimeRange(e.startsAt, e.endsAt)}</div>
-								</td>
-								<td>
-									{#each parseTags(e.tags) as tag (tag)}
-										<Badge variant="outline" class="mr-1">{tag}</Badge>
-									{/each}
-								</td>
-								<td>
-									{#if e.reservationId}
-										<Badge variant="info">Reserved</Badge>
-									{:else}
-										<span class="text-sm opacity-40">—</span>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+								{label}
+							</td>
+						</tr>
+					{/if}
+					{@const href = resolve(`/staff/events/${e.id}`)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px">
+							<StatusBadge status={e.status} />
+						</td>
+						<!-- The day is in the group header, so the cell carries the title
+						     and just the time range. -->
+						<td class="cell-primary">
+							<a {href} class="block truncate font-medium hover:underline">{e.title}</a>
+							<div class="text-sm whitespace-nowrap opacity-60">
+								{formatTimeRange(e.startsAt, e.endsAt)}
+							</div>
+						</td>
+						<td class="col-support">
+							<div class="flex flex-wrap gap-1">
+								{#each parseTags(e.tags) as tag (tag)}
+									<Badge size="sm" variant="outline">{tag}</Badge>
+								{/each}
+							</div>
+						</td>
+						<td class="col-extra w-px">
+							{#if e.reservationId}
+								<Badge size="sm" variant="info">Reserved</Badge>
+							{:else}
+								<span class="opacity-40">—</span>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

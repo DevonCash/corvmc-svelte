@@ -1,37 +1,36 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Field from '$lib/components/shared/Form/FormField.svelte';
+	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
-	import {
-		IconUserCog,
-		IconUserShield,
-		IconUserHeart,
-		IconDots,
-		IconEye,
-		IconCopy,
-		IconUserOff
-	} from '@tabler/icons-svelte';
+	import { IconDots, IconEye, IconCopy, IconUserOff } from '@tabler/icons-svelte';
 	import { getStaffUsers, bulkDeactivateUsers } from '$lib/remote/users.remote';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDateShortYear } from '$lib/utils/format';
 
-	let search = $state('');
+	// Named `searchText`, not `search`: FilterBar's slot for the always-visible
+	// control is a snippet called `search`, and a snippet shadows a same-named
+	// script binding.
+	let searchText = $state('');
 	let status = $state<'active' | 'deactivated' | 'all'>('active');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 			selected.clear();
 		}, 300);
@@ -47,24 +46,39 @@
 
 	type User = Awaited<typeof result>['rows'][number];
 
-	function getTier(user: User): 'admin' | 'staff' | 'sustaining' | null {
-		if (user.roles.includes('admin')) return 'admin';
-		if (user.roles.includes('staff')) return 'staff';
-		if (user.sustaining) return 'sustaining';
-		return null;
+	// `MemberLink` renders the admin/staff/sustaining glyph and the email itself,
+	// so the tier and Email columns this page used to carry are folded into the
+	// primary cell rather than hidden.
+	function memberOf(user: User) {
+		return {
+			name: user.name,
+			email: user.email,
+			pronouns: user.pronouns,
+			role: user.roles.includes('admin')
+				? 'admin'
+				: user.roles.includes('staff')
+					? 'staff'
+					: undefined,
+			sustaining: user.sustaining,
+			userId: user.id
+		};
 	}
-
-	const tierLabel: Record<string, string> = {
-		admin: 'Admin',
-		staff: 'Staff',
-		sustaining: 'Sustaining Member'
-	};
 
 	const statusOptions = [
 		{ value: 'active', label: 'Active' },
 		{ value: 'deactivated', label: 'Deactivated' },
 		{ value: 'all', label: 'All' }
 	];
+
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1));
+
+	function clearFilters() {
+		searchText = '';
+		searchDebounced = '';
+		status = 'active';
+		page = 1;
+		selected.clear();
+	}
 
 	// Selection (active users only — deactivated rows can't be deactivated again).
 	//
@@ -110,27 +124,25 @@
 	}
 </script>
 
-<PageHeader title="Users">
-	{#await result then { pagination }}
-		<span class="text-sm opacity-60">{pagination.total} total</span>
-	{/await}
-</PageHeader>
+<PageHeader title="Users" />
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm w-full max-w-sm"
-			placeholder="Search by name or email..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search by name or email..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<div onchange={onStatusChange}>
 			<Field type="select" label="" bind:value={status} options={statusOptions} class="w-40" />
 		</div>
-	</div>
+	</FilterBar>
 
 	{#if selected.size > 0}
-		<div class="flex items-center gap-3 mb-4 rounded-box bg-base-200 px-4 py-2">
+		<div class="mb-4 flex items-center gap-3 rounded-box bg-base-200 px-4 py-2">
 			<span class="text-sm">{selected.size} selected</span>
 			<Action
 				action={bulkDeactivateUsers}
@@ -163,107 +175,76 @@
 		</div>
 	{/if}
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: users, pagination }}
-		{#if users.length === 0}
-			<p class="text-center opacity-60 py-8">No users found</p>
-		{:else}
+	<!-- `goToPage`, not a bare page setter: paging must clear the selection, or
+	     the bulk bar counts rows that are no longer on screen. -->
+	<DataList {result} empty="No users found" onpage={goToPage}>
+		{#snippet children(users)}
 			{@const pageIds = selectablePageIds(users)}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="w-px">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-sm"
-									disabled={pageIds.length === 0}
-									checked={pageIds.length > 0 && pageIds.every((id) => selected.has(id))}
-									onchange={(e) => toggleAll(users, e.currentTarget.checked)}
-								/>
-							</th>
-							<th class="w-px"></th>
-							<th>Member</th>
-							<th>Email</th>
-							<th>Joined</th>
-							<th class="w-px"></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each users as row (row.id)}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/users/${row.id}`)}
-							>
-								<td class="w-px" onclick={(e) => e.stopPropagation()}>
-									<input
-										type="checkbox"
-										class="checkbox checkbox-sm"
-										disabled={!!row.deletedAt}
-										checked={selected.has(row.id)}
-										onchange={(e) => toggle(row.id, e.currentTarget.checked)}
-									/>
-								</td>
-								<td class="w-px">
-									{#if getTier(row)}
-										{@const tier = getTier(row)}
-										<span class="tooltip tooltip-right" data-tip={tierLabel[tier!]}>
-											{#if tier === 'admin'}
-												<IconUserCog size={18} class="text-warning" />
-											{:else if tier === 'staff'}
-												<IconUserShield size={18} class="text-info" />
-											{:else}
-												<IconUserHeart size={18} class="text-error" />
-											{/if}
-										</span>
-									{/if}
-								</td>
-								<td>
-									<div>
-										<span class="font-medium">{row.name}</span>
-										{#if row.deletedAt}
-											<Badge variant="error" size="xs" class="ml-2">Deactivated</Badge>
-										{/if}
-										{#if row.pronouns}
-											<span class="block text-sm opacity-60">{row.pronouns}</span>
-										{/if}
-									</div>
-								</td>
-								<td>{row.email}</td>
-								<td>{formatDate(row.createdAt)}</td>
-								<td class="w-px" onclick={(e) => e.stopPropagation()}>
-									<div class="dropdown dropdown-end">
-										<Button class="btn-ghost btn-xs btn-square" tabindex="0">
-											<IconDots size={16} />
-										</Button>
-										<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-										<ul
-											tabindex="0"
-											class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
-										>
-											<li>
-												<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
-											</li>
-											<li>
-												<button onclick={() => copyEmail(row.email)}
-													><IconCopy size={16} />Copy email</button
-												>
-											</li>
-											<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
-											     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
-											     Re-add this only alongside the route. -->
-										</ul>
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination page={pagination.page} totalPages={pagination.totalPages} onpage={goToPage} />
-		{/if}
-	{/await}
+			<Table>
+				{#snippet head()}
+					<th class="col-support w-px">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							aria-label="Select all on this page"
+							disabled={pageIds.length === 0}
+							checked={pageIds.length > 0 && pageIds.every((id) => selected.has(id))}
+							onchange={(e) => toggleAll(users, e.currentTarget.checked)}
+						/>
+					</th>
+					<th>Member</th>
+					<th class="col-support">Joined</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+
+				{#each users as row (row.id)}
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${row.id}`)}>
+						<td class="col-support w-px">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								aria-label="Select {row.name}"
+								disabled={!!row.deletedAt}
+								checked={selected.has(row.id)}
+								onchange={(e) => toggle(row.id, e.currentTarget.checked)}
+							/>
+						</td>
+						<td class="cell-primary">
+							<div class="flex min-w-0 items-center gap-2">
+								<MemberLink variant="inline" member={memberOf(row)} />
+								{#if row.deletedAt}
+									<Badge variant="error" size="xs">Deactivated</Badge>
+								{/if}
+							</div>
+						</td>
+						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
+						<td class="w-px">
+							<div class="dropdown dropdown-end">
+								<Button class="btn-ghost btn-xs btn-square" tabindex="0" aria-label="Row actions">
+									<IconDots size={16} />
+								</Button>
+								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+								<ul
+									tabindex="0"
+									class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
+								>
+									<li>
+										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
+									</li>
+									<li>
+										<button onclick={() => copyEmail(row.email)}>
+											<IconCopy size={16} />Copy email
+										</button>
+									</li>
+									<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
+									     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
+									     Re-add this only alongside the route. -->
+								</ul>
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

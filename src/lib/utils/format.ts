@@ -72,6 +72,43 @@ export function formatDateTime(d: Date): string {
 	return format(d, 'EEE, MMM d, h:mm a');
 }
 
+/**
+ * List-cell date: "May 13".
+ *
+ * The weekday is noise in a date-sorted list and it is what makes date cells
+ * wrap on narrow screens. Keep `formatDate` for detail pages and group headers,
+ * where the weekday earns its space.
+ */
+export function formatDateShort(d: Date): string {
+	return format(d, 'MMM d');
+}
+
+/** List-cell date + time: "May 13, 2:30 PM" */
+export function formatDateTimeShort(d: Date): string {
+	return format(d, 'MMM d, h:mm a');
+}
+
+/**
+ * Humanise a snake_case enum value: `admin_adjustment` → "Admin adjustment".
+ *
+ * The fallback for every enum→label map, so a value someone forgets to add
+ * still reads as English rather than leaking the raw database token.
+ */
+export function titleCase(value: string): string {
+	const s = value.replace(/_/g, ' ');
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * List-cell date with year: "May 13, 2026".
+ *
+ * For durable facts — a join date, a created-at — where a bare "Dec 22" is
+ * ambiguous once the list spans more than one year.
+ */
+export function formatDateShortYear(d: Date): string {
+	return format(d, 'MMM d, yyyy');
+}
+
 // ---------------------------------------------------------------------------
 // Time formatting
 // ---------------------------------------------------------------------------

@@ -2,9 +2,14 @@
 	import StatCard from '$lib/components/shared/StatCard.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
+	import { rowLink } from '$lib/actions/row-link';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
 	import { resolve } from '$app/paths';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDateShortYear } from '$lib/utils/format';
 
 	let data = $derived(await getStaffDashboard());
 </script>
@@ -17,30 +22,25 @@
 		<StatCard title="New This Month" value={data.stats.newUsersThisMonth} />
 	</div>
 
+	<SectionLabel label="Recent members" />
 	{#if data.recentUsers.length === 0}
-		<p class="text-center opacity-60 py-8">No members yet</p>
+		<EmptyState description="No members yet" />
 	{:else}
-		<div class="overflow-x-auto">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Name</th>
-						<th>Email</th>
-						<th>Joined</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.recentUsers as u (u.id)}
-						<tr>
-							<td>
-								<a href={resolve(`/staff/users/${u.id}`)} class="link link-primary">{u.name}</a>
-							</td>
-							<td>{u.email}</td>
-							<td>{formatDate(u.createdAt)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<Table>
+			{#snippet head()}
+				<th>Member</th>
+				<th class="col-support whitespace-nowrap">Joined</th>
+			{/snippet}
+			{#each data.recentUsers as u (u.id)}
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${u.id}`)}>
+					<!-- MemberLink already renders the email under the name, so the
+					     separate Email column is gone. -->
+					<td class="cell-primary">
+						<MemberLink variant="inline" member={{ name: u.name, email: u.email, userId: u.id }} />
+					</td>
+					<td class="col-support whitespace-nowrap">{formatDateShortYear(u.createdAt)}</td>
+				</tr>
+			{/each}
+		</Table>
 	{/if}
 </PageContent>

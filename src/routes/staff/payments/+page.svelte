@@ -1,16 +1,20 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getStaffPayments } from '$lib/remote/users.remote';
-	import { formatDateTime, formatCents } from '$lib/utils/format';
+	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
 
-	let search = $state('');
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
 	let method = $state('');
 	let status = $state('');
 	let dateFrom = $state('');
@@ -20,10 +24,10 @@
 	let searchDebounced = $state('');
 	let searchTimer: ReturnType<typeof setTimeout>;
 	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
+		searchText = (e.target as HTMLInputElement).value;
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
-			searchDebounced = search;
+			searchDebounced = searchText;
 			page = 1;
 		}, 300);
 	}
@@ -39,12 +43,16 @@
 
 	let result = $derived(getStaffPayments(filters));
 
-	function hasActiveFilters(): boolean {
-		return !!(searchDebounced || method || status || dateFrom || dateTo);
-	}
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) +
+			(method ? 1 : 0) +
+			(status ? 1 : 0) +
+			(dateFrom ? 1 : 0) +
+			(dateTo ? 1 : 0)
+	);
 
 	function clearFilters() {
-		search = '';
+		searchText = '';
 		searchDebounced = '';
 		method = '';
 		status = '';
@@ -56,20 +64,23 @@
 
 <PageHeader title="Payments" />
 <PageContent>
-	<p class="text-sm text-base-content/60 mb-4">
+	<p class="mb-4 text-sm text-base-content/60">
 		Cash and credit-settled payments only — card payments (tickets, online reservation payments) are
 		recorded in the Stripe dashboard.
 	</p>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
-			placeholder="Search name or email..."
-			value={search}
-			oninput={onSearchInput}
-		/>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search name or email..."
+				value={searchText}
+				oninput={onSearchInput}
+			/>
+		{/snippet}
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Method"
 			value={method}
 			onchange={(e) => {
 				method = (e.currentTarget as HTMLSelectElement).value;
@@ -82,6 +93,7 @@
 		</select>
 		<select
 			class="select select-bordered select-sm"
+			aria-label="Status"
 			value={status}
 			onchange={(e) => {
 				status = (e.currentTarget as HTMLSelectElement).value;
@@ -94,6 +106,7 @@
 		</select>
 		<input
 			type="date"
+			aria-label="From date"
 			class="input input-bordered input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -102,69 +115,56 @@
 		/>
 		<input
 			type="date"
+			aria-label="To date"
 			class="input input-bordered input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
-		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
-		{/if}
-	</div>
+	</FilterBar>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: payments, pagination }}
-		{#if payments.length === 0}
-			<p class="text-center opacity-60 py-8">No payment records found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Date</th>
-							<th>Member</th>
-							<th>Amount</th>
-							<th class="w-px">Method</th>
-							<th class="w-px">Status</th>
-							<th>Record</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each payments as p (p.id)}
-							<tr class="hover">
-								<td>{formatDateTime(new Date(p.paidAt))}</td>
-								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink
-										member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }}
-									/>
-								</td>
-								<td><span class="font-medium">{formatCents(p.amountCents)}</span></td>
-								<td class="w-px"><PaymentMethodIcon method={p.paymentMethod} /></td>
-								<td class="w-px"><StatusBadge status={p.status} /></td>
-								<td>
-									<div class="flex items-center gap-2">
-										<CopyableId value={p.id} label="Stripe" />
-										{#if p.reservationId}
-											<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
-												View reservation
-											</Button>
-										{/if}
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+	<DataList {result} empty="No payment records found" onpage={(p) => (page = p)}>
+		{#snippet children(payments)}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Member</th>
+					<th class="cell-num">Amount</th>
+					<th class="col-support w-px"><span class="sr-only">Method</span></th>
+					<th class="col-support whitespace-nowrap">Paid</th>
+					<th class="col-extra">Record</th>
+				{/snippet}
+
+				{#each payments as p (p.id)}
+					<tr class="hover">
+						<td class="w-px"><StatusBadge status={p.status} /></td>
+						<td class="cell-primary">
+							<MemberLink
+								variant="inline"
+								member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }}
+							/>
+						</td>
+						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
+						<td class="col-support w-px">
+							<PaymentMethodIcon method={p.paymentMethod} />
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{formatDateTimeShort(new Date(p.paidAt))}
+						</td>
+						<td class="col-extra">
+							<div class="flex items-center gap-2">
+								<CopyableId value={p.id} label="Stripe" />
+								{#if p.reservationId}
+									<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+										View reservation
+									</Button>
+								{/if}
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

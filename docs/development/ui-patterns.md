@@ -37,7 +37,12 @@ Props:
 ```svelte
 <PageHeader title="Users" subtitle="Staff" />
 <PageContent>
-	<DataTable ... />
+	<FilterBar ... />
+	<DataList {result} onpage={(p) => (page = p)}>
+		{#snippet children(rows)}
+			<Table>...</Table>
+		{/snippet}
+	</DataList>
 </PageContent>
 ```
 
@@ -504,121 +509,149 @@ Props:
   and action are all ignored)
 - `class` — useful inside a grid, e.g. `class="col-span-full"`
 
-## DataTable
+## Lists and tables
 
-Table with built-in sorting and client-side pagination. Define columns as child `<Column>` components in the markup — each column declares its header, data key, and optional cell rendering.
+Three small presentational components. **None of them owns columns or fetches
+data** — that coupling is what took down the old `DataTable` when the app moved
+from `+page.ts` loaders to `query()`, and it is not coming back. Pages write
+their own `<th>`/`<td>`, because every staff table has bespoke cells.
 
-```svelte
-import DataTable from '$lib/components/shared/Table/DataTable.svelte'; import Column from
-'$lib/components/shared/Table/Column.svelte';
+### DataList
 
-<DataTable data={users} empty="No users found">
-	<Column key="name" header="Name" sortable />
-	<Column key="email" header="Email" />
-	<Column key="createdAt" header="Joined" sortable type="date" />
-</DataTable>
-```
-
-### Column props
-
-`key` (data property), `header` (label text), `sortable` (click-to-sort), `type` (built-in formatter: `text`, `date`, `datetime`, `currency`, `badge`), `class` (CSS on td), `shrink` (adds `w-px` for shrink-to-fit columns), `stopClick` (prevents row click propagation on this cell).
-
-### Custom cell rendering
-
-For complex cells (links, badges, compound elements), pass a `cell` snippet:
+The async envelope: pending state, empty state, pagination. Pass it the promise
+a paginated `query()` returned.
 
 ```svelte
-<Column key="status" header="Status">
-	{#snippet cell(value, row)}
-		<StatusBadge status={row.status} />
+<DataList {result} empty="No users found" onpage={(p) => (page = p)}>
+	{#snippet children(users)}
+		<Table>...</Table>
 	{/snippet}
-</Column>
+</DataList>
 ```
 
-### MemberColumn
+- `result` — `Promise<{ rows, pagination }>`. Never fetched here.
+- `empty` / `emptyTitle` / `actionLabel` + `actionHref` — passed to `EmptyState`.
+- `onpage` — omit for un-paginated lists and no `Pagination` renders.
 
-Domain component that renders a `MemberLink` in a table cell. Handles the padding, click propagation, and link behavior automatically.
+Give it a card list instead of a `Table` when the row's primary content is
+unbounded prose (`/staff/flags`) or the row has three or more always-visible
+actions. `/staff/closures` and the event check-in list are the card precedents.
+
+### Table
+
+Chrome only: the `overflow-x-auto` wrapper, the daisyUI modifiers, and
+`thead`/`tbody`.
 
 ```svelte
-import MemberColumn from '$lib/components/shared/Table/MemberColumn.svelte';
-
-<MemberColumn nameKey="userName" emailKey="userEmail" userIdKey="userId" />
+<Table>
+	{#snippet head()}
+		<th class="w-px"><span class="sr-only">Status</span></th>
+		<th>Member</th>
+		<th class="col-support cell-num">Amount</th>
+	{/snippet}
+	{#each rows as row (row.id)}
+		<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${row.id}`)}> ... </tr>
+	{/each}
+</Table>
 ```
 
-Props: `nameKey` (default `"userName"`), `emailKey`, `userIdKey`, `header` (default `"Member"`), `sortable`, `avatar`.
+- `size` — `'xs' | 'sm' | 'md'`, default `'sm'`. Leave it alone; `sm` is the
+  density the panel is designed around.
+- `zebra` — default on. Turn it **off** on tables with `bg-base-200` group-header
+  rows (reservations, events), where striping muddies the grouping.
+
+### FilterBar
+
+Toolbar layout, not filter state — pages keep their own `$state`. Search stays
+visible at every width; everything else collapses behind a "Filters" disclosure
+below the `@lg` container breakpoint.
+
+```svelte
+<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	{#snippet search()}<input ... />{/snippet}
+	{#snippet children()}<select ...>...</select>{/snippet}
+</FilterBar>
+```
+
+Name the page's search state `searchText`, not `search` — the `search` snippet
+shadows a same-named script binding.
+
+### Column slots
+
+Every list row is built from the same four slots, in this order:
+
+0. **Status glyph** — optional, `w-px`, one icon-only `StatusBadge`. Never hidden.
+1. **Primary cell** — `cell-primary`, two lines. Strong line is what the list is
+   _of_ (or its ordering key); subline is its single closest qualifier. The only
+   cell allowed to carry two facts. Never hidden.
+2. **Middle columns** — one fact each, one visibility tier each.
+3. **Actions** — `w-px`, right-aligned, icon-only via `<Action iconOnly>` so the
+   label moves to a tooltip. Three or more actions collapse to a
+   `dropdown dropdown-end`. Never hidden.
+
+**Merge before you hide.** If a column repeats or merely qualifies the primary
+cell, delete it and make it the subline — don't tier it. `MemberLink` already
+renders the email and the admin/staff/sustaining glyph, so a list showing a
+member never needs separate Email or role columns.
+
+**Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
+fact belongs on the detail page.
+
+### Visibility tiers
+
+Defined in `src/routes/layout.css` as container queries. `PageContent` is an
+`@container`, so they track the content column, not the viewport, and keep
+working when the sidebar opens at `lg`. Apply the same class to a column's `<th>`
+and every one of its `<td>`s.
+
+| Class         | Appears at | For                                                   |
+| ------------- | ---------- | ----------------------------------------------------- |
+| _(none)_      | always     | status, primary cell, actions — plus at most one more |
+| `col-support` | ≥512px     | money, counts, secondary dates                        |
+| `col-extra`   | ≥768px     | resource IDs, provider record IDs, created-at         |
+
+`cell-primary` (`width: 100%; max-width: 0`) is what makes `truncate` work
+inside a cell: under `table-layout: auto` a column sizes to its content, so
+without it long text widens the table until the last column is clipped. Exactly
+one cell per row gets it.
+
+`cell-num` right-aligns, applies tabular figures, and prevents wrapping. Use it
+on every currency, count, quantity, and balance column.
+
+### Dates
+
+Date cells always get `whitespace-nowrap`, and lists use the short formatters —
+the weekday is noise in a date-sorted list and it is what makes cells wrap.
+
+- `formatDateShort` — "May 13", when the year is obvious from context
+- `formatDateShortYear` — "May 13, 2026", for durable facts like a join date
+- `formatDateTimeShort` — "May 13, 2:30 PM"
+- `relativeDay` — "2 days ago", best for recency columns (last message, updated)
+
+Keep `formatDate` / `formatDateTime` for detail pages and group headers, where
+the weekday earns its space.
 
 ### Row navigation
 
-Make rows clickable with `rowHref`:
-
 ```svelte
-<DataTable data={reservations} rowHref={(r) => `/staff/reservations/${r.id}`}>
-	<!-- columns -->
-</DataTable>
+<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${row.id}`)}>
 ```
 
-Uses SvelteKit's `goto` for client-side navigation. Cells with `stopClick` opt out of row clicks (useful for MemberColumn or action buttons).
+`rowLink` (`$lib/actions/row-link`) navigates with `goto`, ignores clicks that
+land on an interactive element, respects modifier-clicks, and doesn't hijack a
+click that ended a text selection — so cells no longer need their own
+`onclick={(e) => e.stopPropagation()}`.
 
-### Grouping
+Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole
+row as one button. The accessible path is the real `<a>` in the primary cell,
+which every clickable row must have.
 
-Group rows by a label with `groupBy`:
+### Sorting
 
-```svelte
-<DataTable data={reservations} groupBy={(r) => formatDate(r.startsAt)}>
-```
-
-### Toolbar (filters)
-
-DataTable can host a filter bar via the `toolbar` snippet. It wraps the content in a `<form method="get">` with a Filter button and a conditional Clear link.
-
-```svelte
-import * as Filter from '$lib/components/shared/Table/Filter';
-
-<DataTable data={bands} clearHref="/staff/bands" empty="No bands found">
-	{#snippet toolbar()}
-		<Filter.Search name="q" value={data.filters.search} placeholder="Search by name..." />
-		<Filter.Select
-			name="status"
-			value={data.filters.status}
-			placeholder="All statuses"
-			options={[
-				['active', 'Active'],
-				['deactivated', 'Deactivated']
-			]}
-		/>
-	{/snippet}
-	<Column key="name" header="Name" sortable />
-</DataTable>
-```
-
-The Clear link appears automatically when any `[data-filter]` element has a value and hides otherwise. Hidden inputs (for sticky params like `tab`) don't trigger the Clear link.
-
-For extra toolbar content that isn't a filter (hidden inputs, custom markup), place it directly in the snippet — only elements with `data-filter` affect the Clear link visibility:
-
-```svelte
-{#snippet toolbar()}
-	<input type="hidden" name="tab" value={data.tab} />
-	<Filter.Search name="q" value={data.search} />
-	<Filter.Date name="from" value={data.dateFrom ?? ''} />
-	<Filter.Date name="to" value={data.dateTo ?? ''} />
-{/snippet}
-```
-
-#### Filter helpers
-
-All three render a single styled input with the `data-filter` attribute.
-
-- **`Filter.Search`** — text input. Props: `name` (default `"q"`), `value`, `placeholder` (default `"Search..."`), `class` (default `"w-48"`).
-- **`Filter.Select`** — select dropdown. Props: `name`, `value`, `placeholder` (default `"All"`), `options` (accepts `string[]`, `[value, label][]`, or `{ value, label }[]`), `class`. String arrays auto-convert underscores to spaces in labels.
-- **`Filter.Date`** — date input. Props: `name`, `value`, `class`.
-
-### Pagination
-
-Built in, default 20 rows per page. Customize with `pageSize`. Controls only render when there are multiple pages.
-
-### Legacy API
-
-The old `columns` prop + `row` snippet API still works for backward compat but new pages should use `<Column>` components.
+There isn't any, on purpose. No `query()` accepts a sort parameter, and a
+`Table` that knows about sorting is the first step back toward the component
+this replaced. If a page genuinely needs it, add `sort`/`dir` to _that page's_
+filter schema and give it its own header control.
 
 ## StatCard
 
@@ -630,11 +663,17 @@ Single stat display for dashboards.
 
 ## Pagination
 
-Page navigation for lists. Only renders when `totalPages > 1`.
+Page navigation for lists. Spread the `pagination` object a paginated `query()`
+returns; `onpage` receives the requested page number.
 
 ```svelte
-<Pagination page={currentPage} totalPages={total} buildHref={(p) => `?page=${p}`} />
+<Pagination {...pagination} onpage={(p) => (page = p)} />
 ```
+
+Page buttons are windowed with ellipses, so a 40-page list renders a handful of
+buttons rather than 40. The `Showing X–Y of Z` line renders even for a single
+page, so every list states its size. `DataList` renders this for you — reach for
+`Pagination` directly only outside a `DataList`.
 
 ## TagInput
 

@@ -1,17 +1,19 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Pagination from '$lib/components/shared/Pagination.svelte';
+	import DataList from '$lib/components/shared/DataList.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { IconRepeat } from '@tabler/icons-svelte';
+	import { rowLink } from '$lib/actions/row-link';
+	import { resolve } from '$app/paths';
+	import { IconRepeat, IconX } from '@tabler/icons-svelte';
 	import {
 		formatTimeRange,
 		formatDuration,
 		formatScheduleLabel,
-		formatMonthDayYear,
-		formatDate
+		formatDateShortYear
 	} from '$lib/utils/format';
 	import { cancelStaffSeries, getStaffRecurring } from '$lib/remote/recurring.remote';
 	const { fields: cancelFields } = cancelStaffSeries;
@@ -61,88 +63,69 @@
 		</button>
 	</div>
 
-	{#await result}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:then { rows: series, pagination }}
-		{#if series.length === 0}
-			<p class="text-center opacity-60 py-8">No recurring series found</p>
-		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Member</th>
-							<th>Schedule</th>
-							<th class="w-px">Starts</th>
-							<th class="w-px">Created</th>
-							<th class="w-px">Status</th>
-							<th class="w-px"></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each series as s (s.id)}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => (window.location.href = `/staff/recurring/${s.id}`)}
-							>
-								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink
-										member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}
-									/>
-								</td>
-								<td>
-									<div class="flex items-center gap-1">
-										<IconRepeat size={14} class="opacity-60 shrink-0" />
-										{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
-									</div>
-									<div class="text-sm opacity-60">
-										{formatTimeRange(s.startsAt, s.endsAt)}
-										<span class="mx-1">·</span>
-										{formatDuration(s.startsAt, s.endsAt)}
-									</div>
-								</td>
-								<td class="w-px">{formatMonthDayYear(s.startsAt)}</td>
-								<td class="w-px">{formatDate(s.createdAt)}</td>
-								<td class="w-px">
-									{#if s.cancelledAt}
-										<StatusBadge status="cancelled" />
-									{:else}
-										<StatusBadge status="active" />
-									{/if}
-								</td>
-								<td class="w-px" onclick={(e) => e.stopPropagation()}>
-									{#if !s.cancelledAt}
-										<Action
-											action={cancelStaffSeries}
-											label="Cancel"
-											modalTitle="Confirm"
-											successToast="Series cancelled"
-											onsuccess={() => {
-												void getStaffRecurring(filters).refresh();
-											}}
-											class="btn-ghost btn-xs text-error"
-										>
-											{#snippet form()}
-												<input {...cancelFields.seriesId.as('hidden', s.id)} />
-												<p class="py-4">
-													Cancel this recurring series? Future reservations will not be created.
-												</p>
-											{/snippet}
-										</Action>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination
-				page={pagination.page}
-				totalPages={pagination.totalPages}
-				onpage={(p) => (page = p)}
-			/>
-		{/if}
-	{/await}
+	<DataList {result} empty="No recurring series found" onpage={(p) => (page = p)}>
+		{#snippet children(series)}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Series</th>
+					<th class="col-support whitespace-nowrap">Starts</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+
+				{#each series as s (s.id)}
+					{@const href = resolve(`/staff/recurring/${s.id}`)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px">
+							<StatusBadge status={s.cancelledAt ? 'cancelled' : 'active'} />
+						</td>
+						<!-- Schedule is the identity of a series; the member and the time
+						     range are its qualifiers. Created dropped to the detail page. -->
+						<td class="cell-primary">
+							<a {href} class="flex min-w-0 items-center gap-1 font-medium hover:underline">
+								<IconRepeat size={14} class="shrink-0 opacity-60" />
+								<span class="truncate">
+									{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
+								</span>
+							</a>
+							<div class="flex min-w-0 items-center gap-1 text-sm opacity-60">
+								<MemberLink
+									variant="inline"
+									member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}
+								/>
+								<span>·</span>
+								<span class="whitespace-nowrap">
+									{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
+								</span>
+							</div>
+						</td>
+						<td class="col-support whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
+						<td class="w-px">
+							{#if !s.cancelledAt}
+								<Action
+									action={cancelStaffSeries}
+									label="Cancel series"
+									iconOnly
+									modalTitle="Confirm"
+									successToast="Series cancelled"
+									onsuccess={() => {
+										void getStaffRecurring(filters).refresh();
+									}}
+									class="btn-ghost btn-sm btn-square text-error"
+								>
+									{#snippet icon()}<IconX size={16} />{/snippet}
+									{#snippet form()}
+										<input {...cancelFields.seriesId.as('hidden', s.id)} />
+										<p class="py-4">
+											Cancel this recurring series? Future reservations will not be created.
+										</p>
+									{/snippet}
+								</Action>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

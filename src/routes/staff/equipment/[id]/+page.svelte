@@ -19,9 +19,11 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { ActivateToggleAction } from '$lib/components/shared/actions';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
-	import { goto } from '$app/navigation';
+	import Table from '$lib/components/shared/Table.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { formatDate, formatCents } from '$lib/utils/format';
+	import { formatDateShort, formatCents } from '$lib/utils/format';
 	import { equipmentConditions, equipmentStatuses } from '$lib/config';
 
 	const { fields } = editEquipment;
@@ -142,52 +144,53 @@
 <PageContent width="3xl">
 	<InfoCard title="Loan History">
 		{#if loanHistory.length === 0}
-			<p class="text-center opacity-60 py-8">No loan history</p>
+			<EmptyState description="No loan history" />
 		{:else}
-			<div class="overflow-x-auto">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Member</th>
-							<th class="w-px">Status</th>
-							<th class="w-px">Requested</th>
-							<th class="w-px">Due</th>
-							<th class="w-px">Charge</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each loanHistory as loan (loan.id)}
-							<tr
-								class="hover cursor-pointer"
-								onclick={() => goto(resolve(`/staff/equipment/loans/${loan.id}`))}
-							>
-								<td onclick={(e) => e.stopPropagation()}>
-									<MemberLink
-										member={{
-											name: loan.userName,
-											email: loan.userEmail,
-											pronouns: loan.userPronouns,
-											role: loan.userRole,
-											userId: loan.userId
-										}}
-									/>
-								</td>
-								<td class="w-px">
-									<StatusBadge status={loan.status} />
-									{#if loan.isOverdue}
-										<Badge variant="error" size="xs" class="ml-1">Overdue</Badge>
-									{/if}
-								</td>
-								<td class="w-px">{formatDate(loan.requestedPickupDate)}</td>
-								<td class="w-px">{loan.dueDate ? formatDate(loan.dueDate) : '—'}</td>
-								<td class="w-px"
-									>{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}</td
-								>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Member</th>
+					<th class="col-support whitespace-nowrap">Due</th>
+					<th class="col-extra whitespace-nowrap">Requested</th>
+					<th class="col-support cell-num">Charge</th>
+				{/snippet}
+				{#each loanHistory as loan (loan.id)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`/staff/equipment/loans/${loan.id}`)}
+					>
+						<td class="w-px">
+							<div class="flex items-center gap-1">
+								<StatusBadge status={loan.status} />
+								{#if loan.isOverdue}
+									<Badge variant="error" size="xs">Overdue</Badge>
+								{/if}
+							</div>
+						</td>
+						<td class="cell-primary">
+							<MemberLink
+								variant="inline"
+								member={{
+									name: loan.userName,
+									email: loan.userEmail,
+									pronouns: loan.userPronouns,
+									role: loan.userRole,
+									userId: loan.userId
+								}}
+							/>
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{loan.dueDate ? formatDateShort(loan.dueDate) : '—'}
+						</td>
+						<td class="col-extra whitespace-nowrap">
+							{formatDateShort(loan.requestedPickupDate)}
+						</td>
+						<td class="col-support cell-num">
+							{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</InfoCard>
 </PageContent>

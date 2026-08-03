@@ -116,6 +116,18 @@ export function estimateLoanCost(
 // ---------------------------------------------------------------------------
 
 export const equipmentConditions = ['excellent', 'good', 'fair', 'poor'] as const;
+
+/**
+ * Condition is an ordinal scale, so it gets colour rather than four identical
+ * ghost badges. Keyed by the same values as `equipmentConditions` — keep in sync.
+ */
+export const equipmentConditionBadge: Record<(typeof equipmentConditions)[number], string> = {
+	excellent: 'badge-success',
+	good: 'badge-info',
+	fair: 'badge-warning',
+	poor: 'badge-error'
+};
+
 export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export const pricingTiers = ['major', 'accessory'] as const;
 export const loanStatuses = [
@@ -125,6 +137,26 @@ export const loanStatuses = [
 	'returned',
 	'cancelled'
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Credit transaction sources
+// ---------------------------------------------------------------------------
+
+/**
+ * Display labels for `transactionSources`
+ * (src/lib/server/db/schema/finance.ts). Kept here rather than in the schema so
+ * the staff credits page can import it without pulling in server code.
+ * `creditSourceLabels.spec.ts` asserts it stays exhaustive.
+ */
+export const creditSourceLabels: Record<string, string> = {
+	monthly_allocation: 'Monthly allocation',
+	checkout: 'Checkout',
+	checkout_failed: 'Checkout failed',
+	refund: 'Refund',
+	cancelled: 'Cancelled',
+	admin_adjustment: 'Admin adjustment',
+	reservation: 'Reservation'
+};
 
 // ---------------------------------------------------------------------------
 // Inbox enum values

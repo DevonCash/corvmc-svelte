@@ -24,6 +24,7 @@
 		action,
 		label = 'Run',
 		icon,
+		iconOnly = false,
 		successLabel = 'Done',
 		errorLabel = 'Error',
 		confirm,
@@ -46,6 +47,12 @@
 		action: (() => Promise<unknown>) | RemoteForm<any, any>;
 		label?: string;
 		icon?: Snippet;
+		/**
+		 * Render the trigger as icon-only, with `label` moved to a tooltip. Use in
+		 * table action cells — pairing `btn-square` with a visible label overflows
+		 * the square.
+		 */
+		iconOnly?: boolean;
 		successLabel?: string;
 		errorLabel?: string;
 		confirm?: string;
@@ -142,8 +149,8 @@
 	{@render trigger({ onclick: handleClick, disabled: disabled || status === 'pending', status })}
 {:else}
 	<Button
-		{label}
-		{icon}
+		title={iconOnly ? label : undefined}
+		aria-label={iconOnly ? label : undefined}
 		disabled={disabled || status === 'pending'}
 		onclick={handleClick}
 		class={className}
@@ -151,16 +158,16 @@
 	>
 		{#if status === 'success'}
 			<IconCheck size={16} />
-			{successLabel}
+			{#if !iconOnly}{successLabel}{/if}
 		{:else if status === 'error'}
 			<IconX size={16} />
-			{errorLabel}
+			{#if !iconOnly}{errorLabel}{/if}
 		{:else if status === 'pending'}
 			<span class="loading loading-spinner"></span>
-			{label}
+			{#if !iconOnly}{label}{/if}
 		{:else}
 			{@render icon?.()}
-			{label}
+			{#if !iconOnly}{label}{/if}
 		{/if}
 	</Button>
 {/if}
