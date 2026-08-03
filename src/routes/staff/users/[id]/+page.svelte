@@ -38,6 +38,7 @@
 		(allRoles ?? []).filter((r) => member.roles.includes(r.name)).map((r) => String(r.id))
 	);
 
+	const { fields: updateFields } = updateUser;
 	const { fields: deactivateFields } = deactivateUser;
 	const { fields: reactivateFields } = reactivateUser;
 	const { fields: purgeFields } = purgeUser;
@@ -58,6 +59,9 @@
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<!-- Profile card -->
 			<InfoCard title="Account Info">
+				<!-- The mutation target travels as a validated field; `params.id` is
+				     caller-controlled for remote calls and must not identify the record. -->
+				<input {...updateFields.id.as('hidden', id)} />
 				<div class="@container grid grid-cols-4 gap-x-2">
 					<Field
 						name="name"
@@ -166,8 +170,11 @@
 				</div>
 			{:else}
 				<p class="text-sm opacity-70 mb-3">
-					Deactivating cancels all of this member's future reservations and hides them from the
-					directory. This is reversible.
+					Deactivating signs this member out, hides them from the directory, cancels all of their
+					future reservations, and cancels their membership subscription. Reactivating restores
+					their access, but <strong
+						>the cancelled reservations and subscription are not restored</strong
+					> — they would have to be rebooked and resubscribed.
 				</p>
 				<Action
 					action={deactivateUser}
@@ -178,7 +185,10 @@
 				>
 					{#snippet form()}
 						<input {...deactivateFields.id.as('hidden', id)} />
-						<p class="py-4">Deactivate this account? All future reservations will be cancelled.</p>
+						<p class="py-4">
+							Deactivate this account? All future reservations and their membership subscription
+							will be cancelled, and reactivating will not bring them back.
+						</p>
 					{/snippet}
 				</Action>
 			{/if}

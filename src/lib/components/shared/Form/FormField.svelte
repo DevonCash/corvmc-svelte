@@ -160,7 +160,9 @@
 			bind:value
 		></textarea>
 	{:else if type === 'tags'}
-		<TagInput {...rest} options={rest.options} {...inputProps} disabled={pending} />
+		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
+		     explicitly — without it TagInput starts empty and submits `[]`. -->
+		<TagInput {...rest} options={rest.options} {...inputProps} {value} disabled={pending} />
 	{:else if type === 'calendar'}
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}

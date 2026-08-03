@@ -1,0 +1,287 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Regression: remote functions are directly addressable endpoints. There is no
+// +layout.server.ts under /staff, and SvelteKit dispatches remote calls before
+// any route load runs (runtime/server/respond.js — `handle_remote_call` is
+// reached with the route's load functions skipped), so a remote function is
+// only as guarded as its own first line.
+//
+// getUser / getAllRoles / getUserPayments / getUserCredits shipped with no
+// guard at all, exposing a target user's email, phone, Stripe id and full
+// payment history to any caller. updateUser was worse: it also had no guard and
+// took its target from `params.id`, which for a remote call is derived from the
+// caller-supplied `x-sveltekit-pathname` header — and since it rewrites
+// model_has_roles wholesale, any caller could grant themselves `admin`.
+//
+// These tests pin that every one of those endpoints rejects a non-staff caller
+// before touching the database, and that updateUser cannot be used to escalate
+// privileges or to lock the panel by demoting yourself / the last admin.
+
+const requireStaff = vi.fn<() => Promise<unknown>>(async () => {
+	throw new Error('403: Staff access required');
+});
+const getUserRoles = vi.fn(async () => ['member']);
+vi.mock('$lib/server/authorization', () => ({
+	requireStaff: (...args: unknown[]) => requireStaff(...(args as [])),
+	requireUser: () => ({ id: 'acting-staff', name: 'Acting', email: 'acting@example.com' }),
+	getUserRoles: (...args: unknown[]) => getUserRoles(...(args as []))
+}));
+
+// Role rows and the remaining-admin count the authorized-path tests read back.
+const ROLE_ROWS = [
+	{ id: 1, name: 'admin' },
+	{ id: 2, name: 'staff' },
+	{ id: 3, name: 'member' }
+];
+let otherAdminCount = 1;
+
+// Any db access on a rejected call is a failure — the guard tests assert these
+// spies stay clean. On the authorized path db.select serves the two reads
+// updateUser makes: all role rows, then a count of admins other than the target.
+const dbSelect = vi.fn((shape?: Record<string, unknown>) => {
+	const isCount = !!shape && 'value' in shape;
+	const rows = isCount ? [{ value: otherAdminCount }] : ROLE_ROWS;
+	const result = {
+		from: () => result,
+		where: () => result,
+		limit: () => result,
+		then: (resolve: (v: unknown) => unknown) => resolve(rows)
+	};
+	return result;
+});
+// Write builders are inert: the guard tests assert they were never *called*,
+// which is the meaningful signal, and the authorized tests need them to work.
+const writeBuilder = () => {
+	const b = {
+		set: () => b,
+		values: () => b,
+		where: () => b,
+		returning: () => b,
+		then: (resolve: (v: unknown) => unknown) => resolve([])
+	};
+	return b;
+};
+const dbUpdate = vi.fn(writeBuilder);
+const dbDelete = vi.fn(writeBuilder);
+const dbInsert = vi.fn(writeBuilder);
+const dbBatch = vi.fn(async () => []);
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: (...a: unknown[]) => dbSelect(...(a as [])),
+		update: (...a: unknown[]) => dbUpdate(...(a as [])),
+		delete: (...a: unknown[]) => dbDelete(...(a as [])),
+		insert: (...a: unknown[]) => dbInsert(...(a as [])),
+		batch: (...a: unknown[]) => dbBatch(...(a as []))
+	}
+}));
+
+const listByUser = vi.fn(async () => [{ id: 'pay_1', amountCents: 1500 }]);
+vi.mock('$lib/server/finance/payment-cache-service', () => ({
+	listByUser: (...a: unknown[]) => listByUser(...(a as [])),
+	list: vi.fn(async () => [])
+}));
+
+const getAllBalances = vi.fn(async () => ({ free_hours: 240, equipment_credits: 3 }));
+vi.mock('$lib/server/finance/credit-service', () => ({
+	getAllBalances: (...a: unknown[]) => getAllBalances(...(a as [])),
+	getUsageSinceLastAllocation: vi.fn(async () => 0),
+	addCredits: vi.fn(async () => undefined),
+	deductCredits: vi.fn(async () => undefined),
+	listTransactions: vi.fn(async () => [])
+}));
+
+vi.mock('$lib/server/finance/subscription-service', () => ({
+	isSustainingMemberSql: vi.fn(() => null),
+	getMemberSubscription: vi.fn(async () => null),
+	mapDbSubscription: vi.fn(() => null)
+}));
+
+vi.mock('$lib/server/user/user-service', () => ({
+	deactivateUser: vi.fn(async () => undefined),
+	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
+	reactivateUser: vi.fn(async () => undefined),
+	purgeUser: vi.fn(async () => undefined),
+	UserNotFoundError: class UserNotFoundError extends Error {},
+	UserNotDeactivatedError: class UserNotDeactivatedError extends Error {},
+	UserHasOwnedBandsError: class UserHasOwnedBandsError extends Error {},
+	UserHasLinkedRecordsError: class UserHasLinkedRecordsError extends Error {}
+}));
+
+vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
+vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn(() => null) }));
+vi.mock('$lib/server/db/paginate', () => ({
+	paginate: vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0, totalPages: 0 } }))
+}));
+
+// `params.id` for a remote call comes from the caller-supplied
+// `x-sveltekit-pathname` header, so a test caller controls it exactly as an
+// attacker would.
+let currentParams: Record<string, string> = { id: 'victim-user' };
+vi.mock('$app/server', () => ({
+	getRequestEvent: () => ({
+		locals: { user: null },
+		params: currentParams,
+		url: new URL('http://localhost/'),
+		request: { headers: new Headers() }
+	}),
+	query: (...args: unknown[]) => {
+		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
+			...a: unknown[]
+		) => Promise<unknown>;
+		// Real query results expose .refresh(); the forms call it after a write.
+		const wrapped = (...a: unknown[]) => {
+			const promise = handler(...a) as Promise<unknown> & { refresh?: () => void };
+			promise.refresh = () => undefined;
+			return promise;
+		};
+		(wrapped as unknown as Record<string, unknown>).__ = { type: 'query' };
+		return wrapped;
+	},
+	form: (_schema: unknown, handler: (...a: unknown[]) => unknown) => {
+		const fn = handler as unknown as Record<string, unknown>;
+		fn.__ = { type: 'form' };
+		fn.for = () => fn;
+		return handler;
+	},
+	command: (handler: (...a: unknown[]) => unknown) => {
+		(handler as unknown as Record<string, unknown>).__ = { type: 'command' };
+		return handler;
+	}
+}));
+
+const users = (await import('./users.remote')) as unknown as Record<
+	string,
+	((...args: unknown[]) => Promise<unknown>) & { refresh?: () => void }
+>;
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	requireStaff.mockRejectedValue(new Error('403: Staff access required'));
+	getUserRoles.mockResolvedValue(['member']);
+	otherAdminCount = 1;
+	currentParams = { id: 'victim-user' };
+	for (const fn of Object.values(users)) {
+		if (typeof fn === 'function') fn.refresh = () => undefined;
+	}
+});
+
+// Shaped as the handler receives it, i.e. after the zod schema's
+// JSON.parse transform on `roles` — the mocked form() above skips validation.
+const VALID_UPDATE = {
+	id: 'victim-user',
+	name: 'Renamed By Attacker',
+	pronouns: '',
+	phone: '',
+	roles: ['1']
+};
+
+const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
+	{ name: 'getUser', args: ['victim-user'] },
+	{ name: 'getAllRoles' },
+	{ name: 'getUserPayments', args: ['victim-user'] },
+	{ name: 'getUserCredits', args: ['victim-user'] },
+	{ name: 'updateUser', args: [VALID_UPDATE] }
+];
+
+describe('users.remote staff guards', () => {
+	for (const { name, args = [] } of STAFF_ONLY) {
+		it(`${name} rejects a non-staff caller before touching the database`, async () => {
+			await expect(users[name](...args)).rejects.toThrow('Staff access required');
+			expect(dbSelect).not.toHaveBeenCalled();
+			expect(dbUpdate).not.toHaveBeenCalled();
+			expect(dbDelete).not.toHaveBeenCalled();
+			expect(dbInsert).not.toHaveBeenCalled();
+			expect(dbBatch).not.toHaveBeenCalled();
+		});
+	}
+
+	it('getUserPayments does not leak payment history to a non-staff caller', async () => {
+		await expect(users.getUserPayments('victim-user')).rejects.toThrow('Staff access required');
+		expect(listByUser).not.toHaveBeenCalled();
+	});
+
+	it('getUserCredits does not leak credit balances to a non-staff caller', async () => {
+		await expect(users.getUserCredits('victim-user')).rejects.toThrow('Staff access required');
+		expect(getAllBalances).not.toHaveBeenCalled();
+	});
+
+	it('updateUser cannot be used to grant a non-staff caller the admin role', async () => {
+		// The escalation shape: point params.id at yourself via the pathname
+		// header and post the admin role id.
+		currentParams = { id: 'attacker' };
+		await expect(
+			users.updateUser({
+				id: 'attacker',
+				name: 'Attacker',
+				pronouns: '',
+				phone: '',
+				roles: ['1']
+			})
+		).rejects.toThrow('Staff access required');
+		expect(dbBatch).not.toHaveBeenCalled();
+		expect(dbDelete).not.toHaveBeenCalled();
+		expect(dbInsert).not.toHaveBeenCalled();
+	});
+
+	it('updateUser ignores params.id and edits the user named in the payload', async () => {
+		// A stale/forged pathname header must not redirect the write.
+		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		currentParams = { id: 'some-other-user' };
+		await users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] });
+		expect(dbBatch).toHaveBeenCalled();
+		expect(dbUpdate).toHaveBeenCalled();
+	});
+});
+
+// SvelteKit's error() throws an HttpError ({ status, body }), not an Error, so
+// toThrow(string) can't read a .message off it.
+async function expectHttpError(promise: Promise<unknown>, status: number, contains: string) {
+	const thrown = await promise.then(
+		() => null,
+		(e) => e as { status?: number; body?: { message?: string } }
+	);
+	expect(thrown).not.toBeNull();
+	expect(thrown?.status).toBe(status);
+	expect(thrown?.body?.message).toContain(contains);
+}
+
+describe('users.remote lockout guards', () => {
+	beforeEach(() => {
+		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+	});
+
+	it('refuses to let a staff member drop their own staff access', async () => {
+		getUserRoles.mockResolvedValue(['staff']);
+		await expectHttpError(
+			// role 3 = member only
+			users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['3'] }),
+			400,
+			'cannot remove your own staff access'
+		);
+		expect(dbBatch).not.toHaveBeenCalled();
+	});
+
+	it('lets a staff member keep their access while changing other roles', async () => {
+		getUserRoles.mockResolvedValue(['staff']);
+		await users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['2', '3'] });
+		expect(dbBatch).toHaveBeenCalled();
+	});
+
+	it('refuses to demote the last remaining admin', async () => {
+		getUserRoles.mockResolvedValue(['admin']);
+		otherAdminCount = 0;
+		await expectHttpError(
+			users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] }),
+			409,
+			'last admin'
+		);
+		expect(dbBatch).not.toHaveBeenCalled();
+	});
+
+	it('allows demoting an admin while another admin remains', async () => {
+		getUserRoles.mockResolvedValue(['admin']);
+		otherAdminCount = 1;
+		await users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] });
+		expect(dbBatch).toHaveBeenCalled();
+	});
+});

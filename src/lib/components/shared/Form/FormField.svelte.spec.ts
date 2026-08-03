@@ -90,4 +90,41 @@ describe('FormField', () => {
 		const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
 		expect(input.name).toBe('b:lookingForBand');
 	});
+
+	// Regression: `value` is destructured into its own prop, so it was not part of
+	// `...rest` and the tags branch never forwarded it to TagInput. The hidden
+	// input therefore always serialised `[]`, and on the staff user page every
+	// profile save posted an empty role list — silently deleting the member's
+	// roles (staff/admin included) as a side effect of editing a phone number.
+	it('pre-fills a tags input from the value prop', async () => {
+		const { container } = render(FormField, {
+			name: 'roles',
+			type: 'tags',
+			label: 'Roles',
+			multiple: true,
+			options: [
+				{ id: '1', label: 'admin' },
+				{ id: '2', label: 'staff' },
+				{ id: '3', label: 'member' }
+			],
+			value: ['2', '3']
+		});
+
+		const hidden = container.querySelector('input[name="roles"]') as HTMLInputElement;
+		expect(JSON.parse(hidden.value)).toEqual(['2', '3']);
+	});
+
+	it('serialises an empty tags input as an empty array', async () => {
+		const { container } = render(FormField, {
+			name: 'roles',
+			type: 'tags',
+			label: 'Roles',
+			multiple: true,
+			options: [{ id: '1', label: 'admin' }],
+			value: []
+		});
+
+		const hidden = container.querySelector('input[name="roles"]') as HTMLInputElement;
+		expect(JSON.parse(hidden.value)).toEqual([]);
+	});
 });
