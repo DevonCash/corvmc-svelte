@@ -118,7 +118,8 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 | `STRIPE_WEBHOOK_SECRET`                                                   | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                           |
 | `STRIPE_WEBHOOK_ID`                                                       | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                    |
 | `POSTMARK_SERVER_TOKEN`                                                   | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                   |
-| `POSTMARK_INBOUND_TOKEN`                                                  | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`)                                                                 |
+| `POSTMARK_INBOUND_TOKEN`                                                  | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL             |
+| `INBOX_REPLY_SECRET`                                                      | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`              |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                                | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                            |
 | `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN`        | Messenger inbox channel (`src/routes/api/inbox/meta/+server.ts`) — provisioned but dormant                                                            |
 | `ULTRALOC_CLIENT_ID` / `_CLIENT_SECRET` / `_REFRESH_TOKEN` / `_DEVICE_ID` | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`)                                                                                       |
@@ -171,6 +172,28 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
 - **Inbound email** (support inbox) is a Postmark inbound webhook pointed at
   `/api/inbox/postmark`, authenticated by `POSTMARK_INBOUND_TOKEN`. A separate delivery-
   events webhook posts to `/api/webhooks/postmark`.
+- **Inbound auth is HTTP Basic in the URL**, not a header. Postmark's "up to 30 custom
+  headers" feature belongs to _modular_ (message-event) webhooks — which is why
+  `/api/webhooks/postmark/events` can use `x-postmark-token`. The inbound hook is a bare
+  `InboundHookUrl`, so configure it as
+  `https://postmark:<POSTMARK_INBOUND_TOKEN>@corvmc.org/api/inbox/postmark`. The route also
+  accepts `x-postmark-token` for local curl testing, and **rejects every request when the
+  secret is unset**.
+- **Reply routing.** Staff replies go out with a plus-addressed
+  `Reply-To: reply+<threadId>.<sig>@replies.corvmc.org`. Postmark parses the part after the
+  `+` into the inbound payload's `MailboxHash`, which routes the response straight back into
+  its original thread (`src/lib/server/inbox/reply-address.ts`). The thread id is HMAC-signed
+  — without that the address is a bearer token for writing into a thread, and it is visible
+  to anyone the recipient forwards our reply to.
+  - Requires `MX replies.corvmc.org → inbound.postmarkapp.com` (priority 10) and _Inbound
+    domain forwarding_ set to `replies.corvmc.org` in the Postmark server settings.
+  - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
+    mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
+    MX records.
+  - Until that MX is live, leave `INBOX_REPLY_ADDRESS` unset: replies then fall back to
+    `Reply-To: STAFF_CONTACT_EMAIL`, which reaches a human instead of bouncing.
+- The `email` **channel toggle** (Staff → Settings → Inbox Channels) gates only _new-sender_
+  mail. A reply to a thread we started always lands, because we invited it.
 
 ### Twilio (SMS)
 

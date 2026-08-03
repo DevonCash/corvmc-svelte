@@ -97,14 +97,23 @@
 				<!-- Reply form -->
 				<div class="divider text-xs opacity-60">Reply</div>
 				{#await enabledChannels then channels}
-					{#if t.channel === 'web' || channels.includes(t.channel)}
+					{#if (t.channel === 'web' || t.channel === 'email') && !t.contactEmail}
+						<div class="alert alert-warning text-sm">
+							This conversation has no contact email, so there is nowhere to send a reply. Add an
+							internal note instead.
+						</div>
+					{:else if t.channel === 'web' || channels.includes(t.channel)}
 						<form
 							{...replyForm.enhance(async ({ submit }) => {
-								if (await submit()) {
-									toast.success('Reply sent');
-									void getInboxThread(threadId).refresh();
-								} else {
-									toast.error('Failed to send reply');
+								try {
+									if (await submit()) {
+										toast.success('Reply sent');
+										void getInboxThread(threadId).refresh();
+									} else {
+										toast.error('Failed to send reply');
+									}
+								} catch (err) {
+									toast.error(err instanceof Error ? err.message : 'Failed to send reply');
 								}
 							})}
 							class="flex flex-col gap-2"

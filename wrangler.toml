@@ -62,6 +62,13 @@ PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
+# Base address for inbox reply routing. Staff replies go out with a plus-addressed
+# Reply-To (reply+<threadId>.<sig>@...) so the response threads back into the same
+# conversation via Postmark's MailboxHash. Requires an MX record on this subdomain
+# pointing at inbound.postmarkapp.com — do NOT use corvmc.org itself, which
+# receives real mail. Until that MX is live, leave this UNSET: replies then fall
+# back to Reply-To: STAFF_CONTACT_EMAIL, which reaches a human instead of bouncing.
+# INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
 # Public Cloudflare Turnstile site key for the bot-protection widget on the public
 # sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
 # TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value

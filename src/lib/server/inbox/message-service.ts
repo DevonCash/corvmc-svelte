@@ -55,6 +55,18 @@ export async function addInboundMessage(params: AddInboundMessageParams) {
 	return message;
 }
 
+/**
+ * In-Reply-To / References must hold RFC 5322 msg-ids. Older rows (and every
+ * outbound row) store Postmark's internal GUID instead, which no mail client
+ * can thread on — drop those rather than emit a malformed header. Thread
+ * routing does not depend on this; the signed Reply-To address does that.
+ */
+function normalizeMessageId(raw: string | null | undefined): string | null {
+	const value = raw?.trim();
+	if (!value || !value.includes('@')) return null;
+	return value.startsWith('<') && value.endsWith('>') ? value : `<${value}>`;
+}
+
 export interface AddOutboundMessageParams {
 	threadId: string;
 	body: string;
@@ -88,7 +100,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 
 	const references =
 		inboundIds
-			.map((m) => m.channelMessageId)
+			.map((m) => normalizeMessageId(m.channelMessageId))
 			.filter(Boolean)
 			.join(' ') || null;
 
@@ -106,7 +118,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 				contactPhone: thread.contactPhone,
 				contactExternalId: thread.contactExternalId,
 				subject: thread.subject,
-				lastInboundMessageId: lastInbound?.channelMessageId ?? null,
+				lastInboundMessageId: normalizeMessageId(lastInbound?.channelMessageId),
 				references
 			})) ?? null;
 	} catch (err) {

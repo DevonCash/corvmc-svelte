@@ -132,6 +132,8 @@ export interface SendInboxReplyTemplateParams {
 	to: string;
 	/** Mustachio model: { subject, contactName, staffName, body } (body is unescaped HTML) */
 	model: Record<string, unknown>;
+	/** Where the recipient's response should go — a plus-addressed thread address */
+	replyTo?: string | null;
 	/** Original Message-ID for In-Reply-To header */
 	inReplyTo?: string | null;
 	/** Accumulated References header for threading */
@@ -155,6 +157,7 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 		const result = await getClient().sendEmailWithTemplate({
 			From: `${fromName} <${fromAddress}>`,
 			To: params.to,
+			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: 'inbox-reply',
 			TemplateModel: params.model,
 			Tag: 'inbox-reply',

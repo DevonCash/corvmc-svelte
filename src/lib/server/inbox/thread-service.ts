@@ -86,6 +86,25 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 	return thread;
 }
 
+/** Bare thread row by id — used by inbound routing, which needs the thread's
+ *  channel/status/contact fields but not its messages or notes. */
+export async function findThreadById(id: string) {
+	const [thread] = await db.select().from(inboxThread).where(eq(inboxThread.id, id)).limit(1);
+	return thread;
+}
+
+/**
+ * Reopen a thread when a contact replies to it. `findOrCreateThread` provides
+ * this implicitly for new threads (it only matches open/snoozed rows), but the
+ * MailboxHash path resolves a thread directly and bypasses that filter.
+ */
+export async function reopenThread(threadId: string) {
+	await db
+		.update(inboxThread)
+		.set({ status: 'open', snoozedUntil: null, updatedAt: new Date() })
+		.where(eq(inboxThread.id, threadId));
+}
+
 export interface ListThreadsFilters {
 	status?: InboxThreadStatus;
 	channel?: InboxChannel;
