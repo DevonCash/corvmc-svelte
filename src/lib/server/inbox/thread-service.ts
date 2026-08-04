@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxNote } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, desc, count, like, or, inArray, sql } from 'drizzle-orm';
+import { eq, and, desc, count, like, or, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
@@ -241,4 +241,50 @@ export async function getUnresolvedCount(): Promise<number> {
 		.from(inboxThread)
 		.where(eq(inboxThread.status, 'open'));
 	return row?.count ?? 0;
+}
+
+export type ThreadStatusCounts = Record<InboxThreadStatus, number> & { all: number };
+
+/**
+ * Thread totals per status, for the badges on the list page's status tabs. One
+ * grouped query rather than one count per tab.
+ */
+export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
+	const rows = await db
+		.select({ status: inboxThread.status, count: count() })
+		.from(inboxThread)
+		.groupBy(inboxThread.status);
+
+	const counts = { open: 0, resolved: 0, snoozed: 0, all: 0 } satisfies ThreadStatusCounts;
+	for (const row of rows) {
+		counts[row.status] = row.count;
+		counts.all += row.count;
+	}
+	return counts;
+}
+
+/**
+ * Return every snoozed thread whose snooze has elapsed to the open queue. Run
+ * from /api/cron/wake-snoozed; without it a snooze is indistinguishable from
+ * deleting the thread.
+ *
+ * Rows with a null `snoozedUntil` are left alone — those were snoozed without a
+ * date and are only reopened by hand or by an inbound reply.
+ */
+export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woken: number }> {
+	const due = and(
+		eq(inboxThread.status, 'snoozed'),
+		isNotNull(inboxThread.snoozedUntil),
+		lte(inboxThread.snoozedUntil, now)
+	);
+
+	const rows = await db.select({ id: inboxThread.id }).from(inboxThread).where(due);
+	if (rows.length === 0) return { woken: 0 };
+
+	await db
+		.update(inboxThread)
+		.set({ status: 'open', snoozedUntil: null, updatedAt: now })
+		.where(due);
+
+	return { woken: rows.length };
 }

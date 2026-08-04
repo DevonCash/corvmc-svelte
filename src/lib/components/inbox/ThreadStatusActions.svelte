@@ -1,0 +1,123 @@
+<script lang="ts">
+	/**
+	 * Status controls for one thread: resolve, reopen, snooze.
+	 *
+	 * This replaced a `<select>` + "Update Status" button, which took two
+	 * interactions to do the one thing anyone does from here. Each action is its
+	 * own single-purpose form so it gets `SubmitButton`'s spinner and success flash
+	 * — the forms are `display: contents` so their buttons still lay out as one row.
+	 */
+	import type { RemoteForm } from '@sveltejs/kit';
+	import { addDays, format, nextMonday } from 'date-fns';
+	import { IconAlarmSnooze, IconCheck, IconRotate } from '@tabler/icons-svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { formatDate } from '$lib/utils/format';
+
+	type StatusInput = {
+		threadId: string;
+		status: 'open' | 'resolved' | 'snoozed';
+		snoozedUntil?: string;
+	};
+	/** What `.for(key)` returns — a form instance with its own pending state. */
+	type StatusFormInstance = Omit<RemoteForm<StatusInput, unknown>, 'for'>;
+
+	let {
+		threadId,
+		status,
+		snoozedUntil,
+		resolveForm,
+		reopenForm,
+		snoozeForm
+	}: {
+		threadId: string;
+		status: 'open' | 'resolved' | 'snoozed';
+		snoozedUntil?: Date | null;
+		/** Separate instances so each button tracks its own pending state. */
+		resolveForm: StatusFormInstance;
+		reopenForm: StatusFormInstance;
+		/** `Action` needs the full form (it renders its own `<Form>`). */
+		snoozeForm: RemoteForm<StatusInput, unknown>;
+	} = $props();
+
+	// Values are the dates themselves, so picking a preset *is* picking a date and
+	// the server never has to re-derive "next Monday" from a label.
+	const snoozeOptions = $derived.by(() => {
+		const now = new Date();
+		return [
+			{ label: 'Tomorrow', date: addDays(now, 1) },
+			{ label: 'In 3 days', date: addDays(now, 3) },
+			{ label: 'Next Monday', date: nextMonday(now) },
+			{ label: 'In two weeks', date: addDays(now, 14) }
+		].map(({ label, date }) => ({
+			value: format(date, 'yyyy-MM-dd'),
+			label: `${label} — ${formatDate(date)}`
+		}));
+	});
+
+	let snoozeDate = $state('');
+</script>
+
+<div class="flex flex-wrap gap-2">
+	{#if status !== 'resolved'}
+		<Form remote={resolveForm} successToast="Marked resolved" class="contents">
+			<input {...resolveForm.fields.threadId.as('hidden', threadId)} />
+			<input {...resolveForm.fields.status.as('hidden', 'resolved')} />
+			<SubmitButton label="Resolve" successLabel="Resolved" class="btn-primary btn-sm">
+				{#snippet icon()}<IconCheck size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{/if}
+
+	{#if status !== 'open'}
+		<Form remote={reopenForm} successToast="Reopened" class="contents">
+			<input {...reopenForm.fields.threadId.as('hidden', threadId)} />
+			<input {...reopenForm.fields.status.as('hidden', 'open')} />
+			<SubmitButton
+				label={status === 'snoozed' ? 'Unsnooze' : 'Reopen'}
+				successLabel="Reopened"
+				class="btn-sm"
+			>
+				{#snippet icon()}<IconRotate size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{/if}
+
+	{#if status !== 'snoozed'}
+		<Action
+			action={snoozeForm}
+			label="Snooze"
+			modalTitle="Snooze conversation"
+			submitLabel="Snooze"
+			successToast="Snoozed"
+			class="btn-ghost btn-sm"
+			maxWidth="max-w-sm"
+		>
+			{#snippet icon()}<IconAlarmSnooze size={16} />{/snippet}
+			{#snippet form()}
+				<input {...snoozeForm.fields.threadId.as('hidden', threadId)} />
+				<input {...snoozeForm.fields.status.as('hidden', 'snoozed')} />
+				<p class="text-sm opacity-70">
+					It leaves the open queue and returns on the morning you pick.
+				</p>
+				<FormField
+					name="snoozedUntil"
+					label="Bring it back"
+					type="select"
+					placeholder="Choose when…"
+					options={snoozeOptions}
+					bind:value={snoozeDate}
+				/>
+			{/snippet}
+		</Action>
+	{/if}
+</div>
+
+{#if status === 'snoozed' && snoozedUntil}
+	<p class="flex items-center gap-1.5 text-sm opacity-70">
+		<IconAlarmSnooze size={14} />
+		Returns {formatDate(new Date(snoozedUntil))}
+	</p>
+{/if}

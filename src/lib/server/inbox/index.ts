@@ -6,7 +6,9 @@ export {
 	getThread,
 	assignThread,
 	updateStatus,
-	getUnresolvedCount
+	getUnresolvedCount,
+	countThreadsByStatus,
+	wakeSnoozedThreads
 } from './thread-service';
 export { buildReplyToAddress, parseReplyMailboxHash } from './reply-address';
 export { addInboundMessage, addOutboundMessage, addNote } from './message-service';

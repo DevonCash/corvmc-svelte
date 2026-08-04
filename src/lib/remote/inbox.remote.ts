@@ -6,12 +6,14 @@ import { requireStaff, listStaffUsers } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
+import { getStaffLayout } from '$lib/remote/layout.remote';
 import {
 	listThreads,
 	getThread,
 	assignThread as assignThreadSvc,
 	updateStatus,
-	getUnresolvedCount
+	getUnresolvedCount,
+	countThreadsByStatus
 } from '$lib/server/inbox/thread-service';
 import {
 	getAllChannelConfigs,
@@ -20,7 +22,8 @@ import {
 } from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
-import { inboxChannels, inboxThreadStatuses } from '$lib/config';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Public forms
@@ -43,23 +46,42 @@ export const submitContactForm = form(submitContactFormSchema, async (data, issu
 const threadFiltersSchema = z.object({
 	status: z.enum(inboxThreadStatuses).optional(),
 	channel: z.enum(inboxChannels).optional(),
-	assignedToUserId: z.string().optional(),
+	/** A staff user id, or the sentinels `mine` / `unassigned`. */
+	assigned: z.string().optional(),
 	search: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional()
 });
 
 export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 	await requireFeature('staffInbox');
-	await requireStaff();
+	const staff = await requireStaff();
+
+	// `undefined` leaves the filter off entirely; `null` is the IS NULL branch in
+	// listThreads, so the two cannot be collapsed.
+	const assignedToUserId =
+		filters.assigned === undefined
+			? undefined
+			: filters.assigned === 'unassigned'
+				? null
+				: filters.assigned === 'mine'
+					? staff.id
+					: filters.assigned;
+
 	return listThreads(
 		{
 			status: filters.status,
 			channel: filters.channel,
-			assignedToUserId: filters.assignedToUserId,
+			assignedToUserId,
 			search: filters.search
 		},
 		{ page: filters.page ?? 1, pageSize: 25 }
 	);
+});
+
+export const getInboxThreadCounts = query(z.void(), async () => {
+	await requireFeature('staffInbox');
+	await requireStaff();
+	return countThreadsByStatus();
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
@@ -92,6 +114,7 @@ const replySchema = z.object({
 });
 
 export const replyToThread = form(replySchema, async (data) => {
+	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
@@ -113,6 +136,7 @@ const noteSchema = z.object({
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
+	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
@@ -136,6 +160,7 @@ const assignSchema = z.object({
 });
 
 export const assignThread = form(assignSchema, async (data) => {
+	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	await assignThreadSvc(data.threadId, data.userId);
 
@@ -161,13 +186,32 @@ export const assignThread = form(assignSchema, async (data) => {
 
 const statusSchema = z.object({
 	threadId: z.string().min(1),
-	status: z.enum(inboxThreadStatuses)
+	status: z.enum(inboxThreadStatuses),
+	/** `YYYY-MM-DD` from the snooze calendar; only meaningful when snoozing. */
+	snoozedUntil: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/)
+		.optional()
 });
 
 export const updateThreadStatus = form(statusSchema, async (data) => {
+	await requireFeature('staffInbox');
 	await requireStaff();
-	await updateStatus(data.threadId, data.status);
+
+	// A calendar date means "put this back in the queue that morning", so it
+	// resolves against club time rather than UTC midnight — otherwise snoozing
+	// until tomorrow wakes the thread at 5pm today.
+	const snoozedUntil = data.snoozedUntil
+		? buildDateInTz(data.snoozedUntil, '08:00', DEFAULT_TIMEZONE)
+		: undefined;
+
+	await updateStatus(data.threadId, data.status, snoozedUntil);
 	void getInboxThread(data.threadId).refresh();
+	void getInboxThreadCounts().refresh();
+	void getInboxUnreadCount().refresh();
+	// The staff nav badge counts open threads, so resolving from the detail page
+	// has to refresh the layout too or the sidebar keeps the old number.
+	void getStaffLayout().refresh();
 	return { success: true };
 });
 
@@ -175,12 +219,17 @@ export const updateThreadStatus = form(statusSchema, async (data) => {
 // Channel configuration
 // ---------------------------------------------------------------------------
 
+// Channel configuration is staff-only but deliberately *not* feature-gated: it
+// lives on the settings page next to the staffInbox flag itself, so requiring
+// the flag to read it would make the inbox impossible to configure before
+// turning it on.
 export const getInboxChannelConfigs = query(z.void(), async () => {
 	await requireStaff();
 	return getAllChannelConfigs();
 });
 
 export const getInboxEnabledChannels = query(z.void(), async () => {
+	await requireFeature('staffInbox');
 	await requireStaff();
 	return getEnabledChannels();
 });

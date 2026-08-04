@@ -9,6 +9,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/cancel-stale-tickets',
 	'/api/cron/cancel-unconfirmed',
 	'/api/cron/expire-waitlisted',
+	'/api/cron/wake-snoozed',
 	'/api/cron/confirmation-reminders',
 	'/api/cron/reservation-reminders',
 	'/api/cron/generate-recurring-reservations',
@@ -45,12 +46,13 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(3);
+		expect(fetcher).toHaveBeenCalledTimes(4);
 		const requests = fetcher.mock.calls.map(([request]: [Request]) => request);
 		expect(requests.map((r) => r.url)).toEqual([
 			'https://corvmc.test/api/cron/auto-complete',
 			'https://corvmc.test/api/cron/cancel-unconfirmed',
-			'https://corvmc.test/api/cron/expire-waitlisted'
+			'https://corvmc.test/api/cron/expire-waitlisted',
+			'https://corvmc.test/api/cron/wake-snoozed'
 		]);
 		for (const request of requests) {
 			expect(request.method).toBe('POST');
@@ -85,11 +87,12 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(3);
+		expect(fetcher).toHaveBeenCalledTimes(4);
 		expect(results).toEqual([
 			{ path: '/api/cron/auto-complete', ok: false, error: 'boom' },
 			{ path: '/api/cron/cancel-unconfirmed', ok: true, status: 200 },
-			{ path: '/api/cron/expire-waitlisted', ok: true, status: 200 }
+			{ path: '/api/cron/expire-waitlisted', ok: true, status: 200 },
+			{ path: '/api/cron/wake-snoozed', ok: true, status: 200 }
 		]);
 	});
 
@@ -104,6 +107,7 @@ describe('runScheduledJobs', () => {
 
 		expect(results.map((r) => ({ ok: r.ok, status: r.status }))).toEqual([
 			{ ok: false, status: 401 },
+			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 }
 		]);
@@ -124,7 +128,9 @@ describe('runScheduledJobs', () => {
 			{ slug: 'cancel-unconfirmed', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'cancel-unconfirmed', status: 'ok', checkInId: 'ci-2' },
 			{ slug: 'expire-waitlisted', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' }
+			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' },
+			{ slug: 'wake-snoozed', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-4' }
 		]);
 	});
 
@@ -144,7 +150,7 @@ describe('runScheduledJobs', () => {
 		const closes = checkIn.mock.calls
 			.map(([opts]) => opts as { status: string; checkInId?: string })
 			.filter((o) => o.status !== 'in_progress');
-		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok']);
+		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok', 'ok']);
 		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
 	});
 
