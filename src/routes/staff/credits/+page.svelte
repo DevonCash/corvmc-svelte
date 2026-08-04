@@ -4,6 +4,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { getStaffCredits } from '$lib/remote/users.remote';
@@ -76,11 +77,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Credit type"
 			value={creditType}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				creditType = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -88,12 +89,12 @@
 			<option value="">All types</option>
 			<option value="free_hours">Free Hours</option>
 			<option value="equipment_credits">Equipment Credits</option>
-		</select>
-		<select
-			class="select select-bordered select-sm"
+		</Select>
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Source"
 			value={source}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				source = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -102,7 +103,7 @@
 			{#each Object.entries(creditSourceLabels) as [value, label] (value)}
 				<option {value}>{label}</option>
 			{/each}
-		</select>
+		</Select>
 		<input
 			type="date"
 			aria-label="From date"

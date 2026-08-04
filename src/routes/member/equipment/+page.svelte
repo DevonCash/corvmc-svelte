@@ -13,7 +13,7 @@
 
 	const { fields } = submitRequest;
 	import Form from '$lib/components/shared/Form/Form.svelte';
-	import { Field } from '$lib/components/shared/Form';
+	import { Field, Select } from '$lib/components/shared/Form';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -112,10 +112,10 @@
 			value={search}
 			oninput={onSearchInput}
 		/>
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			value={categoryId}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
@@ -123,7 +123,7 @@
 			{#each meta.categories as cat (cat.id)}
 				<option value={cat.id}>{cat.name}</option>
 			{/each}
-		</select>
+		</Select>
 		{#if hasActiveFilters()}
 			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
 		{/if}

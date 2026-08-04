@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { adjustCredits } from '$lib/remote/users.remote';
 
@@ -37,14 +38,14 @@
 		<div class="space-y-3">
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Credit Type</span></div>
-				<select
-					class="select select-bordered w-full"
+				<Select
+					class="select-bordered w-full"
 					{...fields.creditType.as('select')}
 					bind:value={creditType}
 				>
 					<option value="free_hours">Free Hours</option>
 					<option value="equipment_credits">Equipment Credits</option>
-				</select>
+				</Select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Amount</span></div>

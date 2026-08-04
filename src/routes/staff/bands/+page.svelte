@@ -4,6 +4,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -60,11 +61,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Status"
 			value={status}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
 				page = 1;
 			}}
@@ -72,7 +73,7 @@
 			<option value="">All statuses</option>
 			<option value="active">Active</option>
 			<option value="deactivated">Deactivated</option>
-		</select>
+		</Select>
 	</FilterBar>
 
 	<DataList {result} empty="No bands found" onpage={(p) => (page = p)}>

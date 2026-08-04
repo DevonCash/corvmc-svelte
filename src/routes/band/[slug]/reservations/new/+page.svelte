@@ -10,6 +10,7 @@
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
@@ -152,10 +153,10 @@
 			{#each bookBandReservation.fields.startTime.issues() ?? [] as issue, i (i)}
 				<p class="text-sm text-error">{issue.message}</p>
 			{/each}
-			<select
+			<Select
 				id="startTime"
 				name="startTime"
-				class="select-bordered select"
+				class="select-bordered"
 				bind:value={selectedStart}
 				onchange={onStartChange}
 				disabled={startTimeOptions.length === 0}
@@ -166,7 +167,7 @@
 				{#each startTimeOptions as time (time)}
 					<option value={time}>{formatSlotTime(time)}</option>
 				{/each}
-			</select>
+			</Select>
 		</div>
 
 		<div class="form-control mt-4">
@@ -176,10 +177,10 @@
 			{#each bookBandReservation.fields.endTime.issues() ?? [] as issue, i (i)}
 				<p class="text-sm text-error">{issue.message}</p>
 			{/each}
-			<select
+			<Select
 				id="endTime"
 				name="endTime"
-				class="select-bordered select"
+				class="select-bordered"
 				bind:value={selectedEnd}
 				disabled={endTimeOptions.length === 0}
 			>
@@ -195,7 +196,7 @@
 				{#each endTimeOptions as time (time)}
 					<option value={time}>{formatSlotTime(time)}</option>
 				{/each}
-			</select>
+			</Select>
 		</div>
 
 		{#if durationHours > 0}
@@ -225,30 +226,25 @@
 				<label class="label" for="recurring">
 					<span class="label-text">Repeat this reservation</span>
 				</label>
-				<select
-					id="recurring"
-					name="recurring"
-					class="select select-bordered"
-					bind:value={recurring}
-				>
+				<Select id="recurring" name="recurring" class="select-bordered" bind:value={recurring}>
 					<option value="">Don't repeat (one-time)</option>
 					<option value="weekly">Weekly</option>
 					<option value="biweekly">Every 2 weeks</option>
 					<option value="monthly">Monthly</option>
-				</select>
+				</Select>
 				{#if recurring === 'monthly'}
 					<label class="label mt-2" for="monthlyMode">
 						<span class="label-text">Monthly pattern</span>
 					</label>
-					<select
+					<Select
 						id="monthlyMode"
 						name="monthlyMode"
-						class="select select-bordered"
+						class="select-bordered"
 						bind:value={monthlyMode}
 					>
 						<option value="weekday">{monthlyLabels.weekday}</option>
 						<option value="monthday">{monthlyLabels.monthday}</option>
-					</select>
+					</Select>
 				{/if}
 				{#if recurring}
 					<p class="text-sm mt-1 opacity-60">Future instances will be generated automatically.</p>

@@ -93,6 +93,12 @@ export default {
 					node.kind === 'component' || (typeof tag === 'string' && /^[A-Z]/.test(tag));
 				if (!isComponent) return;
 
+				// `<Select>` is a markup wrapper around a bare `<select>`, not a field component —
+				// it carries no label or issue handling of its own. It is routinely nested inside a
+				// `<Field name="…">` that renders only its children, so the pair submits one value,
+				// not two. Treat it like the raw `<select>` it replaced.
+				if (tag === 'Select') return;
+
 				const resolved = resolveFieldName(node);
 				if (!resolved) return;
 

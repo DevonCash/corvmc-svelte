@@ -8,7 +8,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { Field } from '$lib/components/shared/Form';
+	import { Field, Select } from '$lib/components/shared/Form';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
@@ -99,11 +99,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Category"
 			value={categoryId}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -112,12 +112,12 @@
 			{#each categories as c (c.id)}
 				<option value={c.id}>{c.name}</option>
 			{/each}
-		</select>
-		<select
-			class="select select-bordered select-sm"
+		</Select>
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Status"
 			value={statusFilter}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -126,7 +126,7 @@
 			{#each equipmentStatuses as s (s)}
 				<option value={s}>{titleCase(s)}</option>
 			{/each}
-		</select>
+		</Select>
 	</FilterBar>
 
 	<DataList {result} empty="No equipment found" onpage={(p) => (page = p)}>

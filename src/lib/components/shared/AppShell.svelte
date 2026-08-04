@@ -8,6 +8,7 @@
 	import { IconWorld } from '@tabler/icons-svelte';
 	import logo from '$lib/assets/cmc-compact-logo.svg';
 	import Button from './Button.svelte';
+	import Select from './Form/Select.svelte';
 
 	// eslint-disable-next-line svelte/no-unused-props -- `brand` is accepted for caller API compatibility; the sidebar renders its own brand
 	let {
@@ -61,18 +62,19 @@
 
 				<!-- Mobile panel nav -->
 				<div class="border-b border-base-300 px-4 py-2 lg:hidden">
-					<select
-						class="select-bordered select w-full select-sm"
+					<Select
+						class="select-bordered w-full select-sm"
 						value={activePanel}
-						onchange={(e) => {
-							const panel = panels.find((p) => p.key === e.currentTarget.value);
+						onchange={(e: Event) => {
+							const key = (e.currentTarget as HTMLSelectElement).value;
+							const panel = panels.find((p) => p.key === key);
 							if (panel) window.location.href = panel.href;
 						}}
 					>
 						{#each panels as panel (panel.key)}
 							<option value={panel.key}>{panel.label}</option>
 						{/each}
-					</select>
+					</Select>
 				</div>
 			{/snippet}
 			{#snippet navigation()}

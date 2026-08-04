@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { inviteByEmailApi } from '$lib/remote/bands.remote';
 
@@ -44,10 +45,10 @@
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<select class="select select-bordered w-full" {...fields.role.as('select')}>
+				<Select class="select-bordered w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
-				</select>
+				</Select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>

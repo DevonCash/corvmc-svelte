@@ -7,6 +7,7 @@
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 	import { toast } from 'svelte-sonner';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 
 	const address = $derived(await getOrgAddress());
 	const cityStateZip = $derived(
@@ -71,11 +72,11 @@
 					</div>
 					<label class="form-control w-full">
 						<div class="label"><span class="label-text">Subject</span></div>
-						<select {...rf.fields.subject.as('select')} class="select select-bordered w-full">
+						<Select {...rf.fields.subject.as('select')} class="select-bordered w-full">
 							{#each subjects as s (s)}
 								<option value={s}>{s}</option>
 							{/each}
-						</select>
+						</Select>
 					</label>
 					<label class="form-control w-full">
 						<div class="label"><span class="label-text">Message</span></div>

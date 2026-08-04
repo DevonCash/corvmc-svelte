@@ -4,6 +4,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -62,11 +63,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Status"
 			value={statusFilter}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -75,7 +76,7 @@
 			{#each loanStatuses as s (s)}
 				<option value={s}>{titleCase(s)}</option>
 			{/each}
-		</select>
+		</Select>
 	</FilterBar>
 
 	<DataList {result} empty="No loans found" onpage={(p) => (page = p)}>

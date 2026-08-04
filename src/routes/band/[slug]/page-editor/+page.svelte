@@ -4,6 +4,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -324,17 +325,20 @@
 											{:else if block.type === 'links'}
 												<label class="form-control">
 													<span class="label-text text-xs">Style</span>
-													<select
-														class="select select-bordered select-sm w-full"
+													<Select
+														class="select-bordered select-sm w-full"
 														value={block.style}
-														onchange={(e) => {
-															block.style = e.currentTarget.value as 'buttons' | 'icons' | 'list';
+														onchange={(e: Event) => {
+															block.style = (e.currentTarget as HTMLSelectElement).value as
+																| 'buttons'
+																| 'icons'
+																| 'list';
 														}}
 													>
 														<option value="buttons">Buttons</option>
 														<option value="icons">Icons</option>
 														<option value="list">List</option>
-													</select>
+													</Select>
 												</label>
 											{:else if block.type === 'members'}
 												<label class="flex items-center gap-2">
@@ -406,17 +410,20 @@
 											{:else if block.type === 'spacer'}
 												<label class="form-control">
 													<span class="label-text text-xs">Height</span>
-													<select
-														class="select select-bordered select-sm w-full"
+													<Select
+														class="select-bordered select-sm w-full"
 														value={block.height}
-														onchange={(e) => {
-															block.height = e.currentTarget.value as 'sm' | 'md' | 'lg';
+														onchange={(e: Event) => {
+															block.height = (e.currentTarget as HTMLSelectElement).value as
+																| 'sm'
+																| 'md'
+																| 'lg';
 														}}
 													>
 														<option value="sm">Small</option>
 														<option value="md">Medium</option>
 														<option value="lg">Large</option>
-													</select>
+													</Select>
 												</label>
 											{:else if block.type === 'custom_html'}
 												<label class="form-control">

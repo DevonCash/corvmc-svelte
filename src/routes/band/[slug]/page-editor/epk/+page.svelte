@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -332,19 +333,19 @@
 													/>
 												</td>
 												<td>
-													<select
-														class="select select-bordered select-sm"
+													<Select
+														class="select-bordered select-sm"
 														value={item.provided ? 'band' : 'venue'}
-														onchange={(e) => {
+														onchange={(e: Event) => {
 															epk.backline![i] = {
 																...item,
-																provided: e.currentTarget.value === 'band'
+																provided: (e.currentTarget as HTMLSelectElement).value === 'band'
 															};
 														}}
 													>
 														<option value="band">Band</option>
 														<option value="venue">Venue</option>
-													</select>
+													</Select>
 												</td>
 												<td>
 													<button

@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { resolve } from '$app/paths';
@@ -66,11 +67,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Status"
 			value={statusFilter}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
 				page = 1;
 			}}
@@ -79,7 +80,7 @@
 			{#each flagStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
-		</select>
+		</Select>
 	</FilterBar>
 
 	<!--

@@ -12,6 +12,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -94,16 +95,17 @@
 									})}
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
-									<select
-										class="select select-bordered select-xs"
+									<Select
+										class="select-bordered select-xs"
 										name="role"
 										aria-label="Role for {m.userName}"
 										value={m.role}
-										onchange={(e) => e.currentTarget.form?.requestSubmit()}
+										onchange={(e: Event) =>
+											(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
 									>
 										<option value="member">Member</option>
 										<option value="admin">Admin</option>
-									</select>
+									</Select>
 								</form>
 							{:else}
 								<Badge size="sm" variant="outline">{m.role}</Badge>
