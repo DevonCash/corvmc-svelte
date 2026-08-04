@@ -8,6 +8,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 
 	const entityLabels: Record<string, string> = {
@@ -131,14 +132,14 @@
 							<div class="space-y-3">
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Resolution</span></div>
-									<select
-										class="select select-bordered w-full"
+									<Select
+										class="select-bordered w-full"
 										{...fields.resolution.as('select')}
 										bind:value={resolution}
 									>
 										<option value="resolved">Resolved — action taken</option>
 										<option value="dismissed">Dismissed — no action needed</option>
-									</select>
+									</Select>
 								</label>
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Notes (optional)</span></div>

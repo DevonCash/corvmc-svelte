@@ -4,6 +4,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
@@ -78,11 +79,11 @@
 				oninput={onSearchInput}
 			/>
 		{/snippet}
-		<select
-			class="select select-bordered select-sm"
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Method"
 			value={method}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				method = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -90,12 +91,12 @@
 			<option value="">All methods</option>
 			<option value="Cash">Cash</option>
 			<option value="Credits">Credits</option>
-		</select>
-		<select
-			class="select select-bordered select-sm"
+		</Select>
+		<Select
+			class="select-bordered select-sm"
 			aria-label="Status"
 			value={status}
-			onchange={(e) => {
+			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
@@ -103,7 +104,7 @@
 			<option value="">All statuses</option>
 			<option value="completed">Completed</option>
 			<option value="refunded">Refunded</option>
-		</select>
+		</Select>
 		<input
 			type="date"
 			aria-label="From date"

@@ -8,7 +8,7 @@
 		createReservation
 	} from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
-	import { Field } from '$lib/components/shared/Form';
+	import { Field, Select } from '$lib/components/shared/Form';
 	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
@@ -110,9 +110,9 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Start time</legend>
-				<select
+				<Select
 					bind:value={startTime}
-					class="select-bordered select w-full"
+					class="select-bordered w-full"
 					disabled={!(await startOptions)?.length}
 				>
 					<option value="">Select start time</option>
@@ -121,19 +121,19 @@
 							{opt.label}{opt.available ? '' : ' ⚠ conflict'}
 						</option>
 					{/each}
-				</select>
+				</Select>
 			</fieldset>
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">End time</legend>
-				<select bind:value={endTime} class="select-bordered select w-full" disabled={!startTime}>
+				<Select bind:value={endTime} class="select-bordered w-full" disabled={!startTime}>
 					<option value="">Select end time</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>
 							{opt.label}{opt.available ? '' : ' (unavailable)'}
 						</option>
 					{/each}
-				</select>
+				</Select>
 			</fieldset>
 
 			<ConflictWarnings {date} {startTime} {endTime} {checkConflicts} />

@@ -13,7 +13,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Form, { Field, SubmitButton, Select } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
@@ -148,14 +148,14 @@
 					<input {...scheduleFields.loanId.as('hidden', id)} />
 					{#if !loan.equipmentId}
 						<Field name="equipmentId" label="Assign Equipment">
-							<select class="select select-bordered w-full" name="equipmentId" required>
+							<Select class="select-bordered w-full" name="equipmentId" required>
 								<option value="" disabled selected>Select equipment...</option>
 								{#each availableEquipment as eq (eq.id)}
 									{#if eq.availableQuantity > 0}
 										<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
 									{/if}
 								{/each}
-							</select>
+							</Select>
 						</Field>
 					{:else}
 						<input {...scheduleFields.equipmentId.as('hidden', loan.equipmentId)} />

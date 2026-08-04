@@ -6,7 +6,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
+	import { Field, Select } from '$lib/components/shared/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -100,11 +100,11 @@
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of spots" name="quantity">
-						<select name="quantity" bind:value={quantity} class="select select-bordered w-full">
+						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
-						</select>
+						</Select>
 					</Field>
 
 					{#if !data.isAuthenticated}
@@ -158,11 +158,11 @@
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of tickets" name="quantity">
-						<select name="quantity" bind:value={quantity} class="select select-bordered w-full">
+						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
-						</select>
+						</Select>
 					</Field>
 
 					{#if !data.isAuthenticated}
