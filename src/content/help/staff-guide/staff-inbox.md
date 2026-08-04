@@ -10,23 +10,57 @@ sortOrder: 14
 ## The inbox
 
 **Staff → Inbox** collects inbound messages — starting with the public contact
-form, and (where enabled) other channels like email, SMS, web, Instagram, and
-Messenger. Tabs separate the channels.
+form, and (where enabled) other channels like email, SMS, Instagram, and
+Messenger. Every channel lands in one list.
 
 ## Working through messages
 
-- **Search** by sender or subject and filter by **active** or **closed**.
-- Open a thread to read its full history and the sender's details.
-- **Reply** from the thread, and update its **status** as you resolve it.
+The list opens on **Open**, so it reads as a work queue — resolved conversations
+are out of the way until you ask for them. The tabs across the top switch between
+**Open**, **Snoozed**, **Resolved** and **All**, and each carries a count.
+
+Below that you can **search** by sender or subject, and filter by **channel** and
+by who a conversation is **assigned to** (including _Unassigned_ and _Assigned to
+me_). Your filters live in the address bar, so opening a conversation and coming
+back leaves you where you were.
+
+## Inside a conversation
+
+Messages and internal notes appear on one timeline in the order they happened.
+Notes are the lighter, indented entries — they are staff-only and the contact
+never sees them.
+
+At the bottom is a single box for writing. The toggle above it decides where what
+you type goes:
+
+- **Reply** — sent to the contact on the channel the conversation came in on.
+- **Internal note** — kept on the thread for other staff. The box tints so the
+  two are never confused.
+
+Switching between the two keeps whatever you have typed. **⌘/Ctrl + Enter**
+sends. The button spins until the message has actually gone out — for an email
+reply that takes a moment, so wait for it rather than pressing again.
 
 Replies to contact-form threads are emailed to the person who wrote in, and their
 response comes back into the same thread — so keep the conversation here rather
 than switching to your own mail client. If a resolved thread gets a reply, it
 reopens automatically.
 
+## Status and assignment
+
+The sidebar carries the actions:
+
+- **Resolve** when you're done. It leaves the open queue.
+- **Snooze** when it needs picking up later — pick tomorrow, three days, next
+  Monday or two weeks, and the conversation drops out of the open queue and
+  returns to it on the morning you chose.
+- **Reopen** / **Unsnooze** to pull one back by hand.
+- **Assignment** puts a conversation on a specific staff member, who is notified.
+
 ## Tips
 
-- Close threads once handled so the active list stays focused.
+- Resolve threads once handled so the Open queue stays honest.
+- Snooze rather than leaving something open that you can't act on yet.
 - For performance/booking inquiries from the contact form, route the person to the
   right next step (membership, a reservation, or an event).
 

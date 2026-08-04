@@ -3,6 +3,7 @@
 	import type { RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
 	import TagInput from './TagInput.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
+	import Select from './Select.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import { getFormContext } from './Form.svelte';
 	import { IconPencilOff } from '@tabler/icons-svelte';
@@ -126,6 +127,12 @@
 		disabled: pending || readonly,
 		...(fieldAttrs ? { 'aria-invalid': fieldAttrs['aria-invalid'] } : {})
 	});
+
+	// `<select>` has no `type` attribute — forward everything else.
+	let selectProps = $derived.by(() => {
+		const { type: _type, ...props } = inputProps;
+		return props;
+	});
 </script>
 
 <fieldset
@@ -228,14 +235,14 @@
 			{/each}
 		</select>
 	{:else if type === 'select'}
-		<select class="select-bordered select w-full" class:ghost={readonly} {...inputProps} bind:value>
+		<Select class="select-bordered w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}
 			{#each rest.options as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
-		</select>
+		</Select>
 	{:else if field && fieldAttrs}
 		<input
 			class="input-bordered input w-full"

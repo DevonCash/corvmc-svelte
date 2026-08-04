@@ -16,7 +16,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
 		'/api/cron/cancel-unconfirmed',
-		'/api/cron/expire-waitlisted'
+		'/api/cron/expire-waitlisted',
+		'/api/cron/wake-snoozed'
 	],
 	'0 16 * * *': [
 		'/api/cron/generate-recurring-reservations',

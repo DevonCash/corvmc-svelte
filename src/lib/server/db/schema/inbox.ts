@@ -24,27 +24,6 @@ export const submitContactFormSchema = z.object({
 	turnstileToken: z.string().min(1)
 });
 
-export const replyToThreadSchema = z.object({
-	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(10000)
-});
-
-export const addThreadNoteSchema = z.object({
-	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(5000)
-});
-
-export const assignThreadSchema = z.object({
-	threadId: z.string().min(1),
-	userId: z.string().nullable()
-});
-
-export const updateThreadStatusSchema = z.object({
-	threadId: z.string().min(1),
-	status: z.enum(inboxThreadStatuses),
-	snoozedUntil: z.coerce.date().optional()
-});
-
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
