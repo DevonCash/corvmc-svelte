@@ -56,18 +56,18 @@ export const getStaffLayout = query(async () => {
 	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
 	if (!allowed) throw redirect(302, '/');
 
+	// The staff panel deliberately ignores feature flags — flags gate the
+	// member/band/public surfaces only, so staff can administer a feature
+	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
-	const [userBands, features] = await Promise.all([
+	const [userBands, inboxUnread] = await Promise.all([
 		listForUser(user.id).catch(() => []),
-		getAllFeatureFlags()
+		getUnresolvedCount().catch(() => 0)
 	]);
-
-	const inboxUnread = features.staffInbox ? await getUnresolvedCount().catch(() => 0) : 0;
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
-		features,
 		inboxUnread
 	};
 });

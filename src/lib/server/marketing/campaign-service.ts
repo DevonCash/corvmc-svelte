@@ -285,7 +285,10 @@ export async function executeSend(campaignId: string): Promise<number> {
 		return 0;
 	}
 
-	const baseUrl = env.PUBLIC_BASE_URL ?? 'https://corvmc.org';
+	// PUBLIC_SITE_URL, not a marketing-only alias: unsubscribe links and the RFC
+	// 8058 List-Unsubscribe header have to point at the environment actually
+	// sending the mail, or a staging send hands recipients production links.
+	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
 	const messages: BroadcastMessage[] = recipients.map((r) => {
 		const unsubscribeUrl = `${baseUrl}/unsubscribe/${signUnsubscribeToken(r.subscriberId, r.audienceId)}`;

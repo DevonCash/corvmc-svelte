@@ -12,11 +12,6 @@ vi.mock('$lib/server/inbox/inbound-handlers', () => ({
 	handlePostmarkInbound: (...args: unknown[]) => mockHandlePostmarkInbound(...(args as []))
 }));
 
-const mockIsFeatureEnabled = vi.fn(async () => true);
-vi.mock('$lib/server/feature-flags', () => ({
-	isFeatureEnabled: () => mockIsFeatureEnabled()
-}));
-
 const mockEnv: Record<string, string | undefined> = { POSTMARK_INBOUND_TOKEN: 'inbound-secret' };
 vi.mock('$env/dynamic/private', () => ({
 	get env() {
@@ -26,7 +21,6 @@ vi.mock('$env/dynamic/private', () => ({
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockIsFeatureEnabled.mockResolvedValue(true);
 	mockEnv.POSTMARK_INBOUND_TOKEN = 'inbound-secret';
 });
 
@@ -100,15 +94,6 @@ describe('POST /api/inbox/postmark — authentication', () => {
 });
 
 describe('POST /api/inbox/postmark — gating', () => {
-	it('skips without authenticating when the staffInbox feature is off', async () => {
-		mockIsFeatureEnabled.mockResolvedValue(false);
-		const { POST } = await import('./+server');
-
-		const res = await POST(req({}));
-
-		expect(await res.json()).toMatchObject({ skipped: 'feature disabled' });
-	});
-
 	it('no longer short-circuits on the email channel toggle', async () => {
 		const { POST } = await import('./+server');
 

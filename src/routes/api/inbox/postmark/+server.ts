@@ -5,7 +5,6 @@ import {
 	handlePostmarkInbound,
 	type PostmarkInboundPayload
 } from '$lib/server/inbox/inbound-handlers';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 /**
  * Postmark's inbound hook is a bare `InboundHookUrl` — unlike modular
@@ -31,10 +30,9 @@ function presentedToken(request: Request): string | null {
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-	if (!(await isFeatureEnabled('staffInbox'))) {
-		return json({ ok: true, skipped: 'feature disabled' });
-	}
-
+	// Ingestion is not feature-flagged: the staff panel always has the inbox, so
+	// inbound mail must always land. The per-channel toggle is the real switch.
+	//
 	// Note: the `email` channel toggle is checked inside handlePostmarkInbound,
 	// and only for mail from a new sender. A reply to a thread we started must
 	// land regardless of whether the support mailbox is switched on.

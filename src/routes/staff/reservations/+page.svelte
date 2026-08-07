@@ -6,6 +6,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import {
@@ -46,6 +47,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
+	let bookerType = $state<'user' | 'band' | 'event' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -64,6 +66,7 @@
 		search: searchDebounced || undefined,
 		dateFrom: dateFrom || undefined,
 		dateTo: dateTo || undefined,
+		bookerType: bookerType || undefined,
 		page
 	});
 
@@ -111,7 +114,7 @@
 	}
 
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+		(searchDebounced ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -119,6 +122,7 @@
 		searchDebounced = '';
 		dateFrom = '';
 		dateTo = '';
+		bookerType = '';
 		page = 1;
 	}
 </script>
@@ -173,7 +177,7 @@
 			<input
 				type="text"
 				class="input input-bordered input-sm w-full"
-				placeholder="Search name or email..."
+				placeholder="Search member or band..."
 				value={searchText}
 				oninput={onSearchInput}
 			/>
@@ -196,6 +200,20 @@
 				page = 1;
 			}}
 		/>
+		<Select
+			class="select-bordered select-sm"
+			aria-label="Booked by"
+			value={bookerType}
+			onchange={(e: Event) => {
+				bookerType = (e.currentTarget as HTMLSelectElement).value as typeof bookerType;
+				page = 1;
+			}}
+		>
+			<option value="">Anyone</option>
+			<option value="user">Members</option>
+			<option value="band">Bands</option>
+			<option value="event">Events</option>
+		</Select>
 	</FilterBar>
 
 	<DataList {result} empty="No reservations found" onpage={(p) => (page = p)}>
@@ -252,6 +270,19 @@
 									<span class="tooltip" data-tip={r.bookerType}>
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
+								{/if}
+								{#if r.bookerType === 'band' && r.bandName}
+									<!--
+										The band owns the slot, so it is the subline; the member who
+										booked it is the qualifier after the middot.
+									-->
+									<a
+										href={resolve(`/staff/bands/${r.bandId}`)}
+										class="truncate font-medium hover:underline"
+									>
+										{r.bandName}
+									</a>
+									<span class="opacity-40">·</span>
 								{/if}
 								<!--
 									No email: the member is already the *subline* of this cell,

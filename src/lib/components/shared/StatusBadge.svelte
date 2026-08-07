@@ -33,6 +33,7 @@
 		IconSend,
 		IconMailCheck,
 		IconBan,
+		IconStar,
 		IconPointFilled
 	} from '@tabler/icons-svelte';
 	import type { SvelteComponent } from 'svelte';
@@ -73,6 +74,9 @@
 		// Tickets
 		valid: 'badge-info',
 		checked_in: 'badge-success',
+		// Band tiers
+		free: 'badge-ghost',
+		premium: 'badge-warning',
 		// Campaigns
 		sending: 'badge-info',
 		sent: 'badge-success',
@@ -124,6 +128,10 @@
 		// Ticket statuses
 		valid: { icon: IconTicket, color: 'text-info' },
 		checked_in: { icon: IconCircleCheckFilled, color: 'text-success' },
+
+		// Band tiers
+		free: { icon: IconPointFilled, color: 'text-base-content/60' },
+		premium: { icon: IconStar, color: 'text-warning' },
 
 		// Campaign statuses
 		sending: { icon: IconSend, color: 'text-info' },

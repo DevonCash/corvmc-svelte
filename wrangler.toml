@@ -58,15 +58,14 @@ R2_PUBLIC_URL = "https://media.corvmc.org"
 # Canonical public site URLs (used for links in emails/notifications) + email
 # sender name. Non-secret config.
 PUBLIC_SITE_URL = "https://corvmc.org"
-PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
 # Postmark message streams. Custom streams, not Postmark's defaults
 # (`outbound`/`broadcast`) — both must exist with these exact ids on the server
 # POSTMARK_SERVER_TOKEN belongs to. Required: sends throw when either is unset.
-POSTMARK_TRANSACTIONAL_STREAM = "corvmc-transactional"
-POSTMARK_BROADCAST_STREAM = "corvmc-broadcast"
+POSTMARK_TRANSACTIONAL_STREAM = "outgoing"
+POSTMARK_BROADCAST_STREAM = "broadcast"
 # Base address for inbox reply routing. Staff replies go out with a plus-addressed
 # Reply-To (reply+<threadId>.<sig>@...) so the response threads back into the same
 # conversation via Postmark's MailboxHash. Requires an MX record on this subdomain
