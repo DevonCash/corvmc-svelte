@@ -18,7 +18,7 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -470,8 +470,7 @@ export const checkConflicts = query(
 	}),
 	async ({ date, startTime, endTime, excludeReservationId }) => {
 		await requireStaff();
-		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
-		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
+		const { startsAt, endsAt } = buildTimeRangeInTz(date, startTime, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
@@ -526,15 +525,25 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	}
 
 	const tz = DEFAULT_TIMEZONE;
-	const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-	const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+	// One date field covers both times, so an end before the start means the show
+	// runs past midnight and the range rolls onto the next day.
+	const { startsAt, endsAt } = buildTimeRangeInTz(
+		data.eventDate,
+		data.eventStartTime,
+		data.eventEndTime,
+		tz
+	);
 	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
 	const reservation =
 		reserveSpace && data.reservationStartTime && data.reservationEndTime
 			? {
-					startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-					endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+					...buildTimeRangeInTz(
+						data.eventDate,
+						data.reservationStartTime,
+						data.reservationEndTime,
+						tz
+					),
 					overrideConflicts
 				}
 			: undefined;
@@ -642,10 +651,13 @@ export const updateEvent = form(
 			updateParams.ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : null;
 		}
 
-		// Build Date objects if date/time fields provided
+		// Build Date objects if date/time fields provided. One date field covers both
+		// times, so an end before the start means the show runs past midnight and the
+		// range rolls onto the next day.
 		if (data.eventDate && data.eventStartTime && data.eventEndTime) {
-			updateParams.startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-			updateParams.endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+			const range = buildTimeRangeInTz(data.eventDate, data.eventStartTime, data.eventEndTime, tz);
+			updateParams.startsAt = range.startsAt;
+			updateParams.endsAt = range.endsAt;
 		}
 
 		if (data.doorsTime !== undefined) {
@@ -660,10 +672,16 @@ export const updateEvent = form(
 			data.reservationStartTime &&
 			data.reservationEndTime
 		) {
+			const reservationRange = buildTimeRangeInTz(
+				data.eventDate,
+				data.reservationStartTime,
+				data.reservationEndTime,
+				tz
+			);
 			updateParams.rebook = {
 				userId: staff.id,
-				reservationStartsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-				reservationEndsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+				reservationStartsAt: reservationRange.startsAt,
+				reservationEndsAt: reservationRange.endsAt,
 				overrideConflicts
 			};
 		}
