@@ -15,6 +15,12 @@ lineup entry — and later claim its own profile without the show history being 
 
 Everything here is staff-facing and gated behind a `productions` feature flag.
 
+> **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
+> splits today's `band` table into `group` (the managed organization: roster, roles, slug,
+> announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).
+> An external act is a `band_profile` with no group. Sections below that used to describe external
+> acts as member-less `band` rows have been reconciled with it.
+
 ---
 
 ## Key concepts
@@ -40,10 +46,16 @@ created the reservation only at `confirmed`, which meant the room stayed bookabl
 members for the entire stretch while a show was being booked into it. Holding early and
 widening later costs nothing and closes that window.
 
-**A lineup slot always points at a `band` row.** Touring and non-member acts get `band`
-rows too, with no members (see below). One reference type means a lineup can mix member
-and non-member acts without a polymorphic column, and an act that later joins the
+**A lineup slot always points at a `band_profile` row.** Touring and non-member acts get
+profiles too, with no group attached (see below). One reference type means a lineup can mix
+member and non-member acts without a polymorphic column, and an act that later joins the
 Collective keeps every production it ever played.
+
+This is also why lineups are **not** modeled with `event_group`, the co-billing join
+introduced in [groups-spec.md](groups-spec.md). `production_slot` carries set times, set
+lengths, ordering, and per-act settlement; `event_group` carries only which member groups a
+band-authored event is advertised on. A production uses `production_slot`; a member-authored
+event uses `event_group`; nothing uses both.
 
 **Set times are derived, full stop.** A pure helper walks the lineup in order and the
 service recomputes on every lineup mutation. There is no override, no lock flag, and no
@@ -198,25 +210,41 @@ decided at event creation — `create()` in `event-service.ts` takes an optional
 venue the answer is always yes; for an off-site production it is always no, which is the
 point of tracking the venue.
 
-### Bands, extended to cover external acts
+### External acts are band profiles with no group
 
-A touring act needs a name, a bio, genres, links, a photo, and a contact — which is
-exactly the `band` table. Rather than fork all of that into an `externalAct` table and
-face a painful merge the day the act joins, external acts are simply `band` rows.
+A touring act needs a name, a bio, genres, links, a photo, and a contact, and no roster at
+all. Under the band/group split that is exactly a **`band_profile` with `groupId` null** —
+a staff-kept record of an act, held for the next time they come through.
 
-**No new columns.** An earlier draft added `band.claimStatus` (`claimed` / `unclaimed` /
-`claim_pending`) and relaxed `band.ownerId` to nullable. Both are gone. `claimStatus` was
-a fourth copy of a fact already recorded three other ways — by `bandMember` rows, by
-`ownerId`, and by a pending `platform_invite` — and four copies of one fact is four
-chances to disagree.
+> **An unclaimed act is a band profile with no group.** One condition, one source of truth.
+> It has no slug, so it is not publicly addressable; it has no roster, so there is no
+> membership to interpret.
 
-Instead, this spec **drops `band.ownerId` entirely.**
+Two earlier drafts of this section are now superseded, and it is worth saying why, because
+each was solving a real problem the split removes:
 
-> **An unclaimed act is a band with zero `bandMember` rows.** One condition, one source of
-> truth. The owner is the `bandMember` row with `role: 'owner'`, enforced by a partial
-> unique index on `(bandId) WHERE role = 'owner'`. The split-brain the earlier draft
-> worried about — a `bandMember` with `role: 'owner'` while `band.ownerId` is still null —
-> becomes structurally impossible rather than something the claim step has to remember.
+- The **first** draft added `band.claimStatus` (`claimed` / `unclaimed` / `claim_pending`)
+  and relaxed `band.ownerId` to nullable — a fourth copy of a fact already recorded three
+  other ways.
+- The **second** made external acts member-less `band` rows. That collapsed the four copies
+  into one, but it put unclaimed acts into the same table as public bands, which forced the
+  [Visibility audit](#visibility-audit) below: every "is this band public?" filter had to
+  learn to exclude rows with no members.
+
+Putting them in `band_profile` collapses that too. Public addressability now comes from
+having a group at all, because that is where the slug lives — so there is no filter to
+apply and none to forget.
+
+The objection the second draft raised against a separate table — "a painful merge the day
+the act joins" — does not apply, because nothing merges. Claiming creates a group, moves
+name/description/avatar onto it, and links the existing profile; every production the act
+ever played is already attached to that profile and stays attached. See
+[Claiming a touring act](groups-spec.md#claiming-a-touring-act).
+
+**`band.ownerId` is still dropped**, for the reasons below; ownership is now a
+`group_member` row with `role: 'owner'`, enforced by a partial unique index on
+`(groupId) WHERE role = 'owner'`. The call sites listed below are unchanged in substance —
+substitute `group_member` for `bandMember` throughout.
 
 The evidence for dropping it:
 
@@ -305,32 +333,38 @@ duplicate the reasoning here.
 
 What matters for this migration specifically:
 
-- **`band` has eight descendants to protect**, not six. The direct children are
-  `band_genre`, `band_media`, `band_member`, `band_page_config`, `event`, and
-  `platform_invite` — but `event` is itself a parent, so `ticket` and `event_rsvp` are
-  pulled in too. The rewrite walks that transitively and orders the work deepest-first.
+- **Recount the descendants against the split.** `band_member` and `platform_invite` leave
+  the band entirely — they become `group_member` and `group_invite`, children of `group`.
+  `band_genre`, `band_media`, and `band_page_config` re-key to `band_profile`. `event`
+  re-points from `band` to `group`, pulling `ticket` and `event_rsvp` with it as before.
+  The rewrite walks that transitively and orders the work deepest-first; confirm the
+  generated set matches this list rather than assuming it.
 - **Review the generated SQL** rather than skimming it. It will rebuild all eight of those
   tables around the `band` rebuild, which is correct and looks alarming.
 - **Land it on its own**, ahead of the productions tables, so the one risky migration in
   this feature can be applied and verified in isolation.
 - **Verify against local D1** before it goes near production: `pnpm db:reset && pnpm db:seed`,
-  then confirm row counts in `band_member`, `band_genre`, `band_media`,
-  `band_page_config`, `platform_invite`, `ticket`, and `event_rsvp`, plus non-null
-  `event.band_id` values.
+  then confirm row counts in `group_member`, `group_invite`, `band_genre`, `band_media`,
+  `band_page_config`, `ticket`, and `event_rsvp`, plus non-null `event.group_id` values.
 
-**Claiming** reuses the existing platform-invite machinery and gets simpler as a result.
-Staff send a `platformInvite` to the act's contact email with `role: 'owner'` —
-`platform_invite.role` is already typed as the full `bandRoles` tuple
-(`['owner', 'admin', 'member']`), so no schema change. When that person signs up,
-`resolvePendingInvites()` — called from `src/hooks.server.ts`, defined in
-`band/platform-invite-service.ts` — inserts their `bandMember` row with the invited role
-on first login, and **that insert is the claim**. There is no second step to keep in sync,
-no `claimStatus` to flip, and no `ownerId` to backfill. The only thing left for the act to
-do is choose its `directoryVisibility`, which is a normal band-settings edit.
+**Claiming** reuses the invite machinery and gets simpler as a result. Staff send a
+`group_invite` to the act's contact email with `role: 'owner'` — the role column is already
+typed as the full role tuple (`['owner', 'admin', 'member']`), so no schema change. Claiming
+is the two-part operation described in
+[groups-spec.md](groups-spec.md#claiming-a-touring-act): a `group` is created for the
+profile, and the invitee's `group_member` row is inserted with the invited role when they
+sign up. There is no `claimStatus` to flip and no `ownerId` to backfill.
 
-The earlier draft's warning that `resolvePendingInvites()` leaves a split-brain because it
-"only inserts the `bandMember` row" no longer describes a problem — inserting the
-`bandMember` row is now the entire operation.
+Note the ordering this implies: **the group must exist before the invite can be sent**,
+since `group_invite.groupId` is a NOT NULL FK. Staff creating an act inline for a lineup
+produce a profile with no group; sending an owner invite is what promotes it, and that step
+is where the act's name, description, and avatar move from the profile onto the group. The
+only thing left for the act to do is choose its visibility, which is a normal group-settings
+edit.
+
+The earlier draft's warning that `resolvePendingInvites()` leaves a split-brain no longer
+describes a problem — the identity move happens once, at group creation, and the membership
+insert is the whole of the remaining operation.
 
 `transferOwnership()` needs one adjustment: it currently demotes the actor's owner row and
 takes the actor id from `band.ownerId` at the call site. With no owner row at all the
@@ -346,7 +380,7 @@ One act, one set, one position in the running order.
 production_slot
   id                 uuid pk
   productionId       uuid fk → production (cascade)
-  bandId             uuid? fk → band (set null)
+  bandProfileId      uuid? fk → band_profile (set null)
   sortOrder          real             — fractional; lower plays first, no unique constraint
   billing            text             — headliner | support | opener | dj | host
   setLengthMinutes   int
@@ -362,15 +396,18 @@ production_slot
   techNotes          text?
   backlineNeeds      text?
   hospitalityNotes   text?
-  contactName        text?            — per-show override of the band's directoryContact
+  contactName        text?            — per-show override of the act's stored contact
   contactEmail       text?
   contactPhone       text?
   createdAt          timestamp
   updatedAt          timestamp
 ```
 
-`bandId` is nullable and set-null rather than cascade so a deleted band leaves the slot —
-and its payout record — intact for historical settlements.
+`bandProfileId` is nullable and set-null rather than cascade so a deleted act leaves the
+slot — and its payout record — intact for historical settlements. Note that deleting a
+_group_ does not delete its band profile: the profile survives with `groupId` set to null and
+its identity columns repopulated, so a disbanded member band reverts to a staff-kept record
+and its slots keep a name.
 
 **There is no `doorSplitPercent`.** The split is a property of the deal for the whole
 show, not of each act, and it lives on `production.bandSplitPercent`. See "Settlement".
@@ -794,39 +831,56 @@ active productions unless the closed filter is on.
 
 ### The gig-guide attribution rule
 
-**A production never writes an external act into `event.bandId`.** That column stays for
-band-authored events (`source: 'band'`); CMC lineups live entirely in `production_slot`.
+**A production never writes an external act into `event.groupId`.** That column — renamed
+from `event.bandId` by [groups-spec.md](groups-spec.md#events), where it marks who manages
+an event rather than who is billed on it — stays for member-authored events
+(`source: 'band'` or `'group'`); CMC lineups live entirely in `production_slot`.
 
-This matters because `listPublicCalendarEvents()` and `listPublicUpcomingEvents()` in
-`event-service.ts` left-join `band` and emit `bandSlug`, which the public event page
-renders as a link to `/directory/bands/[slug]`. An external act is
-`directoryVisibility: 'hidden'`, so that link would 404. Keeping external acts out of
-`event.bandId` avoids the problem entirely.
+Under the split this is **structural rather than a convention**: an external act is a band
+profile with no group, so there is no group id to write. The rule can no longer be violated
+by forgetting it. Co-billing on member events uses `event_group`, which productions do not
+touch.
+
+The earlier reasoning — that `listPublicCalendarEvents()` and `listPublicUpcomingEvents()`
+left-join the band and emit a slug the public event page renders as a link, which would 404
+for a hidden external act — is now moot for external acts specifically, since they have no
+slug to emit. It still applies to **hidden member bands**, which do have slugs; see the
+pre-existing hole in the audit below.
 
 The same rule applies to the published run of show: render a link only for slots whose
-band is directory-visible, and plain text otherwise.
+profile has a group and is publicly visible, and plain text otherwise.
 
 ---
 
 ## Visibility audit
 
-Putting external acts in `band` means every filter that decides "is this band public?" has
-to account for rows with no members. The gates today, and what each needs:
+**Most of this audit dissolves under the band/group split.** It existed because external
+acts lived in the same table as public bands, so every "is this band public?" filter had to
+learn to exclude member-less rows. Now an external act is a `band_profile` with no group and
+therefore no slug, so it is structurally unaddressable — there is no gate to add and none to
+forget.
 
-| Location                                                   | Current gate                                                         | Required change                                                                                                                                                                                                                  |
-| ---------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | Add "has an active owner `bandMember`". Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses.                                                                                               |
-| `remote/directory.remote.ts` — `loadBandProfile()`         | slug + `deletedAt IS NULL`, then `isBandProfileHidden()`             | Same guard, so `/directory/bands/[slug]` 404s for stubs.                                                                                                                                                                         |
-| `remote/band-site.remote.ts` — `getBandSiteData()`         | `deletedAt IS NULL` + `tier === 'premium'` **only**                  | Pre-existing hole — no `directoryVisibility` check at all, so a hidden band with premium tier still renders a full public microsite. Add both checks.                                                                            |
-| `event-service.ts` — public calendar queries               | `event.status = 'published'` + source flag; no band visibility check | Pre-existing — a hidden member band's published event already leaks its name and a 404ing profile link. The attribution rule above avoids making it worse; fixing it properly means gating the emitted `bandSlug` on visibility. |
+What remains is the set of **pre-existing holes this audit surfaced**, which are real
+regardless of the split and are worth fixing while in the area:
 
-The owner-membership guard is cheap to express now that ownership is a `bandMember` row:
-an `EXISTS` against `band_member` with `role = 'owner'` and `status = 'active'`, which the
-partial unique index already supports.
+| Location                                                   | Current gate                                                         | Status under the split                                                                                                                                                                                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | **Resolved.** Listing joins `group`, so a profile with no group cannot appear. Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses; the visibility column moves to `group.publicVisibility`. |
+| `remote/directory.remote.ts` — `loadBandProfile()`         | slug + `deletedAt IS NULL`, then `isBandProfileHidden()`             | **Resolved.** The route key is a group slug, and a group-less profile has none, so `/directory/bands/[slug]` cannot resolve to a stub.                                                                                             |
+| `remote/band-site.remote.ts` — `getBandSiteData()`         | `deletedAt IS NULL` + `tier === 'premium'` **only**                  | **Still open.** No visibility check at all, so a hidden band with premium tier renders a full public microsite. Add the visibility check alongside the tier check.                                                                 |
+| `event-service.ts` — public calendar queries               | `event.status = 'published'` + source flag; no band visibility check | **Still open.** A hidden member band's published event leaks its name and a 404ing profile link. Fixing it means gating the emitted slug on `group.publicVisibility`.                                                              |
 
-Belt and braces: `directoryVisibility` defaults to `'public'` in the schema and `create()`
-never sets it, so the external-create path must pass `'hidden'` explicitly, and that
-should be an asserted case in the band service tests rather than a convention.
+The guard the earlier draft proposed — an `EXISTS` against `band_member` for an active owner
+— is no longer needed anywhere. "Has a group" is a nullable column on the row already being
+selected, and in the two resolved cases above it is not even an explicit condition, just a
+consequence of joining `group` to get the slug.
+
+Belt and braces is also no longer required. The earlier draft noted that
+`directoryVisibility` defaults to `'public'` and `create()` never sets it, so the
+external-create path had to remember to pass `'hidden'`. A group-less profile has no public
+surface to be visible _on_, so forgetting is no longer possible — the default is harmless.
+Visibility becomes meaningful only once a group exists, which is exactly when someone is
+there to choose it.
 
 One more cleanup while in the area: `requireStaffOrOwner()` in `authorization.ts` has
 zero callers. It is safe today, but it compares `userId === ownerId` after guarding only
@@ -858,9 +912,11 @@ outlive any one production.
   all reused, not reimplemented. The production reaches the reservation only through here.
 - `reservation/reservation-service.ts` — a new `adjustWindow()`, called via
   `event-service`; never called directly by the production
-- `band/band-service.ts` — `create()` extended so an external act can be created with no
-  initial member
-- `band/platform-invite-service.ts` — `createInvite()` with `role: 'owner'` for claims
+- `band/band-service.ts` — `create()` extended so an external act can be created as a
+  profile with no group
+- `group/group-service.ts` — `claimBandProfile()`, which creates the group and moves the
+  act's identity onto it
+- `group/invite-service.ts` — `createInvite()` with `role: 'owner'` for claims
 - `ticket/ticket-service.ts` — read-only, for counts and comps
 - `finance/payment-service.ts` and the Stripe client — a read-only PaymentIntent search at
   settle time. Note that `finance/payment-cache-service.ts` is **not** an integration
@@ -881,12 +937,12 @@ Five new tables — `production`, `production_slot`, `production_task`,
 `production_expense`, `venue` — plus column changes on three existing ones:
 
 ```
-band (changes)
+band_profile (changes)
   ownerId       DROPPED
-  name          UNIQUE dropped (stays not null)
+  name          UNIQUE dropped (nullable — see groups-spec.md)
 
-band_member (addition)
-  partial unique index on (bandId) where role = 'owner'
+group_member (addition)
+  partial unique index on (groupId) where role = 'owner'
 
 event (additions)
   venueId       uuid? references venue(id) on delete set null
@@ -899,7 +955,7 @@ Prerequisites. This feature reads it; it does not add it.
 Indexes on the new tables:
 
 - `production` — unique on `eventId`; index on `(status, createdAt)`
-- `production_slot` — index on `(productionId, sortOrder)`; index on `bandId`
+- `production_slot` — index on `(productionId, sortOrder)`; index on `bandProfileId`
 - `production_task` — index on `(productionId, phase)`
 - `production_expense` — index on `productionId`
 - `venue` — unique on `slug`; index on `slug`
@@ -1014,8 +1070,8 @@ phase: a band sees its booked shows only through the existing public event listi
 
 - Five new tables; `event.venueId` added; `band.ownerId` and the `UNIQUE` on `band.name`
   both dropped in a single table rebuild, landed as its own migration.
-- A partial unique index on `band_member (bandId) WHERE role = 'owner'` becomes the sole
-  definition of band ownership.
+- A partial unique index on `group_member (groupId) WHERE role = 'owner'` becomes the sole
+  definition of ownership.
 - `band-service.ts`'s three owner `innerJoin`s become left joins through `bandMember`;
   `deleteBand`/`deactivate` attribute reservation cancellations to the acting staff
   member; `transferOwnership()` drops its third batch statement and resolves the current
@@ -1073,15 +1129,15 @@ phase: a band sees its booked shows only through the existing public event listi
 ## Open questions
 
 1. **Does a claimed act keep its production history public?** An act that claims its
-   profile and sets `directoryVisibility: 'public'` retroactively exposes every past
+   profile and sets `group.publicVisibility` to `'public'` retroactively exposes every past
    production it played. Probably desirable — it's a gig history — but it should be a
    deliberate call, not a side effect of claiming.
-2. **Should `band` gain a `createdBy` column?** The owner-column question is answered: an
-   unclaimed act has no owner `bandMember`, so `/staff/bands` shows an "Unclaimed" badge
-   and there is nothing else to render. But that leaves "who stubbed this act?"
-   unanswerable, and staff will ask. `createdBy` is a column `band` does not currently
-   have — and adding it to the same rebuild is nearly free, which argues for deciding now
-   rather than later.
+2. **Should `band_profile` gain a `createdBy` column?** The owner-column question is
+   answered: an unclaimed act has no group, so `/staff/bands` shows an "Unclaimed" badge and
+   there is nothing else to render. But that leaves "who stubbed this act?" unanswerable,
+   and staff will ask. `createdBy` is a column the table does not currently have — and
+   adding it to the same rebuild is nearly free, which argues for deciding now rather than
+   later.
 3. **Should `venue.isPrimary` be a column or config?** A boolean column allows more than
    one primary venue if the Collective ever runs a second room; a KV config key naming the
    venue id is stricter. This spec picks the column.
