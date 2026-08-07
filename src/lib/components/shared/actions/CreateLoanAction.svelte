@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createLoan } from '$lib/remote/equipment.remote';
+	import { createLoan, getAvailableEquipment } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
 	import Button from '$lib/components/shared/Button.svelte';
 
@@ -20,7 +20,6 @@
 	let query = $state('');
 	let userId = $state('');
 	let userName = $state('');
-	let equipmentOptions = $state<{ id: string; name: string }[]>([]);
 	let memberResults = $state<{ id: string; name: string; email: string }[]>([]);
 
 	async function handleMemberSearch() {
@@ -38,18 +37,6 @@
 		memberResults = [];
 		query = '';
 	}
-
-	async function loadEquipmentOptions() {
-		const res = await fetch('/api/equipment?available=true');
-		if (res.ok) {
-			const data = (await res.json()) as { rows?: { id: string; name: string }[] };
-			equipmentOptions = (data.rows ?? []).map((e) => ({ id: e.id, name: e.name }));
-		}
-	}
-
-	$effect(() => {
-		loadEquipmentOptions();
-	});
 </script>
 
 <Action
@@ -62,56 +49,69 @@
 	{...rest}
 >
 	{#snippet form()}
-		<div class="space-y-3">
-			<input {...fields.userId.as('hidden', userId)} />
-			{#if userId}
-				<div class="flex items-center justify-between bg-base-200 rounded p-2">
-					<span class="font-medium">{userName}</span>
-					<Button
-						type="button"
-						class="btn-ghost btn-xs"
-						onclick={() => {
-							userId = '';
-							userName = '';
-						}}>Change</Button
-					>
-				</div>
-			{:else}
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Member</span></div>
-					<input
-						type="text"
-						class="input input-bordered w-full"
-						bind:value={query}
-						oninput={handleMemberSearch}
-						placeholder="Search by name or email..."
-					/>
-				</label>
-				{#if memberResults.length > 0}
-					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
-						{#each memberResults as u (u.id)}
-							<button
-								type="button"
-								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
-								onclick={() => selectMember(u)}
-							>
-								<span class="font-medium">{u.name}</span>
-								<span class="opacity-60 ml-1">{u.email}</span>
-							</button>
-						{/each}
+		<svelte:boundary>
+			<div class="space-y-3">
+				<input {...fields.userId.as('hidden', userId)} />
+				{#if userId}
+					<div class="flex items-center justify-between bg-base-200 rounded p-2">
+						<span class="font-medium">{userName}</span>
+						<Button
+							type="button"
+							class="btn-ghost btn-xs"
+							onclick={() => {
+								userId = '';
+								userName = '';
+							}}>Change</Button
+						>
 					</div>
+				{:else}
+					<label class="form-control w-full">
+						<div class="label"><span class="label-text">Member</span></div>
+						<input
+							type="text"
+							class="input input-bordered w-full"
+							bind:value={query}
+							oninput={handleMemberSearch}
+							placeholder="Search by name or email..."
+						/>
+					</label>
+					{#if memberResults.length > 0}
+						<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
+							{#each memberResults as u (u.id)}
+								<button
+									type="button"
+									class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
+									onclick={() => selectMember(u)}
+								>
+									<span class="font-medium">{u.name}</span>
+									<span class="opacity-60 ml-1">{u.email}</span>
+								</button>
+							{/each}
+						</div>
+					{/if}
 				{/if}
-			{/if}
-			<Field field={fields.equipmentId} type="select" label="Equipment">
-				<option value="">-- Select equipment --</option>
-				{#each equipmentOptions as eq (eq.id)}
-					<option value={eq.id}>{eq.name}</option>
-				{/each}
-			</Field>
-			<Field field={fields.quantity} type="number" label="Quantity" value={1} />
-			<Field field={fields.requestedPickupDate} type="date" label="Requested pickup date" />
-			<Field field={fields.estimatedReturnDate} type="date" label="Estimated return date" />
-			<Field field={fields.memberNotes} type="textarea" label="Notes (optional)" />
-		</div>
+				<!--
+				Awaited here rather than fetched from `/api/equipment` — that route
+				does not exist, so the select silently stayed empty and every
+				staff-created loan quietly became a free-form request.
+			-->
+				<Field field={fields.equipmentId} type="select" label="Equipment">
+					<option value="">-- Select equipment --</option>
+					{#each await getAvailableEquipment() as eq (eq.id)}
+						<option value={eq.id}>{eq.name}</option>
+					{/each}
+				</Field>
+				<Field field={fields.quantity} type="number" label="Quantity" value={1} />
+				<Field field={fields.requestedPickupDate} type="date" label="Requested pickup date" />
+				<Field field={fields.estimatedReturnDate} type="date" label="Estimated return date" />
+				<Field field={fields.memberNotes} type="textarea" label="Notes (optional)" />
+			</div>
+
+			{#snippet pending()}
+				<div class="flex items-center justify-center p-8">
+					<span class="loading loading-md loading-spinner"></span>
+				</div>
+			{/snippet}
+		</svelte:boundary>
 	{/snippet}
 </Action>

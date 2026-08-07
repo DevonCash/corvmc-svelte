@@ -63,7 +63,7 @@ vi.mock('$lib/server/notification/email', () => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({
-	env: { PUBLIC_BASE_URL: 'https://test.com' }
+	env: { PUBLIC_SITE_URL: 'https://test.com' }
 }));
 
 // ---------------------------------------------------------------------------
@@ -522,7 +522,7 @@ describe('campaign-service', () => {
 			expect(setCall.sentAt).toBeInstanceOf(Date);
 		});
 
-		it('builds unsubscribe URL from env.PUBLIC_BASE_URL and renders per-recipient HTML', async () => {
+		it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {
 			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
 
 			await executeSend('camp-1');

@@ -126,7 +126,6 @@ export const confirmUnsubscribe = form(
 
 /** List all audiences (staff). Used on audiences index and as audience options. */
 export const getAudiences = query(z.void(), async () => {
-	await requireFeature('emailMarketing');
 	await requireStaff();
 	return listAudiences();
 });
