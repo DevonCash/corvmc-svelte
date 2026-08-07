@@ -7,7 +7,7 @@ import {
 	update,
 	checkRebookNeeded,
 	publish,
-	unpublish,
+	unpublishWithBandNotice,
 	cancel,
 	getById,
 	listAll as listAllEvents,
@@ -51,7 +51,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
-import { event, createEventSchema } from '$lib/server/db/schema/event';
+import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
@@ -369,10 +369,13 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	};
 });
 
-export const getStaffEvents = query(z.object({ page: z.number().optional() }), async (filters) => {
-	await requireStaff();
-	return listAllEvents({ page: filters.page ?? 1, pageSize: 50 });
-});
+export const getStaffEvents = query(
+	z.object({ source: z.enum(eventSources).optional(), page: z.number().optional() }),
+	async (filters) => {
+		await requireStaff();
+		return listAllEvents({ source: filters.source }, { page: filters.page ?? 1, pageSize: 50 });
+	}
+);
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();
@@ -385,6 +388,18 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		.from(user)
 		.where(eq(user.id, evt.createdByUserId))
 		.limit(1);
+
+	// Band attribution: staff need to see whose gig this is before editing or
+	// pulling it, since band events sit in the same list as CMC ones.
+	let bookingBand: { id: string; name: string; slug: string } | null = null;
+	if (evt.bandId) {
+		const [row] = await db
+			.select({ id: band.id, name: band.name, slug: band.slug })
+			.from(band)
+			.where(eq(band.id, evt.bandId))
+			.limit(1);
+		if (row) bookingBand = row;
+	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
 	if (evt.reservationId) {
@@ -451,8 +466,13 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
 			ticketQuantity: evt.ticketQuantity,
-			posterKey: evt.posterKey
+			posterKey: evt.posterKey,
+			source: evt.source,
+			bandId: evt.bandId,
+			location: evt.location,
+			externalTicketUrl: evt.externalTicketUrl
 		},
+		band: bookingBand,
 		posterUrl,
 		creator,
 		linkedReservation,
@@ -613,6 +633,10 @@ export const updateEvent = form(
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
 		doorsTime: z.string().optional(),
+		// Band gigs live off these two — without them staff can see a wrong venue
+		// or a dead ticket link on the guide and have no way to fix it.
+		location: z.string().max(255).optional(),
+		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
 		ticketQuantity: z.string().optional(),
@@ -634,6 +658,10 @@ export const updateEvent = form(
 		if (data.title !== undefined && data.title !== '') updateParams.title = data.title;
 		if (data.description !== undefined) updateParams.description = data.description || null;
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
+		if (data.location !== undefined) updateParams.location = data.location || null;
+		if (data.externalTicketUrl !== undefined) {
+			updateParams.externalTicketUrl = data.externalTicketUrl || null;
+		}
 		if (ticketingEnabled !== undefined) updateParams.ticketingEnabled = ticketingEnabled;
 		if (data.ticketPrice !== undefined) {
 			updateParams.ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : null;
@@ -681,7 +709,9 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 
 export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireStaff();
-	await unpublish(data.id);
+	// Band-sourced events notify the band's admins — pulling a gig silently is
+	// the one unpublish that needs a word back to whoever posted it.
+	await unpublishWithBandNotice(data.id);
 	return { success: true };
 });
 

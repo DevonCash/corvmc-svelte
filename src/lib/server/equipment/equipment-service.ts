@@ -200,7 +200,11 @@ function activeLoansSubquery() {
 		.as('active_loans');
 }
 
-export async function getEquipmentById(id: string) {
+/**
+ * `includeDeleted` exists for staff: deactivation is a soft delete, and without
+ * it the detail page 404s on the very rows whose Reactivate button lives there.
+ */
+export async function getEquipmentById(id: string, opts: { includeDeleted?: boolean } = {}) {
 	const loans = activeLoansSubquery();
 	const [row] = await db
 		.select({
@@ -211,7 +215,11 @@ export async function getEquipmentById(id: string) {
 		.from(equipment)
 		.innerJoin(equipmentCategory, eq(equipment.categoryId, equipmentCategory.id))
 		.leftJoin(loans, eq(equipment.id, loans.equipmentId))
-		.where(and(eq(equipment.id, id), isNull(equipment.deletedAt)))
+		.where(
+			opts.includeDeleted
+				? eq(equipment.id, id)
+				: and(eq(equipment.id, id), isNull(equipment.deletedAt))
+		)
 		.limit(1);
 
 	if (!row) return null;

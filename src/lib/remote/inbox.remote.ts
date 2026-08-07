@@ -3,7 +3,6 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff, listStaffUsers } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -52,7 +51,6 @@ const threadFiltersSchema = z.object({
 });
 
 export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
-	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 
 	// `undefined` leaves the filter off entirely; `null` is the IS NULL branch in
@@ -78,13 +76,11 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 });
 
 export const getInboxThreadCounts = query(z.void(), async () => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 	return countThreadsByStatus();
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 	const thread = await getThread(id);
 	if (!thread) throw error(404, 'Thread not found');
@@ -92,13 +88,11 @@ export const getInboxThread = query(z.string(), async (id) => {
 });
 
 export const getInboxUnreadCount = query(z.void(), async () => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 	return getUnresolvedCount();
 });
 
 export const getAssignableStaff = query(z.void(), async () => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 	return listStaffUsers();
 });
@@ -113,7 +107,6 @@ const replySchema = z.object({
 });
 
 export const replyToThread = form(replySchema, async (data) => {
-	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
@@ -135,7 +128,6 @@ const noteSchema = z.object({
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
-	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
@@ -159,7 +151,6 @@ const assignSchema = z.object({
 });
 
 export const assignThread = form(assignSchema, async (data) => {
-	await requireFeature('staffInbox');
 	const staff = await requireStaff();
 	await assignThreadSvc(data.threadId, data.userId);
 
@@ -194,7 +185,6 @@ const statusSchema = z.object({
 });
 
 export const updateThreadStatus = form(statusSchema, async (data) => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 
 	// A calendar date means "put this back in the queue that morning", so it
@@ -228,7 +218,6 @@ export const getInboxChannelConfigs = query(z.void(), async () => {
 });
 
 export const getInboxEnabledChannels = query(z.void(), async () => {
-	await requireFeature('staffInbox');
 	await requireStaff();
 	return getEnabledChannels();
 });
