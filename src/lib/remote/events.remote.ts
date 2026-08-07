@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import {
@@ -522,7 +522,7 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
 
 	if (!data.title) {
-		issue.title('Title is required');
+		invalid(issue.title('Title is required'));
 	}
 
 	const tz = DEFAULT_TIMEZONE;
@@ -701,15 +701,17 @@ export const compTickets = form(
 	async (data, issue) => {
 		await requireStaff();
 
+		const issues: Parameters<typeof invalid> = [];
 		if (!data.attendeeName) {
-			issue.attendeeName('Name is required');
+			issues.push(issue.attendeeName('Name is required'));
 		}
 		if (!data.attendeeEmail) {
-			issue.attendeeEmail('Email is required');
+			issues.push(issue.attendeeEmail('Email is required'));
 		}
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 50) {
-			issue.quantity('Quantity must be between 1 and 50');
+			issues.push(issue.quantity('Quantity must be between 1 and 50'));
 		}
+		if (issues.length) invalid(...issues);
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -746,25 +748,35 @@ export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), asy
 	return { success: true };
 });
 
+// A single field issue as constructed by a form handler's `issue` helper. Note that
+// constructing one does nothing on its own — it only takes effect when handed to
+// `invalid()`, which throws.
+type FormIssue = Parameters<typeof invalid>[number];
+
 // Resolves the attendee's name and email for a ticket/RSVP form. Logged-in users don't
 // have to re-type their details — their account values fill in any field left blank —
-// while guests must still supply both. Reports validation through the form's `issue` API.
+// while guests must still supply both. Returns any validation issues rather than
+// throwing, so the caller can report them alongside its own (e.g. quantity) in one pass.
 function resolveAttendee(
 	data: { attendeeName?: string; attendeeEmail?: string },
 	user: { name?: string | null; email?: string | null } | undefined,
-	issue: { attendeeName: (msg: string) => void; attendeeEmail: (msg: string) => void }
-): { name: string; email: string } {
+	issue: {
+		attendeeName: (msg: string) => FormIssue;
+		attendeeEmail: (msg: string) => FormIssue;
+	}
+): { name: string; email: string; issues: FormIssue[] } {
 	const name = (data.attendeeName ?? '').trim() || user?.name?.trim() || '';
 	const email = (data.attendeeEmail ?? '').trim() || user?.email?.trim() || '';
 
-	if (!name) issue.attendeeName('Name is required');
+	const issues: FormIssue[] = [];
+	if (!name) issues.push(issue.attendeeName('Name is required'));
 	if (!email) {
-		issue.attendeeEmail('Email is required');
+		issues.push(issue.attendeeEmail('Email is required'));
 	} else if (!z.string().email().safeParse(email).success) {
-		issue.attendeeEmail('Valid email is required');
+		issues.push(issue.attendeeEmail('Valid email is required'));
 	}
 
-	return { name, email };
+	return { name, email, issues };
 }
 
 export const rsvpForEvent = form(
@@ -777,12 +789,15 @@ export const rsvpForEvent = form(
 	async (data, issue) => {
 		const { locals } = getRequestEvent();
 
+		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
-			issue.quantity('Quantity must be between 1 and 10');
+			issues.push(issue.quantity('Quantity must be between 1 and 10'));
 		}
 
 		// Logged-in attendees needn't re-enter their details; fall back to their account.
 		const attendee = resolveAttendee(data, locals.user, issue);
+		issues.push(...attendee.issues);
+		if (issues.length) invalid(...issues);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
@@ -859,12 +874,15 @@ export const purchaseTickets = form(
 	async (data, issue) => {
 		const { locals, url } = getRequestEvent();
 
+		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
-			issue.quantity('Quantity must be between 1 and 10');
+			issues.push(issue.quantity('Quantity must be between 1 and 10'));
 		}
 
 		// Logged-in buyers needn't re-enter their details; fall back to their account.
 		const attendee = resolveAttendee(data, locals.user, issue);
+		issues.push(...attendee.issues);
+		if (issues.length) invalid(...issues);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
