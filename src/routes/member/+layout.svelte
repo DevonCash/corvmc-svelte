@@ -69,6 +69,7 @@
 					data-sveltekit-reload
 					class="btn-ghost btn-xs btn-square"
 					title="Create Band"
+					aria-label="Create Band"
 				>
 					<IconPlus size={14} />
 				</Button>
