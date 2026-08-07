@@ -26,7 +26,12 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { formatDateFull, formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
+import {
+	formatDateFull,
+	formatDateInTz,
+	buildDateInTz,
+	nextDay
+} from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -262,6 +267,20 @@ export async function checkRebookNeeded(
 	};
 }
 
+/**
+ * Reject a backwards range on update, against the times the row will end up
+ * with — the same guard create() applies. Without it the range reaches D1 as a
+ * raw `event_time_order` CHECK-constraint failure (a 500 with no explanation).
+ */
+function assertTimeOrder(
+	existing: { startsAt: Date; endsAt: Date },
+	params: { startsAt?: Date; endsAt?: Date }
+): void {
+	const startsAt = params.startsAt ?? existing.startsAt;
+	const endsAt = params.endsAt ?? existing.endsAt;
+	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+}
+
 /** A stored ticket price is either null (no price) or a positive whole-cent integer. */
 function assertValidTicketPrice(price: number | null | undefined): void {
 	if (price == null) return;
@@ -274,6 +293,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
 	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
@@ -577,15 +597,6 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	return query;
 }
 
-/** Add one calendar day to a "YYYY-MM-DD" string (UTC rollover handles month/year). */
-function nextDay(dateStr: string): string {
-	const [year, month, day] = dateStr.split('-').map(Number);
-	const d = new Date(Date.UTC(year, month - 1, day + 1));
-	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
-		d.getUTCDate()
-	).padStart(2, '0')}`;
-}
-
 /** Soonest published CMC show on today's calendar day (PT) that hasn't ended yet. */
 export async function getShowTonight(now = new Date()): Promise<EventRow | null> {
 	const today = formatDateInTz(now, DEFAULT_TIMEZONE);
@@ -740,6 +751,7 @@ export async function updateBandEvent(
 	if (!existing) throw new Error('Event not found');
 	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
 	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
