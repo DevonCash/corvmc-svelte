@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff, listStaffUsers } from '$lib/server/authorization';
@@ -31,8 +31,7 @@ import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses } from '$lib/confi
 export const submitContactForm = form(submitContactFormSchema, async (data, issue) => {
 	const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
 	if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-		issue.turnstileToken('Verification failed. Please try again.');
-		return;
+		invalid(issue.turnstileToken('Verification failed. Please try again.'));
 	}
 	await handleContactForm(data);
 	return { success: true };

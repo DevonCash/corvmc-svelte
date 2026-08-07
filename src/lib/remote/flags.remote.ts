@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireFeature, isFeatureEnabled } from '$lib/server/feature-flags';
@@ -125,8 +125,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	const { request, locals } = getRequestEvent();
 	const ip = request.headers.get('CF-Connecting-IP');
 	if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-		issue.turnstileToken('Verification failed. Please try again.');
-		return;
+		invalid(issue.turnstileToken('Verification failed. Please try again.'));
 	}
 
 	// Only publicly visible events are reportable — mirrors getPublicEventDetail
