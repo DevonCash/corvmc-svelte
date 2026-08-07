@@ -53,6 +53,7 @@ import {
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
+import { bookerNameFor } from '$lib/server/reservation/booker-name';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
 import { getReservationConfig } from '$lib/server/reservation/config';
@@ -816,6 +817,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			bookerType: reservation.bookerType,
+			bookerId: reservation.bookerId,
+			bookerName: bookerNameFor(reservation.bookerType, reservation.bookerId),
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
@@ -823,6 +826,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
+			memberId: user.id,
 			memberName: user.name,
 			memberEmail: user.email,
 			memberPronouns: user.pronouns,

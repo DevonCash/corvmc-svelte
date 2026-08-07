@@ -765,6 +765,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(reservation)
 			.values({
 				bookerType: 'event',
+				// Placeholder; backfilled with the real event id via linkEventBooker
+				// once the event row exists (event.reservationId requires the
+				// reservation to be created first, so the id isn't known yet here).
 				bookerId: 'event',
 				createdByUserId,
 				status: reservationStatus,
@@ -775,6 +778,16 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			})
 			.returning();
 		return r.id;
+	}
+
+	// Point an event's space reservation at the event it belongs to, mirroring the
+	// production generation job which books `bookerId: <eventId>`.
+	async function linkEventBooker(reservationId: string | undefined, eventId: string) {
+		if (!reservationId) return;
+		await db
+			.update(reservation)
+			.set({ bookerId: eventId })
+			.where(eq(reservation.id, reservationId));
 	}
 
 	for (let i = 0; i < 6; i++) {
@@ -813,6 +826,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				createdByUserId: creator.id
 			})
 			.returning();
+		await linkEventBooker(reservationId, e.id);
 		rows.push(e);
 	}
 
@@ -872,6 +886,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				createdByUserId: creator.id
 			})
 			.returning();
+		await linkEventBooker(reservationId, e.id);
 		rows.push(e);
 	}
 
@@ -898,6 +913,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				createdByUserId: creator.id
 			})
 			.returning();
+		await linkEventBooker(reservationId, e.id);
 		rows.push(e);
 	}
 
@@ -916,6 +932,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			createdByUserId: cancelledCreator.id
 		})
 		.returning();
+	await linkEventBooker(cancelledResId, cancelled.id);
 	rows.push(cancelled);
 
 	const [cancelledNoRes] = await db
@@ -965,6 +982,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				createdByUserId: creator.id
 			})
 			.returning();
+		await linkEventBooker(protoResId, proto.id);
 		rows.push(proto);
 
 		const rrule = seedRRule(protoStart, 'weekly');
@@ -1004,6 +1022,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 					createdByUserId: creator.id
 				})
 				.returning();
+			await linkEventBooker(instResId, inst.id);
 			rows.push(inst);
 		}
 	}
