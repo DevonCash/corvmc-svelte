@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IconUser, IconCalendarEvent } from '@tabler/icons-svelte';
+	import { IconUser, IconCalendarEvent, IconMusic } from '@tabler/icons-svelte';
 
 	let {
 		type,
@@ -14,6 +14,8 @@
 
 {#if type === 'user'}
 	<IconUser {size} class={extraClass} />
+{:else if type === 'band'}
+	<IconMusic {size} class={extraClass} />
 {:else if type === 'event'}
 	<IconCalendarEvent {size} class={extraClass} />
 {/if}

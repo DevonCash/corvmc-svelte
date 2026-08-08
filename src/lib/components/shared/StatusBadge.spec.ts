@@ -5,7 +5,7 @@ import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
 import { flagStatuses } from '$lib/server/db/schema/flag';
-import { bandMemberStatuses } from '$lib/server/db/schema/band';
+import { bandMemberStatuses, bandTiers } from '$lib/server/db/schema/band';
 import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 
 /**
@@ -35,6 +35,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	event: eventStatuses,
 	flag: flagStatuses,
 	bandMember: bandMemberStatuses,
+	bandTier: bandTiers,
 	platformInvite: inviteStatuses,
 	ticket: ticketStatuses,
 	equipment: equipmentStatuses,

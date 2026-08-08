@@ -12,6 +12,7 @@
 		RefundReservationAction
 	} from '$lib/components/shared/actions';
 	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
+	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -147,17 +148,26 @@
 
 	<!-- Member + Payment grid -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<!-- Member card -->
-		<InfoCard title="Member">
+		<!-- Member card — a band booking leads with the band, then who booked it -->
+		<InfoCard title={r.bookerType === 'band' ? 'Band Booking' : 'Member'}>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
-					{#if r.createdByUserId}
+					{#if r.bookerType === 'band' && r.bandId}
+						<Button href="/staff/bands/{r.bandId}" class="btn-sm">View Band</Button>
+					{:else if r.createdByUserId}
 						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm">View Profile</Button>
 					{/if}
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
+				{#if r.bookerType === 'band' && r.bandName}
+					<div class="mb-3 flex items-center gap-2">
+						<BookerTypeIcon type="band" size={18} />
+						<span class="text-lg font-medium">{r.bandName}</span>
+					</div>
+					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
+				{/if}
 				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
 				<h3 class="text-lg">{r.memberName}</h3>
 				{#if r.memberPronouns}

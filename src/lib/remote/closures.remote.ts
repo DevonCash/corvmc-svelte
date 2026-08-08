@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
@@ -39,7 +39,7 @@ export const createClosure = form(
 		const endsAt = new Date(data.endsAt as string);
 
 		if (endsAt <= startsAt) {
-			issue.endsAt('End time must be after start time');
+			invalid(issue.endsAt('End time must be after start time'));
 		}
 
 		await db.insert(closure).values({ reason: data.reason as string, startsAt, endsAt });

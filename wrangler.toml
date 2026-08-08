@@ -58,7 +58,6 @@ R2_PUBLIC_URL = "https://media.corvmc.org"
 # Canonical public site URLs (used for links in emails/notifications) + email
 # sender name. Non-secret config.
 PUBLIC_SITE_URL = "https://corvmc.org"
-PUBLIC_BASE_URL = "https://corvmc.org"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
