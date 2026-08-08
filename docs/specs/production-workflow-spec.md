@@ -412,6 +412,13 @@ and its slots keep a name.
 **There is no `doorSplitPercent`.** The split is a property of the deal for the whole
 show, not of each act, and it lives on `production.bandSplitPercent`. See "Settlement".
 
+**Staff may set it per show**, defaulting to 70. A locked value with a config key was the
+alternative; it was rejected because unusual deals are real and the app should record the
+deal rather than force staff to work around it. The protection against a split quietly
+settling at the wrong number is **visibility, not immutability**: the value appears in the
+band-facing terms summary (see [Permissions](#permissions)), so the act sees the deal it was
+offered rather than only the payout that came out the other end.
+
 Tech requirements are entered per show, but a member band with a premium page already has
 this on file: `BandEpk` in `src/lib/types/band-page.ts` carries `technicalRiderKey`,
 `stagePlotKey`, and `backline`, and `band_media` has `'rider'` and `'stage_plot'` types.
@@ -448,8 +455,18 @@ show. Starting set:
 - **advance** — confirm lineup and set times, collect tech riders and stage plots,
   confirm backline, send load-in details, confirm door/sound staffing, poster and social
   announcement, ticket link live.
-- **day_of** — doors staffed, sound check complete, hospitality set, merch table set,
-  float counted.
+- **day_of** — the pre-show walkthrough, and a real phase rather than a slice of advance.
+  It is the list somebody works through the afternoon of the show, and most of it is about
+  the building rather than the lineup: set house gear, check concessions stock, clean the
+  bathrooms, float counted, doors staffed, sound check complete, hospitality set, merch
+  table set.
+
+  Merging it into `advance` was considered and rejected. Advance is booking work done days
+  or weeks ahead by whoever is producing; `day_of` is venue work done hours ahead by
+  whoever is on shift, and the two are often different people with different questions
+  ("is the lineup confirmed?" versus "is the room ready?"). Collapsing them would put a
+  stale rider request next to an unswept floor on one list.
+
 - **closeout** — door count reconciled, bands paid, load-out complete, room reset, trash
   and recycling out, gear returned to storage, incidents logged, lock-up.
 
@@ -485,7 +502,7 @@ draft ──▶ offered ──▶ confirmed ──▶ completed ──▶ settle
 | `draft` → `offered`               | Offers sent                                                   | Slots move to `invited`; no public change                                                                                                 |
 | `offered` → `confirmed`           | Lineup locked                                                 | Unlocks event publish; no reservation work — the room is already held                                                                     |
 | `confirmed` → `completed`         | Show happened (or the auto-complete cron passes the end time) | Slots **in `confirmed` status** move to `performed`; unlocks settlement                                                                   |
-| `completed` → `settled`           | Staff settle                                                  | Reads ticket revenue from Stripe, computes the band pool, snapshots the totals; freezes the money fields                                  |
+| `completed` → `settled`           | Staff settle                                                  | Reads ticket revenue, computes the band pool, snapshots the totals. Money fields stay editable; later changes go to the audit log         |
 | `settled` → `closed`              | Close-out done                                                | Requires every `closeout` task `done`; archives the production                                                                            |
 | any pre-`completed` → `cancelled` | Staff cancel                                                  | Cancels the event via `event-service.cancel()` (which notifies ticket holders and releases the reservation); marks live slots `cancelled` |
 
@@ -674,6 +691,20 @@ common case exactly one slot's payout row is filled: the lead band's. The worksh
 displays `bandPoolCents` against `sum(slot.payoutCents)` side by side, so a mismatch is
 visible without anyone having to do the subtraction.
 
+**There is no lead band, and payouts are per-slot.** An earlier reading assumed one act
+takes the cut and divides it in the parking lot. That happens, but it is a special case of
+the general one: `payoutCents` lives on `production_slot`, so a four-band bill with no
+headliner is four rows summing to `bandPoolCents`, and a show where one act collects for
+everyone is one row equal to it. Both are the same worksheet — the only rule is that the
+rows sum to the pool, which is exactly the side-by-side check above.
+
+That means the schema needs no change, but the workflow does: settlement asks staff to
+allocate the pool across slots rather than assuming a single recipient, and
+`payoutMethod` / `paidAt` are per slot too, since one act may take cash on the night and
+another a Venmo transfer the next morning. A slot may legitimately have `payoutCents: 0` —
+an opener playing for the door split of nothing, or a band that declined payment — which is
+different from `null`, meaning not yet settled.
+
 ### Reading ticket revenue
 
 `ticketRevenueCents` is **read, not entered** — but not from where an earlier draft
@@ -736,8 +767,13 @@ trusting one side.
 
 `production.ticketRevenueCents` remains on the table, but as a **settlement snapshot**: one
 write at settle time, alongside `settledAt` and `settledByUserId`, recording what was
-settled and on what figures. That is an audit record, not a ledger. Reopening a settlement
-clears the snapshot and re-reads Stripe.
+settled and on what figures. That is an audit record, not a ledger.
+
+**The snapshot is the durable figure — Stripe is not re-read to reconstruct it.** A
+settlement from two years ago reads its own snapshot, and edits since then are in the audit
+log. Re-reading Stripe is always an explicit staff action against a live show, never an
+implicit recompute of an old one. See [How far back Stripe can be
+read](#how-far-back-stripe-can-be-read) for why that matters.
 
 **Settlement must fail cleanly.** If the Stripe search errors, rate-limits, or pages
 incompletely, the service must **not** write a partial snapshot — a settlement that
@@ -748,6 +784,46 @@ worksheet shows the failure, and staff can retry or enter the figure manually as
 
 Comps (`compCount`) come from `ticket` rows with no `stripePaymentRecordId`, once that
 column exists.
+
+### How far back Stripe can be read
+
+An earlier draft worried that Stripe's search would age out and leave an old settlement
+unreconstructable. Checking [Stripe's search
+documentation](https://docs.stripe.com/search) shows the premise is wrong in one direction
+and understated in another.
+
+**There is no documented lookback limit.** Search has no date horizon and no historical
+cutoff, so a bounded date window is not needed for that reason. The listed limitations are
+about freshness and consistency, not age.
+
+**But three real hazards are documented, and two of them are worse than staleness:**
+
+| Limitation                                                                                                                                  | Why it matters at settle time                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| _"In rare cases, paginating through a result set can reorder some records, causing them to be missing or duplicated on a page."_            | This is a **correctness bug for a sum**. A duplicated PaymentIntent overstates revenue; a missing one understates it. Neither is visible in the total. |
+| _"The Search API filters using a cached version of the PaymentIntent `status`, but returns data based on the latest version."_              | Filtering on `status:"succeeded"` can miss a payment that has since succeeded, or return one that hasn't.                                              |
+| _"Under normal operating conditions, data is searchable in under 1 minute."_ Stripe explicitly says not to use search for read-after-write. | Settling minutes after the last door sale can miss it. Rate limit is 20 read ops/sec across all search endpoints.                                      |
+
+So the design rule is not a date window — it is **don't depend on search for a number that
+has to be right**:
+
+1. **Sum from local rows, not from the search.** Every ticket now carries
+   `stripePaymentRecordId` (see [Prerequisites](#prerequisites-two-fixes-both-landed)).
+   Settlement walks the event's tickets, takes the **distinct** payment ids, and retrieves
+   those PaymentIntents **by id**. Retrieval by id has none of search's caveats: no
+   indexing lag, no pagination reordering, no status cache. Tickets in one purchase share a
+   PaymentIntent, so the call count is purchases, not tickets.
+2. **Search is the reconciliation, not the source.** Run it as a cross-check — a
+   PaymentIntent the search returns with no matching ticket, or a ticket whose payment the
+   retrieval can't find, is surfaced as a discrepancy for staff. This is the mismatch check
+   already described above, now with the two sides the right way round.
+3. **Search is also the backfill** for ticket purchases predating `stripePaymentRecordId`,
+   where no local id exists. That set is finite and shrinks to nothing.
+4. **Then snapshot**, and never recompute an old settlement implicitly.
+
+The clean-failure rule stands and gets easier to honor: if retrieval fails or the
+cross-check disagrees, refuse the transition to `settled` rather than writing a partial
+snapshot.
 
 ### Door cash, and why Stripe never hears about it
 
@@ -780,10 +856,34 @@ over settled productions — date, title, gross revenue, band pool, total expens
 payout method — so the debit side reaches whoever does the Collective's books. Without it
 the app records the band cut and then loses it, which is worse than not recording it.
 
-Settling writes the snapshot and stamps `settledAt` / `settledByUserId`. After that the
-money fields are read-only — reopening requires a staff action that returns the production
-to `completed` and clears the snapshot, so an edited settlement is always visibly
-re-settled.
+### Settlement stays editable, with an audit trail
+
+Settling writes the snapshot and stamps `settledAt` / `settledByUserId`. **The money fields
+stay editable afterwards**; every change is recorded rather than prevented.
+
+An earlier draft froze them and required an explicit reopen that cleared the snapshot. That
+is the right design for an organization with a finance team and a close process. For a
+collective where the person who settled the show is the person who finds the error, a lock
+mostly produces a ritual — reopen, fix, re-settle — that records less than simply logging
+the edit would, because the intermediate states are gone by the end of it. A correction two
+days later is normal here, not an exception to be gated.
+
+So settlement edits are appended to the [staff audit log](audit-log-spec.md): actor,
+timestamp, field, before, after. That gives the thing the freeze was actually protecting —
+an answer to "who changed the band pool, and from what" — without the ceremony. The
+production keeps its original `settledAt` / `settledByUserId`; the log carries everything
+since.
+
+Two consequences worth stating:
+
+- **The snapshot is never silently recomputed.** Editing a money field changes that field
+  and nothing else. Re-reading Stripe is an explicit action, because an automatic recompute
+  would overwrite a deliberate manual correction with a machine's answer.
+- **`closed` still means closed.** Once a production is `closed`, editing money reopens
+  nothing and changes no status, but it is logged like any other edit. If that turns out to
+  be too loose, the narrower rule is to require `closed → settled` first — but start
+  permissive, since the audit log makes looseness recoverable and a lock does not make
+  errors less likely.
 
 ---
 
@@ -907,7 +1007,7 @@ guard `ownerId` too.
 - `production-service.ts` — create, update, status transitions, queries
 - `slot-service.ts` — lineup CRUD, fractional reorder, per-slot status
 - `set-times.ts` — pure `computeSetTimes()` and its validation warnings
-- `settlement-service.ts` — Stripe revenue read, totals, snapshot, reopen, CSV export
+- `settlement-service.ts` — Stripe revenue read, totals, snapshot, audited edits, CSV export
 - `task-service.ts` — checklist CRUD and template seeding
 - `errors.ts` additions — `ProductionNotFoundError`, `InvalidProductionTransitionError`,
   `CloseoutIncompleteError`, `RevenueUnavailableError`, extending the `DomainError` base
@@ -1068,9 +1168,28 @@ their `directoryContact` is deferred.
 
 ## Permissions
 
-Staff-only throughout — every remote function calls `requireStaff()`, and every route
-calls `requireFeature('productions')`. There is no member or band-panel surface in this
-phase: a band sees its booked shows only through the existing public event listing.
+Staff-only for everything that edits a production — every mutating remote function calls
+`requireStaff()`, and every staff route calls `requireFeature('productions')`.
+
+**One read-only band-facing surface: the terms summary.** A booked act should be able to
+see the deal it agreed to without emailing a producer, so a member band whose group holds a
+`production_slot` sees, in its own panel:
+
+| Shown                                                                              | Not shown                                            |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Date, venue, set time and length, billing position                                 | Other acts' guarantees or payouts                    |
+| Load-in, soundcheck, curfew                                                        | Expenses, door cash, net, or any whole-show total    |
+| `bandSplitPercent` — the deal on offer                                             | `bandPoolCents` before it is settled                 |
+| Its **own** `guaranteeCents`, `payoutCents`, `payoutMethod`, `paidAt` once settled | Internal notes, checklists, anything on `production` |
+
+This is what makes a per-show `bandSplitPercent` safe to allow: the number is visible to the
+party it affects, before the show rather than after. A split that looks wrong gets
+questioned by the band, which is a better check than any warning banner on a staff
+worksheet.
+
+It is a read surface only — a band cannot accept, decline, or edit a slot here. Slot
+invitations and responses remain out of scope for this phase, and unclaimed touring acts see
+nothing at all, since they have no panel; their terms travel by email as they do today.
 
 `'productions'` is added to the `FeatureFlag` union and `ALL_FLAGS` in
 `src/lib/server/feature-flags.ts`, defaulting off like every other flag.
@@ -1137,37 +1256,42 @@ phase: a band sees its booked shows only through the existing public event listi
 - **Volunteer and staffing assignment** per production, pending the volunteering module.
 - **ASCAP/BMI setlist reporting**, which would need per-song data below the slot level.
 
+## Decisions that were open
+
+1. **A claimed act keeps its production history public.** Claiming a profile and setting
+   `group.publicVisibility` to `'public'` retroactively exposes every past production the
+   act played, and that is the intent — it is a gig history, and a gig history with holes
+   in it is worth less than none. No per-production visibility flag, and no prompt at claim
+   time.
+2. **No `createdBy` on `band_profile`.** Staff create touring-act records, so "who stubbed
+   this?" has a narrow enough answer set that a dedicated column is not worth carrying.
+   When it does need answering, it belongs in the [staff audit log](audit-log-spec.md)
+   alongside every other staff action, not as a one-off column on one table. This also
+   keeps the `band_profile` rebuild smaller.
+3. **`venue.isPrimary` stays a column.** A KV config key naming the primary venue id would
+   be stricter, but reading it costs a second request on a path that has already loaded the
+   venue row. The column allows more than one primary venue if the Collective ever runs a
+   second room, which is the likelier future than needing the constraint.
+4. **`day_of` is a real phase.** It is the pre-show walkthrough — set house gear, check
+   concessions stock, clean the bathrooms, float, doors, soundcheck — and it belongs to
+   whoever is on shift rather than whoever produced the show. See the checklist templates
+   above for why merging it into `advance` was rejected.
+5. **Settlement stays editable, with an audit trail**, rather than freezing on `settled`.
+   See [Settlement stays editable](#settlement-stays-editable-with-an-audit-trail).
+6. **Stripe search has no lookback limit — but it is the wrong tool for the sum anyway.**
+   Checking the documentation showed the original worry was misdirected: there is no date
+   horizon, but pagination can reorder records into duplicates or omissions, which is a
+   correctness bug for a total. Settlement sums from local `stripePaymentRecordId` values
+   retrieved by id, uses search only for cross-checking and for pre-column backfill, and
+   never implicitly recomputes an old settlement. See
+   [How far back Stripe can be read](#how-far-back-stripe-can-be-read).
+7. **`bandSplitPercent` is per-show and staff-editable**, defaulting to 70, with the value
+   surfaced in the band-facing terms summary. The protection against a wrong split is
+   visibility to the affected party, not immutability.
+8. **The band pool is allocated across slots.** There is no lead band in the model:
+   `payoutCents` is per `production_slot`, and the only rule is that the rows sum to
+   `bandPoolCents`. One act collecting for everyone is a single row, not a special case.
+
 ## Open questions
 
-1. **Does a claimed act keep its production history public?** An act that claims its
-   profile and sets `group.publicVisibility` to `'public'` retroactively exposes every past
-   production it played. Probably desirable — it's a gig history — but it should be a
-   deliberate call, not a side effect of claiming.
-2. **Should `band_profile` gain a `createdBy` column?** The owner-column question is
-   answered: an unclaimed act has no group, so `/staff/bands` shows an "Unclaimed" badge and
-   there is nothing else to render. But that leaves "who stubbed this act?" unanswerable,
-   and staff will ask. `createdBy` is a column the table does not currently have — and
-   adding it to the same rebuild is nearly free, which argues for deciding now rather than
-   later.
-3. **Should `venue.isPrimary` be a column or config?** A boolean column allows more than
-   one primary venue if the Collective ever runs a second room; a KV config key naming the
-   venue id is stricter. This spec picks the column.
-4. **Is `day_of` a real checklist phase or noise?** It sits awkwardly between advance and
-   close-out. Merging it into `advance` would simplify the UI to two checklists.
-5. **How much of settlement should be locked after `settled`?** This spec freezes the
-   money fields and requires an explicit reopen. A softer version — always editable, with
-   an audit trail — may suit a small collective better.
-6. **How far back can the Stripe PaymentIntent search reach?** Stripe's search API has
-   indexing lag and pagination limits. For a show settled a week after the fact this is
-   fine; for a production reopened a year later it may not be. Does settlement need a
-   bounded date window, and what happens when a reopen can no longer reconstruct the
-   original figures?
-7. **What is `bandSplitPercent` allowed to be?** Default 70 is the standing deal, but if
-   staff can edit it per show, the worksheet needs to make an unusual split visible rather
-   than quietly settling at 50. A per-show override with a warning, or a locked value with
-   a config key, are both defensible.
-8. **Who divides the band pool when there is no lead band?** The model assumes one act
-   takes the cut and splits it. A four-band bill with no headliner, or a show where each
-   act wants paying separately, means multiple payout rows summing to `bandPoolCents` —
-   which the schema supports but the workflow doesn't describe.
-   </content>
+None — all decisions have been made.
