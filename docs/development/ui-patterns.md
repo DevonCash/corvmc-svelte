@@ -275,7 +275,12 @@ The body snippet receives `{ close }` so the parent can programmatically close t
 
 ### Form modal
 
-When `action` is a `RemoteForm` (from `form()` in `data.remote.ts`), clicking the button opens a modal with a `<Form>` wrapper. Provide the form fields via the `body` snippet. The modal includes a built-in `SubmitButton` and closes on success.
+When `action` is a `RemoteForm` (from a `form()` remote), clicking the button opens a modal with a `<Form>` wrapper. Provide the fields via the **`form`** snippet. The modal includes a built-in `SubmitButton` and closes on success.
+
+> **Use `form`, not `body`, whenever `action` is a RemoteForm.** `Action` checks
+> `{#if body}` _before_ the RemoteForm branch, so a `body` snippet renders your
+> fields bare — no `<Form>` wrapper, no submit button, nothing posts. `body` is
+> for the callback-modal mode only.
 
 ```svelte
 <Action
@@ -284,21 +289,21 @@ When `action` is a `RemoteForm` (from `form()` in `data.remote.ts`), clicking th
 	class="btn-primary btn-sm"
 	modalTitle="Edit Item"
 	successToast="Updated"
-	onsuccess={() => invalidateAll()}
 >
-	{#snippet body({ close })}
+	{#snippet form()}
 		<FormField name="name" type="text" value={item.name} />
 		<FormField name="description" type="textarea" value={item.description} />
 	{/snippet}
 </Action>
 ```
 
-For `.for()` instances (per-row actions in a list):
+For `.for()` instances (per-row actions in a list). The row id has to travel with the submission, so include it as a hidden input matching the schema's field name:
 
 ```svelte
 {#each items as item (item.id)}
 	<Action action={updateItem.for(item.id)} label="Edit" modalTitle="Edit {item.name}" ...>
-		{#snippet body({ close })}
+		{#snippet form()}
+			<input type="hidden" name="id" value={item.id} />
 			<FormField name="name" type="text" value={item.name} />
 		{/snippet}
 	</Action>
@@ -307,12 +312,13 @@ For `.for()` instances (per-row actions in a list):
 
 ### Mode detection
 
-| `action` type | `body`  | `confirm` | Mode                |
-| ------------- | ------- | --------- | ------------------- |
-| callback      | —       | —         | Direct action       |
-| callback      | —       | string    | Confirmation dialog |
-| callback      | snippet | —         | Callback modal      |
-| RemoteForm    | snippet | —         | Form modal          |
+| `action` type | `body`  | `form`  | `confirm` | Mode                                |
+| ------------- | ------- | ------- | --------- | ----------------------------------- |
+| callback      | —       | —       | —         | Direct action                       |
+| callback      | —       | —       | string    | Confirmation dialog                 |
+| callback      | snippet | —       | —         | Callback modal                      |
+| RemoteForm    | —       | snippet | —         | Form modal                          |
+| RemoteForm    | snippet | —       | —         | ⚠️ broken — fields render unwrapped |
 
 ### Props
 
@@ -321,7 +327,8 @@ For `.for()` instances (per-row actions in a list):
 - `icon` — optional icon snippet on the trigger button
 - `confirm` — string message for the confirmation dialog (callback mode, no body)
 - `modalTitle` — title for the modal (callback modal and form modal modes)
-- `body` — snippet rendered inside the modal. Receives `{ close }` as params. In form-modal mode, wrapped in a `<Form>`. In callback mode, rendered as-is.
+- `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
+- `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
 - `maxWidth` — modal width class (default `'max-w-lg'`)

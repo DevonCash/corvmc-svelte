@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { variants, badgeClass } from './StatusBadge.svelte';
-import { equipmentStatuses, loanStatuses, inboxThreadStatuses } from '$lib/config';
+import {
+	equipmentStatuses,
+	loanStatuses,
+	inboxThreadStatuses,
+	volunteerHourStatuses
+} from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
@@ -41,6 +46,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	equipment: equipmentStatuses,
 	equipmentLoan: loanStatuses,
 	inboxThread: inboxThreadStatuses,
+	volunteerHour: volunteerHourStatuses,
 	...derivedStatuses
 };
 

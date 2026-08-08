@@ -44,6 +44,7 @@ as reality — reconcile deliberately.
 | [email-marketing-spec.md](specs/email-marketing-spec.md)               | ✅     | Audiences, campaigns, scheduled sends                                                                                       |
 | [finance-spec.md](specs/finance-spec.md)                               | ✅     | Stripe-first payments, credit wallets / ledger                                                                              |
 | [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md` |
+| [volunteering-spec.md](specs/volunteering-spec.md)                     | ✅     | Volunteer roles, member hour logging, staff approval queue, reporting; shifts + certifications designed, unbuilt            |
 
 ## plans
 

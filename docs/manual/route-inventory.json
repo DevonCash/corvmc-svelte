@@ -92,7 +92,15 @@
 		"panel": "public"
 	},
 	{
+		"route": "/donate",
+		"panel": "public"
+	},
+	{
 		"route": "/events",
+		"panel": "public"
+	},
+	{
+		"route": "/events/[id]",
 		"panel": "public"
 	},
 	{
@@ -101,6 +109,10 @@
 	},
 	{
 		"route": "/events/[id]/tickets/success",
+		"panel": "public"
+	},
+	{
+		"route": "/local-resources",
 		"panel": "public"
 	},
 	{
@@ -168,7 +180,19 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/reservations/[id]",
+		"panel": "member"
+	},
+	{
 		"route": "/member/reservations/[id]/pay",
+		"panel": "member"
+	},
+	{
+		"route": "/member/volunteer",
+		"panel": "member"
+	},
+	{
+		"route": "/membership",
 		"panel": "member"
 	},
 	{
@@ -221,6 +245,14 @@
 	},
 	{
 		"route": "/staff/events/[id]/check-in",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/flags",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/flags/[id]",
 		"panel": "staff"
 	},
 	{
@@ -297,6 +329,18 @@
 	},
 	{
 		"route": "/staff/users/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/report",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/roles",
 		"panel": "staff"
 	},
 	{

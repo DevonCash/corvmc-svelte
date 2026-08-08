@@ -20,7 +20,10 @@
 		IconBook,
 		IconLayoutDashboard,
 		IconInbox,
-		IconFlag
+		IconFlag,
+		IconHeartHandshake,
+		IconReportAnalytics,
+		IconListDetails
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -89,6 +92,20 @@
 				{#snippet icon()}<IconTool />{/snippet}
 				<Nav.Item href="/staff/equipment" label="Inventory">
 					{#snippet icon()}<IconPackage />{/snippet}
+				</Nav.Item>
+			</Nav.Collapsible>
+			<Nav.Collapsible
+				href="/staff/volunteer"
+				label="Volunteering"
+				childHrefs={['/staff/volunteer', '/staff/volunteer/roles', '/staff/volunteer/report']}
+				badge={layout.volunteerPending}
+			>
+				{#snippet icon()}<IconHeartHandshake />{/snippet}
+				<Nav.Item href="/staff/volunteer/roles" label="Roles">
+					{#snippet icon()}<IconListDetails />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/volunteer/report" label="Report">
+					{#snippet icon()}<IconReportAnalytics />{/snippet}
 				</Nav.Item>
 			</Nav.Collapsible>
 		</Nav.Group>
