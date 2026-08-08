@@ -21,7 +21,10 @@ schema anticipates them and nothing more.
 Approved volunteer hours are a record, not a currency. They do not grant
 practice-room credits and they never touch the finance ledger.
 
-The module ships behind a `volunteering` feature flag, default off.
+The module ships behind a `volunteering` feature flag, default off. Per #171 the
+flag gates the **member** surface only — the staff panel always shows
+volunteering, so staff can define roles and work the queue before it is switched
+on for everyone, and keep administering it if it is switched back off.
 
 ---
 
@@ -494,8 +497,9 @@ auth role is now unconditional.
 
 ### Integration points
 
-- **Feature flags** — `requireFeature('volunteering')` at the top of every remote
-  function. Nav visibility keys off `layout.features.volunteering`.
+- **Feature flags** — `requireFeature('volunteering')` at the top of every
+  **member** remote function, and on the member nav item. Staff remotes and the
+  staff nav deliberately omit it (#171).
 - **Notifications** — three new `NOTIFICATION_TYPES` and three listeners on the
   existing domain event bus. No new Postmark templates; the generic `notification`
   alias covers all three.
@@ -724,9 +728,10 @@ no in-app badge and honors no per-staff preference.
 - **Create, edit, archive, or delete roles**: staff.
 - **Read the report**: staff.
 
-No new auth roles or permissions. Every remote function guards with
-`requireFeature('volunteering')` and then `requireStaff()` or `requireUser()` —
-the remote function is the security boundary, not the layout.
+No new auth roles or permissions. Every remote function guards — the remote
+function is the security boundary, not the layout. Staff functions call
+`requireStaff()` alone; member functions call `requireFeature('volunteering')`
+and then `requireUser()`, because the flag gates the member surface only.
 
 ### On the existing `volunteer` auth role
 

@@ -54,11 +54,9 @@
 		<Nav.Item href="/staff" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
 		</Nav.Item>
-		{#if layout.features.staffInbox}
-			<Nav.Item href="/staff/inbox" label="Inbox" badge={layout.inboxUnread}>
-				{#snippet icon()}<IconInbox />{/snippet}
-			</Nav.Item>
-		{/if}
+		<Nav.Item href="/staff/inbox" label="Inbox" badge={layout.inboxUnread}>
+			{#snippet icon()}<IconInbox />{/snippet}
+		</Nav.Item>
 
 		<Nav.Group title="Operations">
 			<Nav.Item href="/staff/users" label="Users">
@@ -83,59 +81,49 @@
 			<Nav.Item href="/staff/bands" label="Bands">
 				{#snippet icon()}<IconMusic />{/snippet}
 			</Nav.Item>
-			{#if layout.features.contentFlags}
-				<Nav.Item href="/staff/flags" label="Content Flags">
-					{#snippet icon()}<IconFlag />{/snippet}
+			<Nav.Item href="/staff/flags" label="Content Flags">
+				{#snippet icon()}<IconFlag />{/snippet}
+			</Nav.Item>
+			<Nav.Collapsible
+				href="/staff/equipment/loans"
+				label="Equipment"
+				childHrefs={['/staff/equipment/loans', '/staff/equipment']}
+			>
+				{#snippet icon()}<IconTool />{/snippet}
+				<Nav.Item href="/staff/equipment" label="Inventory">
+					{#snippet icon()}<IconPackage />{/snippet}
 				</Nav.Item>
-			{/if}
-			{#if layout.features.equipment}
-				<Nav.Collapsible
-					href="/staff/equipment/loans"
-					label="Equipment"
-					childHrefs={['/staff/equipment/loans', '/staff/equipment']}
-				>
-					{#snippet icon()}<IconTool />{/snippet}
-					<Nav.Item href="/staff/equipment" label="Inventory">
-						{#snippet icon()}<IconPackage />{/snippet}
-					</Nav.Item>
-				</Nav.Collapsible>
-			{/if}
-			{#if layout.features.volunteering}
-				<Nav.Collapsible
-					href="/staff/volunteer"
-					label="Volunteering"
-					childHrefs={['/staff/volunteer', '/staff/volunteer/roles', '/staff/volunteer/report']}
-					badge={layout.volunteerPending}
-				>
-					{#snippet icon()}<IconHeartHandshake />{/snippet}
-					<Nav.Item href="/staff/volunteer/roles" label="Roles">
-						{#snippet icon()}<IconListDetails />{/snippet}
-					</Nav.Item>
-					<Nav.Item href="/staff/volunteer/report" label="Report">
-						{#snippet icon()}<IconReportAnalytics />{/snippet}
-					</Nav.Item>
-				</Nav.Collapsible>
-			{/if}
+			</Nav.Collapsible>
+			<Nav.Collapsible
+				href="/staff/volunteer"
+				label="Volunteering"
+				childHrefs={['/staff/volunteer', '/staff/volunteer/roles', '/staff/volunteer/report']}
+				badge={layout.volunteerPending}
+			>
+				{#snippet icon()}<IconHeartHandshake />{/snippet}
+				<Nav.Item href="/staff/volunteer/roles" label="Roles">
+					{#snippet icon()}<IconListDetails />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/volunteer/report" label="Report">
+					{#snippet icon()}<IconReportAnalytics />{/snippet}
+				</Nav.Item>
+			</Nav.Collapsible>
 		</Nav.Group>
 
-		{#if layout.features.emailMarketing}
-			<Nav.Group title="Marketing">
-				<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
-					{#snippet icon()}<IconMail />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/marketing/audiences" label="Audiences">
-					{#snippet icon()}<IconMailbox />{/snippet}
-				</Nav.Item>
-			</Nav.Group>
-		{/if}
+		<Nav.Group title="Marketing">
+			<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
+				{#snippet icon()}<IconMail />{/snippet}
+			</Nav.Item>
+			<Nav.Item href="/staff/marketing/audiences" label="Audiences">
+				{#snippet icon()}<IconMailbox />{/snippet}
+			</Nav.Item>
+		</Nav.Group>
 
-		{#if layout.features.helpArticles}
-			<Nav.Group title="Content">
-				<Nav.Item href="/staff/help" label="Help Articles">
-					{#snippet icon()}<IconBook />{/snippet}
-				</Nav.Item>
-			</Nav.Group>
-		{/if}
+		<Nav.Group title="Content">
+			<Nav.Item href="/staff/help" label="Help Articles">
+				{#snippet icon()}<IconBook />{/snippet}
+			</Nav.Item>
+		</Nav.Group>
 
 		<Nav.Group title="System">
 			<Nav.Item href="/staff/payments" label="Payments">

@@ -9,7 +9,8 @@
 		descriptionKey = 'email' as keyof T & string,
 		placeholder = 'Search by name or email...',
 		minChars = 2,
-		name
+		name,
+		onselect
 	}: {
 		search: (query: string) => Promise<T[]>;
 		value?: T | null;
@@ -18,6 +19,8 @@
 		placeholder?: string;
 		minChars?: number;
 		name?: string;
+		/** Fires when a result is picked, and with `null` when the choice is cleared. */
+		onselect?: (value: T | null) => void;
 	} = $props();
 
 	let query = $state('');
@@ -32,6 +35,7 @@
 			if (found) {
 				value = found;
 				query = '';
+				onselect?.(found);
 			}
 		}
 	});
@@ -39,6 +43,7 @@
 	function clear() {
 		value = null;
 		comboValue = [];
+		onselect?.(null);
 	}
 </script>
 

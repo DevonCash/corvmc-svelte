@@ -56,6 +56,11 @@ function asStatus(raw: string | undefined): VolunteerHourStatus | undefined {
 // ---------------------------------------------------------------------------
 // Queries — Staff
 // ---------------------------------------------------------------------------
+// Staff functions guard with requireStaff() and deliberately do NOT check the
+// feature flag: flags gate the member, band and public surfaces only, so staff
+// can set up roles and work the queue before volunteering is switched on for
+// everyone — and keep administering it if it is switched back off (#171).
+// The member functions below do check it.
 
 const staffLogFilters = z.object({
 	status: z.string().optional(),
@@ -67,7 +72,6 @@ const staffLogFilters = z.object({
 });
 
 export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 	return listHourLogs(
 		{
@@ -82,14 +86,12 @@ export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 });
 
 export const getVolunteerStatusCounts = query(async () => {
-	await requireFeature('volunteering');
 	await requireStaff();
 	return getStatusCounts();
 });
 
 /** Staff view of the role list — includes archived roles. */
 export const getVolunteerRoles = query(async () => {
-	await requireFeature('volunteering');
 	await requireStaff();
 	return listVolunteerRoles({ includeInactive: true });
 });
@@ -100,7 +102,6 @@ const reportRange = z.object({
 });
 
 export const getVolunteerReport = query(reportRange, async (range) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 
 	const [totals, byRole, byMonth] = await Promise.all([
@@ -115,7 +116,6 @@ export const getVolunteerReport = query(reportRange, async (range) => {
 export const getVolunteerReportByMember = query(
 	reportRange.extend({ page: z.number().optional() }),
 	async (r) => {
-		await requireFeature('volunteering');
 		await requireStaff();
 		return getHoursByMember({ from: r.from, to: r.to }, { page: r.page ?? 1, pageSize: 50 });
 	}
@@ -238,7 +238,6 @@ export const approveVolunteerHours = form(
 		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional()
 	}),
 	async (data) => {
-		await requireFeature('volunteering');
 		const staff = await requireStaff();
 
 		try {
@@ -261,7 +260,6 @@ export const rejectVolunteerHours = form(
 			.max(VOLUNTEER_REVIEW_NOTES_MAX, `Keep this under ${VOLUNTEER_REVIEW_NOTES_MAX} characters`)
 	}),
 	async (data) => {
-		await requireFeature('volunteering');
 		const staff = await requireStaff();
 
 		try {
@@ -296,7 +294,6 @@ const roleFormSchema = z.object({
 });
 
 export const createVolunteerRole = form(roleFormSchema, async (data) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 
 	try {
@@ -318,7 +315,6 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 export const updateVolunteerRole = form(
 	roleFormSchema.extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireFeature('volunteering');
 		await requireStaff();
 
 		try {
@@ -338,7 +334,6 @@ export const updateVolunteerRole = form(
 );
 
 export const archiveVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 
 	try {
@@ -352,7 +347,6 @@ export const archiveVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 
 	try {
@@ -366,7 +360,6 @@ export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	await requireStaff();
 
 	try {

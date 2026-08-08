@@ -145,6 +145,27 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
   targeting `button[data-button-root]`.
 - **`content_flag` missing from `scripts/d1-table-order.mjs`.**
 
+## Post-merge with main (Aug 8)
+
+Merged `origin/main` (4 commits). Two of them changed things this module had
+already assumed:
+
+- **#171 made the staff panel flag-independent** — flags now gate the member,
+  band and public surfaces only, so staff can run a feature before it is switched
+  on. Applied here: dropped `requireFeature('volunteering')` from all 12
+  staff-side remotes (6 member-side ones keep it), removed the flag gate from the
+  staff nav, and made `volunteerPending` always compute. The member nav and member
+  remotes are unchanged.
+- **#175 fixed the nested-button defect** this module reported, so icon-only
+  actions are no longer a `<button>` inside a `<button>`. The e2e selectors target
+  `button[data-button-root]`, which works either way.
+- **#174 added `content_flag` to `d1-table-order.mjs`** — the other issue this
+  module filed. Merged alongside `volunteer_role` / `volunteer_hour_log`.
+
+Conflicts resolved in `staff/+layout.svelte`, `layout.remote.ts`,
+`d1-table-order.mjs` and `Action.svelte` (main's phrasing of the `.for()` type
+comment kept; the widened type was already identical).
+
 ## Step 9 — Commit
 
 - [x] "Add volunteer roles and hour logging with a staff approval queue and report."

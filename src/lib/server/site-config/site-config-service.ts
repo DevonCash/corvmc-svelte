@@ -38,7 +38,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'integration.utec.deviceId': '',
 	'integration.utec.refreshToken': '',
 
-	'feature.staffInbox': true,
+	// Flags gate the member, band and public surfaces only — the staff panel
+	// always shows every feature — so they all start off.
+	'feature.staffInbox': false,
 	'feature.bandPremium': false,
 	'feature.bandReservations': false,
 	'feature.bandEvents': false,

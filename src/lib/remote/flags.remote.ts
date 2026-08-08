@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireFeature, isFeatureEnabled } from '$lib/server/feature-flags';
@@ -29,7 +29,6 @@ const flagFiltersSchema = z.object({
 });
 
 export const getFlagsQueue = query(flagFiltersSchema, async (filters) => {
-	await requireFeature('contentFlags');
 	await requireStaff();
 	return listFlags(
 		{ status: filters.status, search: filters.search },
@@ -38,7 +37,6 @@ export const getFlagsQueue = query(flagFiltersSchema, async (filters) => {
 });
 
 export const getFlagDetail = query(z.string(), async (flagId) => {
-	await requireFeature('contentFlags');
 	await requireStaff();
 	try {
 		return await getFlag(flagId);
@@ -60,7 +58,6 @@ const resolveSchema = z.object({
 });
 
 export const resolveFlag = form(resolveSchema, async (data) => {
-	await requireFeature('contentFlags');
 	const staff = await requireStaff();
 	try {
 		await resolveFlagSvc(data.flagId, {
@@ -74,8 +71,11 @@ export const resolveFlag = form(resolveSchema, async (data) => {
 		if (err instanceof FlagAlreadyResolvedError) error(409, err.message);
 		throw err;
 	}
+	// Only the detail query is refreshed here. The queue is keyed by its filter
+	// args — `getFlagsQueue({})` is not the entry the list page holds, so that
+	// call refreshed nothing. The list re-queries on its own when staff navigate
+	// back to it, since its cached value is released once it unmounts.
 	void getFlagDetail(data.flagId).refresh();
-	void getFlagsQueue({}).refresh();
 	return { success: true };
 });
 
@@ -125,8 +125,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	const { request, locals } = getRequestEvent();
 	const ip = request.headers.get('CF-Connecting-IP');
 	if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-		issue.turnstileToken('Verification failed. Please try again.');
-		return;
+		invalid(issue.turnstileToken('Verification failed. Please try again.'));
 	}
 
 	// Only publicly visible events are reportable — mirrors getPublicEventDetail

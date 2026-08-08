@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import {
 		searchMembers,
+		searchBands,
 		getStaffSlots,
 		checkConflicts,
 		createReservation
@@ -15,7 +16,15 @@
 
 	const { fields } = createReservation;
 
+	let bookerType = $state<'user' | 'band'>('user');
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);
+	let selectedBand = $state<{
+		id: string;
+		name: string;
+		ownerId: string;
+		ownerName: string;
+		ownerEmail: string;
+	} | null>(null);
 	let date = $state(new Date().toISOString().split('T')[0]);
 	let startTime = $state('');
 	let endTime = $state('');
@@ -68,8 +77,18 @@
 			.padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
 	}
 
+	// Picking a band fills the member field with its owner — a band booking still
+	// needs a person, since free hours and cash settle against them.
+	function onBandSelected(b: typeof selectedBand) {
+		if (b && !selectedMember) {
+			selectedMember = { id: b.ownerId, name: b.ownerName, email: b.ownerEmail };
+		}
+	}
+
 	function resetForm() {
+		bookerType = 'user';
 		selectedMember = null;
+		selectedBand = null;
 		date = new Date().toISOString().split('T')[0];
 		startTime = '';
 		endTime = '';
@@ -94,11 +113,37 @@
 	{#snippet form()}
 		<svelte:boundary>
 			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
+			<input
+				{...fields.bandId.as('hidden', bookerType === 'band' ? (selectedBand?.id ?? '') : '')}
+			/>
 			<input {...fields.startTime.as('hidden', startTime)} />
 			<input {...fields.endTime.as('hidden', endTime)} />
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Member</legend>
+				<legend class="fieldset-legend">Booking for</legend>
+				<Select bind:value={bookerType} class="select-bordered w-full">
+					<option value="user">A member</option>
+					<option value="band">A band</option>
+				</Select>
+			</fieldset>
+
+			{#if bookerType === 'band'}
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend">Band</legend>
+					<SearchSelect
+						search={searchBands}
+						bind:value={selectedBand}
+						descriptionKey="ownerName"
+						placeholder="Search bands by name..."
+						onselect={onBandSelected}
+					/>
+				</fieldset>
+			{/if}
+
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">
+					{bookerType === 'band' ? 'Booked by' : 'Member'}
+				</legend>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={selectedMember}

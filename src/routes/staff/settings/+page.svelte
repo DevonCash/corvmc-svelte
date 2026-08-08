@@ -792,8 +792,9 @@
 			</Form>
 		{:else if activeTab === 'features'}
 			<p class="text-sm opacity-70">
-				Enable or disable feature modules. Disabled features are hidden from navigation and return
-				404 if accessed directly. Use this to control which features are available in production.
+				Enable or disable feature modules for members, bands and the public site. Disabled features
+				are hidden from member navigation and return 404 if accessed directly. The staff panel
+				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
 
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}

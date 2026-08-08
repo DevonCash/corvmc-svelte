@@ -24,9 +24,13 @@ import {
 	deleteBand as deleteBandService,
 	deactivate,
 	reactivate,
+	setTier,
 	setBandAvatar,
-	clearBandAvatar
+	clearBandAvatar,
+	BandNotFoundError,
+	BandTierManagedByStripeError
 } from '$lib/server/band/band-service';
+import { bandTiers } from '$lib/server/db/schema/band';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
@@ -47,6 +51,7 @@ import {
 const staffBandsFilters = z.object({
 	search: z.string().optional(),
 	status: z.enum(['active', 'deactivated']).optional(),
+	tier: z.enum(bandTiers).optional(),
 	page: z.number().optional()
 });
 
@@ -55,7 +60,8 @@ export const getStaffBands = query(staffBandsFilters, async (filters) => {
 	return listAll(
 		{
 			search: filters.search || undefined,
-			status: filters.status || undefined
+			status: filters.status || undefined,
+			tier: filters.tier || undefined
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
@@ -249,6 +255,26 @@ export const reactivateBand = form(
 	async (data) => {
 		await requireStaff();
 		await reactivate(data.id);
+		return { success: true };
+	}
+);
+
+/** Staff comp/revoke of premium. Stripe-backed bands are refused by the service. */
+export const setBandTier = form(
+	z.object({
+		id: z.string().min(1),
+		tier: z.enum(bandTiers)
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await setTier(data.id, data.tier);
+		} catch (err) {
+			if (err instanceof BandNotFoundError) error(404, err.message);
+			if (err instanceof BandTierManagedByStripeError) error(409, err.message);
+			throw err;
+		}
+		void getStaffBand(data.id).refresh();
 		return { success: true };
 	}
 );

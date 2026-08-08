@@ -30,7 +30,7 @@ The Svelte app is not a 1:1 port. Key architectural shifts:
 | Bands                      | BandResource (via tenancy)           | ✅ /staff/bands                                                      | List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Email marketing            | — (new)                              | ✅ Immediate send                                                    | Audiences, campaigns (draft/send-now), markdown editor with live preview, broadcast via Postmark. Per-audience opt-out + global suppression (Postmark bounce/complaint webhook → `subscriber.suppressedAt`) + one-click `List-Unsubscribe`. Scheduled send built but deferred (UI hidden); the `send-campaigns` cron trigger now exists, so un-hiding the UI is the remaining step.                                                                                                                              |
 | Equipment                  | Equipment resource                   | ✅ Full flow                                                         | Catalog, categories, loans (request/schedule/checkout/return/cancel), equipment credits, seed data                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Volunteering               | VolunteerReportPage, PendingHourLogs | ✅ /staff/volunteer, /staff/volunteer/roles, /staff/volunteer/report | Phase 1: staff-defined volunteer roles with job descriptions, an hour-log approval queue, and a date-ranged report by member/role/month. Behind the `volunteering` flag. Phase 2 (shifts + sign-up) designed in `docs/specs/volunteering-spec.md`, not built                                                                                                                                                                                                                                                     |
+| Volunteering               | VolunteerReportPage, PendingHourLogs | ✅ /staff/volunteer, /staff/volunteer/roles, /staff/volunteer/report | Phase 1: staff-defined volunteer roles with job descriptions, an hour-log approval queue, and a date-ranged report by member/role/month. Staff surface always on; the `volunteering` flag gates the member side. Phase 2 (shifts + sign-up) designed in `docs/specs/volunteering-spec.md`, not built                                                                                                                                                                                                             |
 | Sponsors                   | Sponsors resource                    | —                                                                    | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Site pages / CMS           | SitePages with block builder         | —                                                                    | Not started                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Venues                     | Venues resource                      | 📋 Spec'd                                                            | Design only — `venue` table (CMC room + external venues, capacity, contact, load-in notes, backline) plus `event.venueId` alongside the existing free-text `event.location`. Specified as part of Productions; see `docs/specs/production-workflow-spec.md`                                                                                                                                                                                                                                                      |
@@ -240,20 +240,44 @@ Chosen libraries for platform concerns. Preference is for small, focused package
 
 ## Feature flags
 
-Features that exist in the Svelte app but not in the Laravel production app are gated behind KV-backed feature flags. All flags default to **off** and can be toggled from Staff Settings > Features.
+Features that exist in the Svelte app but not in the Laravel production app are gated behind
+KV-backed feature flags. All flags default to **off** and can be toggled from Staff Settings >
+Features.
 
-| Flag               | Feature                                       | Routes gated                                                             |
+**Flags gate the member, band and public surfaces only — the staff panel always shows every
+feature.** Staff can set a feature up (configure channels, comp a band, stage help articles,
+draft a campaign) before it is switched on for everyone else, and can keep administering it if
+it is switched back off.
+
+| Flag               | Feature                                       | Gated for members/bands/public                                           |
 | ------------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
-| `staffInbox`       | Multi-channel unified inbox                   | `/staff/inbox/**`, `/api/inbox/postmark`, `/api/inbox/twilio`            |
+| `staffInbox`       | Multi-channel unified inbox                   | Nothing member-facing; the public contact form is always live            |
 | `bandPremium`      | Premium tier, page editor, EPK, band sites    | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` |
 | `bandReservations` | Band-context practice-space booking           | `/band/[slug]/reservations/**`                                           |
-| `bandEvents`       | Band-managed events                           | `/band/[slug]/events/**`                                                 |
-| `emailMarketing`   | Audiences, campaigns, broadcasts              | `/staff/marketing/**`, `/subscribe/[slug]`, `/api/cron/send-campaigns`   |
-| `equipment`        | Equipment catalog, loans, credits             | `/staff/equipment/**`, `/member/equipment/**`                            |
-| `helpArticles`     | Help center for staff and members             | `/staff/help/**`, `/member/help/**`, `/api/help/**`                      |
+| `bandEvents`       | Band-managed events                           | `/band/[slug]/events/**`, band rows in the public gig guide              |
+| `emailMarketing`   | Audiences, campaigns, broadcasts              | `/subscribe/[slug]`, `/api/cron/send-campaigns`, Postmark event webhook  |
+| `equipment`        | Equipment catalog, loans, credits             | `/member/equipment/**`                                                   |
+| `helpArticles`     | Help center for members                       | `/member/help/**`, `/api/help/**`                                        |
+| `contentFlags`     | Member/public reporting of profiles + events  | Report actions on directory profiles and `/events/[id]`                  |
 | `productions`      | Show productions + venues (spec'd, not built) | `/staff/productions/**`, `/staff/venues/**`                              |
 
-Implementation: `src/lib/server/feature-flags.ts` reads `feature.*` keys from the site config KV store. Navigation items are conditionally rendered in panel layouts. Route data queries call `requireFeature()` which throws 404 when disabled.
+Implementation: `src/lib/server/feature-flags.ts` reads `feature.*` keys from the site config KV
+store. Member and band layouts render nav items conditionally; the staff layout does not. Member
+and public remote functions call `requireFeature()`, which throws 404 when disabled — staff
+queries and forms are guarded by `requireStaff()` alone.
+
+### Staff administration of each flagged feature
+
+| Feature           | Staff surface                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Inbox             | `/staff/inbox` work queue + channel config in Staff Settings; ingestion endpoints are never flag-gated                                                 |
+| Band premium      | Tier badge, Stripe/comped distinction, and comp/revoke on `/staff/bands/[id]`; tier column + filter on the list                                        |
+| Band reservations | Band-booked rows render with the band name and a music icon, are searchable by band, filterable by booker type, and staff can book on a band's behalf  |
+| Band events       | Source column + filter on `/staff/events`, band attribution on the detail page, staff-editable venue and ticket URL, band admins notified on unpublish |
+| Email marketing   | Audiences, campaigns, and scheduled sends (`Schedule` on new/edit, `Unschedule` on detail)                                                             |
+| Equipment         | Inventory incl. deactivated gear, categories, and the full loan lifecycle with a working equipment picker                                              |
+| Help articles     | Article CRUD, category edit, and bulk publish for the drafts `pnpm help:sync` imports                                                                  |
+| Content flags     | `/staff/flags` triage queue with resolve/dismiss and optional event unpublish                                                                          |
 
 ## Suggested build order
 
@@ -266,7 +290,7 @@ Features are grouped by dependency. The notification system is foundational — 
 5. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
 6. ~~**Equipment module**~~ — ✅ Complete. Three tables (equipment_category, equipment, equipment_loan). Staff catalog + category management, loan lifecycle (request/schedule/checkout/return/cancel), member catalog browsing + loan requests (specific + free-form), equipment credits (1:1 with subscription, deducted on return), pricing tiers (major $5/day, accessory $1/day, sustaining members get free accessories).
 7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
-8. ~~**Volunteering module**~~ — ✅ Phase 1 complete. Two tables (`volunteer_role`, `volunteer_hour_log`). Staff-managed roles with markdown job descriptions, member hour submission, staff approval queue, and a date-ranged report by member/role/month. Approved hours are tracking only — no credit tie-in, with a test enforcing it. Behind the `volunteering` flag. Phase 2 (opportunities/shifts, member sign-up, per-event staffing, the daily shift-reminder cron) is designed in `docs/specs/volunteering-spec.md` but not built.
+8. ~~**Volunteering module**~~ — ✅ Phase 1 complete. Two tables (`volunteer_role`, `volunteer_hour_log`). Staff-managed roles with markdown job descriptions, member hour submission, staff approval queue, and a date-ranged report by member/role/month. Approved hours are tracking only — no credit tie-in, with a test enforcing it. The `volunteering` flag gates the member surface only. Phase 2 (opportunities/shifts, member sign-up, per-event staffing, the daily shift-reminder cron) is designed in `docs/specs/volunteering-spec.md` but not built.
 9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
 10. **Productions + venues** — 📋 Designed, not built. Five tables, staff-only, behind the `productions` flag. Unifies four IDEAS.md entries (Booking Request Pipeline, Tech Rider Management, Event Settlement, Venues) into one workflow from booking through cleanup. Spec: `docs/specs/production-workflow-spec.md`.
 11. **Everything else** — Sponsors, CMS, kiosk, activity log, reports, bylaws.

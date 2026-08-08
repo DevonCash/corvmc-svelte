@@ -45,9 +45,8 @@
 		...rest
 	}: {
 		/**
-		 * `Omit<…, 'for'>` is what `someForm.for(id)` returns. Per-row actions in a
-		 * list are the documented use, but the narrower `RemoteForm` type rejected
-		 * them — this is the same object minus a method `Action` never calls.
+		 * A remote form, one of its `.for(id)` instances (which drops `for` from
+		 * the type), or a plain async callback.
 		 */
 		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		label?: string;

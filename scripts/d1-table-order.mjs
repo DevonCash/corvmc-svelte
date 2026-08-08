@@ -43,6 +43,7 @@ export const tableOrder = [
 	'band_member',
 	'payment_cache',
 	'ticket',
+	'event_rsvp',
 	'platform_invite',
 	'credit_transaction',
 	'help_articles',
@@ -50,5 +51,6 @@ export const tableOrder = [
 	'band_page_config',
 	'inbox_message',
 	'inbox_note',
+	'content_flag',
 	'volunteer_hour_log'
 ];

@@ -279,6 +279,20 @@ export async function updateArticle(id: string, data: Partial<CreateArticleData>
 	return article;
 }
 
+/**
+ * Bulk publish/unpublish. `pnpm help:sync` deliberately lands the ~67 markdown
+ * articles as drafts for staff review, and one-at-a-time publishing is the
+ * thing that keeps the help centre empty after a sync.
+ */
+export async function setArticlesPublished(ids: string[], published: boolean) {
+	if (ids.length === 0) return 0;
+	await db
+		.update(helpArticle)
+		.set({ published, updatedAt: new Date() })
+		.where(inArray(helpArticle.id, ids));
+	return ids.length;
+}
+
 export async function deleteArticle(id: string) {
 	await db.delete(helpArticle).where(eq(helpArticle.id, id));
 }
