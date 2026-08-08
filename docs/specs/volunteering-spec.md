@@ -13,9 +13,10 @@ logs, approving or rejecting each one, and a report rolls the approved hours up
 by member, by role, and by month over any date range.
 
 Phase 1 is roles and hour logging: retrospective, member-initiated,
-staff-approved. Phase 2 — volunteer opportunities and shifts, member sign-up,
-per-event staffing needs — is designed here but **not built**. The Phase 1
-schema anticipates it and nothing more.
+staff-approved. Two further pieces are designed here but **not built** — Phase 2
+(volunteer opportunities and shifts, member sign-up, per-event staffing) and
+certifications (who is cleared for what, and when that lapses). The Phase 1
+schema anticipates them and nothing more.
 
 Approved volunteer hours are a record, not a currency. They do not grant
 practice-room credits and they never touch the finance ledger.
@@ -246,13 +247,12 @@ What connects it to Phase 1:
 
 - `volunteer_hour_log.shiftId` becomes a real FK. A completed shift pre-fills an
   hour log — the member confirms rather than composes — and a log filed against a
-  a shift can be approved with less scrutiny because staff already scheduled it.
-- `volunteer_role` grows the fields only shifts need: default duration, default
-  capacity, and whether the role requires training before someone may claim it
-  unsupervised.
-- The **auth** `volunteer` role finally gets a meaning, if we want one: "cleared
-  to claim shifts unsupervised." That is the single scenario that would justify
-  keeping it (see Permissions).
+  shift can be approved with less scrutiny because staff already scheduled it.
+- `volunteer_role` grows the fields only shifts need: default duration and
+  default capacity. "Requires training" is **not** one of them — that is what
+  certifications express, and it is where shift-claiming gets gated.
+- Certifications stop being advisory and start gating: a member may only claim a
+  shift for a role whose required certifications they currently hold.
 - The daily 09:00 shift-reminder cron from the Laravel app
   (`docs/reports/parity-report.md`) becomes buildable. It is deferred until then
   because Phase 1 has nothing to remind anyone about.
@@ -261,6 +261,180 @@ What connects it to Phase 1:
 
 Not decided: whether shifts recur (the `recurring_series` prototype pattern would
 apply), and whether members can propose a shift or only claim one.
+
+---
+
+## Certifications
+
+**None of this is built either.** It is a sibling of Phase 2 rather than part of
+it: certifications are useful on their own — they answer "who can run the desk?"
+without any shift scheduling — but they are also what Phase 2 checks before
+letting someone claim a shift. Either can be built first; building
+certifications first is the smaller piece and makes Phase 2 smaller in turn.
+
+Some volunteer work needs clearance before someone does it alone. Two different
+things wear that name and the model has to hold both:
+
+- **Internal clearances** the collective grants itself — "cleared on the sound
+  desk", "holds a door code". No issuer, usually no expiry.
+- **External cards** a member brings — Food Handler, First Aid/CPR, OLCC alcohol
+  service. Issued by somebody else, carry a number, and _lapse_.
+
+### Key concepts
+
+**A certification is a thing, not a property of a role.** First Aid is not a
+volunteer role and never will be, and one clearance frequently covers several
+roles — sound desk clearance applies to Sound Engineering and to Load-Out. So
+certifications live in their own catalog and roles _reference_ them, rather than
+each role carrying a `requiresTraining` flag. The alternative was considered and
+rejected: it has nowhere to put First Aid, and forces training that clears two
+roles to be recorded twice.
+
+**Held certifications are append-only, not overwritten on renewal.** A renewal
+writes a new row. This is not tidiness — it is the only way to answer the
+question that actually gets asked after an incident: _was their First Aid current
+on the day they worked that shift?_ Overwriting the grant date destroys exactly
+that. "Does this member hold X **now**" is the most recent row by `grantedAt`.
+
+**Expiry is derived from dates, never stored as a status.** A `status` column
+saying `expired` is wrong the moment the clock passes midnight, and keeping it
+right needs a cron whose only job is to age rows. Current / expiring soon /
+expired is computed from `expiresAt` against today in club time, the same way
+the rest of this module compares dates.
+
+**`expiresAt` is stamped at grant time, not computed on read.** It is derived
+from the catalog's `validityMonths` when the record is created and then stored.
+Computing it live would mean that editing "Food Handler: 3 years" to 2 years
+retroactively expires cards that were validly issued for three.
+
+**Certifications are advisory in Phase 1 and never block logging hours.** Someone
+who did the work should be able to record it; refusing the hours does not un-do
+the work, it just loses the data. The staff review queue flags a log whose role
+requires a certification the member did not hold **on the date worked** — which
+is a prompt to have a conversation, not a rejection. Gating belongs at
+shift-claiming, where it prevents something.
+
+### Domain model
+
+#### Certification
+
+The catalog. Staff-managed, same shape and rules as a volunteer role.
+
+```
+volunteer_certification
+  id              uuid pk
+  name            text unique   — "Sound Desk Cleared", "Food Handler"
+  description     text?         — markdown: what it covers, how to get it
+  issuedBy        text?         — null = internal to CMC; "Oregon Health Authority" etc.
+  validityMonths  integer?      — null = does not expire
+  displayOrder    integer
+  isActive        boolean       — archived; hidden from the grant form only
+  createdAt       timestamp
+  updatedAt       timestamp
+```
+
+#### Held certification
+
+One member holding one certification, once. Renewals append.
+
+```
+member_certification
+  id                uuid pk
+  userId            uuid fk → user                     cascade
+  certificationId   uuid fk → volunteer_certification  restrict
+  grantedAt         timestamp   — calendar date, noon club time
+  expiresAt         timestamp?  — stamped from validityMonths at grant; null = never
+  grantedByUserId   uuid? fk → user                    set null
+  reference         text?       — external card or licence number
+  notes             text?
+  createdAt         timestamp
+  updatedAt         timestamp
+```
+
+No unique constraint on `(userId, certificationId)` — that is the append-only
+decision made structural.
+
+#### Role requirement
+
+```
+volunteer_role_certification
+  volunteerRoleId   uuid fk → volunteer_role           cascade
+  certificationId   uuid fk → volunteer_certification  cascade
+  primary key (volunteerRoleId, certificationId)
+```
+
+Cascade on both sides: this row is a link, not a record of anything that
+happened, so deleting either end should take it. That is the difference from
+`member_certification`, which restricts — a held certification is history.
+
+Three tables, taking the app from 31 to 34.
+
+### Derived state
+
+| State             | Condition                                                              |
+| ----------------- | ---------------------------------------------------------------------- |
+| **current**       | `grantedAt <= today` and (`expiresAt` is null or `expiresAt >= today`) |
+| **expiring soon** | current, and `expiresAt` within `CERT_EXPIRY_WARNING_DAYS` (60)        |
+| **expired**       | `expiresAt < today`                                                    |
+| **never held**    | no row                                                                 |
+
+All comparisons against today in club time, via `clubToday()` — the same rule
+that keeps same-day hour logging working.
+
+"Was this member cleared on a given date" is the same predicate with `today`
+swapped for the date worked. That query is the whole reason for the shape.
+
+### Staff UI
+
+- **`/staff/volunteer/certifications`** — the catalog, mirroring
+  `/staff/volunteer/roles` exactly: table, create/edit modals, archive rather
+  than delete, and delete offered only for an entry nothing references. Editing
+  `validityMonths` warns that it applies to future grants only.
+- **Role editing** gains a required-certifications multi-select (`TagInput`).
+- **Member detail** gains a Certifications card: what they hold, when granted,
+  when it expires, who granted it, and a Grant action. Revoking is a delete —
+  a certification granted in error is not history worth keeping, unlike one that
+  lapsed.
+- **The review queue** shows a warning glyph on a log whose role required a
+  certification the member did not hold on the date worked. Advisory only.
+- **A "clearances" view** — who is current, who is expiring, who has lapsed —
+  is the natural companion to the hours report. Worth building with the catalog
+  rather than after it.
+
+### Member UI
+
+`/member/volunteer` gains a Certifications block: what you hold, what expires
+when, and — for a role you are not cleared for — what the role requires and how
+to get it (the catalog's markdown description is where that copy lives). This is
+the part that turns the page from a form into something worth opening.
+
+### Permissions
+
+- **Grant, edit, revoke a member's certification**: staff.
+- **Manage the catalog and role requirements**: staff.
+- **See your own certifications**: any member.
+- **See anyone's**: staff.
+
+No new auth roles — and this is what finally closes the question about the old
+one. The single scenario that would have justified keeping the dead `volunteer`
+auth role was expressing "cleared to claim shifts unsupervised". A certification
+expresses that strictly better: it is per-role rather than global, it records
+who cleared them and when, and it can lapse. The recommendation to delete the
+auth role is now unconditional.
+
+### Deferred within certifications
+
+- **Expiry reminders.** A daily cron mailing members whose card lapses inside
+  the warning window, and staff a digest. Wants a `volunteer_certification_expiring`
+  notification type. Deferred because it is only worth building once real expiry
+  dates are in the table — and it should be folded into the Phase 2 shift-reminder
+  cron rather than shipping a second daily job.
+- **Evidence upload.** Photographing a Food Handler card. Needs the media work
+  in the parity report's enhancements section; `reference` carries the number in
+  the meantime.
+- **Self-service claims.** A member asserting they hold a card, pending staff
+  verification. Phase 1 of this is staff-entered only, which is the honest
+  default for something that gates work.
 
 ---
 
@@ -296,7 +470,8 @@ apply), and whether members can propose a shift or only claim one.
 
 ## Schema
 
-Two new tables, taking the app from 29 to 31.
+Two new tables, taking the app from 29 to 31. The certification tables below are
+designed, not created — see [Certifications, unbuilt](#certifications).
 
 ### volunteer_role
 
@@ -346,6 +521,53 @@ hard account purge should take it, matching `equipment_loan.user_id`.
 `reviewed_by_user_id` is set-null, matching `content_flag.resolved_by_user_id` —
 a departed staffer must not delete the review. `volunteer_role_id` restricts,
 because reports depend on it resolving.
+
+### Certification tables (designed, not created)
+
+```sql
+CREATE TABLE volunteer_certification (
+  id               TEXT PRIMARY KEY,
+  name             TEXT NOT NULL UNIQUE,
+  description      TEXT,
+  issued_by        TEXT,
+  validity_months  INTEGER,
+  display_order    INTEGER NOT NULL DEFAULT 0,
+  is_active        INTEGER NOT NULL DEFAULT 1,
+  created_at       INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at       INTEGER NOT NULL DEFAULT (unixepoch()),
+  CONSTRAINT validity_months_positive CHECK (validity_months IS NULL OR validity_months > 0)
+);
+
+CREATE TABLE member_certification (
+  id                 TEXT PRIMARY KEY,
+  user_id            TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  certification_id   TEXT NOT NULL REFERENCES volunteer_certification(id) ON DELETE RESTRICT,
+  granted_at         INTEGER NOT NULL,
+  expires_at         INTEGER,
+  granted_by_user_id TEXT REFERENCES user(id) ON DELETE SET NULL,
+  reference          TEXT,
+  notes              TEXT,
+  created_at         INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at         INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE TABLE volunteer_role_certification (
+  volunteer_role_id TEXT NOT NULL REFERENCES volunteer_role(id) ON DELETE CASCADE,
+  certification_id  TEXT NOT NULL REFERENCES volunteer_certification(id) ON DELETE CASCADE,
+  PRIMARY KEY (volunteer_role_id, certification_id)
+);
+
+-- "what does this member currently hold", the query every screen runs
+CREATE INDEX member_certification_user_idx ON member_certification(user_id, certification_id, granted_at);
+-- the expiring-soon sweep and the future reminder cron
+CREATE INDEX member_certification_expiry_idx ON member_certification(expires_at)
+  WHERE expires_at IS NOT NULL;
+```
+
+Deliberately **no** unique constraint on `(user_id, certification_id)`: renewals
+append, and a unique index would forbid exactly the history the model exists to
+keep. `granted_at` is the third column of the user index so "most recent grant"
+is an index scan rather than a sort.
 
 Enum tuples and limits live in `src/lib/config.ts`, not the schema file, so
 Svelte pages can import them — `flag.ts` declared its tuples inline and
@@ -477,9 +699,11 @@ This module does not revive it, and recommends deleting it:
   range — true by construction, where a hand-assigned flag goes stale the moment
   someone stops showing up.
 
-The one case that would justify keeping it is the Phase 2 "cleared to claim
-shifts unsupervised" meaning. Deletion is left out of this change set so it can
-be decided on its own terms.
+The one case that would have justified keeping it — "cleared to claim shifts
+unsupervised" — is answered better by a certification, which is per-role, dated,
+attributable, and able to lapse. Nothing is left arguing for the auth role.
+Deletion is still left out of this change set so it can be done on its own
+terms, but it is no longer a question of _whether_.
 
 ---
 
@@ -516,6 +740,8 @@ be decided on its own terms.
 
 - **Opportunities, shifts, and sign-up** — the whole of Phase 2, above. This is
   the bulk of the original IDEAS.md entry.
+- **Certifications** — designed above. The smaller of the two unbuilt pieces,
+  and it makes Phase 2 smaller, so it is the better one to build next.
 - **The daily 09:00 shift-reminder cron** — nothing to remind about until shifts
   exist.
 - **Per-event and per-production staffing** — `production-workflow-spec.md`'s
@@ -547,3 +773,19 @@ be decided on its own terms.
    rest of the seeded set is inferred venue ops. Unlike an enum this is now
    trivially editable in the UI, so the cost of being wrong is a few minutes of
    typing — but it is worth a look from whoever actually schedules volunteers.
+3. **Which certifications does CMC actually track?** The catalog is staff-editable
+   so this is not a schema question, but it decides whether the model is even
+   pointed the right way. Internal sound-desk clearance is near-certain. What is
+   unknown: whether the space serves food or alcohol (Food Handler / OLCC), and
+   whether anyone is expected to hold First Aid during shows. If the answer is
+   "sound desk only, nothing expires", the `issuedBy` / `validityMonths` /
+   `reference` columns are dead weight and the simpler role-attached model would
+   have been right after all.
+4. **Revoking is a hard delete — is that right?** A certification granted by
+   mistake is not history. But a certification _withdrawn_ for cause — someone
+   lost their clearance — is exactly the history you would want, and deleting it
+   looks identical. If withdrawal-for-cause is a real scenario here, this needs
+   a `revokedAt` + reason instead, which changes "does this member hold X now"
+   from "latest row" to "latest row that is not revoked".
+5. **`CERT_EXPIRY_WARNING_DAYS = 60`** is a guess, and it only matters once the
+   reminder cron exists.

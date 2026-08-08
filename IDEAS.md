@@ -14,7 +14,7 @@ A public-facing directory of local music-related businesses and spaces — recor
 
 Manage volunteer sign-ups, shift scheduling, and hour tracking for events and venue operations. Members could browse open volunteer slots, sign up, and log hours. Staff get a dashboard to define needs per event, confirm sign-ups, and track contributions.
 
-**Progress:** Split into two phases in `docs/specs/volunteering-spec.md`. Phase 1 — staff-defined volunteer roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month — is built behind the `volunteering` flag. Phase 2 — opportunities and shifts, member sign-up, per-event and per-production staffing, and the daily shift-reminder cron — is designed there but deferred. Approved hours are tracking only; they grant no practice-room credits.
+**Progress:** Split into two phases in `docs/specs/volunteering-spec.md`. Phase 1 — staff-defined volunteer roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month — is built behind the `volunteering` flag. Phase 2 — opportunities and shifts, member sign-up, per-event and per-production staffing, and the daily shift-reminder cron — is designed there but deferred, as are certifications (who is cleared for which role, and when that lapses). Approved hours are tracking only; they grant no practice-room credits.
 
 ### Member Voting / Proposals
 
