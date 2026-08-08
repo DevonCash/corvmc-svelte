@@ -347,12 +347,43 @@ member_certification
   grantedByUserId   uuid? fk → user                    set null
   reference         text?       — external card or licence number
   notes             text?
+  revokedAt         timestamp?  — pulled early; null = not revoked
+  revokedReason     text?       — required when revokedAt is set
+  revokedByUserId   uuid? fk → user                    set null
   createdAt         timestamp
   updatedAt         timestamp
 ```
 
 No unique constraint on `(userId, certificationId)` — that is the append-only
 decision made structural.
+
+##### Revocation
+
+**Pulling a clearance is recorded, not deleted.** The distinction that matters is
+not whether there was fault; it is **whether the record was ever true**:
+
+| Case                                | Action                                             |
+| ----------------------------------- | -------------------------------------------------- |
+| Typo, wrong member, never relied on | Hard delete — it was never true                    |
+| Was true, is not now — any reason   | Set `revokedAt` — the window it covered is history |
+
+Deleting a clearance that someone actually held destroys the answer to "were they
+cleared on the night of the incident?", which is the entire reason this table is
+append-only. That holds regardless of why it was pulled — and it holds even if
+the member is later banned outright, because you still want the record of what
+they were cleared for while they worked.
+
+The reasons are mostly blameless, which is why "just ban them" is not the
+alternative: a volunteer who keeps mis-patching the desk loses that clearance and
+keeps doing load-out; a replaced desk voids everyone's clearance on the old one;
+an external card can be pulled by its issuer; someone joining the board should
+stop handling door cash. Revocation is also the proportionate middle rung for
+conduct that does not warrant losing a member — pull the solo clearance, require
+supervision.
+
+`revokedReason` is required whenever `revokedAt` is set, for the same reason a
+rejected hour log needs one: the next staffer looking at the list needs to know
+why this person is no longer on it.
 
 #### Role requirement
 
@@ -371,18 +402,29 @@ Three tables, taking the app from 31 to 34.
 
 ### Derived state
 
-| State             | Condition                                                              |
-| ----------------- | ---------------------------------------------------------------------- |
-| **current**       | `grantedAt <= today` and (`expiresAt` is null or `expiresAt >= today`) |
-| **expiring soon** | current, and `expiresAt` within `CERT_EXPIRY_WARNING_DAYS` (60)        |
-| **expired**       | `expiresAt < today`                                                    |
-| **never held**    | no row                                                                 |
+| State             | Condition                                                                    |
+| ----------------- | ---------------------------------------------------------------------------- |
+| **current**       | `revokedAt` null, `grantedAt <= today`, and (`expiresAt` null or `>= today`) |
+| **expiring soon** | current, and `expiresAt` within `CERT_EXPIRY_WARNING_DAYS` (60)              |
+| **expired**       | `revokedAt` null and `expiresAt < today`                                     |
+| **revoked**       | `revokedAt <= today`                                                         |
+| **never held**    | no row                                                                       |
 
 All comparisons against today in club time, via `clubToday()` — the same rule
 that keeps same-day hour logging working.
 
 "Was this member cleared on a given date" is the same predicate with `today`
-swapped for the date worked. That query is the whole reason for the shape.
+swapped for the date worked, and it is the whole reason for the shape:
+
+```
+grantedAt <= worked
+  and (expiresAt is null or expiresAt >= worked)
+  and (revokedAt is null or revokedAt  >  worked)
+```
+
+Note `revokedAt > worked`, not `>=`: a clearance pulled _on_ the day of a shift
+was not in force for that shift. Expiry uses `>=`, because a card is valid
+through its expiry date. The asymmetry is deliberate and easy to get backwards.
 
 ### Staff UI
 
@@ -392,9 +434,10 @@ swapped for the date worked. That query is the whole reason for the shape.
   `validityMonths` warns that it applies to future grants only.
 - **Role editing** gains a required-certifications multi-select (`TagInput`).
 - **Member detail** gains a Certifications card: what they hold, when granted,
-  when it expires, who granted it, and a Grant action. Revoking is a delete —
-  a certification granted in error is not history worth keeping, unlike one that
-  lapsed.
+  when it expires, who granted it, and a Grant action. Revoke takes a required
+  reason. Delete is offered only for a record created today by the same staffer
+  — the correcting-a-typo window — so that the ordinary way to end a clearance
+  is the one that keeps its history.
 - **The review queue** shows a warning glyph on a log whose role required a
   certification the member did not hold on the date worked. Advisory only.
 - **A "clearances" view** — who is current, who is expiring, who has lapsed —
@@ -410,7 +453,8 @@ the part that turns the page from a form into something worth opening.
 
 ### Permissions
 
-- **Grant, edit, revoke a member's certification**: staff.
+- **Grant, edit, revoke a member's certification**: staff. Revocation records who
+  did it and why, so it is attributable the way an hour-log rejection is.
 - **Manage the catalog and role requirements**: staff.
 - **See your own certifications**: any member.
 - **See anyone's**: staff.
@@ -547,8 +591,15 @@ CREATE TABLE member_certification (
   granted_by_user_id TEXT REFERENCES user(id) ON DELETE SET NULL,
   reference          TEXT,
   notes              TEXT,
+  revoked_at         INTEGER,
+  revoked_reason     TEXT,
+  revoked_by_user_id TEXT REFERENCES user(id) ON DELETE SET NULL,
   created_at         INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at         INTEGER NOT NULL DEFAULT (unixepoch())
+  updated_at         INTEGER NOT NULL DEFAULT (unixepoch()),
+  -- A revocation without a reason is unactionable for whoever reads the list next.
+  CONSTRAINT revoked_has_reason CHECK (
+    revoked_at IS NULL OR (revoked_reason IS NOT NULL AND length(trim(revoked_reason)) > 0)
+  )
 );
 
 CREATE TABLE volunteer_role_certification (
@@ -773,19 +824,12 @@ terms, but it is no longer a question of _whether_.
    rest of the seeded set is inferred venue ops. Unlike an enum this is now
    trivially editable in the UI, so the cost of being wrong is a few minutes of
    typing — but it is worth a look from whoever actually schedules volunteers.
-3. **Which certifications does CMC actually track?** The catalog is staff-editable
-   so this is not a schema question, but it decides whether the model is even
-   pointed the right way. Internal sound-desk clearance is near-certain. What is
-   unknown: whether the space serves food or alcohol (Food Handler / OLCC), and
-   whether anyone is expected to hold First Aid during shows. If the answer is
-   "sound desk only, nothing expires", the `issuedBy` / `validityMonths` /
-   `reference` columns are dead weight and the simpler role-attached model would
-   have been right after all.
-4. **Revoking is a hard delete — is that right?** A certification granted by
-   mistake is not history. But a certification _withdrawn_ for cause — someone
-   lost their clearance — is exactly the history you would want, and deleting it
-   looks identical. If withdrawal-for-cause is a real scenario here, this needs
-   a `revokedAt` + reason instead, which changes "does this member hold X now"
-   from "latest row" to "latest row that is not revoked".
+3. ~~**Which certifications does CMC actually track?**~~ **Answered.** First Aid
+   and Food Handler are expected eventually, alongside internal sound-desk
+   clearance. `issuedBy`, `validityMonths` and `reference` all earn their place,
+   and the standalone-catalog model is the right one — a role-attached training
+   flag would have had nowhere to put either card.
+4. ~~**Revoking is a hard delete — is that right?**~~ **Answered: no.** Revocation
+   is recorded, not deleted — see [Revocation](#revocation).
 5. **`CERT_EXPIRY_WARNING_DAYS = 60`** is a guess, and it only matters once the
    reminder cron exists.
