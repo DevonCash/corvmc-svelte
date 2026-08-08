@@ -137,13 +137,15 @@ group_member
 
 ### Ownership
 
-Every group has exactly one owner: the `group_member` row with `role = 'owner'`, guaranteed by `unique(groupId) where role = 'owner'`.
+A group has **at most one** owner: the `group_member` row with `role = 'owner'`, guaranteed by `unique(groupId) where role = 'owner'`. A partial unique index permits zero, which is deliberate — see [Resigning a leadership](#resigning-a-leadership).
 
 This spec drops `band.ownerId` rather than carrying it across. Authorization never reads it today — `requireBandOwner()` resolves through `getUserRole()`, which reads `band_member` alone — so every remaining use is display or bookkeeping, and all of it is derivable. `transferOwnership()` already performs its three writes in a single `db.batch([...])`; dropping the column removes one statement from a batch that already spans the other two, so the atomicity guarantee is unchanged.
 
 Dropping it also retires a live contradiction. The migration declares `owner_id text NOT NULL` with `FOREIGN KEY ... ON DELETE SET NULL` — two clauses that cannot both be satisfied, so deleting a user who owns a band would fail at the constraint. The Drizzle definition says `onDelete: 'restrict'`, so schema and migration disagree about the intent as well. `purgeUser()` guards it in application code, which is why nobody has hit it.
 
-**A group with zero members is legal**, and it is how an unclaimed touring act is represented once it has a group. The owner row is created at the same time as the group in every user-facing path; only staff can create a member-less one.
+**A group with no owner is legal**, and it is a normal transient state: a program whose leader stepped down and whose replacement has not been appointed yet. The program keeps running — its sessions, roster, documents, and announcements are untouched — and staff see it flagged in `/staff/groups` until someone is appointed. Making an ownerless group illegal would mean either trapping a leader in the role or dissolving a working program the moment they resign, and neither is right.
+
+Admins keep working while the owner seat is empty; only owner-exclusive actions (transferring ownership, and deleting a band) are unavailable, and for a program those belong to staff anyway.
 
 ### Announcement
 
@@ -379,14 +381,33 @@ Nothing merges and no rows are reconciled, which is what the earlier "external a
 
 Unchanged from bands, minus the `ownerId` write: the target's row becomes `owner`, the previous owner's becomes `admin`, in one batch. An owner cannot be removed or leave without transferring first.
 
-For a club or committee, staff may also reassign the leader directly from the staff panel without the outgoing leader's participation — the appointment is theirs to make and unmake. That path skips the owner-must-transfer-first rule, which exists to stop a band being orphaned, not to bind a program to whoever last ran it.
+For a club or committee, staff may also reassign the leader directly from the staff panel without the outgoing leader's participation — the appointment is theirs to make and unmake.
 
-### Deleting a group
+### Resigning a leadership
 
-1. A band's owner confirms from Settings; a club or committee is deleted by **staff** from `/staff/groups/{id}`.
-2. Private R2 objects for the group's files are deleted first — a failed object delete leaves the rows as a recovery record rather than orphaning storage silently.
-3. The `group` row is deleted. `group_member`, `group_invite`, `announcement`, and `file` **cascade**.
-4. A linked `band_profile` survives with `groupId` set to null, and its identity columns are repopulated from the group before deletion — a deleted band reverts to a staff-kept record rather than vanishing, so its event history keeps a name.
+**A program leader may leave without naming a successor.** They step down, their `group_member` row is deleted, the owner seat goes empty, and staff are notified and see the group flagged in `/staff/groups`.
+
+This is the one place programs and bands diverge on leaving. A band owner must transfer first, because there is nobody whose job it is to pick up an orphaned band. A program leader was **appointed**, and the body that appointed them is still there — so "must find your own replacement" would be trapping someone in a volunteer role they have already said they are done with. The group keeps running in the meantime; nothing about it depends on the owner row existing.
+
+Ordinary members leaving is unremarkable under either policy, and under `open` they may rejoin whenever they like.
+
+### Ending a group
+
+**Deactivation is how a program ends. Hard deletion is for mistakes.** These are two different operations and the UI should not present them as a pair of equally weighted buttons.
+
+A dissolved committee is a historical fact, and its minutes, roster, and announcements _are_ the record of it. Cascading them away because the committee wound up is the wrong default — the group ending is exactly when its documents become archival rather than operational. `deactivate()` / `reactivate()` already exist for bands (`band-service.ts:570`, `:599`) and generalize unchanged.
+
+**Deactivating** sets `deletedAt`. The group leaves the public directory and the panel switcher, its events stop generating, and the panel goes read-only — but every row survives, staff can still reach it and its documents from `/staff/groups`, and reactivating restores a working group. No R2 object is touched. Retention is indefinite; a wound-up committee's minutes are a few megabytes and the storage argument does not outweigh losing them.
+
+**Hard deletion** is a staff-only action reserved for rows that should never have existed — a typo'd name, a duplicate, a test. It confirms with an explicit count ("this will permanently delete 14 documents and 62 announcements"), then:
+
+1. Private R2 objects for the group's files are deleted first — a failed object delete leaves the rows as a recovery record rather than orphaning storage silently.
+2. The `group` row is deleted. `group_member`, `group_invite`, `announcement`, and `file` **cascade**.
+3. A linked `band_profile` survives with `groupId` set to null, and its identity columns are repopulated from the group before deletion — a deleted band reverts to a staff-kept record rather than vanishing, so its event history keeps a name.
+
+A band owner deleting their own band from Settings keeps today's behavior: it is their project and their call, and the confirmation carries the same document count.
+
+The alternative designs were rejected as more machinery than the problem needs: reassigning orphaned files to an archive group needs a synthetic group and an `archivedFrom` column; blocking deletion until documents are cleared just makes staff delete them manually first, which is the outcome deactivation avoids entirely.
 
 ---
 
@@ -408,7 +429,7 @@ Unchanged root, now resolving a **group** slug. Nav splits into two sections so 
 | **Manage**      | `/band/{slug}/documents`       | Shared files                               | all members  |
 | **Manage**      | `/band/{slug}/events`          | Band events                                | all members  |
 | **Manage**      | `/band/{slug}/reservations`    | Practice bookings                          | all members  |
-| **Manage**      | `/band/{slug}/settings`        | Delete group, danger zone                  | owner        |
+| **Manage**      | `/band/{slug}/settings`        | Delete band, danger zone                   | owner        |
 
 ### Group panel (`/group/{slug}`)
 
@@ -506,6 +527,8 @@ No new Postmark template is needed — the generic `notification` template is mo
 
 ## Documents and private storage
 
+**Documents is a file store, not a document tool.** Members upload files produced elsewhere — charts as PDFs, committee minutes from whatever word processor the committee already uses — and download them again. There is no in-app authoring, no rich-text editor, no versioning, and no structured minutes or agenda format. That boundary is what keeps this a small feature, and it is a decision rather than an omission.
+
 ### This requires a second bucket
 
 `media.corvmc.org` is an **R2 bucket custom domain**. There is no prefix scoping and no per-object ACL: attaching a custom domain makes the entire keyspace publicly readable, and existing keys are guessable (`bands/avatars/{bandId}.jpg`). A private document placed in the `corvmc` bucket would be one guessed URL away from public, and nothing in the app would report it.
@@ -562,7 +585,8 @@ New: `src/lib/server/group/`.
 | `update(groupId, data)`                                                  | Name/description/visibility/`joinPolicy`; re-slug on rename, excluding self                                                                           |
 | `joinGroup(groupId, userId)`                                             | Self-join. Re-reads `joinPolicy` from the resolved group; always `role: 'member'`, `status: 'active'`                                                 |
 | `assignLeader(groupId, userId, actorId)`                                 | Staff appointment: owner row created or moved without the outgoing owner's participation                                                              |
-| `deleteGroup(groupId, actorId)`                                          | Delete private objects, restore profile identity, delete group (cascades)                                                                             |
+| `deactivate(groupId)` / `reactivate(groupId)`                            | The normal end-of-life. Sets/clears `deletedAt`; no rows removed, no R2 objects touched                                                               |
+| `deleteGroup(groupId, actorId)`                                          | Hard delete for mistakes only. Delete private objects, restore profile identity, delete group (cascades)                                              |
 | `getBySlug(slug)` / `getById(id)`                                        | Excludes soft-deleted; includes member count                                                                                                          |
 | `listForUser(userId)`                                                    | Groups where the user has a row, any status                                                                                                           |
 | `getMembers(groupId)`                                                    | Rows joined to user, ordered owner → admin → member                                                                                                   |
@@ -674,16 +698,23 @@ Verified against the code, and load-bearing for this design whether or not they 
 - **Per-group document quota tiers** — service constants for now.
 - **Self-serve joining** — `joinInstructions` is prose; there is no request-to-join flow, and every membership starts with an invitation.
 
+## Decisions that were open
+
+Recorded because each one shaped something above, and because the reasoning is easier to revisit than to reconstruct.
+
+- **A committee needs nothing a club doesn't.** Both are the same shape. Minutes are **uploaded** from whatever word processor the committee already uses, not authored in the app — so they are ordinary documents and there is no minutes editor, no decision log, and no structured agenda. This is the clearest statement of what Documents is: a **file store**, not a document tool. Anything that would need in-app authoring is out of scope by construction.
+- **A program leader may resign without a successor.** The owner seat goes empty and staff reappoint. See [Resigning a leadership](#resigning-a-leadership).
+- **Touring profiles get no stable URL.** A clean, human-readable, permanent address is a **member benefit** — it is what joining CMC buys, alongside the directory listing and the microsite. Staff reach an unclaimed act by UUID under the staff panel, which is adequate for the one workflow that needs it (booking an act into a production). This also explains, from the product side, why slugs live on `group`: a slug is the public identity of something CMC has a relationship with. A short-link service for sharing an act's record with a promoter is a plausible small addition later, and deliberately not the same thing as giving the act a real URL.
+- **Documents survive the group.** Deactivation, not deletion, is how a program ends; see [Ending a group](#ending-a-group).
+
 ## Open questions
 
-- **Does a committee need anything a club doesn't?** Both are modeled identically today. Committees may want meeting minutes with dates and decisions rather than free-form documents, and terms of service for officers — but that is speculative until one exists.
-- **Can a member leave an open group they were invited to lead?** An appointed owner can hand off, but if nobody will take it the program has an owner who wants out and no path. Staff reassigning from `/staff/groups` covers it operationally; whether the leader can force the issue is a policy call.
-- **Should `band_profile` be reachable by staff at a stable URL?** It has no slug by design. A UUID path under the staff panel works, but it makes sharing a link to an act's record awkward when booking.
-- **What happens to a group's documents when it is deleted?** Currently they cascade and their objects are deleted. A committee's minutes may warrant retention past the committee, which would mean an archive path rather than a cascade.
+- **Bands remain member self-service — confirm.** The governance table treats `band` as the one kind any member may create, on the reasoning that a band is a member's own project while a club or committee is an institution. Everything about the band panel, the existing Create Band flow, and paid rehearsal time rests on it. If staff should create bands too, that table and the creation workflow both change.
 
 ## What this does not cover
 
 - The CMC production workflow — venues, run of show, settlement. That is [production-workflow-spec.md](production-workflow-spec.md); this spec only redefines the band/group boundary it depends on.
 - Event creation, ticketing, and the public gig guide, beyond the ownership column and the source allow-list.
 - The staff inbox, marketing campaigns, and platform-wide notification preferences.
+- **Authoring documents in the app.** Documents stores files; it does not create or edit them. Minutes, agendas, and charts are made elsewhere and uploaded.
 - Migration mechanics for D1 table rebuilds — see [conventions](../development/conventions.md#table-rebuilds-on-d1).
