@@ -61,7 +61,12 @@ import {
 } from '../src/lib/server/db/schema/marketing';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
-import { inboxThread, inboxMessage, inboxNote } from '../src/lib/server/db/schema/inbox';
+import {
+	inboxThread,
+	inboxMessage,
+	inboxNote,
+	inboxChannelConfig
+} from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
@@ -1218,6 +1223,45 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 				})
 				.returning();
 			rows.push(e);
+		}
+	}
+
+	return rows;
+}
+
+/**
+ * Band-booked practice slots. Seeded separately from `seedReservations` because
+ * bands do not exist yet at that point, and without these rows the staff
+ * reservation queue has no band bookings to render, search or filter.
+ */
+async function seedBandReservations(bands: any[]) {
+	console.log('Seeding band reservations...');
+	const rows = [];
+
+	for (const b of bands.filter((x: any) => !x.deletedAt).slice(0, 4)) {
+		for (const day of [-6, 3]) {
+			const hour = randomInt(17, 20);
+			const duration = pick([2, 3]);
+			const startsAt = ptDate(day, hour);
+			const endsAt = ptDate(day, hour + duration);
+			const isPast = day < 0;
+
+			const [r] = await db
+				.insert(reservation)
+				.values({
+					bookerType: 'band',
+					bookerId: b.id,
+					// A band booking is still made by a person, and their free hours
+					// settle it — same shape the band-facing booking form produces.
+					createdByUserId: b.ownerId,
+					status: isPast ? 'completed' : 'confirmed',
+					startsAt,
+					endsAt,
+					notes: pick(['Full band rehearsal', 'Set list run-through', 'Pre-show practice']),
+					paidAt: isPast ? startsAt : null
+				})
+				.returning();
+			rows.push(r);
 		}
 	}
 
@@ -2509,6 +2553,19 @@ async function seedInbox(adminUser: SeedUser) {
 		1
 	);
 
+	// Channels default to disabled, so without these rows the seeded SMS thread
+	// opens with a "channel is disabled" banner and a composer that refuses to
+	// send — a dead end on a fresh local database.
+	await batchInsert(
+		inboxChannelConfig,
+		[
+			{ id: randomUUID(), channel: 'web' as const, enabled: true, config: {} },
+			{ id: randomUUID(), channel: 'email' as const, enabled: true, config: {} },
+			{ id: randomUUID(), channel: 'sms' as const, enabled: true, config: {} }
+		],
+		3
+	);
+
 	return { threads: threads.length, messages: messages.length, notes: notes.length };
 }
 
@@ -2531,6 +2588,7 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers);
+	const bandReservations = await seedBandReservations(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
@@ -2555,6 +2613,7 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${bandEvents.length} band events`);
+	console.log(`  ${bandReservations.length} band reservations`);
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);

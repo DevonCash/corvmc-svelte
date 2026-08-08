@@ -16,6 +16,7 @@
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
 	let status = $state<'active' | 'deactivated' | ''>('');
+	let tier = $state<'free' | 'premium' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -32,17 +33,19 @@
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status: status || undefined,
+		tier: tier || undefined,
 		page
 	});
 
 	let result = $derived(getStaffBands(filters));
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0));
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0) + (tier ? 1 : 0));
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
 		status = '';
+		tier = '';
 		page = 1;
 	}
 </script>
@@ -74,6 +77,19 @@
 			<option value="active">Active</option>
 			<option value="deactivated">Deactivated</option>
 		</Select>
+		<Select
+			class="select-bordered select-sm"
+			aria-label="Tier"
+			value={tier}
+			onchange={(e: Event) => {
+				tier = (e.currentTarget as HTMLSelectElement).value as typeof tier;
+				page = 1;
+			}}
+		>
+			<option value="">All tiers</option>
+			<option value="free">Free</option>
+			<option value="premium">Premium</option>
+		</Select>
 	</FilterBar>
 
 	<DataList {result} empty="No bands found" onpage={(p) => (page = p)}>
@@ -82,6 +98,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Band</th>
+					<th class="col-support">Tier</th>
 					<th class="col-support cell-num">Members</th>
 					<th class="col-extra whitespace-nowrap">Created</th>
 				{/snippet}
@@ -100,6 +117,7 @@
 							<a {href} class="block truncate font-medium hover:underline">{b.name}</a>
 							<div class="truncate text-sm opacity-60">{b.ownerName}</div>
 						</td>
+						<td class="col-support"><StatusBadge status={b.tier} label /></td>
 						<td class="col-support cell-num">{b.memberCount}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(b.createdAt)}</td>
 					</tr>

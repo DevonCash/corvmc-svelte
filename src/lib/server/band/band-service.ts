@@ -12,7 +12,7 @@ import { deleteObject, uploadFile } from '$lib/server/storage';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
-import type { BandRole } from '$lib/server/db/schema/band';
+import type { BandRole, BandTier } from '$lib/server/db/schema/band';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,6 +62,13 @@ export class OwnerCannotLeaveError extends Error {
 	constructor() {
 		super('Owner must transfer ownership before leaving');
 		this.name = 'OwnerCannotLeaveError';
+	}
+}
+
+export class BandTierManagedByStripeError extends Error {
+	constructor() {
+		super('This band has an active Stripe subscription — change the tier in Stripe instead');
+		this.name = 'BandTierManagedByStripeError';
 	}
 }
 
@@ -494,7 +501,7 @@ export async function leaveBand(bandId: string, userId: string) {
 // ---------------------------------------------------------------------------
 
 export async function listAll(
-	opts?: { search?: string; status?: 'active' | 'deactivated' },
+	opts?: { search?: string; status?: 'active' | 'deactivated'; tier?: BandTier },
 	pagination: PaginationInput = {}
 ) {
 	const conditions = [];
@@ -507,6 +514,9 @@ export async function listAll(
 	} else if (opts?.status === 'deactivated') {
 		conditions.push(isNotNull(band.deletedAt));
 	}
+	if (opts?.tier) {
+		conditions.push(eq(band.tier, opts.tier));
+	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -517,6 +527,7 @@ export async function listAll(
 			slug: band.slug,
 			ownerId: band.ownerId,
 			ownerName: user.name,
+			tier: band.tier,
 			memberCount: sql<number>`(
 				select count(*) from band_member bm
 				where bm.band_id = ${band.id} and bm.status = 'active'
@@ -552,6 +563,8 @@ export async function getByIdWithDetails(bandId: string) {
 			ownerPronouns: user.pronouns,
 			ownerRole: primaryRoleFor(user.id),
 			avatarKey: band.avatarKey,
+			tier: band.tier,
+			subscription: band.subscription,
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,
 			deletedAt: band.deletedAt,
@@ -601,6 +614,30 @@ export async function reactivate(bandId: string) {
 		.update(band)
 		.set({ deletedAt: null, updatedAt: new Date() })
 		.where(and(eq(band.id, bandId), isNotNull(band.deletedAt)))
+		.returning();
+
+	if (!row) throw new BandNotFoundError();
+	return row;
+}
+
+/**
+ * Staff comp/revoke of the premium tier.
+ *
+ * A comped band carries `tier: 'premium'` with a null `subscription`, which is
+ * exactly what `clearStaleBands` in the Stripe sync skips over (it only clears
+ * bands whose subscription JSON is set), so the comp survives the nightly
+ * reconciliation. Bands that *do* pay through Stripe are refused here — letting
+ * staff flip the column would silently diverge from the live subscription.
+ */
+export async function setTier(bandId: string, tier: BandTier) {
+	const existing = await getById(bandId);
+	if (!existing) throw new BandNotFoundError();
+	if (existing.subscription) throw new BandTierManagedByStripeError();
+
+	const [row] = await db
+		.update(band)
+		.set({ tier, updatedAt: new Date() })
+		.where(eq(band.id, bandId))
 		.returning();
 
 	if (!row) throw new BandNotFoundError();

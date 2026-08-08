@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { Button as BitsButton, Tooltip } from 'bits-ui';
+	import { Button as BitsButton, Tooltip, mergeProps } from 'bits-ui';
 	import clsx from 'clsx';
 
 	let {
@@ -20,8 +20,18 @@
 	} = $props();
 </script>
 
-{#snippet renderButton()}
-	<BitsButton.Root {href} {disabled} class={clsx('btn', className)} {...rest}>
+<!-- `triggerProps` are the tooltip trigger's props, merged onto the button itself.
+     Rendering them on a wrapper element instead would nest a <button> inside a
+     <button> (or an <a> inside a <button>), which drops the control out of the
+     accessibility tree entirely. -->
+{#snippet renderButton(triggerProps?: Record<string | symbol, unknown>)}
+	<BitsButton.Root
+		{...mergeProps(triggerProps ?? {}, rest, {
+			href,
+			disabled,
+			class: clsx('btn', className)
+		})}
+	>
 		{@render children?.()}
 	</BitsButton.Root>
 {/snippet}
@@ -30,8 +40,10 @@
 	{@render renderButton()}
 {:else}
 	<Tooltip.Root>
-		<Tooltip.Trigger>
-			{@render renderButton()}
+		<Tooltip.Trigger {disabled}>
+			{#snippet child({ props })}
+				{@render renderButton(props)}
+			{/snippet}
 		</Tooltip.Trigger>
 		<Tooltip.Portal>
 			<Tooltip.Content

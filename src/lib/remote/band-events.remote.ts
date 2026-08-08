@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
@@ -111,7 +111,7 @@ export const createBandEventForm = form(
 		const { user, band } = await requireBandAdmin();
 
 		if (!data.title) {
-			issue.title('Title is required');
+			invalid(issue.title('Title is required'));
 		}
 
 		const tz = DEFAULT_TIMEZONE;

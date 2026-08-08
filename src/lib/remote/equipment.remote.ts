@@ -34,9 +34,9 @@ import { equipmentConditions, equipmentStatuses } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 export const getEquipment = query(z.string(), async (id) => {
-	await requireFeature('equipment');
 	await requireStaff();
-	const item = await getEquipmentById(id);
+	// Staff see deactivated gear too — that page is where Reactivate lives.
+	const item = await getEquipmentById(id, { includeDeleted: true });
 	if (!item) error(404, 'Equipment not found');
 	return item;
 });
@@ -68,6 +68,7 @@ const staffEquipmentFilters = z.object({
 	search: z.string().optional(),
 	categoryId: z.string().optional(),
 	status: z.string().optional(),
+	includeDeleted: z.boolean().optional(),
 	page: z.number().optional()
 });
 
@@ -79,7 +80,8 @@ export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters
 			categoryId: filters.categoryId || undefined,
 			status: (filters.status || undefined) as
 				| import('$lib/server/db/schema/equipment').EquipmentStatus
-				| undefined
+				| undefined,
+			includeDeleted: filters.includeDeleted
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
