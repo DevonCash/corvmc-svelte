@@ -658,7 +658,9 @@ Verified against the code, and load-bearing for this design whether or not they 
 
 - **Classes.** A class looks like a group — a teacher, some students, a roster — but the resemblance stops at the roster. Enrollment is not membership: it has a **term** with a start and an end, so the same person is enrolled in Spring and not in Summer while the class itself persists; it has **attendance** per session; and it has **completion**, which is a per-person outcome a membership row has nowhere to put. Modeling that as `group_member` would mean either a new group per term (losing the class's identity and history) or status values that quietly mean different things depending on kind.
 
-  The right shape is almost certainly a `class` module that **owns a group** for its roster and reuses announcements and documents wholesale, adding `term` and `enrollment` alongside — the same relationship `band_profile` has to `group`. Nothing in this spec forecloses that, and the `kind` union is one line to extend. This is also where the reserved `'lesson'` value already sitting in `reservation.bookerType` would finally get used.
+  The shape when it lands: **`class` is its own kind**, added to the union alongside `club` — not a flavour of club and not a rename of one. A `class` module then hangs off it holding `term` and `enrollment`, the same relationship `band_profile` has to `group`, while roster, announcements, and documents are reused wholesale. Nothing in this spec forecloses that; adding the kind is one line plus a row in the governance table above. This is also where the reserved `'lesson'` value already sitting in `reservation.bookerType` would finally get used.
+
+  This is why `club` keeps its concrete name rather than a broader one like `program`. A single umbrella kind would have to be subdivided the moment classes arrive, and subdividing an enum after rows exist is a data migration; separate kinds from the start cost nothing.
 
 - **Threaded discussion** — replies to announcements, read receipts, unread counts. `sse.ts` is a per-isolate in-memory registry, adequate for a bell badge but not a real-time transport; group chat would want a Durable Object.
 - **Group email aliases** — an inbound address per group fanning out to members. The inbound plumbing exists (Postmark `MailboxHash`, signed reply addresses) but a real mailing list is deliverability work, and the inbox schema is contact-keyed rather than member-keyed.
@@ -674,7 +676,6 @@ Verified against the code, and load-bearing for this design whether or not they 
 
 ## Open questions
 
-- **Should the kind be called `program` rather than `club`?** "Programs or committees" is how these were described, and a class would be a program too once it lands — which argues the umbrella term is the better name and `club` is one instance of it. `club` is kept here because it is concrete and it is what the Real Book Club is. Worth settling before the enum ships, since renaming a kind after rows exist means a data migration.
 - **Does a committee need anything a club doesn't?** Both are modeled identically today. Committees may want meeting minutes with dates and decisions rather than free-form documents, and terms of service for officers — but that is speculative until one exists.
 - **Can a member leave an open group they were invited to lead?** An appointed owner can hand off, but if nobody will take it the program has an owner who wants out and no path. Staff reassigning from `/staff/groups` covers it operationally; whether the leader can force the issue is a policy call.
 - **Should `band_profile` be reachable by staff at a stable URL?** It has no slug by design. A UUID path under the staff panel works, but it makes sharing a link to an act's record awkward when booking.
