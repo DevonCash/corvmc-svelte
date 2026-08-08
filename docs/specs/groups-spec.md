@@ -81,6 +81,7 @@ group
 ```
 band_profile
   id            text (uuid), PK
+  publicId      text, not null, unique      — short opaque id for the share link
   groupId       text, nullable, unique, FK → group (set null on delete)
 
   -- identity: populated ONLY when groupId IS NULL
@@ -106,6 +107,22 @@ The alternative — keeping both populated and syncing on write — was rejected
 This is enforced in the service layer, not as a CHECK constraint. Adding a CHECK to SQLite forces a full table rebuild, which is dangerous on D1 — see [table rebuilds on D1](../development/conventions.md#table-rebuilds-on-d1). The schema carries a comment saying so, because otherwise someone will helpfully add the constraint and trigger the rebuild.
 
 `band_genre`, `band_page_config`, and `band_media` all re-key from `bandId` to `bandProfileId`.
+
+#### `publicId` — the short link for an unclaimed act
+
+A touring act has no slug, but staff still need to point at its record — internally, and sometimes to send it to a promoter or agent who has no account. `publicId` is a short random string (nanoid-style, ~10 characters), giving `/a/{publicId}`.
+
+**It is random, not derived.** [Sqids](https://sqids.org/) were considered and don't fit, for three reasons:
+
+1. **They encode non-negative integers only.** Every domain table here uses `text` uuid primary keys; the only `integer` autoincrement PKs are in `authorization.ts` and `finance.ts`. There is no number on `band_profile` to encode.
+2. **Adding one is not cheap.** SQLite's `AUTOINCREMENT` applies only to `INTEGER PRIMARY KEY`, so a second monotonic column needs `max(seq)+1` — racy — or a counter table. The implicit `rowid` is not a safe substitute **in this codebase specifically**: phase 3 rebuilds this exact table, and a D1 rebuild copies rows into a new one, reassigning rowids and invalidating every link already handed out.
+3. **Their own documentation rules out the use case.** Under "Not good for," sqids list _sensitive data_ ("this is not an encryption library") and _user IDs_ ("can reveal user count if anyone finds out the encoding alphabet"). The encoding is reversible against a shuffled alphabet, not a secret. A touring profile holds the act's booking contact, so an enumerable id lets someone walk the space and harvest every act CMC has ever booked.
+
+A random `publicId` avoids all three: no counter, no rebuild hazard, not enumerable, and it is safe whether the link is staff-only or forwarded to someone without an account. It is also less machinery than a sqid, not more — one column and a unique index. `platform_invite.token` already establishes the pattern.
+
+**This is a share link, not a public profile.** `/a/{publicId}` renders the act's name, bio, genres, links, and photo — not its contact details, which stay staff-only. It is unguessable rather than access-controlled, so it should never carry anything that would matter if forwarded. A revocable or expiring variant is [deferred](#deferred); rotating `publicId` is the crude version and is available from day one.
+
+None of this makes the act publicly addressable in the sense that matters: there is still no slug, no directory listing, and no `/directory/bands/...` entry. A clean permanent URL remains a member benefit.
 
 ### GroupMember
 
@@ -454,6 +471,7 @@ There is no danger zone here. Ending a club or committee is a staff action, so `
 | `/groups`                 | Directory of public groups, filterable by kind                                                                  |
 | `/groups/{slug}`          | Simple public page — name, description, photo, upcoming sessions, and a Join button when `joinPolicy` is `open` |
 | `/directory/bands/{slug}` | Band profile — unchanged, now resolving through the group                                                       |
+| `/a/{publicId}`           | Share link for an unclaimed touring act. **No contact details.** Unguessable, unlisted, `noindex`               |
 
 The Join button is the only write on a public page. It requires a session, so a signed-out visitor gets a sign-in prompt that returns them to the group.
 
@@ -471,7 +489,9 @@ Reserve `class` and `classes` now even though classes are deferred. Reserving a 
 | `/staff/groups/{id}` | Edit, set `joinPolicy` and visibility, reassign the leader, deactivate, delete |
 | `/staff/bands`       | Existing page — gains a filter for unlinked touring profiles                   |
 
-`/staff/groups` is the **only** place a club or committee comes into existence. Touring profiles have no panel and no public URL; they are reached from the staff bands area, which gains an inline create used when booking an act into a production.
+`/staff/groups` is the **only** place a club or committee comes into existence. Touring profiles have no panel and no slug; they are reached from the staff bands area, which gains an inline create used when booking an act into a production, and are shared via `/a/{publicId}`.
+
+Add `a` to `RESERVED_SLUGS` alongside the group words, so no group can claim the share-link root as a subdomain.
 
 ### API
 
@@ -641,6 +661,7 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 | Reservations  | `bookerId` for `bookerType = 'band'` repoints to `group.id`. No new `bookerType` value                  |
 | Enrollment    | `joinPolicy` on `group`; self-join for `open` groups                                                    |
 | Staff panel   | New `/staff/groups` — the only place a club or committee is created                                     |
+| Share links   | `band_profile.publicId` + `/a/{publicId}` for unclaimed touring acts                                    |
 | Storage       | Second R2 bucket for private documents                                                                  |
 | Email         | `sendTemplateBatch()` added to the Postmark client                                                      |
 | Notifications | One `announcement` type; per-group mute on the membership row                                           |
@@ -693,6 +714,7 @@ Verified against the code, and load-bearing for this design whether or not they 
 - **Group rehearsal bookings** — a group holding the room privately, outside an event, against a credit balance. This is the band-rehearsal shape and would need a `bookerType` value and credit accounting. Programs do not need it: their sessions are events, and events reserve the room free — see [Room time](#room-time). An earlier draft listed this as a blocking gap for the Real Book Club, which was wrong; the jam is an event and gets its room that way.
 
 - **Request-to-join.** `joinPolicy` has two values, not three. Approval-gated joining needs a `status: 'requested'` rather than reusing `'pending'` — today `'pending'` means "we invited you, awaiting your answer," and a join request is the exact mirror, "you asked us, awaiting ours." Overloading one value would make every roster query and every notification ambiguous about which direction it was facing. It also needs an approval queue and its own notification type, which is more surface than anyone has asked for.
+- **Revocable and expiring share links.** `publicId` is unguessable but permanent and unauditable — there is no record of who it was sent to and no way to kill one link without killing them all. Rotating `publicId` is the crude revoke. A proper version would be a separate token table with an expiry and a label, which is only worth building if acts' records start circulating more widely than intended.
 - **Group subdomains** — only band microsites claim one.
 - **Public group directory filtering** beyond kind — no genre or tag search for non-band groups.
 - **Per-group document quota tiers** — service constants for now.
@@ -704,7 +726,7 @@ Recorded because each one shaped something above, and because the reasoning is e
 
 - **A committee needs nothing a club doesn't.** Both are the same shape. Minutes are **uploaded** from whatever word processor the committee already uses, not authored in the app — so they are ordinary documents and there is no minutes editor, no decision log, and no structured agenda. This is the clearest statement of what Documents is: a **file store**, not a document tool. Anything that would need in-app authoring is out of scope by construction.
 - **A program leader may resign without a successor.** The owner seat goes empty and staff reappoint. See [Resigning a leadership](#resigning-a-leadership).
-- **Touring profiles get no stable URL.** A clean, human-readable, permanent address is a **member benefit** — it is what joining CMC buys, alongside the directory listing and the microsite. Staff reach an unclaimed act by UUID under the staff panel, which is adequate for the one workflow that needs it (booking an act into a production). This also explains, from the product side, why slugs live on `group`: a slug is the public identity of something CMC has a relationship with. A short-link service for sharing an act's record with a promoter is a plausible small addition later, and deliberately not the same thing as giving the act a real URL.
+- **Touring profiles get a short link, not a stable URL.** A clean, human-readable, permanent address is a **member benefit** — it is what joining CMC buys, alongside the directory listing and the microsite. An unclaimed act gets `/a/{publicId}`, a short opaque share link that is deliberately not the same thing: no slug, no directory listing, no name in the URL. This is also the product-side reason slugs live on `group` — a slug is the public identity of something CMC has a relationship with. See [`publicId`](#publicid--the-short-link-for-an-unclaimed-act) for why it is random rather than a sqid.
 - **Documents survive the group.** Deactivation, not deletion, is how a program ends; see [Ending a group](#ending-a-group).
 
 ## Open questions
