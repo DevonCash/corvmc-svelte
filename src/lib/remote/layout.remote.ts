@@ -5,6 +5,7 @@ import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-servi
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
+import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunteer/hour-log-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 
@@ -63,12 +64,18 @@ export const getStaffLayout = query(async () => {
 	]);
 
 	const inboxUnread = features.staffInbox ? await getUnresolvedCount().catch(() => 0) : 0;
+	const volunteerPending = features.volunteering
+		? await getVolunteerStatusCounts()
+				.then((c) => c.pending)
+				.catch(() => 0)
+		: 0;
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
 		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		features,
-		inboxUnread
+		inboxUnread,
+		volunteerPending
 	};
 });
 

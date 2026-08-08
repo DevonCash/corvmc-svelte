@@ -44,7 +44,12 @@
 		onfailure,
 		...rest
 	}: {
-		action: (() => Promise<unknown>) | RemoteForm<any, any>;
+		/**
+		 * `Omit<…, 'for'>` is what `someForm.for(id)` returns. Per-row actions in a
+		 * list are the documented use, but the narrower `RemoteForm` type rejected
+		 * them — this is the same object minus a method `Action` never calls.
+		 */
+		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		label?: string;
 		icon?: Snippet;
 		/**

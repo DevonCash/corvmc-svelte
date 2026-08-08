@@ -21,17 +21,18 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
 Each row is one `help_categories` entry (defined in `scripts/seed-dev.ts`; `sync-help-articles.ts`
 auto-creates any missing).
 
-| slug                | Name                 | icon     | minRole | Covers                                   |
-| ------------------- | -------------------- | -------- | ------- | ---------------------------------------- |
-| `getting-started`   | Getting Started      | book     | member  | account, navigation, basics              |
-| `reservations`      | Practice Space       | calendar | member  | booking, recurring, payment, credits     |
-| `profile-directory` | Profile & Directory  | user     | member  | profile editing, visibility, being found |
-| `bands`             | Bands                | music    | member  | create/join, invites, membership         |
-| `band-pages`        | Band Pages (Premium) | layout   | member  | subscription, page editor, EPK           |
-| `events-tickets`    | Events & Tickets     | ticket   | member  | browsing, tickets, QR check-in           |
-| `equipment`         | Equipment Lending    | package  | member  | catalog, requesting loans                |
-| `membership`        | Membership & Billing | heart    | member  | sustaining membership, Stripe portal     |
-| `staff-guide`       | Staff Guide          | settings | staff   | all staff operations                     |
+| slug                | Name                 | icon            | minRole | Covers                                   |
+| ------------------- | -------------------- | --------------- | ------- | ---------------------------------------- |
+| `getting-started`   | Getting Started      | book            | member  | account, navigation, basics              |
+| `reservations`      | Practice Space       | calendar        | member  | booking, recurring, payment, credits     |
+| `profile-directory` | Profile & Directory  | user            | member  | profile editing, visibility, being found |
+| `bands`             | Bands                | music           | member  | create/join, invites, membership         |
+| `band-pages`        | Band Pages (Premium) | layout          | member  | subscription, page editor, EPK           |
+| `events-tickets`    | Events & Tickets     | ticket          | member  | browsing, tickets, QR check-in           |
+| `equipment`         | Equipment Lending    | package         | member  | catalog, requesting loans                |
+| `membership`        | Membership & Billing | heart           | member  | sustaining membership, Stripe portal     |
+| `volunteering`      | Volunteering         | heart-handshake | member  | roles, logging hours, staff review       |
+| `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                     |
 
 **Coverage:** ~8 public + ~30 member + ~19 band + ~19 staff ≈ **76 articles**.
 
@@ -97,6 +98,11 @@ auto-creates any missing).
 - [x] `[H]` Become a sustaining member (subscription flow)
 - [x] `[H]` Manage billing via the Stripe portal (update card, cancel, resume)
 - [x] `[H]` Understand benefits, sliding scale & credit allocation
+
+### volunteering
+
+- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, logging hours, review outcomes
+- [x] `[H]` Reviewing volunteer hours (minRole=staff) — the approval queue, managing roles, the report
 
 ## C. Band panel → `src/content/help/`
 

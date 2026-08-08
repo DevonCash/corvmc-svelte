@@ -9,7 +9,8 @@
 		IconMetronome,
 		IconUser,
 		IconSettings,
-		IconUsersGroup
+		IconUsersGroup,
+		IconHeartHandshake
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -55,6 +56,11 @@
 		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
 		</Nav.Item>
+		{#if layout.features.volunteering}
+			<Nav.Item href="/member/volunteer" label="Volunteering">
+				{#snippet icon()}<IconHeartHandshake />{/snippet}
+			</Nav.Item>
+		{/if}
 
 		<Nav.Group title="Bands">
 			{#snippet action()}

@@ -79,6 +79,9 @@
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Volunteer hour logs
+		approved: 'badge-success',
+		rejected: 'badge-error',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -132,6 +135,10 @@
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
 		revoked: { icon: IconBan, color: 'text-error' },
+
+		// Volunteer hour log statuses
+		approved: { icon: IconCircleCheckFilled, color: 'text-success' },
+		rejected: { icon: IconCircleX, color: 'text-error' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },

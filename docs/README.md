@@ -29,20 +29,21 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 Behavioral source of truth. When code and a spec disagree, treat the spec as intent and the code
 as reality — reconcile deliberately.
 
-| Doc                                                                    | Status | Notes                                                                                     |
-| ---------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------- |
-| [reservation-system-spec.md](specs/reservation-system-spec.md)         | ✅     | Practice-room reservations, lock integration, book-then-pay                               |
-| [recurring-reservations-spec.md](specs/recurring-reservations-spec.md) | ✅     | RRULE series, prototype cloning, advance windows                                          |
-| [staff-reservations-spec.md](specs/staff-reservations-spec.md)         | ✅     | Staff reservation backend, resolve modal, overrides                                       |
-| [bands-spec.md](specs/bands-spec.md)                                   | ✅     | Band entity, membership, ownership, invitations                                           |
-| [staff-bands-spec.md](specs/staff-bands-spec.md)                       | ✅     | Staff band management & moderation                                                        |
-| [tickets-spec.md](specs/tickets-spec.md)                               | ✅     | Ticketed events, Stripe, guest checkout, member discount                                  |
-| [directory-profiles-spec.md](specs/directory-profiles-spec.md)         | ✅     | Member/band profiles, instruments, genres, visibility                                     |
-| [membership-page-spec.md](specs/membership-page-spec.md)               | ✅     | Sustaining membership UI, credit balance, Stripe portal                                   |
-| [member-dashboard-spec.md](specs/member-dashboard-spec.md)             | ✅     | Member landing page                                                                       |
-| [email-marketing-spec.md](specs/email-marketing-spec.md)               | ✅     | Audiences, campaigns, scheduled sends                                                     |
-| [finance-spec.md](specs/finance-spec.md)                               | ✅     | Stripe-first payments, credit wallets / ledger                                            |
-| [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts |
+| Doc                                                                    | Status | Notes                                                                                       |
+| ---------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| [reservation-system-spec.md](specs/reservation-system-spec.md)         | ✅     | Practice-room reservations, lock integration, book-then-pay                                 |
+| [recurring-reservations-spec.md](specs/recurring-reservations-spec.md) | ✅     | RRULE series, prototype cloning, advance windows                                            |
+| [staff-reservations-spec.md](specs/staff-reservations-spec.md)         | ✅     | Staff reservation backend, resolve modal, overrides                                         |
+| [bands-spec.md](specs/bands-spec.md)                                   | ✅     | Band entity, membership, ownership, invitations                                             |
+| [staff-bands-spec.md](specs/staff-bands-spec.md)                       | ✅     | Staff band management & moderation                                                          |
+| [tickets-spec.md](specs/tickets-spec.md)                               | ✅     | Ticketed events, Stripe, guest checkout, member discount                                    |
+| [directory-profiles-spec.md](specs/directory-profiles-spec.md)         | ✅     | Member/band profiles, instruments, genres, visibility                                       |
+| [membership-page-spec.md](specs/membership-page-spec.md)               | ✅     | Sustaining membership UI, credit balance, Stripe portal                                     |
+| [member-dashboard-spec.md](specs/member-dashboard-spec.md)             | ✅     | Member landing page                                                                         |
+| [email-marketing-spec.md](specs/email-marketing-spec.md)               | ✅     | Audiences, campaigns, scheduled sends                                                       |
+| [finance-spec.md](specs/finance-spec.md)                               | ✅     | Stripe-first payments, credit wallets / ledger                                              |
+| [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts   |
+| [volunteering-spec.md](specs/volunteering-spec.md)                     | ✅     | Volunteer roles with job descriptions, member hour logging, staff approval queue, reporting |
 
 ## plans
 

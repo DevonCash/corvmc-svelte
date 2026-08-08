@@ -6,12 +6,15 @@
 		href,
 		label,
 		icon,
+		badge,
 		childHrefs,
 		children
 	}: {
 		href: string;
 		label: string;
 		icon?: Snippet;
+		/** Queue count on the parent row, same treatment as Nav.Item. */
+		badge?: number;
 		childHrefs: string[];
 		children: Snippet;
 	} = $props();
@@ -23,7 +26,10 @@
 <li>
 	<a {href} class:active>
 		{@render icon?.()}
-		{label}
+		<span class="grow">{label}</span>
+		{#if badge}
+			<span class="badge badge-primary badge-sm">{badge > 99 ? '99+' : badge}</span>
+		{/if}
 	</a>
 	{#if isOpen}
 		<ul class="menu-dropdown menu-dropdown-show">

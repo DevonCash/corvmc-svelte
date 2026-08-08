@@ -63,6 +63,7 @@ import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/d
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import { inboxThread, inboxMessage, inboxNote } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
+import { volunteerRole, volunteerHourLog } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
 const { env, dispose } = await getPlatformProxy();
@@ -409,6 +410,10 @@ const BACKLINE_ITEMS = [
 async function deleteAll() {
 	console.log('Deleting all data...');
 	const tables = [
+		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
+		// volunteer_role, so the role rows can't go first.
+		'volunteer_hour_log',
+		'volunteer_role',
 		'content_flag',
 		'inbox_note',
 		'inbox_message',
@@ -2217,6 +2222,14 @@ async function seedHelp() {
 				icon: 'heart',
 				sortOrder: 7,
 				minRole: 'member'
+			},
+			{
+				name: 'Volunteering',
+				slug: 'volunteering',
+				description: 'Volunteer roles, logging hours, and how review works',
+				icon: 'heart-handshake',
+				sortOrder: 9,
+				minRole: 'member'
 			}
 		],
 		9
@@ -2544,6 +2557,8 @@ async function main() {
 	const help = await seedHelp();
 	const inbox = await seedInbox(adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
+	const volunteerRoles = await seedVolunteerRoles();
+	const volunteerHours = await seedVolunteerHours(allUsers, volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -2571,12 +2586,147 @@ async function main() {
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(`  ${flags.length} content flags`);
+	console.log(
+		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs`
+	);
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {
 		console.log(`    http://localhost:5173/?__band_subdomain=${b.slug}`);
 	}
 
 	await dispose();
+}
+
+// ---------------------------------------------------------------------------
+// Volunteering
+// ---------------------------------------------------------------------------
+
+const VOLUNTEER_ROLE_SEEDS: Array<{
+	name: string;
+	description: string;
+	displayOrder: number;
+	isActive?: boolean;
+}> = [
+	{
+		name: 'Sound Engineering',
+		description:
+			'Run the board for a show or open mic. Line check, monitor mixes, and a house mix that respects the room.\n\n**No experience needed** — we will train you on the desk before you fly solo.',
+		displayOrder: 10
+	},
+	{
+		name: 'Event Setup',
+		description:
+			'Get the room ready before doors: chairs, tables, PA, stage lighting, and the merch table.\n\nUsually a two-hour window starting three hours before the show.',
+		displayOrder: 20
+	},
+	{
+		name: 'Front Desk',
+		description:
+			'Cover the door during open hours or at a show. Greet people, take entry, answer questions about membership, and point folks at the practice room.',
+		displayOrder: 30
+	},
+	{
+		name: 'Load-Out & Teardown',
+		description:
+			'After the last set: strike the stage, coil cables, reset the floor, and take the trash out. The fastest way to make yourself indispensable.',
+		displayOrder: 40
+	},
+	{
+		name: 'Facilities & Maintenance',
+		description:
+			'Keep the space working — patch drywall, swap bulbs, restring the loaner guitars, fix the door that sticks.\n\nBring whatever skills you have; there is always something.',
+		displayOrder: 50
+	},
+	{
+		name: 'Outreach & Tabling',
+		description:
+			'Represent CMC at the farmers market, campus events, and other venues. Hand out info, talk to musicians, sign people up.',
+		displayOrder: 60
+	},
+	{
+		name: 'Administration',
+		description:
+			'Behind-the-scenes work: data entry, grant paperwork, scheduling, and answering the inbox.',
+		displayOrder: 70
+	},
+	{
+		// Archived so the restore path and the "archived roles still resolve in
+		// reports" behaviour both have coverage on a fresh seed.
+		name: 'Zine & Print',
+		description: 'Layout and printing for the quarterly zine. On hiatus while we rethink the run.',
+		displayOrder: 80,
+		isActive: false
+	}
+];
+
+const VOLUNTEER_DESCRIPTIONS = [
+	'Ran sound for the Thursday open mic',
+	'Set up chairs and PA for the all-ages show',
+	'Front desk during afternoon open hours',
+	'Load-out and floor reset after the show',
+	'Restrung and cleaned the loaner guitars',
+	'Tabled at the farmers market',
+	'Sorted and labelled the cable bin',
+	'Covered the door for the benefit gig',
+	'Monitor mixes for the four-band bill',
+	'Patched and repainted the green room wall',
+	'Entered new member signups from the show',
+	'Hauled the backline over from storage'
+];
+
+const VOLUNTEER_REJECT_NOTES = [
+	'This looks like a duplicate of the log you filed the same day — resubmit just the one.',
+	'We had you down for two hours on this, not five. Log the corrected time and we will approve it.',
+	'Practice time is not volunteer time, but thanks for pitching in on the reset afterward — log that part.',
+	'No record of this shift. Check the date and resubmit.'
+];
+
+async function seedVolunteerRoles() {
+	console.log('Seeding volunteer roles...');
+	return batchInsert(volunteerRole, VOLUNTEER_ROLE_SEEDS);
+}
+
+async function seedVolunteerHours(users: any[], roles: any[]) {
+	console.log('Seeding volunteer hour logs...');
+	if (roles.length === 0 || users.length === 0) return [];
+
+	// Weighted so the queue has real work on first load, and the report has
+	// enough approved history to be worth opening.
+	const STATUS_MIX = [
+		...Array(10).fill('pending'),
+		...Array(36).fill('approved'),
+		...Array(4).fill('rejected')
+	] as const;
+
+	const volunteers = pickN(users, Math.min(10, users.length));
+	const reviewer = users[0];
+	const archivedRole = roles.find((r: any) => !r.isActive);
+	const activeRoles = roles.filter((r: any) => r.isActive);
+
+	const values = STATUS_MIX.map((status, i) => {
+		// A few logs against the archived role, so the report has to prove it
+		// still resolves retired roles.
+		const role = archivedRole && i % 17 === 0 ? archivedRole : pick(activeRoles);
+		const workedOn = ptDate(-randomInt(1, 180), 12);
+		const reviewed = status !== 'pending';
+
+		return {
+			userId: pick(volunteers).id,
+			volunteerRoleId: role.id,
+			shiftId: null,
+			workedOn,
+			minutes: pick([60, 90, 120, 180, 240, 300]),
+			description: pick(VOLUNTEER_DESCRIPTIONS),
+			status,
+			reviewedByUserId: reviewed ? reviewer.id : null,
+			reviewedAt: reviewed ? new Date(workedOn.getTime() + 2 * 24 * 60 * 60 * 1000) : null,
+			reviewNotes: status === 'rejected' ? pick(VOLUNTEER_REJECT_NOTES) : null
+		};
+	});
+
+	// 13 columns × the default batch of 10 is 130 bound parameters, over D1's
+	// 100-variable ceiling for a single statement. 7 × 13 = 91.
+	return batchInsert(volunteerHourLog, values, 7);
 }
 
 async function seedContentFlags(users: any[], bands: any[], bandEvents: any[] = []) {

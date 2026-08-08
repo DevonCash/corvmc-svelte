@@ -267,6 +267,31 @@ export interface EventUnpublishedByStaffEvent {
 	}>;
 }
 
+export interface VolunteerHoursSubmittedEvent {
+	logId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	roleName: string;
+	/** Display hours, not stored minutes — email copy shouldn't do arithmetic. */
+	hours: number;
+	/** ISO string, like every other date on this bus. */
+	workedOn: string;
+	description: string;
+}
+
+export interface VolunteerHoursReviewedEvent {
+	logId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	roleName: string;
+	hours: number;
+	workedOn: string;
+	reviewNotes: string | null;
+	reviewedByName: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -296,6 +321,9 @@ export type DomainEvents = {
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
+	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
+	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
+	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
 };
 
 // ---------------------------------------------------------------------------
