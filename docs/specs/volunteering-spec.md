@@ -814,22 +814,23 @@ terms, but it is no longer a question of _whether_.
 
 ## Open questions
 
-1. **`VOLUNTEER_BACKDATE_LIMIT_DAYS = 90`.** Too tight and someone loses a busy
-   season's hours after a stretch of not logging; too loose and the "this
-   quarter" figure keeps moving under the board. It is a constant, changeable
-   without a migration, but the collective's actual reporting cadence should set
-   it rather than this guess.
-2. **The seeded role list.** Only three role names exist anywhere in the repo
-   today (a seed inbox fixture: sound engineer, event setup, front desk). The
-   rest of the seeded set is inferred venue ops. Unlike an enum this is now
-   trivially editable in the UI, so the cost of being wrong is a few minutes of
-   typing — but it is worth a look from whoever actually schedules volunteers.
-3. ~~**Which certifications does CMC actually track?**~~ **Answered.** First Aid
-   and Food Handler are expected eventually, alongside internal sound-desk
-   clearance. `issuedBy`, `validityMonths` and `reference` all earn their place,
-   and the standalone-catalog model is the right one — a role-attached training
-   flag would have had nowhere to put either card.
-4. ~~**Revoking is a hard delete — is that right?**~~ **Answered: no.** Revocation
-   is recorded, not deleted — see [Revocation](#revocation).
-5. **`CERT_EXPIRY_WARNING_DAYS = 60`** is a guess, and it only matters once the
-   reminder cron exists.
+None. Everything below was asked and answered during design; the answers are
+kept so nobody re-opens them from scratch.
+
+### Settled
+
+- **`VOLUNTEER_BACKDATE_LIMIT_DAYS = 90`** — reviewed and kept. Fine to begin
+  with; it is a constant, so changing it later costs nothing and needs no
+  migration.
+- **`CERT_EXPIRY_WARNING_DAYS = 60`** — reviewed and kept, on the same terms. It
+  has no effect until the expiry-reminder cron is built.
+- **The seeded role list** — left as seeded. Five of the eight names were
+  inferred rather than drawn from the repo, but the catalog is staff-editable,
+  so correcting them is typing rather than a migration. Not worth blocking on.
+- **Which certifications CMC tracks** — First Aid and Food Handler are expected
+  eventually, alongside internal sound-desk clearance. `issuedBy`,
+  `validityMonths` and `reference` therefore all earn their place, and the
+  standalone catalog is the right model: a role-attached training flag would
+  have had nowhere to put either card.
+- **Revoking a certification** — recorded, not deleted. See
+  [Revocation](#revocation).
