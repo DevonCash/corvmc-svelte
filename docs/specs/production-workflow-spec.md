@@ -847,8 +847,17 @@ for a hidden external act — is now moot for external acts specifically, since 
 slug to emit. It still applies to **hidden member bands**, which do have slugs; see the
 pre-existing hole in the audit below.
 
-The same rule applies to the published run of show: render a link only for slots whose
-profile has a group and is publicly visible, and plain text otherwise.
+**The published run of show links out, never in.** Per
+[groups-spec.md](groups-spec.md#an-unclaimed-act-has-no-page-anywhere), an unclaimed act has
+no hosted page at all — not even an unlisted one — so a slot renders as:
+
+- a link to `/directory/bands/[slug]` when the act is a member band and publicly visible;
+- a link to the act's **own** URL, from `band_profile.links`, when it is unclaimed and has
+  given one;
+- plain text otherwise.
+
+There is no case where an unclaimed act's name resolves to something CMC hosts, which is
+what makes this safe by construction rather than by remembering to check visibility.
 
 ---
 
@@ -1023,7 +1032,9 @@ and `pending`. It needs `offered`, `settled`, `closed`, `invited`, `declined`, a
 No new public routes. `/events/[id]` gains an optional lineup section — act names in
 running order with set times — rendered when the event is published, the production is
 `confirmed` or later, and at least one slot is `confirmed`. Act names link to
-`/directory/bands/[slug]` only when that band is directory-visible; otherwise plain text.
+`/directory/bands/[slug]` for publicly visible member bands, to the act's own URL for
+unclaimed acts that have given one, and render as plain text otherwise — see
+[The gig-guide attribution rule](#the-gig-guide-attribution-rule).
 
 ---
 
