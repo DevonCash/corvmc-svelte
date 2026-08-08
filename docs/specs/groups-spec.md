@@ -1,8 +1,12 @@
 # Groups Module
 
-A group is a set of CMC members who organize together — a band, a club, a class, or a committee. Groups own a roster, post announcements to their members, keep shared documents, and run events. A band additionally has a **band profile**: the public-facing musical identity (genres, hometown, links, EPK, premium microsite) that a club or committee has no use for.
+A group is a set of CMC members who organize together — a band, a club, or a committee. Groups own a roster, post announcements to their members, keep shared documents, and run events. A band additionally has a **band profile**: the public-facing musical identity (genres, hometown, links, EPK, premium microsite) that a club or committee has no use for.
 
-This spec splits today's `band` table in two. `group` is the managed organization; `band_profile` is the band's presentational data. The split is what lets clubs, classes, and committees reuse the roster machinery without inheriting band-shaped columns — and what lets a touring act exist as a staff-kept record with no roster at all.
+The driving case is the Real Book Club jazz jam: a member-run club with a roster, a recurring event series on the public gig guide, a way to tell its members when a session moves, and somewhere to keep the charts. Everything in this spec should be checked against whether it serves that.
+
+This spec splits today's `band` table in two. `group` is the managed organization; `band_profile` is the band's presentational data. The split is what lets clubs and committees reuse the roster machinery without inheriting band-shaped columns — and what lets a touring act exist as a staff-kept record with no roster at all.
+
+**Classes are deliberately out of scope.** A class needs enrollment, not membership — term boundaries, attendance, completion — and none of that is expressible as a roster. See [Deferred](#deferred).
 
 > This spec is the source of truth for the band/group boundary. Where
 > [production-workflow-spec.md](production-workflow-spec.md) describes external acts as `band` rows,
@@ -20,20 +24,22 @@ This spec splits today's `band` table in two. `group` is the managed organizatio
 | `band_profile` | tagline, hometown, founded year, genres, links, tier & subscription, EPK, microsite config, media                     | Yes — a touring act, as a staff-kept record |
 | the link       | `band_profile.groupId` — nullable, unique                                                                             | A CMC member band is both                   |
 
-Four kinds of group, and the kind is presentation and filtering only — it grants no capability by itself:
+Three kinds of group, and the kind is presentation and filtering only — it grants no capability by itself:
 
 ```
-group.kind  'band' | 'club' | 'class' | 'committee'
+group.kind  'band' | 'club' | 'committee'
 ```
 
-Only a `band` group may have a band profile. Everything else about a group — roster, roles, announcements, documents, events — behaves identically across all four kinds. **Kind is not a permission.** A club can run events exactly as a band can; the only thing kind gates is whether the band-profile surfaces appear.
+Only a `band` group may have a band profile. Everything else about a group — roster, roles, announcements, documents, events — behaves identically across all three kinds. **Kind is not a permission.** A club runs events exactly as a band does; the only thing kind gates is whether the band-profile surfaces appear.
+
+Adding a kind is a one-line change to this union plus a label, precisely because kind grants nothing. That is what makes deferring classes cheap rather than a decision to relitigate later.
 
 ### Group
 
 ```
 group
   id                 text (uuid), PK
-  kind               text, not null   ('band' | 'club' | 'class' | 'committee')
+  kind               text, not null   ('band' | 'club' | 'committee')
   name               text, not null
   slug               text, not null, unique
   description        text, nullable
@@ -105,7 +111,7 @@ group_member
 - Owner row: `role = 'owner'`, `status = 'active'`, `invitedById = null`.
 - Invited member: `role = 'member' | 'admin'`, `status = 'pending'`, `invitedById` set.
 - Accepting flips `status` to `'active'`. Declining or revoking deletes the row.
-- `position` is free text and carries whatever the group calls it — instrument for a band, office for a committee, role for a class.
+- `position` is free text and carries whatever the group calls it — instrument for a band, office for a committee, "host" or "chart librarian" for a club.
 - `notifyAnnouncements` is the per-group mute. A member of six groups needs to silence one without silencing all; a single global preference cannot express that.
 
 **Membership is not polymorphic.** Because everything managed is a group, `groupId` is a real foreign key with `ON DELETE CASCADE` — as are `group_invite`, `announcement`, and `file`. This is the single largest simplification in the design. A polymorphic `(entityType, entityId)` shape would have required a `purgeEntity()` helper called from every delete path, an orphan-reconcile cron, and a discriminator branch in every query. It would also have invited the bug `content_flag` already has: its rows are never cleaned up when a band is deleted, because there is no FK to enforce it.
@@ -214,7 +220,7 @@ Adding `groupId` and the join table are plain `ALTER TABLE ADD COLUMN` / `CREATE
 
 ## Roles and permissions
 
-Three roles within a group, checked at the service level. Identical across all four kinds.
+Three roles within a group, checked at the service level. Identical across all three kinds.
 
 | Role   | Post announcements | Upload documents | Invite | Remove members | Edit group | Manage events | Delete group | Transfer ownership |
 | ------ | ------------------ | ---------------- | ------ | -------------- | ---------- | ------------- | ------------ | ------------------ |
@@ -255,6 +261,19 @@ Passing the ref explicitly is not a security regression. The slug is a lookup ke
 ---
 
 ## Workflows
+
+### The Real Book Club, end to end
+
+The driving case, traced through the design, as a check that the pieces actually compose:
+
+1. A member creates a group, kind `club`, named "Real Book Club". It gets the slug `real-book-club`, a public page at `/groups/real-book-club`, and an owner row. No band profile.
+2. They set `lookingForMembers` and write `joinInstructions` — "third Thursday, bring a horn, charts provided" — which is what the public page shows alongside upcoming sessions.
+3. They invite the regulars. Members who have accounts get a pending `group_member` row on their dashboard; the two who don't get a `group_invite` email and land in the roster on signup.
+4. They create a recurring event series for the jam, `source: 'group'`, which generates published occurrences on the public gig guide with the club as host. **This is the one place the design has a gap today** — the recurring generator hard-codes `source: 'cmc'` and `status: 'draft'`, so it has to be fixed first; see [Prerequisites](#prerequisites-and-known-defects).
+5. They upload the charts to Documents as PDFs. Members download them through the authorized route; nobody outside the club can, which matters for material they don't own outright.
+6. A session moves. They post an announcement; it fans out in-app and by email to every member who hasn't muted the club, in one batched send.
+
+What this does **not** give them: the club cannot book the room under its own name, because group reservations are [deferred](#deferred). A member books it personally and the event links to that reservation. That is the most likely first thing they will ask for.
 
 ### Creating a group
 
@@ -333,7 +352,7 @@ Unchanged root, now resolving a **group** slug. Nav splits into two sections so 
 
 ### Group panel (`/group/{slug}`)
 
-The same two-section shape for clubs, classes, and committees. Its _Public face_ is one page — the simple public page — and it has no reservations:
+The same two-section shape for clubs and committees. Its _Public face_ is one page — the simple public page — and it has no reservations:
 
 | Section         | Route                         | Page                                                    |
 | --------------- | ----------------------------- | ------------------------------------------------------- |
@@ -356,6 +375,8 @@ The same two-section shape for clubs, classes, and committees. Its _Public face_
 Groups get **no subdomains**. Only band microsites claim `{slug}.corvmc.org`, so `hooks.ts` is untouched. Group slugs still need reserved-checking, because they share one namespace with bands.
 
 `RESERVED_SLUGS` currently holds `band`, `bands`, `member`, `members`, `events`, `directory` — and none of `group`, `groups`, `club`, `clubs`, `class`, `classes`, `committee`, `committees`, `file`, `files`. These must be added **before the first group is created**; retrofitting means renaming live slugs.
+
+Reserve `class` and `classes` now even though classes are deferred. Reserving a word costs nothing today and cannot be done later without taking a slug away from a group that already has it.
 
 ### Staff
 
@@ -383,7 +404,7 @@ One notification type covers every kind:
 ```
 key         'announcement'
 label       'Group announcements'
-description 'Posts from bands, clubs, classes, and committees you belong to'
+description 'Posts from bands, clubs, and committees you belong to'
 defaults    { email: true, inApp: true, sms: false }
 ```
 
@@ -559,11 +580,15 @@ Verified against the code, and load-bearing for this design whether or not they 
 
 ## Deferred
 
+- **Classes.** A class looks like a group — a teacher, some students, a roster — but the resemblance stops at the roster. Enrollment is not membership: it has a **term** with a start and an end, so the same person is enrolled in Spring and not in Summer while the class itself persists; it has **attendance** per session; and it has **completion**, which is a per-person outcome a membership row has nowhere to put. Modeling that as `group_member` would mean either a new group per term (losing the class's identity and history) or status values that quietly mean different things depending on kind.
+
+  The right shape is almost certainly a `class` module that **owns a group** for its roster and reuses announcements and documents wholesale, adding `term` and `enrollment` alongside — the same relationship `band_profile` has to `group`. Nothing in this spec forecloses that, and the `kind` union is one line to extend. This is also where the reserved `'lesson'` value already sitting in `reservation.bookerType` would finally get used.
+
 - **Threaded discussion** — replies to announcements, read receipts, unread counts. `sse.ts` is a per-isolate in-memory registry, adequate for a bell badge but not a real-time transport; group chat would want a Durable Object.
 - **Group email aliases** — an inbound address per group fanning out to members. The inbound plumbing exists (Postmark `MailboxHash`, signed reply addresses) but a real mailing list is deliverability work, and the inbox schema is contact-keyed rather than member-keyed.
 - **Document folders, versioning, and previews** — flat list, one version, download only.
 - **Presigned multipart upload** — needed above the 25 MB in-Worker ceiling.
-- **Group room reservations** — clubs and classes booking the space under their own name and credit balance. `bookerType` would gain a value and the booking guard would generalize.
+- **Group room reservations** — a club booking the space under its own name and credit balance. `bookerType` would gain a value and the booking guard would generalize. Note this is a real gap for the Real Book Club case: its jam needs a room, so until this lands a member books it personally and the club's event links to that reservation.
 - **Group subdomains** — only band microsites claim one.
 - **Public group directory filtering** beyond kind — no genre or tag search for non-band groups.
 - **Per-group document quota tiers** — service constants for now.
@@ -571,7 +596,7 @@ Verified against the code, and load-bearing for this design whether or not they 
 
 ## Open questions
 
-- **Do classes need a roster distinct from enrollment?** A class with a teacher and students maps onto `owner` / `member` cleanly, but term boundaries, attendance, and completion have no representation here. If classes turn out to need any of that, they may deserve their own module built on the group primitive rather than more columns on `group`.
+- **Does a committee need anything a club doesn't?** Both are modeled identically today. Committees may want meeting minutes with dates and decisions rather than free-form documents, and terms of service for officers — but that is speculative until one exists.
 - **Should `band_profile` be reachable by staff at a stable URL?** It has no slug by design. A UUID path under the staff panel works, but it makes sharing a link to an act's record awkward when booking.
 - **What happens to a group's documents when it is deleted?** Currently they cascade and their objects are deleted. A committee's minutes may warrant retention past the committee, which would mean an archive path rather than a cascade.
 
