@@ -2,7 +2,7 @@
 
 A group is a set of CMC members who organize together — a band, a club, or a committee. Groups own a roster, post announcements to their members, keep shared documents, and run events. A band additionally has a **band profile**: the public-facing musical identity (genres, hometown, links, EPK, premium microsite) that a club or committee has no use for.
 
-The driving case is the Real Book Club jazz jam: a member-run club with a roster, a recurring event series on the public gig guide, a way to tell its members when a session moves, and somewhere to keep the charts. Everything in this spec should be checked against whether it serves that.
+The driving case is the Real Book Club jazz jam: a CMC program with a roster, a recurring session anyone may drop into, a way to tell its members when a session moves, and somewhere to keep the charts. Everything in this spec should be checked against whether it serves that.
 
 This spec splits today's `band` table in two. `group` is the managed organization; `band_profile` is the band's presentational data. The split is what lets clubs and committees reuse the roster machinery without inheriting band-shaped columns — and what lets a touring act exist as a staff-kept record with no roster at all.
 
@@ -24,15 +24,29 @@ This spec splits today's `band` table in two. `group` is the managed organizatio
 | `band_profile` | tagline, hometown, founded year, genres, links, tier & subscription, EPK, microsite config, media                     | Yes — a touring act, as a staff-kept record |
 | the link       | `band_profile.groupId` — nullable, unique                                                                             | A CMC member band is both                   |
 
-Three kinds of group, and the kind is presentation and filtering only — it grants no capability by itself:
+Three kinds of group:
 
 ```
 group.kind  'band' | 'club' | 'committee'
 ```
 
-Only a `band` group may have a band profile. Everything else about a group — roster, roles, announcements, documents, events — behaves identically across all three kinds. **Kind is not a permission.** A club runs events exactly as a band does; the only thing kind gates is whether the band-profile surfaces appear.
+**Roles and membership behave identically across all three.** Owner, admin, and member mean the same thing everywhere; announcements, documents, and the roster are one implementation. What kind does determine is the line below, which is a governance fact rather than a UI one:
 
-Adding a kind is a one-line change to this union plus a label, precisely because kind grants nothing. That is what makes deferring classes cheap rather than a decision to relitigate later.
+|                                   | `band`                                  | `club`, `committee`                      |
+| --------------------------------- | --------------------------------------- | ---------------------------------------- |
+| Created by                        | Any member, self-service                | **Staff only**, from the staff panel     |
+| Owner                             | The creator                             | **Appointed by staff**                   |
+| Deleted by                        | Its owner                               | Staff only                               |
+| Has a band profile                | Yes                                     | No                                       |
+| Default join policy               | `invite_only`                           | Either; `open` is the point of a program |
+| Its events may hold the room free | No                                      | **Yes**                                  |
+| Rehearsal bookings                | `bookerType: 'band'`, credits then cash | n/a — see [Room time](#room-time)        |
+
+**A club or committee is a sanctioned CMC program by construction.** There is no `sanctioned` flag, because the existence of the row is the sanction — staff created it and staff appointed whoever runs it. A band is the opposite: a member's own project, self-created, paying for its own rehearsal time.
+
+That distinction is what makes free room time safe to grant. An earlier draft proposed a `sanctioned` boolean so staff could bless individual groups; it is unnecessary once members cannot create clubs at all. The abuse case — spin up a fake club, give it a weekly "event," collect free room time — is closed structurally rather than by a check someone has to remember.
+
+Adding a kind later is a one-line change to this union plus a row in that table.
 
 ### Group
 
@@ -45,6 +59,7 @@ group
   description        text, nullable
   avatarKey          text, nullable   (R2 storage key)
   publicVisibility   text, not null, default 'public'   ('public' | 'members' | 'hidden')
+  joinPolicy         text, not null, default 'invite_only'   ('invite_only' | 'open')
   joinInstructions   text, nullable
   lookingForMembers  boolean, not null, default false
   contact            json, nullable   (public contact preferences)
@@ -56,6 +71,10 @@ group
 **Slugs live here and nowhere else.** `group.slug` is the only slug in the system, so a plain unique index is the whole namespace enforcement — no registry table, no dual-write, no second source of truth. It follows that **a thing is publicly addressable if and only if it has a group**, which is a structural fact rather than a filter anyone can forget to apply.
 
 **There is no `ownerId`.** The owner is the `group_member` row with `role = 'owner'`, enforced by a partial unique index. See [Ownership](#ownership).
+
+**`joinPolicy` is how open enrollment works.** `invite_only` is today's behavior and stays the default: you get in because someone with authority added you. `open` means any signed-in member may join themselves, landing directly on an active `member` row with no approval step — which is the whole point of a drop-in program like the Real Book Club. The policy governs only self-service joining; invitations work identically under both.
+
+`joinInstructions` remains useful under `open` — it is the "bring a horn, charts provided" prose next to the button, not a substitute for it.
 
 ### Band profile
 
@@ -216,19 +235,40 @@ A CMC production uses `production_slot`. A member-authored event uses `event_gro
 
 Adding `groupId` and the join table are plain `ALTER TABLE ADD COLUMN` / `CREATE TABLE` operations, and extending the `source` enum emits **zero SQL** — it is a TypeScript-only constraint in Drizzle's SQLite dialect. Generalizing instead to `ownerType`/`ownerId` was rejected: it would force a rebuild of `event`, which has more children than any other table (`ticket`, `event_rsvp`, `recurring_series`, `reservation`) and is the riskiest rebuild in the schema.
 
+### Room time
+
+A program does not book the room the way a band does. It gets the room **through its event**, free, and the mechanism already exists — it just isn't reachable from outside the staff panel today:
+
+| Path                              | Reserves the room                                                 | Cost               |
+| --------------------------------- | ----------------------------------------------------------------- | ------------------ |
+| Member or band rehearsal          | `bookerType: 'user' \| 'band'`                                    | Credits, then cash |
+| Staff CMC event — `create()`      | `bookerType: 'event'`, via `staffCreate`, straight to `confirmed` | **Free**           |
+| Band event — `createBandEvent()`  | **Nothing.** It is an off-site gig listing with a `location`      | n/a                |
+| **Club or committee event — new** | `bookerType: 'event'`, same path as a CMC event                   | **Free**           |
+
+So a group event needs a `createGroupEvent()` that takes optional reservation params and routes them through `staffCreate` with `bookerType: 'event'`, exactly as `create()` does at `event-service.ts:113` — including the `hasConflict` pre-check and the compensating delete if the event insert fails. Recurring group sessions need the same on each generated occurrence.
+
+**No new `bookerType` value, and no credit accounting.** The reservation belongs to the event, not the group, so nothing in the booker polymorphism changes and no credit ledger is touched. `bookerType: 'group'` would imply a group has a balance to spend, which is precisely what a sanctioned program does not need.
+
+This is why free room time is safe: only staff create clubs and committees, so only staff decide who may hold the room this way. The privilege travels with the kind, not with a per-event approval.
+
+Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'band'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
+
 ---
 
 ## Roles and permissions
 
 Three roles within a group, checked at the service level. Identical across all three kinds.
 
-| Role   | Post announcements | Upload documents | Invite | Remove members | Edit group | Manage events | Delete group | Transfer ownership |
-| ------ | ------------------ | ---------------- | ------ | -------------- | ---------- | ------------- | ------------ | ------------------ |
-| owner  | ✅                 | ✅               | ✅     | ✅             | ✅         | ✅            | ✅           | ✅                 |
-| admin  | ✅                 | ✅               | ✅     | ✅ (not owner) | ✅         | ✅            | ❌           | ❌                 |
-| member | ❌                 | ❌               | ❌     | ❌             | ❌         | ❌            | ❌           | ❌                 |
+| Role   | Post announcements | Upload documents | Invite | Remove members | Edit group | Manage events | Transfer ownership | Delete group |
+| ------ | ------------------ | ---------------- | ------ | -------------- | ---------- | ------------- | ------------------ | ------------ |
+| owner  | ✅                 | ✅               | ✅     | ✅             | ✅         | ✅            | ✅                 | Bands only   |
+| admin  | ✅                 | ✅               | ✅     | ✅ (not owner) | ✅         | ✅            | ❌                 | ❌           |
+| member | ❌                 | ❌               | ❌     | ❌             | ❌         | ❌            | ❌                 | ❌           |
 
 Members read announcements and download documents; they do not create them. Staff (`admin` or `staff`) can manage any group from the staff panel.
+
+**Deleting a club or committee is staff-only**, unlike a band. An appointed program leader runs the program; they do not own it, and they should not be able to dissolve a CMC program on their own — the same reason they could not create it. A leader who wants out transfers ownership or leaves; ending the program is a staff decision. This is the one place the role table differs by kind.
 
 ### The guard
 
@@ -266,21 +306,39 @@ Passing the ref explicitly is not a security regression. The slug is a lookup ke
 
 The driving case, traced through the design, as a check that the pieces actually compose:
 
-1. A member creates a group, kind `club`, named "Real Book Club". It gets the slug `real-book-club`, a public page at `/groups/real-book-club`, and an owner row. No band profile.
-2. They set `lookingForMembers` and write `joinInstructions` — "third Thursday, bring a horn, charts provided" — which is what the public page shows alongside upcoming sessions.
-3. They invite the regulars. Members who have accounts get a pending `group_member` row on their dashboard; the two who don't get a `group_invite` email and land in the roster on signup.
-4. They create a recurring event series for the jam, `source: 'group'`, which generates published occurrences on the public gig guide with the club as host. **This is the one place the design has a gap today** — the recurring generator hard-codes `source: 'cmc'` and `status: 'draft'`, so it has to be fixed first; see [Prerequisites](#prerequisites-and-known-defects).
-5. They upload the charts to Documents as PDFs. Members download them through the authorized route; nobody outside the club can, which matters for material they don't own outright.
+The driving case, traced through the design, as a check that the pieces actually compose:
+
+1. **Staff** create the group from `/staff/groups`, kind `club`, named "Real Book Club", and appoint a member as its leader — an owner `group_member` row. It gets the slug `real-book-club` and a public page at `/groups/real-book-club`. No band profile.
+2. Staff set `joinPolicy: 'open'`. The leader writes `joinInstructions` — "third Thursday, bring a horn, charts provided" — which the public page shows next to a Join button.
+3. Anyone browsing `/groups/real-book-club` who is signed in can join themselves, landing straight on an active `member` row. The leader can still invite people directly, and non-members get a `group_invite` email.
+4. The leader creates a recurring event series for the jam, `source: 'group'`, and asks it to hold the room. Each occurrence is published to the gig guide with the club as host and carries a free `bookerType: 'event'` reservation — see [Room time](#room-time). No credits are spent and nobody books anything personally.
+5. They upload the charts to Documents as PDFs. Members download them through the authorized route; nobody outside the club can, which matters for material the club doesn't own outright.
 6. A session moves. They post an announcement; it fans out in-app and by email to every member who hasn't muted the club, in one batched send.
 
-What this does **not** give them: the club cannot book the room under its own name, because group reservations are [deferred](#deferred). A member books it personally and the event links to that reservation. That is the most likely first thing they will ask for.
+Two pieces of this do not exist yet and are the real work: a `createGroupEvent()` that can reserve the room, and a fix to the recurring generator, which hard-codes `source: 'cmc'` and `status: 'draft'` and would otherwise emit unpublished CMC-attributed drafts with no reservation. See [Prerequisites](#prerequisites-and-known-defects).
 
 ### Creating a group
 
-1. Member picks a kind and enters a name; description optional.
-2. The service creates the `group` (slug generated from the name, checked against `RESERVED_SLUGS`) and a `group_member` row with `role = 'owner'`, `status = 'active'`, in one `db.batch`.
-3. If kind is `band`, a linked `band_profile` row is created with its identity columns NULL.
-4. Redirect to `/group/{slug}` — or `/band/{slug}` for a band.
+**Bands** are member self-service, unchanged from today: a member enters a name, and the service creates the `group` (slug generated and checked against `RESERVED_SLUGS`), the owner `group_member` row, and a linked `band_profile` with its identity columns NULL — one `db.batch`. Redirect to `/band/{slug}`.
+
+**Clubs and committees** are created by staff from `/staff/groups`:
+
+1. Staff enter a name, kind, and description, and pick the member who will lead it.
+2. The service creates the `group` and an owner `group_member` row for that member with `status = 'active'` — appointed, not invited, so there is nothing for them to accept.
+3. Staff set `joinPolicy` and `publicVisibility`.
+4. The appointee gets a notification and the group appears in their panel switcher.
+
+The appointee never had to opt in, which is deliberate: staff are recording an arrangement that already exists offline. They can leave or hand off afterwards like any owner.
+
+### Joining an open group
+
+1. A signed-in member opens the public page of a group with `joinPolicy: 'open'` and clicks Join.
+2. The service inserts a `group_member` row with `role = 'member'`, `status = 'active'`, `invitedById = null`.
+3. They land in the panel immediately — no approval, no pending state.
+
+The guard is the group's own policy, not the caller's identity: the remote re-reads `joinPolicy` from the resolved group rather than trusting anything from the request. Re-joining is idempotent against `unique(groupId, userId)`. Leaving and rejoining is unremarkable and expected for a drop-in program.
+
+Owners and admins cannot self-assign — self-join always produces `role = 'member'`.
 
 ### Inviting a member
 
@@ -321,9 +379,11 @@ Nothing merges and no rows are reconciled, which is what the earlier "external a
 
 Unchanged from bands, minus the `ownerId` write: the target's row becomes `owner`, the previous owner's becomes `admin`, in one batch. An owner cannot be removed or leave without transferring first.
 
+For a club or committee, staff may also reassign the leader directly from the staff panel without the outgoing leader's participation — the appointment is theirs to make and unmake. That path skips the owner-must-transfer-first rule, which exists to stop a band being orphaned, not to bind a program to whoever last ran it.
+
 ### Deleting a group
 
-1. Owner confirms from Settings.
+1. A band's owner confirms from Settings; a club or committee is deleted by **staff** from `/staff/groups/{id}`.
 2. Private R2 objects for the group's files are deleted first — a failed object delete leaves the rows as a recovery record rather than orphaning storage silently.
 3. The `group` row is deleted. `group_member`, `group_invite`, `announcement`, and `file` **cascade**.
 4. A linked `band_profile` survives with `groupId` set to null, and its identity columns are repopulated from the group before deletion — a deleted band reverts to a staff-kept record rather than vanishing, so its event history keeps a name.
@@ -361,16 +421,20 @@ The same two-section shape for clubs and committees. Its _Public face_ is one pa
 | **Manage**      | `/group/{slug}/members`       | Roster, invitations, roles                              |
 | **Manage**      | `/group/{slug}/announcements` | Announcement list & composer                            |
 | **Manage**      | `/group/{slug}/documents`     | Shared files                                            |
-| **Manage**      | `/group/{slug}/events`        | Group events                                            |
-| **Manage**      | `/group/{slug}/settings`      | Delete group                                            |
+| **Manage**      | `/group/{slug}/events`        | Group sessions, including the recurring series          |
+| **Manage**      | `/group/{slug}/settings`      | Leave, hand off — **no delete**                         |
+
+There is no danger zone here. Ending a club or committee is a staff action, so `/group/{slug}/settings` carries leaving and handing off but not deletion.
 
 ### Public
 
-| Route                     | Page                                                                        |
-| ------------------------- | --------------------------------------------------------------------------- |
-| `/groups`                 | Directory of public groups, filterable by kind                              |
-| `/groups/{slug}`          | Simple public page — name, description, photo, upcoming events, how to join |
-| `/directory/bands/{slug}` | Band profile — unchanged, now resolving through the group                   |
+| Route                     | Page                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `/groups`                 | Directory of public groups, filterable by kind                                                                  |
+| `/groups/{slug}`          | Simple public page — name, description, photo, upcoming sessions, and a Join button when `joinPolicy` is `open` |
+| `/directory/bands/{slug}` | Band profile — unchanged, now resolving through the group                                                       |
+
+The Join button is the only write on a public page. It requires a session, so a signed-out visitor gets a sign-in prompt that returns them to the group.
 
 Groups get **no subdomains**. Only band microsites claim `{slug}.corvmc.org`, so `hooks.ts` is untouched. Group slugs still need reserved-checking, because they share one namespace with bands.
 
@@ -380,7 +444,13 @@ Reserve `class` and `classes` now even though classes are deferred. Reserving a 
 
 ### Staff
 
-Touring profiles have no panel and no public URL. They are reached from the staff bands area, which gains a filter for unlinked profiles and an inline create used when booking an act into a production.
+| Route                | Page                                                                           |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `/staff/groups`      | All clubs and committees; **create** a group and appoint its leader            |
+| `/staff/groups/{id}` | Edit, set `joinPolicy` and visibility, reassign the leader, deactivate, delete |
+| `/staff/bands`       | Existing page — gains a filter for unlinked touring profiles                   |
+
+`/staff/groups` is the **only** place a club or committee comes into existence. Touring profiles have no panel and no public URL; they are reached from the staff bands area, which gains an inline create used when booking an act into a production.
 
 ### API
 
@@ -486,18 +556,20 @@ Soft-deleting a document **hard-deletes the R2 object immediately**; the row is 
 
 New: `src/lib/server/group/`.
 
-| Function                                                                 | Description                                                               |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `create(ownerId, { kind, name, description })`                           | Group + owner row (+ band profile when kind is `band`), one batch         |
-| `update(groupId, data)`                                                  | Name/description/visibility; re-slug on rename, excluding self            |
-| `deleteGroup(groupId, actorId)`                                          | Delete private objects, restore profile identity, delete group (cascades) |
-| `getBySlug(slug)` / `getById(id)`                                        | Excludes soft-deleted; includes member count                              |
-| `listForUser(userId)`                                                    | Groups where the user has a row, any status                               |
-| `getMembers(groupId)`                                                    | Rows joined to user, ordered owner → admin → member                       |
-| `invite` / `acceptInvitation` / `declineInvitation` / `revokeInvitation` | Unchanged semantics, group-scoped                                         |
-| `removeMember` / `updateMember`                                          | Client ids re-scoped via `memberScope`                                    |
-| `transferOwnership` / `leaveGroup`                                       | Owner constraints as today, minus the `ownerId` write                     |
-| `claimBandProfile(profileId, ownerId)`                                   | The touring-act claim described above                                     |
+| Function                                                                 | Description                                                                                                                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create(ownerId, { kind, name, description })`                           | Group + owner row (+ band profile when kind is `band`), one batch. Callers gate on kind: `band` is member self-service, `club`/`committee` staff-only |
+| `update(groupId, data)`                                                  | Name/description/visibility/`joinPolicy`; re-slug on rename, excluding self                                                                           |
+| `joinGroup(groupId, userId)`                                             | Self-join. Re-reads `joinPolicy` from the resolved group; always `role: 'member'`, `status: 'active'`                                                 |
+| `assignLeader(groupId, userId, actorId)`                                 | Staff appointment: owner row created or moved without the outgoing owner's participation                                                              |
+| `deleteGroup(groupId, actorId)`                                          | Delete private objects, restore profile identity, delete group (cascades)                                                                             |
+| `getBySlug(slug)` / `getById(id)`                                        | Excludes soft-deleted; includes member count                                                                                                          |
+| `listForUser(userId)`                                                    | Groups where the user has a row, any status                                                                                                           |
+| `getMembers(groupId)`                                                    | Rows joined to user, ordered owner → admin → member                                                                                                   |
+| `invite` / `acceptInvitation` / `declineInvitation` / `revokeInvitation` | Unchanged semantics, group-scoped                                                                                                                     |
+| `removeMember` / `updateMember`                                          | Client ids re-scoped via `memberScope`                                                                                                                |
+| `transferOwnership` / `leaveGroup`                                       | Owner constraints as today, minus the `ownerId` write                                                                                                 |
+| `claimBandProfile(profileId, ownerId)`                                   | The touring-act claim described above                                                                                                                 |
 
 `announcement-service.ts`, `file-service.ts`, and `group-context.ts` sit alongside it. `band-service.ts` shrinks to band-profile concerns: tier, subscription, genres, links, and the microsite.
 
@@ -520,11 +592,11 @@ Phase order. Each phase ships green, with bands working at every step.
 | 2   | Port every `band_member` read and write to `group_member` — **its own PR**                              |
 | 3   | `band` → `band_profile`: drop slug, name, `ownerId`, the name unique, and the redundant columns         |
 | 4   | `requireGroupRole` + explicit refs; deprecated wrappers retained                                        |
-| 5   | `/group/{slug}` panel, group creation, public group page                                                |
+| 5   | `/staff/groups` + `/group/{slug}` panel + public group page; `joinPolicy` and self-join                 |
 | 6   | `group_invite` replaces `platform_invite`                                                               |
 | 7   | Announcements — bands and groups simultaneously, since it is the same code                              |
 | 8   | Documents — bucket and binding deployed and verified **first**, then the table and route                |
-| 9   | Group events + `event_group`                                                                            |
+| 9   | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                        |
 
 Do not interleave phases 1–3. A half-ported roster plus a new `group` table means group bugs and band regressions land in one diff and cannot be told apart.
 
@@ -541,7 +613,10 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 | Ownership     | `band.ownerId` dropped; the owner is a `group_member` row                                               |
 | Permissions   | `band-context.ts` → `requireGroupRole` with explicit refs                                               |
 | Events        | `event.bandId` → `event.groupId`; `source` gains `'group'`; `event_group` for co-billing                |
-| Reservations  | `bookerId` for `bookerType = 'band'` repoints to `group.id`                                             |
+| Group events  | New `createGroupEvent()` that can reserve the room free via `bookerType: 'event'`                       |
+| Reservations  | `bookerId` for `bookerType = 'band'` repoints to `group.id`. No new `bookerType` value                  |
+| Enrollment    | `joinPolicy` on `group`; self-join for `open` groups                                                    |
+| Staff panel   | New `/staff/groups` — the only place a club or committee is created                                     |
 | Storage       | Second R2 bucket for private documents                                                                  |
 | Email         | `sendTemplateBatch()` added to the Postmark client                                                      |
 | Notifications | One `announcement` type; per-group mute on the membership row                                           |
@@ -565,14 +640,15 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 
 Verified against the code, and load-bearing for this design whether or not they are fixed in the same pass.
 
-| Finding                                                                                                       | Location                           | Effect                                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `opts.includeBandEvents ? undefined : eq(event.source, 'cmc')` — the filter vanishes when true                | `event-service.ts:789, :814`       | Group events would leak onto the public calendar regardless of the flag, and band events cannot be enabled independently. Replace the boolean with a `sources: EventSource[]` allow-list. |
-| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location` | `generation-job.ts:465`            | A club's recurring jazz night would never reach the gig guide. Latent today only because band events cannot be recurring at all.                                                          |
-| `invite()` catches `err.message.includes('unique')` against D1's `UNIQUE constraint failed`                   | `band-service.ts:317`              | `BandMemberExistsError` never fires; a duplicate invite surfaces as a 500. `platform-invite-service.ts:153` gets the case right.                                                          |
-| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                            | `platform-invite.ts:25`            | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                            |
-| `createBandEventForm` declares `slug` in Zod, then ignores it for `params.slug`                               | `band-events.remote.ts:96`         | Two sources of truth for one value. Resolved by the explicit-ref refactor.                                                                                                                |
-| Three raw-SQL `band_member` subqueries                                                                        | `band-service.ts` ~200, ~521, ~559 | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate.                                                                                             |
+| Finding                                                                                                                                                                | Location                           | Effect                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `opts.includeBandEvents ? undefined : eq(event.source, 'cmc')` — the filter vanishes when true                                                                         | `event-service.ts:789, :814`       | Group events would leak onto the public calendar regardless of the flag, and band events cannot be enabled independently. Replace the boolean with a `sources: EventSource[]` allow-list.                    |
+| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location`, and creates no reservation unless the prototype had one | `generation-job.ts:465`            | A club's recurring jazz night would never reach the gig guide **and** would not hold the room. Latent today only because band events cannot be recurring at all.                                             |
+| `createBandEvent()` creates no reservation at all — it is an off-site gig listing                                                                                      | `event-service.ts:571`             | There is no non-staff path that reserves the room, so `createGroupEvent()` must add one, modelled on `create()` at `event-service.ts:113` including the `hasConflict` pre-check and the compensating delete. |
+| `invite()` catches `err.message.includes('unique')` against D1's `UNIQUE constraint failed`                                                                            | `band-service.ts:317`              | `BandMemberExistsError` never fires; a duplicate invite surfaces as a 500. `platform-invite-service.ts:153` gets the case right.                                                                             |
+| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                                                                                     | `platform-invite.ts:25`            | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                                               |
+| `createBandEventForm` declares `slug` in Zod, then ignores it for `params.slug`                                                                                        | `band-events.remote.ts:96`         | Two sources of truth for one value. Resolved by the explicit-ref refactor.                                                                                                                                   |
+| Three raw-SQL `band_member` subqueries                                                                                                                                 | `band-service.ts` ~200, ~521, ~559 | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate.                                                                                                                |
 
 **A decision this spec must make, not defer:** whether `processEventSeries()` copies `status` from the prototype. Doing so is required for a club series to publish automatically, but it changes behavior for existing staff CMC series, which today always generate drafts for review. Publish automatically only when `source !== 'cmc'`, preserving the staff review step where it already exists.
 
@@ -588,7 +664,9 @@ Verified against the code, and load-bearing for this design whether or not they 
 - **Group email aliases** — an inbound address per group fanning out to members. The inbound plumbing exists (Postmark `MailboxHash`, signed reply addresses) but a real mailing list is deliverability work, and the inbox schema is contact-keyed rather than member-keyed.
 - **Document folders, versioning, and previews** — flat list, one version, download only.
 - **Presigned multipart upload** — needed above the 25 MB in-Worker ceiling.
-- **Group room reservations** — a club booking the space under its own name and credit balance. `bookerType` would gain a value and the booking guard would generalize. Note this is a real gap for the Real Book Club case: its jam needs a room, so until this lands a member books it personally and the club's event links to that reservation.
+- **Group rehearsal bookings** — a group holding the room privately, outside an event, against a credit balance. This is the band-rehearsal shape and would need a `bookerType` value and credit accounting. Programs do not need it: their sessions are events, and events reserve the room free — see [Room time](#room-time). An earlier draft listed this as a blocking gap for the Real Book Club, which was wrong; the jam is an event and gets its room that way.
+
+- **Request-to-join.** `joinPolicy` has two values, not three. Approval-gated joining needs a `status: 'requested'` rather than reusing `'pending'` — today `'pending'` means "we invited you, awaiting your answer," and a join request is the exact mirror, "you asked us, awaiting ours." Overloading one value would make every roster query and every notification ambiguous about which direction it was facing. It also needs an approval queue and its own notification type, which is more surface than anyone has asked for.
 - **Group subdomains** — only band microsites claim one.
 - **Public group directory filtering** beyond kind — no genre or tag search for non-band groups.
 - **Per-group document quota tiers** — service constants for now.
@@ -596,7 +674,9 @@ Verified against the code, and load-bearing for this design whether or not they 
 
 ## Open questions
 
+- **Should the kind be called `program` rather than `club`?** "Programs or committees" is how these were described, and a class would be a program too once it lands — which argues the umbrella term is the better name and `club` is one instance of it. `club` is kept here because it is concrete and it is what the Real Book Club is. Worth settling before the enum ships, since renaming a kind after rows exist means a data migration.
 - **Does a committee need anything a club doesn't?** Both are modeled identically today. Committees may want meeting minutes with dates and decisions rather than free-form documents, and terms of service for officers — but that is speculative until one exists.
+- **Can a member leave an open group they were invited to lead?** An appointed owner can hand off, but if nobody will take it the program has an owner who wants out and no path. Staff reassigning from `/staff/groups` covers it operationally; whether the leader can force the issue is a policy call.
 - **Should `band_profile` be reachable by staff at a stable URL?** It has no slug by design. A UUID path under the staff panel works, but it makes sharing a link to an act's record awkward when booking.
 - **What happens to a group's documents when it is deleted?** Currently they cascade and their objects are deleted. A committee's minutes may warrant retention past the committee, which would mean an archive path rather than a cascade.
 
