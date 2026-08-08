@@ -68,7 +68,9 @@ group
   deletedAt          timestamp, nullable
 ```
 
-**Slugs live here and nowhere else.** `group.slug` is the only slug in the system, so a plain unique index is the whole namespace enforcement — no registry table, no dual-write, no second source of truth. It follows that **a thing is publicly addressable if and only if it has a group**, which is a structural fact rather than a filter anyone can forget to apply.
+**Slugs live here and nowhere else.** `group.slug` is the only slug in the system — `band_profile` has none — so a plain unique index is the whole namespace enforcement: no registry table, no dual-write, no second source of truth. It follows that **a thing is publicly addressable if and only if it has a group**, which is a structural fact rather than a filter anyone can forget to apply.
+
+The index is `unique(slug)`, not `unique(kind, slug)`: one namespace shared by bands, clubs, and committees alike. A per-kind namespace would work, but it would make `requireGroupRole({ slug })` ambiguous — see [Decisions that were open](#decisions-that-were-open).
 
 **There is no `ownerId`.** The owner is the `group_member` row with `role = 'owner'`, enforced by a partial unique index. See [Ownership](#ownership).
 
@@ -759,10 +761,16 @@ Recorded because each one shaped something above, and because the reasoning is e
   Two earlier drafts overshot this. The first gave staff a UUID path; the second added a `publicId` and an unlisted `/a/{publicId}` profile so staff could forward an act's record to a promoter. Both were answering "how do we address this record publicly" when the right answer is that we don't. A promoter wants the band's own links, and hosting our copy of a third party's information means owning its accuracy and its exposure for no benefit. [Sqids](https://sqids.org/) were considered for the short id and were doubly wrong — they encode integers, which this schema has none of on `band_profile`; the implicit `rowid` alternative is unstable across the D1 table rebuild in phase 3; and their own docs list _sensitive data_ and _user IDs_ under "not good for," since the encoding is reversible against a shuffled alphabet rather than a secret.
 
 - **Documents survive the group.** Deactivation, not deletion, is how a program ends; see [Ending a group](#ending-a-group).
+- **Bands stay member self-service.** A band is a member's own project; a club or committee is an institution CMC stands behind. Any member may create a band, exactly as today, and the existing Create Band flow is unchanged. Only clubs and committees are staff-created — which is what makes free room time safe to grant by kind, since the privilege attaches to the thing members cannot mint for themselves.
+- **One slug namespace for every kind, not one per kind.** `group.slug` is `unique(slug)`, not `unique(kind, slug)`. Splitting it would work — the route roots are already disjoint (`/band/{slug}` and `/group/{slug}`), and only bands claim subdomains — and it would let a band and a club both be "Jazz Night" instead of one becoming `jazz-night-2`.
+
+  It was rejected on three counts. **The guard is the decisive one:** `requireGroupRole({ slug })` resolves a group from a slug alone, and it is called at ~55 sites; a per-kind namespace makes the ref `{ kind, slug }`, so the security boundary takes two client-supplied values instead of one and every caller has to know the kind before it can resolve anything. **Kind stops being free metadata** — `unique(kind, slug)` means changing a group's kind can collide, so it gains a uniqueness check on update. **And kind has to travel everywhere slug travels**: the panel switcher, search results, an announcement's source, a notification's `href`. That is a lot of plumbing to buy a collision case that is arguably worth preventing anyway, since two groups sharing a name confuses people regardless of what the URLs do.
+
+  The reversibility is also asymmetric. Shared → split is easy later: nothing collides, you relax the index. Split → shared means resolving collisions that already exist and breaking live URLs. Name squatting — a member taking a slug a future program wants — is handled by `RESERVED_SLUGS`, which staff can pre-claim, plus a rename.
 
 ## Open questions
 
-- **Bands remain member self-service — confirm.** The governance table treats `band` as the one kind any member may create, on the reasoning that a band is a member's own project while a club or committee is an institution. Everything about the band panel, the existing Create Band flow, and paid rehearsal time rests on it. If staff should create bands too, that table and the creation workflow both change.
+None — all decisions have been made.
 
 ## What this does not cover
 
