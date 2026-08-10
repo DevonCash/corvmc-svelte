@@ -7,6 +7,7 @@
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
 
@@ -111,88 +112,108 @@
 	<title>{pageTitle(mode === 'login' ? 'Sign in' : 'Create account')}</title>
 </svelte:head>
 
-<div class="flex items-center justify-center py-16 px-4">
-	<div class="w-full max-w-sm">
-		<div
-			class="card shadow-xl"
-			style="background: var(--surface); border: 1px solid var(--surface-border)"
-		>
-			<div class="card-body gap-4">
-				{#if inviteMeta}
-					<div class="alert alert-info text-sm">
-						<span
-							><strong>{inviteMeta.inviterName}</strong> invited you to join
-							<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
+<!--
+	The only page under (public) that deliberately does NOT server-render its
+	content. A boundary with a pending snippet renders that snippet during SSR
+	instead of its contents, so this keeps the sign-in form out of the initial
+	HTML and back to mounting client-side, the way the whole public site behaved
+	before it started server-rendering.
+
+	Why only here: a server-rendered form is interactive before its JS lands, and
+	on this page that window is a credential path — an early submit left the
+	password in a `?password=` query string and never signed the user in (an
+	intermittent CI failure waiting for /member). Form.svelte's `method="post"`
+	and SubmitButton's disabled-until-hydrated guard both narrow that window
+	everywhere; this closes it outright on the one form where the cost of losing
+	the race is a leaked credential. Nothing is given up for it — the page is a
+	form, with no content a crawler or link preview would want.
+-->
+<ErrorToastBoundary>
+	<div class="flex items-center justify-center py-16 px-4">
+		<div class="w-full max-w-sm">
+			<div
+				class="card shadow-xl"
+				style="background: var(--surface); border: 1px solid var(--surface-border)"
+			>
+				<div class="card-body gap-4">
+					{#if inviteMeta}
+						<div class="alert alert-info text-sm">
+							<span
+								><strong>{inviteMeta.inviterName}</strong> invited you to join
+								<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
+							>
+						</div>
+					{/if}
+
+					<h2 class="card-title justify-center text-lg">
+						{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+					</h2>
+
+					{#if error}
+						<div class="alert alert-error text-sm">
+							{error}
+						</div>
+					{/if}
+
+					<Form action={handleSubmit} class="flex flex-col gap-3">
+						{#if mode === 'register'}
+							<Field name="name" type="text" label="Name" />
+						{/if}
+						<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
+						<Field
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							label="Password"
+							minlength={mode === 'register' ? 8 : undefined}
 						>
-					</div>
-				{/if}
-
-				<h2 class="card-title justify-center text-lg">
-					{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
-				</h2>
-
-				{#if error}
-					<div class="alert alert-error text-sm">
-						{error}
-					</div>
-				{/if}
-
-				<Form action={handleSubmit} class="flex flex-col gap-3">
-					{#if mode === 'register'}
-						<Field name="name" type="text" label="Name" />
-					{/if}
-					<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
-					<Field
-						name="password"
-						type={showPassword ? 'text' : 'password'}
-						label="Password"
-						minlength={mode === 'register' ? 8 : undefined}
-					>
-						{#snippet input(id)}
-							<div class="relative">
-								<input
-									{id}
-									name="password"
-									type={showPassword ? 'text' : 'password'}
-									class="input-bordered input w-full pr-10"
-									minlength={mode === 'register' ? 8 : undefined}
-								/>
-								<button
-									type="button"
-									class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
-									onclick={() => (showPassword = !showPassword)}
-									tabindex={-1}
-								>
-									{#if showPassword}
-										<IconEyeOff size={16} />
-									{:else}
-										<IconEye size={16} />
-									{/if}
-								</button>
-							</div>
-						{/snippet}
-					</Field>
-					{#if mode === 'register'}
-						<Turnstile
-							siteKey={TURNSTILE_SITE_KEY}
-							theme="auto"
-							bind:reset={resetTurnstile}
-							on:callback={(e) => (turnstileToken = e.detail.token)}
-							on:expired={() => (turnstileToken = '')}
+							{#snippet input(id)}
+								<div class="relative">
+									<input
+										{id}
+										name="password"
+										type={showPassword ? 'text' : 'password'}
+										class="input-bordered input w-full pr-10"
+										minlength={mode === 'register' ? 8 : undefined}
+									/>
+									<button
+										type="button"
+										class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
+										onclick={() => (showPassword = !showPassword)}
+										tabindex={-1}
+									>
+										{#if showPassword}
+											<IconEyeOff size={16} />
+										{:else}
+											<IconEye size={16} />
+										{/if}
+									</button>
+								</div>
+							{/snippet}
+						</Field>
+						{#if mode === 'register'}
+							<Turnstile
+								siteKey={TURNSTILE_SITE_KEY}
+								theme="auto"
+								bind:reset={resetTurnstile}
+								on:callback={(e) => (turnstileToken = e.detail.token)}
+								on:expired={() => (turnstileToken = '')}
+							/>
+						{/if}
+						<SubmitButton
+							label={mode === 'login' ? 'Sign in' : 'Create account'}
+							class="btn-primary w-full mt-1"
 						/>
-					{/if}
-					<SubmitButton
-						label={mode === 'login' ? 'Sign in' : 'Create account'}
-						class="btn-primary w-full mt-1"
-					/>
-				</Form>
+					</Form>
 
-				<div class="divider my-0 text-xs">OR</div>
+					<div class="divider my-0 text-xs">OR</div>
 
-				<button class="btn btn-ghost btn-sm" onclick={toggleMode}>
-					{mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-				</button>
+					<button class="btn btn-ghost btn-sm" onclick={toggleMode}>
+						{mode === 'login'
+							? "Don't have an account? Sign up"
+							: 'Already have an account? Sign in'}
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
+</ErrorToastBoundary>

@@ -27,6 +27,19 @@ import {
  *    which does not exist (404); the create modal lives on /member/bands.
  */
 
+/**
+ * The `<dd>` of a QuickFacts row on a public profile page. Scoped deliberately:
+ * a bare `getByText('Corvallis, OR')` also matches the site footer's 501(c)(3)
+ * address, so a page-wide locator either reads the wrong element or trips
+ * strict mode once the profile server-renders.
+ */
+function quickFact(page: import('@playwright/test').Page, label: string) {
+	return page
+		.locator('.quick-fact')
+		.filter({ has: page.getByText(label, { exact: true }) })
+		.locator('dd');
+}
+
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
 	// FormField renders a <legend>, not a <label for>, so target inputs by name.
@@ -63,16 +76,17 @@ test('saving the profile preserves hometown and founded year', async ({ page }) 
 
 	// The public profile still shows "Based in {hometown}" / "Formed {year}".
 	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
-	await expect(page.getByText(SEED_PUBLIC_BAND_HOMETOWN)).toBeVisible();
-	await expect(page.getByText(SEED_PUBLIC_BAND_FOUNDED)).toBeVisible();
+	await expect(quickFact(page, 'Based in')).toHaveText(SEED_PUBLIC_BAND_HOMETOWN);
+	await expect(quickFact(page, 'Formed')).toHaveText(SEED_PUBLIC_BAND_FOUNDED);
 });
 
-// Band pages resolve their data client-side through remote queries, so the
-// HTTP response is always a 200 shell; the visibility gate surfaces as the
-// boundary's "Band not found" state with no profile content rendered.
+// Public pages server-render their remote queries (the (public) layout's
+// boundary has no pending snippet), so the visibility gate is a real HTTP 404
+// carrying SvelteKit's +error.svelte — not a 200 shell that resolves the gate
+// client-side. Either way no profile content is rendered.
 test('hidden band detail page is not publicly readable', async ({ page }) => {
 	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
-	// .first(): the message renders in both the boundary alert and the error toast.
+	// .first(): the message is also embedded in the serialized __sveltekit payload.
 	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText('E2E Hidden Band')).toHaveCount(0);
 	await expect(page.getByText('opted out of the directory')).toHaveCount(0);
@@ -82,7 +96,7 @@ test('members-only band is withheld publicly but renders in the member directory
 	page
 }) => {
 	await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	// .first(): the message renders in both the boundary alert and the error toast.
+	// .first(): the message is also embedded in the serialized __sveltekit payload.
 	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
 
