@@ -39,7 +39,12 @@ export const band = sqliteTable(
 		id: text()
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		name: text('name').notNull().unique(),
+		// Deliberately NOT unique. Two bands may share a name — only the slug has
+		// to be distinct, and `ensureUniqueSlug` guarantees that by suffixing.
+		// The old UNIQUE here made `create()` throw a raw D1 constraint error
+		// (surfaced as a 500) on any duplicate name, including one still held by a
+		// soft-deleted band, since `deactivate()` only sets `deletedAt`.
+		name: text('name').notNull(),
 		slug: text('slug').notNull().unique(),
 		bio: text('bio'),
 		ownerId: text('owner_id')

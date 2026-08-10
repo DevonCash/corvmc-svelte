@@ -3,6 +3,7 @@ import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
+	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
 	SEED_HIDDEN_BAND_SLUG,
@@ -102,6 +103,51 @@ test('members-only band is withheld publicly but renders in the member directory
 	await login(page);
 	await page.goto(`/member/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
+});
+
+// Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band rotates its slug, but
+// saveBandProfile then refreshed getBandProfile, which re-resolves the band from
+// `params.slug` — still the pre-rename value, because for a remote request it
+// comes from the `x-sveltekit-pathname` header the client sent. The lookup 404s,
+// SvelteKit ships that per-query failure to the client, and `apply_refreshes`
+// calls `resource.fail(...)`: the save succeeds and the page it just saved drops
+// into a "Band not found" state.
+//
+// This is the first save of every newly created band — a new band starts out
+// slugged after its creator and gets its real name on that first save.
+//
+// Renames the seeded band and puts the name back, so the tests above (which key
+// off SEED_PUBLIC_BAND_SLUG) still pass on a re-run.
+test('renaming a band saves cleanly and follows the new slug', async ({ page }) => {
+	const consoleErrors: string[] = [];
+	page.on('console', (m) => {
+		if (m.type() === 'error') consoleErrors.push(m.text());
+	});
+
+	await login(page);
+	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`);
+	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+
+	await page.locator('input[name="name"]').fill('E2E Renamed Band');
+	await page.getByRole('button', { name: 'Save' }).click();
+
+	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
+	// The save worked, so nothing on the page may claim the band is missing.
+	await expect(page.getByText('Band not found')).toHaveCount(0);
+	await page.waitForURL(/\/band\/e2e-renamed-band\/edit/, { timeout: 15000 });
+
+	// The reported failure was a caught exception: the form swallowed it into a
+	// toast and only the console (and Sentry) showed the real cause.
+	expect(consoleErrors.join('\n')).not.toContain('JSON.parse');
+
+	// Restore, so this test is re-runnable and the earlier tests keep their slug.
+	// Reload first: the redirect above only fires for the first rename of a page
+	// session, so a second save in-place would leave the form on the old URL.
+	await page.goto('/band/e2e-renamed-band/edit');
+	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	await page.locator('input[name="name"]').fill(SEED_PUBLIC_BAND_NAME);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`), { timeout: 15000 });
 });
 
 test('sidebar Create Band links open the create-band modal', async ({ page }) => {

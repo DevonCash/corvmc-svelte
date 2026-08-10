@@ -15,6 +15,9 @@ export function generateSlug(name: string): string {
 		.replace(/^-|-$/g, '');
 }
 
+/** Stands in for a name that slugifies to nothing. Shared by every caller. */
+const FALLBACK_SLUG = 'untitled';
+
 /**
  * Ensure a slug is unique within a table by appending -2, -3, etc. if needed.
  *
@@ -32,6 +35,14 @@ export async function ensureUniqueSlug(
 	exclude?: { column: SQLiteColumn; value: string },
 	isDisallowed?: (slug: string) => boolean
 ): Promise<string> {
+	// `generateSlug` keeps only [a-z0-9], so a name in any non-Latin script (or
+	// made of punctuation or emoji) reduces to ''. An empty slug is not NULL, so
+	// it inserts happily and leaves the row unreachable — every /<slug> route
+	// 404s, the {slug}.corvmc.org reroute breaks, and callers that redirect on a
+	// truthy slug silently do nothing. Fall back before the collision loop so the
+	// suffixes read 'untitled-2' rather than a bare '-2'.
+	baseSlug = baseSlug || FALLBACK_SLUG;
+
 	let slug = baseSlug;
 	let suffix = 2;
 
