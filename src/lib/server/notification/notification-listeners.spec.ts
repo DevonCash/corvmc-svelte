@@ -122,16 +122,30 @@ describe('registerAllNotificationListeners', () => {
 describe('ticket.purchased handler (dedicated template)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
+	/** A paid two-ticket purchase with the buyer covering fees. */
+	const purchase = {
+		purchaseId: 'a1b2c3d4-5678-90ab-cdef-000000000000',
+		eventId: 'event-1',
+		attendeeName: 'Alice',
+		attendeeEmail: 'alice@test.com',
+		eventTitle: 'Jazz Night',
+		eventDate: 'May 20',
+		eventTime: '8:00 PM',
+		ticketCodes: ['ABC123', 'DEF456'],
+		quantity: 2,
+		unitPriceCents: 2000,
+		subtotalCents: 4000,
+		feesCents: 120,
+		totalCents: 4120
+	};
+
+	/** The model handed to the ticket-confirmation template. */
+	function ticketModel(): Record<string, unknown> {
+		return mockDispatchEmailOnly.mock.calls[0][0].model;
+	}
+
 	it('sends email-only notification with the ticket-confirmation template', async () => {
-		await emit('ticket.purchased', {
-			attendeeName: 'Alice',
-			attendeeEmail: 'alice@test.com',
-			eventTitle: 'Jazz Night',
-			eventDate: 'May 20',
-			eventTime: '8:00 PM',
-			ticketCodes: ['ABC123', 'DEF456'],
-			quantity: 2
-		});
+		await emit('ticket.purchased', purchase);
 
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -144,6 +158,27 @@ describe('ticket.purchased handler (dedicated template)', () => {
 				})
 			})
 		);
+	});
+
+	it('includes the receipt amounts, order id, and a link back to the tickets', async () => {
+		await emit('ticket.purchased', purchase);
+
+		expect(ticketModel()).toMatchObject({
+			unitPrice: '$20.00',
+			subtotal: '$40.00',
+			feesCovered: true,
+			fees: '$1.20',
+			total: '$41.20',
+			orderId: 'A1B2C3D4',
+			ticketsUrl:
+				'https://test.corvmc.com/events/event-1/tickets/success?purchase_id=a1b2c3d4-5678-90ab-cdef-000000000000'
+		});
+	});
+
+	it('flags fees as not covered when none were charged', async () => {
+		await emit('ticket.purchased', { ...purchase, feesCents: 0, totalCents: 4000 });
+
+		expect(ticketModel()).toMatchObject({ feesCovered: false, total: '$40.00' });
 	});
 });
 

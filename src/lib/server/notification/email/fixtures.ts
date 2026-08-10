@@ -102,7 +102,15 @@ export const FIXTURES: Fixture[] = [
 			quantity: 1,
 			multiple: false,
 			preview_text: 'Real Book Club · Thursday, December 5 at 7:00 PM',
-			ticketCodes: [{ code: 'CMC-4K2P-9XQ1' }]
+			ticketCodes: [{ code: 'CMC-4K2P-9XQ1' }],
+			// Buyer declined fee coverage — the fees row should be absent.
+			orderId: '7F3A9C21',
+			unitPrice: '$15.00',
+			subtotal: '$15.00',
+			feesCovered: false,
+			fees: '$0.00',
+			total: '$15.00',
+			ticketsUrl: 'https://corvmc.org/events/evt-1/tickets/success?purchase_id=7f3a9c21'
 		}
 	},
 	{
@@ -116,7 +124,19 @@ export const FIXTURES: Fixture[] = [
 			quantity: 3,
 			multiple: true,
 			preview_text: 'Winter Showcase · Saturday, December 14 at 8:00 PM',
-			ticketCodes: [{ code: 'CMC-4K2P-9XQ1' }, { code: 'CMC-7B3M-2LZ8' }, { code: 'CMC-1N9V-6RT4' }]
+			ticketCodes: [
+				{ code: 'CMC-4K2P-9XQ1' },
+				{ code: 'CMC-7B3M-2LZ8' },
+				{ code: 'CMC-1N9V-6RT4' }
+			],
+			// Buyer covered fees — exercises the {{#feesCovered}} row.
+			orderId: 'B82D5E60',
+			unitPrice: '$20.00',
+			subtotal: '$60.00',
+			feesCovered: true,
+			fees: '$2.04',
+			total: '$62.04',
+			ticketsUrl: 'https://corvmc.org/events/evt-2/tickets/success?purchase_id=b82d5e60'
 		}
 	},
 	{

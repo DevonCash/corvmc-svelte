@@ -6,6 +6,10 @@ export default defineConfig({
 	webServer: {
 		command: 'npm run build && npm run preview',
 		port: 4173,
+		// The command builds before it serves, and a cold production build here
+		// takes several minutes — well past the 60s default, which reported the
+		// timeout as a server failure rather than a slow build.
+		timeout: 600_000,
 		// Reuse a preview already running locally to avoid a full rebuild each run.
 		reuseExistingServer: !process.env.CI,
 		env: {

@@ -5,17 +5,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockFulfillPurchase = vi.fn();
+const mockEmit = vi.fn();
+
+/** Rows the event lookup resolves to. Empty by default so the listener bails
+ *  before emitting; the receipt tests set a row to exercise the emit path. */
+const mockEventLookup = vi.fn<() => Promise<unknown[]>>();
 
 vi.mock('./ticket-service', () => ({
 	fulfillPurchase: (...args: unknown[]) => mockFulfillPurchase(...args)
 }));
 
 vi.mock('$lib/server/events/event-bus', () => ({
-	domainEvents: { emit: vi.fn() }
+	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));
 
+vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+
 vi.mock('$lib/server/db', () => ({
-	db: { select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }) }
+	db: {
+		select: () => ({ from: () => ({ where: () => ({ limit: () => mockEventLookup() }) }) })
+	}
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
@@ -39,6 +48,7 @@ const { handleTicketCheckout } = await import('./checkout-listener');
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockEventLookup.mockResolvedValue([]);
 });
 
 describe('handleTicketCheckout', () => {
@@ -177,5 +187,90 @@ describe('handleTicketCheckout', () => {
 		} as any);
 
 		expect(mockFulfillPurchase).toHaveBeenCalledWith('purchase-none', 'cs_test_skip');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Receipt amounts
+// ---------------------------------------------------------------------------
+// A guest has no account and no order history — the confirmation email is their
+// only record of what they paid, so the emitted event has to carry the money.
+
+describe('handleTicketCheckout receipt amounts', () => {
+	beforeEach(() => {
+		mockEventLookup.mockResolvedValue([
+			{ id: 'event-1', title: 'Jazz Night', startsAt: new Date('2026-05-14T20:00:00Z') }
+		]);
+		mockFulfillPurchase.mockResolvedValue([
+			{ id: 't1', eventId: 'event-1', code: 'ABC', attendeeName: 'Jo', attendeeEmail: 'jo@x.com' },
+			{ id: 't2', eventId: 'event-1', code: 'DEF', attendeeName: 'Jo', attendeeEmail: 'jo@x.com' }
+		]);
+	});
+
+	/** The payload passed to domainEvents.emit('ticket.purchased', …). */
+	function emittedPayload() {
+		const call = mockEmit.mock.calls.find((c) => c[0] === 'ticket.purchased');
+		return call?.[1] as Record<string, unknown> | undefined;
+	}
+
+	it('splits the charge into ticket subtotal and covered fees', async () => {
+		await handleTicketCheckout({
+			id: 'cs_fees',
+			amount_subtotal: 4120,
+			amount_total: 4120,
+			metadata: {
+				type: 'ticket',
+				purchase_id: 'purchase-abc',
+				ticket_quantity: '2',
+				ticket_unit_price_cents: '2000'
+			}
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({
+			eventId: 'event-1',
+			unitPriceCents: 2000,
+			subtotalCents: 4000,
+			feesCents: 120,
+			totalCents: 4120,
+			quantity: 2
+		});
+	});
+
+	it('reports zero fees when the buyer did not cover them', async () => {
+		await handleTicketCheckout({
+			id: 'cs_nofees',
+			amount_subtotal: 4000,
+			amount_total: 4000,
+			metadata: {
+				type: 'ticket',
+				purchase_id: 'purchase-abc',
+				ticket_quantity: '2',
+				ticket_unit_price_cents: '2000'
+			}
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({
+			subtotalCents: 4000,
+			feesCents: 0,
+			totalCents: 4000
+		});
+	});
+
+	it('falls back to the charged total when the unit price metadata is missing', async () => {
+		// Sessions created before this metadata existed must still produce a
+		// coherent receipt rather than booking the whole charge as fees.
+		await handleTicketCheckout({
+			id: 'cs_legacy',
+			amount_subtotal: 4000,
+			amount_total: 4000,
+			metadata: { type: 'ticket', purchase_id: 'purchase-abc', ticket_quantity: '2' }
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({
+			unitPriceCents: 0,
+			subtotalCents: 4000,
+			feesCents: 0,
+			totalCents: 4000
+		});
 	});
 });

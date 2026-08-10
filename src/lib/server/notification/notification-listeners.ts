@@ -63,7 +63,7 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
-	// --- Ticket purchase confirmation (dedicated template) ---
+	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		// Ticket buyers may not have accounts — use email-only dispatch
 		await dispatchEmailOnly({
@@ -80,7 +80,18 @@ export function registerAllNotificationListeners(): void {
 				preview_text: `${event.eventTitle} · ${event.eventDate} at ${event.eventTime}`,
 				quantity: event.quantity,
 				multiple: event.quantity > 1,
-				ticketCodes: event.ticketCodes.map((code) => ({ code }))
+				ticketCodes: event.ticketCodes.map((code) => ({ code })),
+				// Receipt. A guest has no order history to fall back on, so this
+				// email is their proof of purchase — and the success-page link is
+				// how they get their codes back if they lose it. That page keys off
+				// the purchase id alone (no session), which is what makes it work.
+				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
+				unitPrice: formatMoney(event.unitPriceCents),
+				subtotal: formatMoney(event.subtotalCents),
+				feesCovered: event.feesCents > 0,
+				fees: formatMoney(event.feesCents),
+				total: formatMoney(event.totalCents),
+				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
 			}
 		});
 	});

@@ -29,8 +29,16 @@
 				</p>
 			</div>
 
+			<!-- Only paid purchases trigger an email (ticket.purchased fires from the
+			     Stripe webhook). Free RSVPs send nothing, so don't promise one. -->
 			<p class="text-sm opacity-60">
-				A confirmation email will be sent to {data.tickets[0]?.attendeeEmail ?? 'your email'}.
+				{#if isRsvp}
+					Save the {data.tickets.length > 1 ? 'codes' : 'code'} below — that's your confirmation. No email
+					is sent for RSVPs.
+				{:else}
+					A confirmation email and receipt will be sent to {data.tickets[0]?.attendeeEmail ??
+						'your email'}.
+				{/if}
 			</p>
 		</div>
 	</div>
