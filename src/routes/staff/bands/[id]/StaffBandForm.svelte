@@ -6,7 +6,8 @@
 		getStaffBand as getBand,
 		updateStaffBand as updateBand,
 		deactivateBand,
-		reactivateBand
+		reactivateBand,
+		setBandTier
 	} from '$lib/remote/bands.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -16,6 +17,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 
@@ -36,9 +38,14 @@
 	const { fields: reactivateFields } = reactivateBand;
 	const { fields: deactivateFields } = deactivateBand;
 	const { fields: bandFields } = updateBand;
+	const { fields: tierFields } = setBandTier;
 
 	// Reactive: deactivate/reactivate refresh getBand, which updates the prop.
 	const isDeactivated = $derived(!!band.deletedAt);
+
+	// A comped band is premium with no subscription JSON; only Stripe-backed
+	// bands are off-limits to the comp/revoke actions.
+	const isStripeBacked = $derived(!!band.subscription);
 
 	let bioHtml = $state(untrack(() => band.bio) ?? '');
 </script>
@@ -90,6 +97,26 @@
 					<dt class="opacity-60">Members</dt>
 					<dd>{band.memberCount} active</dd>
 
+					<dt class="opacity-60">Tier</dt>
+					<dd class="flex items-center gap-2">
+						<StatusBadge status={band.tier} label />
+						<span class="text-xs opacity-60">
+							{isStripeBacked ? 'billed through Stripe' : 'set by staff'}
+						</span>
+					</dd>
+
+					{#if band.subscription}
+						<dt class="opacity-60">Billing</dt>
+						<dd>
+							{band.subscription.billingInterval}, renews {new Date(
+								band.subscription.currentPeriodEnd
+							).toLocaleDateString()}
+							{#if band.subscription.cancelAtPeriodEnd}
+								<Badge variant="warning" size="sm">Cancels at period end</Badge>
+							{/if}
+						</dd>
+					{/if}
+
 					<dt class="opacity-60">Created</dt>
 					<dd>{new Date(band.createdAt).toLocaleDateString()}</dd>
 
@@ -99,7 +126,44 @@
 					{/if}
 				</dl>
 
-				<div class="mt-4 flex gap-2">
+				<div class="mt-4 flex flex-wrap gap-2">
+					{#if isStripeBacked}
+						<span class="text-xs opacity-60">
+							Premium is billed through Stripe — cancel there to move this band back to free.
+						</span>
+					{:else if band.tier === 'premium'}
+						<Action
+							action={setBandTier}
+							label="Revoke premium"
+							successToast="Premium revoked"
+							class="btn-warning btn-sm"
+						>
+							{#snippet form()}
+								<input {...tierFields.id.as('hidden', id)} />
+								<input {...tierFields.tier.as('hidden', 'free')} />
+								<p class="py-4">
+									Move this band back to the free tier? Their page editor, EPK and public band site
+									stop being reachable.
+								</p>
+							{/snippet}
+						</Action>
+					{:else}
+						<Action
+							action={setBandTier}
+							label="Comp premium"
+							successToast="Premium comped"
+							class="btn-secondary btn-sm"
+						>
+							{#snippet form()}
+								<input {...tierFields.id.as('hidden', id)} />
+								<input {...tierFields.tier.as('hidden', 'premium')} />
+								<p class="py-4">
+									Give this band premium at no charge? No Stripe subscription is created, and the
+									comp stays in place until staff revoke it.
+								</p>
+							{/snippet}
+						</Action>
+					{/if}
 					{#if isDeactivated}
 						<Action
 							action={reactivateBand}

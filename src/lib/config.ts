@@ -165,3 +165,47 @@ export const creditSourceLabels: Record<string, string> = {
 export const inboxChannels = ['email', 'sms', 'web', 'instagram', 'messenger'] as const;
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 export const inboxMessageDirections = ['inbound', 'outbound'] as const;
+
+// ---------------------------------------------------------------------------
+// Volunteering
+// ---------------------------------------------------------------------------
+
+export const volunteerHourStatuses = ['pending', 'approved', 'rejected'] as const;
+
+/**
+ * How far back a member may backdate an hour log. Too tight and someone loses a
+ * busy season's hours after a stretch of not logging; too loose and the "this
+ * quarter" figure keeps moving under the board.
+ */
+export const VOLUNTEER_BACKDATE_LIMIT_DAYS = 90;
+
+/** 12 hours. The DB check constraint backstops at 24. */
+export const VOLUNTEER_MAX_MINUTES_PER_LOG = 720;
+
+export const VOLUNTEER_DESCRIPTION_MAX = 1000;
+export const VOLUNTEER_REVIEW_NOTES_MAX = 1000;
+export const VOLUNTEER_ROLE_NAME_MAX = 100;
+export const VOLUNTEER_ROLE_DESCRIPTION_MAX = 2000;
+
+/** Hours a member may enter per log, as a step for the number input. */
+export const VOLUNTEER_HOUR_STEP = 0.25;
+
+/**
+ * Today's calendar date in club time, as YYYY-MM-DD.
+ *
+ * `new Date().toISOString().slice(0, 10)` is the UTC date, which is tomorrow's
+ * date in club time from 5pm PT onward — a date-input defaulted that way offers
+ * a day the service rejects as being in the future. Client-safe: `$lib/config`
+ * carries no server imports.
+ */
+export function clubToday(): string {
+	// en-CA formats as YYYY-MM-DD, which is also what <input type="date"> wants.
+	return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(new Date());
+}
+
+/** Minutes → display hours. 180 → "3 hrs", 90 → "1.5 hrs", 60 → "1 hr". */
+export function formatVolunteerHours(minutes: number): string {
+	const hours = minutes / 60;
+	const rendered = Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/0+$/, '');
+	return `${rendered} ${hours === 1 ? 'hr' : 'hrs'}`;
+}

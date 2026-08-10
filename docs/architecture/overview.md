@@ -395,6 +395,12 @@ otherwise the default. **Feature flags** are just `feature.*` config keys, wrapp
 missing page). Current flags: `staffInbox`, `bandPremium`, `bandReservations`,
 `bandEvents`, `emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
 
+A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
+entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff
+remote functions are guarded by `requireStaff()` rather than `requireFeature()` — so a
+feature can be configured and run by staff before (and after) it is switched on for
+everyone else.
+
 ## Money (orientation)
 
 All payments run through Stripe; the app never touches card data. The moving parts, all in

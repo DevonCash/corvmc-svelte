@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import {
@@ -7,7 +7,7 @@ import {
 	update,
 	checkRebookNeeded,
 	publish,
-	unpublish,
+	unpublishWithBandNotice,
 	cancel,
 	getById,
 	listAll as listAllEvents,
@@ -18,7 +18,7 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -51,7 +51,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
-import { event, createEventSchema } from '$lib/server/db/schema/event';
+import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
@@ -369,10 +369,13 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	};
 });
 
-export const getStaffEvents = query(z.object({ page: z.number().optional() }), async (filters) => {
-	await requireStaff();
-	return listAllEvents({ page: filters.page ?? 1, pageSize: 50 });
-});
+export const getStaffEvents = query(
+	z.object({ source: z.enum(eventSources).optional(), page: z.number().optional() }),
+	async (filters) => {
+		await requireStaff();
+		return listAllEvents({ source: filters.source }, { page: filters.page ?? 1, pageSize: 50 });
+	}
+);
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();
@@ -385,6 +388,18 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		.from(user)
 		.where(eq(user.id, evt.createdByUserId))
 		.limit(1);
+
+	// Band attribution: staff need to see whose gig this is before editing or
+	// pulling it, since band events sit in the same list as CMC ones.
+	let bookingBand: { id: string; name: string; slug: string } | null = null;
+	if (evt.bandId) {
+		const [row] = await db
+			.select({ id: band.id, name: band.name, slug: band.slug })
+			.from(band)
+			.where(eq(band.id, evt.bandId))
+			.limit(1);
+		if (row) bookingBand = row;
+	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
 	if (evt.reservationId) {
@@ -451,8 +466,13 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
 			ticketQuantity: evt.ticketQuantity,
-			posterKey: evt.posterKey
+			posterKey: evt.posterKey,
+			source: evt.source,
+			bandId: evt.bandId,
+			location: evt.location,
+			externalTicketUrl: evt.externalTicketUrl
 		},
+		band: bookingBand,
 		posterUrl,
 		creator,
 		linkedReservation,
@@ -470,8 +490,7 @@ export const checkConflicts = query(
 	}),
 	async ({ date, startTime, endTime, excludeReservationId }) => {
 		await requireStaff();
-		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
-		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
+		const { startsAt, endsAt } = buildTimeRangeInTz(date, startTime, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
@@ -522,19 +541,29 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
 
 	if (!data.title) {
-		issue.title('Title is required');
+		invalid(issue.title('Title is required'));
 	}
 
 	const tz = DEFAULT_TIMEZONE;
-	const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-	const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+	// One date field covers both times, so an end before the start means the show
+	// runs past midnight and the range rolls onto the next day.
+	const { startsAt, endsAt } = buildTimeRangeInTz(
+		data.eventDate,
+		data.eventStartTime,
+		data.eventEndTime,
+		tz
+	);
 	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
 	const reservation =
 		reserveSpace && data.reservationStartTime && data.reservationEndTime
 			? {
-					startsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-					endsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+					...buildTimeRangeInTz(
+						data.eventDate,
+						data.reservationStartTime,
+						data.reservationEndTime,
+						tz
+					),
 					overrideConflicts
 				}
 			: undefined;
@@ -613,6 +642,10 @@ export const updateEvent = form(
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
 		doorsTime: z.string().optional(),
+		// Band gigs live off these two — without them staff can see a wrong venue
+		// or a dead ticket link on the guide and have no way to fix it.
+		location: z.string().max(255).optional(),
+		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
 		ticketQuantity: z.string().optional(),
@@ -634,6 +667,10 @@ export const updateEvent = form(
 		if (data.title !== undefined && data.title !== '') updateParams.title = data.title;
 		if (data.description !== undefined) updateParams.description = data.description || null;
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
+		if (data.location !== undefined) updateParams.location = data.location || null;
+		if (data.externalTicketUrl !== undefined) {
+			updateParams.externalTicketUrl = data.externalTicketUrl || null;
+		}
 		if (ticketingEnabled !== undefined) updateParams.ticketingEnabled = ticketingEnabled;
 		if (data.ticketPrice !== undefined) {
 			updateParams.ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : null;
@@ -642,10 +679,13 @@ export const updateEvent = form(
 			updateParams.ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : null;
 		}
 
-		// Build Date objects if date/time fields provided
+		// Build Date objects if date/time fields provided. One date field covers both
+		// times, so an end before the start means the show runs past midnight and the
+		// range rolls onto the next day.
 		if (data.eventDate && data.eventStartTime && data.eventEndTime) {
-			updateParams.startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-			updateParams.endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+			const range = buildTimeRangeInTz(data.eventDate, data.eventStartTime, data.eventEndTime, tz);
+			updateParams.startsAt = range.startsAt;
+			updateParams.endsAt = range.endsAt;
 		}
 
 		if (data.doorsTime !== undefined) {
@@ -660,10 +700,16 @@ export const updateEvent = form(
 			data.reservationStartTime &&
 			data.reservationEndTime
 		) {
+			const reservationRange = buildTimeRangeInTz(
+				data.eventDate,
+				data.reservationStartTime,
+				data.reservationEndTime,
+				tz
+			);
 			updateParams.rebook = {
 				userId: staff.id,
-				reservationStartsAt: buildDateInTz(data.eventDate, data.reservationStartTime, tz),
-				reservationEndsAt: buildDateInTz(data.eventDate, data.reservationEndTime, tz),
+				reservationStartsAt: reservationRange.startsAt,
+				reservationEndsAt: reservationRange.endsAt,
 				overrideConflicts
 			};
 		}
@@ -681,7 +727,9 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 
 export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireStaff();
-	await unpublish(data.id);
+	// Band-sourced events notify the band's admins — pulling a gig silently is
+	// the one unpublish that needs a word back to whoever posted it.
+	await unpublishWithBandNotice(data.id);
 	return { success: true };
 });
 
@@ -701,15 +749,17 @@ export const compTickets = form(
 	async (data, issue) => {
 		await requireStaff();
 
+		const issues: Parameters<typeof invalid> = [];
 		if (!data.attendeeName) {
-			issue.attendeeName('Name is required');
+			issues.push(issue.attendeeName('Name is required'));
 		}
 		if (!data.attendeeEmail) {
-			issue.attendeeEmail('Email is required');
+			issues.push(issue.attendeeEmail('Email is required'));
 		}
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 50) {
-			issue.quantity('Quantity must be between 1 and 50');
+			issues.push(issue.quantity('Quantity must be between 1 and 50'));
 		}
+		if (issues.length) invalid(...issues);
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -746,25 +796,35 @@ export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), asy
 	return { success: true };
 });
 
+// A single field issue as constructed by a form handler's `issue` helper. Note that
+// constructing one does nothing on its own — it only takes effect when handed to
+// `invalid()`, which throws.
+type FormIssue = Parameters<typeof invalid>[number];
+
 // Resolves the attendee's name and email for a ticket/RSVP form. Logged-in users don't
 // have to re-type their details — their account values fill in any field left blank —
-// while guests must still supply both. Reports validation through the form's `issue` API.
+// while guests must still supply both. Returns any validation issues rather than
+// throwing, so the caller can report them alongside its own (e.g. quantity) in one pass.
 function resolveAttendee(
 	data: { attendeeName?: string; attendeeEmail?: string },
 	user: { name?: string | null; email?: string | null } | undefined,
-	issue: { attendeeName: (msg: string) => void; attendeeEmail: (msg: string) => void }
-): { name: string; email: string } {
+	issue: {
+		attendeeName: (msg: string) => FormIssue;
+		attendeeEmail: (msg: string) => FormIssue;
+	}
+): { name: string; email: string; issues: FormIssue[] } {
 	const name = (data.attendeeName ?? '').trim() || user?.name?.trim() || '';
 	const email = (data.attendeeEmail ?? '').trim() || user?.email?.trim() || '';
 
-	if (!name) issue.attendeeName('Name is required');
+	const issues: FormIssue[] = [];
+	if (!name) issues.push(issue.attendeeName('Name is required'));
 	if (!email) {
-		issue.attendeeEmail('Email is required');
+		issues.push(issue.attendeeEmail('Email is required'));
 	} else if (!z.string().email().safeParse(email).success) {
-		issue.attendeeEmail('Valid email is required');
+		issues.push(issue.attendeeEmail('Valid email is required'));
 	}
 
-	return { name, email };
+	return { name, email, issues };
 }
 
 export const rsvpForEvent = form(
@@ -777,12 +837,15 @@ export const rsvpForEvent = form(
 	async (data, issue) => {
 		const { locals } = getRequestEvent();
 
+		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
-			issue.quantity('Quantity must be between 1 and 10');
+			issues.push(issue.quantity('Quantity must be between 1 and 10'));
 		}
 
 		// Logged-in attendees needn't re-enter their details; fall back to their account.
 		const attendee = resolveAttendee(data, locals.user, issue);
+		issues.push(...attendee.issues);
+		if (issues.length) invalid(...issues);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
@@ -859,12 +922,15 @@ export const purchaseTickets = form(
 	async (data, issue) => {
 		const { locals, url } = getRequestEvent();
 
+		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
-			issue.quantity('Quantity must be between 1 and 10');
+			issues.push(issue.quantity('Quantity must be between 1 and 10'));
 		}
 
 		// Logged-in buyers needn't re-enter their details; fall back to their account.
 		const attendee = resolveAttendee(data, locals.user, issue);
+		issues.push(...attendee.issues);
+		if (issues.length) invalid(...issues);
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');

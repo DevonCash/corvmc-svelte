@@ -8,12 +8,14 @@
 		getAudienceOptions,
 		getPreview,
 		createDraft,
-		createAndSend
+		createAndSend,
+		createAndSchedule
 	} from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
+	let scheduledFor = $state('');
 	let submitting = $state(false);
 
 	let audiences = $derived(await getAudienceOptions());
@@ -70,8 +72,33 @@
 		}
 	}
 
+	async function handleSchedule() {
+		if (!isValid() || !isFutureSchedule()) return;
+		submitting = true;
+		try {
+			const result = await createAndSchedule({
+				subject: subject.trim(),
+				markdownBody,
+				audienceIds: selectedAudienceIds,
+				scheduledFor: new Date(scheduledFor).toISOString()
+			});
+			toast.success('Campaign scheduled');
+			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
+		} finally {
+			submitting = false;
+		}
+	}
+
 	function isValid() {
 		return subject.trim() && markdownBody.trim() && selectedAudienceIds.length > 0;
+	}
+
+	// The service rejects a past date with a bare Error, which would surface as a
+	// raw toast — catch it here while the field is still in front of the user.
+	function isFutureSchedule() {
+		return !!scheduledFor && new Date(scheduledFor).getTime() > Date.now();
 	}
 </script>
 
@@ -134,6 +161,21 @@
 				</p>
 			</div>
 
+			<div>
+				<label for="campaign-schedule" class="label text-sm font-medium">
+					Schedule for later (optional)
+				</label>
+				<input
+					id="campaign-schedule"
+					type="datetime-local"
+					bind:value={scheduledFor}
+					class="input input-bordered w-full"
+				/>
+				{#if scheduledFor && !isFutureSchedule()}
+					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>
+				{/if}
+			</div>
+
 			<!-- Actions -->
 			<div class="flex flex-wrap gap-2">
 				<button
@@ -142,6 +184,13 @@
 					onclick={handleSaveDraft}
 				>
 					Save Draft
+				</button>
+				<button
+					class="btn btn-secondary btn-sm"
+					disabled={!isValid() || !isFutureSchedule() || submitting}
+					onclick={handleSchedule}
+				>
+					Schedule
 				</button>
 				<button
 					class="btn btn-primary btn-sm"

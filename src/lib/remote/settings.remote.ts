@@ -14,7 +14,7 @@ import {
 import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireStaff } from '$lib/server/authorization';
-import { getAllFeatureFlags, type FeatureFlag } from '$lib/server/feature-flags';
+import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
 import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
 
@@ -219,15 +219,9 @@ export const getFeatureFlags = query(async () => {
 	return getAllFeatureFlags();
 });
 
-const VALID_FLAGS: FeatureFlag[] = [
-	'staffInbox',
-	'bandPremium',
-	'bandReservations',
-	'bandEvents',
-	'emailMarketing',
-	'equipment',
-	'helpArticles'
-];
+// Kept as an alias rather than a second hand-maintained list: the two drifted
+// apart and `contentFlags` was missing here, so the settings toggle 400'd.
+const VALID_FLAGS: FeatureFlag[] = ALL_FLAGS;
 
 export const updateFeatureFlag = form(
 	z.object({

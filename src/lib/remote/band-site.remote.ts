@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { verifyTurnstile } from '$lib/server/turnstile';
@@ -133,8 +133,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 
 	const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
 	if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-		issue.turnstileToken('Verification failed. Please try again.');
-		return;
+		invalid(issue.turnstileToken('Verification failed. Please try again.'));
 	}
 
 	const [bandRow] = await db

@@ -55,7 +55,12 @@
 			{#snippet brand()}
 				<span class="block flex h-[48px] items-center justify-between px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
-					<Button class="latched btn-square btn-outline btn-sm" title="To Public Site" href="/">
+					<Button
+						class="latched btn-square btn-outline btn-sm"
+						title="To Public Site"
+						aria-label="To Public Site"
+						href="/"
+					>
 						<IconWorld class="size-5 text-primary" />
 					</Button>
 				</span>

@@ -3,14 +3,12 @@ import type { RequestHandler } from './$types';
 import { handleTwilioInbound } from '$lib/server/inbox/inbound-handlers';
 import { validateTwilioSignature } from '$lib/server/inbox/twilio-client';
 import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const EMPTY_TWIML = '<Response></Response>';
 
 export const POST: RequestHandler = async ({ request, url }) => {
-	if (!(await isFeatureEnabled('staffInbox'))) {
-		return text(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });
-	}
+	// Not feature-flagged — the staff inbox is always available, so the `sms`
+	// channel toggle below is what decides whether we accept inbound texts.
 	const enabled = await isChannelEnabled('sms');
 	if (!enabled) {
 		return text(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });

@@ -29,7 +29,8 @@ import {
 	desc,
 	count
 } from 'drizzle-orm';
-import { getBySlug } from '$lib/server/band/band-service';
+import { getBySlug, getById as getBandById } from '$lib/server/band/band-service';
+import { band } from '$lib/server/db/schema/band';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
@@ -219,10 +220,14 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			memberEmail: user.email,
 			memberPhone: user.phone,
 			memberPronouns: user.pronouns,
-			memberImage: user.image
+			memberImage: user.image,
+			bandId: band.id,
+			bandName: band.name,
+			bandSlug: band.slug
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(band, bandBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -246,6 +251,9 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		memberPhone: rows[0].memberPhone,
 		memberPronouns: rows[0].memberPronouns,
 		memberImage: resolveImageUrl(rows[0].memberImage),
+		bandId: rows[0].bandId,
+		bandName: rows[0].bandName,
+		bandSlug: rows[0].bandSlug,
 		createdByStaffName
 	};
 
@@ -328,6 +336,26 @@ export const searchMembers = query(z.string(), async (q) => {
 		.limit(SEARCH_LIMIT);
 
 	return results;
+});
+
+/** Staff: band lookup for booking on a band's behalf. */
+export const searchBands = query(z.string(), async (q) => {
+	await requireStaff();
+	if (!q || q.length < 2) return [];
+
+	const pattern = `%${q}%`;
+	return db
+		.select({
+			id: band.id,
+			name: band.name,
+			ownerId: band.ownerId,
+			ownerName: user.name,
+			ownerEmail: user.email
+		})
+		.from(band)
+		.innerJoin(user, eq(user.id, band.ownerId))
+		.where(and(isNull(band.deletedAt), like(band.name, pattern)))
+		.limit(SEARCH_LIMIT);
 });
 
 /** Staff: available slots + config for a given date. */
@@ -723,8 +751,16 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
+	bookerType: z.enum(['user', 'band', 'event']).optional(),
 	page: z.number().optional()
 });
+
+/**
+ * `bookerId` points at a band only when `bookerType` is `band`, so the join has
+ * to carry that discriminator — otherwise a band whose id happened to match a
+ * user's would attach to the wrong row.
+ */
+const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
 
 /** Staff: paginated, filtered reservation list. */
 export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
@@ -760,9 +796,15 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		);
 	}
 
+	if (filters.bookerType) {
+		conditions.push(eq(reservation.bookerType, filters.bookerType));
+	}
+
 	if (filters.search) {
 		const pattern = `%${filters.search}%`;
-		conditions.push(or(like(user.name, pattern), like(user.email, pattern)));
+		conditions.push(
+			or(like(user.name, pattern), like(user.email, pattern), like(band.name, pattern))
+		);
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -785,10 +827,13 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			memberEmail: user.email,
 			memberPronouns: user.pronouns,
 			memberRole: primaryRoleFor(user.id),
-			memberSustaining: isSustainingMemberSql(user.id)
+			memberSustaining: isSustainingMemberSql(user.id),
+			bandId: band.id,
+			bandName: band.name
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(band, bandBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -797,6 +842,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.select({ count: count() })
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(band, bandBookerJoin)
 		.where(where);
 
 	return paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 50 });
@@ -867,9 +913,17 @@ export const getHourlyRate = query(async () => {
 // Forms — booking
 // ===========================================================================
 
-/** Staff: create a reservation on behalf of a member. */
+/**
+ * Staff: create a reservation on behalf of a member, or on behalf of a band.
+ *
+ * A band booking is still *made by* a member — `createdByUserId` is who the
+ * front desk picked, and their free hours settle it — exactly as in the
+ * member-facing `bookBandReservation`. `bandId` only changes who the slot is
+ * attributed to.
+ */
 const staffCreateSchema = z.object({
 	memberId: z.string().min(1, 'Select a member'),
+	bandId: z.string().optional(),
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
 	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
@@ -881,10 +935,15 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
+	if (data.bandId) {
+		const bookingBand = await getBandById(data.bandId);
+		if (!bookingBand) error(404, 'Band not found');
+	}
+
 	const res = await staffCreate({
 		userId: data.memberId,
-		bookerType: 'user',
-		bookerId: data.memberId,
+		bookerType: data.bandId ? 'band' : 'user',
+		bookerId: data.bandId ?? data.memberId,
 		startsAt,
 		endsAt,
 		notes: data.notes,

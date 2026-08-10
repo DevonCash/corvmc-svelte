@@ -12,6 +12,7 @@
 		getPreview,
 		saveDraft,
 		sendCampaignNow,
+		scheduleCampaign,
 		deleteCampaign
 	} from '$lib/remote/marketing.remote';
 
@@ -23,6 +24,7 @@
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
+	let scheduledFor = $state('');
 	let submitting = $state(false);
 	let initialized = $state(false);
 
@@ -62,6 +64,12 @@
 		return subject.trim() && markdownBody.trim() && selectedAudienceIds.length > 0;
 	}
 
+	// The service rejects a past date with a bare Error, which would surface as a
+	// raw toast — catch it here while the field is still in front of the user.
+	function isFutureSchedule() {
+		return !!scheduledFor && new Date(scheduledFor).getTime() > Date.now();
+	}
+
 	async function handleSave() {
 		if (!isValid()) return;
 		submitting = true;
@@ -98,6 +106,27 @@
 			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to send');
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleSchedule() {
+		if (!isValid() || !isFutureSchedule()) return;
+		submitting = true;
+		try {
+			// Save first: `scheduleCampaign` only sets the date, so unsaved edits
+			// would otherwise go out with the old copy.
+			await saveDraft({
+				subject: subject.trim(),
+				markdownBody,
+				audienceIds: selectedAudienceIds
+			});
+			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
+			toast.success('Campaign scheduled');
+			goto(resolve(`/staff/marketing/campaigns/${id}`));
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
 		} finally {
 			submitting = false;
 		}
@@ -176,6 +205,21 @@
 				</p>
 			</div>
 
+			<div>
+				<label for="campaign-schedule" class="label text-sm font-medium">
+					Schedule for later (optional)
+				</label>
+				<input
+					id="campaign-schedule"
+					type="datetime-local"
+					bind:value={scheduledFor}
+					class="input input-bordered w-full"
+				/>
+				{#if scheduledFor && !isFutureSchedule()}
+					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>
+				{/if}
+			</div>
+
 			<div class="flex flex-wrap gap-2">
 				<button
 					class="btn btn-outline btn-sm"
@@ -183,6 +227,13 @@
 					onclick={handleSave}
 				>
 					Save Draft
+				</button>
+				<button
+					class="btn btn-secondary btn-sm"
+					disabled={!isValid() || !isFutureSchedule() || submitting}
+					onclick={handleSchedule}
+				>
+					Schedule
 				</button>
 				<button
 					class="btn btn-primary btn-sm"

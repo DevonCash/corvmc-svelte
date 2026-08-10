@@ -33,6 +33,7 @@
 		IconSend,
 		IconMailCheck,
 		IconBan,
+		IconStar,
 		IconPointFilled
 	} from '@tabler/icons-svelte';
 	import type { SvelteComponent } from 'svelte';
@@ -73,12 +74,18 @@
 		// Tickets
 		valid: 'badge-info',
 		checked_in: 'badge-success',
+		// Band tiers
+		free: 'badge-ghost',
+		premium: 'badge-warning',
 		// Campaigns
 		sending: 'badge-info',
 		sent: 'badge-success',
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Volunteer hour logs
+		approved: 'badge-success',
+		rejected: 'badge-error',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -125,6 +132,10 @@
 		valid: { icon: IconTicket, color: 'text-info' },
 		checked_in: { icon: IconCircleCheckFilled, color: 'text-success' },
 
+		// Band tiers
+		free: { icon: IconPointFilled, color: 'text-base-content/60' },
+		premium: { icon: IconStar, color: 'text-warning' },
+
 		// Campaign statuses
 		sending: { icon: IconSend, color: 'text-info' },
 		sent: { icon: IconMailCheck, color: 'text-success' },
@@ -132,6 +143,10 @@
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
 		revoked: { icon: IconBan, color: 'text-error' },
+
+		// Volunteer hour log statuses
+		approved: { icon: IconCircleCheckFilled, color: 'text-success' },
+		rejected: { icon: IconCircleX, color: 'text-error' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },
