@@ -14,6 +14,7 @@ import {
 	createArticle as createArticleSvc,
 	updateArticle as updateArticleSvc,
 	deleteArticle as deleteArticleSvc,
+	setArticlesPublished,
 	createCategory as createCategorySvc,
 	updateCategory as updateCategorySvc,
 	deleteCategory as deleteCategorySvc,
@@ -78,7 +79,6 @@ export const searchHelp = query(z.string(), async (q) => {
 // ---------------------------------------------------------------------------
 
 export const getStaffArticles = query(z.void(), async () => {
-	await requireFeature('helpArticles');
 	await requireStaff();
 	return listAllArticles();
 });
@@ -134,6 +134,20 @@ export const updateArticle = form(updateArticleSchema, async (data) => {
 	await updateArticleSvc(id, rest);
 	return { success: true };
 });
+
+/** Bulk publish/unpublish from the staff list — the counterpart to `help:sync`. */
+export const setArticlesPublishedForm = form(
+	z.object({
+		ids: z.array(z.string().min(1)).min(1).max(200),
+		published: z.boolean()
+	}),
+	async (data) => {
+		await requireStaff();
+		const count = await setArticlesPublished(data.ids, data.published);
+		void getStaffArticles().refresh();
+		return { count };
+	}
+);
 
 export const deleteArticle = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireStaff();

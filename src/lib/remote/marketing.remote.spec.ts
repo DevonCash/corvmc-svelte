@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { isValidationError } from '@sveltejs/kit';
 
 // Regression: `getUnsubscribeInfo` is a `query` — it answers a GET — but it
 // called `unsubscribe()` as a side effect while merely rendering the page.
@@ -48,8 +49,15 @@ vi.mock('$lib/server/marketing/campaign-service', () => ({
 	renderCampaignPreview: vi.fn()
 }));
 
-vi.mock('$lib/server/marketing/subscriber-service', () => ({ findOrCreateByEmail: vi.fn() }));
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: vi.fn(async () => true) }));
+const findOrCreateByEmail = vi.fn(async () => ({ id: 'sub-1' }));
+vi.mock('$lib/server/marketing/subscriber-service', () => ({
+	findOrCreateByEmail: (...a: unknown[]) => findOrCreateByEmail(...(a as []))
+}));
+
+const verifyTurnstile = vi.fn(async () => true);
+vi.mock('$lib/server/turnstile', () => ({
+	verifyTurnstile: (...a: unknown[]) => verifyTurnstile(...(a as []))
+}));
 vi.mock('$lib/server/authorization', () => ({ requireStaff: vi.fn(async () => undefined) }));
 vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
 vi.mock('$lib/server/utils/slug', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
@@ -131,5 +139,42 @@ describe('confirmUnsubscribe', () => {
 
 		expect(result.valid).toBe(false);
 		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+});
+
+// Regression: the failed-Turnstile branch called `issue.turnstileToken(...)` and
+// then bare `return`. Constructing an issue does nothing on its own — only
+// `invalid()` throws it — so the handler resolved as if it had succeeded. The
+// visitor got a form that silently did nothing, with no error to act on.
+describe('subscribeToAudience Turnstile failure', () => {
+	function makeIssue() {
+		return new Proxy(
+			{},
+			{ get: (_t, field: string) => (message: string) => ({ message, path: [field] }) }
+		);
+	}
+
+	it('rejects a failed Turnstile check instead of resolving silently', async () => {
+		verifyTurnstile.mockResolvedValueOnce(false);
+
+		let thrown: unknown;
+		try {
+			await marketing.subscribeToAudience(
+				{
+					slug: 'newsletter',
+					email: 'ada@example.com',
+					name: 'Ada',
+					turnstileToken: 'bot-token'
+				},
+				makeIssue()
+			);
+		} catch (e) {
+			thrown = e;
+		}
+
+		expect(isValidationError(thrown)).toBe(true);
+		const issues = (thrown as { issues: Array<{ path: string[] }> }).issues;
+		expect(issues.some((i) => i.path?.includes('turnstileToken'))).toBe(true);
+		expect(findOrCreateByEmail).not.toHaveBeenCalled();
 	});
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
@@ -15,7 +15,7 @@ import {
 	unpublish,
 	getById
 } from '$lib/server/event/event-service';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -111,12 +111,18 @@ export const createBandEventForm = form(
 		const { user, band } = await requireBandAdmin();
 
 		if (!data.title) {
-			issue.title('Title is required');
+			invalid(issue.title('Title is required'));
 		}
 
 		const tz = DEFAULT_TIMEZONE;
-		const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-		const endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+		// One date field covers both times, so an end before the start means the gig
+		// runs past midnight and the range rolls onto the next day.
+		const { startsAt, endsAt } = buildTimeRangeInTz(
+			data.eventDate,
+			data.eventStartTime,
+			data.eventEndTime,
+			tz
+		);
 		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
 		const evt = await createBandEvent({
@@ -166,8 +172,9 @@ export const updateBandEventForm = form(
 		}
 
 		if (data.eventDate && data.eventStartTime && data.eventEndTime) {
-			params.startsAt = buildDateInTz(data.eventDate, data.eventStartTime, tz);
-			params.endsAt = buildDateInTz(data.eventDate, data.eventEndTime, tz);
+			const range = buildTimeRangeInTz(data.eventDate, data.eventStartTime, data.eventEndTime, tz);
+			params.startsAt = range.startsAt;
+			params.endsAt = range.endsAt;
 		}
 
 		if (data.doorsTime !== undefined && data.eventDate) {

@@ -6,7 +6,10 @@ const KV_PREFIX = 'site-config:';
 // Defaults — used when no KV entry exists for a key
 // ---------------------------------------------------------------------------
 
-const DEFAULTS: Record<string, string | number | boolean> = {
+// Exported so `feature-flags.spec.ts` can assert every FeatureFlag has a
+// default here and vice versa — the two lists drifting is what left the
+// Content Flags toggle throwing a 400.
+export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursStart': '09:00',
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.minDurationHours': 1,
@@ -35,14 +38,17 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'integration.utec.deviceId': '',
 	'integration.utec.refreshToken': '',
 
-	'feature.staffInbox': true,
+	// Flags gate the member, band and public surfaces only — the staff panel
+	// always shows every feature — so they all start off.
+	'feature.staffInbox': false,
 	'feature.bandPremium': false,
 	'feature.bandReservations': false,
 	'feature.bandEvents': false,
 	'feature.emailMarketing': false,
 	'feature.equipment': false,
 	'feature.helpArticles': false,
-	'feature.contentFlags': false
+	'feature.contentFlags': false,
+	'feature.volunteering': false
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;

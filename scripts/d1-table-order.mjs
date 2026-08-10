@@ -20,6 +20,7 @@ export const tableOrder = [
 	'subscriber',
 	'roles',
 	'permissions',
+	'volunteer_role',
 	// independents (no FKs)
 	'closure',
 	'inbox_channel_config',
@@ -42,11 +43,14 @@ export const tableOrder = [
 	'band_member',
 	'payment_cache',
 	'ticket',
+	'event_rsvp',
 	'platform_invite',
 	'credit_transaction',
 	'help_articles',
 	'band_media',
 	'band_page_config',
 	'inbox_message',
-	'inbox_note'
+	'inbox_note',
+	'content_flag',
+	'volunteer_hour_log'
 ];

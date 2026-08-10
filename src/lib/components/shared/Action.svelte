@@ -44,7 +44,11 @@
 		onfailure,
 		...rest
 	}: {
-		action: (() => Promise<unknown>) | RemoteForm<any, any>;
+		/**
+		 * A remote form, one of its `.for(id)` instances (which drops `for` from
+		 * the type), or a plain async callback.
+		 */
+		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		label?: string;
 		icon?: Snippet;
 		/**

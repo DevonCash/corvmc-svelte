@@ -15,6 +15,14 @@ vi.mock('./dispatcher', () => ({
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+const mockStaffUsers = vi.fn(async () => [
+	{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
+	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
+]);
+vi.mock('$lib/server/authorization', () => ({
+	listStaffUsers: () => mockStaffUsers()
+}));
+
 vi.mock('$env/dynamic/private', () => ({
 	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
 }));
@@ -68,6 +76,18 @@ beforeEach(() => {
 // through the single generic `notification` template.
 const GENERIC = 'notification';
 
+const volunteerPayload = {
+	logId: 'log-1',
+	userId: 'user-1',
+	userName: 'Bob',
+	userEmail: 'u@test.com',
+	roleName: 'Front Desk',
+	hours: 2,
+	workedOn: '2026-05-21T19:00:00.000Z',
+	reviewNotes: null as string | null,
+	reviewedByName: 'Ada'
+};
+
 describe('registerAllNotificationListeners', () => {
 	it('registers handlers for all expected events', () => {
 		registerAllNotificationListeners();
@@ -89,7 +109,10 @@ describe('registerAllNotificationListeners', () => {
 			'equipment.loan_requested',
 			'equipment.checked_out',
 			'equipment.returned',
-			'contact.form_submitted'
+			'contact.form_submitted',
+			'volunteer.hours_submitted',
+			'volunteer.hours_approved',
+			'volunteer.hours_rejected'
 		]) {
 			expect(handlers[event], event).toBeDefined();
 		}
@@ -446,6 +469,96 @@ describe('reservation.cancelled handler', () => {
 // the whole set. Assert over every model any listener produces, so a new
 // listener can't reintroduce them.
 
+describe('volunteer hour-log handlers', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	// Fans out per-staffer rather than to one STAFF_CONTACT_EMAIL, so the queue
+	// gets an in-app badge and each staffer's own preference is honored.
+	it('dispatches a submission to every staff member in-app', async () => {
+		await emit('volunteer.hours_submitted', {
+			logId: 'log-1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'u@test.com',
+			roleName: 'Front Desk',
+			hours: 2,
+			workedOn: '2026-05-21T19:00:00.000Z',
+			description: 'Covered the door'
+		});
+
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+		expect(mockDispatch.mock.calls.map((c) => c[0].userId)).toEqual(['staff-1', 'staff-2']);
+	});
+
+	it('carries no email template on the staff submission notice', async () => {
+		await emit('volunteer.hours_submitted', {
+			logId: 'log-1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'u@test.com',
+			roleName: 'Front Desk',
+			hours: 2,
+			workedOn: '2026-05-21T19:00:00.000Z',
+			description: 'Covered the door'
+		});
+
+		expect(mockDispatch.mock.calls[0][0].emailTemplate).toBeUndefined();
+		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteer');
+	});
+
+	// One staffer with a bad address must not swallow the rest of the fan-out.
+	it('keeps notifying staff after one dispatch throws', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('bad address'));
+
+		await emit('volunteer.hours_submitted', {
+			logId: 'log-1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'u@test.com',
+			roleName: 'Front Desk',
+			hours: 2,
+			workedOn: '2026-05-21T19:00:00.000Z',
+			description: 'Covered the door'
+		});
+
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+
+	it('emails the member on approval with date, role, and hours', async () => {
+		await emit('volunteer.hours_approved', { ...volunteerPayload });
+
+		const call = mockDispatch.mock.calls[0][0];
+		expect(call.userId).toBe('user-1');
+		expect(call.emailTemplate.alias).toBe(GENERIC);
+		expect(detailLabels(call.emailTemplate.model)).toEqual(['Date', 'Role', 'Hours']);
+		expect(detailText(call.emailTemplate.model)).toContain('Front Desk');
+	});
+
+	// The reason is the point of the rejection email — without it the member
+	// can't correct and resubmit, which is why the service demands one.
+	it('carries the reason on a rejection', async () => {
+		await emit('volunteer.hours_rejected', {
+			...volunteerPayload,
+			reviewNotes: 'Looks like a duplicate'
+		});
+
+		const call = mockDispatch.mock.calls[0][0];
+		expect(call.body).toBe('Looks like a duplicate');
+		expect(detailLabels(call.emailTemplate.model)).toContain('Reason');
+		expect(paragraphText(call.emailTemplate.model)).toContain('Looks like a duplicate');
+	});
+
+	it('pluralizes hours correctly', async () => {
+		await emit('volunteer.hours_approved', { ...volunteerPayload, hours: 1 });
+		expect(mockDispatch.mock.calls[0][0].title).toContain('1 hour of');
+
+		mockDispatch.mockClear();
+		await emit('volunteer.hours_approved', { ...volunteerPayload, hours: 1.5 });
+		expect(mockDispatch.mock.calls[0][0].title).toContain('1.5 hours');
+	});
+});
+
 describe('every notification-alias model', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
@@ -540,6 +653,11 @@ describe('every notification-alias model', () => {
 			eventTitle: 'Show',
 			notes: 'Reported',
 			bandAdmins: [{ userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' }]
+		});
+		await emit('volunteer.hours_approved', { ...volunteerPayload });
+		await emit('volunteer.hours_rejected', {
+			...volunteerPayload,
+			reviewNotes: 'Looks like a duplicate'
 		});
 
 		return [

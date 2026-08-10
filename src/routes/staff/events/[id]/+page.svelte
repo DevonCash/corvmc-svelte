@@ -30,6 +30,7 @@
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { IconMusic } from '@tabler/icons-svelte';
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
@@ -42,6 +43,8 @@
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editTags = $state('');
+	let editLocation = $state('');
+	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
 	let editEndTime = $state('');
@@ -71,6 +74,8 @@
 		editTitle = evt.title;
 		editDescription = evt.description ?? '';
 		editTags = evt.tags ?? '';
+		editLocation = evt.location ?? '';
+		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 
 		// Parse existing dates into form values
 		editDate = toLocalDate(evt.startsAt);
@@ -112,8 +117,11 @@
 			return;
 		}
 
-		const newStartsAt = buildISOFromLocal(editDate, editStartTime);
-		const newEndsAt = buildISOFromLocal(editDate, editEndTime);
+		const { startsAt: newStartsAt, endsAt: newEndsAt } = buildISORangeFromLocal(
+			editDate,
+			editStartTime,
+			editEndTime
+		);
 
 		const result = await checkRebook({
 			eventId: evt.id,
@@ -162,10 +170,26 @@
 
 	// ── Helpers ───────────────────────────────────────────────────────────
 
-	function buildISOFromLocal(date: string, time: string): string {
-		// Build a rough ISO string for the rebook check query
-		// The server will parse with proper timezone handling
-		return new Date(`${date}T${time}:00`).toISOString();
+	/** Add one calendar day to a "YYYY-MM-DD" string. */
+	function nextDay(date: string): string {
+		const [year, month, day] = date.split('-').map(Number);
+		return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+	}
+
+	function buildISORangeFromLocal(
+		date: string,
+		startTime: string,
+		endTime: string
+	): { startsAt: string; endsAt: string } {
+		// Build rough ISO strings for the rebook check query.
+		// The server will parse with proper timezone handling.
+		const startsAt = new Date(`${date}T${startTime}:00`);
+		// One date field covers both times: a show that ends past midnight ends on
+		// the following day, same as the server builds it when the form is saved.
+		const endsOnNextDay = new Date(`${date}T${endTime}:00`) < startsAt;
+		const endsAt = new Date(`${endsOnNextDay ? nextDay(date) : date}T${endTime}:00`);
+
+		return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 	}
 
 	function parseTags(tags: string | null): string[] {
@@ -336,6 +360,30 @@
 								/>
 							</FormField>
 
+							<!-- Venue and ticket link: what a band gig is made of. CMC shows
+							     happen at the space and sell through us, so both stay optional. -->
+							<FormField label="Location" id="editLocation" issues={[]}>
+								<input
+									id="editLocation"
+									name="location"
+									type="text"
+									bind:value={editLocation}
+									class="input input-bordered w-full"
+									placeholder="Venue name and address"
+								/>
+							</FormField>
+
+							<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
+								<input
+									id="editTicketUrl"
+									name="externalTicketUrl"
+									type="url"
+									bind:value={editExternalTicketUrl}
+									class="input input-bordered w-full"
+									placeholder="https://..."
+								/>
+							</FormField>
+
 							<!-- Ticketing -->
 							<div class="form-control">
 								<label class="label cursor-pointer justify-start gap-3">
@@ -464,6 +512,19 @@
 
 	<!-- Event info card -->
 	<InfoCard title="Event Details">
+		{#if evt.source === 'band'}
+			<p class="mb-2 flex items-center gap-2 text-sm">
+				<IconMusic size={16} />
+				Posted by
+				{#if data.band}
+					<a href={resolve(`/staff/bands/${data.band.id}`)} class="link font-medium">
+						{data.band.name}
+					</a>
+				{:else}
+					<span class="font-medium">a band</span>
+				{/if}
+			</p>
+		{/if}
 		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
 		<p class="opacity-70">
 			{#if evt.doorsAt}
@@ -472,6 +533,16 @@
 				{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 			{/if}
 		</p>
+
+		{#if evt.location}
+			<p class="opacity-70">{evt.location}</p>
+		{/if}
+
+		{#if evt.externalTicketUrl}
+			<a href={evt.externalTicketUrl} class="link text-sm" target="_blank" rel="noopener noreferrer"
+				>Tickets ↗</a
+			>
+		{/if}
 
 		{#if evt.description}
 			<div class="mt-4 pt-4 border-t border-base-200">

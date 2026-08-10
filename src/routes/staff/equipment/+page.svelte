@@ -33,6 +33,7 @@
 	let searchText = $state('');
 	let categoryId = $state('');
 	let statusFilter = $state('');
+	let includeDeleted = $state(false);
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -50,6 +51,7 @@
 		search: searchDebounced || undefined,
 		categoryId: categoryId || undefined,
 		status: statusFilter || undefined,
+		includeDeleted: includeDeleted || undefined,
 		page
 	});
 
@@ -65,7 +67,10 @@
 	}>(null);
 
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + (statusFilter ? 1 : 0)
+		(searchDebounced ? 1 : 0) +
+			(categoryId ? 1 : 0) +
+			(statusFilter ? 1 : 0) +
+			(includeDeleted ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -73,6 +78,7 @@
 		searchDebounced = '';
 		categoryId = '';
 		statusFilter = '';
+		includeDeleted = false;
 		page = 1;
 	}
 
@@ -127,6 +133,17 @@
 				<option value={s}>{titleCase(s)}</option>
 			{/each}
 		</Select>
+		<!-- Deactivation is a soft delete, so without this the only way back to a
+		     deactivated item (and its Reactivate button) is a hand-typed URL. -->
+		<label class="label cursor-pointer gap-2 text-sm">
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm"
+				bind:checked={includeDeleted}
+				onchange={() => (page = 1)}
+			/>
+			Show deactivated
+		</label>
 	</FilterBar>
 
 	<DataList {result} empty="No equipment found" onpage={(p) => (page = p)}>
@@ -142,8 +159,10 @@
 
 				{#each equipment as e (e.id)}
 					{@const href = resolve(`/staff/equipment/${e.id}`)}
-					<tr class="hover cursor-pointer" use:rowLink={href}>
-						<td class="w-px"><StatusBadge status={e.status} /></td>
+					<tr class="hover cursor-pointer" class:opacity-50={e.deletedAt} use:rowLink={href}>
+						<td class="w-px">
+							<StatusBadge status={e.deletedAt ? 'deactivated' : e.status} />
+						</td>
 						<!-- Category was its own column; as the subline it costs no width. -->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{e.name}</a>
