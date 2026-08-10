@@ -30,6 +30,7 @@
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import { IconMusic } from '@tabler/icons-svelte';
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
@@ -42,6 +43,8 @@
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editTags = $state('');
+	let editLocation = $state('');
+	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
 	let editEndTime = $state('');
@@ -71,6 +74,8 @@
 		editTitle = evt.title;
 		editDescription = evt.description ?? '';
 		editTags = evt.tags ?? '';
+		editLocation = evt.location ?? '';
+		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 
 		// Parse existing dates into form values
 		editDate = toLocalDate(evt.startsAt);
@@ -355,6 +360,30 @@
 								/>
 							</FormField>
 
+							<!-- Venue and ticket link: what a band gig is made of. CMC shows
+							     happen at the space and sell through us, so both stay optional. -->
+							<FormField label="Location" id="editLocation" issues={[]}>
+								<input
+									id="editLocation"
+									name="location"
+									type="text"
+									bind:value={editLocation}
+									class="input input-bordered w-full"
+									placeholder="Venue name and address"
+								/>
+							</FormField>
+
+							<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
+								<input
+									id="editTicketUrl"
+									name="externalTicketUrl"
+									type="url"
+									bind:value={editExternalTicketUrl}
+									class="input input-bordered w-full"
+									placeholder="https://..."
+								/>
+							</FormField>
+
 							<!-- Ticketing -->
 							<div class="form-control">
 								<label class="label cursor-pointer justify-start gap-3">
@@ -483,6 +512,19 @@
 
 	<!-- Event info card -->
 	<InfoCard title="Event Details">
+		{#if evt.source === 'band'}
+			<p class="mb-2 flex items-center gap-2 text-sm">
+				<IconMusic size={16} />
+				Posted by
+				{#if data.band}
+					<a href={resolve(`/staff/bands/${data.band.id}`)} class="link font-medium">
+						{data.band.name}
+					</a>
+				{:else}
+					<span class="font-medium">a band</span>
+				{/if}
+			</p>
+		{/if}
 		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
 		<p class="opacity-70">
 			{#if evt.doorsAt}
@@ -491,6 +533,16 @@
 				{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
 			{/if}
 		</p>
+
+		{#if evt.location}
+			<p class="opacity-70">{evt.location}</p>
+		{/if}
+
+		{#if evt.externalTicketUrl}
+			<a href={evt.externalTicketUrl} class="link text-sm" target="_blank" rel="noopener noreferrer"
+				>Tickets ↗</a
+			>
+		{/if}
 
 		{#if evt.description}
 			<div class="mt-4 pt-4 border-t border-base-200">

@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import { user } from '$lib/server/db/schema/authentication';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
 import { eq, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -191,68 +191,11 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		params.resolution === 'resolved' &&
 		existing.entityType === 'event'
 	) {
-		await unpublishFlaggedEvent(existing.entityId, params.notes);
+		const { unpublishWithBandNotice } = await import('$lib/server/event/event-service');
+		await unpublishWithBandNotice(existing.entityId, { notes: params.notes });
 	}
 
 	return row;
-}
-
-/**
- * Unpublish a flagged event and, for band events, notify the band's admins so
- * they can fix the listing and republish.
- */
-async function unpublishFlaggedEvent(eventId: string, notes?: string): Promise<void> {
-	const [row] = await db
-		.select({
-			id: event.id,
-			title: event.title,
-			status: event.status,
-			source: event.source,
-			bandId: event.bandId,
-			bandName: band.name
-		})
-		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
-		.where(eq(event.id, eventId))
-		.limit(1);
-
-	// Already off the guide (unpublished/cancelled since the flag was filed).
-	if (!row || row.status !== 'published') return;
-
-	const { unpublish } = await import('$lib/server/event/event-service');
-	await unpublish(eventId);
-
-	if (row.source !== 'band' || !row.bandId || !row.bandName) return;
-
-	const admins = await db
-		.select({ id: user.id, name: user.name, email: user.email })
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(
-			and(
-				eq(bandMember.bandId, row.bandId),
-				inArray(bandMember.role, ['owner', 'admin']),
-				eq(bandMember.status, 'active')
-			)
-		);
-
-	const payload = {
-		eventId: row.id,
-		eventTitle: row.title,
-		bandId: row.bandId,
-		bandName: row.bandName,
-		notes: notes || null,
-		bandAdmins: admins.map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
-	};
-
-	// Fire-and-forget: don't block the staff resolution on notification fan-out.
-	Promise.resolve().then(async () => {
-		try {
-			await domainEvents.emit('event.unpublished_by_staff', payload);
-		} catch (err) {
-			captureException(err, { event: 'event.unpublished_by_staff', eventId });
-		}
-	});
 }
 
 // ---------------------------------------------------------------------------

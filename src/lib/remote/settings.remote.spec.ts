@@ -51,7 +51,11 @@ vi.mock('$lib/server/lock/lock-service', () => ({
 	revokeLockSelfTest: vi.fn(async () => undefined)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+// `ALL_FLAGS` is the real list on purpose: `VALID_FLAGS` in settings.remote is
+// an alias of it, so mocking it out would stop this suite from catching a flag
+// that the settings page can toggle but the handler rejects.
+vi.mock('$lib/server/feature-flags', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/feature-flags')>()),
 	getAllFeatureFlags: vi.fn(async () => ({}))
 }));
 

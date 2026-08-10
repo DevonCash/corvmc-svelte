@@ -157,6 +157,27 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Event unlisted by staff',
 		description: 'Notification when staff unpublish one of your band’s events after a report',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_hours_submitted',
+		label: 'Volunteer hours submitted (staff)',
+		// In-app only, like the inbox and content-flag queues. A log every few
+		// days is routine queue work; emailing every staffer would train them to
+		// ignore it.
+		description: 'Notification when a member logs volunteer hours for review',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_hours_approved',
+		label: 'Volunteer hours approved',
+		description: 'Notification when staff approve volunteer hours you logged',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_hours_rejected',
+		label: 'Volunteer hours returned',
+		description: 'Notification when staff return volunteer hours you logged, with a reason',
+		defaults: { email: true, inApp: true, sms: false }
 	}
 ];
 

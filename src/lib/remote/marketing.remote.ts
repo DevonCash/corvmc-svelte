@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff } from '$lib/server/authorization';
@@ -64,8 +64,7 @@ export const subscribeToAudience = form(
 		await requireFeature('emailMarketing');
 		const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
 		if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-			issue.turnstileToken('Verification failed. Please try again.');
-			return;
+			invalid(issue.turnstileToken('Verification failed. Please try again.'));
 		}
 		const aud = await getAudienceBySlug(data.slug);
 		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
@@ -126,7 +125,6 @@ export const confirmUnsubscribe = form(
 
 /** List all audiences (staff). Used on audiences index and as audience options. */
 export const getAudiences = query(z.void(), async () => {
-	await requireFeature('emailMarketing');
 	await requireStaff();
 	return listAudiences();
 });
@@ -190,8 +188,7 @@ export const createAudience = form(
 
 		const name = (data.name as string).trim();
 		if (!name) {
-			issue.name('Name is required');
-			return;
+			invalid(issue.name('Name is required'));
 		}
 
 		const baseSlug = (data.slug as string)?.trim() || generateSlug(name);
@@ -267,8 +264,7 @@ export const addSubscriber = form(
 
 		const email = (data.email as string).trim();
 		if (!email) {
-			issue.email('Email is required');
-			return;
+			invalid(issue.email('Email is required'));
 		}
 
 		const sub = await findOrCreateByEmail(email, (data.name as string)?.trim() || undefined);
