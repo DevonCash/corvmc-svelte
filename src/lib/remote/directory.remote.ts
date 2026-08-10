@@ -440,6 +440,18 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		links: data.links
 	});
 
-	void getBandProfile().refresh();
+	// `getBandProfile` resolves its band from `params.slug`, which for a remote
+	// request comes from the `x-sveltekit-pathname` header the client sent — the
+	// slug as it was *before* this save. Renaming the band rotates the slug, so
+	// refreshing here would look up a slug that no longer exists and throw 404.
+	// SvelteKit ships that per-query failure to the client, where `apply_refreshes`
+	// calls `resource.fail(...)`: the write succeeds and the page it just saved
+	// drops into a "Band not found" error state. Skip it — the client navigates to
+	// the new slug (see BandProfileForm's onsuccess), which re-runs the query with
+	// the correct param anyway.
+	if (updated.slug === band.slug) {
+		void getBandProfile().refresh();
+	}
+
 	return { success: true, slug: updated.slug };
 });

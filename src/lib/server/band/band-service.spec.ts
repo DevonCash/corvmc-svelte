@@ -152,6 +152,33 @@ describe('BandService', () => {
 			expect(db.batch).toHaveBeenCalled();
 			expect(result.id).toBe('band-1');
 		});
+
+		// Regression: `band.name` carried a UNIQUE constraint in the deployed DB
+		// while `create()` inserted the name raw, so a second band with a name
+		// already taken — including one held by a soft-deleted band, since
+		// `deactivate()` only sets `deletedAt` and never frees the name — threw a
+		// raw D1 "UNIQUE constraint failed: band.name" straight out of `db.batch`
+		// and surfaced as a 500. Two bands may share a name; only the slug is
+		// unique, which `ensureUniqueSlug` already guarantees by suffixing.
+		it('allows a second band to reuse an existing name', async () => {
+			selectResult = [{ ...mockBand }];
+			vi.mocked(ensureUniqueSlug).mockResolvedValueOnce('the-velvet-underground-2');
+
+			const result = await create('user-owner', { name: 'The Velvet Underground' });
+
+			expect(result).toBeDefined();
+			expect(ensureUniqueSlug).toHaveBeenCalled();
+		});
+
+		// `update()` guards the same case at its `returning()` call; `create()` read
+		// `newBand.slug` in the caller (bands.remote.ts) off an unchecked
+		// destructure, so an empty re-select surfaced as
+		// "Cannot read properties of undefined" instead of a real error.
+		it('throws BandNotFoundError when the post-insert re-select comes back empty', async () => {
+			selectResult = [];
+
+			await expect(create('user-owner', { name: 'Ghost Band' })).rejects.toThrow(BandNotFoundError);
+		});
 	});
 
 	// -----------------------------------------------------------------------

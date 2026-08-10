@@ -38,8 +38,21 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => ({ id: 'user-1', name: 'Member', email: 'member@example.com' })
 }));
 
+// A slug-derived band lookup, faithful to the real `requireBandAdmin()`:
+// it resolves the band from the *route param* slug, which for a remote request
+// comes from the `x-sveltekit-pathname` header the client sent. Renaming a band
+// rotates its slug, so the param goes stale mid-request.
+let routeParamSlug = 'the-regressions';
+let storedBandSlug = 'the-regressions';
+
+const bandNotFound = () =>
+	Object.assign(new Error('Band not found'), { status: 404, body: { message: 'Band not found' } });
+
 vi.mock('$lib/server/band/band-context', () => ({
-	requireBandAdmin: vi.fn(async () => ({ user: { id: 'user-1' }, band: { id: 'band-1' } }))
+	requireBandAdmin: vi.fn(async () => {
+		if (routeParamSlug !== storedBandSlug) throw bandNotFound();
+		return { user: { id: 'user-1' }, band: { id: 'band-1', slug: storedBandSlug } };
+	})
 }));
 
 vi.mock('$lib/server/event/event-service', () => ({
@@ -49,8 +62,19 @@ vi.mock('$lib/server/event/event-service', () => ({
 	countMemberPastShows: vi.fn()
 }));
 
+// Faithful to band-service `update()`: changing the name regenerates the slug.
+const updateBandBasics = vi.fn(async (_bandId: string, data: { name?: string }) => {
+	if (data.name !== undefined) {
+		storedBandSlug = data.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
+	}
+	return { slug: storedBandSlug };
+});
+
 vi.mock('$lib/server/band/band-service', () => ({
-	update: vi.fn(async () => ({ slug: 'the-regressions' }))
+	update: (...args: unknown[]) => updateBandBasics(...(args as [string, { name?: string }]))
 }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
@@ -68,6 +92,9 @@ class ValidationFailure extends Error {
 	}
 }
 
+/** Errors raised by post-write query refreshes (see the `query` mock below). */
+const refreshFailures: unknown[] = [];
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: null },
@@ -80,9 +107,21 @@ vi.mock('$app/server', () => ({
 		) => unknown;
 		// The forms call `getX().refresh()` after a successful write, so the call
 		// result has to be a thenable carrying `.refresh`.
+		//
+		// `.refresh()` re-runs the query for real, because that is what the server
+		// does: a refresh registers the query in `state.remote.refreshes`, and
+		// `serialize_singleflight` awaits it while building the response. It also
+		// *catches* a rejection per key and ships `{type:'error'}` to the client,
+		// where `apply_refreshes` turns it into `resource.fail(new HttpError(...))`
+		// — so a failed refresh does not reject the form, it poisons the query the
+		// page is rendering. `refreshFailures` stands in for that error channel.
 		const wrapped = (...a: unknown[]) => {
 			const promise = Promise.resolve(handler(...a)) as Promise<unknown> & { refresh(): void };
-			promise.refresh = () => undefined;
+			promise.refresh = () => {
+				void Promise.resolve()
+					.then(() => handler(...a))
+					.catch((err) => refreshFailures.push(err));
+			};
 			return promise;
 		};
 		(wrapped as unknown as Record<string, unknown>).__ = { type: 'query' };
@@ -115,7 +154,13 @@ const directory = (await import('./directory.remote')) as unknown as Record<
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	routeParamSlug = 'the-regressions';
+	storedBandSlug = 'the-regressions';
+	refreshFailures.length = 0;
 });
+
+/** Let the queued `.refresh()` microtasks settle before asserting on them. */
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const VALID_MEMBER = {
 	tagline: '',
@@ -200,4 +245,35 @@ describe('saveBandProfile', () => {
 			expect(updateBandProfile).not.toHaveBeenCalled();
 		});
 	}
+
+	// Regression: saving the profile with a *new name* rotates the band's slug
+	// (band-service `update()` regenerates it), but the post-write
+	// `getBandProfile().refresh()` re-resolves the band through
+	// `requireBandAdmin()` → `getBySlug(params.slug)` — and `params.slug` is still
+	// the OLD slug, because for a remote request it is derived from the
+	// `x-sveltekit-pathname` header the client sent before the rename. The lookup
+	// misses and throws 404, so the save succeeds but the page's profile query is
+	// left in a failed state.
+	//
+	// This is the first save of every newly created band, since a new band starts
+	// out slugged after its creator and gets its real name on that first save.
+	it('does not fail the profile query refresh when the name change rotates the slug', async () => {
+		const result = (await directory.saveBandProfile({
+			...VALID_BAND,
+			name: 'Brand New Name'
+		})) as { success: boolean; slug: string };
+
+		await flush();
+
+		expect(result).toEqual({ success: true, slug: 'brand-new-name' });
+		expect(refreshFailures).toEqual([]);
+	});
+
+	it('still refreshes the profile query when the name is unchanged', async () => {
+		await directory.saveBandProfile(VALID_BAND);
+		await flush();
+
+		expect(storedBandSlug).toBe('the-regressions');
+		expect(refreshFailures).toEqual([]);
+	});
 });

@@ -92,6 +92,9 @@ export async function create(ownerId: string, data: CreateBandData) {
 	]);
 
 	const [newBand] = await db.select().from(band).where(eq(band.id, bandId));
+	// Callers read `.slug` off this; an unchecked destructure turned an empty
+	// re-select into "Cannot read properties of undefined" at the call site.
+	if (!newBand) throw new BandNotFoundError();
 	return newBand;
 }
 
