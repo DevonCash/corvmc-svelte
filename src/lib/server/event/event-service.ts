@@ -1,9 +1,23 @@
 import { db, getRowCount } from '$lib/server/db';
-import { event } from '$lib/server/db/schema/event';
+import { event, type EventSource } from '$lib/server/db/schema/event';
 import { band, bandMember } from '$lib/server/db/schema/band';
+import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
-import { eq, and, gt, gte, lt, lte, ne, asc, desc, inArray, count } from 'drizzle-orm';
+import {
+	eq,
+	and,
+	gt,
+	gte,
+	lt,
+	lte,
+	ne,
+	asc,
+	desc,
+	inArray,
+	count,
+	getTableColumns
+} from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -12,7 +26,12 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
-import { formatDateFull, formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
+import {
+	formatDateFull,
+	formatDateInTz,
+	buildDateInTz,
+	nextDay
+} from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -179,6 +198,8 @@ export interface UpdateEventParams {
 	endsAt?: Date;
 	doorsAt?: Date | null;
 	tags?: string | null;
+	location?: string | null;
+	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
 	ticketQuantity?: number | null;
@@ -246,6 +267,20 @@ export async function checkRebookNeeded(
 	};
 }
 
+/**
+ * Reject a backwards range on update, against the times the row will end up
+ * with — the same guard create() applies. Without it the range reaches D1 as a
+ * raw `event_time_order` CHECK-constraint failure (a 500 with no explanation).
+ */
+function assertTimeOrder(
+	existing: { startsAt: Date; endsAt: Date },
+	params: { startsAt?: Date; endsAt?: Date }
+): void {
+	const startsAt = params.startsAt ?? existing.startsAt;
+	const endsAt = params.endsAt ?? existing.endsAt;
+	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+}
+
 /** A stored ticket price is either null (no price) or a positive whole-cent integer. */
 function assertValidTicketPrice(price: number | null | undefined): void {
 	if (price == null) return;
@@ -258,6 +293,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
 	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
@@ -266,6 +302,10 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
+	if (params.location !== undefined) updates.location = params.location;
+	if (params.externalTicketUrl !== undefined) {
+		updates.externalTicketUrl = params.externalTicketUrl;
+	}
 
 	// Ticketing fields
 	if (params.ticketingEnabled !== undefined) {
@@ -384,6 +424,70 @@ export async function unpublish(eventId: string): Promise<void> {
 		.where(and(eq(event.id, eventId), eq(event.status, 'published')));
 }
 
+/**
+ * Unpublish and, for a band-sourced event, tell the band's admins so they can
+ * fix the listing and republish. Pulling a band's gig without a word is the one
+ * thing staff must not be able to do by accident, so both entry points — the
+ * moderation queue and the staff event page — go through here.
+ *
+ * No-ops when the event is already off the guide, which is what makes it safe
+ * to call from the flag queue after another staff member got there first.
+ */
+export async function unpublishWithBandNotice(
+	eventId: string,
+	opts: { notes?: string } = {}
+): Promise<void> {
+	const [row] = await db
+		.select({
+			id: event.id,
+			title: event.title,
+			status: event.status,
+			source: event.source,
+			bandId: event.bandId,
+			bandName: band.name
+		})
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(eq(event.id, eventId))
+		.limit(1);
+
+	if (!row || row.status !== 'published') return;
+
+	await unpublish(eventId);
+
+	if (row.source !== 'band' || !row.bandId || !row.bandName) return;
+
+	const admins = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(bandMember)
+		.innerJoin(user, eq(user.id, bandMember.userId))
+		.where(
+			and(
+				eq(bandMember.bandId, row.bandId),
+				inArray(bandMember.role, ['owner', 'admin']),
+				eq(bandMember.status, 'active')
+			)
+		);
+
+	const payload = {
+		eventId: row.id,
+		eventTitle: row.title,
+		bandId: row.bandId,
+		bandName: row.bandName,
+		notes: opts.notes || null,
+		bandAdmins: admins.map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
+	};
+
+	// Fire-and-forget: don't block the staff action on notification fan-out.
+	Promise.resolve().then(async () => {
+		try {
+			await domainEvents.emit('event.unpublished_by_staff', payload);
+		} catch (err) {
+			captureException(err, { event: 'event.unpublished_by_staff', eventId });
+		}
+	});
+}
+
 // ---------------------------------------------------------------------------
 // cancel()
 // ---------------------------------------------------------------------------
@@ -493,15 +597,6 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	return query;
 }
 
-/** Add one calendar day to a "YYYY-MM-DD" string (UTC rollover handles month/year). */
-function nextDay(dateStr: string): string {
-	const [year, month, day] = dateStr.split('-').map(Number);
-	const d = new Date(Date.UTC(year, month - 1, day + 1));
-	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
-		d.getUTCDate()
-	).padStart(2, '0')}`;
-}
-
 /** Soonest published CMC show on today's calendar day (PT) that hasn't ended yet. */
 export async function getShowTonight(now = new Date()): Promise<EventRow | null> {
 	const today = formatDateInTz(now, DEFAULT_TIMEZONE);
@@ -540,10 +635,25 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
 	return query;
 }
 
-/** All events for staff, newest first. */
-export async function listAll(pagination: PaginationInput = {}) {
-	const dataQ = db.select().from(event).orderBy(desc(event.startsAt)).$dynamic();
-	const countQ = db.select({ count: count() }).from(event);
+/**
+ * All events for staff, newest first. Band-sourced events sit in the same list
+ * as CMC ones, so the band name rides along — without it a band's gig is
+ * indistinguishable from a show the space is producing.
+ */
+export async function listAll(
+	opts: { source?: EventSource } = {},
+	pagination: PaginationInput = {}
+) {
+	const where = opts.source ? eq(event.source, opts.source) : undefined;
+
+	const dataQ = db
+		.select({ ...getTableColumns(event), bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.leftJoin(band, eq(band.id, event.bandId))
+		.where(where)
+		.orderBy(desc(event.startsAt))
+		.$dynamic();
+	const countQ = db.select({ count: count() }).from(event).where(where);
 	return paginate(dataQ, countQ, pagination);
 }
 
@@ -641,6 +751,7 @@ export async function updateBandEvent(
 	if (!existing) throw new Error('Event not found');
 	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
 	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;

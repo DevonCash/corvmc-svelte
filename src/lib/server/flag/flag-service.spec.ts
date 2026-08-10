@@ -42,9 +42,12 @@ vi.mock('$lib/server/events/event-bus', () => ({
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+// The unpublish-and-notify behaviour itself lives in the event service (shared
+// with the staff event page) and is covered by `event-service.spec.ts`; here we
+// only assert the flag queue delegates to it.
 const unpublishMock = vi.fn().mockResolvedValue(undefined);
 vi.mock('$lib/server/event/event-service', () => ({
-	unpublish: (...args: unknown[]) => unpublishMock(...args)
+	unpublishWithBandNotice: (...args: unknown[]) => unpublishMock(...args)
 }));
 
 import {
@@ -206,21 +209,8 @@ describe('resolveFlag', () => {
 		expect(row).toMatchObject({ status: 'resolved' });
 	});
 
-	it('unpublishes a flagged band event and notifies its admins when requested', async () => {
-		selectResultQueue = [
-			[{ status: 'pending', entityType: 'event', entityId: 'e1' }], // flag lookup
-			[
-				{
-					id: 'e1',
-					title: 'Loud Show',
-					status: 'published',
-					source: 'band',
-					bandId: 'b1',
-					bandName: 'The Squares'
-				}
-			], // event + band lookup
-			[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }] // band admins
-		];
+	it('hands a flagged event to the unpublish-and-notify path when requested', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
 		updateResult = [{ id: 'f1', status: 'resolved' }];
 
 		await resolveFlag('f1', {
@@ -230,19 +220,7 @@ describe('resolveFlag', () => {
 			unpublishEvent: true
 		});
 
-		expect(unpublishMock).toHaveBeenCalledWith('e1');
-		await Promise.resolve();
-		await Promise.resolve();
-		expect(emitMock).toHaveBeenCalledWith(
-			'event.unpublished_by_staff',
-			expect.objectContaining({
-				eventId: 'e1',
-				eventTitle: 'Loud Show',
-				bandId: 'b1',
-				notes: 'Poster violated guidelines',
-				bandAdmins: [{ userId: 'u9', userName: 'Admin', userEmail: 'admin@example.com' }]
-			})
-		);
+		expect(unpublishMock).toHaveBeenCalledWith('e1', { notes: 'Poster violated guidelines' });
 	});
 
 	it('does not unpublish when the option is not set', async () => {
@@ -252,20 +230,5 @@ describe('resolveFlag', () => {
 		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 
 		expect(unpublishMock).not.toHaveBeenCalled();
-	});
-
-	it('skips unpublish when the event is no longer published', async () => {
-		selectResultQueue = [
-			[{ status: 'pending', entityType: 'event', entityId: 'e1' }],
-			[{ id: 'e1', title: 'Loud Show', status: 'draft', source: 'band', bandId: 'b1' }]
-		];
-		updateResult = [{ id: 'f1', status: 'resolved' }];
-
-		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1', unpublishEvent: true });
-
-		expect(unpublishMock).not.toHaveBeenCalled();
-		await Promise.resolve();
-		await Promise.resolve();
-		expect(emitMock).not.toHaveBeenCalled();
 	});
 });

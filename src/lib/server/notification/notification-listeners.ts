@@ -37,6 +37,21 @@ function formatMoney(cents: number): string {
 	return `$${(cents / 100).toFixed(2)}`;
 }
 
+/** Display hours for email copy. 3 → "3 hours", 1.5 → "1.5 hours", 1 → "1 hour". */
+function formatHours(hours: number): string {
+	const rendered = Number.isInteger(hours) ? String(hours) : String(Number(hours.toFixed(2)));
+	return `${rendered} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
+/** Calendar date for volunteer copy — no time component to render. */
+function formatWorkedOn(value: string): string {
+	return new Date(value).toLocaleDateString('en-US', {
+		weekday: 'long',
+		month: 'long',
+		day: 'numeric'
+	});
+}
+
 /** Date + time range as rows for the details card. En-dash per the brand voice. */
 function whenDetails(date: string, startTime: string, endTime: string): NotificationEmailDetail[] {
 	return [
@@ -48,7 +63,7 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
-	// --- Ticket purchase confirmation (dedicated template) ---
+	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		// Ticket buyers may not have accounts — use email-only dispatch
 		await dispatchEmailOnly({
@@ -65,7 +80,18 @@ export function registerAllNotificationListeners(): void {
 				preview_text: `${event.eventTitle} · ${event.eventDate} at ${event.eventTime}`,
 				quantity: event.quantity,
 				multiple: event.quantity > 1,
-				ticketCodes: event.ticketCodes.map((code) => ({ code }))
+				ticketCodes: event.ticketCodes.map((code) => ({ code })),
+				// Receipt. A guest has no order history to fall back on, so this
+				// email is their proof of purchase — and the success-page link is
+				// how they get their codes back if they lose it. That page keys off
+				// the purchase id alone (no session), which is what makes it work.
+				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
+				unitPrice: formatMoney(event.unitPriceCents),
+				subtotal: formatMoney(event.subtotalCents),
+				feesCovered: event.feesCents > 0,
+				fees: formatMoney(event.feesCents),
+				total: formatMoney(event.totalCents),
+				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
 			}
 		});
 	});
@@ -627,5 +653,94 @@ export function registerAllNotificationListeners(): void {
 				});
 			}
 		}
+	});
+
+	// --- Volunteer hours submitted (notify staff) ---
+	// Fans out per-staffer rather than to a single STAFF_CONTACT_EMAIL: this is
+	// queue work, so it needs an in-app badge and each staffer's own preference.
+	domainEvents.on('volunteer.hours_submitted', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'volunteer_hours_submitted',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.userName} logged ${formatHours(event.hours)} of volunteer time`,
+					body: `${event.roleName} — ${event.description}`,
+					href: '/staff/volunteer'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.volunteer_hours_submitted',
+					to: member.email
+				});
+			}
+		}
+	});
+
+	// --- Volunteer hours approved (notify member) ---
+	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_hours_approved',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `${formatHours(event.hours)} of volunteer time approved`,
+			body: `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your volunteer hours were approved`,
+					heading: 'Volunteer Hours Approved',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'Thanks for helping out — your logged hours have been approved.' },
+						...(event.reviewNotes ? [{ text: `Note from staff: ${event.reviewNotes}` }] : [])
+					],
+					details: [
+						{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+						{ label: 'Role', value: event.roleName },
+						{ label: 'Hours', value: formatHours(event.hours) }
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'View my hours' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Volunteer hours rejected (notify member) ---
+	// The reason is the point of this email — without it the member can't correct
+	// and resubmit, which is why the service requires a non-empty note.
+	domainEvents.on('volunteer.hours_rejected', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_hours_rejected',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `${formatHours(event.hours)} of volunteer time needs another look`,
+			body: event.reviewNotes ?? `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your volunteer hours need another look`,
+					heading: 'Volunteer Hours Returned',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: "Staff reviewed the hours you logged and couldn't approve them as written. You can log them again with the correction below."
+						},
+						...(event.reviewNotes ? [{ text: `Reason: ${event.reviewNotes}` }] : [])
+					],
+					details: [
+						{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+						{ label: 'Role', value: event.roleName },
+						{ label: 'Hours', value: formatHours(event.hours) },
+						...(event.reviewNotes ? [{ label: 'Reason', value: event.reviewNotes }] : [])
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'Log hours again' }
+				} satisfies NotificationEmailModel
+			}
+		});
 	});
 }

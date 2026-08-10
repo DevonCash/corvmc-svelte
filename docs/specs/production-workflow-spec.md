@@ -15,6 +15,12 @@ lineup entry — and later claim its own profile without the show history being 
 
 Everything here is staff-facing and gated behind a `productions` feature flag.
 
+> **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
+> splits today's `band` table into `group` (the managed organization: roster, roles, slug,
+> announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).
+> An external act is a `band_profile` with no group. Sections below that used to describe external
+> acts as member-less `band` rows have been reconciled with it.
+
 ---
 
 ## Key concepts
@@ -40,10 +46,16 @@ created the reservation only at `confirmed`, which meant the room stayed bookabl
 members for the entire stretch while a show was being booked into it. Holding early and
 widening later costs nothing and closes that window.
 
-**A lineup slot always points at a `band` row.** Touring and non-member acts get `band`
-rows too, with no members (see below). One reference type means a lineup can mix member
-and non-member acts without a polymorphic column, and an act that later joins the
+**A lineup slot always points at a `band_profile` row.** Touring and non-member acts get
+profiles too, with no group attached (see below). One reference type means a lineup can mix
+member and non-member acts without a polymorphic column, and an act that later joins the
 Collective keeps every production it ever played.
+
+This is also why lineups are **not** modeled with `event_group`, the co-billing join
+introduced in [groups-spec.md](groups-spec.md). `production_slot` carries set times, set
+lengths, ordering, and per-act settlement; `event_group` carries only which member groups a
+band-authored event is advertised on. A production uses `production_slot`; a member-authored
+event uses `event_group`; nothing uses both.
 
 **Set times are derived, full stop.** A pure helper walks the lineup in order and the
 service recomputes on every lineup mutation. There is no override, no lock flag, and no
@@ -198,25 +210,41 @@ decided at event creation — `create()` in `event-service.ts` takes an optional
 venue the answer is always yes; for an off-site production it is always no, which is the
 point of tracking the venue.
 
-### Bands, extended to cover external acts
+### External acts are band profiles with no group
 
-A touring act needs a name, a bio, genres, links, a photo, and a contact — which is
-exactly the `band` table. Rather than fork all of that into an `externalAct` table and
-face a painful merge the day the act joins, external acts are simply `band` rows.
+A touring act needs a name, a bio, genres, links, a photo, and a contact, and no roster at
+all. Under the band/group split that is exactly a **`band_profile` with `groupId` null** —
+a staff-kept record of an act, held for the next time they come through.
 
-**No new columns.** An earlier draft added `band.claimStatus` (`claimed` / `unclaimed` /
-`claim_pending`) and relaxed `band.ownerId` to nullable. Both are gone. `claimStatus` was
-a fourth copy of a fact already recorded three other ways — by `bandMember` rows, by
-`ownerId`, and by a pending `platform_invite` — and four copies of one fact is four
-chances to disagree.
+> **An unclaimed act is a band profile with no group.** One condition, one source of truth.
+> It has no slug, so it is not publicly addressable; it has no roster, so there is no
+> membership to interpret.
 
-Instead, this spec **drops `band.ownerId` entirely.**
+Two earlier drafts of this section are now superseded, and it is worth saying why, because
+each was solving a real problem the split removes:
 
-> **An unclaimed act is a band with zero `bandMember` rows.** One condition, one source of
-> truth. The owner is the `bandMember` row with `role: 'owner'`, enforced by a partial
-> unique index on `(bandId) WHERE role = 'owner'`. The split-brain the earlier draft
-> worried about — a `bandMember` with `role: 'owner'` while `band.ownerId` is still null —
-> becomes structurally impossible rather than something the claim step has to remember.
+- The **first** draft added `band.claimStatus` (`claimed` / `unclaimed` / `claim_pending`)
+  and relaxed `band.ownerId` to nullable — a fourth copy of a fact already recorded three
+  other ways.
+- The **second** made external acts member-less `band` rows. That collapsed the four copies
+  into one, but it put unclaimed acts into the same table as public bands, which forced the
+  [Visibility audit](#visibility-audit) below: every "is this band public?" filter had to
+  learn to exclude rows with no members.
+
+Putting them in `band_profile` collapses that too. Public addressability now comes from
+having a group at all, because that is where the slug lives — so there is no filter to
+apply and none to forget.
+
+The objection the second draft raised against a separate table — "a painful merge the day
+the act joins" — does not apply, because nothing merges. Claiming creates a group, moves
+name/description/avatar onto it, and links the existing profile; every production the act
+ever played is already attached to that profile and stays attached. See
+[Claiming a touring act](groups-spec.md#claiming-a-touring-act).
+
+**`band.ownerId` is still dropped**, for the reasons below; ownership is now a
+`group_member` row with `role: 'owner'`, enforced by a partial unique index on
+`(groupId) WHERE role = 'owner'`. The call sites listed below are unchanged in substance —
+substitute `group_member` for `bandMember` throughout.
 
 The evidence for dropping it:
 
@@ -305,32 +333,38 @@ duplicate the reasoning here.
 
 What matters for this migration specifically:
 
-- **`band` has eight descendants to protect**, not six. The direct children are
-  `band_genre`, `band_media`, `band_member`, `band_page_config`, `event`, and
-  `platform_invite` — but `event` is itself a parent, so `ticket` and `event_rsvp` are
-  pulled in too. The rewrite walks that transitively and orders the work deepest-first.
+- **Recount the descendants against the split.** `band_member` and `platform_invite` leave
+  the band entirely — they become `group_member` and `group_invite`, children of `group`.
+  `band_genre`, `band_media`, and `band_page_config` re-key to `band_profile`. `event`
+  re-points from `band` to `group`, pulling `ticket` and `event_rsvp` with it as before.
+  The rewrite walks that transitively and orders the work deepest-first; confirm the
+  generated set matches this list rather than assuming it.
 - **Review the generated SQL** rather than skimming it. It will rebuild all eight of those
   tables around the `band` rebuild, which is correct and looks alarming.
 - **Land it on its own**, ahead of the productions tables, so the one risky migration in
   this feature can be applied and verified in isolation.
 - **Verify against local D1** before it goes near production: `pnpm db:reset && pnpm db:seed`,
-  then confirm row counts in `band_member`, `band_genre`, `band_media`,
-  `band_page_config`, `platform_invite`, `ticket`, and `event_rsvp`, plus non-null
-  `event.band_id` values.
+  then confirm row counts in `group_member`, `group_invite`, `band_genre`, `band_media`,
+  `band_page_config`, `ticket`, and `event_rsvp`, plus non-null `event.group_id` values.
 
-**Claiming** reuses the existing platform-invite machinery and gets simpler as a result.
-Staff send a `platformInvite` to the act's contact email with `role: 'owner'` —
-`platform_invite.role` is already typed as the full `bandRoles` tuple
-(`['owner', 'admin', 'member']`), so no schema change. When that person signs up,
-`resolvePendingInvites()` — called from `src/hooks.server.ts`, defined in
-`band/platform-invite-service.ts` — inserts their `bandMember` row with the invited role
-on first login, and **that insert is the claim**. There is no second step to keep in sync,
-no `claimStatus` to flip, and no `ownerId` to backfill. The only thing left for the act to
-do is choose its `directoryVisibility`, which is a normal band-settings edit.
+**Claiming** reuses the invite machinery and gets simpler as a result. Staff send a
+`group_invite` to the act's contact email with `role: 'owner'` — the role column is already
+typed as the full role tuple (`['owner', 'admin', 'member']`), so no schema change. Claiming
+is the two-part operation described in
+[groups-spec.md](groups-spec.md#claiming-a-touring-act): a `group` is created for the
+profile, and the invitee's `group_member` row is inserted with the invited role when they
+sign up. There is no `claimStatus` to flip and no `ownerId` to backfill.
 
-The earlier draft's warning that `resolvePendingInvites()` leaves a split-brain because it
-"only inserts the `bandMember` row" no longer describes a problem — inserting the
-`bandMember` row is now the entire operation.
+Note the ordering this implies: **the group must exist before the invite can be sent**,
+since `group_invite.groupId` is a NOT NULL FK. Staff creating an act inline for a lineup
+produce a profile with no group; sending an owner invite is what promotes it, and that step
+is where the act's name, description, and avatar move from the profile onto the group. The
+only thing left for the act to do is choose its visibility, which is a normal group-settings
+edit.
+
+The earlier draft's warning that `resolvePendingInvites()` leaves a split-brain no longer
+describes a problem — the identity move happens once, at group creation, and the membership
+insert is the whole of the remaining operation.
 
 `transferOwnership()` needs one adjustment: it currently demotes the actor's owner row and
 takes the actor id from `band.ownerId` at the call site. With no owner row at all the
@@ -346,7 +380,7 @@ One act, one set, one position in the running order.
 production_slot
   id                 uuid pk
   productionId       uuid fk → production (cascade)
-  bandId             uuid? fk → band (set null)
+  bandProfileId      uuid? fk → band_profile (set null)
   sortOrder          real             — fractional; lower plays first, no unique constraint
   billing            text             — headliner | support | opener | dj | host
   setLengthMinutes   int
@@ -362,18 +396,28 @@ production_slot
   techNotes          text?
   backlineNeeds      text?
   hospitalityNotes   text?
-  contactName        text?            — per-show override of the band's directoryContact
+  contactName        text?            — per-show override of the act's stored contact
   contactEmail       text?
   contactPhone       text?
   createdAt          timestamp
   updatedAt          timestamp
 ```
 
-`bandId` is nullable and set-null rather than cascade so a deleted band leaves the slot —
-and its payout record — intact for historical settlements.
+`bandProfileId` is nullable and set-null rather than cascade so a deleted act leaves the
+slot — and its payout record — intact for historical settlements. Note that deleting a
+_group_ does not delete its band profile: the profile survives with `groupId` set to null and
+its identity columns repopulated, so a disbanded member band reverts to a staff-kept record
+and its slots keep a name.
 
 **There is no `doorSplitPercent`.** The split is a property of the deal for the whole
 show, not of each act, and it lives on `production.bandSplitPercent`. See "Settlement".
+
+**Staff may set it per show**, defaulting to 70. A locked value with a config key was the
+alternative; it was rejected because unusual deals are real and the app should record the
+deal rather than force staff to work around it. The protection against a split quietly
+settling at the wrong number is **visibility, not immutability**: the value appears in the
+band-facing terms summary (see [Permissions](#permissions)), so the act sees the deal it was
+offered rather than only the payout that came out the other end.
 
 Tech requirements are entered per show, but a member band with a premium page already has
 this on file: `BandEpk` in `src/lib/types/band-page.ts` carries `technicalRiderKey`,
@@ -411,8 +455,18 @@ show. Starting set:
 - **advance** — confirm lineup and set times, collect tech riders and stage plots,
   confirm backline, send load-in details, confirm door/sound staffing, poster and social
   announcement, ticket link live.
-- **day_of** — doors staffed, sound check complete, hospitality set, merch table set,
-  float counted.
+- **day_of** — the pre-show walkthrough, and a real phase rather than a slice of advance.
+  It is the list somebody works through the afternoon of the show, and most of it is about
+  the building rather than the lineup: set house gear, check concessions stock, clean the
+  bathrooms, float counted, doors staffed, sound check complete, hospitality set, merch
+  table set.
+
+  Merging it into `advance` was considered and rejected. Advance is booking work done days
+  or weeks ahead by whoever is producing; `day_of` is venue work done hours ahead by
+  whoever is on shift, and the two are often different people with different questions
+  ("is the lineup confirmed?" versus "is the room ready?"). Collapsing them would put a
+  stale rider request next to an unswept floor on one list.
+
 - **closeout** — door count reconciled, bands paid, load-out complete, room reset, trash
   and recycling out, gear returned to storage, incidents logged, lock-up.
 
@@ -448,7 +502,7 @@ draft ──▶ offered ──▶ confirmed ──▶ completed ──▶ settle
 | `draft` → `offered`               | Offers sent                                                   | Slots move to `invited`; no public change                                                                                                 |
 | `offered` → `confirmed`           | Lineup locked                                                 | Unlocks event publish; no reservation work — the room is already held                                                                     |
 | `confirmed` → `completed`         | Show happened (or the auto-complete cron passes the end time) | Slots **in `confirmed` status** move to `performed`; unlocks settlement                                                                   |
-| `completed` → `settled`           | Staff settle                                                  | Reads ticket revenue from Stripe, computes the band pool, snapshots the totals; freezes the money fields                                  |
+| `completed` → `settled`           | Staff settle                                                  | Reads ticket revenue, computes the band pool, snapshots the totals. Money fields stay editable; later changes go to the audit log         |
 | `settled` → `closed`              | Close-out done                                                | Requires every `closeout` task `done`; archives the production                                                                            |
 | any pre-`completed` → `cancelled` | Staff cancel                                                  | Cancels the event via `event-service.cancel()` (which notifies ticket holders and releases the reservation); marks live slots `cancelled` |
 
@@ -637,6 +691,20 @@ common case exactly one slot's payout row is filled: the lead band's. The worksh
 displays `bandPoolCents` against `sum(slot.payoutCents)` side by side, so a mismatch is
 visible without anyone having to do the subtraction.
 
+**There is no lead band, and payouts are per-slot.** An earlier reading assumed one act
+takes the cut and divides it in the parking lot. That happens, but it is a special case of
+the general one: `payoutCents` lives on `production_slot`, so a four-band bill with no
+headliner is four rows summing to `bandPoolCents`, and a show where one act collects for
+everyone is one row equal to it. Both are the same worksheet — the only rule is that the
+rows sum to the pool, which is exactly the side-by-side check above.
+
+That means the schema needs no change, but the workflow does: settlement asks staff to
+allocate the pool across slots rather than assuming a single recipient, and
+`payoutMethod` / `paidAt` are per slot too, since one act may take cash on the night and
+another a Venmo transfer the next morning. A slot may legitimately have `payoutCents: 0` —
+an opener playing for the door split of nothing, or a band that declined payment — which is
+different from `null`, meaning not yet settled.
+
 ### Reading ticket revenue
 
 `ticketRevenueCents` is **read, not entered** — but not from where an earlier draft
@@ -699,8 +767,13 @@ trusting one side.
 
 `production.ticketRevenueCents` remains on the table, but as a **settlement snapshot**: one
 write at settle time, alongside `settledAt` and `settledByUserId`, recording what was
-settled and on what figures. That is an audit record, not a ledger. Reopening a settlement
-clears the snapshot and re-reads Stripe.
+settled and on what figures. That is an audit record, not a ledger.
+
+**The snapshot is the durable figure — Stripe is not re-read to reconstruct it.** A
+settlement from two years ago reads its own snapshot, and edits since then are in the audit
+log. Re-reading Stripe is always an explicit staff action against a live show, never an
+implicit recompute of an old one. See [How far back Stripe can be
+read](#how-far-back-stripe-can-be-read) for why that matters.
 
 **Settlement must fail cleanly.** If the Stripe search errors, rate-limits, or pages
 incompletely, the service must **not** write a partial snapshot — a settlement that
@@ -711,6 +784,46 @@ worksheet shows the failure, and staff can retry or enter the figure manually as
 
 Comps (`compCount`) come from `ticket` rows with no `stripePaymentRecordId`, once that
 column exists.
+
+### How far back Stripe can be read
+
+An earlier draft worried that Stripe's search would age out and leave an old settlement
+unreconstructable. Checking [Stripe's search
+documentation](https://docs.stripe.com/search) shows the premise is wrong in one direction
+and understated in another.
+
+**There is no documented lookback limit.** Search has no date horizon and no historical
+cutoff, so a bounded date window is not needed for that reason. The listed limitations are
+about freshness and consistency, not age.
+
+**But three real hazards are documented, and two of them are worse than staleness:**
+
+| Limitation                                                                                                                                  | Why it matters at settle time                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| _"In rare cases, paginating through a result set can reorder some records, causing them to be missing or duplicated on a page."_            | This is a **correctness bug for a sum**. A duplicated PaymentIntent overstates revenue; a missing one understates it. Neither is visible in the total. |
+| _"The Search API filters using a cached version of the PaymentIntent `status`, but returns data based on the latest version."_              | Filtering on `status:"succeeded"` can miss a payment that has since succeeded, or return one that hasn't.                                              |
+| _"Under normal operating conditions, data is searchable in under 1 minute."_ Stripe explicitly says not to use search for read-after-write. | Settling minutes after the last door sale can miss it. Rate limit is 20 read ops/sec across all search endpoints.                                      |
+
+So the design rule is not a date window — it is **don't depend on search for a number that
+has to be right**:
+
+1. **Sum from local rows, not from the search.** Every ticket now carries
+   `stripePaymentRecordId` (see [Prerequisites](#prerequisites-two-fixes-both-landed)).
+   Settlement walks the event's tickets, takes the **distinct** payment ids, and retrieves
+   those PaymentIntents **by id**. Retrieval by id has none of search's caveats: no
+   indexing lag, no pagination reordering, no status cache. Tickets in one purchase share a
+   PaymentIntent, so the call count is purchases, not tickets.
+2. **Search is the reconciliation, not the source.** Run it as a cross-check — a
+   PaymentIntent the search returns with no matching ticket, or a ticket whose payment the
+   retrieval can't find, is surfaced as a discrepancy for staff. This is the mismatch check
+   already described above, now with the two sides the right way round.
+3. **Search is also the backfill** for ticket purchases predating `stripePaymentRecordId`,
+   where no local id exists. That set is finite and shrinks to nothing.
+4. **Then snapshot**, and never recompute an old settlement implicitly.
+
+The clean-failure rule stands and gets easier to honor: if retrieval fails or the
+cross-check disagrees, refuse the transition to `settled` rather than writing a partial
+snapshot.
 
 ### Door cash, and why Stripe never hears about it
 
@@ -743,10 +856,34 @@ over settled productions — date, title, gross revenue, band pool, total expens
 payout method — so the debit side reaches whoever does the Collective's books. Without it
 the app records the band cut and then loses it, which is worse than not recording it.
 
-Settling writes the snapshot and stamps `settledAt` / `settledByUserId`. After that the
-money fields are read-only — reopening requires a staff action that returns the production
-to `completed` and clears the snapshot, so an edited settlement is always visibly
-re-settled.
+### Settlement stays editable, with an audit trail
+
+Settling writes the snapshot and stamps `settledAt` / `settledByUserId`. **The money fields
+stay editable afterwards**; every change is recorded rather than prevented.
+
+An earlier draft froze them and required an explicit reopen that cleared the snapshot. That
+is the right design for an organization with a finance team and a close process. For a
+collective where the person who settled the show is the person who finds the error, a lock
+mostly produces a ritual — reopen, fix, re-settle — that records less than simply logging
+the edit would, because the intermediate states are gone by the end of it. A correction two
+days later is normal here, not an exception to be gated.
+
+So settlement edits are appended to the [staff audit log](audit-log-spec.md): actor,
+timestamp, field, before, after. That gives the thing the freeze was actually protecting —
+an answer to "who changed the band pool, and from what" — without the ceremony. The
+production keeps its original `settledAt` / `settledByUserId`; the log carries everything
+since.
+
+Two consequences worth stating:
+
+- **The snapshot is never silently recomputed.** Editing a money field changes that field
+  and nothing else. Re-reading Stripe is an explicit action, because an automatic recompute
+  would overwrite a deliberate manual correction with a machine's answer.
+- **`closed` still means closed.** Once a production is `closed`, editing money reopens
+  nothing and changes no status, but it is logged like any other edit. If that turns out to
+  be too loose, the narrower rule is to require `closed → settled` first — but start
+  permissive, since the audit log makes looseness recoverable and a lock does not make
+  errors less likely.
 
 ---
 
@@ -794,39 +931,65 @@ active productions unless the closed filter is on.
 
 ### The gig-guide attribution rule
 
-**A production never writes an external act into `event.bandId`.** That column stays for
-band-authored events (`source: 'band'`); CMC lineups live entirely in `production_slot`.
+**A production never writes an external act into `event.groupId`.** That column — renamed
+from `event.bandId` by [groups-spec.md](groups-spec.md#events), where it marks who manages
+an event rather than who is billed on it — stays for member-authored events
+(`source: 'band'` or `'group'`); CMC lineups live entirely in `production_slot`.
 
-This matters because `listPublicCalendarEvents()` and `listPublicUpcomingEvents()` in
-`event-service.ts` left-join `band` and emit `bandSlug`, which the public event page
-renders as a link to `/directory/bands/[slug]`. An external act is
-`directoryVisibility: 'hidden'`, so that link would 404. Keeping external acts out of
-`event.bandId` avoids the problem entirely.
+Under the split this is **structural rather than a convention**: an external act is a band
+profile with no group, so there is no group id to write. The rule can no longer be violated
+by forgetting it. Co-billing on member events uses `event_group`, which productions do not
+touch.
 
-The same rule applies to the published run of show: render a link only for slots whose
-band is directory-visible, and plain text otherwise.
+The earlier reasoning — that `listPublicCalendarEvents()` and `listPublicUpcomingEvents()`
+left-join the band and emit a slug the public event page renders as a link, which would 404
+for a hidden external act — is now moot for external acts specifically, since they have no
+slug to emit. It still applies to **hidden member bands**, which do have slugs; see the
+pre-existing hole in the audit below.
+
+**The published run of show links out, never in.** Per
+[groups-spec.md](groups-spec.md#an-unclaimed-act-has-no-page-anywhere), an unclaimed act has
+no hosted page at all — not even an unlisted one — so a slot renders as:
+
+- a link to `/directory/bands/[slug]` when the act is a member band and publicly visible;
+- a link to the act's **own** URL, from `band_profile.links`, when it is unclaimed and has
+  given one;
+- plain text otherwise.
+
+There is no case where an unclaimed act's name resolves to something CMC hosts, which is
+what makes this safe by construction rather than by remembering to check visibility.
 
 ---
 
 ## Visibility audit
 
-Putting external acts in `band` means every filter that decides "is this band public?" has
-to account for rows with no members. The gates today, and what each needs:
+**Most of this audit dissolves under the band/group split.** It existed because external
+acts lived in the same table as public bands, so every "is this band public?" filter had to
+learn to exclude member-less rows. Now an external act is a `band_profile` with no group and
+therefore no slug, so it is structurally unaddressable — there is no gate to add and none to
+forget.
 
-| Location                                                   | Current gate                                                         | Required change                                                                                                                                                                                                                  |
-| ---------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | Add "has an active owner `bandMember`". Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses.                                                                                               |
-| `remote/directory.remote.ts` — `loadBandProfile()`         | slug + `deletedAt IS NULL`, then `isBandProfileHidden()`             | Same guard, so `/directory/bands/[slug]` 404s for stubs.                                                                                                                                                                         |
-| `remote/band-site.remote.ts` — `getBandSiteData()`         | `deletedAt IS NULL` + `tier === 'premium'` **only**                  | Pre-existing hole — no `directoryVisibility` check at all, so a hidden band with premium tier still renders a full public microsite. Add both checks.                                                                            |
-| `event-service.ts` — public calendar queries               | `event.status = 'published'` + source flag; no band visibility check | Pre-existing — a hidden member band's published event already leaks its name and a 404ing profile link. The attribution rule above avoids making it worse; fixing it properly means gating the emitted `bandSlug` on visibility. |
+What remains is the set of **pre-existing holes this audit surfaced**, which are real
+regardless of the split and are worth fixing while in the area:
 
-The owner-membership guard is cheap to express now that ownership is a `bandMember` row:
-an `EXISTS` against `band_member` with `role = 'owner'` and `status = 'active'`, which the
-partial unique index already supports.
+| Location                                                   | Current gate                                                         | Status under the split                                                                                                                                                                                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `directory/directory-service.ts` — `bandWhereConditions()` | `deletedAt IS NULL` + `directoryVisibility`                          | **Resolved.** Listing joins `group`, so a profile with no group cannot appear. Single choke point for `listBands()` and `listPublicBands()`, which the sitemap also uses; the visibility column moves to `group.publicVisibility`. |
+| `remote/directory.remote.ts` — `loadBandProfile()`         | slug + `deletedAt IS NULL`, then `isBandProfileHidden()`             | **Resolved.** The route key is a group slug, and a group-less profile has none, so `/directory/bands/[slug]` cannot resolve to a stub.                                                                                             |
+| `remote/band-site.remote.ts` — `getBandSiteData()`         | `deletedAt IS NULL` + `tier === 'premium'` **only**                  | **Still open.** No visibility check at all, so a hidden band with premium tier renders a full public microsite. Add the visibility check alongside the tier check.                                                                 |
+| `event-service.ts` — public calendar queries               | `event.status = 'published'` + source flag; no band visibility check | **Still open.** A hidden member band's published event leaks its name and a 404ing profile link. Fixing it means gating the emitted slug on `group.publicVisibility`.                                                              |
 
-Belt and braces: `directoryVisibility` defaults to `'public'` in the schema and `create()`
-never sets it, so the external-create path must pass `'hidden'` explicitly, and that
-should be an asserted case in the band service tests rather than a convention.
+The guard the earlier draft proposed — an `EXISTS` against `band_member` for an active owner
+— is no longer needed anywhere. "Has a group" is a nullable column on the row already being
+selected, and in the two resolved cases above it is not even an explicit condition, just a
+consequence of joining `group` to get the slug.
+
+Belt and braces is also no longer required. The earlier draft noted that
+`directoryVisibility` defaults to `'public'` and `create()` never sets it, so the
+external-create path had to remember to pass `'hidden'`. A group-less profile has no public
+surface to be visible _on_, so forgetting is no longer possible — the default is harmless.
+Visibility becomes meaningful only once a group exists, which is exactly when someone is
+there to choose it.
 
 One more cleanup while in the area: `requireStaffOrOwner()` in `authorization.ts` has
 zero callers. It is safe today, but it compares `userId === ownerId` after guarding only
@@ -844,7 +1007,7 @@ guard `ownerId` too.
 - `production-service.ts` — create, update, status transitions, queries
 - `slot-service.ts` — lineup CRUD, fractional reorder, per-slot status
 - `set-times.ts` — pure `computeSetTimes()` and its validation warnings
-- `settlement-service.ts` — Stripe revenue read, totals, snapshot, reopen, CSV export
+- `settlement-service.ts` — Stripe revenue read, totals, snapshot, audited edits, CSV export
 - `task-service.ts` — checklist CRUD and template seeding
 - `errors.ts` additions — `ProductionNotFoundError`, `InvalidProductionTransitionError`,
   `CloseoutIncompleteError`, `RevenueUnavailableError`, extending the `DomainError` base
@@ -858,9 +1021,11 @@ outlive any one production.
   all reused, not reimplemented. The production reaches the reservation only through here.
 - `reservation/reservation-service.ts` — a new `adjustWindow()`, called via
   `event-service`; never called directly by the production
-- `band/band-service.ts` — `create()` extended so an external act can be created with no
-  initial member
-- `band/platform-invite-service.ts` — `createInvite()` with `role: 'owner'` for claims
+- `band/band-service.ts` — `create()` extended so an external act can be created as a
+  profile with no group
+- `group/group-service.ts` — `claimBandProfile()`, which creates the group and moves the
+  act's identity onto it
+- `group/invite-service.ts` — `createInvite()` with `role: 'owner'` for claims
 - `ticket/ticket-service.ts` — read-only, for counts and comps
 - `finance/payment-service.ts` and the Stripe client — a read-only PaymentIntent search at
   settle time. Note that `finance/payment-cache-service.ts` is **not** an integration
@@ -881,12 +1046,12 @@ Five new tables — `production`, `production_slot`, `production_task`,
 `production_expense`, `venue` — plus column changes on three existing ones:
 
 ```
-band (changes)
+band_profile (changes)
   ownerId       DROPPED
-  name          UNIQUE dropped (stays not null)
+  name          UNIQUE dropped (nullable — see groups-spec.md)
 
-band_member (addition)
-  partial unique index on (bandId) where role = 'owner'
+group_member (addition)
+  partial unique index on (groupId) where role = 'owner'
 
 event (additions)
   venueId       uuid? references venue(id) on delete set null
@@ -899,7 +1064,7 @@ Prerequisites. This feature reads it; it does not add it.
 Indexes on the new tables:
 
 - `production` — unique on `eventId`; index on `(status, createdAt)`
-- `production_slot` — index on `(productionId, sortOrder)`; index on `bandId`
+- `production_slot` — index on `(productionId, sortOrder)`; index on `bandProfileId`
 - `production_task` — index on `(productionId, phase)`
 - `production_expense` — index on `productionId`
 - `venue` — unique on `slug`; index on `slug`
@@ -967,7 +1132,9 @@ and `pending`. It needs `offered`, `settled`, `closed`, `invited`, `declined`, a
 No new public routes. `/events/[id]` gains an optional lineup section — act names in
 running order with set times — rendered when the event is published, the production is
 `confirmed` or later, and at least one slot is `confirmed`. Act names link to
-`/directory/bands/[slug]` only when that band is directory-visible; otherwise plain text.
+`/directory/bands/[slug]` for publicly visible member bands, to the act's own URL for
+unclaimed acts that have given one, and render as plain text otherwise — see
+[The gig-guide attribution rule](#the-gig-guide-attribution-rule).
 
 ---
 
@@ -1001,9 +1168,28 @@ their `directoryContact` is deferred.
 
 ## Permissions
 
-Staff-only throughout — every remote function calls `requireStaff()`, and every route
-calls `requireFeature('productions')`. There is no member or band-panel surface in this
-phase: a band sees its booked shows only through the existing public event listing.
+Staff-only for everything that edits a production — every mutating remote function calls
+`requireStaff()`, and every staff route calls `requireFeature('productions')`.
+
+**One read-only band-facing surface: the terms summary.** A booked act should be able to
+see the deal it agreed to without emailing a producer, so a member band whose group holds a
+`production_slot` sees, in its own panel:
+
+| Shown                                                                              | Not shown                                            |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Date, venue, set time and length, billing position                                 | Other acts' guarantees or payouts                    |
+| Load-in, soundcheck, curfew                                                        | Expenses, door cash, net, or any whole-show total    |
+| `bandSplitPercent` — the deal on offer                                             | `bandPoolCents` before it is settled                 |
+| Its **own** `guaranteeCents`, `payoutCents`, `payoutMethod`, `paidAt` once settled | Internal notes, checklists, anything on `production` |
+
+This is what makes a per-show `bandSplitPercent` safe to allow: the number is visible to the
+party it affects, before the show rather than after. A split that looks wrong gets
+questioned by the band, which is a better check than any warning banner on a staff
+worksheet.
+
+It is a read surface only — a band cannot accept, decline, or edit a slot here. Slot
+invitations and responses remain out of scope for this phase, and unclaimed touring acts see
+nothing at all, since they have no panel; their terms travel by email as they do today.
 
 `'productions'` is added to the `FeatureFlag` union and `ALL_FLAGS` in
 `src/lib/server/feature-flags.ts`, defaulting off like every other flag.
@@ -1014,8 +1200,8 @@ phase: a band sees its booked shows only through the existing public event listi
 
 - Five new tables; `event.venueId` added; `band.ownerId` and the `UNIQUE` on `band.name`
   both dropped in a single table rebuild, landed as its own migration.
-- A partial unique index on `band_member (bandId) WHERE role = 'owner'` becomes the sole
-  definition of band ownership.
+- A partial unique index on `group_member (groupId) WHERE role = 'owner'` becomes the sole
+  definition of ownership.
 - `band-service.ts`'s three owner `innerJoin`s become left joins through `bandMember`;
   `deleteBand`/`deactivate` attribute reservation cancellations to the acting staff
   member; `transferOwnership()` drops its third batch statement and resolves the current
@@ -1070,37 +1256,42 @@ phase: a band sees its booked shows only through the existing public event listi
 - **Volunteer and staffing assignment** per production, pending the volunteering module.
 - **ASCAP/BMI setlist reporting**, which would need per-song data below the slot level.
 
+## Decisions that were open
+
+1. **A claimed act keeps its production history public.** Claiming a profile and setting
+   `group.publicVisibility` to `'public'` retroactively exposes every past production the
+   act played, and that is the intent — it is a gig history, and a gig history with holes
+   in it is worth less than none. No per-production visibility flag, and no prompt at claim
+   time.
+2. **No `createdBy` on `band_profile`.** Staff create touring-act records, so "who stubbed
+   this?" has a narrow enough answer set that a dedicated column is not worth carrying.
+   When it does need answering, it belongs in the [staff audit log](audit-log-spec.md)
+   alongside every other staff action, not as a one-off column on one table. This also
+   keeps the `band_profile` rebuild smaller.
+3. **`venue.isPrimary` stays a column.** A KV config key naming the primary venue id would
+   be stricter, but reading it costs a second request on a path that has already loaded the
+   venue row. The column allows more than one primary venue if the Collective ever runs a
+   second room, which is the likelier future than needing the constraint.
+4. **`day_of` is a real phase.** It is the pre-show walkthrough — set house gear, check
+   concessions stock, clean the bathrooms, float, doors, soundcheck — and it belongs to
+   whoever is on shift rather than whoever produced the show. See the checklist templates
+   above for why merging it into `advance` was rejected.
+5. **Settlement stays editable, with an audit trail**, rather than freezing on `settled`.
+   See [Settlement stays editable](#settlement-stays-editable-with-an-audit-trail).
+6. **Stripe search has no lookback limit — but it is the wrong tool for the sum anyway.**
+   Checking the documentation showed the original worry was misdirected: there is no date
+   horizon, but pagination can reorder records into duplicates or omissions, which is a
+   correctness bug for a total. Settlement sums from local `stripePaymentRecordId` values
+   retrieved by id, uses search only for cross-checking and for pre-column backfill, and
+   never implicitly recomputes an old settlement. See
+   [How far back Stripe can be read](#how-far-back-stripe-can-be-read).
+7. **`bandSplitPercent` is per-show and staff-editable**, defaulting to 70, with the value
+   surfaced in the band-facing terms summary. The protection against a wrong split is
+   visibility to the affected party, not immutability.
+8. **The band pool is allocated across slots.** There is no lead band in the model:
+   `payoutCents` is per `production_slot`, and the only rule is that the rows sum to
+   `bandPoolCents`. One act collecting for everyone is a single row, not a special case.
+
 ## Open questions
 
-1. **Does a claimed act keep its production history public?** An act that claims its
-   profile and sets `directoryVisibility: 'public'` retroactively exposes every past
-   production it played. Probably desirable — it's a gig history — but it should be a
-   deliberate call, not a side effect of claiming.
-2. **Should `band` gain a `createdBy` column?** The owner-column question is answered: an
-   unclaimed act has no owner `bandMember`, so `/staff/bands` shows an "Unclaimed" badge
-   and there is nothing else to render. But that leaves "who stubbed this act?"
-   unanswerable, and staff will ask. `createdBy` is a column `band` does not currently
-   have — and adding it to the same rebuild is nearly free, which argues for deciding now
-   rather than later.
-3. **Should `venue.isPrimary` be a column or config?** A boolean column allows more than
-   one primary venue if the Collective ever runs a second room; a KV config key naming the
-   venue id is stricter. This spec picks the column.
-4. **Is `day_of` a real checklist phase or noise?** It sits awkwardly between advance and
-   close-out. Merging it into `advance` would simplify the UI to two checklists.
-5. **How much of settlement should be locked after `settled`?** This spec freezes the
-   money fields and requires an explicit reopen. A softer version — always editable, with
-   an audit trail — may suit a small collective better.
-6. **How far back can the Stripe PaymentIntent search reach?** Stripe's search API has
-   indexing lag and pagination limits. For a show settled a week after the fact this is
-   fine; for a production reopened a year later it may not be. Does settlement need a
-   bounded date window, and what happens when a reopen can no longer reconstruct the
-   original figures?
-7. **What is `bandSplitPercent` allowed to be?** Default 70 is the standing deal, but if
-   staff can edit it per show, the worksheet needs to make an unusual split visible rather
-   than quietly settling at 50. A per-show override with a warning, or a locked value with
-   a config key, are both defensible.
-8. **Who divides the band pool when there is no lead band?** The model assumes one act
-   takes the cut and splits it. A four-band bill with no headliner, or a show where each
-   act wants paying separately, means multiple payout rows summing to `bandPoolCents` —
-   which the schema supports but the workflow doesn't describe.
-   </content>
+None — all decisions have been made.

@@ -101,11 +101,14 @@ import {
 	getUserRole,
 	setBandAvatar,
 	clearBandAvatar,
+	setTier,
+	BandTierManagedByStripeError,
 	BandMemberExistsError,
 	CannotRemoveOwnerError,
 	OwnerCannotLeaveError,
 	BandNotFoundError
 } from './band-service';
+import { db } from '$lib/server/db';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
@@ -528,6 +531,36 @@ describe('BandService', () => {
 			await expect(setBandAvatar('nope', new ArrayBuffer(8), 'image/png')).rejects.toThrow(
 				BandNotFoundError
 			);
+		});
+	});
+
+	describe('setTier', () => {
+		it('comps premium on a band with no Stripe subscription', async () => {
+			selectResult = [{ ...mockBand, tier: 'free', subscription: null }];
+
+			await setTier('band-1', 'premium');
+
+			const setArg = (db.update as any).mock.results[0].value.set.mock.calls[0][0];
+			expect(setArg).toMatchObject({ tier: 'premium' });
+		});
+
+		it('refuses to touch a band billed through Stripe', async () => {
+			selectResult = [
+				{
+					...mockBand,
+					tier: 'premium',
+					subscription: { stripeSubscriptionId: 'sub_123' }
+				}
+			];
+
+			await expect(setTier('band-1', 'free')).rejects.toThrow(BandTierManagedByStripeError);
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('throws when the band does not exist', async () => {
+			selectResult = [];
+
+			await expect(setTier('nope', 'premium')).rejects.toThrow(BandNotFoundError);
 		});
 	});
 

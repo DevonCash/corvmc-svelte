@@ -5,17 +5,21 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
+	import { IconMusic } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate, formatTimeRange } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
 
 	let page = $state(1);
 	let showCreateModal = $state(false);
+	let source = $state<'cmc' | 'band' | ''>('');
 
-	let result = $derived(getStaffEvents({ page }));
+	let result = $derived(getStaffEvents({ source: source || undefined, page }));
 
 	type Event = Awaited<typeof result>['rows'][number];
 
@@ -30,6 +34,11 @@
 	function dayLabel(e: Event): string {
 		return formatDate(e.startsAt);
 	}
+
+	function clearFilters() {
+		source = '';
+		page = 1;
+	}
 </script>
 
 <PageHeader title="Events">
@@ -38,6 +47,19 @@
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
+	<FilterBar activeCount={source ? 1 : 0} onclear={clearFilters}>
+		<Select
+			class="select-bordered select-sm"
+			aria-label="Source"
+			bind:value={source}
+			onchange={() => (page = 1)}
+		>
+			<option value="">All events</option>
+			<option value="cmc">CMC events</option>
+			<option value="band">Band events</option>
+		</Select>
+	</FilterBar>
+
 	<DataList {result} empty="No events yet" onpage={(p) => (page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
@@ -45,6 +67,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Event</th>
+					<th class="col-support">Source</th>
 					<th class="col-support">Tags</th>
 					<th class="col-extra w-px">Space</th>
 				{/snippet}
@@ -55,7 +78,7 @@
 					{#if label !== prevLabel}
 						<tr>
 							<td
-								colspan="4"
+								colspan="5"
 								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
 							>
 								{label}
@@ -74,6 +97,19 @@
 							<div class="text-sm whitespace-nowrap opacity-60">
 								{formatTimeRange(e.startsAt, e.endsAt)}
 							</div>
+						</td>
+						<td class="col-support">
+							{#if e.source === 'band'}
+								<a
+									href={resolve(`/directory/bands/${e.bandSlug}`)}
+									class="link inline-flex items-center gap-1 text-sm"
+								>
+									<IconMusic size={14} />
+									{e.bandName ?? 'Band'}
+								</a>
+							{:else}
+								<span class="text-sm opacity-60">CMC</span>
+							{/if}
 						</td>
 						<td class="col-support">
 							<div class="flex flex-wrap gap-1">

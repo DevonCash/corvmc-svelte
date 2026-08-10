@@ -24,4 +24,40 @@
   </td></tr>
 </table>
 
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="quote-bg" style="background-color:#fff7e2; border:2px solid #5a3d2b; border-radius:6px; margin:20px 0 4px;">
+  <tr><td style="padding:10px 22px;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+      <tr>
+        <td class="label" style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#5a3d2b;">Order</td>
+        <td align="right" class="code-text" style="padding:8px 0; font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace; font-size:14px; color:#1a2330; white-space:nowrap;">{{orderId}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#5a3d2b;">{{quantity}} &times; {{unitPrice}} ticket{{#multiple}}s{{/multiple}}</td>
+        <td align="right" style="padding:8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#1a2330; white-space:nowrap;">{{subtotal}}</td>
+      </tr>
+      {{#feesCovered}}
+      <tr>
+        <td style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#5a3d2b;">Processing fees covered</td>
+        <td align="right" style="padding:8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#1a2330; white-space:nowrap;">{{fees}}</td>
+      </tr>
+      {{/feesCovered}}
+      <tr>
+        <td colspan="2" style="padding:0; font-size:0; line-height:0;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td height="2" style="height:2px; background-color:#5a3d2b; font-size:0; line-height:0;">&nbsp;</td></tr></table></td>
+      </tr>
+      <tr>
+        <td class="label" style="padding:10px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#5a3d2b;">Total paid</td>
+        <td align="right" class="navy-text" style="padding:10px 0 8px; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:18px; font-weight:700; color:#003b5c; white-space:nowrap;">{{total}}</td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0 6px;">
+  <tr>
+    <td bgcolor="#e5771e" class="btn-cell" style="background-color:#e5771e; border:2px solid #5a3d2b; border-right-width:5px; border-bottom-width:5px; border-radius:6px;">
+      <a href="{{ticketsUrl}}" target="_blank" style="display:inline-block; padding:13px 24px; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-weight:700; font-size:15px; color:#ffffff; text-decoration:none;">View Your Tickets</a>
+    </td>
+  </tr>
+</table>
+
 <p class="surface-muted" style="margin:22px 0 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#7a6248;">Show {{#multiple}}these codes{{/multiple}}{{^multiple}}this code{{/multiple}} at the door for check-in. See you there.</p>

@@ -65,6 +65,7 @@ export interface ConfirmationReminderDueEvent {
 
 export interface TicketPurchasedEvent {
 	purchaseId: string;
+	eventId: string;
 	attendeeName: string;
 	attendeeEmail: string;
 	eventTitle: string;
@@ -72,6 +73,14 @@ export interface TicketPurchasedEvent {
 	eventTime: string;
 	ticketCodes: string[];
 	quantity: number;
+	/** Price per ticket actually charged, after any member discount. */
+	unitPriceCents: number;
+	/** Tickets only: unitPriceCents × quantity. */
+	subtotalCents: number;
+	/** Fee-coverage line item; 0 when the buyer didn't cover fees. */
+	feesCents: number;
+	/** What the card was actually charged. */
+	totalCents: number;
 }
 
 export interface EventCancelledEvent {
@@ -267,6 +276,31 @@ export interface EventUnpublishedByStaffEvent {
 	}>;
 }
 
+export interface VolunteerHoursSubmittedEvent {
+	logId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	roleName: string;
+	/** Display hours, not stored minutes — email copy shouldn't do arithmetic. */
+	hours: number;
+	/** ISO string, like every other date on this bus. */
+	workedOn: string;
+	description: string;
+}
+
+export interface VolunteerHoursReviewedEvent {
+	logId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	roleName: string;
+	hours: number;
+	workedOn: string;
+	reviewNotes: string | null;
+	reviewedByName: string;
+}
+
 // ---------------------------------------------------------------------------
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
@@ -296,6 +330,9 @@ export type DomainEvents = {
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
+	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
+	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
+	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
 };
 
 // ---------------------------------------------------------------------------

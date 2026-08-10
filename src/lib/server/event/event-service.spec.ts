@@ -118,7 +118,19 @@ vi.mock('$lib/server/storage', () => ({
 	deleteObject: vi.fn().mockResolvedValue(undefined)
 }));
 
-import { create, publish, cancel, update, checkRebookNeeded } from './event-service';
+const mockTicketsSold = vi.fn().mockResolvedValue(0);
+vi.mock('$lib/server/ticket/ticket-service', () => ({
+	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
+}));
+
+import {
+	create,
+	publish,
+	cancel,
+	update,
+	checkRebookNeeded,
+	unpublishWithBandNotice
+} from './event-service';
 import {
 	staffCreate,
 	cancel as cancelReservation
@@ -622,6 +634,66 @@ describe('EventService', () => {
 	// -----------------------------------------------------------------------
 	// update ticketing fields
 	// -----------------------------------------------------------------------
+
+	describe('unpublishWithBandNotice', () => {
+		const publishedBandEvent = {
+			id: 'evt-1',
+			title: 'Loud Show',
+			status: 'published',
+			source: 'band',
+			bandId: 'band-1',
+			bandName: 'The Squares'
+		};
+
+		it('unpublishes a band event and notifies its admins', async () => {
+			selectResultQueue = [
+				[publishedBandEvent], // event + band lookup
+				[{ ...mockEventRow, status: 'published' }], // getById inside unpublish()
+				[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }] // band admins
+			];
+
+			await unpublishWithBandNotice('evt-1', { notes: 'Poster violated guidelines' });
+
+			expect(lastUpdateSet).toMatchObject({ status: 'draft', publishedAt: null });
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(mockEmit).toHaveBeenCalledWith(
+				'event.unpublished_by_staff',
+				expect.objectContaining({
+					eventId: 'evt-1',
+					eventTitle: 'Loud Show',
+					bandId: 'band-1',
+					bandName: 'The Squares',
+					notes: 'Poster violated guidelines',
+					bandAdmins: [{ userId: 'u9', userName: 'Admin', userEmail: 'admin@example.com' }]
+				})
+			);
+		});
+
+		it('is a no-op when the event is already off the guide', async () => {
+			selectResultQueue = [[{ ...publishedBandEvent, status: 'draft' }]];
+
+			await unpublishWithBandNotice('evt-1');
+
+			expect(lastUpdateSet).toBeNull();
+			await Promise.resolve();
+			expect(mockEmit).not.toHaveBeenCalled();
+		});
+
+		it('notifies nobody for a CMC event', async () => {
+			selectResultQueue = [
+				[{ ...publishedBandEvent, source: 'cmc', bandId: null, bandName: null }],
+				[{ ...mockEventRow, status: 'published' }]
+			];
+
+			await unpublishWithBandNotice('evt-1');
+
+			expect(lastUpdateSet).toMatchObject({ status: 'draft' });
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(mockEmit).not.toHaveBeenCalled();
+		});
+	});
 
 	describe('update ticketing fields', () => {
 		it('enables ticketing with price and quantity', async () => {

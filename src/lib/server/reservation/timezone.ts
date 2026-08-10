@@ -77,6 +77,44 @@ export function buildDateInTz(dateStr: string, timeStr: string, tz: string): Dat
 	return corrected;
 }
 
+/** Add one calendar day to a "YYYY-MM-DD" string (UTC rollover handles month/year). */
+export function nextDay(dateStr: string): string {
+	const [year, month, day] = dateStr.split('-').map(Number);
+	const d = new Date(Date.UTC(year, month - 1, day + 1));
+	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+		d.getUTCDate()
+	).padStart(2, '0')}`;
+}
+
+/**
+ * Build the start and end instants for a range entered as one date plus a start
+ * and an end time.
+ *
+ * A show that runs past midnight (9 PM – 1 AM) is entered on the day it starts,
+ * so its end time reads as *earlier* than its start. Anchoring both to the same
+ * date puts the end before the start, which the `ends_at > starts_at` CHECK
+ * constraints reject — so an end that falls before the start rolls onto the next
+ * calendar day. Equal times are left alone: that's a data-entry mistake, not an
+ * overnight range, and callers reject it.
+ */
+export function buildTimeRangeInTz(
+	dateStr: string,
+	startTime: string,
+	endTime: string,
+	tz: string
+): { startsAt: Date; endsAt: Date } {
+	const startsAt = buildDateInTz(dateStr, startTime, tz);
+	const sameDayEnd = buildDateInTz(dateStr, endTime, tz);
+
+	return {
+		startsAt,
+		endsAt:
+			sameDayEnd.getTime() < startsAt.getTime()
+				? buildDateInTz(nextDay(dateStr), endTime, tz)
+				: sameDayEnd
+	};
+}
+
 /**
  * Get the UTC offset in minutes for a timezone at a given instant.
  * Positive = behind UTC, negative = ahead (matching getTimezoneOffset convention).
