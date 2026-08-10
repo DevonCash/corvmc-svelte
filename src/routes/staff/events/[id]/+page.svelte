@@ -117,8 +117,11 @@
 			return;
 		}
 
-		const newStartsAt = buildISOFromLocal(editDate, editStartTime);
-		const newEndsAt = buildISOFromLocal(editDate, editEndTime);
+		const { startsAt: newStartsAt, endsAt: newEndsAt } = buildISORangeFromLocal(
+			editDate,
+			editStartTime,
+			editEndTime
+		);
 
 		const result = await checkRebook({
 			eventId: evt.id,
@@ -167,10 +170,26 @@
 
 	// ── Helpers ───────────────────────────────────────────────────────────
 
-	function buildISOFromLocal(date: string, time: string): string {
-		// Build a rough ISO string for the rebook check query
-		// The server will parse with proper timezone handling
-		return new Date(`${date}T${time}:00`).toISOString();
+	/** Add one calendar day to a "YYYY-MM-DD" string. */
+	function nextDay(date: string): string {
+		const [year, month, day] = date.split('-').map(Number);
+		return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+	}
+
+	function buildISORangeFromLocal(
+		date: string,
+		startTime: string,
+		endTime: string
+	): { startsAt: string; endsAt: string } {
+		// Build rough ISO strings for the rebook check query.
+		// The server will parse with proper timezone handling.
+		const startsAt = new Date(`${date}T${startTime}:00`);
+		// One date field covers both times: a show that ends past midnight ends on
+		// the following day, same as the server builds it when the form is saved.
+		const endsOnNextDay = new Date(`${date}T${endTime}:00`) < startsAt;
+		const endsAt = new Date(`${endsOnNextDay ? nextDay(date) : date}T${endTime}:00`);
+
+		return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 	}
 
 	function parseTags(tags: string | null): string[] {
