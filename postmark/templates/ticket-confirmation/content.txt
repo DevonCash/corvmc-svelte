@@ -8,4 +8,12 @@ TIME: {{eventTime}}
 TICKET{{#multiple}}S{{/multiple}}:
 {{#each ticketCodes}}  {{code}}
 {{/each}}
+RECEIPT
+ORDER: {{orderId}}
+{{quantity}} x {{unitPrice}} ticket{{#multiple}}s{{/multiple}}: {{subtotal}}
+{{#feesCovered}}Processing fees covered: {{fees}}
+{{/feesCovered}}TOTAL PAID: {{total}}
+
+View your tickets: {{{ticketsUrl}}}
+
 Show {{#multiple}}these codes{{/multiple}}{{^multiple}}this code{{/multiple}} at the door for check-in. See you there.

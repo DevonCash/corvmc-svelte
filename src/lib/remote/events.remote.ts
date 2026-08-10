@@ -979,7 +979,10 @@ export const purchaseTickets = form(
 				type: 'ticket',
 				purchase_id: purchaseId,
 				event_id: evt.id,
-				ticket_quantity: String(data.quantity)
+				ticket_quantity: String(data.quantity),
+				// The webhook needs this to break the charge into tickets vs. covered
+				// fees on the receipt — the session alone can't tell them apart.
+				ticket_unit_price_cents: String(unitPrice)
 			},
 			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
 			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
