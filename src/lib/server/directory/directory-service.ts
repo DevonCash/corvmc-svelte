@@ -370,7 +370,6 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 				id: b.id,
 				name: b.name,
 				slug: b.slug,
-				bio: b.bio ? (b.bio.length > 120 ? b.bio.slice(0, 120).trimEnd() + '…' : b.bio) : null,
 				tagline: b.tagline,
 				avatarUrl: resolveImageUrl(b.avatarKey),
 				memberCount: b.memberCount,
