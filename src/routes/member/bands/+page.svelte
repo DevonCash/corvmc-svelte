@@ -143,7 +143,13 @@
 <Modal title="Create Band" bind:open={showCreateModal} onclose={onCreateModalClose}>
 	<Form
 		remote={createBand}
-		onfailure={() => toast.error('Failed to create band')}
+		onfailure={(issues) => {
+			// A validation failure already renders under the offending field, so the
+			// toast would only repeat it. Reserve the generic message for genuine
+			// server/network failures, which have no field to point at — previously
+			// both produced the same opaque "Failed to create band".
+			if (!issues?.length) toast.error('Failed to create band');
+		}}
 		onsuccess={(result) => {
 			toast.success('Band created');
 			showCreateModal = false;
@@ -151,26 +157,21 @@
 		}}
 	>
 		<div class="space-y-4">
-			<FormField label="Band name" id="band-name">
-				<input
-					id="band-name"
-					name="name"
-					type="text"
-					class="input input-bordered w-full"
-					placeholder="e.g. The Velvet Underground"
-					required
-				/>
-			</FormField>
+			<FormField
+				field={createBand.fields.name}
+				label="Band name"
+				type="text"
+				placeholder="e.g. The Velvet Underground"
+				required
+			/>
 
-			<FormField label="Bio" id="band-bio">
-				<textarea
-					id="band-bio"
-					name="bio"
-					class="textarea textarea-bordered w-full"
-					rows="3"
-					placeholder="Tell people about your band (optional)"
-				></textarea>
-			</FormField>
+			<FormField
+				field={createBand.fields.bio}
+				label="Bio"
+				type="textarea"
+				rows={3}
+				placeholder="Tell people about your band (optional)"
+			/>
 
 			<div class="flex justify-end pt-2">
 				<SubmitButton label="Create Band" successLabel="Created" class="btn-primary" />

@@ -36,6 +36,15 @@ describe('generateSlug', () => {
 		expect(generateSlug('The Velvet Underground')).toBe('the-velvet-underground');
 		expect(generateSlug('  A -- B!! ')).toBe('a-b');
 	});
+
+	// Documents the input that `ensureUniqueSlug` has to defend against: the
+	// regex keeps only [a-z0-9], so a name written in any non-Latin script — or
+	// made entirely of punctuation or emoji — slugifies to the empty string.
+	it('yields an empty string for names with no ASCII alphanumerics', () => {
+		expect(generateSlug('東京事変')).toBe('');
+		expect(generateSlug('☆')).toBe('');
+		expect(generateSlug('!!!')).toBe('');
+	});
 });
 
 describe('ensureUniqueSlug', () => {
@@ -69,5 +78,20 @@ describe('ensureUniqueSlug', () => {
 		collisionCounts.push(0);
 		await ensureUniqueSlug('my-band', fakeTable, slugColumn);
 		expect(JSON.stringify(whereConditions[0])).not.toContain(' and ');
+	});
+
+	// Regression: an empty base slug was stored verbatim. It isn't NULL, so the
+	// insert succeeded and the row was permanently unreachable — /band/ 404s, the
+	// {slug}.corvmc.org reroute breaks, and the create modal's `if (result?.slug)`
+	// redirect silently never fires because '' is falsy. A second such row got the
+	// slug '-2'.
+	it('substitutes a fallback when the base slug is empty', async () => {
+		collisionCounts.push(0);
+		expect(await ensureUniqueSlug('', fakeTable, slugColumn)).toBe('untitled');
+	});
+
+	it('suffixes the fallback rather than producing a bare -2', async () => {
+		collisionCounts.push(1, 0);
+		expect(await ensureUniqueSlug('', fakeTable, slugColumn)).toBe('untitled-2');
 	});
 });
