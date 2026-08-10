@@ -65,6 +65,7 @@ export interface ConfirmationReminderDueEvent {
 
 export interface TicketPurchasedEvent {
 	purchaseId: string;
+	eventId: string;
 	attendeeName: string;
 	attendeeEmail: string;
 	eventTitle: string;
@@ -72,6 +73,14 @@ export interface TicketPurchasedEvent {
 	eventTime: string;
 	ticketCodes: string[];
 	quantity: number;
+	/** Price per ticket actually charged, after any member discount. */
+	unitPriceCents: number;
+	/** Tickets only: unitPriceCents × quantity. */
+	subtotalCents: number;
+	/** Fee-coverage line item; 0 when the buyer didn't cover fees. */
+	feesCents: number;
+	/** What the card was actually charged. */
+	totalCents: number;
 }
 
 export interface EventCancelledEvent {
