@@ -84,8 +84,9 @@ test('back after a tab switch returns to bands and stays there', async ({ page }
 
 test('the tabs are real links, not buttons', async ({ page }) => {
 	// They render as anchors so middle-click and open-in-new-tab work and the
-	// target is copyable. (This does not make them crawlable: every `(public)`
-	// page currently server-renders as the layout boundary's pending spinner.)
+	// target is copyable. Not yet crawlable — every `(public)` page currently
+	// server-renders as the layout boundary's pending spinner, which PR #180
+	// fixes; once it lands these anchors reach crawlers unchanged.
 	await page.goto('/directory');
 
 	await expect(musiciansTab(page)).toHaveAttribute('href', /\/directory\?tab=musicians/);

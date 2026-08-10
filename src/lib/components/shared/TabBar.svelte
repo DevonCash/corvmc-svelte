@@ -30,9 +30,10 @@
 	// ToggleGroup of links would also be the wrong role — these are navigations,
 	// not a pressed state.
 	//
-	// Note this does not make the tab crawlable today: every page under
-	// `(public)` currently server-renders as the layout boundary's pending
-	// spinner, so no initial HTML carries these anchors either way.
+	// This does not by itself make the tab crawlable: every page under `(public)`
+	// currently server-renders as the layout boundary's pending spinner, so no
+	// initial HTML carries these anchors. PR #180 fixes that, and these become
+	// crawlable the moment it lands — no change needed here.
 	const asLinks = $derived(tabs.some((t) => t.href));
 
 	function itemClass(key: string) {
