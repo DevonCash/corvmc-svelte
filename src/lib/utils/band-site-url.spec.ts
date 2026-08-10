@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bandSiteHref, bandSitePath, baseDomainFromSiteUrl } from './band-site-url';
+import { bandSiteHref, bandSitePath, bandSiteUrl, baseDomainFromSiteUrl } from './band-site-url';
 
 describe('bandSiteHref', () => {
 	it('emits plain paths on a real subdomain', () => {
@@ -34,6 +34,24 @@ describe('bandSitePath', () => {
 		expect(bandSitePath('the-neons', new URL('https://the-neons.corvmc.org/events'))).toBe(
 			'/events'
 		);
+	});
+});
+
+describe('bandSiteUrl', () => {
+	it('builds the production subdomain URL', () => {
+		expect(bandSiteUrl('the-neons', 'https://corvmc.org')).toBe('https://the-neons.corvmc.org');
+		expect(bandSiteUrl('the-neons', 'https://www.corvmc.org')).toBe('https://the-neons.corvmc.org');
+	});
+
+	it('keeps the protocol and port in dev', () => {
+		expect(bandSiteUrl('the-neons', 'http://localhost:5173')).toBe(
+			'http://the-neons.localhost:5173'
+		);
+	});
+
+	it('falls back to production on missing or invalid input', () => {
+		expect(bandSiteUrl('the-neons', undefined)).toBe('https://the-neons.corvmc.org');
+		expect(bandSiteUrl('the-neons', 'not a url')).toBe('https://the-neons.corvmc.org');
 	});
 });
 

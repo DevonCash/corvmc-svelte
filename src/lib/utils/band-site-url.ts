@@ -22,6 +22,26 @@ export function baseDomainFromSiteUrl(siteUrl: string | undefined): string {
 	return 'corvmc.org';
 }
 
+/**
+ * The absolute public URL of a band's site ({slug}.<domain>), for links that
+ * leave the app shell — "view live site" from the band dashboard, the page
+ * editor preview. Protocol and port come from PUBLIC_SITE_URL, so dev gets
+ * http://{slug}.localhost:5173 (which the reroute hook handles the same way as
+ * a real subdomain) and production gets https://{slug}.corvmc.org.
+ */
+export function bandSiteUrl(slug: string, siteUrl: string | undefined): string {
+	const baseDomain = baseDomainFromSiteUrl(siteUrl);
+	if (siteUrl) {
+		try {
+			const { protocol, port } = new URL(siteUrl);
+			return `${protocol}//${slug}.${baseDomain}${port ? `:${port}` : ''}`;
+		} catch {
+			// fall through to the production default
+		}
+	}
+	return `https://${slug}.${baseDomain}`;
+}
+
 /** The band-site-relative path ('/', '/events', …) of the current URL. */
 export function bandSitePath(slug: string, currentUrl: URL): string {
 	const prefix = `/band-site/${slug}`;
