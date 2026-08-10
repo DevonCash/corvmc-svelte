@@ -177,6 +177,10 @@ export async function getBySlug(slug: string) {
 			ownerId: band.ownerId,
 			avatarKey: band.avatarKey,
 			tier: band.tier,
+			customDomain: band.customDomain,
+			customDomainStatus: band.customDomainStatus,
+			customDomainHostnameId: band.customDomainHostnameId,
+			customDomainVerification: band.customDomainVerification,
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,
 			memberCount: sql<number>`count(case when ${bandMember.status} = 'active' then 1 end)`

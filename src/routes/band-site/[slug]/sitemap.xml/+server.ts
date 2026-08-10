@@ -1,6 +1,6 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
-import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+import { bandSiteUrl } from '$lib/utils/band-site-url';
 import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { band } from '$lib/server/db/schema/band';
@@ -12,7 +12,13 @@ export const GET: RequestHandler = async ({ params }) => {
 	await requireFeature('bandPremium');
 
 	const [row] = await db
-		.select({ id: band.id, tier: band.tier, updatedAt: band.updatedAt })
+		.select({
+			id: band.id,
+			tier: band.tier,
+			updatedAt: band.updatedAt,
+			customDomain: band.customDomain,
+			status: band.customDomainStatus
+		})
 		.from(band)
 		.where(and(eq(band.slug, params.slug!), isNull(band.deletedAt)))
 		.limit(1);
@@ -24,8 +30,11 @@ export const GET: RequestHandler = async ({ params }) => {
 		.where(eq(bandPageConfig.bandId, row.id))
 		.limit(1);
 
-	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
-	const origin = `https://${params.slug}.${baseDomain}`;
+	const origin = bandSiteUrl(
+		params.slug!,
+		env.PUBLIC_SITE_URL,
+		row.status === 'active' ? row.customDomain : null
+	);
 	const lastmod = row.updatedAt ? row.updatedAt.toISOString().slice(0, 10) : undefined;
 
 	const paths = ['/', '/events', ...(config?.epk ? ['/epk'] : [])];

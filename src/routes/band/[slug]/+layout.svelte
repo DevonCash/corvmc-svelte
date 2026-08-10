@@ -24,6 +24,10 @@
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const base = $derived(`/band/${layout.band.slug}`);
+	// A custom domain only replaces the subdomain once it is actually serving.
+	const liveCustomDomain = $derived(
+		layout.band.customDomainStatus === 'active' ? layout.band.customDomain : null
+	);
 	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	const panels = $derived([
@@ -74,7 +78,7 @@
 				{#snippet icon()}<IconBrush />{/snippet}
 			</Nav.Item>
 			<Nav.Item
-				href={bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL)}
+				href={bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)}
 				label="View Live Site"
 				target="_blank"
 				rel="noopener"

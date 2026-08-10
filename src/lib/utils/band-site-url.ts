@@ -7,6 +7,8 @@
  *
  * `path` is the band-site-relative path ('' for home, '/events', '/epk').
  */
+import { isReservedSlug } from '$lib/reserved-slugs';
+
 /**
  * The domain band subdomains hang off ({slug}.<domain>), derived from
  * PUBLIC_SITE_URL so staging/preview deploys get their own namespace.
@@ -23,13 +25,43 @@ export function baseDomainFromSiteUrl(siteUrl: string | undefined): string {
 }
 
 /**
+ * The band slug a hostname claims, or null when the host isn't a band subdomain.
+ *
+ * Every band — free or premium — has `{slug}.<baseDomain>`; what that address
+ * *serves* is decided server-side in `src/hooks.server.ts` (premium bands get
+ * their microsite, everyone else is redirected to their directory profile).
+ * This function only answers "which slug, if any", so it stays pure and usable
+ * from the universal reroute hook.
+ */
+export function bandSlugFromHost(hostname: string, siteUrl: string | undefined): string | null {
+	const baseDomain = baseDomainFromSiteUrl(siteUrl);
+	if (hostname === baseDomain || hostname === `www.${baseDomain}`) return null;
+	if (!hostname.endsWith(`.${baseDomain}`)) return null;
+
+	const slug = hostname.slice(0, -(baseDomain.length + 1));
+	// Nested subdomains aren't band sites, and system subdomains (media = the R2
+	// public bucket) must reach their own origin untouched.
+	if (slug.includes('.') || isReservedSlug(slug)) return null;
+	return slug;
+}
+
+/**
  * The absolute public URL of a band's site ({slug}.<domain>), for links that
  * leave the app shell — "view live site" from the band dashboard, the page
  * editor preview. Protocol and port come from PUBLIC_SITE_URL, so dev gets
  * http://{slug}.localhost:5173 (which the reroute hook handles the same way as
  * a real subdomain) and production gets https://{slug}.corvmc.org.
+ *
+ * `customDomain` wins when the band has one live — that is the address they
+ * paid for, so canonical/OG URLs and outbound links should all use it.
  */
-export function bandSiteUrl(slug: string, siteUrl: string | undefined): string {
+export function bandSiteUrl(
+	slug: string,
+	siteUrl: string | undefined,
+	customDomain?: string | null
+): string {
+	if (customDomain) return `https://${customDomain}`;
+
 	const baseDomain = baseDomainFromSiteUrl(siteUrl);
 	if (siteUrl) {
 		try {

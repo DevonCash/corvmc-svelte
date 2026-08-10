@@ -1089,6 +1089,27 @@ async function seedBands(users: SeedUser[]) {
 							cancelAtPeriodEnd: false
 						}
 					: null,
+				// The first premium band has a live custom domain, the second is still
+				// waiting on DNS — both states need to be visible in band settings.
+				...(isPremiumBand && i < 2
+					? {
+							customDomain: `${slug.replace(/-/g, '')}.example.com`,
+							customDomainStatus: i === 0 ? ('active' as const) : ('pending' as const),
+							customDomainHostnameId: `seed-hostname-${randomUUID().slice(0, 8)}`,
+							customDomainVerification: {
+								ownership: {
+									name: `_cf-custom-hostname.${slug.replace(/-/g, '')}.example.com`,
+									value: randomUUID()
+								},
+								ssl: {
+									name: `_acme-challenge.${slug.replace(/-/g, '')}.example.com`,
+									value: randomUUID().replace(/-/g, '')
+								},
+								cnameTarget: 'domains.corvmc.org'
+							},
+							customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
+						}
+					: {}),
 				tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
 				hometown: pick(HOMETOWNS),
 				foundedYear: String(randomInt(2015, 2024)),

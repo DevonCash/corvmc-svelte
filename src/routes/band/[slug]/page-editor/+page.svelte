@@ -21,7 +21,13 @@
 
 	// Gate: premium only
 	const isPremium = $derived(band.tier === 'premium');
-	const siteUrl = $derived(bandSiteUrl(band.slug, env.PUBLIC_SITE_URL));
+	const siteUrl = $derived(
+		bandSiteUrl(
+			band.slug,
+			env.PUBLIC_SITE_URL,
+			band.customDomainStatus === 'active' ? band.customDomain : null
+		)
+	);
 
 	// Local state for editable fields — initialized from server data
 	const initialConfig = $derived(pageData.config);

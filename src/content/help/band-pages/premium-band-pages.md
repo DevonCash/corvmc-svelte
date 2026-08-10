@@ -9,12 +9,16 @@ sortOrder: 0
 
 ## Premium band pages
 
-A Premium subscription turns your band's listing into a full custom website. Open
-the band's **Subscription** page to see plans and what's included.
+Every band already has a web address: `yourband.corvmc.org` sends visitors to your
+directory profile, free, with nothing to set up. A Premium subscription turns that
+address into a full custom website. Open the band's **Subscription** page to see
+plans and what's included.
 
 ## What you get
 
-- A **custom band page** with your own subdomain.
+- A **custom band page** at your subdomain, replacing the directory profile.
+- **Your own domain** — connect `theband.com` from the band's Settings page and
+  we'll give you the DNS records to add.
 - A **block-based page editor** with 14 block types (hero, bio, links, members,
   events, gallery, embeds, press, achievements, contact, tech rider, merch, and
   more).

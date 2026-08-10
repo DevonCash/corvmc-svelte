@@ -40,12 +40,18 @@ test('upgrade page renders both plans for a free-tier band owner', async ({ page
 	await expect(page.getByText(/single `<form>` element/i)).toHaveCount(0);
 });
 
-test('upgrade page advertises the band own subdomain', async ({ page }) => {
+test('upgrade page sells a custom domain, not the free subdomain', async ({ page }) => {
 	await login(page);
 	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/subscription`);
 
-	// Derived from PUBLIC_SITE_URL, not the hardcoded "yourband.corvmc.org".
-	await expect(page.getByText(new RegExp(`${SEED_PUBLIC_BAND_SLUG}\\.`))).toBeVisible({
+	// The band's free address, derived from PUBLIC_SITE_URL rather than a
+	// hardcoded corvmc.org, is shown as something they already have.
+	await expect(page.getByText(new RegExp(`${SEED_PUBLIC_BAND_SLUG}\\.`)).first()).toBeVisible({
 		timeout: 15000
 	});
+
+	// Subdomains became free for every band, so premium must not still be
+	// advertising one as the thing you are paying for.
+	await expect(page.getByText(/custom subdomain/i)).toHaveCount(0);
+	await expect(page.getByText(/your own domain/i).first()).toBeVisible();
 });

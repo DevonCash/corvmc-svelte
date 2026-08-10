@@ -20,7 +20,13 @@
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
-	const siteUrl = $derived(bandSiteUrl(band.slug, env.PUBLIC_SITE_URL));
+	const siteUrl = $derived(
+		bandSiteUrl(
+			band.slug,
+			env.PUBLIC_SITE_URL,
+			band.customDomainStatus === 'active' ? band.customDomain : null
+		)
+	);
 	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
 
 	// One form object per <form> element — a single object attached to both the
@@ -110,8 +116,9 @@
 				<div class="card-body text-center">
 					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
 					<p class="mt-2 opacity-70">
-						Get a custom band page on your own subdomain with a block editor, custom CSS, genre
-						themes, and a full EPK.
+						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
+						directory profile. Premium turns it into a real website — a block editor, custom CSS,
+						genre themes, a full EPK — and lets you serve it from your own domain.
 					</p>
 				</div>
 			</div>
@@ -184,7 +191,7 @@
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Custom subdomain ({band.slug}.{baseDomain})
+							Your own domain (theband.com) — or keep using {band.slug}.{baseDomain}
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

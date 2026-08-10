@@ -1,13 +1,25 @@
 import type { Reroute } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+import { bandSlugFromHost, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+
+/** Resolves a custom domain to the band whose site it serves. See src/routes/api/host-route. */
+const HOST_ROUTE_ENDPOINT = '/api/host-route';
 
 /**
- * Reroute subdomain requests to the band-site route group.
- * e.g. the-neons.corvmc.org/events → /band-site/the-neons/events
+ * Reroute band addresses to the band-site route group.
+ *   the-neons.corvmc.org/events → /band-site/the-neons/events
+ *   theband.com/events (custom domain) → /band-site/the-neons/events
+ *
+ * Rerouting is only half the story: this hook runs on the client too, so it
+ * can't read the database. Whether a band's subdomain actually *serves* the
+ * microsite or redirects to its directory profile is decided in
+ * `src/hooks.server.ts`, which can.
  */
-export const reroute: Reroute = ({ url }) => {
+export const reroute: Reroute = async ({ url, fetch }) => {
+	// The lookup below is an ordinary request, so it comes back through here. Without
+	// this guard it reroutes into another lookup, forever.
+	if (url.pathname === HOST_ROUTE_ENDPOINT) return url.pathname;
+
 	// In dev, we can't use real subdomains easily, so support a query param override:
 	// http://localhost:5173?__band_subdomain=the-neons
 	const devOverride = url.searchParams.get('__band_subdomain');
@@ -15,23 +27,31 @@ export const reroute: Reroute = ({ url }) => {
 		return `/band-site/${devOverride}${url.pathname}`;
 	}
 
-	// Production: detect band subdomains. The base domain derives from
-	// PUBLIC_SITE_URL so staging/preview deploys use their own domain.
-	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
-	const hostname = url.hostname;
+	const slug = bandSlugFromHost(url.hostname, env.PUBLIC_SITE_URL);
+	if (slug) return `/band-site/${slug}${url.pathname}`;
 
-	if (
-		hostname !== baseDomain &&
-		hostname !== `www.${baseDomain}` &&
-		hostname.endsWith(`.${baseDomain}`)
-	) {
-		const slug = hostname.slice(0, -(baseDomain.length + 1));
-		// Don't reroute system subdomains (e.g. media = R2 public bucket)
-		if (slug.includes('.') || isReservedSlug(slug)) {
-			return url.pathname;
-		}
-		return `/band-site/${slug}${url.pathname}`;
+	// Not our domain at all — either an unrelated host (workers.dev, an IP) or a
+	// premium band's custom domain. Only the app can tell the two apart, so ask
+	// it. `/api/host-route` is cheap and its answer is cached per URL on the
+	// client; on the server it is a KV-cached lookup.
+	if (isBaseDomain(url.hostname)) return url.pathname;
+
+	try {
+		const api = new URL(HOST_ROUTE_ENDPOINT, url);
+		api.searchParams.set('host', url.hostname);
+		const { slug: customSlug } = (await fetch(api).then((r) => r.json())) as {
+			slug: string | null;
+		};
+		if (customSlug) return `/band-site/${customSlug}${url.pathname}`;
+	} catch {
+		// A failed lookup must not break navigation — fall through to the app.
 	}
 
 	return url.pathname;
 };
+
+/** True for the app's own domain and its subdomains, which never need a lookup. */
+function isBaseDomain(hostname: string): boolean {
+	const base = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
+	return hostname === base || hostname.endsWith(`.${base}`);
+}

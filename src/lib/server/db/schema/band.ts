@@ -29,6 +29,28 @@ export const bandSubscriptionSchema = z
 
 export type BandSubscription = z.infer<typeof bandSubscriptionSchema>;
 
+export const customDomainStatuses = ['pending', 'active', 'failed'] as const;
+export type CustomDomainStatus = (typeof customDomainStatuses)[number];
+
+/**
+ * The DNS records a band must add at their registrar, straight from
+ * Cloudflare's custom-hostname response. `ownership` proves they control the
+ * domain; `ssl` lets Cloudflare issue the certificate. Both are TXT records, so
+ * the band can verify before pointing the domain at us — no window where their
+ * live site is broken.
+ */
+export const customDomainVerificationSchema = z
+	.object({
+		ownership: z.object({ name: z.string(), value: z.string() }).nullable(),
+		ssl: z.object({ name: z.string(), value: z.string() }).nullable(),
+		/** Where the band points the domain itself, once verified. */
+		cnameTarget: z.string()
+	})
+	.nullable()
+	.default(null);
+
+export type CustomDomainVerification = z.infer<typeof customDomainVerificationSchema>;
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -57,6 +79,17 @@ export const band = sqliteTable(
 		// subscription & tier
 		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
 		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
+
+		// custom domain (premium only — every band gets {slug}.corvmc.org for free).
+		// Backed by a Cloudflare for SaaS custom hostname; `customDomainHostnameId`
+		// is that hostname's id, needed to poll status and to delete it.
+		customDomain: text('custom_domain').unique(),
+		customDomainStatus: text('custom_domain_status', { enum: customDomainStatuses }),
+		customDomainHostnameId: text('custom_domain_hostname_id'),
+		customDomainVerification: text('custom_domain_verification', {
+			mode: 'json'
+		}).$type<CustomDomainVerification>(),
+		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' }),
 
 		// directory profile
 		tagline: text('tagline'),

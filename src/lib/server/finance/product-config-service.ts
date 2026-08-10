@@ -48,7 +48,7 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 	},
 	band_premium: {
 		name: 'Band Premium Page',
-		description: 'Premium band page with subdomain, block editor, and EPK features',
+		description: 'Premium band website with block editor, EPK, and a custom domain',
 		unitAmountCents: 1500,
 		unitLabel: 'per month'
 	}
