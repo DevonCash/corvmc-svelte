@@ -22,10 +22,18 @@
 
 	let {
 		children,
-		pending: pendingSnippet
+		pending: pendingSnippet,
+		showPending = true
 	}: {
 		children: Snippet;
 		pending?: Snippet;
+		/**
+		 * Whether to show placeholder UI while the boundary's `await` expressions first
+		 * resolve. A boundary with a pending snippet renders that snippet during SSR
+		 * *instead of* awaiting its contents, so pass `false` anywhere the server-rendered
+		 * HTML needs to contain the real content (crawlable public pages).
+		 */
+		showPending?: boolean;
 	} = $props();
 
 	function extractMessage(err: unknown): string {
@@ -54,18 +62,22 @@
 	} satisfies ErrorBoundaryContext);
 </script>
 
-<svelte:boundary onerror={handleError}>
-	{@render children()}
+{#snippet defaultPending()}
+	<div class="flex items-center justify-center p-12">
+		<span class="loading loading-spinner loading-lg"></span>
+	</div>
+{/snippet}
 
-	{#snippet pending()}
-		{#if pendingSnippet}
-			{@render pendingSnippet()}
-		{:else}
-			<div class="flex items-center justify-center p-12">
-				<span class="loading loading-spinner loading-lg"></span>
-			</div>
-		{/if}
-	{/snippet}
+<!--
+	`pending` is passed as an attribute rather than declared as a snippet so it can be
+	`undefined`: Svelte only substitutes the pending UI for the boundary's contents when
+	the attribute resolves to something, and otherwise awaits and renders the real content.
+-->
+<svelte:boundary
+	onerror={handleError}
+	pending={showPending ? (pendingSnippet ?? defaultPending) : undefined}
+>
+	{@render children()}
 
 	{#snippet failed(error, reset)}
 		<Alert type="error" {reset}>Failed to load: {extractMessage(error)}</Alert>
