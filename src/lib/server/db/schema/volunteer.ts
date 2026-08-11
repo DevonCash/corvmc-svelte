@@ -430,10 +430,12 @@ export const volunteerShiftFeedback = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		check(
-			'volunteer_shift_feedback_rating_range',
-			sql`rating >= ${SHIFT_FEEDBACK_MIN_RATING} AND rating <= ${SHIFT_FEEDBACK_MAX_RATING}`
-		),
+		// Literals, not interpolated constants: drizzle binds an interpolated value
+		// as a parameter, and SQLite rejects parameters in a CHECK constraint
+		// outright. Backstop only — the service enforces SHIFT_FEEDBACK_MIN_RATING
+		// and SHIFT_FEEDBACK_MAX_RATING, same arrangement as the hour log's
+		// minutes check above.
+		check('volunteer_shift_feedback_rating_range', sql`rating >= 1 AND rating <= 5`),
 		index('volunteer_shift_feedback_submitted_idx').on(t.submittedAt)
 	]
 );
