@@ -39,13 +39,13 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 1 — Schema
 
-- [ ] `schema/volunteer.ts` — 6 tables, types, zod schemas
-- [ ] `volunteer_role` — `defaultDurationMinutes`, `defaultCapacity`
-- [ ] `volunteer_hour_log.shiftId` — bare text column becomes a real FK
-- [ ] `src/lib/config.ts` — `volunteerSignupStatuses`,
+- [x] `schema/volunteer.ts` — 6 tables, types, zod schemas
+- [x] `volunteer_role` — `defaultDurationMinutes`, `defaultCapacity`
+- [x] `volunteer_hour_log.shiftId` — bare text column becomes a real FK
+- [x] `src/lib/config.ts` — `volunteerSignupStatuses`,
       `CERT_EXPIRY_WARNING_DAYS = 60`, shift/feedback limits
-- [ ] `schema/index.ts`, `schema/relations.ts`
-- [ ] `scripts/d1-table-order.mjs` — parents before children
+- [x] `schema/index.ts`, `schema/relations.ts`
+- [x] `scripts/d1-table-order.mjs` — parents before children
 - [ ] (user runs `pnpm db:generate`)
 
 ## Step 2 — Certifications
