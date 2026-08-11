@@ -50,13 +50,21 @@ function basic(user: string, password: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('POST /api/inbox/postmark — authentication', () => {
 	it('accepts HTTP Basic credentials, which is all Postmark inbound can send', async () => {
-		const { POST } = await import('./+server');
-
 		const res = await POST(req(basic('postmark', 'inbound-secret')));
 
 		expect(res.status).toBe(200);
@@ -64,29 +72,22 @@ describe('POST /api/inbox/postmark — authentication', () => {
 	});
 
 	it('accepts the x-postmark-token header for local testing', async () => {
-		const { POST } = await import('./+server');
-
 		const res = await POST(req({ 'x-postmark-token': 'inbound-secret' }));
 
 		expect(res.status).toBe(200);
 	});
 
 	it('rejects a wrong Basic password', async () => {
-		const { POST } = await import('./+server');
-
 		await expect(POST(req(basic('postmark', 'wrong')))).rejects.toMatchObject({ status: 401 });
 		expect(mockHandlePostmarkInbound).not.toHaveBeenCalled();
 	});
 
 	it('rejects an unauthenticated request', async () => {
-		const { POST } = await import('./+server');
-
 		await expect(POST(req({}))).rejects.toMatchObject({ status: 401 });
 	});
 
 	it('rejects everything when the secret is not configured', async () => {
 		mockEnv.POSTMARK_INBOUND_TOKEN = undefined;
-		const { POST } = await import('./+server');
 
 		await expect(POST(req({}))).rejects.toMatchObject({ status: 401 });
 		expect(mockHandlePostmarkInbound).not.toHaveBeenCalled();
@@ -95,8 +96,6 @@ describe('POST /api/inbox/postmark — authentication', () => {
 
 describe('POST /api/inbox/postmark — gating', () => {
 	it('no longer short-circuits on the email channel toggle', async () => {
-		const { POST } = await import('./+server');
-
 		const res = await POST(req(basic('postmark', 'inbound-secret')));
 
 		expect(await res.json()).toEqual({ ok: true });

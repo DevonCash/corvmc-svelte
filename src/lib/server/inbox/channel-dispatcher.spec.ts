@@ -58,13 +58,21 @@ function params(overrides: Partial<DispatchReplyParams> = {}): DispatchReplyPara
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { dispatchReply } = await import('./channel-dispatcher');
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('dispatchReply — web channel (contact form)', () => {
 	it('sends the reply by email to the submitter', async () => {
-		const { dispatchReply } = await import('./channel-dispatcher');
-
 		const messageId = await dispatchReply(params());
 
 		expect(mockSendInboxReply).toHaveBeenCalledTimes(1);
@@ -76,8 +84,6 @@ describe('dispatchReply — web channel (contact form)', () => {
 	});
 
 	it('sets Reply-To to the plus-addressed thread address', async () => {
-		const { dispatchReply } = await import('./channel-dispatcher');
-
 		await dispatchReply(params());
 
 		expect(mockBuildReplyToAddress).toHaveBeenCalledWith('thread-1');
@@ -87,7 +93,6 @@ describe('dispatchReply — web channel (contact form)', () => {
 
 	it('falls back to the staff contact address when no reply address is configured', async () => {
 		mockBuildReplyToAddress.mockReturnValue(null);
-		const { dispatchReply } = await import('./channel-dispatcher');
 
 		await dispatchReply(params());
 
@@ -96,8 +101,6 @@ describe('dispatchReply — web channel (contact form)', () => {
 	});
 
 	it('throws when the thread has no contact email', async () => {
-		const { dispatchReply } = await import('./channel-dispatcher');
-
 		await expect(dispatchReply(params({ contactEmail: null }))).rejects.toThrow(
 			/no contact email/i
 		);
@@ -106,7 +109,6 @@ describe('dispatchReply — web channel (contact form)', () => {
 	it('does not require the email channel toggle to be on', async () => {
 		// isChannelEnabled is consulted for the thread's own channel ('web'), which is
 		// always true — the 'email' channel toggle gates inbound mail, not outbound replies.
-		const { dispatchReply } = await import('./channel-dispatcher');
 
 		await dispatchReply(params());
 
@@ -117,8 +119,6 @@ describe('dispatchReply — web channel (contact form)', () => {
 
 describe('dispatchReply — email channel', () => {
 	it('still sends with threading headers', async () => {
-		const { dispatchReply } = await import('./channel-dispatcher');
-
 		await dispatchReply(
 			params({
 				channel: 'email',
@@ -134,7 +134,6 @@ describe('dispatchReply — email channel', () => {
 
 	it('throws when the channel is disabled', async () => {
 		mockIsChannelEnabled.mockResolvedValue(false);
-		const { dispatchReply } = await import('./channel-dispatcher');
 
 		await expect(dispatchReply(params({ channel: 'email' }))).rejects.toThrow(/not enabled/i);
 	});

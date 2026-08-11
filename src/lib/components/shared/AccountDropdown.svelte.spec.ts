@@ -15,9 +15,18 @@ vi.mock('$app/paths', () => ({
 	resolve: (path: string) => path
 }));
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const AccountDropdown = (await import('./AccountDropdown.svelte')).default;
+
 describe('AccountDropdown', () => {
 	it('renders the signed-in user and opens the menu', async () => {
-		const AccountDropdown = (await import('./AccountDropdown.svelte')).default;
 		render(AccountDropdown);
 
 		const trigger = page.getByRole('button', { name: 'Account menu' });

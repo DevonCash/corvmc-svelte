@@ -20,24 +20,29 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
+
 describe('POST /api/cron/wake-snoozed', () => {
 	it('rejects requests without the cron secret', async () => {
-		const { POST } = await import('./+server');
-
 		await expect(POST({ request: post() } as never)).rejects.toThrow();
 		expect(mockWake).not.toHaveBeenCalled();
 	});
 
 	it('rejects requests with the wrong secret', async () => {
-		const { POST } = await import('./+server');
-
 		await expect(POST({ request: post('Bearer nope') } as never)).rejects.toThrow();
 		expect(mockWake).not.toHaveBeenCalled();
 	});
 
 	it('returns the number of threads returned to the queue', async () => {
 		mockWake.mockResolvedValue({ woken: 3 });
-		const { POST } = await import('./+server');
 
 		const response = await POST({ request: post('Bearer test-secret') } as never);
 

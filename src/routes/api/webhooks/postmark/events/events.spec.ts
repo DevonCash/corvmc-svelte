@@ -44,12 +44,21 @@ function req(body: unknown, token: string | null = 'hook-secret') {
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('POST /api/webhooks/postmark/events', () => {
 	it('rejects requests with a missing/wrong token', async () => {
-		const { POST } = await import('./+server');
 		await expect(
 			POST(req({ RecordType: 'SpamComplaint', Email: 'a@b.com' }, 'nope'))
 		).rejects.toThrow();
@@ -60,7 +69,6 @@ describe('POST /api/webhooks/postmark/events', () => {
 	});
 
 	it('maps SpamComplaint to a complaint suppression', async () => {
-		const { POST } = await import('./+server');
 		const res = await POST(req({ RecordType: 'SpamComplaint', Email: 'spam@example.com' }));
 
 		expect(mockSuppressByEmail).toHaveBeenCalledWith('spam@example.com', 'complaint');
@@ -68,14 +76,12 @@ describe('POST /api/webhooks/postmark/events', () => {
 	});
 
 	it('maps a HardBounce to a bounce suppression', async () => {
-		const { POST } = await import('./+server');
 		await POST(req({ RecordType: 'Bounce', Type: 'HardBounce', Email: 'bad@example.com' }));
 
 		expect(mockSuppressByEmail).toHaveBeenCalledWith('bad@example.com', 'bounce');
 	});
 
 	it('suppresses any Bounce flagged Inactive', async () => {
-		const { POST } = await import('./+server');
 		await POST(
 			req({ RecordType: 'Bounce', Type: 'SomethingElse', Inactive: true, Email: 'x@example.com' })
 		);
@@ -84,7 +90,6 @@ describe('POST /api/webhooks/postmark/events', () => {
 	});
 
 	it('ignores soft/transient bounces', async () => {
-		const { POST } = await import('./+server');
 		const res = await POST(
 			req({ RecordType: 'Bounce', Type: 'SoftBounce', Email: 'soft@example.com' })
 		);
@@ -95,7 +100,6 @@ describe('POST /api/webhooks/postmark/events', () => {
 
 	it('skips when the email marketing feature is disabled', async () => {
 		mockIsFeatureEnabled.mockResolvedValue(false);
-		const { POST } = await import('./+server');
 		const res = await POST(req({ RecordType: 'SpamComplaint', Email: 'a@b.com' }));
 
 		expect(mockSuppressByEmail).not.toHaveBeenCalled();

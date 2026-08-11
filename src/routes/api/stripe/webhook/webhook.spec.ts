@@ -36,6 +36,16 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -55,7 +65,6 @@ describe('POST /api/stripe/webhook', () => {
 	}
 
 	it('returns 400 when stripe-signature header is missing', async () => {
-		const { POST } = await import('./+server');
 		await expect(POST(req({ signature: null }))).rejects.toThrow();
 	});
 
@@ -64,7 +73,6 @@ describe('POST /api/stripe/webhook', () => {
 			throw new Error('Invalid signature');
 		});
 
-		const { POST } = await import('./+server');
 		await expect(POST(req())).rejects.toThrow();
 	});
 
@@ -77,7 +85,6 @@ describe('POST /api/stripe/webhook', () => {
 		});
 		mockHandler.mockResolvedValue(undefined);
 
-		const { POST } = await import('./+server');
 		const response = await POST(req());
 		const body = (await response.json()) as any;
 
@@ -92,7 +99,6 @@ describe('POST /api/stripe/webhook', () => {
 			data: { object: {} }
 		});
 
-		const { POST } = await import('./+server');
 		const response = await POST(req());
 		const body = (await response.json()) as any;
 
@@ -114,7 +120,6 @@ describe('POST /api/stripe/webhook', () => {
 
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		const { POST } = await import('./+server');
 		await expect(POST(req())).rejects.toMatchObject({ status: 500 });
 		consoleSpy.mockRestore();
 		vi.unstubAllEnvs();
@@ -130,7 +135,6 @@ describe('POST /api/stripe/webhook', () => {
 		const handlerError = new Error('handler failed');
 		mockHandler.mockRejectedValue(handlerError);
 
-		const { POST } = await import('./+server');
 		await expect(POST(req())).rejects.toMatchObject({ status: 500 });
 
 		expect(mockCaptureException).toHaveBeenCalledWith(handlerError, {
