@@ -21,6 +21,11 @@ export const tableOrder = [
 	'roles',
 	'permissions',
 	'volunteer_role',
+	'volunteer_certification',
+	// references volunteer_role + event, and is referenced by volunteer_signup
+	// and volunteer_hour_log, so it sits between them.
+	'volunteer_shift',
+	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
 	'inbox_channel_config',
@@ -53,5 +58,8 @@ export const tableOrder = [
 	'inbox_note',
 	'content_flag',
 	'volunteer_hour_log',
-	'volunteer_role_interest'
+	'volunteer_role_interest',
+	'volunteer_shift_feedback',
+	'member_certification',
+	'volunteer_role_certification'
 ];

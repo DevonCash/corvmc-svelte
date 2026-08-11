@@ -148,13 +148,60 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	volunteerRole: {
 		hourLogs: t.many.volunteerHourLog(),
-		interests: t.many.volunteerRoleInterest()
+		interests: t.many.volunteerRoleInterest(),
+		shifts: t.many.volunteerShift(),
+		requiredCertifications: t.many.volunteerRoleCertification()
 	},
 	volunteerRoleInterest: {
 		user: t.one.user({ from: t.volunteerRoleInterest.userId, to: t.user.id }),
 		role: t.one.volunteerRole({
 			from: t.volunteerRoleInterest.volunteerRoleId,
 			to: t.volunteerRole.id
+		})
+	},
+	volunteerShift: {
+		role: t.one.volunteerRole({
+			from: t.volunteerShift.volunteerRoleId,
+			to: t.volunteerRole.id
+		}),
+		event: t.one.event({ from: t.volunteerShift.eventId, to: t.event.id }),
+		signups: t.many.volunteerSignup()
+	},
+	volunteerSignup: {
+		shift: t.one.volunteerShift({ from: t.volunteerSignup.shiftId, to: t.volunteerShift.id }),
+		user: t.one.user({ from: t.volunteerSignup.userId, to: t.user.id }),
+		feedback: t.one.volunteerShiftFeedback({
+			from: t.volunteerSignup.id,
+			to: t.volunteerShiftFeedback.signupId
+		})
+	},
+	volunteerShiftFeedback: {
+		signup: t.one.volunteerSignup({
+			from: t.volunteerShiftFeedback.signupId,
+			to: t.volunteerSignup.id
+		})
+	},
+	volunteerCertification: {
+		holders: t.many.memberCertification(),
+		roles: t.many.volunteerRoleCertification()
+	},
+	memberCertification: {
+		user: t.one.user({ from: t.memberCertification.userId, to: t.user.id }),
+		certification: t.one.volunteerCertification({
+			from: t.memberCertification.certificationId,
+			to: t.volunteerCertification.id
+		}),
+		grantedBy: t.one.user({ from: t.memberCertification.grantedByUserId, to: t.user.id }),
+		revokedBy: t.one.user({ from: t.memberCertification.revokedByUserId, to: t.user.id })
+	},
+	volunteerRoleCertification: {
+		role: t.one.volunteerRole({
+			from: t.volunteerRoleCertification.volunteerRoleId,
+			to: t.volunteerRole.id
+		}),
+		certification: t.one.volunteerCertification({
+			from: t.volunteerRoleCertification.certificationId,
+			to: t.volunteerCertification.id
 		})
 	},
 	volunteerHourLog: {

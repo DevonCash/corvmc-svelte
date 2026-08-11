@@ -207,6 +207,55 @@ export const VOLUNTEER_ROLE_DESCRIPTION_MAX = 2000;
 /** Hours a member may enter per log, as a step for the number input. */
 export const VOLUNTEER_HOUR_STEP = 0.25;
 
+// ---------------------------------------------------------------------------
+// Shifts
+// ---------------------------------------------------------------------------
+
+/**
+ * The same words `reservationStatuses` uses for the same states, deliberately:
+ * a shift claim and a room booking move through the same shape, and two
+ * vocabularies for one lifecycle is a tax on everyone reading the code.
+ *
+ * `claimed` is a member putting their hand up; `confirmed` is staff saying yes.
+ */
+export const volunteerSignupStatuses = [
+	'claimed',
+	'confirmed',
+	'completed',
+	'cancelled',
+	'no_show'
+] as const;
+export type VolunteerSignupStatus = (typeof volunteerSignupStatuses)[number];
+
+/** A single shift can't run longer than a day — a typo'd end date, not a real shift. */
+export const VOLUNTEER_SHIFT_MAX_MINUTES = 1440;
+
+/** How many people one shift can ask for. Higher than any real call. */
+export const VOLUNTEER_SHIFT_MAX_CAPACITY = 50;
+
+export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
+// Certifications
+// ---------------------------------------------------------------------------
+
+/** A card inside this window of expiry reads as "expiring soon" rather than current. */
+export const CERT_EXPIRY_WARNING_DAYS = 60;
+
+export const CERT_NAME_MAX = 100;
+export const CERT_DESCRIPTION_MAX = 2000;
+export const CERT_REFERENCE_MAX = 100;
+export const CERT_NOTES_MAX = 1000;
+export const CERT_REVOKED_REASON_MAX = 1000;
+
+// ---------------------------------------------------------------------------
+// Post-shift feedback
+// ---------------------------------------------------------------------------
+
+export const SHIFT_FEEDBACK_MIN_RATING = 1;
+export const SHIFT_FEEDBACK_MAX_RATING = 5;
+export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
+
 /**
  * Today's calendar date in club time, as YYYY-MM-DD.
  *

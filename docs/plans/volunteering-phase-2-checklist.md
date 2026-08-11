@@ -1,0 +1,122 @@
+# Volunteering Phase 2 — progress checklist
+
+Design: `docs/specs/volunteering-spec.md` §Phase 2 (line 264) and §Certifications
+(line 302). Plan: `~/.claude/plans/deep-drifting-kernighan.md` (approved).
+Phase 1 checklist: `volunteering-checklist.md`.
+
+Building certifications **and** shifts in one pass, plus the post-shift survey.
+
+## Model recap
+
+- **Six new tables**, 32 → 38. Certifications: `volunteer_certification`
+  (catalog), `member_certification` (held, append-only),
+  `volunteer_role_certification` (join). Shifts: `volunteer_shift`,
+  `volunteer_signup`. Feedback: `volunteer_shift_feedback`.
+- **Held certifications append; renewals never overwrite.** Hence **no unique
+  constraint** on `(userId, certificationId)`. This is the only way to answer
+  "was their First Aid current on the night of the incident?"
+- **`expiresAt` is stamped at grant time** from `validityMonths`, never computed
+  on read — editing a catalog entry must not retroactively expire cards issued
+  under the old rule.
+- **No status column for certifications.** current / expiring soon / expired /
+  revoked is derived from dates against `clubToday()`.
+- **The as-of-a-date predicate, and its asymmetry** (spec line 460):
+  `grantedAt <= worked AND (expiresAt IS NULL OR expiresAt >= worked) AND
+(revokedAt IS NULL OR revokedAt > worked)`. A clearance pulled _on_ the day was
+  not in force; a card is valid _through_ its expiry date. Easy to invert — pin
+  it with a test.
+- **Revoke, don't delete.** Hard delete only for a record that was never true (a
+  typo), and only same-day by the same staffer. `revokedReason` required whenever
+  `revokedAt` is set.
+- **Certifications are advisory for hour logs, gating for shift claims.** Someone
+  who did the work can always log it; refusing the hours doesn't undo the work.
+- **Signup statuses mirror `reservationStatuses`**: claimed → confirmed →
+  completed, plus cancelled and no_show. Same words for the same states.
+- **One-off shifts only.** No recurrence this pass; `recurring_series`
+  generalizes by `prototypeType` if that changes.
+- **Staff create shifts, members claim.** No proposal state.
+- **Feedback is keyed to the signup**, one per signup.
+
+## Step 1 — Schema
+
+- [ ] `schema/volunteer.ts` — 6 tables, types, zod schemas
+- [ ] `volunteer_role` — `defaultDurationMinutes`, `defaultCapacity`
+- [ ] `volunteer_hour_log.shiftId` — bare text column becomes a real FK
+- [ ] `src/lib/config.ts` — `volunteerSignupStatuses`,
+      `CERT_EXPIRY_WARNING_DAYS = 60`, shift/feedback limits
+- [ ] `schema/index.ts`, `schema/relations.ts`
+- [ ] `scripts/d1-table-order.mjs` — parents before children
+- [ ] (user runs `pnpm db:generate`)
+
+## Step 2 — Certifications
+
+- [ ] `volunteer-certification-service.ts` — catalog CRUD, archive/restore,
+      in-use delete guard (copy `volunteer-role-service.ts`)
+- [ ] `member-certification-service.ts` — grant, revoke, derived state,
+      `heldOn(userId, certId, date)`, same-day typo delete
+- [ ] `/staff/volunteer/certifications` — catalog table
+- [ ] Clearances view — current / expiring / lapsed
+- [ ] Role edit form — required-certifications `TagInput`
+- [ ] `staff/users/[id]` — Certifications card, Grant + Revoke actions
+- [ ] `/member/volunteer` — Certifications block
+- [ ] Review queue — advisory glyph when the role required a cert the member
+      did not hold on the date worked
+
+## Step 3 — Shifts
+
+- [ ] `volunteer-shift-service.ts` — create/duplicate/edit/cancel, list open,
+      claim counts
+- [ ] `volunteer-signup-service.ts` — claim (capacity + clearance + dup guards),
+      cancel, confirm, no-show
+- [ ] `/staff/volunteer/shifts` — list with needed-vs-claimed, filters
+- [ ] `/staff/volunteer/shifts/[id]` — claimants, confirm, no-show
+- [ ] `/member/volunteer` — Open Shifts block, interest-first ordering, and an
+      unclaimable shift says _why_ rather than hiding
+- [ ] Staff nav `childHrefs` + `Nav.Item`, queue header buttons
+
+## Step 4 — Crons, notifications, hour-log join
+
+- [ ] `/api/cron/shift-reminders` — daily batch, confirmed signups for tomorrow
+- [ ] `/api/cron/complete-shifts` — 15-min group, confirmed past `endsAt`
+- [ ] `/api/cron/shift-feedback` — daily batch, yesterday's completed signups
+- [ ] `CRON_SCHEDULE` **and** the `wrangler.toml` comment — hand-synced, keep both
+- [ ] 3 domain events, 3 `NOTIFICATION_TYPES`, 3 listeners (generic alias)
+- [ ] Completed signup pre-fills an hour log; queue marks scheduled logs
+
+## Step 5 — Feedback
+
+- [ ] `volunteer-feedback-service.ts` — submit once per signup, read for staff
+- [ ] Member form from the notification (Bits UI `RatingGroup`)
+- [ ] Staff: per-shift responses and the per-role aggregate
+
+## Step 6 — Seeds, tests, docs
+
+- [ ] `scripts/seed-dev.ts` — catalog with one expiring + one lapsed card,
+      shifts either side of today, signups across every status, feedback on the
+      completed ones
+- [ ] Specs: date asymmetry, renewal appends, claim refusals (full / uncleared /
+      duplicate), completion only touches confirmed-and-past, feedback once
+- [ ] Extend `e2e/volunteering.e2e.ts` + its fixture
+- [ ] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
+- [ ] `production-workflow-spec.md:1256` — close the staffing hook
+- [ ] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
+      `pnpm docs:check`, parity-report row + table count 32 → 38
+
+## Gotchas carried from Phase 1
+
+- Remotes live in `src/lib/remote/`, not colocated.
+- Guard inside the remote handler — remote functions bypass route/layout loads
+  and take params from a client header.
+- No `db.transaction()` (lint rule). Guard-then-insert and let unique indexes be
+  the backstop.
+- Chunk multi-row inserts — D1 caps a statement at 100 bound parameters.
+- `refresh()` is keyed by argument: refresh the arg-keyed query from the page,
+  not an argless one from the remote.
+- Every user-facing validation rule needs written copy, or staff see raw zod.
+- Markdown descriptions render through `renderMarkdown` in the remote, never
+  `sanitizeBio`.
+- URL filter state: local `$state` + `goto(replaceState: true)`, never
+  `replaceState()`. Name the search binding `searchText` — a `search` snippet
+  shadows it.
+- Dates that are calendar dates anchor at **noon** club time.
+- daisyUI `.select` goes on a wrapper — use `Form/Select.svelte`.
