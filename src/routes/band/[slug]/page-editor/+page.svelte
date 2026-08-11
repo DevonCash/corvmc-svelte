@@ -8,6 +8,8 @@
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { env } from '$env/dynamic/public';
+	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
@@ -19,6 +21,13 @@
 
 	// Gate: premium only
 	const isPremium = $derived(band.tier === 'premium');
+	const siteUrl = $derived(
+		bandSiteUrl(
+			band.slug,
+			env.PUBLIC_SITE_URL,
+			band.customDomainStatus === 'active' ? band.customDomain : null
+		)
+	);
 
 	// Local state for editable fields — initialized from server data
 	const initialConfig = $derived(pageData.config);
@@ -561,13 +570,9 @@
 
 			<!-- Save -->
 			<div class="flex justify-between items-center">
-				<a
-					href={resolve(`/band-site/${band.slug}`)}
-					target="_blank"
-					rel="noopener"
-					class="link text-sm"
-				>
-					Preview your page &rarr;
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute URL on the band's own subdomain, not a route in this app -->
+				<a href={siteUrl} target="_blank" rel="noopener" class="link text-sm">
+					View your page at {siteUrl.replace(/^https?:\/\//, '')} &rarr;
 				</a>
 				<button class="btn btn-primary">Save Changes</button>
 			</div>

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
@@ -28,6 +28,28 @@ export const bandSubscriptionSchema = z
 	.default(null);
 
 export type BandSubscription = z.infer<typeof bandSubscriptionSchema>;
+
+export const customDomainStatuses = ['pending', 'active', 'failed'] as const;
+export type CustomDomainStatus = (typeof customDomainStatuses)[number];
+
+/**
+ * The DNS records a band must add at their registrar, straight from
+ * Cloudflare's custom-hostname response. `ownership` proves they control the
+ * domain; `ssl` lets Cloudflare issue the certificate. Both are TXT records, so
+ * the band can verify before pointing the domain at us — no window where their
+ * live site is broken.
+ */
+export const customDomainVerificationSchema = z
+	.object({
+		ownership: z.object({ name: z.string(), value: z.string() }).nullable(),
+		ssl: z.object({ name: z.string(), value: z.string() }).nullable(),
+		/** Where the band points the domain itself, once verified. */
+		cnameTarget: z.string()
+	})
+	.nullable()
+	.default(null);
+
+export type CustomDomainVerification = z.infer<typeof customDomainVerificationSchema>;
 
 // ---------------------------------------------------------------------------
 // Tables
@@ -63,6 +85,24 @@ export const band = sqliteTable(
 		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
 		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
 
+		// custom domain (premium only — every band gets {slug}.corvmc.org for free).
+		// Backed by a Cloudflare for SaaS custom hostname; `customDomainHostnameId`
+		// is that hostname's id, needed to poll status and to delete it.
+		// Uniqueness lives in a separate index rather than a column constraint.
+		// SQLite cannot add a UNIQUE column with ALTER TABLE, so `.unique()` here
+		// makes drizzle rebuild the whole `band` table (create-copy-DROP-rename).
+		// `pnpm db:generate` would rewrite that to be D1-safe, but a plain
+		// ADD COLUMN + CREATE UNIQUE INDEX needs no rewriting at all. Same
+		// semantics — SQLite implements a column UNIQUE as a unique index, and
+		// both treat NULLs as distinct, so any number of bands can have none.
+		customDomain: text('custom_domain'),
+		customDomainStatus: text('custom_domain_status', { enum: customDomainStatuses }),
+		customDomainHostnameId: text('custom_domain_hostname_id'),
+		customDomainVerification: text('custom_domain_verification', {
+			mode: 'json'
+		}).$type<CustomDomainVerification>(),
+		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' }),
+
 		// directory profile
 		tagline: text('tagline'),
 		hometown: text('hometown'),
@@ -72,7 +112,12 @@ export const band = sqliteTable(
 		directoryContact: text('directory_contact', { mode: 'json' }),
 		links: text('links', { mode: 'json' })
 	},
-	(t) => [index('idx_band_slug').on(t.slug)]
+	(t) => [
+		index('idx_band_slug').on(t.slug),
+		// One band per custom domain. Also the lookup index for
+		// resolveCustomDomain(), which runs on every request to a custom host.
+		uniqueIndex('idx_band_custom_domain').on(t.customDomain)
+	]
 );
 
 export const bandGenre = sqliteTable(

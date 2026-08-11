@@ -50,6 +50,22 @@ zone_name = "corvmc.org"
 pattern = "*.corvmc.org/*"
 zone_name = "corvmc.org"
 
+# Premium bands' own domains (theband.com) arrive as Cloudflare for SaaS custom
+# hostnames. Worker routes match on the request's Host, which for those requests
+# is the band's domain — NOT anything under corvmc.org — so none of the patterns
+# above fire and the request would fall through to the fallback origin, which is
+# originless (AAAA 100::) and answers nothing. A wildcard-host route is what
+# Cloudflare's "Workers as your fallback origin" guide prescribes for a Worker
+# that is itself the origin:
+# https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/start/advanced-settings/worker-as-origin/
+#
+# Scoped to this zone, so it covers corvmc.org hostnames and the custom hostnames
+# attached to it — nothing else. media.corvmc.org was already inside *.corvmc.org/*
+# and still resolves to R2 (custom-domain routes win); re-verify after deploying.
+[[routes]]
+pattern = "*/*"
+zone_name = "corvmc.org"
+
 [vars]
 # ORIGIN is required — better-auth uses it as baseURL and throws if unset
 # (src/lib/server/auth.ts). Differs per environment.

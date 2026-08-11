@@ -12,6 +12,10 @@ import { resolvePendingInvites } from '$lib/server/band/platform-invite-service'
 import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
+import { env as publicEnv } from '$env/dynamic/public';
+import { bandSlugFromHost } from '$lib/utils/band-site-url';
+import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const resolvedSessions = new Set<string>();
 
@@ -58,6 +62,42 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 
 	return svelteKitHandler({ event, resolve, auth, building });
+};
+
+/**
+ * Every band has `{slug}.corvmc.org`, but only premium bands have a microsite
+ * to serve there. For everyone else the subdomain is an alias for their
+ * directory profile, so the address a band hands out always resolves to
+ * something about that band — free or not.
+ *
+ * This lives here rather than in `reroute` because the decision needs the
+ * database, and `reroute` is a universal hook that also runs in the browser.
+ * `reroute` has already mapped the request to /band-site/{slug} by this point;
+ * all that is left is to decide whether to let it through.
+ *
+ * A band whose `directoryVisibility` is not public redirects to a profile that
+ * 404s. That is deliberate: visibility is enforced once, in
+ * `getPublicBandProfile`, instead of being duplicated per host.
+ */
+const handleBandSubdomain: Handle = async ({ event, resolve }) => {
+	const slug = bandSlugFromHost(event.url.hostname, publicEnv.PUBLIC_SITE_URL);
+	if (!slug) return resolve(event);
+
+	const [host, premiumEnabled] = await Promise.all([
+		resolveBandSubdomain(slug),
+		isFeatureEnabled('bandPremium')
+	]);
+
+	if (host?.servesSite && premiumEnabled) return resolve(event);
+
+	// Free tier, unknown slug, or the feature switched off — send them to the
+	// profile. Band-site subpaths (/events, /epk) have no directory equivalent,
+	// so everything lands on the profile itself.
+	const siteUrl = publicEnv.PUBLIC_SITE_URL || 'https://corvmc.org';
+	return new Response(null, {
+		status: 302,
+		headers: { location: new URL(`/directory/bands/${slug}`, siteUrl).href }
+	});
 };
 
 // Bot/proxy clients probe paths we don't serve (e.g. /.well-known/traffic-advice),
@@ -109,7 +149,10 @@ export const handle: Handle = sequence(
 		enableLogs: true
 	}),
 	Sentry.sentryHandle(),
-	handleBetterAuth
+	// Must come after handleBetterAuth: that is where initDb() runs, and the
+	// subdomain gate queries the band table.
+	handleBetterAuth,
+	handleBandSubdomain
 );
 
 export const handleError: HandleServerError = Sentry.handleErrorWithSentry(

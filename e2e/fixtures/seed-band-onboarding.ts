@@ -35,7 +35,17 @@ export const SEED_MEMBERS_BAND_ID = 'e2e-band-members';
 export const SEED_MEMBERS_BAND_SLUG = 'e2e-members-band';
 export const SEED_MEMBERS_BAND_NAME = 'E2E Members Band';
 
-const BAND_IDS = [SEED_PUBLIC_BAND_ID, SEED_HIDDEN_BAND_ID, SEED_MEMBERS_BAND_ID];
+/** Premium tier, so its subdomain serves the microsite instead of redirecting. */
+export const SEED_PREMIUM_BAND_ID = 'e2e-band-premium';
+export const SEED_PREMIUM_BAND_SLUG = 'e2e-premium-band';
+export const SEED_PREMIUM_BAND_NAME = 'E2E Premium Band';
+
+const BAND_IDS = [
+	SEED_PUBLIC_BAND_ID,
+	SEED_HIDDEN_BAND_ID,
+	SEED_MEMBERS_BAND_ID,
+	SEED_PREMIUM_BAND_ID
+];
 
 export async function seedBandOnboarding(): Promise<void> {
 	const { env, dispose } = await getPlatformProxy();
@@ -105,6 +115,17 @@ export async function seedBandOnboarding(): Promise<void> {
 				bio: 'Visible to logged-in members only.',
 				ownerId: SEED_OWNER_ID,
 				directoryVisibility: 'members',
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_PREMIUM_BAND_ID,
+				name: SEED_PREMIUM_BAND_NAME,
+				slug: SEED_PREMIUM_BAND_SLUG,
+				bio: 'Premium tier, so its subdomain serves a band site.',
+				ownerId: SEED_OWNER_ID,
+				tier: 'premium',
+				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
 			}

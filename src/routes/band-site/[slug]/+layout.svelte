@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '$lib/themes/band-site/index.css';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
-	import { bandSitePath, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import { bandSitePath, bandSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
 	import { page } from '$app/state';
 
@@ -9,9 +9,8 @@
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const themeClass = $derived(`theme-${data.config?.theme ?? 'default'}`);
 
-	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
 	const canonicalUrl = $derived(
-		`https://${page.params.slug}.${baseDomain}${bandSitePath(page.params.slug!, page.url).replace(/\/$/, '')}`
+		`${bandSiteUrl(page.params.slug!, env.PUBLIC_SITE_URL, data.band.customDomain)}${bandSitePath(page.params.slug!, page.url).replace(/\/$/, '')}`
 	);
 	const description = $derived(data.band.tagline || `${data.band.name} — official site`);
 	const heroBlock = $derived(data.config?.blocks.find((b) => b.type === 'hero'));

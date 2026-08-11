@@ -20,6 +20,10 @@ export default defineConfig({
 			// the preview server throws ("ORIGIN environment variable is required").
 			// Real values can override these via the shell environment.
 			ORIGIN: process.env.ORIGIN ?? 'http://localhost:4173',
+			// Band addresses hang off this domain, so the subdomain tests need it to
+			// be `localhost` — without it the app falls back to corvmc.org and
+			// {slug}.localhost:4173 is not recognised as a band address at all.
+			PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4173',
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? 'e2e-local-better-auth-secret-not-for-prod',
 			STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? 'sk_test_dummy_e2e',
