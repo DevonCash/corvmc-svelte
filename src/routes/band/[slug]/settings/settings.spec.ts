@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
@@ -57,13 +57,25 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let deleteBand: any;
+
+beforeAll(async () => {
+	({ deleteBand } = (await import('$lib/remote/bands.remote')) as any);
+});
+
+// ---------------------------------------------------------------------------
 // Remote handlers
 // ---------------------------------------------------------------------------
 
 describe('deleteBand', () => {
 	it('deletes the band', async () => {
-		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
-
 		const result = await deleteBand({});
 
 		expect(bandServiceMock.deleteBand).toHaveBeenCalledWith('band-1');
@@ -72,14 +84,12 @@ describe('deleteBand', () => {
 
 	it('rejects non-owner users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 		await expect(deleteBand({})).rejects.toThrow();
 	});

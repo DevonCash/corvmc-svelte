@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -105,6 +105,22 @@ function makeEvent(overrides?: Record<string, unknown>) {
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let handle: typeof import('./hooks.server').handle;
+let isLocalOriginEvent: typeof import('./hooks.server').isLocalOriginEvent;
+let handleError: typeof import('./hooks.server').handleError;
+
+beforeAll(async () => {
+	({ handle, isLocalOriginEvent, handleError } = await import('./hooks.server'));
+});
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -112,11 +128,10 @@ describe('hooks.server handle', () => {
 	it('calls registerListeners when handling a request', async () => {
 		mockGetSession.mockResolvedValue(null);
 
-		const { handle } = await import('./hooks.server');
 		await handle({ event: makeEvent() as any, resolve: vi.fn() });
 
 		expect(mockRegisterListeners).toHaveBeenCalled();
-	}, 30_000);
+	});
 
 	it('populates locals.user and locals.session when session exists', async () => {
 		const mockSession = {
@@ -125,7 +140,6 @@ describe('hooks.server handle', () => {
 		};
 		mockGetSession.mockResolvedValue(mockSession);
 
-		const { handle } = await import('./hooks.server');
 		const event = makeEvent();
 		const resolve = vi.fn();
 
@@ -147,7 +161,6 @@ describe('hooks.server handle', () => {
 		};
 		mockGetSession.mockResolvedValue(mockSession);
 
-		const { handle } = await import('./hooks.server');
 		const event = makeEvent();
 
 		await handle({ event: event as any, resolve: vi.fn() });
@@ -160,7 +173,6 @@ describe('hooks.server handle', () => {
 	it('does not populate locals when session is null', async () => {
 		mockGetSession.mockResolvedValue(null);
 
-		const { handle } = await import('./hooks.server');
 		const event = makeEvent();
 		const resolve = vi.fn();
 
@@ -177,7 +189,6 @@ describe('hooks.server handle', () => {
 		};
 		mockGetSession.mockResolvedValue(mockSession);
 
-		const { handle } = await import('./hooks.server');
 		const event = makeEvent();
 		const resolve = vi.fn();
 
@@ -189,7 +200,6 @@ describe('hooks.server handle', () => {
 	it('delegates to svelteKitHandler', async () => {
 		mockGetSession.mockResolvedValue(null);
 
-		const { handle } = await import('./hooks.server');
 		const event = makeEvent();
 		const resolve = vi.fn();
 
@@ -205,29 +215,24 @@ describe('hooks.server handle', () => {
 
 describe('hooks.server isLocalOriginEvent', () => {
 	it('drops events from the local preview server (JAVASCRIPT-SVELTEKIT-1Y)', async () => {
-		const { isLocalOriginEvent } = await import('./hooks.server');
 		expect(
 			isLocalOriginEvent({ request: { url: 'http://localhost:4173/_app/version.json' } })
 		).toBe(true);
 	});
 
 	it('keeps events from production', async () => {
-		const { isLocalOriginEvent } = await import('./hooks.server');
 		expect(isLocalOriginEvent({ request: { url: 'https://corvmc.org/api/stripe/webhook' } })).toBe(
 			false
 		);
 	});
 
 	it('keeps events with no request URL rather than dropping them blind', async () => {
-		const { isLocalOriginEvent } = await import('./hooks.server');
 		expect(isLocalOriginEvent({})).toBe(false);
 	});
 });
 
 describe('hooks.server handleError', () => {
 	it('does not report 4xx client errors (e.g. bot /.well-known probes)', async () => {
-		const { handleError } = await import('./hooks.server');
-
 		await handleError({
 			error: new Error('Not found: /.well-known/traffic-advice'),
 			event: makeEvent({ url: new URL('http://localhost/.well-known/traffic-advice') }) as any,
@@ -239,7 +244,6 @@ describe('hooks.server handleError', () => {
 	});
 
 	it('reports genuine 5xx errors to Sentry', async () => {
-		const { handleError } = await import('./hooks.server');
 		const error = new Error('boom');
 
 		await handleError({

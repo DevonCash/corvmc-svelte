@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import type { PostmarkInboundPayload } from './inbound-handlers';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +77,21 @@ function payload(overrides: Partial<PostmarkInboundPayload> = {}): PostmarkInbou
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let handlePostmarkInbound: typeof import('./inbound-handlers').handlePostmarkInbound;
+let handleContactForm: typeof import('./inbound-handlers').handleContactForm;
+
+beforeAll(async () => {
+	({ handlePostmarkInbound, handleContactForm } = await import('./inbound-handlers'));
+});
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -84,7 +99,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 	it('appends a reply to the thread the hash names, without creating a new one', async () => {
 		mockParseReplyMailboxHash.mockReturnValue('thread-1');
 		mockFindThreadById.mockResolvedValue({ id: 'thread-1', channel: 'web', status: 'open' });
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		const result = await handlePostmarkInbound(payload());
 
@@ -96,7 +110,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 	it('reopens a resolved thread when the contact replies', async () => {
 		mockParseReplyMailboxHash.mockReturnValue('thread-1');
 		mockFindThreadById.mockResolvedValue({ id: 'thread-1', channel: 'web', status: 'resolved' });
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		await handlePostmarkInbound(payload());
 
@@ -107,7 +120,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 		mockIsChannelEnabled.mockResolvedValue(false);
 		mockParseReplyMailboxHash.mockReturnValue('thread-1');
 		mockFindThreadById.mockResolvedValue({ id: 'thread-1', channel: 'web', status: 'open' });
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		await handlePostmarkInbound(payload());
 
@@ -117,7 +129,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 	it('stores the real Message-ID header rather than Postmark’s internal guid', async () => {
 		mockParseReplyMailboxHash.mockReturnValue('thread-1');
 		mockFindThreadById.mockResolvedValue({ id: 'thread-1', channel: 'web', status: 'open' });
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		await handlePostmarkInbound(payload());
 
@@ -134,7 +145,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 			status: 'open',
 			contactEmail: 'charlie@example.com'
 		});
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		const result = await handlePostmarkInbound(
 			payload({
@@ -151,8 +161,6 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 
 describe('handlePostmarkInbound — fallback for unrecognised mail', () => {
 	it('creates an email thread when there is no hash', async () => {
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
-
 		await handlePostmarkInbound(payload({ MailboxHash: undefined }));
 
 		expect(mockFindOrCreateThread).toHaveBeenCalledWith(
@@ -161,8 +169,6 @@ describe('handlePostmarkInbound — fallback for unrecognised mail', () => {
 	});
 
 	it('records an unresolvable hash so the routing failure is diagnosable', async () => {
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
-
 		await handlePostmarkInbound(payload({ MailboxHash: 'garbage.hash' }));
 
 		const metadata = mockAddInboundMessage.mock.calls[0][0].channelMetadata!;
@@ -172,7 +178,6 @@ describe('handlePostmarkInbound — fallback for unrecognised mail', () => {
 	it('falls back to find-or-create when the hash names a thread that no longer exists', async () => {
 		mockParseReplyMailboxHash.mockReturnValue('deleted-thread');
 		mockFindThreadById.mockResolvedValue(undefined);
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		await handlePostmarkInbound(payload());
 
@@ -181,7 +186,6 @@ describe('handlePostmarkInbound — fallback for unrecognised mail', () => {
 
 	it('drops unsolicited mail when the email channel is disabled', async () => {
 		mockIsChannelEnabled.mockResolvedValue(false);
-		const { handlePostmarkInbound } = await import('./inbound-handlers');
 
 		const result = await handlePostmarkInbound(payload({ MailboxHash: undefined }));
 
@@ -193,7 +197,6 @@ describe('handlePostmarkInbound — fallback for unrecognised mail', () => {
 describe('handleContactForm', () => {
 	it('emits contact.form_submitted so staff get the alert email', async () => {
 		mockFindOrCreateThread.mockResolvedValue({ id: 'thread-9', channel: 'web' });
-		const { handleContactForm } = await import('./inbound-handlers');
 
 		await handleContactForm({
 			name: 'Charlie',

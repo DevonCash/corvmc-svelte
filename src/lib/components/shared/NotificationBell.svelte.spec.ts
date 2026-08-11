@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 // NotificationBell awaits `getNotifications()` and opens an EventSource stream —
@@ -21,13 +21,26 @@ class FakeEventSource {
 	close() {}
 }
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let NotificationBell: typeof import('./NotificationBell.svelte').default;
+
+beforeAll(async () => {
+	NotificationBell = (await import('./NotificationBell.svelte')).default;
+});
+
 describe('NotificationBell', () => {
 	beforeEach(() => {
 		vi.stubGlobal('EventSource', FakeEventSource);
 	});
 
 	it('opens on click and closes when clicking outside', async () => {
-		const NotificationBell = (await import('./NotificationBell.svelte')).default;
 		render(NotificationBell);
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
@@ -47,7 +60,6 @@ describe('NotificationBell', () => {
 	// `open` then throws. Simulate by unmounting in a capture-phase listener so
 	// the same click reaches the window handler after teardown.
 	it('survives a click that unmounts the component mid-dispatch (JAVASCRIPT-SVELTEKIT-Q/1A)', async () => {
-		const NotificationBell = (await import('./NotificationBell.svelte')).default;
 		const screen = render(NotificationBell);
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });

@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 // AccountDropdown awaits `getMe()` and resolves route paths — both require a live
@@ -15,9 +15,22 @@ vi.mock('$app/paths', () => ({
 	resolve: (path: string) => path
 }));
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let AccountDropdown: typeof import('./AccountDropdown.svelte').default;
+
+beforeAll(async () => {
+	AccountDropdown = (await import('./AccountDropdown.svelte')).default;
+});
+
 describe('AccountDropdown', () => {
 	it('renders the signed-in user and opens the menu', async () => {
-		const AccountDropdown = (await import('./AccountDropdown.svelte')).default;
 		render(AccountDropdown);
 
 		const trigger = page.getByRole('button', { name: 'Account menu' });

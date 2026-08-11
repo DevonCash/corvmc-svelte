@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -40,19 +40,31 @@ function req(secret?: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let POST: typeof import('./+server').POST;
+
+beforeAll(async () => {
+	({ POST } = await import('./+server'));
+});
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('POST /api/cron/send-campaigns', () => {
 	it('rejects requests without valid auth', async () => {
-		const { POST } = await import('./+server');
 		await expect(POST(req('wrong-secret'))).rejects.toThrow();
 	});
 
 	it('delegates to processDueCampaigns', async () => {
 		mockProcessDueCampaigns.mockResolvedValue(3);
 
-		const { POST } = await import('./+server');
 		await POST(req());
 
 		expect(mockProcessDueCampaigns).toHaveBeenCalled();
@@ -61,7 +73,6 @@ describe('POST /api/cron/send-campaigns', () => {
 	it('returns processed count in response', async () => {
 		mockProcessDueCampaigns.mockResolvedValue(5);
 
-		const { POST } = await import('./+server');
 		const response = await POST(req());
 		const body = await response.json();
 

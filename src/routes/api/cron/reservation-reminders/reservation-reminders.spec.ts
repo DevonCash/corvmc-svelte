@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -72,13 +72,25 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let POST: typeof import('./+server').POST;
+
+beforeAll(async () => {
+	({ POST } = await import('./+server'));
+});
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('POST /api/cron/reservation-reminders', () => {
 	it('rejects requests without valid auth', async () => {
-		const { POST } = await import('./+server');
-
 		await expect(
 			POST({
 				request: new Request('http://localhost/api/cron/reservation-reminders', {
@@ -112,8 +124,6 @@ describe('POST /api/cron/reservation-reminders', () => {
 			}
 		];
 
-		const { POST } = await import('./+server');
-
 		const response = await POST({
 			request: new Request('http://localhost/api/cron/reservation-reminders', {
 				method: 'POST',
@@ -146,8 +156,6 @@ describe('POST /api/cron/reservation-reminders', () => {
 
 	it('returns zero when no reservations match', async () => {
 		queryResult = [];
-
-		const { POST } = await import('./+server');
 
 		const response = await POST({
 			request: new Request('http://localhost/api/cron/reservation-reminders', {
@@ -186,8 +194,6 @@ describe('POST /api/cron/reservation-reminders', () => {
 		mockEmit.mockRejectedValueOnce(new Error('dispatch failed')).mockResolvedValueOnce(undefined);
 
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-		const { POST } = await import('./+server');
 
 		const response = await POST({
 			request: new Request('http://localhost/api/cron/reservation-reminders', {

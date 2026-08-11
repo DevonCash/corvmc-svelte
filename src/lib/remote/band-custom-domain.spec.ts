@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 
 /**
@@ -82,9 +82,22 @@ beforeEach(() => {
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
 });
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, but
+// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
+// first import transforms the whole module graph, which blows the 5s per-test
+// timeout if it happens inside an `it()`.
+let getCustomDomain: typeof import('./band-custom-domain.remote').getCustomDomain;
+
+beforeAll(async () => {
+	({ getCustomDomain } = await import('./band-custom-domain.remote'));
+});
+
 describe('getCustomDomain', () => {
 	it('returns the domain config to the band owner', async () => {
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		const result = await (getCustomDomain as unknown as (slug: string) => Promise<unknown>)(
 			'the-velvet-underground'
 		);
@@ -93,7 +106,6 @@ describe('getCustomDomain', () => {
 
 	it('rejects a member who does not own the band', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		await expect(
 			(getCustomDomain as unknown as (slug: string) => Promise<unknown>)('the-velvet-underground')
 		).rejects.toMatchObject({ status: 403 });
@@ -101,7 +113,6 @@ describe('getCustomDomain', () => {
 
 	it('rejects a logged-in user with no role in the band', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		await expect(
 			(getCustomDomain as unknown as (slug: string) => Promise<unknown>)('the-velvet-underground')
 		).rejects.toMatchObject({ status: 403 });
