@@ -105,20 +105,23 @@ test('members-only band is withheld publicly but renders in the member directory
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
 });
 
-// Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band rotates its slug, but
-// saveBandProfile then refreshed getBandProfile, which re-resolves the band from
-// `params.slug` — still the pre-rename value, because for a remote request it
-// comes from the `x-sveltekit-pathname` header the client sent. The lookup 404s,
-// SvelteKit ships that per-query failure to the client, and `apply_refreshes`
-// calls `resource.fail(...)`: the save succeeds and the page it just saved drops
-// into a "Band not found" state.
+// Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band used to rotate its slug,
+// but saveBandProfile then refreshed getBandProfile, which re-resolves the band
+// from `params.slug` — still the pre-rename value, because for a remote request
+// it comes from the `x-sveltekit-pathname` header the client sent. The lookup
+// 404s, SvelteKit ships that per-query failure to the client, and
+// `apply_refreshes` calls `resource.fail(...)`: the save succeeded and the page
+// it had just saved dropped into a "Band not found" state.
 //
-// This is the first save of every newly created band — a new band starts out
-// slugged after its creator and gets its real name on that first save.
+// The hazard was removed at the source — a rename no longer touches the slug at
+// all, because that slug is the band's public address (owners change it
+// deliberately on the settings page; see band-address.e2e.ts). So the page now
+// stays put, which is the other half of what this test guards: a rename must not
+// move a band's URL out from under anyone.
 //
 // Renames the seeded band and puts the name back, so the tests above (which key
-// off SEED_PUBLIC_BAND_SLUG) still pass on a re-run.
-test('renaming a band saves cleanly and follows the new slug', async ({ page }) => {
+// off SEED_PUBLIC_BAND_NAME) still pass on a re-run.
+test('renaming a band saves cleanly and leaves its address alone', async ({ page }) => {
 	const consoleErrors: string[] = [];
 	page.on('console', (m) => {
 		if (m.type() === 'error') consoleErrors.push(m.text());
@@ -134,20 +137,19 @@ test('renaming a band saves cleanly and follows the new slug', async ({ page }) 
 	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
 	// The save worked, so nothing on the page may claim the band is missing.
 	await expect(page.getByText('Band not found')).toHaveCount(0);
-	await page.waitForURL(/\/band\/e2e-renamed-band\/edit/, { timeout: 15000 });
+	// Same URL as before the rename — no slug rotation, nothing to follow.
+	await expect(page).toHaveURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`));
 
 	// The reported failure was a caught exception: the form swallowed it into a
 	// toast and only the console (and Sentry) showed the real cause.
 	expect(consoleErrors.join('\n')).not.toContain('JSON.parse');
 
-	// Restore, so this test is re-runnable and the earlier tests keep their slug.
-	// Reload first: the redirect above only fires for the first rename of a page
-	// session, so a second save in-place would leave the form on the old URL.
-	await page.goto('/band/e2e-renamed-band/edit');
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	// Restore the name, so this test is re-runnable. No reload needed now that
+	// the page never navigates away.
 	await page.locator('input[name="name"]').fill(SEED_PUBLIC_BAND_NAME);
 	await page.getByRole('button', { name: 'Save' }).click();
-	await page.waitForURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`), { timeout: 15000 });
+	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
+	await expect(page).toHaveURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`));
 });
 
 test('sidebar Create Band links open the create-band modal', async ({ page }) => {
