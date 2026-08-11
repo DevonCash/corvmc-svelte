@@ -46,7 +46,7 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
       `CERT_EXPIRY_WARNING_DAYS = 60`, shift/feedback limits
 - [x] `schema/index.ts`, `schema/relations.ts`
 - [x] `scripts/d1-table-order.mjs` — parents before children
-- [ ] (user runs `pnpm db:generate`)
+- [x] (user runs `pnpm db:generate`) — migration 20260811204457_magenta_paibok
 
 ## Step 2 — Certifications
 
@@ -54,10 +54,11 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
       in-use delete guard (copy `volunteer-role-service.ts`)
 - [x] `member-certification-service.ts` — grant, revoke, derived state,
       `heldOn(userId, certId, date)`, same-day typo delete
-- [ ] `/staff/volunteer/certifications` — catalog table
-- [ ] Clearances view — current / expiring / lapsed
-- [ ] Role edit form — required-certifications `TagInput`
-- [ ] `staff/users/[id]` — Certifications card, Grant + Revoke actions
+- [x] `/staff/volunteer/certifications` — catalog table
+- [x] Clearances view — current / expiring / lapsed
+- [x] Role edit form — required-certifications picker (CheckboxGroup, not
+      TagInput: TagInput's encoding doesn't match an array field)
+- [x] `staff/users/[id]` — Certifications card, Grant + Revoke actions
 - [ ] `/member/volunteer` — Certifications block
 - [ ] Review queue — advisory glyph when the role required a cert the member
       did not hold on the date worked

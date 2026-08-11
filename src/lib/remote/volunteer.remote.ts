@@ -37,8 +37,32 @@ import {
 	countInterestsByRole
 } from '$lib/server/volunteer/volunteer-interest-service';
 import {
+	createCertification as createCertificationService,
+	updateCertification as updateCertificationService,
+	archiveCertification as archiveCertificationService,
+	restoreCertification as restoreCertificationService,
+	deleteCertification as deleteCertificationService,
+	listCertifications,
+	getRequirementsForRole,
+	getRequirementsForRoles,
+	setRoleRequirements
+} from '$lib/server/volunteer/volunteer-certification-service';
+import {
+	grantCertification as grantCertificationService,
+	revokeCertification as revokeCertificationService,
+	deleteCertificationRecord,
+	listForUser as listCertificationsForUser,
+	listClearances,
+	missingRequirements
+} from '$lib/server/volunteer/member-certification-service';
+import {
 	volunteerHourStatuses,
 	volunteerRoleGroups,
+	CERT_DESCRIPTION_MAX,
+	CERT_NAME_MAX,
+	CERT_NOTES_MAX,
+	CERT_REFERENCE_MAX,
+	CERT_REVOKED_REASON_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_REVIEW_NOTES_MAX,
@@ -98,10 +122,15 @@ export const getVolunteerStatusCounts = query(async () => {
 	return getStatusCounts();
 });
 
-/** Staff view of the role list — includes archived roles. */
+/**
+ * Staff view of the role list — includes archived roles, and each role's
+ * required certifications so the table can render them without a query per row.
+ */
 export const getVolunteerRoles = query(async () => {
 	await requireStaff();
-	return listVolunteerRoles({ includeInactive: true });
+	const roles = await listVolunteerRoles({ includeInactive: true });
+	const requirements = await getRequirementsForRoles(roles.map((r) => r.id));
+	return roles.map((r) => ({ ...r, requiredCertifications: requirements.get(r.id) ?? [] }));
 });
 
 const interestFilters = z.object({
@@ -461,4 +490,246 @@ async function refreshStaffQueue() {
 // and the report's role names all at once.
 async function refreshRoleViews() {
 	await Promise.all([getVolunteerRoles().refresh(), getActiveVolunteerRoles().refresh()]);
+}
+
+// ---------------------------------------------------------------------------
+// Certifications
+// ---------------------------------------------------------------------------
+
+/** Staff view of the catalog — includes archived entries. */
+export const getCertifications = query(async () => {
+	await requireStaff();
+	return listCertifications({ includeInactive: true });
+});
+
+/** Live catalog entries, for the grant form and the role requirements picker. */
+export const getActiveCertifications = query(async () => {
+	await requireStaff();
+	return listCertifications();
+});
+
+export const getMemberCertifications = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listCertificationsForUser(userId);
+});
+
+/** The member's own — what they hold, and what it unlocks. */
+export const getMyCertifications = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return listCertificationsForUser(currentUser.id);
+});
+
+const clearanceFilters = z.object({
+	certificationId: z.string().optional(),
+	state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
+});
+
+export const getClearances = query(clearanceFilters, async (f) => {
+	await requireStaff();
+	return listClearances({
+		certificationId: f.certificationId || undefined,
+		state: f.state
+	});
+});
+
+export const getRoleRequirements = query(z.string(), async (roleId) => {
+	await requireStaff();
+	return getRequirementsForRole(roleId);
+});
+
+/** What a member still needs before they could claim this role's shifts. */
+export const getMyMissingRequirements = query(z.string(), async (roleId) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return missingRequirements(currentUser.id, roleId);
+});
+
+const certificationFormSchema = z.object({
+	name: z
+		.string()
+		.min(1, 'Give the certification a name')
+		.max(CERT_NAME_MAX, `Keep the name under ${CERT_NAME_MAX} characters`),
+	description: z
+		.string()
+		.max(CERT_DESCRIPTION_MAX, `Keep the description under ${CERT_DESCRIPTION_MAX} characters`)
+		.optional(),
+	issuedBy: z.string().max(CERT_NAME_MAX).optional(),
+	validityMonths: z.string().optional(),
+	displayOrder: z.string().optional(),
+	isActive: z.string().optional()
+});
+
+/** Blank means "never expires", which is the normal case for internal clearances. */
+function parseValidityMonths(raw: string | undefined): number | null {
+	if (!raw?.trim()) return null;
+	const parsed = parseInt(raw, 10);
+	if (!Number.isFinite(parsed)) error(400, 'Validity must be a whole number of months');
+	return parsed;
+}
+
+export const createCertification = form(certificationFormSchema, async (data) => {
+	await requireStaff();
+
+	try {
+		await createCertificationService({
+			name: data.name,
+			description: data.description,
+			issuedBy: data.issuedBy,
+			validityMonths: parseValidityMonths(data.validityMonths),
+			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+			isActive: data.isActive !== 'false'
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const updateCertification = form(
+	certificationFormSchema.extend({ id: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await updateCertificationService(data.id, {
+				name: data.name,
+				description: data.description ?? '',
+				issuedBy: data.issuedBy ?? '',
+				validityMonths: parseValidityMonths(data.validityMonths),
+				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
+				isActive: data.isActive !== 'false'
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshCertificationViews();
+		return { success: true };
+	}
+);
+
+export const archiveCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await archiveCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const restoreCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await restoreCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const deleteCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await deleteCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const setRoleCertifications = form(
+	z.object({
+		roleId: z.string().min(1),
+		// Clearing every requirement is legitimate, so this bottoms out empty.
+		certificationIds: z.array(z.string().min(1)).max(20).default([])
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await setRoleRequirements(data.roleId, data.certificationIds);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getRoleRequirements(data.roleId).refresh();
+		return { success: true };
+	}
+);
+
+export const grantCertification = form(
+	z.object({
+		userId: z.string().min(1),
+		certificationId: z.string().min(1, 'Pick a certification'),
+		grantedOn: z.string().min(1, 'Pick the date it was granted'),
+		reference: z.string().max(CERT_REFERENCE_MAX).optional(),
+		notes: z.string().max(CERT_NOTES_MAX).optional()
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await grantCertificationService({
+				userId: data.userId,
+				certificationId: data.certificationId,
+				grantedOn: data.grantedOn,
+				reference: data.reference,
+				notes: data.notes,
+				grantedByUserId: staff.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+export const revokeCertification = form(
+	z.object({
+		id: z.string().min(1),
+		userId: z.string().min(1),
+		reason: z
+			.string()
+			.min(1, 'Give a reason — the next staffer needs to know why they are off the list')
+			.max(CERT_REVOKED_REASON_MAX)
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await revokeCertificationService(data.id, staff.id, data.reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+export const deleteCertificationGrant = form(
+	z.object({ id: z.string().min(1), userId: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await deleteCertificationRecord(data.id, staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+async function refreshCertificationViews() {
+	await Promise.all([getCertifications().refresh(), getActiveCertifications().refresh()]);
 }

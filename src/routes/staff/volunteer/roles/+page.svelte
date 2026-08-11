@@ -11,9 +11,18 @@
 		volunteerRoleGroups,
 		volunteerRoleGroupLabels
 	} from '$lib/config';
-	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
+	import { CheckboxGroup } from '$lib/components/shared/Form';
+	import {
+		IconPencil,
+		IconArchive,
+		IconArchiveOff,
+		IconTrash,
+		IconCertificate
+	} from '@tabler/icons-svelte';
 	import {
 		getVolunteerRoles,
+		getActiveCertifications,
+		setRoleCertifications,
 		createVolunteerRole,
 		updateVolunteerRole,
 		archiveVolunteerRole,
@@ -22,6 +31,7 @@
 	} from '$lib/remote/volunteer.remote';
 
 	let roles = $derived(getVolunteerRoles());
+	let certifications = $derived(getActiveCertifications());
 
 	const groupOptions = volunteerRoleGroups.map((g) => ({
 		value: g,
@@ -91,6 +101,13 @@
 									{role.description}
 								</div>
 							{/if}
+							{#if role.requiredCertifications.length > 0}
+								<div class="mt-1 flex flex-wrap gap-1">
+									{#each role.requiredCertifications as cert (cert.id)}
+										<span class="badge badge-ghost badge-xs">{cert.name}</span>
+									{/each}
+								</div>
+							{/if}
 						</td>
 
 						<td class="col-support cell-num">{role.logCount}</td>
@@ -98,6 +115,42 @@
 
 						<td class="w-px">
 							<div class="flex justify-end gap-1">
+								<!--
+									Requirements are their own action rather than a field on the edit
+									form: they post an array to a different remote, and folding them
+									in would mean one form writing to two services.
+								-->
+								{#await certifications then certOptions}
+									{#if certOptions.length > 0}
+										<Action
+											action={setRoleCertifications.for(role.id)}
+											label="Clearances"
+											iconOnly
+											icon={certificateIcon}
+											class="btn-ghost btn-sm"
+											modalTitle="What {role.name} requires"
+											successToast="Requirements saved"
+										>
+											{#snippet form()}
+												<input type="hidden" name="roleId" value={role.id} />
+												<p class="text-sm opacity-70">
+													Someone must hold all of these before they can claim a shift for this
+													role. Logging hours is never blocked — the review queue just flags it.
+												</p>
+												<CheckboxGroup
+													field={setRoleCertifications.fields.certificationIds}
+													selected={role.requiredCertifications.map((c) => c.id)}
+													options={certOptions.map((c) => ({
+														value: c.id,
+														label: c.name,
+														description: c.issuedBy ?? 'Granted by CMC'
+													}))}
+												/>
+											{/snippet}
+										</Action>
+									{/if}
+								{/await}
+
 								<Action
 									action={updateVolunteerRole.for(role.id)}
 									label="Edit"
@@ -204,6 +257,10 @@
 		{/if}
 	{/await}
 </PageContent>
+
+{#snippet certificateIcon()}
+	<IconCertificate size={16} />
+{/snippet}
 
 {#snippet pencilIcon()}
 	<IconPencil size={16} />
