@@ -28,10 +28,10 @@
 		external?: boolean;
 	};
 
-	// The `/viewform` URL, not the `/edit` one — `/edit` opens the Google Forms
-	// editor and shows everyone else a permission-denied screen.
-	const VOLUNTEER_FORM_URL =
-		'https://docs.google.com/forms/d/1wg6z7O7LQh692_0RgUc27-sctNYzwnxMHr-WNjmnfNQ/viewform';
+	// The form's share link, which redirects to the published `/d/e/…/viewform`
+	// URL. Not the `docs.google.com/…/edit` link the form editor shows you —
+	// that one is a permission-denied screen for everyone but its owners.
+	const VOLUNTEER_FORM_URL = 'https://forms.gle/1yYx7WSiD2fdKtGG6';
 
 	// Zeffy's hosted donation form (zero-fee for nonprofits). Distinct from the
 	// `/embed/...` variant, which is the bare iframe payload meant for embedding.
