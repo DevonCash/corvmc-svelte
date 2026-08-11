@@ -10,7 +10,13 @@ import {
 	SEED_VOL_LOG_REJECT_DESC,
 	SEED_VOL_LOG_REJECTED_DESC,
 	SEED_VOL_REJECTED_REASON,
-	readVolunteerState
+	SEED_VOL_CERT_NAME,
+	SEED_VOL_GATED_ROLE_NAME,
+	SEED_VOL_SHIFT_OPEN_ID,
+	SEED_VOL_SHIFT_OPEN_NOTE,
+	SEED_VOL_SHIFT_FULL_NOTE,
+	readVolunteerState,
+	readSignupStatus
 } from './fixtures/seed-volunteering';
 
 /**
@@ -202,5 +208,104 @@ test.describe('volunteering — member', () => {
 		await expect(row).toContainText('1.5 hrs');
 		// Editable only while pending — the controls are the proof of status.
 		await expect(rowAction(row, 'Withdraw')).toBeVisible();
+	});
+});
+
+/**
+ * Phase 2 — shifts.
+ *
+ * These exist because the pane-based manual pass could not reach them: the
+ * Browser pane drops its auth cookie, and a cached SSR page hides that as a 401
+ * on the next POST rather than a visible logout. Everything below is a real
+ * client-server round trip through a real session.
+ *
+ * The shift board lives on `/member/volunteer` above the interest form.
+ */
+function shiftCard(page: Page, text: string) {
+	return page.locator('li').filter({ hasText: text });
+}
+
+test.describe('volunteering — shifts', () => {
+	test('a member can claim an open shift and then drop out', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		await expect(card).toBeVisible({ timeout: 15000 });
+
+		await card.getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, 'Claim it').click();
+
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
+			timeout: 15000
+		});
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('claimed');
+
+		// Dropping out has to free the place, not just hide the button — the
+		// capacity count is computed from live signups.
+		await shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)
+			.getByRole('button', { name: 'Drop out' })
+			.click();
+		await modalSubmit(page, 'Drop out').click();
+
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText("I'll do it", {
+			timeout: 15000
+		});
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('cancelled');
+	});
+
+	test('a shift needing a clearance the member lacks says so instead of offering it', async ({
+		page
+	}) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_GATED_ROLE_NAME);
+		await expect(card).toBeVisible({ timeout: 15000 });
+
+		// The whole design decision: show it with the reason rather than hide it,
+		// because the reason is what tells them what to go and get.
+		await expect(card).toContainText(SEED_VOL_CERT_NAME);
+		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+	});
+
+	test('a full shift is not claimable', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_SHIFT_FULL_NOTE);
+		await expect(card).toBeVisible({ timeout: 15000 });
+		await expect(card).toContainText('Full');
+		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+	});
+
+	test('staff see the claim and can confirm it', async ({ page }) => {
+		// Claim as the member first, so staff have something to confirm. Separate
+		// contexts rather than two logins in one: signing a second user in over an
+		// existing session does not swap it.
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		await card.getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, 'Claim it').click();
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
+			timeout: 15000
+		});
+
+		await page.context().clearCookies();
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_OPEN_ID}`);
+
+		const claimant = page.locator('li').filter({ hasText: SEED_VOL_MEMBER_EMAIL });
+		await expect(claimant).toBeVisible({ timeout: 15000 });
+
+		await claimant.locator('button[data-button-root][aria-label="Confirm"]').click();
+		await modalSubmit(page, 'Confirm').click();
+
+		await expect(page.locator('li').filter({ hasText: SEED_VOL_MEMBER_EMAIL })).toContainText(
+			'confirmed',
+			{ timeout: 15000 }
+		);
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('confirmed');
 	});
 });

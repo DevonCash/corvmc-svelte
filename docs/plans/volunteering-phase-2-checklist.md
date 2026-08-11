@@ -97,19 +97,21 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
       completed ones
 - [~] Specs: date asymmetry **done**, renewal appends, claim refusals (full / uncleared /
   duplicate), completion only touches confirmed-and-past, feedback once
-- [ ] Extend `e2e/volunteering.e2e.ts` + its fixture
+- [x] Extend `e2e/volunteering.e2e.ts` + its fixture — shifts done; feedback
+      still to add once Stage 5 lands
 - [ ] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
 - [ ] `production-workflow-spec.md:1256` — close the staffing hook
 - [ ] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
       `pnpm docs:check`, parity-report row + table count 32 → 38
 
-## Verification still owed
+## Verification notes
 
-- Shift UI in the browser. The Browser pane won't hold a better-auth session
-  (its cookie jar drops it, and a cached SSR page masks the failure as a 401 on
-  the next POST), so the claim flow is covered by unit tests rather than
-  clicked through. Extend `e2e/volunteering.e2e.ts` instead — its fixture
-  already authenticates.
+- The Browser pane won't hold a better-auth session — its cookie jar drops it,
+  and a cached SSR page masks that as a 401 on the next POST rather than a
+  visible logout. Verify signed-in flows with Playwright, not the pane.
+- `e2e/volunteering.e2e.ts` now covers the shift board: claim, drop out (and the
+  place reopening), the clearance refusal naming what's missing, a full shift,
+  and staff confirming a claim. 13 tests, ~55s.
 
 ## Gotchas carried from Phase 1
 

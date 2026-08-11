@@ -22,7 +22,15 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, inArray } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
-import { volunteerRole, volunteerHourLog } from '../../src/lib/server/db/schema/volunteer';
+import {
+	volunteerRole,
+	volunteerHourLog,
+	volunteerCertification,
+	memberCertification,
+	volunteerRoleCertification,
+	volunteerShift,
+	volunteerSignup
+} from '../../src/lib/server/db/schema/volunteer';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_VOL_MEMBER_ID = 'e2e-vol-member';
@@ -60,6 +68,37 @@ export const SEED_VOL_LOG_ARCHIVED_ID = 'e2e-vol-log-archived';
 export const SEED_VOL_LOG_REJECTED_ID = 'e2e-vol-log-already-rejected';
 export const SEED_VOL_LOG_REJECTED_DESC = 'E2E already-rejected entry';
 
+// --- Phase 2: certifications and shifts -----------------------------------
+
+export const SEED_VOL_CERT_ID = 'e2e-vol-cert';
+export const SEED_VOL_CERT_NAME = 'E2E Sound Desk Clearance';
+
+/** Requires the clearance above; the seeded member does NOT hold it. */
+export const SEED_VOL_GATED_ROLE_ID = 'e2e-vol-role-gated';
+export const SEED_VOL_GATED_ROLE_NAME = 'E2E Sound Desk';
+
+/** Open, ungated, one place — the happy-path claim. */
+export const SEED_VOL_SHIFT_OPEN_ID = 'e2e-vol-shift-open';
+export const SEED_VOL_SHIFT_OPEN_NOTE = 'E2E meet at the side door';
+
+/** Gated by the clearance the member lacks — the refusal must say why. */
+export const SEED_VOL_SHIFT_GATED_ID = 'e2e-vol-shift-gated';
+
+/** Capacity 1, already taken by somebody else. */
+export const SEED_VOL_SHIFT_FULL_ID = 'e2e-vol-shift-full';
+export const SEED_VOL_SHIFT_FULL_NOTE = 'E2E already spoken for';
+export const SEED_VOL_OTHER_MEMBER_ID = 'e2e-vol-other-member';
+
+const SHIFT_IDS = [SEED_VOL_SHIFT_OPEN_ID, SEED_VOL_SHIFT_GATED_ID, SEED_VOL_SHIFT_FULL_ID];
+
+/** Days out, at a fixed hour, so the board always has a future shift to claim. */
+function daysFromNow(days: number, hourUtc: number): Date {
+	const d = new Date();
+	d.setDate(d.getDate() + days);
+	d.setUTCHours(hourUtc, 0, 0, 0);
+	return d;
+}
+
 const LOG_IDS = [
 	SEED_VOL_LOG_APPROVE_ID,
 	SEED_VOL_LOG_REJECT_ID,
@@ -85,10 +124,22 @@ export async function seedVolunteering(): Promise<void> {
 		// The flag lives in KV, not D1 — without this every volunteer route 404s.
 		await kv.put('site-config:feature.volunteering', JSON.stringify(true));
 
-		// Child before parent: the role FK is ON DELETE RESTRICT.
+		// Child before parent: the role FK is ON DELETE RESTRICT, and signups and
+		// held certifications both point at rows recreated below.
+		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, SHIFT_IDS));
+		await db.delete(volunteerShift).where(inArray(volunteerShift.id, SHIFT_IDS));
+		await db
+			.delete(volunteerRoleCertification)
+			.where(eq(volunteerRoleCertification.certificationId, SEED_VOL_CERT_ID));
+		await db
+			.delete(memberCertification)
+			.where(eq(memberCertification.certificationId, SEED_VOL_CERT_ID));
+		await db.delete(volunteerCertification).where(eq(volunteerCertification.id, SEED_VOL_CERT_ID));
+		await db.delete(user).where(eq(user.id, SEED_VOL_OTHER_MEMBER_ID));
 		await db.delete(volunteerHourLog).where(inArray(volunteerHourLog.id, LOG_IDS));
 		await db.delete(volunteerHourLog).where(eq(volunteerHourLog.userId, SEED_VOL_MEMBER_ID));
 		await db.delete(volunteerRole).where(inArray(volunteerRole.id, ROLE_IDS));
+		await db.delete(volunteerRole).where(eq(volunteerRole.id, SEED_VOL_GATED_ROLE_ID));
 		await db.delete(modelHasRole).where(eq(modelHasRole.userId, SEED_VOL_MEMBER_ID));
 		await db.delete(account).where(eq(account.userId, SEED_VOL_MEMBER_ID));
 		await db.delete(user).where(eq(user.id, SEED_VOL_MEMBER_ID));
@@ -145,6 +196,88 @@ export async function seedVolunteering(): Promise<void> {
 			}
 		]);
 
+		// --- Phase 2 -------------------------------------------------------
+		// A second member, so the "full" shift is taken by somebody who isn't the
+		// member under test.
+		await db.insert(user).values({
+			id: SEED_VOL_OTHER_MEMBER_ID,
+			name: 'E2E Other Volunteer',
+			email: 'e2e.other.volunteer@example.com',
+			emailVerified: true,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(volunteerCertification).values({
+			id: SEED_VOL_CERT_ID,
+			name: SEED_VOL_CERT_NAME,
+			description: 'Ask a staff engineer to sign you off.',
+			displayOrder: 0,
+			isActive: true,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(volunteerRole).values({
+			id: SEED_VOL_GATED_ROLE_ID,
+			name: SEED_VOL_GATED_ROLE_NAME,
+			description: 'Run the desk.',
+			displayOrder: 2,
+			isActive: true,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		// The gate itself. The member under test deliberately holds nothing, so
+		// the refusal path is the default rather than something a test sets up.
+		await db.insert(volunteerRoleCertification).values({
+			volunteerRoleId: SEED_VOL_GATED_ROLE_ID,
+			certificationId: SEED_VOL_CERT_ID
+		});
+
+		await db.insert(volunteerShift).values([
+			{
+				id: SEED_VOL_SHIFT_OPEN_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(3, 2),
+				endsAt: daysFromNow(3, 6),
+				capacity: 1,
+				notes: SEED_VOL_SHIFT_OPEN_NOTE,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_VOL_SHIFT_GATED_ID,
+				volunteerRoleId: SEED_VOL_GATED_ROLE_ID,
+				startsAt: daysFromNow(4, 2),
+				endsAt: daysFromNow(4, 6),
+				capacity: 1,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_VOL_SHIFT_FULL_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(5, 2),
+				endsAt: daysFromNow(5, 6),
+				capacity: 1,
+				notes: SEED_VOL_SHIFT_FULL_NOTE,
+				createdAt: now,
+				updatedAt: now
+			}
+		]);
+
+		await db.insert(volunteerSignup).values({
+			id: 'e2e-vol-signup-other',
+			shiftId: SEED_VOL_SHIFT_FULL_ID,
+			userId: SEED_VOL_OTHER_MEMBER_ID,
+			status: 'confirmed',
+			claimedAt: now,
+			confirmedAt: now,
+			createdAt: now,
+			updatedAt: now
+		});
+
 		await db.insert(volunteerHourLog).values([
 			{
 				id: SEED_VOL_LOG_APPROVE_ID,
@@ -193,6 +326,23 @@ export async function seedVolunteering(): Promise<void> {
 				updatedAt: now
 			}
 		]);
+	} finally {
+		await dispose();
+	}
+}
+
+/** The member's signup status on a shift, for assertions the UI cannot make. */
+export async function readSignupStatus(shiftId: string): Promise<string | null> {
+	const { env, dispose } = await getPlatformProxy();
+	const db = drizzle((env as { DB: D1Database }).DB);
+
+	try {
+		const [row] = await db
+			.select({ status: volunteerSignup.status })
+			.from(volunteerSignup)
+			.where(eq(volunteerSignup.shiftId, shiftId))
+			.limit(1);
+		return row?.status ?? null;
 	} finally {
 		await dispose();
 	}
