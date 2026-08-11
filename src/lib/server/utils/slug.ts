@@ -4,13 +4,16 @@ import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /**
  * Generate a URL-friendly slug from a string.
- * Lowercases, replaces non-alphanumeric characters with hyphens,
- * collapses consecutive hyphens, and trims leading/trailing hyphens.
+ *
+ * Lowercases, then **drops** anything that isn't a letter, digit or hyphen —
+ * slug generation never introduces a hyphen of its own. 'Rock & Roll' is
+ * `rockroll`, not `rock-roll`. Hyphens already in the source survive, with runs
+ * collapsed and the ends trimmed, so 'Sun-Ra' stays `sun-ra`.
  */
 export function generateSlug(name: string): string {
 	return name
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/[^a-z0-9-]+/g, '')
 		.replace(/-{2,}/g, '-')
 		.replace(/^-|-$/g, '');
 }

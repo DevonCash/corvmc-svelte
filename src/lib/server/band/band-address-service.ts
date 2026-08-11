@@ -14,6 +14,7 @@
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { band, bandSlugHistory } from '$lib/server/db/schema/band';
+import { generateSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { forgetCustomDomain } from '$lib/server/band/band-host-service';
 import { BandNotFoundError } from '$lib/server/band/band-service';
@@ -30,20 +31,13 @@ export class SlugUnavailableError extends Error {
 }
 
 /**
- * Owner-typed input reduced to its canonical form.
- *
- * Spaces and punctuation are dropped rather than hyphenated — someone typing an
- * address is choosing a domain, and "the velvets" reads as `thevelvets`, not
- * `the-velvets`. Hyphens they type on purpose survive. This is deliberately not
- * `generateSlug`, which derives a slug from a *name* (band creation, help
- * articles) and wants the hyphens for readability.
+ * Owner-typed input reduced to its canonical form: the same `generateSlug` the
+ * rest of the app uses, so an address a band picks and one derived from its name
+ * follow one rule. Spaces and punctuation are dropped rather than hyphenated —
+ * "the velvets" reads as `thevelvets` — while hyphens typed on purpose survive.
  */
 export function normalizeBandSlug(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9-]+/g, '')
-		.replace(/-{2,}/g, '-')
-		.replace(/^-|-$/g, '');
+	return generateSlug(input);
 }
 
 /**

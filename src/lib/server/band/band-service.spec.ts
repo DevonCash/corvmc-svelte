@@ -73,7 +73,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/utils/slug', () => ({
-	generateSlug: vi.fn((name: string) => name.toLowerCase().replace(/\s+/g, '-')),
+	generateSlug: vi.fn((name: string) => name.toLowerCase().replace(/[^a-z0-9-]+/g, '')),
 	ensureUniqueSlug: vi.fn(async (slug: string) => slug)
 }));
 

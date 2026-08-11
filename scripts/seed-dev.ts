@@ -1057,10 +1057,12 @@ async function seedBands(users: SeedUser[]) {
 
 	for (let i = 0; i < BAND_NAMES.length; i++) {
 		const owner = users[i % users.length];
+		// Same rule as `generateSlug`, which is what a real band creation uses.
 		const slug = BAND_NAMES[i]
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/-$/, '');
+			.replace(/[^a-z0-9-]+/g, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-|-$/g, '');
 
 		const genres = pickN(GENRES, randomInt(1, 3));
 		const isPremiumBand = i < PREMIUM_BAND_COUNT;
