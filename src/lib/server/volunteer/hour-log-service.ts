@@ -63,7 +63,7 @@ export interface SubmitHoursData {
 	workedOn: string;
 	minutes: number;
 	description: string;
-	/** Phase 2. Always null today. */
+	/** The completed shift this log pre-filled from, when it did. */
 	shiftId?: string | null;
 }
 
@@ -385,6 +385,8 @@ export interface HourLogRow {
 	workedOn: Date;
 	minutes: number;
 	description: string;
+	/** Set when the log pre-filled from a completed shift — staff scheduled it. */
+	shiftId: string | null;
 	status: VolunteerHourStatus;
 	reviewedByName: string | null;
 	reviewedAt: Date | null;
@@ -463,6 +465,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		workedOn: row.log.workedOn,
 		minutes: row.log.minutes,
 		description: row.log.description,
+		shiftId: row.log.shiftId,
 		status: row.log.status,
 		reviewedByName: row.reviewedByName,
 		reviewedAt: row.log.reviewedAt,

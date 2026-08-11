@@ -249,6 +249,9 @@ export const getMyVolunteerSummary = query(async () => {
 // have >=1 characters".
 const hoursFormSchema = z.object({
 	volunteerRoleId: z.string().min(1, 'Pick what you helped with'),
+	// Present when the log comes from a completed shift's pre-fill; staff see
+	// those marked as scheduled in the queue and can approve with less scrutiny.
+	shiftId: z.string().optional(),
 	workedOn: z.string().min(1, 'Pick the date you worked'),
 	hours: z.string().min(1, 'Enter how long you worked'),
 	description: z
@@ -266,7 +269,8 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 			volunteerRoleId: data.volunteerRoleId,
 			workedOn: data.workedOn,
 			minutes: hoursToMinutes(data.hours),
-			description: data.description
+			description: data.description,
+			shiftId: data.shiftId || null
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -489,7 +493,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	await Promise.all([getMyVolunteerHours().refresh(), getMyVolunteerSummary().refresh()]);
+	await Promise.all([
+		getMyVolunteerHours().refresh(),
+		getMyVolunteerSummary().refresh(),
+		// Logging against a shift clears it from the "log your hours" prompt.
+		getUnloggedShifts().refresh()
+	]);
 }
 
 /**

@@ -220,7 +220,16 @@
 
 				{#each logs as log (log.id)}
 					<tr class="hover">
-						<td class="w-px"><StatusBadge status={log.status} /></td>
+						<td class="w-px">
+							<StatusBadge status={log.status} />
+							{#if log.shiftId}
+								<!-- Filed against a shift staff scheduled — the person was
+								     rostered, so this can be approved with less scrutiny. -->
+								<span class="badge badge-ghost badge-xs mt-1" title="Logged from a scheduled shift"
+									>scheduled</span
+								>
+							{/if}
+						</td>
 
 						<!--
 							MemberLink already carries the email and the role glyph, so the

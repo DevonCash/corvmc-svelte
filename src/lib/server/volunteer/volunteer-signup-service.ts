@@ -1,5 +1,10 @@
 import { db } from '$lib/server/db';
-import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
+import {
+	volunteerShift,
+	volunteerSignup,
+	volunteerRole,
+	volunteerShiftFeedback
+} from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
@@ -326,4 +331,43 @@ export async function listUnloggedCompletions(userId: string) {
 			)
 		)
 		.orderBy(asc(volunteerShift.startsAt));
+}
+
+/**
+ * Completed signups whose shift ended inside a window and that haven't been
+ * asked for feedback yet — the day-after survey.
+ *
+ * The "no feedback row" clause is what makes the cron idempotent: a second run
+ * over the same window finds nothing, so a retry can't double-ask. Asking is
+ * recorded by the answer, not by a sent-flag, which means somebody who never
+ * answers is asked once and then left alone.
+ */
+export async function listCompletionsAwaitingFeedback(
+	from: Date,
+	to: Date
+): Promise<CompletedSignup[]> {
+	return db
+		.select({
+			signupId: volunteerSignup.id,
+			userId: volunteerSignup.userId,
+			userName: user.name,
+			userEmail: user.email,
+			shiftId: volunteerShift.id,
+			roleName: volunteerRole.name,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+		.leftJoin(volunteerShiftFeedback, eq(volunteerShiftFeedback.signupId, volunteerSignup.id))
+		.where(
+			and(
+				eq(volunteerSignup.status, 'completed'),
+				isNull(volunteerShiftFeedback.id),
+				sql`${volunteerShift.endsAt} >= ${Math.floor(from.getTime() / 1000)}`,
+				sql`${volunteerShift.endsAt} < ${Math.floor(to.getTime() / 1000)}`
+			)
+		);
 }

@@ -77,12 +77,12 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 4 — Crons, notifications, hour-log join
 
-- [ ] `/api/cron/shift-reminders` — daily batch, confirmed signups for tomorrow
-- [ ] `/api/cron/complete-shifts` — 15-min group, confirmed past `endsAt`
-- [ ] `/api/cron/shift-feedback` — daily batch, yesterday's completed signups
-- [ ] `CRON_SCHEDULE` **and** the `wrangler.toml` comment — hand-synced, keep both
-- [ ] 3 domain events, 3 `NOTIFICATION_TYPES`, 3 listeners (generic alias)
-- [ ] Completed signup pre-fills an hour log; queue marks scheduled logs
+- [x] `/api/cron/shift-reminders` — daily batch, confirmed signups for tomorrow
+- [x] `/api/cron/complete-shifts` — 15-min group, confirmed past `endsAt`
+- [x] `/api/cron/shift-feedback` — daily batch, yesterday's completed signups
+- [x] `CRON_SCHEDULE` **and** the `wrangler.toml` comment — hand-synced, keep both
+- [x] 3 domain events, 3 `NOTIFICATION_TYPES`, 3 listeners (generic alias)
+- [x] Completed signup pre-fills an hour log; queue marks scheduled logs
 
 ## Step 5 — Feedback
 

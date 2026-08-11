@@ -52,6 +52,14 @@ function formatWorkedOn(value: string): string {
 	});
 }
 
+/** "Saturday, February 7, 6:00–10:00 PM" — one string for a shift's when. */
+function formatShiftWhen(startsAt: string, endsAt: string): string {
+	const start = new Date(startsAt);
+	const end = new Date(endsAt);
+	const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+	return `${formatWorkedOn(startsAt)}, ${time(start)}–${time(end)}`;
+}
+
 /** Date + time range as rows for the details card. En-dash per the brand voice. */
 function whenDetails(date: string, startTime: string, endTime: string): NotificationEmailDetail[] {
 	return [
@@ -739,6 +747,82 @@ export function registerAllNotificationListeners(): void {
 						...(event.reviewNotes ? [{ label: 'Reason', value: event.reviewNotes }] : [])
 					],
 					cta: { url: `${siteUrl}/member/volunteer`, label: 'Log hours again' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Shift reminder, the day before (notify member) ---
+	// The one notification here that has to reach somebody who isn't looking at
+	// the site: they agreed to work tomorrow and the room is counting on it.
+	domainEvents.on('volunteer.shift_reminder_due', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_reminder',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `${event.roleName} tomorrow`,
+			body: formatShiftWhen(event.startsAt, event.endsAt),
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Reminder: ${event.roleName} tomorrow`,
+					heading: 'Your shift is tomorrow',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: `You're down for ${event.roleName} tomorrow. Thanks for helping out.` },
+						{
+							text: "If something has come up, drop the shift from your volunteering page so somebody else can take it — that's much more useful to us than a no-show."
+						}
+					],
+					details: [
+						{ label: 'Role', value: event.roleName },
+						{ label: 'When', value: formatShiftWhen(event.startsAt, event.endsAt) }
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'View my shifts' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Shift finished (notify member) ---
+	// In-app only: they were just there, so this is a nudge to log the hours
+	// rather than news. The pre-filled log is waiting on the page it links to.
+	domainEvents.on('volunteer.shift_completed', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_completed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Log your hours for ${event.roleName}`,
+			body: formatShiftWhen(event.startsAt, event.endsAt),
+			href: '/member/volunteer'
+		});
+	});
+
+	// --- How did it go, the day after (notify member) ---
+	domainEvents.on('volunteer.shift_feedback_due', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_feedback',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `How did ${event.roleName} go?`,
+			body: 'Two questions, takes a moment.',
+			href: `/member/volunteer/feedback/${event.signupId}`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `How did ${event.roleName} go?`,
+					heading: 'How did it go?',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `Thanks for working ${event.roleName} on ${formatWorkedOn(event.startsAt)}. Two questions, and they genuinely change how we run the next one.`
+						}
+					],
+					cta: {
+						url: `${siteUrl}/member/volunteer/feedback/${event.signupId}`,
+						label: 'Answer two questions'
+					}
 				} satisfies NotificationEmailModel
 			}
 		});
