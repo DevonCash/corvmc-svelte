@@ -10,6 +10,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import Form, { CheckboxGroup, SubmitButton } from '$lib/components/shared/Form';
+	import OpenShifts from '$lib/components/shared/volunteer/OpenShifts.svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {
 		clubToday,
@@ -25,6 +26,7 @@
 		getMyVolunteerHours,
 		getMyVolunteerInterests,
 		getMyVolunteerSummary,
+		getOpenShifts,
 		saveVolunteerInterests,
 		submitVolunteerHours,
 		editVolunteerHours,
@@ -35,6 +37,7 @@
 
 	let roles = $derived(getActiveVolunteerRoles());
 	let interests = $derived(getMyVolunteerInterests());
+	let openShifts = $derived(getOpenShifts());
 	let logs = $derived(getMyVolunteerHours());
 	let summary = $derived(getMyVolunteerSummary());
 
@@ -106,6 +109,15 @@
 			<StatCard title="This year" value={formatVolunteerHours(s.approvedMinutesThisYear)} />
 			<StatCard title="Awaiting review" value={formatVolunteerHours(s.pendingMinutes)} />
 		</div>
+	{/await}
+
+	<!--
+		Shifts first: a dated "we need someone on Saturday" is more actionable than
+		a standing "I'd help with this", and the board is ordered so the roles they
+		already said yes to surface at the top.
+	-->
+	{#await openShifts then shifts}
+		<OpenShifts {shifts} />
 	{/await}
 
 	<!--

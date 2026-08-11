@@ -65,15 +65,15 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 3 — Shifts
 
-- [ ] `volunteer-shift-service.ts` — create/duplicate/edit/cancel, list open,
+- [x] `volunteer-shift-service.ts` — create/duplicate/edit/cancel, list open,
       claim counts
-- [ ] `volunteer-signup-service.ts` — claim (capacity + clearance + dup guards),
+- [x] `volunteer-signup-service.ts` — claim (capacity + clearance + dup guards),
       cancel, confirm, no-show
-- [ ] `/staff/volunteer/shifts` — list with needed-vs-claimed, filters
-- [ ] `/staff/volunteer/shifts/[id]` — claimants, confirm, no-show
-- [ ] `/member/volunteer` — Open Shifts block, interest-first ordering, and an
+- [x] `/staff/volunteer/shifts` — list with needed-vs-claimed, filters
+- [x] `/staff/volunteer/shifts/[id]` — claimants, confirm, no-show
+- [x] `/member/volunteer` — Open Shifts block, interest-first ordering, and an
       unclaimable shift says _why_ rather than hiding
-- [ ] Staff nav `childHrefs` + `Nav.Item`, queue header buttons
+- [x] Staff nav `childHrefs` + `Nav.Item`, queue header buttons
 
 ## Step 4 — Crons, notifications, hour-log join
 
@@ -102,6 +102,14 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 - [ ] `production-workflow-spec.md:1256` — close the staffing hook
 - [ ] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
       `pnpm docs:check`, parity-report row + table count 32 → 38
+
+## Verification still owed
+
+- Shift UI in the browser. The Browser pane won't hold a better-auth session
+  (its cookie jar drops it, and a cached SSR page masks the failure as a 401 on
+  the next POST), so the claim flow is covered by unit tests rather than
+  clicked through. Extend `e2e/volunteering.e2e.ts` instead — its fixture
+  already authenticates.
 
 ## Gotchas carried from Phase 1
 

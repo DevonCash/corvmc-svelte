@@ -25,7 +25,8 @@
 		IconReportAnalytics,
 		IconListDetails,
 		IconHandStop,
-		IconCertificate
+		IconCertificate,
+		IconCalendarTime
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -101,6 +102,7 @@
 				label="Volunteering"
 				childHrefs={[
 					'/staff/volunteer',
+					'/staff/volunteer/shifts',
 					'/staff/volunteer/interest',
 					'/staff/volunteer/roles',
 					'/staff/volunteer/certifications',
@@ -110,6 +112,9 @@
 				badge={layout.volunteerPending}
 			>
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
+				<Nav.Item href="/staff/volunteer/shifts" label="Shifts">
+					{#snippet icon()}<IconCalendarTime />{/snippet}
+				</Nav.Item>
 				<Nav.Item href="/staff/volunteer/interest" label="Interest">
 					{#snippet icon()}<IconHandStop />{/snippet}
 				</Nav.Item>

@@ -48,6 +48,23 @@ import {
 	setRoleRequirements
 } from '$lib/server/volunteer/volunteer-certification-service';
 import {
+	createShift as createShiftService,
+	duplicateShift as duplicateShiftService,
+	updateShift as updateShiftService,
+	cancelShift as cancelShiftService,
+	listShifts,
+	listOpenShiftsForMember,
+	getShiftById
+} from '$lib/server/volunteer/volunteer-shift-service';
+import {
+	claimShift as claimShiftService,
+	cancelSignup as cancelSignupService,
+	confirmSignup as confirmSignupService,
+	markNoShow as markNoShowService,
+	listClaimants,
+	listUnloggedCompletions
+} from '$lib/server/volunteer/volunteer-signup-service';
+import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
 	deleteCertificationRecord,
@@ -63,6 +80,7 @@ import {
 	CERT_NOTES_MAX,
 	CERT_REFERENCE_MAX,
 	CERT_REVOKED_REASON_MAX,
+	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_REVIEW_NOTES_MAX,
@@ -733,3 +751,206 @@ export const deleteCertificationGrant = form(
 async function refreshCertificationViews() {
 	await Promise.all([getCertifications().refresh(), getActiveCertifications().refresh()]);
 }
+
+// ---------------------------------------------------------------------------
+// Shifts
+// ---------------------------------------------------------------------------
+
+const shiftFilters = z.object({
+	volunteerRoleId: z.string().optional(),
+	from: z.string().optional(),
+	to: z.string().optional(),
+	includeCancelled: z.boolean().optional()
+});
+
+export const getShifts = query(shiftFilters, async (f) => {
+	await requireStaff();
+	return listShifts({
+		volunteerRoleId: f.volunteerRoleId || undefined,
+		from: f.from ? new Date(f.from) : undefined,
+		to: f.to ? new Date(f.to) : undefined,
+		includeCancelled: f.includeCancelled
+	});
+});
+
+export const getShift = query(z.string(), async (id) => {
+	await requireStaff();
+	const shift = await getShiftById(id);
+	if (!shift) throw error(404, 'Shift not found');
+	const claimants = await listClaimants(id);
+	return { shift, claimants };
+});
+
+/**
+ * Open shifts for the member, with the reason they can't take one attached
+ * rather than the shift hidden — "you need Sound Desk Cleared" is the useful
+ * half of a refusal.
+ */
+export const getOpenShifts = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	const shifts = await listOpenShiftsForMember(currentUser.id);
+	return Promise.all(
+		shifts.map(async (shift) => ({
+			...shift,
+			missingCertifications: shift.myStatus
+				? []
+				: await missingRequirements(currentUser.id, shift.volunteerRoleId, shift.startsAt)
+		}))
+	);
+});
+
+/** Completed shifts with no hour log yet — the pre-fill offer. */
+export const getUnloggedShifts = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return listUnloggedCompletions(currentUser.id);
+});
+
+const shiftFormSchema = z.object({
+	volunteerRoleId: z.string().min(1, 'Pick a role'),
+	eventId: z.string().optional(),
+	startsAt: z.string().min(1, 'Pick when it starts'),
+	endsAt: z.string().min(1, 'Pick when it ends'),
+	capacity: z.string().min(1, 'How many people do you need?'),
+	notes: z
+		.string()
+		.max(VOLUNTEER_SHIFT_NOTES_MAX, `Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`)
+		.optional()
+});
+
+export const createShift = form(shiftFormSchema, async (data) => {
+	const staff = await requireStaff();
+
+	try {
+		await createShiftService({
+			volunteerRoleId: data.volunteerRoleId,
+			eventId: data.eventId,
+			startsAt: data.startsAt,
+			endsAt: data.endsAt,
+			capacity: parseInt(data.capacity, 10),
+			notes: data.notes,
+			createdByUserId: staff.id
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	return { success: true };
+});
+
+export const updateShift = form(
+	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await updateShiftService(data.id, {
+				volunteerRoleId: data.volunteerRoleId,
+				eventId: data.eventId,
+				startsAt: data.startsAt,
+				endsAt: data.endsAt,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const duplicateShift = form(
+	z.object({ id: z.string().min(1), offsetDays: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await duplicateShiftService(data.id, parseInt(data.offsetDays, 10), staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		return { success: true };
+	}
+);
+
+export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	try {
+		await cancelShiftService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getShift(data.id).refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Signups
+// ---------------------------------------------------------------------------
+
+export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	try {
+		await claimShiftService(data.shiftId, currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getOpenShifts().refresh();
+	return { success: true };
+});
+
+export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	try {
+		await cancelSignupService(data.signupId, currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getOpenShifts().refresh();
+	return { success: true };
+});
+
+export const confirmSignup = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await confirmSignupService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.shiftId).refresh();
+		return { success: true };
+	}
+);
+
+export const markSignupNoShow = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await markNoShowService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.shiftId).refresh();
+		return { success: true };
+	}
+);

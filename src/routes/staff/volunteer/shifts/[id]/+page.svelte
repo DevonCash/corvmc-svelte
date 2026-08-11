@@ -1,0 +1,170 @@
+<script lang="ts">
+	import { page } from '$app/state';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { IconCheck, IconUserX } from '@tabler/icons-svelte';
+	import {
+		getShift,
+		confirmSignup,
+		markSignupNoShow,
+		cancelShift
+	} from '$lib/remote/volunteer.remote';
+
+	let id = $derived(page.params.id!);
+	let data = $derived(getShift(id));
+
+	function timeRange(start: Date, end: Date): string {
+		const fmt = new Intl.DateTimeFormat('en-US', {
+			hour: 'numeric',
+			minute: '2-digit',
+			timeZone: DEFAULT_TIMEZONE
+		});
+		return `${fmt.format(start)}–${fmt.format(end)}`;
+	}
+
+	const statusBadge: Record<string, string> = {
+		claimed: 'badge-info',
+		confirmed: 'badge-success',
+		completed: 'badge-neutral',
+		no_show: 'badge-error',
+		cancelled: 'badge-ghost'
+	};
+</script>
+
+{#await data then { shift, claimants }}
+	<PageHeader
+		title={formatDateShortYear(shift.startsAt)}
+		subtitle="Shift"
+		backHref="/staff/volunteer/shifts"
+	>
+		{#if !shift.cancelledAt}
+			<Action
+				action={cancelShift.for(shift.id)}
+				label="Call it off"
+				class="btn-ghost btn-sm text-error"
+				modalTitle="Cancel this shift?"
+				submitLabel="Cancel shift"
+				submitClass="btn-error"
+				successToast="Shift cancelled"
+			>
+				{#snippet form()}
+					<input type="hidden" name="id" value={shift.id} />
+					<p class="text-sm">
+						{claimants.length}
+						{claimants.length === 1 ? 'person has' : 'people have'} claimed this. The shift and its claims
+						stay on record so you can still see what was called off.
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+	</PageHeader>
+
+	<PageContent width="3xl">
+		<InfoCard title={shift.cancelledAt ? 'Cancelled shift' : 'Shift'}>
+			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
+				<dt class="opacity-60">When</dt>
+				<dd>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</dd>
+				<dt class="opacity-60">Needed</dt>
+				<dd>
+					{claimants.filter((c) => c.status !== 'no_show').length} of {shift.capacity} filled
+				</dd>
+				{#if shift.notes}
+					<dt class="opacity-60">Notes</dt>
+					<dd>{shift.notes}</dd>
+				{/if}
+			</dl>
+		</InfoCard>
+
+		<InfoCard title="Who's on it">
+			{#if claimants.length === 0}
+				<EmptyState
+					title="Nobody yet"
+					description="Members who said they're up for this role see it at the top of their list."
+				/>
+			{:else}
+				<ul class="flex flex-col gap-3">
+					{#each claimants as claimant (claimant.signupId)}
+						<li class="flex flex-wrap items-center justify-between gap-3">
+							<div class="flex min-w-0 items-center gap-2">
+								<MemberLink
+									variant="inline"
+									member={{
+										name: claimant.name,
+										email: claimant.email,
+										pronouns: claimant.pronouns,
+										role: claimant.role,
+										userId: claimant.userId
+									}}
+								/>
+								<span class="badge badge-sm {statusBadge[claimant.status]}">
+									{claimant.status.replace('_', ' ')}
+								</span>
+							</div>
+
+							<div class="flex shrink-0 gap-1">
+								{#if claimant.status === 'claimed'}
+									<Action
+										action={confirmSignup.for(claimant.signupId)}
+										label="Confirm"
+										iconOnly
+										icon={checkIcon}
+										class="btn-ghost btn-sm text-success"
+										modalTitle="Confirm {claimant.name}?"
+										submitLabel="Confirm"
+										successToast="Confirmed"
+									>
+										{#snippet form()}
+											<input type="hidden" name="signupId" value={claimant.signupId} />
+											<input type="hidden" name="shiftId" value={shift.id} />
+											<p class="text-sm">
+												They'll get a reminder the day before. Only confirmed claims complete
+												automatically afterwards, so this is what turns a claim into a booking.
+											</p>
+										{/snippet}
+									</Action>
+								{/if}
+
+								{#if claimant.status !== 'no_show'}
+									<Action
+										action={markSignupNoShow.for(claimant.signupId)}
+										label="No-show"
+										iconOnly
+										icon={noShowIcon}
+										class="btn-ghost btn-sm text-error"
+										modalTitle="Mark {claimant.name} as a no-show?"
+										submitLabel="No-show"
+										submitClass="btn-error"
+										successToast="Marked as no-show"
+									>
+										{#snippet form()}
+											<input type="hidden" name="signupId" value={claimant.signupId} />
+											<input type="hidden" name="shiftId" value={shift.id} />
+											<p class="text-sm">
+												Different from cancelling: a cancellation is notice, a no-show isn't, and
+												only one of them is worth remembering next time.
+											</p>
+										{/snippet}
+									</Action>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</InfoCard>
+	</PageContent>
+{/await}
+
+{#snippet checkIcon()}
+	<IconCheck size={16} />
+{/snippet}
+
+{#snippet noShowIcon()}
+	<IconUserX size={16} />
+{/snippet}
