@@ -96,6 +96,14 @@ export async function deleteAudience(id: string) {
 	await db.delete(audience).where(eq(audience.id, id));
 }
 
+/**
+ * How many people on a static list would actually receive a campaign. Counts
+ * active memberships only, and drops globally suppressed addresses — a bounce,
+ * a complaint, or an "unsubscribe from all" — so the number staff see matches
+ * what `getRecipientsForCampaign` will resolve.
+ */
+const DELIVERABLE_COUNT = sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null and ${subscriber.suppressedAt} is null then 1 end) as integer)`;
+
 export async function listAudiences() {
 	// Cheap and idempotent: guarantees the built-ins exist without needing a data
 	// migration. This is a staff-only, low-traffic path.
@@ -110,10 +118,11 @@ export async function listAudiences() {
 			allowOptIn: audience.allowOptIn,
 			systemKey: audience.systemKey,
 			createdAt: audience.createdAt,
-			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
+			subscriberCount: DELIVERABLE_COUNT
 		})
 		.from(audience)
 		.leftJoin(audienceMember, eq(audienceMember.audienceId, audience.id))
+		.leftJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.groupBy(audience.id)
 		.orderBy(audience.name);
 
@@ -138,10 +147,11 @@ export async function getAudience(id: string) {
 			allowOptIn: audience.allowOptIn,
 			systemKey: audience.systemKey,
 			createdAt: audience.createdAt,
-			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
+			subscriberCount: DELIVERABLE_COUNT
 		})
 		.from(audience)
 		.leftJoin(audienceMember, eq(audienceMember.audienceId, audience.id))
+		.leftJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.where(eq(audience.id, id))
 		.groupBy(audience.id);
 

@@ -30,7 +30,11 @@ import {
 	renderCampaignPreview,
 	type CampaignStatus
 } from '$lib/server/marketing/campaign-service';
-import { findOrCreateByEmail } from '$lib/server/marketing/subscriber-service';
+import {
+	findOrCreateByEmail,
+	suppressSelfService,
+	clearSelfServiceSuppression
+} from '$lib/server/marketing/subscriber-service';
 import { verifyUnsubscribeToken } from '$lib/server/marketing/unsubscribe';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { audience } from '$lib/server/db/schema/marketing';
@@ -69,6 +73,10 @@ export const subscribeToAudience = form(
 		const aud = await getAudienceBySlug(data.slug);
 		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 		const sub = await findOrCreateByEmail(data.email.trim().toLowerCase(), data.name?.trim());
+		// Signing up again is an explicit request for mail, so it lifts a previous
+		// "unsubscribe from all" — otherwise this form would report success while
+		// suppression silently kept every campaign away.
+		await clearSelfServiceSuppression(sub.id);
 		await addSubscriberService(aud.id, sub.id);
 		return { success: true };
 	}
@@ -116,6 +124,29 @@ export const confirmUnsubscribe = form(
 
 		await unsubscribe(decoded.subscriberId, decoded.audienceId);
 		return { valid: true as const, audienceName: aud.name };
+	}
+);
+
+/**
+ * Global opt-out — "unsubscribe from all", offered after the single-audience
+ * unsubscribe on the same page.
+ *
+ * This exists because the one-list-only flow is what drives spam complaints:
+ * someone leaves one list, keeps receiving mail from another, and concludes
+ * unsubscribing is broken. A complaint costs far more than a lost subscriber.
+ *
+ * Not offered to the RFC 8058 one-click handler, which must do exactly what it
+ * says and leave only the audience its token names.
+ */
+export const confirmUnsubscribeAll = form(
+	z.object({ token: z.string().min(1) }),
+	async ({ token }) => {
+		await requireFeature('emailMarketing');
+		const decoded = verifyUnsubscribeToken(token);
+		if (!decoded) return { valid: false as const };
+
+		await suppressSelfService(decoded.subscriberId);
+		return { valid: true as const };
 	}
 );
 

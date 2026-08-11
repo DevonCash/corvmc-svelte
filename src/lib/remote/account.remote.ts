@@ -15,7 +15,10 @@ import {
 	addSubscriber,
 	unsubscribe as unsubscribeFromAudience
 } from '$lib/server/marketing/audience-service';
-import { findOrCreateForUser } from '$lib/server/marketing/subscriber-service';
+import {
+	findOrCreateForUser,
+	clearSelfServiceSuppression
+} from '$lib/server/marketing/subscriber-service';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -159,6 +162,9 @@ export const subscribe = form(
 		const currentUser = requireUser();
 		const audienceId = data.audienceId as string;
 		const sub = await findOrCreateForUser(currentUser.id, currentUser.email, currentUser.name);
+		// Opting in lifts a previous "unsubscribe from all"; a bounce or complaint
+		// suppression is left alone.
+		await clearSelfServiceSuppression(sub.id);
 		await addSubscriber(audienceId, sub.id);
 
 		void getMySubscriptions().refresh();

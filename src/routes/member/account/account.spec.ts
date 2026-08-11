@@ -78,7 +78,8 @@ vi.mock('$lib/server/marketing/audience-service', () => ({
 }));
 
 vi.mock('$lib/server/marketing/subscriber-service', () => ({
-	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' })
+	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' }),
+	clearSelfServiceSuppression: vi.fn()
 }));
 
 vi.mock('$app/server', () => ({
@@ -119,7 +120,10 @@ import {
 	addSubscriber,
 	unsubscribe as unsubscribeService
 } from '$lib/server/marketing/audience-service';
-import { findOrCreateForUser } from '$lib/server/marketing/subscriber-service';
+import {
+	findOrCreateForUser,
+	clearSelfServiceSuppression
+} from '$lib/server/marketing/subscriber-service';
 
 const {
 	updateProfile,
@@ -232,6 +236,14 @@ describe('subscribe', () => {
 			mockLocals.user.name
 		);
 		expect(addSubscriber).toHaveBeenCalledWith('aud-99', 'sub-1');
+	});
+
+	// Without this, opting back in after "unsubscribe from all" reports success
+	// while global suppression silently keeps every campaign away.
+	it('lifts a previous global opt-out so the subscription actually delivers', async () => {
+		await subscribe({ audienceId: 'aud-99' });
+
+		expect(clearSelfServiceSuppression).toHaveBeenCalledWith('sub-1');
 	});
 });
 

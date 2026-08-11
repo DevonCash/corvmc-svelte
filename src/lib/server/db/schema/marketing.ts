@@ -6,8 +6,13 @@ import { user } from './authentication';
 // Subscribers
 // ---------------------------------------------------------------------------
 
-/** Why a subscriber is globally suppressed (set by Postmark webhooks). */
-export type SuppressionReason = 'bounce' | 'complaint';
+/**
+ * Why a subscriber is globally suppressed. `bounce` and `complaint` are set by
+ * Postmark webhooks; `unsubscribe` is the recipient choosing "unsubscribe from
+ * all" on the unsubscribe page. The distinction matters: a self-service opt-out
+ * can be reversed by opting back in, a broken or complaining address cannot.
+ */
+export type SuppressionReason = 'bounce' | 'complaint' | 'unsubscribe';
 
 export const subscriber = sqliteTable(
 	'subscriber',
@@ -18,9 +23,10 @@ export const subscriber = sqliteTable(
 		email: text('email').notNull().unique(),
 		name: text('name'),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
-		// Global (cross-audience) suppression set by Postmark bounce/complaint
-		// webhooks. Null = deliverable. Distinct from per-audience opt-out
-		// (audienceMember.unsubscribedAt).
+		// Global (cross-audience) suppression. Null = deliverable. Distinct from
+		// per-audience opt-out (audienceMember.unsubscribedAt): this excludes the
+		// address from every campaign regardless of any audience membership, which
+		// is what makes it the right home for "unsubscribe from all".
 		suppressedAt: integer('suppressed_at', { mode: 'timestamp' }),
 		suppressionReason: text('suppression_reason').$type<SuppressionReason>(),
 		createdAt: integer('created_at', { mode: 'timestamp' })

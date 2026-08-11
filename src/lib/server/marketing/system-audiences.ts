@@ -170,6 +170,9 @@ export const PREVIEW_LIMIT = 100;
  * staff detail page. Reads from `user` rather than `subscriber` — and skips the
  * backfill — so members who have never subscribed still show up, and viewing
  * the page never writes.
+ *
+ * Applies the same exclusions as `countSystemAudience`, so the preview and the
+ * headline count can never disagree.
  */
 export async function previewSystemAudience(audienceId: string, key: SystemAudienceKey) {
 	return db
@@ -187,7 +190,15 @@ export async function previewSystemAudience(audienceId: string, key: SystemAudie
 			audienceMember,
 			and(eq(audienceMember.subscriberId, subscriber.id), eq(audienceMember.audienceId, audienceId))
 		)
-		.where(and(SYSTEM_AUDIENCES[key].predicate(), isNull(subscriber.suppressedAt)))
+		.where(
+			and(
+				SYSTEM_AUDIENCES[key].predicate(),
+				isNull(subscriber.suppressedAt),
+				// Left join: a member with no audience_member row at all passes,
+				// a tombstoned one is excluded.
+				isNull(audienceMember.unsubscribedAt)
+			)
+		)
 		.orderBy(user.name)
 		.limit(PREVIEW_LIMIT);
 }

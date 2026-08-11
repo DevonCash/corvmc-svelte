@@ -44,7 +44,7 @@
 					</td>
 					<td class="col-support w-px">
 						{#if a.systemKey}
-							<Badge size="sm" variant="info">Built-in</Badge>
+							<Badge size="sm" variant="info" class="whitespace-nowrap">Built-in</Badge>
 						{:else}
 							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
 								{a.allowOptIn ? 'Public' : 'Staff only'}

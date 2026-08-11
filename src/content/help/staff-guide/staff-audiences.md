@@ -47,6 +47,20 @@ contacts, past performers, a one-off invite list.
 Pick any mix of built-in and custom audiences when you compose a campaign.
 Anyone who appears on more than one gets a single copy.
 
+Subscriber counts show who would actually receive the email — people who have
+unsubscribed, bounced, or complained are already excluded.
+
+## Unsubscribes
+
+The link in an email removes someone from that one list. From that page they
+can also choose **Unsubscribe from all CorvMC emails**, which stops every
+campaign regardless of list — including built-in audiences they'd otherwise
+keep matching. That's deliberate: someone who can't easily stop the mail hits
+"mark as spam" instead, which damages delivery for everyone.
+
+They can undo it by signing up again, on the public signup page or from their
+account. Bounced and complained addresses can't be revived that way.
+
 ## Related
 
 - Use audiences when you [send a campaign](/member/help/staff-email-campaigns).

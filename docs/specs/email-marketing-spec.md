@@ -18,7 +18,7 @@ CorvMC currently sends only transactional emails (reservation reminders, ticket 
 
 **Campaigns are markdown emails.** Staff writes in markdown, sees a live HTML preview rendered through the existing MJML base template. Campaigns target one or more audiences. At send time, the system deduplicates across audiences and excludes anyone who has unsubscribed.
 
-**Per-audience unsubscribe.** Every outbound email includes a footer link with a signed token. Clicking it unsubscribes the recipient from that specific audience without requiring login. Members can also manage their subscriptions from their account page.
+**Per-audience unsubscribe, plus a global escape hatch.** Every outbound email includes a footer link with a signed token. Clicking it unsubscribes the recipient from that specific audience without requiring login. The confirmation page then offers "unsubscribe from all", which sets `subscriber.suppressedAt` with reason `unsubscribe` — excluding the address from every campaign regardless of audience, including built-ins it would otherwise keep matching. That reason is reversible: opting in again (public signup or the account page) clears it, while `bounce` and `complaint` are never cleared this way. The RFC 8058 one-click handler is deliberately excluded from the global option; it must leave only the audience its token names. Members can also manage their subscriptions from their account page.
 
 ---
 

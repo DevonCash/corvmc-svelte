@@ -137,8 +137,12 @@
 				<Table>
 					{#snippet head()}
 						<th>Subscriber</th>
-						<th class="col-support w-px">Status</th>
-						<th class="col-extra whitespace-nowrap">Joined</th>
+						<!-- A built-in's preview already excludes opt-outs, so every row
+						     would read "Active". -->
+						{#if !isBuiltIn}
+							<th class="col-support w-px">Status</th>
+						{/if}
+						<th class="col-extra whitespace-nowrap">{isBuiltIn ? 'Member since' : 'Joined'}</th>
 						{#if !isBuiltIn}
 							<th class="w-px"><span class="sr-only">Actions</span></th>
 						{/if}
@@ -155,11 +159,13 @@
 									<div class="truncate text-sm opacity-60">{s.name}</div>
 								{/if}
 							</td>
-							<td class="col-support w-px">
-								<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
-									{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
-								</Badge>
-							</td>
+							{#if !isBuiltIn}
+								<td class="col-support w-px">
+									<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
+										{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
+									</Badge>
+								</td>
+							{/if}
 							<td class="col-extra whitespace-nowrap">{formatDateShort(s.createdAt)}</td>
 							{#if !isBuiltIn && s.subscriberId}
 								<td class="w-px">
