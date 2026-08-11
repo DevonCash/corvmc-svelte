@@ -172,10 +172,15 @@ Owner-only, free and premium alike — `changeBandAddress`
 (`src/lib/server/band/band-address-service.ts`). Owner-only matches custom domains;
 admins can still rename the band and edit its profile.
 
-- Input is normalized with the same `generateSlug` used everywhere else, then
-  checked against reserved slugs and current `band.slug` values. Deliberately _not_
-  `ensureUniqueSlug`: silently handing an owner `the-neons-2` when they asked for
-  `the-neons` is worse than telling them it is taken.
+- Input is normalized by `normalizeBandSlug`, then checked against reserved slugs
+  and current `band.slug` values. Two deliberate departures from `generateSlug`:
+  - **Spaces and punctuation are dropped, not hyphenated** — "the velvets" becomes
+    `thevelvets`. Someone typing an address is choosing a domain; hyphens they type
+    themselves survive. `generateSlug` still derives _names_ (band creation, help
+    articles), where the hyphens aid readability, so a band auto-slugged at
+    creation keeps its hyphenated address until an owner changes it.
+  - **No `ensureUniqueSlug`** — silently handing an owner `the-neons-2` when they
+    asked for `the-neons` is worse than telling them it is taken.
 - Three changes per 30 days (`allowRateLimited`, keyed on band id), surfaced as an
   inline field issue rather than a 429 — a thrown `error()` reaches the Form
   component's `onfailure` without its message.

@@ -108,9 +108,16 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('normalizeBandSlug', () => {
-	it('reduces owner-typed input to the canonical form', () => {
-		expect(normalizeBandSlug('The Neons!!')).toBe('the-neons');
-		expect(normalizeBandSlug('  Sœur   Sonic  ')).toBe('s-ur-sonic');
+	// Spaces collapse rather than hyphenating: someone typing an address is
+	// choosing a domain, not naming a band.
+	it('drops spaces and punctuation instead of hyphenating them', () => {
+		expect(normalizeBandSlug('The Neons!!')).toBe('theneons');
+		expect(normalizeBandSlug('  Sœur   Sonic  ')).toBe('sursonic');
+	});
+
+	it('keeps hyphens the owner typed on purpose', () => {
+		expect(normalizeBandSlug('The-Neons')).toBe('the-neons');
+		expect(normalizeBandSlug('--the -- neons--')).toBe('the-neons');
 	});
 });
 
@@ -191,7 +198,7 @@ describe('changeBandSlug', () => {
 	it('is a no-op when the address is unchanged', async () => {
 		selectResults = [[bandRow]];
 
-		await expect(changeBandSlug('band-1', 'The Neons')).resolves.toEqual({
+		await expect(changeBandSlug('band-1', 'The-Neons')).resolves.toEqual({
 			status: 'unchanged',
 			slug: 'the-neons',
 			previousSlug: 'the-neons'
@@ -211,7 +218,7 @@ describe('changeBandSlug', () => {
 
 		await expect(changeBandSlug('band-1', 'The Neon Boys')).resolves.toEqual({
 			status: 'changed',
-			slug: 'the-neon-boys',
+			slug: 'theneonboys',
 			previousSlug: 'the-neons'
 		});
 

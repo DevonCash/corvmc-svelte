@@ -23,13 +23,13 @@
 	let showChange = $state(false);
 	let draft = $state('');
 
-	// A local mirror of `generateSlug` for the preview only — the server's copy
-	// stays authoritative. `$lib/server/utils/slug` cannot be imported here; it
+	// A local mirror of `normalizeBandSlug` for the preview only — the server's
+	// copy stays authoritative. The service module cannot be imported here; it
 	// pulls in the database.
 	const normalized = $derived(
 		draft
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/[^a-z0-9-]+/g, '')
 			.replace(/-{2,}/g, '-')
 			.replace(/^-|-$/g, '')
 	);
@@ -80,7 +80,7 @@
 				placeholder="the-band"
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
 					(draft = e.currentTarget.value)}
-				description="Letters and numbers only — anything else becomes a hyphen."
+				description="Letters, numbers and hyphens. Spaces and punctuation are dropped."
 				required
 			/>
 

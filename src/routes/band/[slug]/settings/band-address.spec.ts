@@ -48,7 +48,8 @@ vi.mock('$lib/server/band/band-address-service', () => ({
 	normalizeBandSlug: (input: string) =>
 		input
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/[^a-z0-9-]+/g, '')
+			.replace(/-{2,}/g, '-')
 			.replace(/^-|-$/g, ''),
 	assertValidBandSlug: (slug: string) => {
 		if (!slug) throw new SlugUnavailableError('Use at least one letter or number.');
@@ -100,8 +101,9 @@ describe('changeBandAddress', () => {
 
 		const result = await changeBandAddress({ newSlug: 'The Velvets' }, issue);
 
-		expect(changeBandSlug).toHaveBeenCalledWith('band-1', 'the-velvets');
-		expect(result).toEqual({ success: true, slug: 'the-velvets', changed: true });
+		// Spaces collapse rather than hyphenating.
+		expect(changeBandSlug).toHaveBeenCalledWith('band-1', 'thevelvets');
+		expect(result).toEqual({ success: true, slug: 'thevelvets', changed: true });
 	});
 
 	it('takes the band from the owner guard, never from the submitted value', async () => {
@@ -134,7 +136,7 @@ describe('changeBandAddress', () => {
 	it('treats the current address as a no-op without spending a change', async () => {
 		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
 
-		const result = await changeBandAddress({ newSlug: 'The Velvet Underground' }, issue);
+		const result = await changeBandAddress({ newSlug: 'The-Velvet-Underground' }, issue);
 
 		expect(result).toEqual({ success: true, slug: 'the-velvet-underground', changed: false });
 		expect(allowRateLimited).not.toHaveBeenCalled();
