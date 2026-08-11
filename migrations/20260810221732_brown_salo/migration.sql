@@ -1,17 +1,15 @@
 -- d1-safe-rebuild: rewritten for Cloudflare D1.
---> statement-breakpoint
+
 -- D1 ignores PRAGMA foreign_keys=OFF inside its migration transaction, so
---> statement-breakpoint
+
 -- drizzle's generated DROP TABLE would cascade-delete these children:
---> statement-breakpoint
+
 --   ticket, event_rsvp, event, band_genre, band_member, band_media, band_page_config, platform_invite
---> statement-breakpoint
+
 -- Each is rebuilt with its FK demoted to NO ACTION, then restored below.
---> statement-breakpoint
 PRAGMA defer_foreign_keys=ON;
 --> statement-breakpoint
 -- detach ticket
---> statement-breakpoint
 CREATE TABLE `__detach_ticket` (
 	`id` text PRIMARY KEY,
 	`event_id` text NOT NULL,
@@ -47,7 +45,6 @@ CREATE INDEX `idx_ticket_user` ON `ticket` (`user_id`);
 CREATE INDEX `idx_ticket_event_status` ON `ticket` (`event_id`,`status`);
 --> statement-breakpoint
 -- detach event_rsvp
---> statement-breakpoint
 CREATE TABLE `__detach_event_rsvp` (
 	`id` text PRIMARY KEY,
 	`event_id` text NOT NULL,
@@ -70,7 +67,6 @@ CREATE UNIQUE INDEX `idx_event_rsvp_event_user` ON `event_rsvp` (`event_id`,`use
 CREATE INDEX `idx_event_rsvp_event` ON `event_rsvp` (`event_id`);
 --> statement-breakpoint
 -- detach event
---> statement-breakpoint
 CREATE TABLE `__detach_event` (
 	`id` text PRIMARY KEY,
 	`title` text NOT NULL,
@@ -120,7 +116,6 @@ CREATE INDEX `idx_event_recurring_series` ON `event` (`recurring_series_id`);
 CREATE UNIQUE INDEX `uq_event_recurring_instance` ON `event` (`recurring_series_id`,`starts_at`) WHERE recurring_series_id IS NOT NULL AND status != 'cancelled';
 --> statement-breakpoint
 -- detach band_genre
---> statement-breakpoint
 CREATE TABLE `__detach_band_genre` (
 	`band_id` text NOT NULL,
 	`genre` text NOT NULL,
@@ -136,7 +131,6 @@ ALTER TABLE `__detach_band_genre` RENAME TO `band_genre`;
 CREATE INDEX `idx_band_genre_band` ON `band_genre` (`band_id`);
 --> statement-breakpoint
 -- detach band_member
---> statement-breakpoint
 CREATE TABLE `__detach_band_member` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -163,7 +157,6 @@ CREATE INDEX `idx_band_member_user` ON `band_member` (`user_id`);
 CREATE INDEX `idx_band_member_status` ON `band_member` (`status`);
 --> statement-breakpoint
 -- detach band_media
---> statement-breakpoint
 CREATE TABLE `__detach_band_media` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -184,7 +177,6 @@ ALTER TABLE `__detach_band_media` RENAME TO `band_media`;
 CREATE INDEX `idx_band_media_band_type` ON `band_media` (`band_id`,`type`,`sort_order`);
 --> statement-breakpoint
 -- detach band_page_config
---> statement-breakpoint
 CREATE TABLE `__detach_band_page_config` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -205,7 +197,6 @@ ALTER TABLE `__detach_band_page_config` RENAME TO `band_page_config`;
 CREATE INDEX `idx_band_page_config_band` ON `band_page_config` (`band_id`);
 --> statement-breakpoint
 -- detach platform_invite
---> statement-breakpoint
 CREATE TABLE `__detach_platform_invite` (
 	`id` text PRIMARY KEY,
 	`email` text NOT NULL,
@@ -264,7 +255,6 @@ ALTER TABLE `__new_band` RENAME TO `band`;
 CREATE INDEX `idx_band_slug` ON `band` (`slug`);
 --> statement-breakpoint
 -- reattach platform_invite
---> statement-breakpoint
 CREATE TABLE `__reattach_platform_invite` (
 	`id` text PRIMARY KEY,
 	`email` text NOT NULL,
@@ -293,7 +283,6 @@ CREATE INDEX `idx_platform_invite_email` ON `platform_invite` (`email`);
 CREATE INDEX `idx_platform_invite_band` ON `platform_invite` (`band_id`);
 --> statement-breakpoint
 -- reattach band_page_config
---> statement-breakpoint
 CREATE TABLE `__reattach_band_page_config` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -314,7 +303,6 @@ ALTER TABLE `__reattach_band_page_config` RENAME TO `band_page_config`;
 CREATE INDEX `idx_band_page_config_band` ON `band_page_config` (`band_id`);
 --> statement-breakpoint
 -- reattach band_media
---> statement-breakpoint
 CREATE TABLE `__reattach_band_media` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -335,7 +323,6 @@ ALTER TABLE `__reattach_band_media` RENAME TO `band_media`;
 CREATE INDEX `idx_band_media_band_type` ON `band_media` (`band_id`,`type`,`sort_order`);
 --> statement-breakpoint
 -- reattach band_member
---> statement-breakpoint
 CREATE TABLE `__reattach_band_member` (
 	`id` text PRIMARY KEY,
 	`band_id` text NOT NULL,
@@ -362,7 +349,6 @@ CREATE INDEX `idx_band_member_user` ON `band_member` (`user_id`);
 CREATE INDEX `idx_band_member_status` ON `band_member` (`status`);
 --> statement-breakpoint
 -- reattach band_genre
---> statement-breakpoint
 CREATE TABLE `__reattach_band_genre` (
 	`band_id` text NOT NULL,
 	`genre` text NOT NULL,
@@ -378,7 +364,6 @@ ALTER TABLE `__reattach_band_genre` RENAME TO `band_genre`;
 CREATE INDEX `idx_band_genre_band` ON `band_genre` (`band_id`);
 --> statement-breakpoint
 -- reattach event
---> statement-breakpoint
 CREATE TABLE `__reattach_event` (
 	`id` text PRIMARY KEY,
 	`title` text NOT NULL,
@@ -428,7 +413,6 @@ CREATE INDEX `idx_event_recurring_series` ON `event` (`recurring_series_id`);
 CREATE UNIQUE INDEX `uq_event_recurring_instance` ON `event` (`recurring_series_id`,`starts_at`) WHERE recurring_series_id IS NOT NULL AND status != 'cancelled';
 --> statement-breakpoint
 -- reattach event_rsvp
---> statement-breakpoint
 CREATE TABLE `__reattach_event_rsvp` (
 	`id` text PRIMARY KEY,
 	`event_id` text NOT NULL,
@@ -451,7 +435,6 @@ CREATE UNIQUE INDEX `idx_event_rsvp_event_user` ON `event_rsvp` (`event_id`,`use
 CREATE INDEX `idx_event_rsvp_event` ON `event_rsvp` (`event_id`);
 --> statement-breakpoint
 -- reattach ticket
---> statement-breakpoint
 CREATE TABLE `__reattach_ticket` (
 	`id` text PRIMARY KEY,
 	`event_id` text NOT NULL,
