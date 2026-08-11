@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let selectResults: unknown[][] = [];
 let selectCallIndex = 0;
 const insertedRows: unknown[] = [];
+const upserts: unknown[] = [];
 let updateData: unknown[] = [];
 let deleteCalled = false;
 
@@ -33,7 +34,12 @@ vi.mock('$lib/server/db', () => ({
 				insertedRows.push(row);
 				return {
 					returning: () =>
-						Promise.resolve([{ id: 'aud-new', ...(typeof row === 'object' ? row : {}) }])
+						Promise.resolve([{ id: 'aud-new', ...(typeof row === 'object' ? row : {}) }]),
+					onConflictDoUpdate: (opts: unknown) => {
+						upserts.push(opts);
+						return Promise.resolve(undefined);
+					},
+					onConflictDoNothing: () => Promise.resolve(undefined)
 				};
 			}
 		}),
@@ -88,7 +94,18 @@ vi.mock('drizzle-orm', () => ({
 	sql: vi.fn(),
 	isNull: vi.fn(),
 	isNotNull: vi.fn(),
+	inArray: vi.fn(),
 	notInArray: vi.fn()
+}));
+
+// Resolution of built-in audiences is system-audiences.ts's job and is covered
+// by its own spec. Here we only care that audience-service branches on it.
+vi.mock('./system-audiences', () => ({
+	ensureSystemAudiences: vi.fn(async () => {}),
+	isSystemAudienceKey: vi.fn((key: unknown) => key === 'all-members'),
+	countSystemAudience: vi.fn(async () => 999),
+	previewSystemAudience: vi.fn(async () => [{ email: 'member@example.com' }]),
+	getSystemAudiencesForUser: vi.fn(async () => [])
 }));
 
 vi.mock('./subscriber-service', () => ({
@@ -107,8 +124,10 @@ const {
 	deleteAudience,
 	listAudiences,
 	getAudience,
+	listSubscribers,
 	addSubscriber,
 	removeSubscriber,
+	bulkAddMembers,
 	unsubscribe
 } = await import('./audience-service');
 
@@ -116,11 +135,23 @@ const {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * Every membership mutation begins with a systemKey lookup. These queue its
+ * result so the following selectResults line up with the real query.
+ */
+function staticAudience() {
+	selectResults.push([{ systemKey: null }]);
+}
+function builtInAudience() {
+	selectResults.push([{ systemKey: 'all-members' }]);
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResults = [];
 	selectCallIndex = 0;
 	insertedRows.length = 0;
+	upserts.length = 0;
 	updateData = [];
 	deleteCalled = false;
 });
@@ -173,6 +204,7 @@ describe('updateAudience', () => {
 
 describe('deleteAudience', () => {
 	it('deletes the audience', async () => {
+		staticAudience();
 		await deleteAudience('aud-1');
 		expect(deleteCalled).toBe(true);
 	});
@@ -180,6 +212,7 @@ describe('deleteAudience', () => {
 
 describe('addSubscriber', () => {
 	it('inserts new membership when subscriber not in audience', async () => {
+		staticAudience();
 		// Check existing membership: not found
 		selectResults.push([]);
 
@@ -193,6 +226,7 @@ describe('addSubscriber', () => {
 	});
 
 	it('re-subscribes when previously unsubscribed', async () => {
+		staticAudience();
 		selectResults.push([{ id: 'am-1', unsubscribedAt: new Date() }]);
 
 		await addSubscriber('aud-1', 'sub-1');
@@ -201,6 +235,7 @@ describe('addSubscriber', () => {
 	});
 
 	it('does nothing when already active', async () => {
+		staticAudience();
 		selectResults.push([{ id: 'am-1', unsubscribedAt: null }]);
 
 		await addSubscriber('aud-1', 'sub-1');
@@ -212,15 +247,117 @@ describe('addSubscriber', () => {
 
 describe('removeSubscriber', () => {
 	it('deletes the audience member row', async () => {
+		staticAudience();
 		await removeSubscriber('aud-1', 'sub-1');
 		expect(deleteCalled).toBe(true);
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Built-in audience guardrails
+// ---------------------------------------------------------------------------
+// A built-in audience's membership is a SQL predicate, so there is no list to
+// edit. Each mutation must refuse rather than silently write rows that the
+// resolver would then ignore.
+
+describe('built-in audience guardrails', () => {
+	it('refuses to delete a built-in audience', async () => {
+		builtInAudience();
+		await expect(deleteAudience('aud-sys')).rejects.toThrow('built-in audience');
+		expect(deleteCalled).toBe(false);
+	});
+
+	it('refuses to add a subscriber to a built-in audience', async () => {
+		builtInAudience();
+		await expect(addSubscriber('aud-sys', 'sub-1')).rejects.toThrow('built-in audience');
+		expect(insertedRows).toHaveLength(0);
+	});
+
+	it('refuses to remove a subscriber from a built-in audience', async () => {
+		builtInAudience();
+		await expect(removeSubscriber('aud-sys', 'sub-1')).rejects.toThrow('built-in audience');
+		expect(deleteCalled).toBe(false);
+	});
+
+	it('refuses to bulk-add members to a built-in audience', async () => {
+		builtInAudience();
+		await expect(bulkAddMembers('aud-sys')).rejects.toThrow('built-in audience');
+		expect(insertedRows).toHaveLength(0);
+	});
+
+	it('refuses to change a built-in audience slug', async () => {
+		builtInAudience();
+		await expect(updateAudience('aud-sys', { slug: 'renamed' })).rejects.toThrow(
+			'slug of a built-in audience'
+		);
+		expect(updateData).toHaveLength(0);
+	});
+
+	it('refuses to open a built-in audience to public opt-in', async () => {
+		builtInAudience();
+		await expect(updateAudience('aud-sys', { allowOptIn: true })).rejects.toThrow(
+			'cannot accept public opt-in'
+		);
+		expect(updateData).toHaveLength(0);
+	});
+
+	it('still allows editing a built-in audience name and description', async () => {
+		builtInAudience();
+
+		await updateAudience('aud-sys', { name: 'Everyone', description: 'All of them' });
+
+		expect(updateData[0]).toMatchObject({ name: 'Everyone', description: 'All of them' });
+	});
+
+	it('reports the live count for a built-in audience instead of the row count', async () => {
+		selectResults.push([
+			{
+				id: 'aud-sys',
+				name: 'All Members',
+				slug: 'all-members',
+				description: null,
+				allowOptIn: false,
+				systemKey: 'all-members',
+				createdAt: new Date(),
+				// audience_member rows for a built-in are opt-out tombstones, so this
+				// joined count is meaningless and must not be surfaced.
+				subscriberCount: 3
+			}
+		]);
+
+		const result = await getAudience('aud-sys');
+
+		expect(result!.subscriberCount).toBe(999);
+	});
+
+	it('lists a live preview instead of tombstone rows for a built-in audience', async () => {
+		builtInAudience();
+
+		const result = await listSubscribers('aud-sys');
+
+		expect(result).toEqual([{ email: 'member@example.com' }]);
+	});
+});
+
 describe('unsubscribe', () => {
-	it('sets unsubscribedAt on the membership', async () => {
+	// Upsert, not update: a built-in audience has no membership row to flip, so
+	// the inserted row IS the opt-out record. Update-only made one-click
+	// unsubscribe a silent no-op for built-ins.
+	it('inserts a tombstone row carrying the opt-out timestamp', async () => {
 		await unsubscribe('sub-1', 'aud-1');
-		expect(updateData[0]).toMatchObject({ unsubscribedAt: expect.any(Date) });
+
+		expect(insertedRows[0]).toMatchObject({
+			subscriberId: 'sub-1',
+			audienceId: 'aud-1',
+			unsubscribedAt: expect.any(Date)
+		});
+	});
+
+	it('upserts so an existing membership row is flipped rather than duplicated', async () => {
+		await unsubscribe('sub-1', 'aud-1');
+
+		expect(upserts).toHaveLength(1);
+		expect(upserts[0]).toMatchObject({ set: { unsubscribedAt: expect.any(Date) } });
 	});
 });
 

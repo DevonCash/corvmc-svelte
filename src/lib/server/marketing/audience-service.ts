@@ -3,12 +3,42 @@ import { audience, audienceMember, subscriber } from '$lib/server/db/schema/mark
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
+import {
+	countSystemAudience,
+	ensureSystemAudiences,
+	getSystemAudiencesForUser,
+	isSystemAudienceKey,
+	previewSystemAudience
+} from './system-audiences';
 
 // ---------------------------------------------------------------------------
 // Audience service
 // ---------------------------------------------------------------------------
 // CRUD for audiences and subscriber management within audiences.
+//
+// Audiences come in two kinds. A static list is staff-curated: membership lives
+// in `audience_member` rows. A built-in ("system") audience has a non-null
+// `systemKey` and its membership is a SQL predicate over member attributes —
+// see system-audiences.ts. Built-ins reject every membership mutation below,
+// because there is no list to edit.
 // ---------------------------------------------------------------------------
+
+/** The audience's systemKey, or null for a staff-curated static list. */
+async function systemKeyFor(audienceId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ systemKey: audience.systemKey })
+		.from(audience)
+		.where(eq(audience.id, audienceId))
+		.limit(1);
+	return row?.systemKey ?? null;
+}
+
+/** Reject a mutation that only makes sense for a staff-curated list. */
+async function assertNotSystem(audienceId: string, action: string): Promise<void> {
+	if (isSystemAudienceKey(await systemKeyFor(audienceId))) {
+		throw new Error(`Cannot ${action} a built-in audience — its membership is computed`);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Audience CRUD
@@ -49,23 +79,36 @@ export async function updateAudience(
 	if (data.slug !== undefined && !/^[a-z0-9-]+$/.test(data.slug))
 		throw new Error('Slug must be lowercase alphanumeric with hyphens');
 
+	if (isSystemAudienceKey(await systemKeyFor(id))) {
+		// Name and description are staff-editable copy. The slug is the systemKey
+		// contract, and opt-in makes no sense for an attribute-defined audience.
+		if (data.slug !== undefined) throw new Error('Cannot change the slug of a built-in audience');
+		if (data.allowOptIn) throw new Error('A built-in audience cannot accept public opt-in');
+	}
+
 	const [updated] = await db.update(audience).set(data).where(eq(audience.id, id)).returning();
 
 	return updated ?? null;
 }
 
 export async function deleteAudience(id: string) {
+	await assertNotSystem(id, 'delete');
 	await db.delete(audience).where(eq(audience.id, id));
 }
 
 export async function listAudiences() {
-	return db
+	// Cheap and idempotent: guarantees the built-ins exist without needing a data
+	// migration. This is a staff-only, low-traffic path.
+	await ensureSystemAudiences();
+
+	const rows = await db
 		.select({
 			id: audience.id,
 			name: audience.name,
 			slug: audience.slug,
 			description: audience.description,
 			allowOptIn: audience.allowOptIn,
+			systemKey: audience.systemKey,
 			createdAt: audience.createdAt,
 			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
 		})
@@ -73,6 +116,16 @@ export async function listAudiences() {
 		.leftJoin(audienceMember, eq(audienceMember.audienceId, audience.id))
 		.groupBy(audience.id)
 		.orderBy(audience.name);
+
+	// A built-in's audience_member rows are opt-out tombstones, so the joined
+	// count above is meaningless for them — resolve the live size instead.
+	return Promise.all(
+		rows.map(async (row) =>
+			isSystemAudienceKey(row.systemKey)
+				? { ...row, subscriberCount: await countSystemAudience(row.id, row.systemKey) }
+				: row
+		)
+	);
 }
 
 export async function getAudience(id: string) {
@@ -83,6 +136,7 @@ export async function getAudience(id: string) {
 			slug: audience.slug,
 			description: audience.description,
 			allowOptIn: audience.allowOptIn,
+			systemKey: audience.systemKey,
 			createdAt: audience.createdAt,
 			subscriberCount: sql<number>`cast(count(case when ${audienceMember.unsubscribedAt} is null then 1 end) as integer)`
 		})
@@ -91,7 +145,10 @@ export async function getAudience(id: string) {
 		.where(eq(audience.id, id))
 		.groupBy(audience.id);
 
-	return row ?? null;
+	if (!row) return null;
+	if (!isSystemAudienceKey(row.systemKey)) return row;
+
+	return { ...row, subscriberCount: await countSystemAudience(row.id, row.systemKey) };
 }
 
 export async function getAudienceBySlug(slug: string) {
@@ -120,6 +177,8 @@ export async function getAudienceBySlug(slug: string) {
  * clears the unsubscribedAt (re-subscribe). If already active, no-op.
  */
 export async function addSubscriber(audienceId: string, subscriberId: string) {
+	await assertNotSystem(audienceId, 'add a subscriber to');
+
 	const [existing] = await db
 		.select({ id: audienceMember.id, unsubscribedAt: audienceMember.unsubscribedAt })
 		.from(audienceMember)
@@ -147,6 +206,8 @@ export async function addSubscriber(audienceId: string, subscriberId: string) {
  * Hard-remove a subscriber from an audience (staff action, not unsubscribe).
  */
 export async function removeSubscriber(audienceId: string, subscriberId: string) {
+	await assertNotSystem(audienceId, 'remove a subscriber from');
+
 	await db
 		.delete(audienceMember)
 		.where(
@@ -155,19 +216,24 @@ export async function removeSubscriber(audienceId: string, subscriberId: string)
 }
 
 /**
- * Unsubscribe: set unsubscribedAt on the audience_member row.
+ * Unsubscribe from an audience.
+ *
+ * This is an upsert, not an update. A built-in audience has no membership row
+ * to flip — the inserted row IS the opt-out record, and the resolvers in
+ * system-audiences.ts exclude anyone who has one. Update-only would have made
+ * one-click unsubscribe (RFC 8058) a silent no-op for every built-in.
+ *
+ * `setWhere` keeps the original opt-out timestamp when the row already exists.
  */
 export async function unsubscribe(subscriberId: string, audienceId: string) {
 	await db
-		.update(audienceMember)
-		.set({ unsubscribedAt: new Date() })
-		.where(
-			and(
-				eq(audienceMember.subscriberId, subscriberId),
-				eq(audienceMember.audienceId, audienceId),
-				isNull(audienceMember.unsubscribedAt)
-			)
-		);
+		.insert(audienceMember)
+		.values({ subscriberId, audienceId, unsubscribedAt: new Date() })
+		.onConflictDoUpdate({
+			target: [audienceMember.subscriberId, audienceMember.audienceId],
+			set: { unsubscribedAt: new Date() },
+			setWhere: isNull(audienceMember.unsubscribedAt)
+		});
 }
 
 /**
@@ -175,6 +241,8 @@ export async function unsubscribe(subscriberId: string, audienceId: string) {
  * Creates subscriber records as needed. Returns count of new additions.
  */
 export async function bulkAddMembers(audienceId: string): Promise<number> {
+	await assertNotSystem(audienceId, 'bulk-add members to');
+
 	const users = await db
 		.select({ id: user.id, email: user.email, name: user.name })
 		.from(user)
@@ -217,6 +285,13 @@ export async function bulkAddMembers(audienceId: string): Promise<number> {
  * List all subscribers in an audience (including unsubscribed, for staff view).
  */
 export async function listSubscribers(audienceId: string) {
+	// A built-in has no membership rows to list — only opt-out tombstones — so
+	// show a live sample of who it currently resolves to instead.
+	const systemKey = await systemKeyFor(audienceId);
+	if (isSystemAudienceKey(systemKey)) {
+		return previewSystemAudience(audienceId, systemKey);
+	}
+
 	return db
 		.select({
 			id: audienceMember.id,
@@ -241,7 +316,7 @@ export async function listSubscribers(audienceId: string) {
  * Get all audiences a user is actively subscribed to (for member account page).
  */
 export async function getSubscriptionsForUser(userId: string) {
-	return db
+	const explicit = await db
 		.select({
 			audienceId: audience.id,
 			audienceName: audience.name,
@@ -253,6 +328,17 @@ export async function getSubscriptionsForUser(userId: string) {
 		.innerJoin(audience, eq(audience.id, audienceMember.audienceId))
 		.where(and(eq(subscriber.userId, userId), isNull(audienceMember.unsubscribedAt)))
 		.orderBy(audience.name);
+
+	// Built-ins have no membership row, so they would otherwise be invisible on
+	// the account page — leaving members mail they cannot see or opt out of.
+	const builtIn = (await getSystemAudiencesForUser(userId)).map((a) => ({
+		audienceId: a.id,
+		audienceName: a.name,
+		audienceDescription: a.description,
+		subscribedAt: null
+	}));
+
+	return [...explicit, ...builtIn].sort((a, b) => a.audienceName.localeCompare(b.audienceName));
 }
 
 /**

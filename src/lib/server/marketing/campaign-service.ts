@@ -2,10 +2,12 @@ import { db } from '$lib/server/db';
 import {
 	campaign,
 	campaignAudience,
+	audience,
 	audienceMember,
 	subscriber
 } from '$lib/server/db/schema/marketing';
 import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
+import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
 import { signUnsubscribeToken } from './unsubscribe';
 import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
@@ -231,35 +233,66 @@ export async function sendNow(id: string) {
 // ---------------------------------------------------------------------------
 
 export async function getRecipientsForCampaign(campaignId: string) {
-	// Get audience IDs for this campaign
-	const audienceIds = (
-		await db
-			.select({ audienceId: campaignAudience.audienceId })
-			.from(campaignAudience)
-			.where(eq(campaignAudience.campaignId, campaignId))
-	).map((r) => r.audienceId);
+	// Targeted audiences, with the marker that says how to resolve each one.
+	const targeted = await db
+		.select({ id: audience.id, systemKey: audience.systemKey })
+		.from(campaignAudience)
+		.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
+		.where(eq(campaignAudience.campaignId, campaignId));
 
-	if (audienceIds.length === 0) return [];
+	if (targeted.length === 0) return [];
 
-	// Get all active subscribers across those audiences, deduplicated by email
-	const rows = await db
-		.selectDistinct({
-			subscriberId: subscriber.id,
-			email: subscriber.email,
-			name: subscriber.name,
-			audienceId: audienceMember.audienceId
-		})
-		.from(audienceMember)
-		.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
-		.where(
-			and(
-				inArray(audienceMember.audienceId, audienceIds),
-				isNull(audienceMember.unsubscribedAt),
-				isNull(subscriber.suppressedAt)
-			)
+	// Sorted so the audience retained for a deduplicated recipient — which
+	// scopes their unsubscribe token — doesn't depend on row order.
+	const ordered = [...targeted].sort((a, b) => a.id.localeCompare(b.id));
+
+	const staticIds = ordered.filter((a) => !isSystemAudienceKey(a.systemKey)).map((a) => a.id);
+	const rows: {
+		subscriberId: string;
+		email: string;
+		name: string | null;
+		audienceId: string;
+	}[] = [];
+
+	if (staticIds.length > 0) {
+		rows.push(
+			...(await db
+				.selectDistinct({
+					subscriberId: subscriber.id,
+					email: subscriber.email,
+					name: subscriber.name,
+					audienceId: audienceMember.audienceId
+				})
+				.from(audienceMember)
+				.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
+				.where(
+					and(
+						inArray(audienceMember.audienceId, staticIds),
+						isNull(audienceMember.unsubscribedAt),
+						isNull(subscriber.suppressedAt)
+					)
+				))
 		);
+	}
 
-	return rows;
+	for (const a of ordered) {
+		if (!isSystemAudienceKey(a.systemKey)) continue;
+		rows.push(...(await resolveSystemAudienceRecipients(a.id, a.systemKey)));
+	}
+
+	// One message per subscriber, however many of the targeted audiences they
+	// are in. Built-in audiences overlap every static list, so without this a
+	// member on "All Members" and the newsletter gets two copies.
+	const rank = new Map(ordered.map((a, i) => [a.id, i]));
+	const bySubscriber = new Map<string, (typeof rows)[number]>();
+	for (const row of rows) {
+		const seen = bySubscriber.get(row.subscriberId);
+		if (!seen || (rank.get(row.audienceId) ?? Infinity) < (rank.get(seen.audienceId) ?? Infinity)) {
+			bySubscriber.set(row.subscriberId, row);
+		}
+	}
+
+	return [...bySubscriber.values()];
 }
 
 // ---------------------------------------------------------------------------

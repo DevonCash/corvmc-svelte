@@ -15,7 +15,7 @@ import {
 	addSubscriber,
 	unsubscribe as unsubscribeFromAudience
 } from '$lib/server/marketing/audience-service';
-import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
+import { findOrCreateForUser } from '$lib/server/marketing/subscriber-service';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -174,10 +174,10 @@ export const unsubscribe = form(
 	async (data) => {
 		const currentUser = requireUser();
 		const audienceId = data.audienceId as string;
-		const sub = await findByUserId(currentUser.id);
-		if (sub) {
-			await unsubscribeFromAudience(sub.id, audienceId);
-		}
+		// find-or-create, not find: a member can be in a built-in audience without
+		// ever having had a subscriber row, and still needs to be able to leave it.
+		const sub = await findOrCreateForUser(currentUser.id, currentUser.email, currentUser.name);
+		await unsubscribeFromAudience(sub.id, audienceId);
 
 		void getMySubscriptions().refresh();
 		void getAvailableLists().refresh();

@@ -42,6 +42,10 @@ export const audience = sqliteTable('audience', {
 	slug: text('slug').notNull().unique(),
 	description: text('description'),
 	allowOptIn: integer('allow_opt_in', { mode: 'boolean' }).notNull().default(false),
+	// Non-null marks a built-in audience whose membership is resolved by a
+	// code-defined SQL predicate at query time rather than from audience_member
+	// rows. See marketing/system-audiences.ts. Null = staff-curated static list.
+	systemKey: text('system_key').unique(),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`)

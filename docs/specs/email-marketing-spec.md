@@ -14,7 +14,7 @@ CorvMC currently sends only transactional emails (reservation reminders, ticket 
 
 **Subscribers are email addresses, not user accounts.** A subscriber record holds an email, an optional name, and an optional link to a user account. This means the same system handles members and external signups. If a member's account email matches a subscriber email, the records are linked via `userId`.
 
-**Audiences are static lists.** Staff creates named audiences and manually adds subscribers. No dynamic filters or auto-updating rules. Staff can bulk-add all current members as a one-time snapshot, but the audience doesn't track membership changes afterward.
+**Audiences are static lists, plus a closed set of built-ins.** Staff creates named audiences and manually adds subscribers; those don't track membership changes afterward, and staff can bulk-add all current members as a one-time snapshot. Alongside them sit four **built-in audiences** (`audience.systemKey` non-null) whose membership is a code-defined SQL predicate over member attributes, resolved at send time — see `src/lib/server/marketing/system-audience-defs.ts`. Built-ins are not a user-authored rules engine: staff cannot define new ones or edit their criteria from the UI. Only subscribers linked to a member account can match one; opt-outs are stored as `audience_member` tombstone rows.
 
 **Campaigns are markdown emails.** Staff writes in markdown, sees a live HTML preview rendered through the existing MJML base template. Campaigns target one or more audiences. At send time, the system deduplicates across audiences and excludes anyone who has unsubscribed.
 
@@ -143,8 +143,8 @@ No email confirmation for v1 — the form submits and the subscriber is immediat
 2. Staff clicks "Send now" or "Schedule for [datetime]"
 3. For immediate send: sets `scheduledFor` to now. For scheduled: sets `scheduledFor` to the chosen time.
 4. Send job (cron picks up where `scheduledFor <= now()` and `sentAt` is null):
-   a. Resolve all `audience_member` rows for the campaign's audiences where `unsubscribedAt` is null
-   b. Join to `subscriber` to get emails. Deduplicate across audiences.
+   a. For static audiences, resolve `audience_member` rows where `unsubscribedAt` is null. For built-ins, run the resolver's predicate against `user`, backfilling `subscriber` rows for members who have none, and exclude tombstoned and suppressed subscribers.
+   b. Join to `subscriber` to get emails. Deduplicate by subscriber across audiences, keeping the lowest-sorted `audienceId` so the unsubscribe token is deterministic.
    c. Render final HTML from markdown + MJML base template. Include unsubscribe link per recipient.
    d. Batch send via Postmark broadcast stream (500 per API call)
    e. Update campaign: `sentAt = now()`, `recipientCount = N`
@@ -271,9 +271,12 @@ Indexes: unique on `email`, index on `userId`.
 | slug        | text      | NOT NULL, UNIQUE        |
 | description | text      | nullable                |
 | allowOptIn  | boolean   | NOT NULL, default false |
+| systemKey   | text      | nullable, UNIQUE        |
 | createdAt   | timestamp | NOT NULL, default now() |
 
-Indexes: unique on `slug`.
+Indexes: unique on `slug`, unique on `system_key`.
+
+`systemKey` is null for a staff-curated static list. Non-null names a built-in resolver in `system-audience-defs.ts`; those rows are provisioned idempotently by `ensureSystemAudiences()` and reject delete, add/remove subscriber, bulk-add, slug change, and opt-in.
 
 ### audience_member
 
@@ -362,7 +365,8 @@ No in-app notifications for campaigns. Campaigns are email-only by design.
 ## Deferred
 
 - **Email confirmation on signup** — double opt-in for public signups. Important for deliverability long-term but adds complexity (pending state, confirmation email, expiry). Revisit when list sizes grow.
-- **Dynamic/filter-based audiences** — audiences defined by member attributes (genre, instrument, join date). Deferred in favor of static lists for simplicity.
+- **Staff-authored audience rules** — a UI for defining audiences by arbitrary member attributes (genre, instrument, join date). Partially superseded: four attribute-defined audiences now ship as built-ins (All Members, Sustaining Members, Non-Sustaining Members, Band Leaders), but the set is closed and code-defined. A general rules engine remains deferred; add a new built-in in `system-audience-defs.ts` instead.
+- **Campaign-scoped unsubscribe** — an unsubscribe link removes the recipient from the one audience its token was signed for, not from every audience the campaign targeted. When a campaign targets several audiences, the token is scoped to the lowest-sorted audience the recipient matched.
 - **Per-recipient tracking** — webhook-driven delivery/open/bounce status per recipient. V1 uses aggregate stats from Postmark's API.
 - **Campaign analytics dashboard** — charts for open rates, click rates, trends over time. V1 shows raw counts on the campaign detail page.
 - **A/B testing** — send variants to subsets and compare. Standard email marketing feature but not needed for v1.

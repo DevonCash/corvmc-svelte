@@ -78,8 +78,7 @@ vi.mock('$lib/server/marketing/audience-service', () => ({
 }));
 
 vi.mock('$lib/server/marketing/subscriber-service', () => ({
-	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' }),
-	findByUserId: vi.fn().mockResolvedValue({ id: 'sub-1' })
+	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' })
 }));
 
 vi.mock('$app/server', () => ({
@@ -120,7 +119,7 @@ import {
 	addSubscriber,
 	unsubscribe as unsubscribeService
 } from '$lib/server/marketing/audience-service';
-import { findOrCreateForUser, findByUserId } from '$lib/server/marketing/subscriber-service';
+import { findOrCreateForUser } from '$lib/server/marketing/subscriber-service';
 
 const {
 	updateProfile,
@@ -237,19 +236,25 @@ describe('subscribe', () => {
 });
 
 describe('unsubscribeFromList', () => {
-	it('finds subscriber and unsubscribes from audience', async () => {
+	it('resolves the subscriber and unsubscribes from the audience', async () => {
 		await unsubscribeFromList({ audienceId: 'aud-99' });
 
-		expect(findByUserId).toHaveBeenCalledWith('user-1');
 		expect(unsubscribeService).toHaveBeenCalledWith('sub-1', 'aud-99');
 	});
 
-	it('does nothing if subscriber not found', async () => {
-		vi.mocked(findByUserId).mockResolvedValueOnce(null as any);
-
+	// A member can be in a built-in audience — membership is a predicate over
+	// their account, not an audience_member row — without ever having had a
+	// subscriber record. Bailing out when none exists left them unable to opt
+	// out of mail they were still receiving.
+	it('creates a subscriber record when the member has none, so opt-out still lands', async () => {
 		await unsubscribeFromList({ audienceId: 'aud-99' });
 
-		expect(unsubscribeService).not.toHaveBeenCalled();
+		expect(findOrCreateForUser).toHaveBeenCalledWith(
+			'user-1',
+			mockLocals.user.email,
+			mockLocals.user.name
+		);
+		expect(unsubscribeService).toHaveBeenCalledWith('sub-1', 'aud-99');
 	});
 });
 
