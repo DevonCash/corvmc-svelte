@@ -50,9 +50,9 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 2 — Certifications
 
-- [ ] `volunteer-certification-service.ts` — catalog CRUD, archive/restore,
+- [x] `volunteer-certification-service.ts` — catalog CRUD, archive/restore,
       in-use delete guard (copy `volunteer-role-service.ts`)
-- [ ] `member-certification-service.ts` — grant, revoke, derived state,
+- [x] `member-certification-service.ts` — grant, revoke, derived state,
       `heldOn(userId, certId, date)`, same-day typo delete
 - [ ] `/staff/volunteer/certifications` — catalog table
 - [ ] Clearances view — current / expiring / lapsed
@@ -94,8 +94,8 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 - [ ] `scripts/seed-dev.ts` — catalog with one expiring + one lapsed card,
       shifts either side of today, signups across every status, feedback on the
       completed ones
-- [ ] Specs: date asymmetry, renewal appends, claim refusals (full / uncleared /
-      duplicate), completion only touches confirmed-and-past, feedback once
+- [~] Specs: date asymmetry **done**, renewal appends, claim refusals (full / uncleared /
+  duplicate), completion only touches confirmed-and-past, feedback once
 - [ ] Extend `e2e/volunteering.e2e.ts` + its fixture
 - [ ] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
 - [ ] `production-workflow-spec.md:1256` — close the staffing hook
