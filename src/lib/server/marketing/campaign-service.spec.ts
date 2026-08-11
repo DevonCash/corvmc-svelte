@@ -26,7 +26,7 @@ vi.mock('$lib/server/db/schema/marketing', () => ({
 		campaignId: 'campaignAudience.campaignId',
 		audienceId: 'campaignAudience.audienceId'
 	},
-	audience: { id: 'audience.id', name: 'audience.name' },
+	audience: { id: 'audience.id', name: 'audience.name', systemKey: 'audience.systemKey' },
 	audienceMember: {
 		audienceId: 'audienceMember.audienceId',
 		subscriberId: 'audienceMember.subscriberId',
@@ -47,6 +47,11 @@ vi.mock('drizzle-orm', () => ({
 	isNull: vi.fn((col: unknown) => ({ col, op: 'isNull' })),
 	lte: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'lte' })),
 	inArray: vi.fn((col: unknown, vals: unknown) => ({ col, vals, op: 'inArray' }))
+}));
+
+vi.mock('./system-audiences', () => ({
+	isSystemAudienceKey: vi.fn((key: unknown) => key === 'all-members'),
+	resolveSystemAudienceRecipients: vi.fn(async () => [])
 }));
 
 vi.mock('./campaign-render', () => ({
@@ -75,6 +80,7 @@ import { isNull } from 'drizzle-orm';
 import { sendBroadcastBatch } from '$lib/server/notification/email';
 import { renderCampaignForSend } from './campaign-render';
 import { signUnsubscribeToken } from './unsubscribe';
+import { resolveSystemAudienceRecipients } from './system-audiences';
 import {
 	deriveCampaignStatus,
 	createCampaign,
@@ -520,6 +526,86 @@ describe('campaign-service', () => {
 			const setCall = updatedSets[0] as { recipientCount: number; sentAt: Date };
 			expect(setCall.recipientCount).toBe(1);
 			expect(setCall.sentAt).toBeInstanceOf(Date);
+		});
+
+		// Regression: a subscriber who belongs to two of the campaign's audiences
+		// used to receive one copy per audience, because the recipient query
+		// selectDistinct'd a tuple that included audienceId. Built-in audiences
+		// overlap every static list, so this went from rare to routine.
+		it('sends exactly one message to a subscriber who is in two targeted audiences', async () => {
+			selectResults = [
+				[{ ...mockCampaign }], // getCampaignRaw
+				[
+					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
+					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
+				], // campaign's audiences
+				[
+					{ ...mockRecipient, audienceId: 'aud-1' },
+					{ ...mockRecipient, audienceId: 'aud-2' }
+				] // same subscriber, once per audience
+			];
+
+			const count = await executeSend('camp-1');
+
+			expect(count).toBe(1);
+			const [messages] = vi.mocked(sendBroadcastBatch).mock.calls[0];
+			expect(messages).toHaveLength(1);
+			expect(messages[0].to).toBe(mockRecipient.email);
+		});
+
+		it('sends one message when a member is in both a built-in and a static audience', async () => {
+			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
+				{ ...mockRecipient, audienceId: 'aud-system' }
+			]);
+			selectResults = [
+				[{ ...mockCampaign }],
+				[
+					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
+					{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }
+				],
+				[{ ...mockRecipient, audienceId: 'aud-1' }] // static-list query
+			];
+
+			const count = await executeSend('camp-1');
+
+			expect(count).toBe(1);
+			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith('aud-system', 'all-members');
+		});
+
+		it('does not run the static-list query when every targeted audience is built-in', async () => {
+			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
+				{ ...mockRecipient, audienceId: 'aud-system' }
+			]);
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }]
+			];
+
+			const count = await executeSend('camp-1');
+
+			expect(count).toBe(1);
+			expect(db.selectDistinct).not.toHaveBeenCalled();
+		});
+
+		it('scopes a deduplicated recipient to a deterministic audience', async () => {
+			// The retained audienceId scopes the unsubscribe token, so it must not
+			// depend on row order coming back from the database.
+			const rows = [
+				{ ...mockRecipient, audienceId: 'aud-2' },
+				{ ...mockRecipient, audienceId: 'aud-1' }
+			];
+			selectResults = [
+				[{ ...mockCampaign }],
+				[
+					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
+					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
+				],
+				rows
+			];
+
+			await executeSend('camp-1');
+
+			expect(signUnsubscribeToken).toHaveBeenCalledWith(mockRecipient.subscriberId, 'aud-1');
 		});
 
 		it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {

@@ -28,6 +28,10 @@
 	let audienceData = $derived(await getAudienceDetail(id));
 	let subscribers = $derived(await getAudienceSubscribers(id));
 
+	// A built-in audience's membership is a SQL predicate over member
+	// attributes, so every list-editing control below is meaningless for it.
+	let isBuiltIn = $derived(Boolean(audienceData?.systemKey));
+
 	// Local mirror of the opt-in setting so the toggle submits an explicit boolean
 	// (the previous string-only checkbox could turn opt-in on but never off). A
 	// writable $derived tracks the server value but lets the toggle reassign it.
@@ -36,10 +40,12 @@
 
 {#if audienceData}
 	<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
-		<DeleteAudienceAction
-			audienceId={id}
-			onsuccess={() => goto(resolve('/staff/marketing/audiences'))}
-		/>
+		{#if !isBuiltIn}
+			<DeleteAudienceAction
+				audienceId={id}
+				onsuccess={() => goto(resolve('/staff/marketing/audiences'))}
+			/>
+		{/if}
 	</PageHeader>
 	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
@@ -49,10 +55,19 @@
 					<dd class="font-mono text-xs">{audienceData.slug}</dd>
 
 					<dt class="opacity-60">Subscribers</dt>
-					<dd>{audienceData.subscriberCount} active</dd>
+					<dd>
+						{audienceData.subscriberCount}
+						{isBuiltIn ? 'matching members' : 'active'}
+					</dd>
 
 					<dt class="opacity-60">Opt-in</dt>
-					<dd>{audienceData.allowOptIn ? 'Public' : 'Staff only'}</dd>
+					<dd>
+						{#if isBuiltIn}
+							<Badge variant="info" size="xs">Built-in</Badge>
+						{:else}
+							{audienceData.allowOptIn ? 'Public' : 'Staff only'}
+						{/if}
+					</dd>
 
 					<dt class="opacity-60">Created</dt>
 					<dd>{new Date(audienceData.createdAt).toLocaleDateString()}</dd>
@@ -60,6 +75,14 @@
 
 				{#if audienceData.description}
 					<p class="text-sm opacity-70 mt-3">{audienceData.description}</p>
+				{/if}
+
+				{#if isBuiltIn}
+					<p class="text-sm opacity-70 mt-3">
+						Membership is worked out from member attributes each time you send, so this list is
+						always current — there is nothing to refresh. Subscribers without a member account, such
+						as public newsletter signups, are never included.
+					</p>
 				{/if}
 
 				{#if audienceData.allowOptIn}
@@ -70,47 +93,63 @@
 				{/if}
 			</InfoCard>
 
-			<InfoCard title="Actions">
-				<div class="space-y-3">
-					<BulkAddMembersAction audienceId={id} />
+			{#if !isBuiltIn}
+				<InfoCard title="Actions">
+					<div class="space-y-3">
+						<BulkAddMembersAction audienceId={id} />
 
-					<Form remote={updateAudience} successToast="Opt-in setting updated">
-						<input {...fields.id.as('hidden', id)} />
-						<input {...fields.allowOptIn.as('hidden', allowOptIn)} />
-						<label class="label cursor-pointer justify-start gap-3">
-							<input
-								type="checkbox"
-								class="toggle toggle-sm"
-								bind:checked={allowOptIn}
-								onchange={(e) => {
-									(e.target as HTMLInputElement).form?.requestSubmit();
-								}}
-							/>
-							<span class="text-sm">Allow public opt-in</span>
-						</label>
-					</Form>
-				</div>
-			</InfoCard>
+						<Form remote={updateAudience} successToast="Opt-in setting updated">
+							<input {...fields.id.as('hidden', id)} />
+							<input {...fields.allowOptIn.as('hidden', allowOptIn)} />
+							<label class="label cursor-pointer justify-start gap-3">
+								<input
+									type="checkbox"
+									class="toggle toggle-sm"
+									bind:checked={allowOptIn}
+									onchange={(e) => {
+										(e.target as HTMLInputElement).form?.requestSubmit();
+									}}
+								/>
+								<span class="text-sm">Allow public opt-in</span>
+							</label>
+						</Form>
+					</div>
+				</InfoCard>
+			{/if}
 		</div>
 
-		<!-- Add Subscriber -->
-		<InfoCard title="Add Subscriber" class="mb-6">
-			<AddSubscriberAction audienceId={id} />
-		</InfoCard>
+		{#if !isBuiltIn}
+			<!-- Add Subscriber -->
+			<InfoCard title="Add Subscriber" class="mb-6">
+				<AddSubscriberAction audienceId={id} />
+			</InfoCard>
+		{/if}
 
 		<!-- Subscriber List -->
-		<InfoCard title="Subscribers ({audienceData.subscriberCount})">
+		<InfoCard
+			title={isBuiltIn
+				? `Matching members (showing ${subscribers.length} of ${audienceData.subscriberCount})`
+				: `Subscribers (${audienceData.subscriberCount})`}
+		>
 			{#if subscribers.length === 0}
-				<EmptyState description="No subscribers yet" />
+				<EmptyState description={isBuiltIn ? 'No members currently match' : 'No subscribers yet'} />
 			{:else}
 				<Table>
 					{#snippet head()}
 						<th>Subscriber</th>
-						<th class="col-support w-px">Status</th>
-						<th class="col-extra whitespace-nowrap">Joined</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<!-- A built-in's preview already excludes opt-outs, so every row
+						     would read "Active". -->
+						{#if !isBuiltIn}
+							<th class="col-support w-px">Status</th>
+						{/if}
+						<th class="col-extra whitespace-nowrap">{isBuiltIn ? 'Member since' : 'Joined'}</th>
+						{#if !isBuiltIn}
+							<th class="w-px"><span class="sr-only">Actions</span></th>
+						{/if}
 					{/snippet}
-					{#each subscribers as s (s.subscriberId)}
+					<!-- Keyed by email: a built-in's preview rows come from `user`, where a
+					     member with no subscriber record yet has a null subscriberId. -->
+					{#each subscribers as s (s.email)}
 						<tr class="hover">
 							<!-- Name was its own column; it qualifies the address, so it is the
 							     subline. -->
@@ -120,19 +159,23 @@
 									<div class="truncate text-sm opacity-60">{s.name}</div>
 								{/if}
 							</td>
-							<td class="col-support w-px">
-								<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
-									{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
-								</Badge>
-							</td>
+							{#if !isBuiltIn}
+								<td class="col-support w-px">
+									<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
+										{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
+									</Badge>
+								</td>
+							{/if}
 							<td class="col-extra whitespace-nowrap">{formatDateShort(s.createdAt)}</td>
-							<td class="w-px">
-								<RemoveSubscriberAction
-									audienceId={id}
-									subscriberId={s.subscriberId}
-									email={s.email}
-								/>
-							</td>
+							{#if !isBuiltIn && s.subscriberId}
+								<td class="w-px">
+									<RemoveSubscriberAction
+										audienceId={id}
+										subscriberId={s.subscriberId}
+										email={s.email}
+									/>
+								</td>
+							{/if}
 						</tr>
 					{/each}
 				</Table>

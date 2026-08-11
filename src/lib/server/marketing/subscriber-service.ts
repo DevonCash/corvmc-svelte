@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { subscriber, type SuppressionReason } from '$lib/server/db/schema/marketing';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Subscriber service
@@ -59,6 +59,34 @@ export async function suppressByEmail(email: string, reason: SuppressionReason):
 		return false;
 	}
 	return true;
+}
+
+/**
+ * Global opt-out chosen by the recipient ("unsubscribe from all"). Suppression
+ * excludes the address from every campaign regardless of audience membership,
+ * which is what makes it cover audiences they aren't on yet — including
+ * built-ins they might start matching later.
+ *
+ * No-op when already suppressed: a `bounce` or `complaint` is a fact about the
+ * address and must not be overwritten with the weaker, reversible reason.
+ */
+export async function suppressSelfService(subscriberId: string): Promise<void> {
+	await db
+		.update(subscriber)
+		.set({ suppressedAt: new Date(), suppressionReason: 'unsubscribe' })
+		.where(and(eq(subscriber.id, subscriberId), isNull(subscriber.suppressedAt)));
+}
+
+/**
+ * Undo a self-service global opt-out when the person opts back in themselves.
+ * Deliberately scoped to `unsubscribe`: opting in must never resurrect an
+ * address Postmark told us is bouncing or complaining.
+ */
+export async function clearSelfServiceSuppression(subscriberId: string): Promise<void> {
+	await db
+		.update(subscriber)
+		.set({ suppressedAt: null, suppressionReason: null })
+		.where(and(eq(subscriber.id, subscriberId), eq(subscriber.suppressionReason, 'unsubscribe')));
 }
 
 /**

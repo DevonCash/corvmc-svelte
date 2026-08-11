@@ -43,9 +43,13 @@
 						{/if}
 					</td>
 					<td class="col-support w-px">
-						<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
-							{a.allowOptIn ? 'Public' : 'Staff only'}
-						</Badge>
+						{#if a.systemKey}
+							<Badge size="sm" variant="info" class="whitespace-nowrap">Built-in</Badge>
+						{:else}
+							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
+								{a.allowOptIn ? 'Public' : 'Staff only'}
+							</Badge>
+						{/if}
 					</td>
 					<td class="cell-num">{a.subscriberCount}</td>
 					<td class="col-extra whitespace-nowrap">{formatDateShortYear(a.createdAt)}</td>

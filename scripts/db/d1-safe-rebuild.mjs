@@ -189,6 +189,49 @@ export function rewriteMigration(sql, snapshot) {
 	return out.join(`\n${BREAK}\n`) + '\n';
 }
 
+/**
+ * Merge comment-only chunks into the statement that follows them.
+ *
+ * `drizzle-kit migrate` POSTs each `--> statement-breakpoint` chunk to D1 as a
+ * single statement, and a chunk holding only comments has none — D1 rejects the
+ * whole migration with `7500: SQL code did not contain a statement`. Comments
+ * are fine; they just have to travel with the statement they describe.
+ *
+ * Runs over every migration, including ones already carrying the SAFE_MARKER
+ * and hand-written ones (a hand-written file is what broke the production
+ * deploy), so `pnpm db:fix-migrations` repairs the class wherever it appears.
+ * Idempotent. Returns null when nothing needs moving.
+ */
+export function collapseCommentOnlyChunks(sql) {
+	const isCommentOnly = (chunk) =>
+		chunk
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line && !line.startsWith('--')).length === 0;
+
+	const chunks = sql.split(BREAK);
+	if (!chunks.some(isCommentOnly)) return null;
+
+	const out = [];
+	let pending = [];
+	for (const chunk of chunks) {
+		if (isCommentOnly(chunk)) {
+			const text = chunk.trim();
+			if (text) pending.push(text);
+			continue;
+		}
+		out.push(pending.length ? `${pending.join('\n')}\n${chunk.trim()}` : chunk.trim());
+		pending = [];
+	}
+
+	// Nothing executable at all — not ours to rewrite.
+	if (!out.length) return null;
+	// Trailing comments have no following statement; park them on the last one.
+	if (pending.length) out[out.length - 1] += `\n${pending.join('\n')}`;
+
+	return out.join(`\n${BREAK}\n`) + '\n';
+}
+
 function migrationDirs() {
 	return readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
 		.filter((d) => d.isDirectory())
@@ -206,6 +249,7 @@ function main() {
 
 	const unsafeRebuilds = [];
 	const unsafeDrops = [];
+	const commentOnly = [];
 	for (const dir of migrationDirs()) {
 		if (GRANDFATHERED.has(dir)) continue;
 		const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
@@ -217,15 +261,28 @@ function main() {
 		const rewritten = rewriteMigration(sql, snapshot);
 
 		if (rewritten && write) {
-			writeFileSync(sqlPath, rewritten);
 			console.log(`rewritten: ${dir}`);
 		} else if (rewritten) {
 			unsafeRebuilds.push(dir);
 		}
 
+		// Comment placement is repaired after the rebuild rewrite so it also
+		// covers the rewrite's own output, and independently of SAFE_MARKER so
+		// already-rewritten and hand-written migrations are both reachable.
+		let repaired = rewritten && write ? rewritten : sql;
+		const collapsed = collapseCommentOnlyChunks(repaired);
+		if (collapsed && write) {
+			repaired = collapsed;
+			console.log(`comments merged onto their statements: ${dir}`);
+		} else if (collapsed) {
+			commentOnly.push(dir);
+		}
+
+		if (write && repaired !== sql) writeFileSync(sqlPath, repaired);
+
 		// Checked against the post-rewrite SQL so the rewrite's own drops don't
 		// register. --write can't repair these, so they're reported in both modes.
-		const finalSql = rewritten && write ? rewritten : sql;
+		const finalSql = repaired;
 		const kids = childGraph(readSnapshot(snapshot));
 		const drops = findUnsafeDrops(finalSql, kids, findRebuiltTables(finalSql));
 		if (drops.length) unsafeDrops.push({ dir, drops });
@@ -252,7 +309,13 @@ function main() {
 		);
 	}
 
-	if (unsafeRebuilds.length || unsafeDrops.length) {
+	if (commentOnly.length) {
+		console.error('\nComment-only chunks found — D1 rejects these with 7500:\n');
+		for (const d of commentOnly) console.error(`  migrations/${d}/migration.sql`);
+		console.error('\nFix with:  pnpm db:fix-migrations');
+	}
+
+	if (unsafeRebuilds.length || unsafeDrops.length || commentOnly.length) {
 		console.error('');
 		process.exit(1);
 	}

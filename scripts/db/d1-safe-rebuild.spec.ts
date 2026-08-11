@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error -- plain .mjs helper, no types
-import { rewriteMigration, findRebuiltTables, findUnsafeDrops } from './d1-safe-rebuild.mjs';
+import {
+	rewriteMigration,
+	findRebuiltTables,
+	findUnsafeDrops,
+	collapseCommentOnlyChunks
+} from './d1-safe-rebuild.mjs';
 // @ts-expect-error -- plain .mjs helper, no types
 import { childGraph, descendantsDeepestFirst, readSnapshot } from './d1-ddl.mjs';
 
@@ -211,5 +216,74 @@ describe('rewriteMigration', () => {
 
 	it('does nothing to a migration that rebuilds no tables', () => {
 		expect(rewriteMigration('ALTER TABLE `band` ADD `claim_status` text;', snapshot)).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Comment placement
+// ---------------------------------------------------------------------------
+// drizzle-kit POSTs each `--> statement-breakpoint` chunk to D1 as one
+// statement. A chunk holding only comments has none, and D1 rejects the entire
+// migration with `7500: SQL code did not contain a statement`.
+
+describe('collapseCommentOnlyChunks', () => {
+	const BREAK = '--> statement-breakpoint';
+
+	function chunksWithoutStatements(sql: string): string[] {
+		return sql.split(BREAK).filter(
+			(chunk) =>
+				chunk
+					.split('\n')
+					.map((line) => line.trim())
+					.filter((line) => line && !line.startsWith('--')).length === 0
+		);
+	}
+
+	it('returns null when every chunk already carries a statement', () => {
+		const sql = `SELECT 1;\n${BREAK}\n-- explains the next one\nSELECT 2;\n`;
+		expect(collapseCommentOnlyChunks(sql)).toBeNull();
+	});
+
+	it('moves a lone comment onto the statement it describes', () => {
+		const sql = `-- why we defer\n${BREAK}\nPRAGMA defer_foreign_keys=ON;\n`;
+
+		const out = collapseCommentOnlyChunks(sql);
+
+		expect(chunksWithoutStatements(out)).toEqual([]);
+		expect(out).toContain('-- why we defer\nPRAGMA defer_foreign_keys=ON;');
+	});
+
+	it('keeps consecutive comment lines together, in order', () => {
+		const sql = `-- first\n${BREAK}\n-- second\n${BREAK}\nSELECT 1;\n`;
+
+		const out = collapseCommentOnlyChunks(sql);
+
+		expect(chunksWithoutStatements(out)).toEqual([]);
+		expect(out).toContain('-- first\n-- second\nSELECT 1;');
+	});
+
+	it('parks trailing comments on the preceding statement', () => {
+		const sql = `SELECT 1;\n${BREAK}\n-- nothing follows this\n`;
+
+		const out = collapseCommentOnlyChunks(sql);
+
+		expect(chunksWithoutStatements(out)).toEqual([]);
+		expect(out).toContain('SELECT 1;\n-- nothing follows this');
+	});
+
+	it('preserves every statement', () => {
+		const sql = `-- a\n${BREAK}\nSELECT 1;\n${BREAK}\n-- b\n${BREAK}\nSELECT 2;\n`;
+
+		const out = collapseCommentOnlyChunks(sql);
+
+		expect(out).toContain('SELECT 1;');
+		expect(out).toContain('SELECT 2;');
+	});
+
+	it('is idempotent', () => {
+		const sql = `-- a\n${BREAK}\nSELECT 1;\n`;
+		const once = collapseCommentOnlyChunks(sql);
+
+		expect(collapseCommentOnlyChunks(once)).toBeNull();
 	});
 });

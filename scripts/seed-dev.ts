@@ -59,6 +59,8 @@ import {
 	campaign,
 	campaignAudience
 } from '../src/lib/server/db/schema/marketing';
+// Registry only — deliberately free of $lib imports so it resolves under tsx.
+import { SYSTEM_AUDIENCES } from '../src/lib/server/marketing/system-audience-defs';
 import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import {
@@ -1775,6 +1777,24 @@ async function seedMarketing(users: SeedUser[]) {
 		])
 		.returning();
 
+	// Built-in audiences. Membership is a SQL predicate resolved at send time,
+	// so these get no audience_member rows — see marketing/system-audiences.ts.
+	const systemAudienceRows = await db
+		.insert(audience)
+		.values(
+			(Object.keys(SYSTEM_AUDIENCES) as (keyof typeof SYSTEM_AUDIENCES)[]).map((key) => ({
+				id: randomUUID(),
+				name: SYSTEM_AUDIENCES[key].name,
+				slug: key,
+				description: SYSTEM_AUDIENCES[key].description,
+				allowOptIn: false,
+				systemKey: key
+			}))
+		)
+		.returning();
+	const allMembersAudience = systemAudienceRows.find((a) => a.systemKey === 'all-members')!;
+	const sustainingAudience = systemAudienceRows.find((a) => a.systemKey === 'sustaining-members')!;
+
 	const subscriberRows = await db
 		.insert(subscriber)
 		.values(users.map((u) => ({ id: randomUUID(), email: u.email, name: u.name, userId: u.id })))
@@ -1823,9 +1843,26 @@ async function seedMarketing(users: SeedUser[]) {
 		}
 	}
 
+	// One opt-out tombstone against a built-in audience: the only kind of
+	// audience_member row a system audience ever has, and the thing that keeps
+	// one-click unsubscribe working when there is no membership row to flip.
+	membershipRows.push({
+		id: randomUUID(),
+		subscriberId: subscriberRows[1].id,
+		audienceId: allMembersAudience.id,
+		unsubscribedAt: new Date(Date.now() - 5 * 86400000)
+	});
+
 	if (membershipRows.length > 0) {
 		await batchInsert(audienceMember, membershipRows);
 	}
+
+	// Globally suppressed by a bounce — excluded from every audience regardless
+	// of opt-in. Previously unexercised in dev data.
+	await db
+		.update(subscriber)
+		.set({ suppressedAt: new Date(Date.now() - 3 * 86400000), suppressionReason: 'bounce' })
+		.where(eq(subscriber.id, externalSubs[0].id));
 
 	const adminUser = users[0];
 
@@ -1916,11 +1953,48 @@ async function seedMarketing(users: SeedUser[]) {
 		.insert(campaignAudience)
 		.values({ campaignId: draft2.id, audienceId: audienceRows[0].id });
 
+	// Campaigns targeting built-in audiences. The sent one also overlaps the
+	// Newsletter list, which is the case the recipient dedupe exists for.
+	const [sentToAll] = await db
+		.insert(campaign)
+		.values({
+			id: randomUUID(),
+			subject: 'Studio Closed for Maintenance This Weekend',
+			markdownBody: '# Heads up\n\nThe practice rooms are closed Saturday and Sunday.',
+			htmlBody: '<p>The practice rooms are closed Saturday and Sunday.</p>',
+			scheduledFor: new Date(Date.now() - 2 * 86400000),
+			sentAt: new Date(Date.now() - 2 * 86400000),
+			sentById: adminUser.id,
+			recipientCount: users.length
+		})
+		.returning();
+	await db.insert(campaignAudience).values([
+		{ campaignId: sentToAll.id, audienceId: allMembersAudience.id },
+		{ campaignId: sentToAll.id, audienceId: audienceRows[0].id }
+	]);
+
+	const [sustainingDraft] = await db
+		.insert(campaign)
+		.values({
+			id: randomUUID(),
+			subject: 'Thank You for Sustaining CorvMC',
+			markdownBody: '# Thank you\n\nYour membership keeps the doors open.',
+			htmlBody: '<p>Your membership keeps the doors open.</p>',
+			scheduledFor: null,
+			sentAt: null,
+			sentById: adminUser.id,
+			recipientCount: null
+		})
+		.returning();
+	await db
+		.insert(campaignAudience)
+		.values({ campaignId: sustainingDraft.id, audienceId: sustainingAudience.id });
+
 	return {
-		audiences: audienceRows.length,
+		audiences: audienceRows.length + systemAudienceRows.length,
 		subscribers: allSubs.length,
 		memberships: membershipRows.length,
-		campaigns: sentCampaigns.length + 3
+		campaigns: sentCampaigns.length + 5
 	};
 }
 

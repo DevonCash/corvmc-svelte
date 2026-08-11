@@ -136,6 +136,9 @@
 								onchange={() => toggleAudience(a.id)}
 							/>
 							<span class="text-sm">{a.name}</span>
+							{#if a.systemKey}
+								<span class="badge badge-info badge-xs">Built-in</span>
+							{/if}
 							<span class="text-xs opacity-60">({a.subscriberCount})</span>
 						</label>
 					{/each}
