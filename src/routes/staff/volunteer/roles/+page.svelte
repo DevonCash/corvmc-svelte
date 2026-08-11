@@ -6,7 +6,11 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import { VOLUNTEER_ROLE_DESCRIPTION_MAX } from '$lib/config';
+	import {
+		VOLUNTEER_ROLE_DESCRIPTION_MAX,
+		volunteerRoleGroups,
+		volunteerRoleGroupLabels
+	} from '$lib/config';
 	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
 	import {
 		getVolunteerRoles,
@@ -18,6 +22,11 @@
 	} from '$lib/remote/volunteer.remote';
 
 	let roles = $derived(getVolunteerRoles());
+
+	const groupOptions = volunteerRoleGroups.map((g) => ({
+		value: g,
+		label: volunteerRoleGroupLabels[g]
+	}));
 
 	const descriptionHelp =
 		'Markdown. This is what members read on their volunteering page, so say what the job actually involves.';
@@ -40,6 +49,7 @@
 				description={descriptionHelp}
 				maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
 			/>
+			<FormField name="group" label="Group" type="select" options={groupOptions} />
 			<FormField
 				name="displayOrder"
 				label="Display order"
@@ -107,6 +117,13 @@
 											value={role.description ?? ''}
 											description={descriptionHelp}
 											maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
+										/>
+										<FormField
+											name="group"
+											label="Group"
+											type="select"
+											value={role.group}
+											options={groupOptions}
 										/>
 										<FormField
 											name="displayOrder"

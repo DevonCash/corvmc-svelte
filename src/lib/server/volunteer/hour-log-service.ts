@@ -538,7 +538,14 @@ export interface UserHourSummary {
 }
 
 export async function getUserHourSummary(userId: string): Promise<UserHourSummary> {
-	const yearStart = buildDateInTz(`${new Date().getFullYear()}-01-01`, '00:00', TZ);
+	// Unix seconds, not the Date. This boundary goes into a raw `sql` fragment,
+	// where drizzle binds whatever it is handed — there is no column in scope for
+	// it to read `mode: 'timestamp'` off, so a Date reaches the driver as an
+	// object and D1 rejects the statement with D1_TYPE_ERROR, taking the whole
+	// member volunteering page with it. The column stores seconds; match it.
+	const yearStart = Math.floor(
+		buildDateInTz(`${new Date().getFullYear()}-01-01`, '00:00', TZ).getTime() / 1000
+	);
 
 	const [row] = await db
 		.select({

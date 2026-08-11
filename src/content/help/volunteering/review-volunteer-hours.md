@@ -2,7 +2,7 @@
 title: Reviewing Volunteer Hours
 slug: review-volunteer-hours
 category: volunteering
-summary: Working the approval queue, managing roles, and pulling the report for the board.
+summary: Working the approval queue, finding volunteers, managing roles, and pulling the report for the board.
 minRole: staff
 sortOrder: 2
 ---
@@ -26,11 +26,27 @@ a corrected log; there is no un-approve.
 Filters (member, role, date range) stay in the URL, so a reload or a back button
 keeps your view.
 
+## Finding someone to ask
+
+**Volunteering → Interest** is the standing list of who has said they would help
+and with what. Filter by role to answer "who can work the door on Saturday" — the
+count beside each role in the filter tells you how deep the bench is before you
+select it. Each row still shows everything that member is up for, so you can see
+at a glance whether you are about to ask the same three people again.
+
+Expressing interest is not a commitment to a date, so treat the list as a place
+to start asking, not a rota. **Copy emails on this page** puts the filtered
+addresses on your clipboard for a quick message.
+
 ## Managing roles
 
 **Volunteering → Roles** is the list members pick from. A role is a name plus a
 job description in markdown — the description is what members read when deciding
 whether to help, so write what the job actually involves rather than a label.
+
+**Group** decides which of the three headings a role appears under — at shows,
+away from shows, or committees. It is presentation only; nothing else depends
+on it.
 
 **Archive** a role you are not using. It disappears from the member's submit
 form and stays everywhere else: existing logs keep working, the staff filter

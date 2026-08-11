@@ -8,10 +8,13 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Form, { CheckboxGroup, SubmitButton } from '$lib/components/shared/Form';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {
 		clubToday,
 		formatVolunteerHours,
+		volunteerRoleGroups,
+		volunteerRoleGroupLabels,
 		DEFAULT_TIMEZONE,
 		VOLUNTEER_HOUR_STEP
 	} from '$lib/config';
@@ -19,15 +22,29 @@
 	import {
 		getActiveVolunteerRoles,
 		getMyVolunteerHours,
+		getMyVolunteerInterests,
 		getMyVolunteerSummary,
+		saveVolunteerInterests,
 		submitVolunteerHours,
 		editVolunteerHours,
 		withdrawVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
+	type Role = { id: string; name: string; group: string; descriptionHtml: string | null };
+
 	let roles = $derived(getActiveVolunteerRoles());
+	let interests = $derived(getMyVolunteerInterests());
 	let logs = $derived(getMyVolunteerHours());
 	let summary = $derived(getMyVolunteerSummary());
+
+	// Group order comes from the enum, not from the data, so the columns stay put
+	// as roles are added. Empty groups drop out rather than rendering a bare
+	// heading — a club with no committees shouldn't see the word.
+	function groupedRoles(all: Role[]) {
+		return volunteerRoleGroups
+			.map((key) => ({ key, roles: all.filter((r) => r.group === key) }))
+			.filter((g) => g.roles.length > 0);
+	}
 
 	// Club time, not UTC: after 5pm PT the UTC date is already tomorrow, and the
 	// service rejects a future date — so a UTC-defaulted input offered a value
@@ -92,28 +109,45 @@
 
 	<!--
 		The role list is the reason this page is worth opening when you have no
-		hours to log: it's the only place that says what volunteering here involves.
+		hours to log: it's the only place that says what volunteering here involves,
+		and ticking a box here is how staff know who to ask.
 	-->
-	{#await roles then roleOptions}
+	{#await Promise.all([roles, interests]) then [roleOptions, myInterests]}
 		<InfoCard title="What you can help with">
 			{#if roleOptions.length === 0}
 				<p class="text-sm opacity-60">
 					No volunteer roles are open right now. Get in touch and we'll find you something.
 				</p>
 			{:else}
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					{#each roleOptions as role (role.id)}
-						<div class="rounded-box bg-base-200 p-4">
-							<h3 class="font-medium">{role.name}</h3>
-							{#if role.descriptionHtml}
-								<div class="prose prose-sm mt-1 max-w-none text-base-content/80">
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -- staff-authored markdown, rendered and sanitized server-side by renderMarkdown -->
-									{@html role.descriptionHtml}
-								</div>
-							{/if}
-						</div>
+				<Form remote={saveVolunteerInterests} successToast="Saved — we'll be in touch">
+					<p class="text-sm text-base-content/70">
+						Tick anything that interests you. It isn't a commitment — it just tells us who to ask
+						when something comes up, and we'll show you how to do it.
+					</p>
+
+					{#each groupedRoles(roleOptions) as group (group.key)}
+						<CheckboxGroup
+							field={saveVolunteerInterests.fields.roleIds}
+							legend={volunteerRoleGroupLabels[group.key]}
+							selected={myInterests}
+							descriptionHtml
+							options={group.roles.map((r) => ({
+								value: r.id,
+								label: r.name,
+								description: r.descriptionHtml
+							}))}
+						/>
 					{/each}
-				</div>
+
+					<p class="text-sm opacity-60">
+						Got an idea for a program, club, or class, or want to show art or perform? <a
+							href="/contact"
+							class="link">Get in touch</a
+						> — that's not a role, but we want to hear it.
+					</p>
+
+					<SubmitButton label="Save what I'm up for" class="btn-primary" />
+				</Form>
 			{/if}
 		</InfoCard>
 	{/await}

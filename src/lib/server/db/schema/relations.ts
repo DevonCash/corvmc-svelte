@@ -147,7 +147,15 @@ export const relations = defineRelations(schema, (t) => ({
 		author: t.one.user({ from: t.inboxNote.authorUserId, to: t.user.id })
 	},
 	volunteerRole: {
-		hourLogs: t.many.volunteerHourLog()
+		hourLogs: t.many.volunteerHourLog(),
+		interests: t.many.volunteerRoleInterest()
+	},
+	volunteerRoleInterest: {
+		user: t.one.user({ from: t.volunteerRoleInterest.userId, to: t.user.id }),
+		role: t.one.volunteerRole({
+			from: t.volunteerRoleInterest.volunteerRoleId,
+			to: t.volunteerRole.id
+		})
 	},
 	volunteerHourLog: {
 		user: t.one.user({ from: t.volunteerHourLog.userId, to: t.user.id }),

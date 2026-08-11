@@ -20,8 +20,23 @@ description of what it actually involves — what you would be doing, roughly ho
 long it takes, and whether we will train you. Nothing needs experience up front
 unless the description says so.
 
+Roles are grouped three ways: things that happen **at shows**, things **away
+from shows**, and **committees**, which meet monthly to steer the organization.
+
 If nothing fits what you have to offer, [get in touch](/contact) and we will
 find something.
+
+## Telling us what you are up for
+
+Tick the roles that interest you and press **Save what I'm up for**. That is not
+a commitment to any particular date — it is a standing note to staff about who
+to contact when something comes up, and we will show you how to do the job.
+
+Change your mind any time: tick or untick and save again. Unticking everything
+takes you off the list entirely.
+
+Ideas that are not a role — a program, a club, a class, showing art, performing
+— go through [the contact form](/contact) instead.
 
 ## Logging your hours
 

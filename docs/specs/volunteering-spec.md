@@ -76,11 +76,39 @@ volunteer_role
   id             uuid pk
   name           text unique        — "Sound Engineer"
   description    text?              — the job description, markdown
+  group          text               — at-shows | away-from-shows | committee
   displayOrder   integer            — sort order in pickers and reports
   isActive       boolean            — false = archived; hidden from the submit form only
   createdAt      timestamp
   updatedAt      timestamp
 ```
+
+`group` is presentation only: it buckets the roles under three headings on the
+member picker and the staff interest filter. Nothing branches on it, so a role
+in the wrong group is a cosmetic bug rather than a broken workflow.
+
+### Role interest
+
+A member's standing "I'd help with this" — the gap between someone reading
+`/contribute` and someone logging hours. It says who to contact when a role
+needs filling; it is not a commitment to a date, which is what a Phase 2 shift
+claim would be.
+
+```
+volunteer_role_interest
+  id                uuid pk
+  userId            uuid fk → user            (cascade — the member is the subject)
+  volunteerRoleId   uuid fk → volunteer_role  (cascade — unlike a log, no history to keep)
+  createdAt         timestamp
+  unique (userId, volunteerRoleId)
+```
+
+The member owns the set outright and staff never edit it, so the only mutation
+is "replace my set with this one". There is no status column: the row exists or
+it doesn't. Interests are member-only by design — an earlier draft took
+anonymous public sign-ups, which needed Turnstile, a parallel identity keyed by
+email, and its own unsubscribe tokens; requiring a (free) account deletes all
+three problems.
 
 ### Hour log
 
@@ -238,6 +266,10 @@ after an approval is worse than a report that takes an extra 30ms.
 **None of this is built.** It is recorded here so the Phase 1 schema can be
 judged against where it is going, and so `production-workflow-spec.md`'s deferred
 staffing hook has something to point at.
+
+Role interest (built) is the standing half of this: it records who _would_ do a
+job. A shift is the dated half — who is doing it on Saturday. The natural join is
+that the claim UI offers shifts for roles you have expressed interest in first.
 
 The shape: a `volunteer_shift` row is a dated, time-bounded need for a
 `volunteerRoleId` — "two Front Desk, Saturday 6–10pm" — optionally attached to an
@@ -489,8 +521,9 @@ auth role is now unconditional.
 
 ### Inside the volunteering domain
 
-- `volunteer_role` and `volunteer_hour_log` schema
+- `volunteer_role`, `volunteer_hour_log` and `volunteer_role_interest` schema
 - `volunteer-role-service.ts` — role CRUD, archive/restore, in-use guard
+- `volunteer-interest-service.ts` — set/read a member's interests, list them for staff
 - `hour-log-service.ts` — submit, edit, withdraw, approve, reject, list
 - `volunteer-report-service.ts` — the four aggregates
 - `volunteer.remote.ts` — guards and form/query wiring

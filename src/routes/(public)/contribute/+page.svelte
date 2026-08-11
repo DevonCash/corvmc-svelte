@@ -28,10 +28,10 @@
 		external?: boolean;
 	};
 
-	// The form's share link, which redirects to the published `/d/e/…/viewform`
-	// URL. Not the `docs.google.com/…/edit` link the form editor shows you —
-	// that one is a permission-denied screen for everyone but its owners.
-	const VOLUNTEER_FORM_URL = 'https://forms.gle/1yYx7WSiD2fdKtGG6';
+	// Registration, then straight to the page with the role checkboxes. This
+	// replaced a Google Form, which forced a Google sign-in on respondents —
+	// we'd rather ask for a free account of our own than someone else's.
+	const VOLUNTEER_SIGNUP_URL = '/login?register&redirect=/member/volunteer';
 
 	// Zeffy's hosted donation form (zero-fee for nonprofits). Distinct from the
 	// `/embed/...` variant, which is the bare iframe payload meant for embedding.
@@ -42,6 +42,7 @@
 		{
 			icon: IconTicket,
 			title: 'At shows',
+			desc: 'Show-night jobs, start to finish. Usually one evening at a time.',
 			roles: [
 				{ name: 'Host', desc: 'Welcome bands, introduce sets, keep things on schedule.' },
 				{ name: 'Tech', desc: 'Operate the soundboard and run soundcheck.' },
@@ -53,6 +54,7 @@
 		{
 			icon: IconSpeakerphone,
 			title: 'Away from shows',
+			desc: 'Keeping the place running between events, mostly on your own schedule.',
 			roles: [
 				{ name: 'Street team', desc: 'Put up posters around town.' },
 				{ name: 'Tabling', desc: 'Staff a table at festivals and community events.' },
@@ -106,7 +108,7 @@
 	<title>Contribute | Corvallis Music Collective</title>
 	<meta
 		name="description"
-		content="Volunteer with the Corvallis Music Collective, become a sustaining member, donate gear, or make a gift. Shows are run by volunteers — no experience needed."
+		content="Volunteer with the Corvallis Music Collective. Shows are run by volunteers — no experience needed, and a free account is all it takes to start. You can also become a sustaining member, donate gear, or make a gift."
 	/>
 </svelte:head>
 
@@ -128,8 +130,13 @@
 
 <!--
 	Volunteering leads the page: it's the ask with the lowest barrier and the one
-	the collective depends on most. The role list mirrors the sign-up form, so
-	someone can decide what they're interested in before they open it.
+	the collective depends on most. The role list mirrors the one on
+	/member/volunteer, where the boxes actually get ticked, so someone can decide
+	what they're interested in before making an account.
+
+	Every mention of signing up says "free" out loud. The sustaining membership
+	section directly below opens at $10/month, and without the word an unqualified
+	"sign up" reads as "pay us" to anyone skimming.
 -->
 <section class="py-16 px-6">
 	<div class="max-w-5xl mx-auto">
@@ -138,7 +145,8 @@
 			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
 				Shows here are run by volunteers. Pick anything that interests you — saying you're
 				interested isn't a commitment, it just helps us know who to contact when opportunities come
-				up. We'll provide whatever training the role needs.
+				up, and we'll provide whatever training the role needs. You'll choose your roles from your
+				member account, which is free to create.
 			</p>
 		</div>
 
@@ -168,13 +176,7 @@
 		</div>
 
 		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
-			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
-				Have an idea for a program, club, or class? Want to show art or perform? Not sure and just
-				want to help? There's a spot for each of those on the form.
-			</p>
-			<Button href={VOLUNTEER_FORM_URL} class="btn-lg" target="_blank" rel="noopener noreferrer"
-				>Sign Up to Volunteer</Button
-			>
+			<Button href={VOLUNTEER_SIGNUP_URL} class="btn-lg">Create a Free Account to Volunteer</Button>
 		</div>
 	</div>
 </section>

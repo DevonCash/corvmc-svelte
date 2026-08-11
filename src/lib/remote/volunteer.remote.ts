@@ -31,8 +31,16 @@ import {
 	getHoursByMonth
 } from '$lib/server/volunteer/volunteer-report-service';
 import {
+	getInterestsForUser,
+	setInterests,
+	listInterestedMembers,
+	countInterestsByRole
+} from '$lib/server/volunteer/volunteer-interest-service';
+import {
 	volunteerHourStatuses,
+	volunteerRoleGroups,
 	VOLUNTEER_DESCRIPTION_MAX,
+	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX
@@ -96,6 +104,27 @@ export const getVolunteerRoles = query(async () => {
 	return listVolunteerRoles({ includeInactive: true });
 });
 
+const interestFilters = z.object({
+	volunteerRoleId: z.string().optional(),
+	search: z.string().optional(),
+	page: z.number().optional()
+});
+
+/** Who has said they'd help, and with what. */
+export const getInterestedVolunteers = query(interestFilters, async (f) => {
+	await requireStaff();
+	return listInterestedMembers(
+		{ roleId: f.volunteerRoleId || undefined, search: f.search || undefined },
+		{ page: f.page ?? 1, pageSize: 50 }
+	);
+});
+
+/** Per-role interest counts, for the filter chips above the table. */
+export const getVolunteerInterestCounts = query(async () => {
+	await requireStaff();
+	return countInterestsByRole();
+});
+
 const reportRange = z.object({
 	from: z.string().optional(),
 	to: z.string().optional()
@@ -140,8 +169,16 @@ export const getActiveVolunteerRoles = query(async () => {
 	return roles.map((r) => ({
 		id: r.id,
 		name: r.name,
+		group: r.group,
 		descriptionHtml: r.description ? renderMarkdown(r.description) : null
 	}));
+});
+
+/** Role ids the member has ticked, for rendering their own interest form. */
+export const getMyVolunteerInterests = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return getInterestsForUser(currentUser.id);
 });
 
 export const getMyVolunteerHours = query(async () => {
@@ -191,6 +228,31 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 	await refreshMemberViews();
 	return { success: true };
 });
+
+/**
+ * Save the member's whole interest set.
+ *
+ * The checkbox group posts nothing at all when every box is unchecked, so
+ * `roleIds` defaults to an empty array rather than failing validation — clearing
+ * the list is a legitimate thing to want, and a form that silently refused to
+ * would be worse than one that never offered the boxes.
+ */
+export const saveVolunteerInterests = form(
+	z.object({ roleIds: z.array(z.string().min(1)).max(VOLUNTEER_MAX_INTERESTS).default([]) }),
+	async (data) => {
+		await requireFeature('volunteering');
+		const currentUser = requireUser();
+
+		try {
+			await setInterests(currentUser.id, data.roleIds);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMyVolunteerInterests().refresh();
+		return { success: true };
+	}
+);
 
 export const editVolunteerHours = form(
 	hoursFormSchema.extend({ id: z.string().min(1) }),
@@ -289,6 +351,7 @@ const roleFormSchema = z.object({
 			`Keep the description under ${VOLUNTEER_ROLE_DESCRIPTION_MAX} characters`
 		)
 		.optional(),
+	group: z.enum(volunteerRoleGroups).optional(),
 	displayOrder: z.string().optional(),
 	isActive: z.string().optional()
 });
@@ -300,6 +363,7 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 		await createRoleService({
 			name: data.name,
 			description: data.description,
+			group: data.group,
 			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
 			isActive: data.isActive !== 'false'
 		});
@@ -321,6 +385,7 @@ export const updateVolunteerRole = form(
 			await updateRoleService(data.id, {
 				name: data.name,
 				description: data.description ?? '',
+				group: data.group,
 				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
 				isActive: data.isActive !== 'false'
 			});

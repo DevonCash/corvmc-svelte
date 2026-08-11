@@ -173,6 +173,23 @@ export const inboxMessageDirections = ['inbound', 'outbound'] as const;
 export const volunteerHourStatuses = ['pending', 'approved', 'rejected'] as const;
 
 /**
+ * How a role is grouped when roles are shown as a list to choose from. Purely
+ * presentational — nothing branches on it. Committee work is volunteering that
+ * happens in a monthly meeting rather than at the space, which is why it reads
+ * as its own group rather than as more "away from shows".
+ */
+export const volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee'] as const;
+
+export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[number], string> = {
+	'at-shows': 'At shows',
+	'away-from-shows': 'Away from shows',
+	committee: 'Committees'
+};
+
+/** How many roles one member may express interest in — every role and then some. */
+export const VOLUNTEER_MAX_INTERESTS = 50;
+
+/**
  * How far back a member may backdate an hour log. Too tight and someone loses a
  * busy season's hours after a stretch of not logging; too loose and the "this
  * quarter" figure keeps moving under the board.

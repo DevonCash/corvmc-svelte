@@ -70,7 +70,11 @@ import {
 	inboxChannelConfig
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
-import { volunteerRole, volunteerHourLog } from '../src/lib/server/db/schema/volunteer';
+import {
+	volunteerRole,
+	volunteerHourLog,
+	volunteerRoleInterest
+} from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
 const { env, dispose } = await getPlatformProxy();
@@ -418,7 +422,9 @@ async function deleteAll() {
 	console.log('Deleting all data...');
 	const tables = [
 		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first.
+		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
+		// cascades, but ordering it explicitly keeps the list readable.)
+		'volunteer_role_interest',
 		'volunteer_hour_log',
 		'volunteer_role',
 		'content_flag',
@@ -2712,6 +2718,7 @@ async function main() {
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	const volunteerHours = await seedVolunteerHours(allUsers, volunteerRoles);
+	const volunteerInterests = await seedVolunteerInterests(allUsers, volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -2741,7 +2748,7 @@ async function main() {
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(`  ${flags.length} content flags`);
 	console.log(
-		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs`
+		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
 	);
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {
@@ -2758,47 +2765,55 @@ async function main() {
 const VOLUNTEER_ROLE_SEEDS: Array<{
 	name: string;
 	description: string;
+	group: 'at-shows' | 'away-from-shows' | 'committee';
 	displayOrder: number;
 	isActive?: boolean;
 }> = [
 	{
 		name: 'Sound Engineering',
+		group: 'at-shows' as const,
 		description:
 			'Run the board for a show or open mic. Line check, monitor mixes, and a house mix that respects the room.\n\n**No experience needed** — we will train you on the desk before you fly solo.',
 		displayOrder: 10
 	},
 	{
 		name: 'Event Setup',
+		group: 'at-shows' as const,
 		description:
 			'Get the room ready before doors: chairs, tables, PA, stage lighting, and the merch table.\n\nUsually a two-hour window starting three hours before the show.',
 		displayOrder: 20
 	},
 	{
 		name: 'Front Desk',
+		group: 'at-shows' as const,
 		description:
 			'Cover the door during open hours or at a show. Greet people, take entry, answer questions about membership, and point folks at the practice room.',
 		displayOrder: 30
 	},
 	{
 		name: 'Load-Out & Teardown',
+		group: 'at-shows' as const,
 		description:
 			'After the last set: strike the stage, coil cables, reset the floor, and take the trash out. The fastest way to make yourself indispensable.',
 		displayOrder: 40
 	},
 	{
 		name: 'Facilities & Maintenance',
+		group: 'away-from-shows' as const,
 		description:
 			'Keep the space working — patch drywall, swap bulbs, restring the loaner guitars, fix the door that sticks.\n\nBring whatever skills you have; there is always something.',
 		displayOrder: 50
 	},
 	{
 		name: 'Outreach & Tabling',
+		group: 'away-from-shows' as const,
 		description:
 			'Represent CMC at the farmers market, campus events, and other venues. Hand out info, talk to musicians, sign people up.',
 		displayOrder: 60
 	},
 	{
 		name: 'Administration',
+		group: 'committee' as const,
 		description:
 			'Behind-the-scenes work: data entry, grant paperwork, scheduling, and answering the inbox.',
 		displayOrder: 70
@@ -2807,6 +2822,7 @@ const VOLUNTEER_ROLE_SEEDS: Array<{
 		// Archived so the restore path and the "archived roles still resolve in
 		// reports" behaviour both have coverage on a fresh seed.
 		name: 'Zine & Print',
+		group: 'committee' as const,
 		description: 'Layout and printing for the quarterly zine. On hiatus while we rethink the run.',
 		displayOrder: 80,
 		isActive: false
@@ -2838,6 +2854,30 @@ const VOLUNTEER_REJECT_NOTES = [
 async function seedVolunteerRoles() {
 	console.log('Seeding volunteer roles...');
 	return batchInsert(volunteerRole, VOLUNTEER_ROLE_SEEDS);
+}
+
+/**
+ * Standing "I'd help with this" marks. About a third of members put their hand
+ * up for something — enough for the staff interest page to have rows and for
+ * the per-role filter to actually narrow, without every member matching every
+ * role and making the filter look broken.
+ */
+async function seedVolunteerInterests(users: any[], roles: any[]) {
+	console.log('Seeding volunteer role interests...');
+	const liveRoles = roles.filter((r: any) => r.isActive !== false);
+	if (liveRoles.length === 0 || users.length === 0) return [];
+
+	const rows = users
+		.filter(() => Math.random() < 0.35)
+		.flatMap((u: any) =>
+			pickN(liveRoles, randomInt(1, 3)).map((role: any) => ({
+				id: randomUUID(),
+				userId: u.id,
+				volunteerRoleId: role.id
+			}))
+		);
+
+	return batchInsert(volunteerRoleInterest, rows);
 }
 
 async function seedVolunteerHours(users: any[], roles: any[]) {

@@ -1,10 +1,12 @@
-import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, check, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import {
 	volunteerHourStatuses,
+	volunteerRoleGroups,
 	VOLUNTEER_DESCRIPTION_MAX,
+	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
@@ -21,6 +23,8 @@ export function isVolunteerHourStatus(value: string): value is VolunteerHourStat
 	return volunteerHourStatuses.includes(value as VolunteerHourStatus);
 }
 
+export type VolunteerRoleGroup = (typeof volunteerRoleGroups)[number];
+
 // ---------------------------------------------------------------------------
 // Zod schemas
 // ---------------------------------------------------------------------------
@@ -28,11 +32,18 @@ export function isVolunteerHourStatus(value: string): value is VolunteerHourStat
 export const createVolunteerRoleSchema = z.object({
 	name: z.string().trim().min(1).max(VOLUNTEER_ROLE_NAME_MAX),
 	description: z.string().trim().max(VOLUNTEER_ROLE_DESCRIPTION_MAX).optional(),
+	group: z.enum(volunteerRoleGroups).default('at-shows'),
 	displayOrder: z.coerce.number().int().min(0).default(0),
 	isActive: z.coerce.boolean().default(true)
 });
 
 export const updateVolunteerRoleSchema = createVolunteerRoleSchema.partial();
+
+export const setVolunteerInterestsSchema = z.object({
+	// Unchecking everything is a legitimate submission — it means "take me off
+	// the list" — so this bottoms out at an empty array rather than min(1).
+	roleIds: z.array(z.uuid()).max(VOLUNTEER_MAX_INTERESTS).default([])
+});
 
 export const submitHoursSchema = z.object({
 	volunteerRoleId: z.uuid(),
@@ -64,6 +75,13 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	description: text('description'),
+
+	// Presentational only — how the role is bucketed when roles are listed for
+	// someone to choose from. Nothing branches on it; a role in the wrong group
+	// is a cosmetic bug, not a broken workflow. Defaulted so the ADD COLUMN
+	// needs no backfill.
+	group: text('group', { enum: volunteerRoleGroups }).notNull().default('at-shows'),
+
 	displayOrder: integer('display_order').notNull().default(0),
 
 	// Retirement is an archive, not a delete: hour logs reference the role and
@@ -149,5 +167,45 @@ export const volunteerHourLog = sqliteTable(
 	]
 );
 
+/**
+ * A standing "I'd do this" — the member has told staff to think of them when
+ * this role needs filling. It is not a commitment to any particular date; that
+ * is what a Phase 2 shift claim would be. Expressing interest grants nothing
+ * and obliges nothing, which is why the row carries no status: it exists or it
+ * doesn't, and the member flips it themselves.
+ */
+export const volunteerRoleInterest = sqliteTable(
+	'volunteer_role_interest',
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// The member is the subject of the row — same call as volunteerHourLog.userId.
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+
+		// Cascade, unlike the hour log's restrict. An hour log is history and must
+		// keep resolving its role; an interest is a current preference with nothing
+		// to preserve, and blocking a role delete over one would be surprising.
+		volunteerRoleId: text('volunteer_role_id')
+			.notNull()
+			.references(() => volunteerRole.id, { onDelete: 'cascade' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// Re-saving the same set must not stack duplicate rows.
+		unique('uq_volunteer_role_interest').on(t.userId, t.volunteerRoleId),
+		// "Who's up for Door?" — the staff page's only query.
+		index('volunteer_role_interest_role_idx').on(t.volunteerRoleId),
+		index('volunteer_role_interest_user_idx').on(t.userId)
+	]
+);
+
 export type VolunteerRole = typeof volunteerRole.$inferSelect;
 export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
+export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;

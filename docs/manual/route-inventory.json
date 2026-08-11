@@ -332,6 +332,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/volunteer/interest",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer/report",
 		"panel": "staff"
 	},

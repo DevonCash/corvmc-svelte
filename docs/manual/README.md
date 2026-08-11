@@ -31,7 +31,7 @@ auto-creates any missing).
 | `events-tickets`    | Events & Tickets     | ticket          | member  | browsing, tickets, QR check-in           |
 | `equipment`         | Equipment Lending    | package         | member  | catalog, requesting loans                |
 | `membership`        | Membership & Billing | heart           | member  | sustaining membership, Stripe portal     |
-| `volunteering`      | Volunteering         | heart-handshake | member  | roles, logging hours, staff review       |
+| `volunteering`      | Volunteering         | heart-handshake | member  | roles, interest, logging hours, review   |
 | `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                     |
 
 **Coverage:** ~8 public + ~30 member + ~19 band + ~19 staff ≈ **76 articles**.
@@ -101,8 +101,8 @@ auto-creates any missing).
 
 ### volunteering
 
-- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, logging hours, review outcomes
-- [x] `[H]` Reviewing volunteer hours (minRole=staff) — the approval queue, managing roles, the report
+- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, saying what you're up for, logging hours, review outcomes
+- [x] `[H]` Reviewing volunteer hours (minRole=staff) — the approval queue, the interest list, managing roles, the report
 
 ## C. Band panel → `src/content/help/`
 

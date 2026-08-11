@@ -23,7 +23,8 @@
 		IconFlag,
 		IconHeartHandshake,
 		IconReportAnalytics,
-		IconListDetails
+		IconListDetails,
+		IconHandStop
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -97,10 +98,18 @@
 			<Nav.Collapsible
 				href="/staff/volunteer"
 				label="Volunteering"
-				childHrefs={['/staff/volunteer', '/staff/volunteer/roles', '/staff/volunteer/report']}
+				childHrefs={[
+					'/staff/volunteer',
+					'/staff/volunteer/interest',
+					'/staff/volunteer/roles',
+					'/staff/volunteer/report'
+				]}
 				badge={layout.volunteerPending}
 			>
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
+				<Nav.Item href="/staff/volunteer/interest" label="Interest">
+					{#snippet icon()}<IconHandStop />{/snippet}
+				</Nav.Item>
 				<Nav.Item href="/staff/volunteer/roles" label="Roles">
 					{#snippet icon()}<IconListDetails />{/snippet}
 				</Nav.Item>
