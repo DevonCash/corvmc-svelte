@@ -143,10 +143,9 @@
 		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
 			<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
 			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
-				Shows here are run by volunteers. Pick anything that interests you — saying you're
-				interested isn't a commitment, it just helps us know who to contact when opportunities come
-				up, and we'll provide whatever training the role needs. You'll choose your roles from your
-				member account, which is free to create.
+				Volunteers are the beating heart of our organization! Every show, every piece of gear, and
+				every program is made possible by the time and energy of our members. No experience is
+				necessary — just a willingness to help. Create a free account to get started.
 			</p>
 		</div>
 
