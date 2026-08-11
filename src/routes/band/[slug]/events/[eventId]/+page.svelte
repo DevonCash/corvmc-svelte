@@ -3,8 +3,10 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import {
 		getBandEventDetail,
@@ -15,6 +17,14 @@
 	} from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
+
+	// Declared before the awaited queries below: a declaration that follows a
+	// top-level await is async-gated, which would compile every `fields.X.as()`
+	// below into an async derived (the churn behind JAVASCRIPT-SVELTEKIT-W).
+	const updateFields = updateBandEventForm.fields;
+	const publishFields = publishBandEvent.fields;
+	const unpublishFields = unpublishBandEvent.fields;
+	const cancelFields = cancelBandEventForm.fields;
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let evt = $derived(
@@ -82,62 +92,38 @@
 
 		<!-- Actions -->
 		{#if isAdmin && evt.status !== 'cancelled'}
-			<div class="flex flex-wrap gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				{#if evt.status === 'draft'}
-					<form
-						{...publishBandEvent.enhance(async (form) => {
-							try {
-								if (await form.submit()) {
-									toast.success('Event published');
-									invalidateAll();
-								}
-							} catch {
-								toast.error('Failed to publish');
-							}
-						})}
-						class="inline"
+					<Form
+						remote={publishBandEvent}
+						successToast="Event published"
+						onsuccess={() => invalidateAll()}
 					>
-						<input {...publishBandEvent.fields.slug.as('hidden', band.slug)} />
-						<input {...publishBandEvent.fields.eventId.as('hidden', evt.id)} />
-						<button class="btn btn-primary btn-sm">Publish</button>
-					</form>
+						<input {...publishFields.slug.as('hidden', band.slug)} />
+						<input {...publishFields.eventId.as('hidden', evt.id)} />
+						<SubmitButton label="Publish" class="btn-primary btn-sm" />
+					</Form>
 				{:else if evt.status === 'published'}
-					<form
-						{...unpublishBandEvent.enhance(async (form) => {
-							try {
-								if (await form.submit()) {
-									toast.success('Event unpublished');
-									invalidateAll();
-								}
-							} catch {
-								toast.error('Failed to unpublish');
-							}
-						})}
-						class="inline"
+					<Form
+						remote={unpublishBandEvent}
+						successToast="Event unpublished"
+						onsuccess={() => invalidateAll()}
 					>
-						<input {...unpublishBandEvent.fields.slug.as('hidden', band.slug)} />
-						<input {...unpublishBandEvent.fields.eventId.as('hidden', evt.id)} />
-						<button class="btn btn-ghost btn-sm">Unpublish</button>
-					</form>
+						<input {...unpublishFields.slug.as('hidden', band.slug)} />
+						<input {...unpublishFields.eventId.as('hidden', evt.id)} />
+						<SubmitButton label="Unpublish" class="btn-ghost btn-sm" />
+					</Form>
 				{/if}
 
-				<form
-					{...cancelBandEventForm.enhance(async (form) => {
-						try {
-							if (await form.submit()) {
-								toast.success('Event cancelled');
-								invalidateAll();
-							}
-						} catch {
-							toast.error('Failed to cancel');
-						}
-					})}
-					class="inline"
+				<Form
+					remote={cancelBandEventForm}
+					successToast="Event cancelled"
+					onsuccess={() => invalidateAll()}
 				>
-					<input {...cancelBandEventForm.fields.slug.as('hidden', band.slug)} />
-					<input {...cancelBandEventForm.fields.eventId.as('hidden', evt.id)} />
-					<button class="btn btn-error btn-outline btn-sm">Cancel Event</button>
-				</form>
+					<input {...cancelFields.slug.as('hidden', band.slug)} />
+					<input {...cancelFields.eventId.as('hidden', evt.id)} />
+					<SubmitButton label="Cancel Event" class="btn-error btn-outline btn-sm" />
+				</Form>
 
 				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
@@ -149,66 +135,57 @@
 		{#if editing && isAdmin}
 			<div class="card bg-base-200 shadow-sm">
 				<div class="card-body">
-					<form
-						{...updateBandEventForm.enhance(async (form) => {
-							try {
-								if (await form.submit()) {
-									toast.success('Event updated');
-									editing = false;
-									invalidateAll();
-								}
-							} catch {
-								toast.error('Failed to update');
-							}
-						})}
+					<Form
+						remote={updateBandEventForm}
+						guard
+						successToast="Event updated"
+						onsuccess={() => {
+							editing = false;
+							invalidateAll();
+						}}
 						class="space-y-4"
 					>
-						<input {...updateBandEventForm.fields.slug.as('hidden', band.slug)} />
-						<input {...updateBandEventForm.fields.eventId.as('hidden', evt.id)} />
+						<input {...updateFields.slug.as('hidden', band.slug)} />
+						<input {...updateFields.eventId.as('hidden', evt.id)} />
 
-						<div class="form-control">
-							<label class="label"><span class="label-text">Title</span></label>
-							<input
-								{...updateBandEventForm.fields.title.as('text', evt.title)}
-								class="input input-bordered w-full"
-								maxlength="200"
-							/>
-						</div>
+						<FormField
+							field={updateFields.title}
+							type="text"
+							label="Title"
+							value={evt.title}
+							maxlength="200"
+						/>
 
-						<div class="form-control">
-							<label class="label"><span class="label-text">Description</span></label>
+						<!-- Custom input mode: FormField's built-in textarea drops `rest`, so
+						     rows and maxlength would be lost. Issues still resolve by name. -->
+						<FormField name="description" label="Description">
 							<textarea
-								{...updateBandEventForm.fields.description.as('text', evt.description ?? '')}
+								{...updateFields.description.as('text', evt.description ?? '')}
 								class="textarea textarea-bordered w-full"
 								rows="4"
 								maxlength="5000"
 							></textarea>
-						</div>
+						</FormField>
 
-						<div class="form-control">
-							<label class="label"><span class="label-text">Location</span></label>
-							<input
-								{...updateBandEventForm.fields.location.as('text', evt.location ?? '')}
-								class="input input-bordered w-full"
-								maxlength="500"
-							/>
-						</div>
+						<FormField
+							field={updateFields.location}
+							type="text"
+							label="Location"
+							value={evt.location ?? ''}
+							maxlength="500"
+						/>
 
-						<div class="form-control">
-							<label class="label"><span class="label-text">Ticket Link</span></label>
-							<input
-								{...updateBandEventForm.fields.externalTicketUrl.as(
-									'text',
-									evt.externalTicketUrl ?? ''
-								)}
-								class="input input-bordered w-full"
-							/>
-						</div>
+						<FormField
+							field={updateFields.externalTicketUrl}
+							type="text"
+							label="Ticket Link"
+							value={evt.externalTicketUrl ?? ''}
+						/>
 
 						<div class="flex justify-end pt-2">
-							<button class="btn btn-primary">Save Changes</button>
+							<SubmitButton label="Save Changes" class="btn-primary" />
 						</div>
-					</form>
+					</Form>
 				</div>
 			</div>
 		{/if}
