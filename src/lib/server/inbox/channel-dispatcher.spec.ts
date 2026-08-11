@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DispatchReplyParams } from './channel-dispatcher';
 
 // ---------------------------------------------------------------------------
@@ -61,15 +61,11 @@ function params(overrides: Partial<DispatchReplyParams> = {}): DispatchReplyPara
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole module graph, which blows the 5s per-test
-// timeout if it happens inside an `it()`.
-let dispatchReply: typeof import('./channel-dispatcher').dispatchReply;
-
-beforeAll(async () => {
-	({ dispatchReply } = await import('./channel-dispatcher'));
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { dispatchReply } = await import('./channel-dispatcher');
 
 // ---------------------------------------------------------------------------
 // Tests

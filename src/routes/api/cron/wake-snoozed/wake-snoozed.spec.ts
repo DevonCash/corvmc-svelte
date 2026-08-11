@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockWake = vi.fn();
 vi.mock('$lib/server/inbox/thread-service', () => ({
@@ -24,15 +24,11 @@ beforeEach(() => {
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole module graph, which blows the 5s per-test
-// timeout if it happens inside an `it()`.
-let POST: typeof import('./+server').POST;
-
-beforeAll(async () => {
-	({ POST } = await import('./+server'));
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
 
 describe('POST /api/cron/wake-snoozed', () => {
 	it('rejects requests without the cron secret', async () => {

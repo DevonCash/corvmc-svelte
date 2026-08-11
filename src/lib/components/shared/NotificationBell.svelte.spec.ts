@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 // NotificationBell awaits `getNotifications()` and opens an EventSource stream —
@@ -25,15 +25,11 @@ class FakeEventSource {
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole module graph, which blows the 5s per-test
-// timeout if it happens inside an `it()`.
-let NotificationBell: typeof import('./NotificationBell.svelte').default;
-
-beforeAll(async () => {
-	NotificationBell = (await import('./NotificationBell.svelte')).default;
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const NotificationBell = (await import('./NotificationBell.svelte')).default;
 
 describe('NotificationBell', () => {
 	beforeEach(() => {

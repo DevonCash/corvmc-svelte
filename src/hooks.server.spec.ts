@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -108,17 +108,11 @@ function makeEvent(overrides?: Record<string, unknown>) {
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole module graph, which blows the 5s per-test
-// timeout if it happens inside an `it()`.
-let handle: typeof import('./hooks.server').handle;
-let isLocalOriginEvent: typeof import('./hooks.server').isLocalOriginEvent;
-let handleError: typeof import('./hooks.server').handleError;
-
-beforeAll(async () => {
-	({ handle, isLocalOriginEvent, handleError } = await import('./hooks.server'));
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { handle, isLocalOriginEvent, handleError } = await import('./hooks.server');
 
 // ---------------------------------------------------------------------------
 // Tests

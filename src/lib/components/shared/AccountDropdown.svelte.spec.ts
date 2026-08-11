@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi, beforeAll } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 // AccountDropdown awaits `getMe()` and resolves route paths — both require a live
@@ -19,15 +19,11 @@ vi.mock('$app/paths', () => ({
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole module graph, which blows the 5s per-test
-// timeout if it happens inside an `it()`.
-let AccountDropdown: typeof import('./AccountDropdown.svelte').default;
-
-beforeAll(async () => {
-	AccountDropdown = (await import('./AccountDropdown.svelte')).default;
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const AccountDropdown = (await import('./AccountDropdown.svelte')).default;
 
 describe('AccountDropdown', () => {
 	it('renders the signed-in user and opens the menu', async () => {

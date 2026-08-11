@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
@@ -64,15 +64,11 @@ beforeEach(() => {
 // Module under test
 // ---------------------------------------------------------------------------
 
-// The import stays dynamic so it resolves after the `vi.mock` calls above, but
-// it is hoisted out of the test bodies: on a cold `node_modules/.vite` cache the
-// first import transforms the whole remote-module graph, which blows the 5s
-// per-test timeout if it happens inside an `it()`.
-let updateBand: any;
-
-beforeAll(async () => {
-	({ updateBand } = (await import('$lib/remote/bands.remote')) as any);
-});
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 // ---------------------------------------------------------------------------
 // Remote handlers
