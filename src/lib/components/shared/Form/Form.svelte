@@ -280,8 +280,18 @@
 		{@render children()}
 	</form>
 {:else}
+	<!--
+		`method="post"` matters only before hydration, when `handleActionSubmit` is not
+		yet attached to preventDefault: a method-less form submits as a GET, putting
+		every field in the query string. On the public login page — now server-rendered,
+		so the form is interactive before its JS lands — that meant a fast submit sent
+		the password to `/login?email=…&password=…`, where it reaches browser history,
+		access logs and the Referer header. The `remote` branch already gets method and
+		action from `remote.enhance()`. Before `{...rest}` so callers can override.
+	-->
 	<form
 		bind:this={formEl}
+		method="post"
 		onsubmit={handleActionSubmit}
 		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}

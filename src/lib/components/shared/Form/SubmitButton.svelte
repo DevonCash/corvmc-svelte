@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { browser } from '$app/environment';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getFormContext } from './Form.svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
@@ -31,8 +32,18 @@
 
 	const isLastStep = $derived(ctx.currentStep >= ctx.totalSteps - 1);
 	const activeLabel = $derived(isLastStep ? label : continueLabel);
+	// `!browser` renders the button disabled in the SSR HTML and enables it on
+	// hydration. Every form here submits through JS (a remote form or an `action`
+	// callback), so a click that lands before the handlers attach does a native
+	// submit that goes nowhere — invisible until the public pages started
+	// server-rendering their forms instead of a spinner, which opened a real
+	// window between paint and hydrate. Enter-in-a-field bypasses the button, so
+	// Form.svelte's `method="post"` still matters as the second line of defence.
 	const isDisabled = $derived(
-		disabled || !ctx.currentStepValid || (ctx.status !== 'idle' && ctx.status !== 'dirty')
+		!browser ||
+			disabled ||
+			!ctx.currentStepValid ||
+			(ctx.status !== 'idle' && ctx.status !== 'dirty')
 	);
 
 	let keys = useShortcut(

@@ -3,6 +3,7 @@ import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
+	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
 	SEED_HIDDEN_BAND_SLUG,
@@ -25,6 +26,19 @@ import {
  * 4. Both sidebar "Create Band" nav links pointed at /member/bands/create,
  *    which does not exist (404); the create modal lives on /member/bands.
  */
+
+/**
+ * The `<dd>` of a QuickFacts row on a public profile page. Scoped deliberately:
+ * a bare `getByText('Corvallis, OR')` also matches the site footer's 501(c)(3)
+ * address, so a page-wide locator either reads the wrong element or trips
+ * strict mode once the profile server-renders.
+ */
+function quickFact(page: import('@playwright/test').Page, label: string) {
+	return page
+		.locator('.quick-fact')
+		.filter({ has: page.getByText(label, { exact: true }) })
+		.locator('dd');
+}
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
@@ -62,16 +76,17 @@ test('saving the profile preserves hometown and founded year', async ({ page }) 
 
 	// The public profile still shows "Based in {hometown}" / "Formed {year}".
 	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
-	await expect(page.getByText(SEED_PUBLIC_BAND_HOMETOWN)).toBeVisible();
-	await expect(page.getByText(SEED_PUBLIC_BAND_FOUNDED)).toBeVisible();
+	await expect(quickFact(page, 'Based in')).toHaveText(SEED_PUBLIC_BAND_HOMETOWN);
+	await expect(quickFact(page, 'Formed')).toHaveText(SEED_PUBLIC_BAND_FOUNDED);
 });
 
-// Band pages resolve their data client-side through remote queries, so the
-// HTTP response is always a 200 shell; the visibility gate surfaces as the
-// boundary's "Band not found" state with no profile content rendered.
+// Public pages server-render their remote queries (the (public) layout's
+// boundary has no pending snippet), so the visibility gate is a real HTTP 404
+// carrying SvelteKit's +error.svelte — not a 200 shell that resolves the gate
+// client-side. Either way no profile content is rendered.
 test('hidden band detail page is not publicly readable', async ({ page }) => {
 	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
-	// .first(): the message renders in both the boundary alert and the error toast.
+	// .first(): the message is also embedded in the serialized __sveltekit payload.
 	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText('E2E Hidden Band')).toHaveCount(0);
 	await expect(page.getByText('opted out of the directory')).toHaveCount(0);
@@ -81,13 +96,58 @@ test('members-only band is withheld publicly but renders in the member directory
 	page
 }) => {
 	await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	// .first(): the message renders in both the boundary alert and the error toast.
+	// .first(): the message is also embedded in the serialized __sveltekit payload.
 	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
 
 	await login(page);
 	await page.goto(`/member/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
+});
+
+// Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band rotates its slug, but
+// saveBandProfile then refreshed getBandProfile, which re-resolves the band from
+// `params.slug` — still the pre-rename value, because for a remote request it
+// comes from the `x-sveltekit-pathname` header the client sent. The lookup 404s,
+// SvelteKit ships that per-query failure to the client, and `apply_refreshes`
+// calls `resource.fail(...)`: the save succeeds and the page it just saved drops
+// into a "Band not found" state.
+//
+// This is the first save of every newly created band — a new band starts out
+// slugged after its creator and gets its real name on that first save.
+//
+// Renames the seeded band and puts the name back, so the tests above (which key
+// off SEED_PUBLIC_BAND_SLUG) still pass on a re-run.
+test('renaming a band saves cleanly and follows the new slug', async ({ page }) => {
+	const consoleErrors: string[] = [];
+	page.on('console', (m) => {
+		if (m.type() === 'error') consoleErrors.push(m.text());
+	});
+
+	await login(page);
+	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`);
+	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+
+	await page.locator('input[name="name"]').fill('E2E Renamed Band');
+	await page.getByRole('button', { name: 'Save' }).click();
+
+	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
+	// The save worked, so nothing on the page may claim the band is missing.
+	await expect(page.getByText('Band not found')).toHaveCount(0);
+	await page.waitForURL(/\/band\/e2e-renamed-band\/edit/, { timeout: 15000 });
+
+	// The reported failure was a caught exception: the form swallowed it into a
+	// toast and only the console (and Sentry) showed the real cause.
+	expect(consoleErrors.join('\n')).not.toContain('JSON.parse');
+
+	// Restore, so this test is re-runnable and the earlier tests keep their slug.
+	// Reload first: the redirect above only fires for the first rename of a page
+	// session, so a second save in-place would leave the form on the old URL.
+	await page.goto('/band/e2e-renamed-band/edit');
+	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	await page.locator('input[name="name"]').fill(SEED_PUBLIC_BAND_NAME);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`), { timeout: 15000 });
 });
 
 test('sidebar Create Band links open the create-band modal', async ({ page }) => {

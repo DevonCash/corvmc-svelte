@@ -21,7 +21,12 @@
 <div class="flex min-h-screen flex-col">
 	<SiteHeader {user} />
 	<main class="flex-1">
-		<ErrorToastBoundary>
+		<!--
+			No pending snippet: the public site has to server-render real content for
+			crawlers and link-preview scrapers, and a boundary with a pending snippet
+			renders that snippet during SSR instead of awaiting its contents.
+		-->
+		<ErrorToastBoundary showPending={false}>
 			{@render children()}
 		</ErrorToastBoundary>
 	</main>
