@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireUser } from '$lib/server/authorization';
 import { requireBandAdmin } from '$lib/server/band/band-context';
@@ -24,6 +24,7 @@ import {
 	countMemberPastShows
 } from '$lib/server/event/event-service';
 import { update as updateBandBasics } from '$lib/server/band/band-service';
+import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 import {
@@ -195,9 +196,28 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
 		.groupBy(band.id);
 
+	if (!row) {
+		// The band may have changed its address and released this slug. Checking
+		// only on a miss is deliberate: folding this into the visibility branch
+		// below would make a hidden band's old slug redirect to its new one,
+		// disclosing both its existence and its current address past the gate.
+		const moved = await resolveBandSlug(slug);
+		if (moved?.kind === 'moved' && moved.slug !== slug) {
+			// 302, not 301 — a released address is claimable, so the redirect has to
+			// be revocable.
+			redirect(
+				302,
+				visibility === 'public'
+					? `/directory/bands/${moved.slug}`
+					: `/member/directory/bands/${moved.slug}`
+			);
+		}
+		throw error(404, 'Band not found');
+	}
+
 	// A band that opted out of this view's directory must not resolve by URL
 	// either — same 404 contract as member profiles.
-	if (!row || isBandProfileHidden(visibility, row.directoryVisibility)) {
+	if (isBandProfileHidden(visibility, row.directoryVisibility)) {
 		throw error(404, 'Band not found');
 	}
 
@@ -427,7 +447,7 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		...(data.contactSocial ? { social: data.contactSocial } : {})
 	};
 
-	const updated = await updateBandBasics(band.id, { name: data.name, bio: data.bio });
+	await updateBandBasics(band.id, { name: data.name, bio: data.bio });
 
 	await updateBandProfile(band.id, user.id, {
 		tagline: data.tagline || undefined,
@@ -440,18 +460,11 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		links: data.links
 	});
 
-	// `getBandProfile` resolves its band from `params.slug`, which for a remote
-	// request comes from the `x-sveltekit-pathname` header the client sent — the
-	// slug as it was *before* this save. Renaming the band rotates the slug, so
-	// refreshing here would look up a slug that no longer exists and throw 404.
-	// SvelteKit ships that per-query failure to the client, where `apply_refreshes`
-	// calls `resource.fail(...)`: the write succeeds and the page it just saved
-	// drops into a "Band not found" error state. Skip it — the client navigates to
-	// the new slug (see BandProfileForm's onsuccess), which re-runs the query with
-	// the correct param anyway.
-	if (updated.slug === band.slug) {
-		void getBandProfile().refresh();
-	}
+	// Safe to refresh unconditionally: `getBandProfile` resolves its band from
+	// `params.slug`, which for a remote request is the slug the client sent, and
+	// renaming no longer rotates it (see band-service `update`). Only the explicit
+	// address change moves a slug, and that one deliberately refreshes nothing.
+	void getBandProfile().refresh();
 
-	return { success: true, slug: updated.slug };
+	return { success: true };
 });

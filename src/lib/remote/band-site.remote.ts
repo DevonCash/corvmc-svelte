@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { error, invalid } from '@sveltejs/kit';
+import { error, invalid, redirect } from '@sveltejs/kit';
+import { env as publicEnv } from '$env/dynamic/public';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { verifyTurnstile } from '$lib/server/turnstile';
@@ -17,6 +18,8 @@ import { eq, and, isNull, asc } from 'drizzle-orm';
 import { listBandEventsUpcoming } from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
+import { resolveBandSlug } from '$lib/server/band/band-address-service';
+import { bandSiteUrl } from '$lib/utils/band-site-url';
 import type { Block } from '$lib/server/db/schema/band-page';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +35,18 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
 		.limit(1);
 
-	if (!bandRow) throw error(404, 'Band not found');
+	if (!bandRow) {
+		// Not just for stale bookmarks: `/api/host-route` answers with
+		// `max-age=300`, which purging the KV host cache cannot clear, so for a few
+		// minutes after an address change a band's own custom domain keeps
+		// rerouting here with the old slug. Without this, those are hard 404s on
+		// the domain they paid for.
+		const moved = await resolveBandSlug(slug);
+		if (moved?.kind === 'moved' && moved.slug !== slug) {
+			redirect(302, bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL));
+		}
+		throw error(404, 'Band not found');
+	}
 	if (bandRow.tier !== 'premium') throw error(404, 'Page not found');
 
 	// Fetch page config

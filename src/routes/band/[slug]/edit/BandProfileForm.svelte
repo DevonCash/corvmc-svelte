@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -66,12 +65,9 @@
 	guard
 	onsuccess={() => {
 		toast.success('Profile saved');
-		const newSlug = saveBandProfile.result?.slug;
-		if (newSlug && newSlug !== band.slug) {
-			goto(resolve(`/band/${newSlug}/edit`));
-		} else {
-			invalidateAll();
-		}
+		// No slug branch: renaming the band no longer moves its address, so the
+		// page always stays where it is. Band settings is where an owner changes it.
+		invalidateAll();
 	}}
 	onfailure={() => toast.error('Failed to save')}
 >

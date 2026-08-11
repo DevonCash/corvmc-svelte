@@ -189,17 +189,19 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('update', () => {
-		it('regenerates slug when name changes', async () => {
+		// The slug is the band's public address — {slug}.corvmc.org, the directory
+		// profile, every bookmark. Deriving it from the name meant a rename moved
+		// all of it silently. Only `changeBandSlug` moves an address now.
+		it('never touches the slug when the name changes', async () => {
+			const { db } = await import('$lib/server/db');
+
 			await update('band-1', { name: 'New Name' });
 
-			expect(generateSlug).toHaveBeenCalledWith('New Name');
-			expect(ensureUniqueSlug).toHaveBeenCalled();
-		});
-
-		it('does not regenerate slug when only bio changes', async () => {
-			await update('band-1', { bio: 'Updated bio' });
-
 			expect(generateSlug).not.toHaveBeenCalled();
+			expect(ensureUniqueSlug).not.toHaveBeenCalled();
+			const setArg = vi.mocked(db.update).mock.results[0]?.value.set.mock.calls[0][0];
+			expect(setArg).not.toHaveProperty('slug');
+			expect(setArg).toMatchObject({ name: 'New Name' });
 		});
 
 		it('throws when band not found', async () => {

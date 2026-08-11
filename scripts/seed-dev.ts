@@ -50,7 +50,7 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { band, bandMember, bandGenre } from '../src/lib/server/db/schema/band';
+import { band, bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
 	subscriber,
@@ -443,6 +443,7 @@ async function deleteAll() {
 		'band_page_config',
 		'band_genre',
 		'band_member',
+		'band_slug_history',
 		'band',
 		'payment_cache',
 		'credit_transaction',
@@ -1147,6 +1148,13 @@ async function seedBands(users: SeedUser[]) {
 				status: Math.random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
 			});
+		}
+
+		// Give the first premium and first free band a released address, so both
+		// old-address redirect paths (microsite and directory profile) have local
+		// data to exercise.
+		if (i === 0 || i === PREMIUM_BAND_COUNT) {
+			await db.insert(bandSlugHistory).values({ slug: `${slug}-old`, bandId: b.id });
 		}
 	}
 
