@@ -92,10 +92,6 @@
 		"panel": "public"
 	},
 	{
-		"route": "/donate",
-		"panel": "public"
-	},
-	{
 		"route": "/events",
 		"panel": "public"
 	},
