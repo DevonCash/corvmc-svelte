@@ -15,7 +15,7 @@ import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { band, bandMember } from '../../src/lib/server/db/schema/band';
+import { band, bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_OWNER_EMAIL = 'e2e.band.owner@example.com';
@@ -27,6 +27,8 @@ export const SEED_PUBLIC_BAND_SLUG = 'e2e-public-band';
 export const SEED_PUBLIC_BAND_NAME = 'E2E Public Band';
 export const SEED_PUBLIC_BAND_HOMETOWN = 'Corvallis, OR';
 export const SEED_PUBLIC_BAND_FOUNDED = '2019';
+/** An address this band released, which should still forward to the one above. */
+export const SEED_PUBLIC_BAND_OLD_SLUG = 'e2e-public-band-former';
 
 export const SEED_HIDDEN_BAND_ID = 'e2e-band-hidden';
 export const SEED_HIDDEN_BAND_SLUG = 'e2e-hidden-band';
@@ -40,11 +42,21 @@ export const SEED_PREMIUM_BAND_ID = 'e2e-band-premium';
 export const SEED_PREMIUM_BAND_SLUG = 'e2e-premium-band';
 export const SEED_PREMIUM_BAND_NAME = 'E2E Premium Band';
 
+/**
+ * Exists to be renamed. The address-change test moves this band's slug, so it
+ * must not be one the other subdomain tests depend on — Playwright ordering
+ * would otherwise decide whether they pass.
+ */
+export const SEED_RENAME_BAND_ID = 'e2e-band-rename';
+export const SEED_RENAME_BAND_SLUG = 'e2e-rename-band';
+export const SEED_RENAME_BAND_NAME = 'E2E Rename Band';
+
 const BAND_IDS = [
 	SEED_PUBLIC_BAND_ID,
 	SEED_HIDDEN_BAND_ID,
 	SEED_MEMBERS_BAND_ID,
-	SEED_PREMIUM_BAND_ID
+	SEED_PREMIUM_BAND_ID,
+	SEED_RENAME_BAND_ID
 ];
 
 export async function seedBandOnboarding(): Promise<void> {
@@ -52,9 +64,16 @@ export async function seedBandOnboarding(): Promise<void> {
 	const db = drizzle((env as { DB: D1Database }).DB);
 
 	try {
+		// The address change is capped at 3 per 30 days, and the local KV survives
+		// between preview runs — without this, the fourth `pnpm test:e2e` on one
+		// machine would fail the address test for reasons that look nothing like
+		// the cause.
+		await (env as { KV?: KVNamespace }).KV?.delete(`rate-limit:band-slug:${SEED_RENAME_BAND_ID}`);
+
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
 		for (const bandId of BAND_IDS) {
 			await db.delete(bandMember).where(eq(bandMember.bandId, bandId));
+			await db.delete(bandSlugHistory).where(eq(bandSlugHistory.bandId, bandId));
 			await db.delete(band).where(eq(band.id, bandId));
 		}
 		await db.delete(account).where(eq(account.userId, SEED_OWNER_ID));
@@ -128,8 +147,25 @@ export async function seedBandOnboarding(): Promise<void> {
 				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
+			},
+			{
+				id: SEED_RENAME_BAND_ID,
+				name: SEED_RENAME_BAND_NAME,
+				slug: SEED_RENAME_BAND_SLUG,
+				bio: 'Disposable: the address-change test moves this band.',
+				ownerId: SEED_OWNER_ID,
+				directoryVisibility: 'public',
+				createdAt: now,
+				updatedAt: now
 			}
 		]);
+
+		await db.insert(bandSlugHistory).values({
+			id: 'e2e-band-public-old-slug',
+			slug: SEED_PUBLIC_BAND_OLD_SLUG,
+			bandId: SEED_PUBLIC_BAND_ID,
+			createdAt: now
+		});
 
 		await db.insert(bandMember).values(
 			BAND_IDS.map((bandId) => ({

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
+import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
@@ -77,12 +78,41 @@ export const getStaffLayout = query(async () => {
 	};
 });
 
+/**
+ * Move a dashboard path onto the band's new slug, keeping the subpage.
+ *
+ * `url.pathname` inside a remote function is the *page* path, which SvelteKit
+ * rebuilds from the client-supplied `x-sveltekit-pathname` header — untrusted
+ * input. Only rewrite when it has the shape we expect; the prefix check is what
+ * stops a crafted header turning this into an open redirect.
+ */
+function dashboardPathAfterRename(oldSlug: string, newSlug: string): string {
+	const { url } = getRequestEvent();
+	const prefix = `/band/${oldSlug}`;
+	if (url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)) {
+		return `/band/${newSlug}${url.pathname.slice(prefix.length)}${url.search}`;
+	}
+	return `/band/${newSlug}`;
+}
+
 export const getBandLayout = query(z.string(), async (slug) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw redirect(302, '/login');
 
 	const band = await getBySlug(slug);
-	if (!band) throw error(404, 'Band not found');
+	if (!band) {
+		// The owner may have changed the band's address out from under a bookmark.
+		// This lives here rather than in `requireBandBySlug` on purpose: that guard
+		// runs on mutations, where a thrown redirect is applied as a client
+		// navigation and would silently discard the submitted form. A stale slug
+		// should fail loudly on write and forward on read — and this query runs
+		// first, so the browser is on the new address before any form can post.
+		const moved = await resolveBandSlug(slug);
+		if (moved?.kind === 'moved' && moved.slug !== slug) {
+			redirect(302, dashboardPathAfterRename(slug, moved.slug));
+		}
+		throw error(404, 'Band not found');
+	}
 
 	const [role, isStaff, userBands, features] = await Promise.all([
 		getUserRole(band.id, locals.user.id),

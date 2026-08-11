@@ -13,8 +13,9 @@ import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 import { env as publicEnv } from '$env/dynamic/public';
-import { bandSlugFromHost } from '$lib/utils/band-site-url';
+import { bandSiteUrl, bandSlugFromHost } from '$lib/utils/band-site-url';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
+import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const resolvedSessions = new Set<string>();
@@ -78,6 +79,10 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  * A band whose `directoryVisibility` is not public redirects to a profile that
  * 404s. That is deliberate: visibility is enforced once, in
  * `getPublicBandProfile`, instead of being duplicated per host.
+ *
+ * A subdomain no band currently holds may still be one a band released by
+ * changing its address, in which case it forwards to wherever that band lives
+ * now — until somebody else claims it.
  */
 const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	const slug = bandSlugFromHost(event.url.hostname, publicEnv.PUBLIC_SITE_URL);
@@ -89,6 +94,24 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	]);
 
 	if (host?.servesSite && premiumEnabled) return resolve(event);
+
+	// No band holds this subdomain — it may be an address one of them released.
+	// The history lookup only runs on this miss, so the hot path is untouched.
+	if (!host) {
+		const moved = await resolveBandSlug(slug);
+		if (moved?.kind === 'moved' && moved.slug !== slug) {
+			// Point at the band's new subdomain rather than its custom domain: the
+			// certificate for a custom hostname may still be pending. A free band
+			// takes a second hop through this same hook to its directory profile.
+			// 302, never 301 — another band may claim this address later, and a
+			// cached permanent redirect could never be taken back.
+			const target = new URL(
+				event.url.pathname + event.url.search,
+				bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL)
+			);
+			return new Response(null, { status: 302, headers: { location: target.href } });
+		}
+	}
 
 	// Free tier, unknown slug, or the feature switched off — send them to the
 	// profile. Band-site subpaths (/events, /epk) have no directory equivalent,

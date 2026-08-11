@@ -28,12 +28,17 @@ import { generateSlug, ensureUniqueSlug } from './slug';
 import { band } from '$lib/server/db/schema/band';
 
 describe('generateSlug', () => {
-	it('lowercases and hyphenates spaces', () => {
-		expect(generateSlug('My Cool Band')).toBe('my-cool-band');
+	// Slug generation never introduces a hyphen of its own — spaces collapse.
+	it('lowercases and collapses spaces', () => {
+		expect(generateSlug('My Cool Band')).toBe('mycoolband');
 	});
 
-	it('strips special characters', () => {
-		expect(generateSlug('Rock & Roll!!!')).toBe('rock-roll');
+	it('strips special characters without leaving a hyphen behind', () => {
+		expect(generateSlug('Rock & Roll!!!')).toBe('rockroll');
+	});
+
+	it('keeps hyphens that were already in the name', () => {
+		expect(generateSlug('Sun-Ra Arkestra')).toBe('sun-raarkestra');
 	});
 
 	it('collapses consecutive hyphens', () => {
@@ -45,7 +50,7 @@ describe('generateSlug', () => {
 	});
 
 	it('handles mixed unicode and punctuation', () => {
-		expect(generateSlug("The Band's Name (Official)")).toBe('the-band-s-name-official');
+		expect(generateSlug("The Band's Name (Official)")).toBe('thebandsnameofficial');
 	});
 
 	it('handles single word', () => {

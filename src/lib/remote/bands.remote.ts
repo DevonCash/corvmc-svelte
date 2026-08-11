@@ -412,11 +412,12 @@ export const updateBand = form(
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
-		const updated = await update(band.id, {
+		await update(band.id, {
 			name: data.name,
 			bio: data.bio
 		});
-		return { success: true, slug: updated.slug };
+		// No slug in the result: renaming does not move the band's address.
+		return { success: true };
 	}
 );
 

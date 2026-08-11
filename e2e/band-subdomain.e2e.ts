@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
 	SEED_PUBLIC_BAND_SLUG,
 	SEED_PUBLIC_BAND_NAME,
+	SEED_PUBLIC_BAND_OLD_SLUG,
 	SEED_PREMIUM_BAND_SLUG,
 	SEED_PREMIUM_BAND_NAME
 } from './fixtures/seed-band-onboarding';
@@ -46,6 +47,41 @@ test('a premium band subdomain serves its band site', async ({ page }) => {
 	await expect(page).toHaveTitle(new RegExp(SEED_PREMIUM_BAND_NAME));
 });
 
+/**
+ * An address a band released by changing its slug keeps forwarding — until some
+ * other band claims it, at which point the live band wins and the redirect stops.
+ */
+test('an old subdomain forwards to the address the band moved to', async ({ request }) => {
+	const response = await request.get(`${subdomain(SEED_PUBLIC_BAND_OLD_SLUG)}/`, {
+		maxRedirects: 0
+	});
+
+	// 302, not 301: the old address is claimable again, so the redirect has to be
+	// revocable.
+	expect(response.status()).toBe(302);
+	expect(response.headers()['location']).toContain(`${SEED_PUBLIC_BAND_SLUG}.localhost:${PORT}`);
+});
+
+test('following an old subdomain lands on the band', async ({ page }) => {
+	await page.goto(`${subdomain(SEED_PUBLIC_BAND_OLD_SLUG)}/`);
+
+	// Two hops: old subdomain → current subdomain → directory profile (free tier).
+	expect(page.url()).toContain(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
+	await expect(page.getByRole('heading', { name: SEED_PUBLIC_BAND_NAME })).toBeVisible({
+		timeout: 15000
+	});
+});
+
+test('an old directory profile URL forwards to the current one', async ({ page }) => {
+	await page.goto(`http://localhost:${PORT}/directory/bands/${SEED_PUBLIC_BAND_OLD_SLUG}`);
+
+	expect(page.url()).toContain(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
+	await expect(page.getByRole('heading', { name: SEED_PUBLIC_BAND_NAME })).toBeVisible({
+		timeout: 15000
+	});
+});
+
+// Negative control for the three tests above: no history row, so no forward.
 test('an unknown subdomain redirects to a directory 404 rather than erroring', async ({ page }) => {
 	await page.goto(`${subdomain('no-such-band-xyz')}/`);
 

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
@@ -83,6 +83,10 @@ export async function create(ownerId: string, data: CreateBandData) {
 	const bandId = crypto.randomUUID();
 
 	await db.batch([
+		// A previous owner may have released this slug. Claiming it retires their
+		// redirect, the same rule `changeBandSlug` enforces — a live band.slug
+		// always shadows history, so a stale row here could only resurface later.
+		db.delete(bandSlugHistory).where(eq(bandSlugHistory.slug, slug)),
 		db.insert(band).values({
 			id: bandId,
 			name: data.name,
@@ -108,18 +112,13 @@ export async function create(ownerId: string, data: CreateBandData) {
 export async function update(bandId: string, data: UpdateBandData) {
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 
+	// The slug is deliberately NOT re-derived here. It is the band's public
+	// address — {slug}.corvmc.org, /directory/bands/{slug}, every bookmark — and
+	// renaming used to move all of it silently, with no redirect behind it.
+	// Owners change the address on purpose via `changeBandSlug`
+	// (band-address-service.ts), which records the old one so it keeps working.
 	if (data.name !== undefined) {
 		updates.name = data.name;
-		const baseSlug = generateSlug(data.name);
-		// Exclude this band so an unchanged name keeps its slug instead of
-		// rotating to '-2' on every save.
-		updates.slug = await ensureUniqueSlug(
-			baseSlug,
-			band,
-			band.slug,
-			{ column: band.id, value: bandId },
-			isReservedSlug
-		);
 	}
 
 	if (data.bio !== undefined) {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
+import { generateSlug } from '$lib/server/utils/slug';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listCategories,
@@ -25,14 +26,10 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function slugify(text: string) {
-	return text
-		.toLowerCase()
-		.replace(/[^\w\s-]/g, '')
-		.replace(/\s+/g, '-')
-		.replace(/-+/g, '-')
-		.trim();
-}
+// Slug derivation is `generateSlug` everywhere — one rule, which drops spaces
+// rather than hyphenating them. Only affects records created without an explicit
+// slug; the static article sync carries its own slugs in frontmatter.
+const slugify = generateSlug;
 
 async function requireUserWithRole() {
 	const { locals } = getRequestEvent();

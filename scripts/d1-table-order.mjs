@@ -33,6 +33,7 @@ export const tableOrder = [
 	'model_has_roles',
 	'role_has_permissions',
 	'band_genre',
+	'band_slug_history',
 	'campaign_audience',
 	'session',
 	'audience_member',

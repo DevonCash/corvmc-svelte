@@ -131,6 +131,39 @@ export const bandGenre = sqliteTable(
 	(t) => [index('idx_band_genre_band').on(t.bandId)]
 );
 
+/**
+ * Addresses a band has released by changing its slug. An old slug redirects to
+ * the band's current address only for as long as no *current* band holds it —
+ * a live `band.slug` always wins, and claiming a released slug deletes its
+ * history row (see `changeBandSlug`). That deletion is also why at most one row
+ * can exist per slug, hence the unique index rather than a plain one.
+ *
+ * `onDelete: 'cascade'` is load-bearing, not decorative: `deleteBand` hard
+ * deletes the band row, so without it every deletion of a band that ever
+ * changed its address would fail on the foreign key.
+ */
+export const bandSlugHistory = sqliteTable(
+	'band_slug_history',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		slug: text('slug').notNull(),
+		bandId: text('band_id')
+			.notNull()
+			.references(() => band.id, { onDelete: 'cascade' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// Doubles as the lookup index for the old-slug redirect, which runs on
+		// every unresolved band subdomain and directory 404.
+		uniqueIndex('idx_band_slug_history_slug').on(t.slug),
+		index('idx_band_slug_history_band').on(t.bandId)
+	]
+);
+
 export const bandMember = sqliteTable(
 	'band_member',
 	{
@@ -164,3 +197,4 @@ export const bandMember = sqliteTable(
 
 export type Band = typeof band.$inferSelect;
 export type BandMember = typeof bandMember.$inferSelect;
+export type BandSlugHistory = typeof bandSlugHistory.$inferSelect;

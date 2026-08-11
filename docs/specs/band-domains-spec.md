@@ -145,3 +145,80 @@ nothing to apply until it exists.
 3. Create a proxied fallback-origin record and designate it as the fallback origin.
 4. Publish the CNAME target bands point at (e.g. `domains.corvmc.org`).
 5. Mint the API token, `wrangler secret put CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID`.
+
+---
+
+# Part 3 — Changing an address
+
+Bands print `{slug}.corvmc.org` on one-sheets and hand it out; it is their public
+identity. Two problems followed from Parts 1 and 2: they could not choose it, and
+they could change it _by accident_ — `band-service.update()` re-derived the slug
+from the name on every save that touched it, silently relocating the subdomain, the
+directory profile and every bookmark.
+
+## Renames no longer move the address
+
+`update()` sets `name` and nothing else. `create()` still derives the initial slug
+from the name via `ensureUniqueSlug`. This removed the hazard that
+`saveBandProfile` used to work around: a slug-keyed query refreshed after a rename
+resolved through the _old_ `params.slug` (remote functions take route params from
+the client-sent `x-sveltekit-pathname` header) and 404'd the page that had just
+saved. That refresh is now unconditional.
+
+## The explicit flow
+
+Owner-only, free and premium alike — `changeBandAddress`
+(`src/lib/remote/band-address.remote.ts`) → `changeBandSlug`
+(`src/lib/server/band/band-address-service.ts`). Owner-only matches custom domains;
+admins can still rename the band and edit its profile.
+
+- Input is normalized by `normalizeBandSlug` — the shared `generateSlug`, so an
+  address a band picks and one derived from its name follow one rule. Slug
+  generation never introduces a hyphen of its own: spaces and punctuation are
+  dropped ("the velvets" → `thevelvets`), while hyphens already in the input
+  survive, with runs collapsed and the ends trimmed.
+- It is then checked against reserved slugs and current `band.slug` values, but
+  deliberately **not** through `ensureUniqueSlug`: silently handing an owner
+  `theneons-2` when they asked for `theneons` is worse than saying it is taken.
+- Three changes per 30 days (`allowRateLimited`, keyed on band id), surfaced as an
+  inline field issue rather than a 429 — a thrown `error()` reaches the Form
+  component's `onfailure` without its message.
+- The mutation refreshes nothing. Every band-scoped query is still keyed on the old
+  slug at that moment, so the client navigates to `/band/{newSlug}/settings` and
+  lets the new route param re-key them.
+
+## Old addresses
+
+`band_slug_history` (slug unique, band FK cascade) records each released slug. An
+old address forwards to wherever the band lives now — **until another band claims
+it**. A live `band.slug` always shadows history, and claiming a slug (whether via
+`changeBandSlug` or `create`) deletes its history row, so at most one row exists
+per slug. Uniqueness for a new address is therefore checked against current slugs
+only, never against history.
+
+`resolveBandSlug` is the one lookup behind all four redirect sites:
+
+| Surface                                    | Where                                                                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `{old}.corvmc.org`                         | `handleBandSubdomain`, `src/hooks.server.ts` — forwards to the new _subdomain_, not a custom domain whose certificate may still be pending |
+| `/directory/bands/{old}` (+ member mirror) | `loadBandProfile`, `src/lib/remote/directory.remote.ts`                                                                                    |
+| `/band/{old}/*`                            | `getBandLayout`, `src/lib/remote/layout.remote.ts`                                                                                         |
+| `/band-site/{old}`                         | `getBandSiteData`, `src/lib/remote/band-site.remote.ts`                                                                                    |
+
+Three decisions worth keeping:
+
+- **302, never 301.** A released address is claimable, so the redirect has to be
+  revocable; a cached permanent redirect never could be.
+- **The directory check runs only when no row is found**, before the visibility
+  gate. Folding it into the combined condition would make a hidden band's old slug
+  redirect to its new one, disclosing both its existence and its current address.
+- **`requireBandBySlug` keeps 404ing.** It guards mutations, where a thrown
+  redirect is applied as a client navigation and would silently discard the
+  submitted form. Reads forward; writes fail loudly.
+
+A soft-deleted band shadows its slug (so reactivation cannot collide) but is never
+a redirect target (the history join filters `deletedAt`).
+
+**Before this can deploy or run in CI:** generate the migration for
+`band_slug_history` with `drizzle-kit`. Until the table exists, `resolveBandSlug`
+turns every unresolved band subdomain and directory 404 into a 500.

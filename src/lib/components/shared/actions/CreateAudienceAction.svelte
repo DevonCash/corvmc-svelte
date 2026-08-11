@@ -21,9 +21,11 @@
 
 	$effect(() => {
 		if (!slugManuallyEdited && name) {
+			// Mirrors `generateSlug` on the server: spaces and punctuation are
+			// dropped, not hyphenated.
 			slug = name
 				.toLowerCase()
-				.replace(/[^a-z0-9]+/g, '-')
+				.replace(/[^a-z0-9-]+/g, '')
 				.replace(/-{2,}/g, '-')
 				.replace(/^-|-$/g, '');
 		}

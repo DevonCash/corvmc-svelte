@@ -32,13 +32,13 @@ beforeEach(() => {
 });
 
 describe('generateSlug', () => {
-	it('lowercases and hyphenates', () => {
-		expect(generateSlug('The Velvet Underground')).toBe('the-velvet-underground');
+	it('lowercases and collapses everything that is not a letter, digit or hyphen', () => {
+		expect(generateSlug('The Velvet Underground')).toBe('thevelvetunderground');
 		expect(generateSlug('  A -- B!! ')).toBe('a-b');
 	});
 
 	// Documents the input that `ensureUniqueSlug` has to defend against: the
-	// regex keeps only [a-z0-9], so a name written in any non-Latin script — or
+	// regex keeps only [a-z0-9-], so a name written in any non-Latin script — or
 	// made entirely of punctuation or emoji — slugifies to the empty string.
 	it('yields an empty string for names with no ASCII alphanumerics', () => {
 		expect(generateSlug('東京事変')).toBe('');

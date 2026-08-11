@@ -75,7 +75,6 @@ describe('updateBand', () => {
 			bio: 'New bio'
 		});
 		expect(result.success).toBe(true);
-		expect(result.slug).toBe('new-name');
 	});
 
 	it('sends null bio when empty', async () => {

@@ -570,7 +570,10 @@ async function migrateBands() {
 			.values({
 				id,
 				name: b.name,
-				slug: b.slug || b.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+				// A legacy slug is a live address and is preserved as-is. Only the
+				// fallback follows the current rule (see `generateSlug`), which drops
+				// spaces rather than hyphenating them.
+				slug: b.slug || b.name.toLowerCase().replace(/[^a-z0-9-]+/g, ''),
 				bio: b.bio,
 				ownerId,
 				avatarKey: null,
