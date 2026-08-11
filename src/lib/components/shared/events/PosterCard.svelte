@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
+	import { formatDate, formatTime } from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
 
 	interface Props {
@@ -9,6 +10,8 @@
 		startsAt: Date;
 		ticketingEnabled?: boolean;
 		ticketPrice?: number | null;
+		/** Set when somebody else sells the tickets — keeps the card off "Free". */
+		externalTicketUrl?: string | null;
 		tags?: string | null;
 		tapeLabel?: string;
 		tapeColor?: 'orange' | 'teal' | 'red' | 'navy' | '';
@@ -27,6 +30,7 @@
 		startsAt,
 		ticketingEnabled = false,
 		ticketPrice,
+		externalTicketUrl,
 		tags,
 		tapeLabel,
 		tapeColor = '',
@@ -47,6 +51,12 @@
 	}
 
 	const tagList = $derived(parseTags(tags));
+
+	// `isFree` is an explicit override (member ticket lists); otherwise the price
+	// comes from the event's own ticketing fields.
+	const price = $derived(
+		priceDisplay({ ticketingEnabled, ticketPrice: ticketPrice ?? null, externalTicketUrl })
+	);
 
 	const pattern = $derived(hashPattern(title));
 	const patternClass = $derived(`poster-gen--${pattern}`);
@@ -143,10 +153,12 @@
 			>
 			Ticketed
 		</div>
-	{:else if isFree || (ticketingEnabled && !ticketPrice)}
+	{:else if isFree}
 		<div class="poster-card__price poster-card__price--free">Free</div>
-	{:else if ticketingEnabled && ticketPrice}
-		<div class="poster-card__price">{formatCents(ticketPrice)}</div>
+	{:else}
+		<div class="poster-card__price {price.label === 'Free' ? 'poster-card__price--free' : ''}">
+			{price.label}
+		</div>
 	{/if}
 {/snippet}
 

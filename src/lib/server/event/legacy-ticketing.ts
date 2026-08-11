@@ -26,7 +26,7 @@ export interface LegacyEventTicketing {
 
 export interface MappedEventTicketing {
 	ticketingEnabled: boolean;
-	/** cents, or null when ticketing is disabled */
+	/** cents, or null when the event was free */
 	ticketPrice: number | null;
 	ticketQuantity: number | null;
 	externalTicketUrl: string | null;
@@ -37,13 +37,21 @@ const toCents = (dollars: string | number): number => Math.round(Number(dollars)
 export function mapLegacyEventTicketing(e: LegacyEventTicketing): MappedEventTicketing {
 	const ticketingEnabled = !!e.ticketing_enabled;
 
+	// The target schema now models a display price independently of platform
+	// ticketing, matching the legacy pricing model — so an unticketed show with a
+	// door price (or a `ticket_url` and a price) keeps that price instead of
+	// importing as free.
 	let ticketPrice: number | null = null;
-	if (ticketingEnabled) {
-		ticketPrice =
-			e.ticket_price_override != null
-				? toCents(e.ticket_price_override)
-				: GLOBAL_TICKET_PRICE_CENTS;
+	if (e.ticket_price_override != null) {
+		ticketPrice = toCents(e.ticket_price_override);
+	} else if (ticketingEnabled) {
+		ticketPrice = GLOBAL_TICKET_PRICE_CENTS;
+	} else if (e.ticket_price != null) {
+		ticketPrice = toCents(e.ticket_price);
 	}
+
+	// A legacy $0 price means free, not "a zero-dollar ticket".
+	if (ticketPrice !== null && ticketPrice <= 0) ticketPrice = null;
 
 	return {
 		ticketingEnabled,

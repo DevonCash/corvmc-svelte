@@ -76,6 +76,9 @@ export const getMemberEvents = query(async () => {
 		tags: e.tags as string | null,
 		ticketingEnabled: e.ticketingEnabled,
 		ticketPrice: e.ticketPrice,
+		// Without the ticket link a card can't tell an off-site sale from a free
+		// show, and an unpriced external gig would advertise itself as free.
+		externalTicketUrl: e.externalTicketUrl,
 		posterUrl: resolveImageUrl(e.posterKey)
 	});
 	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
@@ -145,6 +148,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			tags: e.tags as string | null,
 			ticketingEnabled: e.ticketingEnabled,
 			ticketPrice: e.ticketPrice,
+			externalTicketUrl: e.externalTicketUrl,
 			posterUrl: resolveImageUrl(e.posterKey)
 		}));
 
@@ -161,7 +165,11 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
-			ticketQuantity: evt.ticketQuantity
+			ticketQuantity: evt.ticketQuantity,
+			// An externally ticketed event still takes RSVPs here; the page needs
+			// the link to send members to whoever is actually selling.
+			source: evt.source,
+			externalTicketUrl: evt.externalTicketUrl
 		},
 		remaining,
 		sold,
@@ -186,7 +194,8 @@ export const getPublicEvents = query(async () => {
 			tags: e.tags as string | null,
 			posterUrl: resolveImageUrl(e.posterKey),
 			ticketingEnabled: e.ticketingEnabled,
-			ticketPrice: e.ticketPrice
+			ticketPrice: e.ticketPrice,
+			externalTicketUrl: e.externalTicketUrl
 		}))
 	};
 });
@@ -239,6 +248,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			tags: e.tags as string | null,
 			ticketingEnabled: e.ticketingEnabled,
 			ticketPrice: e.ticketPrice,
+			externalTicketUrl: e.externalTicketUrl,
 			posterUrl: resolveImageUrl(e.posterKey)
 		}));
 
@@ -827,7 +837,11 @@ function resolveAttendee(
 	return { name, email, issues };
 }
 
-export const rsvpForEvent = form(
+// Claim a seat at a free event we're ticketing. This is NOT the same as an RSVP:
+// it issues real `ticket` rows with codes, counts against `ticketQuantity`, and
+// works at door check-in — it just skips Stripe because the price is zero. The
+// headcount-only flow is `rsvpToEvent` below.
+export const claimFreeTicket = form(
 	z.object({
 		eventId: z.string(),
 		quantity: z.string().transform(Number),
@@ -850,7 +864,7 @@ export const rsvpForEvent = form(
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
-		if (!evt.ticketingEnabled) throw error(400, 'RSVPs not available');
+		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
 
 		const remaining = await getTicketsRemaining(data.eventId);
@@ -877,9 +891,11 @@ export const rsvpForEvent = form(
 	}
 );
 
-// RSVP for a NON-ticketed event. Distinct from `rsvpForEvent` above (which issues a free
-// *ticket* with a QR code for price-0 ticketed events): this writes a lightweight join
-// row with no code, no check-in, and no capacity. One RSVP per member (idempotent).
+// The headcount RSVP: a lightweight join row, no code, no check-in, no capacity,
+// one per member (idempotent). Distinct from `claimFreeTicket` above, which mints
+// a real ticket. This is the right flow for anything we don't sell — free shows,
+// door-price shows, and externally ticketed gigs, where the ticket is bought
+// somewhere else and all we're recording is who's coming.
 export const rsvpToEvent = form(
 	z.object({
 		eventId: z.string(),

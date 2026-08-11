@@ -10,11 +10,12 @@
 	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
 
 	const evt = $derived(data.event);
-	const isRsvp = $derived(purchaseId.startsWith('rsvp-'));
+	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
+	const isFreeClaim = $derived(purchaseId.startsWith('rsvp-'));
 </script>
 
 <div class="max-w-lg mx-auto space-y-6">
-	<PageHeader title={isRsvp ? 'RSVP Confirmed' : 'Tickets Confirmed'} backHref="/events" />
+	<PageHeader title="Tickets Confirmed" backHref="/events" />
 
 	<div class="card bg-base-100 shadow">
 		<div class="card-body text-center space-y-4">
@@ -30,11 +31,11 @@
 			</div>
 
 			<!-- Only paid purchases trigger an email (ticket.purchased fires from the
-			     Stripe webhook). Free RSVPs send nothing, so don't promise one. -->
+			     Stripe webhook). Free claims send nothing, so don't promise one. -->
 			<p class="text-sm opacity-60">
-				{#if isRsvp}
+				{#if isFreeClaim}
 					Save the {data.tickets.length > 1 ? 'codes' : 'code'} below — that's your confirmation. No email
-					is sent for RSVPs.
+					is sent for free tickets.
 				{:else}
 					A confirmation email and receipt will be sent to {data.tickets[0]?.attendeeEmail ??
 						'your email'}.

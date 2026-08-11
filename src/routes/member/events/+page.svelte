@@ -19,6 +19,7 @@
 		tags: string | null;
 		ticketingEnabled: boolean;
 		ticketPrice: number | null;
+		externalTicketUrl: string | null;
 		posterUrl: string | null;
 	}
 
@@ -140,6 +141,7 @@
 						startsAt={evt.startsAt}
 						ticketingEnabled={evt.ticketingEnabled}
 						ticketPrice={evt.ticketPrice}
+						externalTicketUrl={evt.externalTicketUrl}
 						tags={evt.tags}
 						tapeLabel={primaryTag(evt.tags)}
 						tapeColor={primaryTag(evt.tags) ? tagToTapeVariant(primaryTag(evt.tags)!) : ''}
@@ -163,6 +165,7 @@
 						startsAt={evt.startsAt}
 						ticketingEnabled={evt.ticketingEnabled}
 						ticketPrice={evt.ticketPrice}
+						externalTicketUrl={evt.externalTicketUrl}
 						tags={evt.tags}
 						tapeLabel={primaryTag(evt.tags)}
 						tapeColor={primaryTag(evt.tags) ? tagToTapeVariant(primaryTag(evt.tags)!) : ''}

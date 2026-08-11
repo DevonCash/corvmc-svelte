@@ -122,6 +122,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			endsAt: e.endsAt,
 			location: e.location,
 			externalTicketUrl: e.externalTicketUrl,
+			ticketPrice: e.ticketPrice,
 			posterUrl: resolveImageUrl(e.posterKey)
 		})),
 		media: media.map((m) => ({

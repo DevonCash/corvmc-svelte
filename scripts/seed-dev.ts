@@ -824,21 +824,29 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		rows.push(e);
 	}
 
-	// Future events: 2 paid ticketed, 2 free RSVP, 2 open (no ticketing)
+	// Future events, one per ticketing shape: 2 paid ticketed, 2 free-ticketed,
+	// 1 sold off-site with a price, 1 door price, 1 genuinely free.
 	const futureConfigs: {
 		ticketingEnabled: boolean;
 		ticketPrice: number | null;
 		ticketQuantity: number | null;
+		externalTicketUrl?: string;
 	}[] = [
 		{ ticketingEnabled: true, ticketPrice: 1500, ticketQuantity: 50 },
 		{ ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 30 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: 40 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: null },
-		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null },
+		{
+			ticketingEnabled: false,
+			ticketPrice: 1800,
+			ticketQuantity: null,
+			externalTicketUrl: 'https://eventbrite.com/e/424242'
+		},
+		{ ticketingEnabled: false, ticketPrice: 1000, ticketQuantity: null },
 		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null }
 	];
 
-	for (let i = 0; i < 6; i++) {
+	for (let i = 0; i < futureConfigs.length; i++) {
 		const day = randomInt(3, 28);
 		const hour = randomInt(18, 20);
 		const duration = pick([2, 3]);
@@ -863,9 +871,10 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(event)
 			.values({
 				title: pick(EVENT_TITLES),
-				description:
-					config.ticketingEnabled && !config.ticketPrice
-						? 'A free community event — RSVP to reserve your spot!'
+				description: config.externalTicketUrl
+					? 'Tickets for this one are sold through our partner venue.'
+					: config.ticketingEnabled && !config.ticketPrice
+						? 'A free community event — grab a ticket to reserve your spot!'
 						: 'An evening of live performances at the Collective.',
 				startsAt,
 				endsAt,
@@ -877,6 +886,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				ticketingEnabled: config.ticketingEnabled,
 				ticketPrice: config.ticketPrice,
 				ticketQuantity: config.ticketQuantity,
+				externalTicketUrl: config.externalTicketUrl ?? null,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -1257,6 +1267,8 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
 						Math.random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
+					// Gigs are priced at the door or by the venue — never sold by us.
+					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: b.ownerId
 				})
 				.returning();
