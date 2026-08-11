@@ -42,13 +42,24 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 
 // A published, ticketed event — so the only thing that can reject the submission
 // is the field validation under test, not the event's own state.
-const getById = vi.fn(async (id: string) => ({
-	id,
-	title: 'Open Mic Night',
-	status: 'published',
-	ticketingEnabled: true,
-	ticketPrice: 1500
-}));
+const getById = vi.fn(
+	async (
+		id: string
+	): Promise<{
+		id: string;
+		title: string;
+		status: string;
+		ticketingEnabled: boolean;
+		ticketPrice: number | null;
+		externalTicketUrl?: string | null;
+	}> => ({
+		id,
+		title: 'Open Mic Night',
+		status: 'published',
+		ticketingEnabled: true,
+		ticketPrice: 1500
+	})
+);
 
 vi.mock('$lib/server/event/event-service', () => ({
 	create: vi.fn(),
@@ -185,13 +196,13 @@ describe('compTickets validation', () => {
 	});
 });
 
-describe('rsvpForEvent validation', () => {
+describe('claimFreeTicket validation', () => {
 	// `attendeeName`/`attendeeEmail` are optional in the schema because logged-in
 	// members fall back to their account. A guest leaving them blank must still be
 	// rejected rather than booked in with an empty name.
 	it('rejects a guest with no name or email without creating an RSVP', async () => {
 		await expectRejects(
-			() => events.rsvpForEvent({ eventId: 'evt-1', quantity: 1 }, makeIssue()),
+			() => events.claimFreeTicket({ eventId: 'evt-1', quantity: 1 }, makeIssue()),
 			'attendeeName'
 		);
 		expect(createRsvp).not.toHaveBeenCalled();
@@ -200,7 +211,7 @@ describe('rsvpForEvent validation', () => {
 	it('rejects a malformed email without creating an RSVP', async () => {
 		await expectRejects(
 			() =>
-				events.rsvpForEvent(
+				events.claimFreeTicket(
 					{ eventId: 'evt-1', quantity: 1, attendeeName: 'Ada', attendeeEmail: 'not-an-email' },
 					makeIssue()
 				),
@@ -212,7 +223,7 @@ describe('rsvpForEvent validation', () => {
 	it('rejects a non-numeric quantity without creating an RSVP', async () => {
 		await expectRejects(
 			() =>
-				events.rsvpForEvent(
+				events.claimFreeTicket(
 					{
 						eventId: 'evt-1',
 						quantity: NaN,
@@ -231,7 +242,7 @@ describe('rsvpForEvent validation', () => {
 	it('reports quantity and attendee issues together', async () => {
 		let thrown: unknown;
 		try {
-			await events.rsvpForEvent({ eventId: 'evt-1', quantity: NaN }, makeIssue());
+			await events.claimFreeTicket({ eventId: 'evt-1', quantity: NaN }, makeIssue());
 		} catch (e) {
 			thrown = e;
 		}
@@ -265,5 +276,52 @@ describe('purchaseTickets validation', () => {
 			'attendeeName'
 		);
 		expect(checkout).not.toHaveBeenCalled();
+	});
+});
+
+// Regression: an externally ticketed event is not one we sell, so it belongs on
+// the lightweight RSVP path — the ticket comes from the outside seller and all we
+// record is who's coming. Only OUR checkout (`ticketingEnabled`) is disqualifying.
+describe('rsvpToEvent with external ticketing', () => {
+	const attendee = { attendeeName: 'Ada', attendeeEmail: 'ada@example.com' };
+
+	it('accepts an RSVP for an event sold off-site', async () => {
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Gig at the Whiteside',
+			status: 'published',
+			ticketingEnabled: false,
+			ticketPrice: 1800,
+			externalTicketUrl: 'https://venue.test/tickets'
+		});
+
+		await events.rsvpToEvent({ eventId: 'evt-1', ...attendee }, makeIssue());
+
+		expect(createRsvp).toHaveBeenCalledWith(
+			expect.objectContaining({ eventId: 'evt-1', ...attendee })
+		);
+	});
+
+	it('accepts an RSVP for a door-price event', async () => {
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Open Jam',
+			status: 'published',
+			ticketingEnabled: false,
+			ticketPrice: 1000,
+			externalTicketUrl: null
+		});
+
+		await events.rsvpToEvent({ eventId: 'evt-1', ...attendee }, makeIssue());
+
+		expect(createRsvp).toHaveBeenCalledOnce();
+	});
+
+	it('still refuses an RSVP for an event we ticket ourselves', async () => {
+		// getById's default mock is a platform-ticketed event.
+		await expect(
+			events.rsvpToEvent({ eventId: 'evt-1', ...attendee }, makeIssue())
+		).rejects.toThrow();
+		expect(createRsvp).not.toHaveBeenCalled();
 	});
 });

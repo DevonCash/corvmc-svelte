@@ -62,11 +62,10 @@
 		});
 	}
 
-	// Compute the ticket price in cents for the hidden field
+	// Ticket price in cents for the hidden field. Independent of the ticketing
+	// toggle: it's the price attendees pay wherever they buy.
 	const ticketPriceCents = $derived(
-		ticketingEnabled && ticketPriceDollars
-			? String(Math.round(parseFloat(ticketPriceDollars) * 100))
-			: ''
+		ticketPriceDollars ? String(Math.round(parseFloat(ticketPriceDollars) * 100)) : ''
 	);
 
 	$effect(() => {
@@ -164,30 +163,26 @@
 				{/if}
 			</Field>
 
+			<!-- Price stands on its own: it's what attendees pay at the door or through
+			     an outside seller, even when we aren't the ones selling. -->
+			<Field
+				name="ticketPriceDollars"
+				type="number"
+				label="Ticket price ($)"
+				bind:value={ticketPriceDollars}
+			/>
+			<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
+
 			<Field
 				name="ticketingEnabled"
 				type="toggle"
 				value={ticketingEnabled}
-				checkboxLabel="Enable ticketing"
+				checkboxLabel="Sell tickets through the site"
 			/>
 
 			{#if ticketingEnabled}
 				<div class="card bg-base-200 p-4 space-y-4">
-					<div class="grid grid-cols-2 gap-4">
-						<Field
-							name="ticketPriceDollars"
-							type="number"
-							label="Ticket price ($)"
-							bind:value={ticketPriceDollars}
-						/>
-						<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
-						<Field
-							name="ticketQuantity"
-							type="number"
-							label="Capacity"
-							bind:value={ticketQuantity}
-						/>
-					</div>
+					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
 				</div>
 			{/if}

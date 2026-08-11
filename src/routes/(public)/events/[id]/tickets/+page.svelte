@@ -12,10 +12,10 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
-	import { purchaseTickets, rsvpForEvent, getPublicTicketPage } from '$lib/remote/events.remote';
+	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
 
 	const purchaseFields = purchaseTickets.fields;
-	const rsvpFields = rsvpForEvent.fields;
+	const freeTicketFields = claimFreeTicket.fields;
 
 	let data = $derived(await getPublicTicketPage(page.params.id!));
 
@@ -48,7 +48,7 @@
 </script>
 
 <div class="max-w-lg mx-auto space-y-6">
-	<PageHeader title={isFreeEvent ? 'RSVP' : 'Get Tickets'} backHref="/events" />
+	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
 	<div class="card bg-base-100 shadow">
 		<div class="card-body">
@@ -92,11 +92,11 @@
 		<div class="alert alert-warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</div>
 	{:else if isFreeEvent}
 		<Form
-			remote={rsvpForEvent}
+			remote={claimFreeTicket}
 			onsuccess={handleSuccess}
 			onfailure={() => toast.error('Something went wrong')}
 		>
-			<input {...rsvpFields.eventId.as('hidden', page.params.id!)} />
+			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
 					<Field label="Number of spots" name="quantity">
@@ -114,7 +114,7 @@
 					{/if}
 
 					<SubmitButton
-						label="RSVP{quantity > 1 ? ` for ${quantity}` : ''}"
+						label="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
 						class="btn-primary w-full"
 					/>
 				</div>

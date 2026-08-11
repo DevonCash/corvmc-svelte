@@ -16,6 +16,7 @@ import {
 	getById
 } from '$lib/server/event/event-service';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import { dollarsToCents } from '$lib/utils/event-ticketing';
 import { resolveImageUrl } from '$lib/server/storage';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -56,6 +57,7 @@ export const getBandEventsPublic = query(z.string(), async (bandId) => {
 		doorsAt: e.doorsAt,
 		location: e.location,
 		externalTicketUrl: e.externalTicketUrl,
+		ticketPrice: e.ticketPrice,
 		posterUrl: resolveImageUrl(e.posterKey)
 	}));
 });
@@ -84,6 +86,7 @@ export const getBandEventDetail = query(
 			location: evt.location,
 			tags: evt.tags,
 			externalTicketUrl: evt.externalTicketUrl,
+			ticketPrice: evt.ticketPrice,
 			posterUrl: resolveImageUrl(evt.posterKey)
 		};
 	}
@@ -104,7 +107,8 @@ export const createBandEventForm = form(
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
-		externalTicketUrl: z.string().url().optional().or(z.literal(''))
+		externalTicketUrl: z.string().url().optional().or(z.literal('')),
+		ticketPriceDollars: z.string().max(12).optional()
 	}),
 	async (data, issue) => {
 		await requireFeature('bandEvents');
@@ -112,6 +116,11 @@ export const createBandEventForm = form(
 
 		if (!data.title) {
 			invalid(issue.title('Title is required'));
+		}
+
+		const ticketPrice = dollarsToCents(data.ticketPriceDollars);
+		if (ticketPrice === undefined) {
+			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
 		}
 
 		const tz = DEFAULT_TIMEZONE;
@@ -135,7 +144,8 @@ export const createBandEventForm = form(
 			doorsAt,
 			location: data.location || undefined,
 			tags: data.tags || undefined,
-			externalTicketUrl: data.externalTicketUrl || undefined
+			externalTicketUrl: data.externalTicketUrl || undefined,
+			ticketPrice
 		});
 
 		return { eventId: evt.id };
@@ -154,14 +164,23 @@ export const updateBandEventForm = form(
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
-		externalTicketUrl: z.string().optional()
+		externalTicketUrl: z.string().optional(),
+		ticketPriceDollars: z.string().max(12).optional()
 	}),
-	async (data) => {
+	async (data, issue) => {
 		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
 		const tz = DEFAULT_TIMEZONE;
 		const params: Parameters<typeof updateBandEvent>[2] = {};
+
+		if (data.ticketPriceDollars !== undefined) {
+			const ticketPrice = dollarsToCents(data.ticketPriceDollars);
+			if (ticketPrice === undefined) {
+				invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
+			}
+			params.ticketPrice = ticketPrice;
+		}
 
 		if (data.title !== undefined) params.title = data.title;
 		if (data.description !== undefined) params.description = data.description || null;

@@ -83,6 +83,7 @@
 						startsAt={evt.startsAt}
 						ticketingEnabled={evt.ticketingEnabled}
 						ticketPrice={evt.ticketPrice}
+						externalTicketUrl={evt.externalTicketUrl}
 						tags={evt.tags}
 					/>
 				{/each}

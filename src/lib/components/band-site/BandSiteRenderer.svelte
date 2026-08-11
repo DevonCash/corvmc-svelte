@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
-	import { formatDate, formatTime } from '$lib/utils/format';
+	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import BandContactForm from './BandContactForm.svelte';
@@ -39,6 +39,7 @@
 		endsAt: Date;
 		location: string | null;
 		externalTicketUrl: string | null;
+		ticketPrice: number | null;
 		posterUrl: string | null;
 	}
 
@@ -155,6 +156,9 @@
 										</p>
 										{#if evt.location}
 											<p class="text-sm opacity-60">{evt.location}</p>
+										{/if}
+										{#if evt.ticketPrice}
+											<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
 										{/if}
 									</div>
 									{#if evt.externalTicketUrl}

@@ -120,16 +120,34 @@
 			/>
 		</div>
 
-		<div class="form-control">
-			<label class="label" for="externalTicketUrl"
-				><span class="label-text">Ticket Link (external)</span></label
-			>
-			<input
-				{...createBandEventForm.fields.externalTicketUrl.as('text')}
-				class="input input-bordered w-full"
-				placeholder="https://eventbrite.com/..."
-				id="externalTicketUrl"
-			/>
+		<div class="grid gap-4 md:grid-cols-2">
+			<div class="form-control">
+				<label class="label" for="externalTicketUrl"
+					><span class="label-text">Ticket Link (external)</span></label
+				>
+				<input
+					{...createBandEventForm.fields.externalTicketUrl.as('text')}
+					class="input input-bordered w-full"
+					placeholder="https://eventbrite.com/..."
+					id="externalTicketUrl"
+				/>
+			</div>
+
+			<div class="form-control">
+				<label class="label" for="ticketPriceDollars"
+					><span class="label-text">Ticket price ($)</span></label
+				>
+				<input
+					{...createBandEventForm.fields.ticketPriceDollars.as('text')}
+					class="input input-bordered w-full"
+					placeholder="10.00"
+					inputmode="decimal"
+					id="ticketPriceDollars"
+				/>
+				<span class="label-text-alt opacity-60 mt-1">
+					What people pay, at the door or through the link. Leave blank if it's free.
+				</span>
+			</div>
 		</div>
 
 		<div class="flex justify-end pt-4">
