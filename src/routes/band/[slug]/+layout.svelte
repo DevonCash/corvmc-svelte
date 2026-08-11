@@ -7,8 +7,11 @@
 		IconPencil,
 		IconSettings,
 		IconCrown,
-		IconBrush
+		IconBrush,
+		IconExternalLink
 	} from '@tabler/icons-svelte';
+	import { env } from '$env/dynamic/public';
+	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
@@ -21,6 +24,10 @@
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	const base = $derived(`/band/${layout.band.slug}`);
+	// A custom domain only replaces the subdomain once it is actually serving.
+	const liveCustomDomain = $derived(
+		layout.band.customDomainStatus === 'active' ? layout.band.customDomain : null
+	);
 	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	const panels = $derived([
@@ -69,6 +76,14 @@
 		{#if layout.features.bandPremium && isOwnerOrAdmin && layout.band.tier === 'premium'}
 			<Nav.Item href={`${base}/page-editor`} label="Page Editor">
 				{#snippet icon()}<IconBrush />{/snippet}
+			</Nav.Item>
+			<Nav.Item
+				href={bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)}
+				label="View Live Site"
+				target="_blank"
+				rel="noopener"
+			>
+				{#snippet icon()}<IconExternalLink />{/snippet}
 			</Nav.Item>
 		{/if}
 		{#if layout.userRole === 'owner'}

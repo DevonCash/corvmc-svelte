@@ -10,16 +10,30 @@
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
+	import CustomDomainSection from './CustomDomainSection.svelte';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	const band = $derived(layout.band);
+
+	// Owner-only and premium-only: the query enforces both, so asking for it as
+	// anyone else would surface an error banner instead of just hiding a section.
+	const showCustomDomain = $derived(
+		layout.features.bandPremium && band.tier === 'premium' && layout.userRole === 'owner'
+	);
+	let customDomain = $derived(showCustomDomain ? await getCustomDomain(band.slug) : null);
 
 	let showDeleteModal = $state(false);
 </script>
 
 <PageHeader title="Settings" subtitle={band.name} />
 <PageContent width="md">
+	{#if customDomain}
+		<CustomDomainSection slug={band.slug} domain={customDomain} />
+		<div class="h-8"></div>
+	{/if}
+
 	<section class="space-y-4">
 		<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
 		<div class="card bg-base-100 border border-error/30">

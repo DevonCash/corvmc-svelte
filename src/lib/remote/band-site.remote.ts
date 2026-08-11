@@ -80,7 +80,10 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			tagline: bandRow.tagline,
 			avatarUrl: resolveImageUrl(bandRow.avatarKey),
 			links: bandRow.links as Array<{ label: string; url: string; embed?: boolean }> | null,
-			genres: genres.map((g) => g.genre)
+			genres: genres.map((g) => g.genre),
+			// Only a live custom domain counts — canonical URLs must not point at a
+			// hostname that isn't serving yet.
+			customDomain: bandRow.customDomainStatus === 'active' ? bandRow.customDomain : null
 		},
 		config: config
 			? {

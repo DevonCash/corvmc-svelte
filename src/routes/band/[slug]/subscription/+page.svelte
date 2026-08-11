@@ -12,12 +12,27 @@
 		resumePremium
 	} from '$lib/remote/band-subscription.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { env } from '$env/dynamic/public';
+	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
+	const siteUrl = $derived(
+		bandSiteUrl(
+			band.slug,
+			env.PUBLIC_SITE_URL,
+			band.customDomainStatus === 'active' ? band.customDomain : null
+		)
+	);
+	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
+
+	// One form object per <form> element — a single object attached to both the
+	// monthly and yearly forms throws and takes the whole page down.
+	const upgradeMonthly = upgradeToPremium.for('monthly');
+	const upgradeYearly = upgradeToPremium.for('yearly');
 </script>
 
 <PageHeader title="Subscription" subtitle={band.name} />
@@ -38,6 +53,15 @@
 					<div>
 						<dt class="font-medium opacity-60">Renews</dt>
 						<dd>{formatDate(new Date(info.subscription.currentPeriodEnd))}</dd>
+					</div>
+					<div class="sm:col-span-2">
+						<dt class="font-medium opacity-60">Your site</dt>
+						<dd>
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute URL on the band's own subdomain, not a route in this app -->
+							<a href={siteUrl} target="_blank" rel="noopener" class="link">
+								{siteUrl.replace(/^https?:\/\//, '')}
+							</a>
+						</dd>
 					</div>
 				</dl>
 
@@ -92,8 +116,9 @@
 				<div class="card-body text-center">
 					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
 					<p class="mt-2 opacity-70">
-						Get a custom band page on your own subdomain with a block editor, custom CSS, genre
-						themes, and a full EPK.
+						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
+						directory profile. Premium turns it into a real website — a block editor, custom CSS,
+						genre themes, a full EPK — and lets you serve it from your own domain.
 					</p>
 				</div>
 			</div>
@@ -108,20 +133,20 @@
 						</p>
 						{#if isOwner}
 							<form
-								{...upgradeToPremium.enhance(async (form) => {
+								{...upgradeMonthly.enhance(async (form) => {
 									try {
 										const result = await form.submit();
-										if (result && upgradeToPremium.result?.redirectUrl) {
+										if (result && upgradeMonthly.result?.redirectUrl) {
 											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeToPremium.result.redirectUrl;
+											window.location.href = upgradeMonthly.result.redirectUrl;
 										}
 									} catch {
 										toast.error('Something went wrong');
 									}
 								})}
 							>
-								<input {...upgradeToPremium.fields.slug.as('hidden', band.slug)} />
-								<input {...upgradeToPremium.fields.billingInterval.as('hidden', 'monthly')} />
+								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
+								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
 								<button class="btn btn-primary mt-4">Subscribe Monthly</button>
 							</form>
 						{/if}
@@ -138,20 +163,20 @@
 						</p>
 						{#if isOwner}
 							<form
-								{...upgradeToPremium.enhance(async (form) => {
+								{...upgradeYearly.enhance(async (form) => {
 									try {
 										const result = await form.submit();
-										if (result && upgradeToPremium.result?.redirectUrl) {
+										if (result && upgradeYearly.result?.redirectUrl) {
 											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeToPremium.result.redirectUrl;
+											window.location.href = upgradeYearly.result.redirectUrl;
 										}
 									} catch {
 										toast.error('Something went wrong');
 									}
 								})}
 							>
-								<input {...upgradeToPremium.fields.slug.as('hidden', band.slug)} />
-								<input {...upgradeToPremium.fields.billingInterval.as('hidden', 'yearly')} />
+								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
+								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
 								<button class="btn btn-primary mt-4">Subscribe Yearly</button>
 							</form>
 						{/if}
@@ -166,7 +191,7 @@
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Custom subdomain (yourband.corvmc.org)
+							Your own domain (theband.com) — or keep using {band.slug}.{baseDomain}
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

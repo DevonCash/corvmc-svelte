@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-// `handle` is `sequence(Sentry.sentryHandle(), handleBetterAuth)`. Both the real
-// `sentryHandle()` and SvelteKit's real `sequence()` reach for the request
-// async-context store, which isn't set up when calling `handle` directly in a
-// unit test. Mock Sentry to no-ops, and mock `sequence` to delegate to the final
-// (business-logic) handler so these tests exercise handleBetterAuth as before.
+// Both the real `sentryHandle()` and SvelteKit's real `sequence()` reach for the
+// request async-context store, which isn't set up when calling `handle` directly
+// in a unit test. Mock Sentry to no-ops, and reimplement `sequence` as plain
+// composition. (It used to just return the last handler — that silently stopped
+// exercising handleBetterAuth the moment another handler was appended after it.)
 vi.mock('@sentry/sveltekit', () => ({
 	initCloudflareSentryHandle:
 		() =>
@@ -21,8 +21,19 @@ vi.mock('@sentry/sveltekit', () => ({
 	handleErrorWithSentry: <T>(handler: T) => handler
 }));
 
+type TestHandle = (input: {
+	event: unknown;
+	resolve: (event: unknown) => unknown;
+}) => unknown | Promise<unknown>;
+
 vi.mock('@sveltejs/kit/hooks', () => ({
-	sequence: (...handlers: unknown[]) => handlers[handlers.length - 1]
+	sequence:
+		(...handlers: TestHandle[]): TestHandle =>
+		({ event, resolve }) =>
+			handlers.reduceRight<(e: unknown) => unknown>(
+				(next, handler) => (e) => handler({ event: e, resolve: next }),
+				resolve
+			)(event)
 }));
 
 const mockRegisterListeners = vi.fn();
@@ -84,6 +95,9 @@ beforeEach(() => {
 function makeEvent(overrides?: Record<string, unknown>) {
 	return {
 		request: new Request('http://localhost/', { method: 'GET' }),
+		// SvelteKit always supplies `url`; the band-subdomain gate in the handle
+		// chain reads its hostname to decide whether the request is a band address.
+		url: new URL('http://localhost/'),
 		locals: {} as Record<string, unknown>,
 		platform: {},
 		...overrides
@@ -181,7 +195,11 @@ describe('hooks.server handle', () => {
 
 		await handle({ event: event as any, resolve });
 
-		expect(mockSvelteKitHandler).toHaveBeenCalledWith(expect.objectContaining({ event, resolve }));
+		// `resolve` here is the next handler in the chain, not the raw mock passed
+		// in — that is what being one link in a sequence means.
+		expect(mockSvelteKitHandler).toHaveBeenCalledWith(
+			expect.objectContaining({ event, resolve: expect.any(Function) })
+		);
 	});
 });
 
