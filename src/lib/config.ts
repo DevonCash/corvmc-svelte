@@ -173,6 +173,17 @@ export const inboxMessageDirections = ['inbound', 'outbound'] as const;
 export const volunteerHourStatuses = ['pending', 'approved', 'rejected'] as const;
 
 /**
+ * The DB says `rejected`, but nothing user-facing does: staff return a log for
+ * correction and the member logs it again, which "rejected" reads as final. The
+ * stored value is unchanged — this is the display layer only.
+ */
+export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[number], string> = {
+	pending: 'Pending',
+	approved: 'Approved',
+	rejected: 'Returned'
+};
+
+/**
  * How a role is grouped when roles are shown as a list to choose from. Purely
  * presentational — nothing branches on it. Committee work is volunteering that
  * happens in a monthly meeting rather than at the space, which is why it reads

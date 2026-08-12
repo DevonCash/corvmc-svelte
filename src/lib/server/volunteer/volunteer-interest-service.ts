@@ -119,7 +119,7 @@ export async function getInterestsForUser(userId: string): Promise<string[]> {
 	return rows.map((r) => r.roleId);
 }
 
-/** How many people are up for each role — the counts beside the staff filter. */
+/** How many people are interested in each role — the counts beside the staff filter. */
 export async function countInterestsByRole(): Promise<
 	{ roleId: string; roleName: string; group: VolunteerRoleGroup; interested: number }[]
 > {

@@ -5,7 +5,7 @@
 	 * A shift they can't take is shown with the reason rather than hidden — "you
 	 * need Sound Desk Cleared" is the useful half of a refusal, and hiding it just
 	 * makes the board look empty. Ordering comes from the service: their own
-	 * claims first, then roles they've said they're up for, then everything else.
+	 * claims first, then roles they've said they're interested in, then everything else.
 	 */
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -55,7 +55,7 @@
 	{#if shifts.length === 0}
 		<EmptyState
 			title="Nothing scheduled yet"
-			description="When staff put shifts up, the ones matching what you're up for show first."
+			description="When staff post shifts, the ones for roles you picked show first."
 		/>
 	{:else}
 		<ul class="flex flex-col gap-3">
@@ -77,7 +77,7 @@
 									{shift.myStatus === 'confirmed' ? "you're on" : 'claimed'}
 								</span>
 							{:else if shift.interested}
-								<span class="badge badge-ghost badge-sm">you're up for this</span>
+								<span class="badge badge-ghost badge-sm">you're interested</span>
 							{/if}
 						</div>
 

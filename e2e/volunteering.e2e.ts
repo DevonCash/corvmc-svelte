@@ -97,8 +97,8 @@ test.describe('volunteering — staff review queue', () => {
 		await page.goto('/staff/volunteer');
 
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
-		await rowAction(row, 'Reject').click();
-		await modalSubmit(page, 'Reject').click();
+		await rowAction(row, 'Return').click();
+		await modalSubmit(page, 'Return').click();
 
 		await expect(page.getByText(/give the member a reason/i)).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(/expected string to have/i)).toHaveCount(0);
@@ -110,15 +110,15 @@ test.describe('volunteering — staff review queue', () => {
 
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
-		await rowAction(row, 'Reject').click();
+		await rowAction(row, 'Return').click();
 		await page.locator('textarea[name="notes"]').fill(reason);
-		await modalSubmit(page, 'Reject').click();
+		await modalSubmit(page, 'Return').click();
 		await expect(row).toHaveCount(0, { timeout: 15000 });
 
 		// Kept staff-side deliberately: signing a second user in over an existing
 		// session in the same browser context does not swap the session, so the
 		// member view is asserted separately from its own login.
-		await page.getByRole('radio', { name: /Rejected/ }).click();
+		await page.getByRole('radio', { name: /Returned/ }).click();
 		const rejected = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await expect(rejected).toBeVisible({ timeout: 15000 });
 		await expect(rejected).toContainText(reason);

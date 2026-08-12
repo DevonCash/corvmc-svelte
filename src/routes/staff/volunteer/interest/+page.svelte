@@ -142,7 +142,7 @@
 	<DataList
 		{result}
 		empty={roleFilter
-			? 'Nobody has put their hand up for this one yet.'
+			? 'No one has picked this role yet.'
 			: 'No one has said what they can help with yet.'}
 		onpage={(p) => (pageNumber = p)}
 	>
@@ -150,7 +150,7 @@
 			<Table>
 				{#snippet head()}
 					<th>Member</th>
-					<th class="col-support">Up for</th>
+					<th class="col-support">Roles</th>
 					<th class="col-extra whitespace-nowrap">Since</th>
 				{/snippet}
 
