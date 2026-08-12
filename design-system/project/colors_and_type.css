@@ -245,6 +245,7 @@
 [data-theme="corvmc-dark"] *::selection {
   background: color-mix(in oklch, var(--cmc-orange) 60%, transparent);
   color: #fff;
+}
 
 /* Auto-apply dark when the user's OS is dark AND no explicit theme is set.
    `:root:not([data-theme="light"])` lets a forced light theme win. */

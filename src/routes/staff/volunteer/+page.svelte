@@ -16,7 +16,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import { IconCheck, IconX } from '@tabler/icons-svelte';
+	import { IconCheck, IconX, IconAlertTriangle } from '@tabler/icons-svelte';
 	import {
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
@@ -121,6 +121,8 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Staff">
+	<Button href="/staff/volunteer/shifts" class="btn-ghost btn-sm">Shifts</Button>
+	<Button href="/staff/volunteer/interest" class="btn-ghost btn-sm">Interest</Button>
 	<Button href="/staff/volunteer/roles" class="btn-ghost btn-sm">Roles</Button>
 	<Button href="/staff/volunteer/report" class="btn-ghost btn-sm">Report</Button>
 </PageHeader>
@@ -218,7 +220,29 @@
 
 				{#each logs as log (log.id)}
 					<tr class="hover">
-						<td class="w-px"><StatusBadge status={log.status} /></td>
+						<td class="w-px">
+							<StatusBadge status={log.status} />
+							{#if log.uncleared}
+								<!--
+									The member didn't hold a clearance their role requires, on the
+									day they worked. Advisory: a prompt to have a conversation, not
+									a reason to refuse hours somebody already put in.
+								-->
+								<span
+									class="mt-1 block text-warning"
+									title="Missing a required clearance on the date worked"
+								>
+									<IconAlertTriangle size={14} />
+								</span>
+							{/if}
+							{#if log.shiftId}
+								<!-- Filed against a shift staff scheduled — the person was
+								     rostered, so this can be approved with less scrutiny. -->
+								<span class="badge badge-ghost badge-xs mt-1" title="Logged from a scheduled shift"
+									>scheduled</span
+								>
+							{/if}
+						</td>
 
 						<!--
 							MemberLink already carries the email and the role glyph, so the

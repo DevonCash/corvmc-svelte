@@ -63,7 +63,7 @@ export interface SubmitHoursData {
 	workedOn: string;
 	minutes: number;
 	description: string;
-	/** Phase 2. Always null today. */
+	/** The completed shift this log pre-filled from, when it did. */
 	shiftId?: string | null;
 }
 
@@ -385,6 +385,8 @@ export interface HourLogRow {
 	workedOn: Date;
 	minutes: number;
 	description: string;
+	/** Set when the log pre-filled from a completed shift — staff scheduled it. */
+	shiftId: string | null;
 	status: VolunteerHourStatus;
 	reviewedByName: string | null;
 	reviewedAt: Date | null;
@@ -463,6 +465,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		workedOn: row.log.workedOn,
 		minutes: row.log.minutes,
 		description: row.log.description,
+		shiftId: row.log.shiftId,
 		status: row.log.status,
 		reviewedByName: row.reviewedByName,
 		reviewedAt: row.log.reviewedAt,
@@ -538,7 +541,14 @@ export interface UserHourSummary {
 }
 
 export async function getUserHourSummary(userId: string): Promise<UserHourSummary> {
-	const yearStart = buildDateInTz(`${new Date().getFullYear()}-01-01`, '00:00', TZ);
+	// Unix seconds, not the Date. This boundary goes into a raw `sql` fragment,
+	// where drizzle binds whatever it is handed — there is no column in scope for
+	// it to read `mode: 'timestamp'` off, so a Date reaches the driver as an
+	// object and D1 rejects the statement with D1_TYPE_ERROR, taking the whole
+	// member volunteering page with it. The column stores seconds; match it.
+	const yearStart = Math.floor(
+		buildDateInTz(`${new Date().getFullYear()}-01-01`, '00:00', TZ).getTime() / 1000
+	);
 
 	const [row] = await db
 		.select({
