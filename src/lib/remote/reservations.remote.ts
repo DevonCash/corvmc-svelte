@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error, redirect } from '@sveltejs/kit';
+import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
@@ -81,6 +81,8 @@ import { create as createSeries } from '$lib/server/reservation/recurring-series
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
+import { ensureContactPhone } from '$lib/server/user/user-service';
+import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
 import {
 	DEFAULT_TIMEZONE,
 	SEARCH_LIMIT,
@@ -695,6 +697,23 @@ export const getReservationPolicy = query(async () => {
 	};
 });
 
+/**
+ * Member: the contact number on file, so the booking forms know whether to ask
+ * for one. Kept separate from getMembershipStatus so it can be refreshed on its
+ * own once a booking has saved a number.
+ */
+export const getBookingContact = query(async () => {
+	const currentUser = requireUser();
+
+	const [row] = await db
+		.select({ phone: user.phone })
+		.from(user)
+		.where(eq(user.id, currentUser.id))
+		.limit(1);
+
+	return { phone: row?.phone ?? null, needsPhone: !isValidPhone(row?.phone) };
+});
+
 /** Member: subscription status — called once per page load. */
 export const getMembershipStatus = query(async () => {
 	const { locals } = getRequestEvent();
@@ -976,9 +995,15 @@ const memberBookingSchema = createReservationSchema.extend({
 	monthlyMode: z.enum(['weekday', 'monthday']).optional()
 });
 
-export const bookMemberReservation = form(memberBookingSchema, async (data, _issue) => {
+export const bookMemberReservation = form(memberBookingSchema, async (data, issue) => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
+
+	// Before anything is written: a reservation staff can't call about is the
+	// problem this guard exists to prevent.
+	if (!(await ensureContactPhone(locals.user.id, data.phone))) {
+		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
+	}
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1217,9 +1242,15 @@ const bookAndPaySchema = createReservationSchema.extend({
 	skipPayment: z.enum(['', 'on']).optional()
 });
 
-export const bookAndPayReservation = form(bookAndPaySchema, async (data, _issue) => {
+export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
 	const { locals, url } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
+
+	// Before anything is written: a reservation staff can't call about is the
+	// problem this guard exists to prevent.
+	if (!(await ensureContactPhone(locals.user.id, data.phone))) {
+		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
+	}
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1401,10 +1432,15 @@ const bandBookingSchema = createReservationSchema.extend({
 	monthlyMode: z.enum(['weekday', 'monthday']).optional()
 });
 
-export const bookBandReservation = form(bandBookingSchema, async (data, _issue) => {
+export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
 	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
+
+	// The band books, but a person is on the hook — same guard as a solo booking.
+	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
+		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
+	}
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;

@@ -21,17 +21,16 @@ function chainableSelect() {
 }
 
 const deleteWhere = vi.fn(() => Promise.resolve({ rowCount: 1 }));
+const updateSet = vi.fn(() => ({
+	where: vi.fn(() => ({
+		returning: vi.fn(() => Promise.resolve(updateResult))
+	}))
+}));
 
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chainableSelect(),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve(updateResult))
-				}))
-			}))
-		})),
+		update: vi.fn(() => ({ set: updateSet })),
 		delete: vi.fn(() => ({ where: deleteWhere }))
 	}
 }));
@@ -51,6 +50,7 @@ import {
 	deactivateUsers,
 	reactivateUser,
 	purgeUser,
+	ensureContactPhone,
 	UserNotFoundError,
 	UserNotDeactivatedError,
 	UserHasOwnedBandsError
@@ -62,6 +62,7 @@ beforeEach(() => {
 	cancelMock.mockClear();
 	subCancelMock.mockClear();
 	deleteWhere.mockClear();
+	updateSet.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -173,5 +174,47 @@ describe('purgeUser', () => {
 	it('throws UserNotFoundError when the user does not exist', async () => {
 		selectResultQueue = [[]];
 		await expect(purgeUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// ensureContactPhone
+// ---------------------------------------------------------------------------
+
+describe('ensureContactPhone', () => {
+	it('saves a 9-digit submission with its leading 1 restored', async () => {
+		selectResultQueue = [[{ phone: null }]];
+
+		const ok = await ensureContactPhone('u1', '415-550-123');
+
+		expect(ok).toBe(true);
+		expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ phone: '1415550123' }));
+	});
+
+	it('stores a 10-digit submission as bare digits', async () => {
+		selectResultQueue = [[{ phone: null }]];
+
+		const ok = await ensureContactPhone('u1', '(541) 555-0123');
+
+		expect(ok).toBe(true);
+		expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ phone: '5415550123' }));
+	});
+
+	it('leaves an already-usable stored number untouched', async () => {
+		selectResultQueue = [[{ phone: '(541) 555-0123' }]];
+
+		const ok = await ensureContactPhone('u1', '999-999-9999');
+
+		expect(ok).toBe(true);
+		expect(updateSet).not.toHaveBeenCalled();
+	});
+
+	it('rejects when nothing is on file and nothing usable was submitted', async () => {
+		selectResultQueue = [[{ phone: 'n/a' }]];
+
+		const ok = await ensureContactPhone('u1', '1234');
+
+		expect(ok).toBe(false);
+		expect(updateSet).not.toHaveBeenCalled();
 	});
 });
