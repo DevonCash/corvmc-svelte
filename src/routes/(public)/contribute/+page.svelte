@@ -1,22 +1,105 @@
 <script lang="ts">
-	import { IconGuitarPick, IconHeartHandshake, IconMicrophone } from '@tabler/icons-svelte';
+	import {
+		IconBuildingCommunity,
+		IconCoin,
+		IconGuitarPick,
+		IconMicrophone,
+		IconSpeakerphone,
+		IconTicket
+	} from '@tabler/icons-svelte';
+	import type { Icon } from '@tabler/icons-svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 
-	const otherWays = [
+	type VolunteerGroup = {
+		icon: Icon;
+		title: string;
+		/** Only the committees group needs a lead-in above its roles. */
+		desc?: string;
+		roles: { name: string; desc: string }[];
+	};
+
+	type ContributeWay = {
+		icon: Icon;
+		title: string;
+		desc: string;
+		href: string;
+		cta: string;
+		/** Opens in a new tab; set for links that leave the site. */
+		external?: boolean;
+	};
+
+	// Registration, then straight to the page with the role checkboxes. This
+	// replaced a Google Form, which forced a Google sign-in on respondents —
+	// we'd rather ask for a free account of our own than someone else's.
+	const VOLUNTEER_SIGNUP_URL = '/login?register&redirect=/member/volunteer';
+
+	// Zeffy's hosted donation form (zero-fee for nonprofits). Distinct from the
+	// `/embed/...` variant, which is the bare iframe payload meant for embedding.
+	const ZEFFY_DONATION_URL =
+		'https://www.zeffy.com/donation-form/donate-to-the-corvallis-music-collective';
+
+	const volunteerGroups: VolunteerGroup[] = [
+		{
+			icon: IconTicket,
+			title: 'At shows',
+			desc: 'Show-night jobs, start to finish. Usually one evening at a time.',
+			roles: [
+				{ name: 'Host', desc: 'Welcome bands, introduce sets, keep things on schedule.' },
+				{ name: 'Tech', desc: 'Operate the soundboard and run soundcheck.' },
+				{ name: 'Door', desc: 'Handle entry, welcome the audience, keep an eye on the space.' },
+				{ name: 'Merch', desc: 'Run CMC merch and concessions, coordinate band merch tables.' },
+				{ name: 'Photos or Video', desc: 'Document the show with your own equipment.' }
+			]
+		},
+		{
+			icon: IconSpeakerphone,
+			title: 'Away from shows',
+			desc: 'Keeping the place running between events, mostly on your own schedule.',
+			roles: [
+				{ name: 'Street team', desc: 'Put up posters around town.' },
+				{ name: 'Tabling', desc: 'Staff a table at festivals and community events.' },
+				{ name: 'Work parties', desc: 'Cleaning, organizing, and building projects.' },
+				{ name: 'Gear repair', desc: 'Clean, maintain, and repair lending library equipment.' },
+				{ name: 'Audio engineering', desc: 'Help members record, mix, or master.' }
+			]
+		},
+		{
+			icon: IconBuildingCommunity,
+			title: 'Committees',
+			desc: 'Committees meet monthly to build and guide the organization.',
+			roles: [
+				{ name: 'Programming', desc: 'Planning and booking CMC-produced events.' },
+				{ name: 'Production', desc: 'Operating, staffing, and running CMC events.' },
+				{ name: 'Development', desc: 'Fundraising, member and partner development, outreach.' },
+				{ name: 'Communications', desc: 'Social media, posters, press, and the newsletter.' },
+				{ name: 'Art and merchandise', desc: 'CMC merch and local artists for poster art.' },
+				{ name: 'Facility', desc: 'Building management, gear library, rehearsal scheduling.' }
+			]
+		}
+	];
+
+	const otherWays: ContributeWay[] = [
+		{
+			icon: IconCoin,
+			title: 'One-Time Donation',
+			desc: 'Not ready to commit monthly? A one-time gift goes straight toward keeping the doors open.',
+			href: ZEFFY_DONATION_URL,
+			cta: 'Donate Now',
+			external: true
+		},
 		{
 			icon: IconGuitarPick,
 			title: 'Donate Gear',
-			desc: 'Working amps, drums, mics, or instruments find a new home in our lending library.'
-		},
-		{
-			icon: IconHeartHandshake,
-			title: 'Volunteer',
-			desc: "Help us run shows, maintain the space, or host meetups. We'll teach you the ropes."
+			desc: 'Working amps, drums, mics, or instruments find a new home in our lending library.',
+			href: '/contact',
+			cta: 'Get in Touch'
 		},
 		{
 			icon: IconMicrophone,
 			title: 'Host a Workshop',
-			desc: 'Share your craft with other musicians — songwriting, recording, gear repair, theory.'
+			desc: 'Share your craft with other musicians — songwriting, recording, gear repair, theory.',
+			href: '/contact',
+			cta: 'Pitch an Idea'
 		}
 	];
 </script>
@@ -25,7 +108,7 @@
 	<title>Contribute | Corvallis Music Collective</title>
 	<meta
 		name="description"
-		content="Support the Corvallis Music Collective through memberships, donations, volunteering, or in-kind contributions."
+		content="Volunteer with the Corvallis Music Collective. Shows are run by volunteers — no experience needed, and a free account is all it takes to start. You can also become a sustaining member, donate gear, or make a gift."
 	/>
 </svelte:head>
 
@@ -45,8 +128,60 @@
 	</div>
 </section>
 
-<!-- Become a Sustaining Member (pointer to /membership) -->
+<!--
+	Volunteering leads the page: it's the ask with the lowest barrier and the one
+	the collective depends on most. The role list mirrors the one on
+	/member/volunteer, where the boxes actually get ticked, so someone can decide
+	what they're interested in before making an account.
+
+	Every mention of signing up says "free" out loud. The sustaining membership
+	section directly below opens at $10/month, and without the word an unqualified
+	"sign up" reads as "pay us" to anyone skimming.
+-->
 <section class="py-16 px-6">
+	<div class="max-w-5xl mx-auto">
+		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
+			<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
+			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+				Volunteers are the beating heart of our organization! Every show, every piece of gear, and
+				every program is made possible by the time and energy of our members. No experience is
+				necessary — just a willingness to help. Create a free account to get started.
+			</p>
+		</div>
+
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+			{#each volunteerGroups as group (group.title)}
+				<div
+					class="flex flex-col gap-3 rounded-lg p-6"
+					style="background: var(--surface); border: 1px solid var(--surface-border)"
+				>
+					<div class="flex items-center gap-2" style="color: var(--cmc-navy)">
+						<group.icon size={24} />
+						<h3 class="text-lg font-bold">{group.title}</h3>
+					</div>
+					{#if group.desc}
+						<p class="text-sm leading-relaxed" style="color: var(--fg-3)">{group.desc}</p>
+					{/if}
+					<ul class="flex flex-col gap-2">
+						{#each group.roles as role (role.name)}
+							<li class="text-sm leading-relaxed">
+								<span class="font-bold">{role.name}</span>
+								<span style="color: var(--fg-2)"> — {role.desc}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/each}
+		</div>
+
+		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
+			<Button href={VOLUNTEER_SIGNUP_URL} class="btn-lg">Create a Free Account to Volunteer</Button>
+		</div>
+	</div>
+</section>
+
+<!-- Become a Sustaining Member (pointer to /membership) -->
+<section class="section-tint-secondary py-16 px-6">
 	<div class="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
 		<p class="text-base leading-relaxed" style="color: var(--fg-2)">
@@ -56,19 +191,6 @@
 			keeps the doors open.
 		</p>
 		<Button href="/membership" class="btn-lg">Explore Membership</Button>
-	</div>
-</section>
-
-<!-- One-Time Donation -->
-<section class="section-tint-secondary py-16 px-6">
-	<div class="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
-		<h2 class="text-4xl font-bold tracking-tight">Make a One-Time Donation</h2>
-		<p class="text-base leading-relaxed" style="color: var(--fg-2)">
-			Not ready to commit monthly? A one-time gift is a direct way to give back. Every dollar goes
-			toward keeping the doors open — affordable practice space and all-ages shows for local
-			musicians.
-		</p>
-		<Button href="/donate" class="btn-lg">Donate Now</Button>
 	</div>
 </section>
 
@@ -89,6 +211,12 @@
 					</div>
 					<h3 class="text-lg font-bold">{item.title}</h3>
 					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{item.desc}</p>
+					<Button
+						href={item.href}
+						class="btn-sm mt-auto"
+						target={item.external ? '_blank' : undefined}
+						rel={item.external ? 'noopener noreferrer' : undefined}>{item.cta}</Button
+					>
 				</div>
 			{/each}
 		</div>

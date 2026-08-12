@@ -15,6 +15,7 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 	'*/5 * * * *': ['/api/cron/send-campaigns'],
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
+		'/api/cron/complete-shifts',
 		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed'
@@ -24,7 +25,11 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/lock-access',
 		'/api/cron/confirmation-reminders',
 		'/api/cron/reservation-reminders',
-		'/api/cron/cancel-stale-tickets'
+		'/api/cron/cancel-stale-tickets',
+		// After the reminders: both read confirmed signups, and complete-shifts
+		// has had all night of 15-minute passes before the feedback ask runs.
+		'/api/cron/shift-reminders',
+		'/api/cron/shift-feedback'
 	]
 };
 

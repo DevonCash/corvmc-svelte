@@ -1,0 +1,239 @@
+<script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import PageHeader from '$lib/components/shared/PageHeader.svelte';
+	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Table from '$lib/components/shared/Table.svelte';
+	import FilterBar from '$lib/components/shared/FilterBar.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
+	import Select from '$lib/components/shared/Form/Select.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import { formatDateShort } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import { IconCopy } from '@tabler/icons-svelte';
+	import {
+		getShifts,
+		getVolunteerRoles,
+		createShift,
+		duplicateShift
+	} from '$lib/remote/volunteer.remote';
+
+	const initial = page.url.searchParams;
+
+	let roleFilter = $state(initial.get('role') ?? '');
+	let showPast = $state(initial.get('past') === '1');
+
+	$effect(() => {
+		const pairs: [string, string][] = [];
+		if (roleFilter) pairs.push(['role', roleFilter]);
+		if (showPast) pairs.push(['past', '1']);
+
+		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		const href = `${resolve('/staff/volunteer/shifts')}${search ? `?${search}` : ''}`;
+		if (location.pathname + location.search !== href) {
+			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+		}
+	});
+
+	// Past shifts are off by default — the list is a scheduling tool, and last
+	// month's shifts only get in the way of filling next week's.
+	let shifts = $derived(
+		getShifts({
+			volunteerRoleId: roleFilter || undefined,
+			from: showPast ? undefined : new Date().toISOString()
+		})
+	);
+	let roles = $derived(getVolunteerRoles());
+
+	function timeRange(start: Date, end: Date): string {
+		const fmt = new Intl.DateTimeFormat('en-US', {
+			hour: 'numeric',
+			minute: '2-digit',
+			timeZone: DEFAULT_TIMEZONE
+		});
+		return `${fmt.format(start)}–${fmt.format(end)}`;
+	}
+
+	/** `YYYY-MM-DDTHH:mm` in club time, for a datetime-local default. */
+	function localInput(d: Date): string {
+		const date = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
+		const time = new Intl.DateTimeFormat('en-GB', {
+			timeZone: DEFAULT_TIMEZONE,
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).format(d);
+		return `${date}T${time}`;
+	}
+
+	const defaultStart = localInput(new Date(Date.now() + 86_400_000));
+	const defaultEnd = localInput(new Date(Date.now() + 86_400_000 + 4 * 3_600_000));
+</script>
+
+<PageHeader title="Shifts" subtitle="Staff" backHref="/staff/volunteer">
+	{#await roles then roleOptions}
+		{@const live = roleOptions.filter((r) => r.isActive)}
+		{#if live.length > 0}
+			<Action
+				action={createShift}
+				label="New Shift"
+				modalTitle="Schedule a shift"
+				submitLabel="Create"
+				successToast="Shift scheduled"
+			>
+				{#snippet form()}
+					<FormField
+						name="volunteerRoleId"
+						label="Role"
+						type="select"
+						options={live.map((r) => ({ value: r.id, label: r.name }))}
+					/>
+					<FormField name="startsAt" label="Starts" type="datetime-local" value={defaultStart} />
+					<FormField name="endsAt" label="Ends" type="datetime-local" value={defaultEnd} />
+					<FormField
+						name="capacity"
+						label="People needed"
+						type="number"
+						min="1"
+						value="1"
+						description="Claims beyond this are refused."
+					/>
+					<FormField
+						name="notes"
+						label="Anything they should know"
+						type="textarea"
+						maxlength={VOLUNTEER_SHIFT_NOTES_MAX}
+						description="Where to meet, what to bring — shown when they claim it."
+					/>
+				{/snippet}
+			</Action>
+		{/if}
+	{/await}
+</PageHeader>
+
+<PageContent>
+	<FilterBar
+		activeCount={(roleFilter ? 1 : 0) + (showPast ? 1 : 0)}
+		onclear={() => {
+			roleFilter = '';
+			showPast = false;
+		}}
+	>
+		{#await roles then roleOptions}
+			<Select
+				class="select-bordered select-sm"
+				aria-label="Role"
+				value={roleFilter}
+				onchange={(e: Event) => {
+					roleFilter = (e.currentTarget as HTMLSelectElement).value;
+				}}
+			>
+				<option value="">All roles</option>
+				{#each roleOptions as role (role.id)}
+					<option value={role.id}>{role.name}</option>
+				{/each}
+			</Select>
+		{/await}
+
+		<label class="label cursor-pointer gap-2 text-sm">
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm"
+				checked={showPast}
+				onchange={(e) => (showPast = e.currentTarget.checked)}
+			/>
+			Include past
+		</label>
+	</FilterBar>
+
+	{#await shifts then rows}
+		{#if rows.length === 0}
+			<EmptyState
+				title="No shifts scheduled"
+				description="Put one up and members who said they're up for that role see it first."
+			/>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th class="whitespace-nowrap">When</th>
+					<th>Role</th>
+					<th class="col-support cell-num">Filled</th>
+					<th class="col-extra">Notes</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+
+				{#each rows as shift (shift.id)}
+					<tr class="hover" class:opacity-50={shift.cancelledAt}>
+						<td class="whitespace-nowrap">
+							<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium">
+								{formatDateShort(shift.startsAt)}
+							</a>
+							<div class="text-xs opacity-60">{timeRange(shift.startsAt, shift.endsAt)}</div>
+						</td>
+
+						<td class="cell-primary">
+							<div class="truncate font-medium">{shift.roleName}</div>
+							{#if shift.eventTitle}
+								<div class="truncate text-xs opacity-60">{shift.eventTitle}</div>
+							{/if}
+							{#if shift.cancelledAt}
+								<div class="text-xs text-error">Cancelled</div>
+							{/if}
+						</td>
+
+						<td class="col-support cell-num">
+							<span class:text-warning={shift.claimed < shift.capacity}>
+								{shift.claimed}/{shift.capacity}
+							</span>
+						</td>
+
+						<td class="col-extra">
+							<div class="truncate text-xs opacity-60" title={shift.notes ?? ''}>
+								{shift.notes ?? ''}
+							</div>
+						</td>
+
+						<td class="w-px">
+							<!--
+								Duplicate is how a standing weekly slot gets made — there is no
+								recurrence, so next week's shift is last week's copied forward.
+							-->
+							<Action
+								action={duplicateShift.for(shift.id)}
+								label="Duplicate"
+								iconOnly
+								icon={copyIcon}
+								class="btn-ghost btn-sm"
+								modalTitle="Copy this shift forward"
+								submitLabel="Copy"
+								successToast="Shift copied"
+							>
+								{#snippet form()}
+									<input type="hidden" name="id" value={shift.id} />
+									<p class="text-sm">
+										{shift.roleName}, {timeRange(shift.startsAt, shift.endsAt)}, with the same notes
+										and headcount. Claims aren't copied.
+									</p>
+									<FormField
+										name="offsetDays"
+										label="How many days ahead"
+										type="number"
+										min="1"
+										value="7"
+										description="7 makes it the same time next week."
+									/>
+								{/snippet}
+							</Action>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	{/await}
+</PageContent>
+
+{#snippet copyIcon()}
+	<IconCopy size={16} />
+{/snippet}

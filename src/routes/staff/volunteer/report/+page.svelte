@@ -14,7 +14,11 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
-	import { getVolunteerReport, getVolunteerReportByMember } from '$lib/remote/volunteer.remote';
+	import {
+		getVolunteerReport,
+		getVolunteerReportByMember,
+		getFeedbackByRole
+	} from '$lib/remote/volunteer.remote';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -41,6 +45,7 @@
 
 	let range = $derived({ from: fromDate || undefined, to: toDate || undefined });
 	let report = $derived(getVolunteerReport(range));
+	let feedbackByRole = $derived(getFeedbackByRole());
 	let byMember = $derived(getVolunteerReportByMember({ ...range, page: pageNumber }));
 
 	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
@@ -205,4 +210,45 @@
 			{/snippet}
 		</DataList>
 	</InfoCard>
+
+	<!--
+		Anonymous by design: this exists to fix briefings and setups, and names
+		would just teach volunteers to answer politely. Not date-filtered like the
+		hours tables above — the sample is small enough that slicing it hides the
+		signal.
+	-->
+	{#await feedbackByRole then rollup}
+		{#if rollup.length > 0}
+			<InfoCard title="How shifts are going">
+				<Table>
+					{#snippet head()}
+						<th>Role</th>
+						<th class="cell-num">Avg rating</th>
+						<th class="col-support cell-num">Set up to succeed</th>
+						<th class="col-support cell-num">Responses</th>
+					{/snippet}
+
+					{#each rollup as role (role.volunteerRoleId)}
+						<tr>
+							<td class="cell-primary">
+								<div class="truncate font-medium">{role.roleName}</div>
+								{#if role.latestComments.length > 0}
+									<div class="truncate text-xs opacity-60" title={role.latestComments[0].comment}>
+										"{role.latestComments[0].comment}"
+									</div>
+								{/if}
+							</td>
+							<td class="cell-num">{role.averageRating.toFixed(1)} / 5</td>
+							<td class="col-support cell-num">
+								<span class:text-warning={role.setUpShare < 0.8}>
+									{Math.round(role.setUpShare * 100)}%
+								</span>
+							</td>
+							<td class="col-support cell-num">{role.responses}</td>
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
+	{/await}
 </PageContent>
