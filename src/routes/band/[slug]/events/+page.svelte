@@ -20,11 +20,6 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
-	// Hoisted above the awaited queries: a declaration after a top-level await is
-	// async-gated, which compiles every `fields.X.as()` into an async derived.
-	const confirmFields = confirmLineupSlotForm.fields;
-	const declineFields = declineLineupSlotForm.fields;
-
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let events = $derived(await getBandEvents(page.params.slug!));
 	let invites = $derived(await getBandLineupInvites(page.params.slug!));
@@ -55,6 +50,10 @@
 		<div class="mb-6 space-y-3">
 			<h2 class="text-sm font-semibold uppercase opacity-60">Invitations</h2>
 			{#each invites as invite (invite.eventId)}
+				<!-- One form object can only back a single <form>, so each invite gets
+				     its own instance with its own pending state. -->
+				{@const confirm = confirmLineupSlotForm.for(invite.eventId)}
+				{@const decline = declineLineupSlotForm.for(invite.eventId)}
 				<div class="card bg-warning/10 border border-warning/40">
 					<div class="card-body flex-row items-center justify-between gap-4 py-4">
 						<div>
@@ -69,23 +68,23 @@
 						{#if isAdmin}
 							<div class="flex shrink-0 gap-2">
 								<Form
-									remote={confirmLineupSlotForm}
+									remote={confirm}
 									successToast="Added to your profile"
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
-									<input {...confirmFields.slug.as('hidden', band.slug)} />
-									<input {...confirmFields.eventId.as('hidden', invite.eventId)} />
+									<input {...confirm.fields.slug.as('hidden', band.slug)} />
+									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Confirm" class="btn-primary btn-sm" />
 								</Form>
 								<Form
-									remote={declineLineupSlotForm}
+									remote={decline}
 									successToast="Declined"
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
-									<input {...declineFields.slug.as('hidden', band.slug)} />
-									<input {...declineFields.eventId.as('hidden', invite.eventId)} />
+									<input {...decline.fields.slug.as('hidden', band.slug)} />
+									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Decline" class="btn-ghost btn-sm" />
 								</Form>
 							</div>
