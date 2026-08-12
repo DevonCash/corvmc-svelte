@@ -13,6 +13,7 @@ import { user } from './authentication';
 import { event } from './event';
 import {
 	volunteerHourStatuses,
+	volunteerProfileStatuses,
 	volunteerRoleGroups,
 	volunteerSignupStatuses,
 	CERT_DESCRIPTION_MAX,
@@ -24,8 +25,10 @@ import {
 	SHIFT_FEEDBACK_MAX_RATING,
 	SHIFT_FEEDBACK_MIN_RATING,
 	VOLUNTEER_DESCRIPTION_MAX,
+	VOLUNTEER_AVAILABILITY_MAX,
 	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
+	VOLUNTEER_NAME_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
@@ -45,6 +48,12 @@ export function isVolunteerHourStatus(value: string): value is VolunteerHourStat
 
 export type VolunteerRoleGroup = (typeof volunteerRoleGroups)[number];
 
+export type VolunteerProfileStatus = (typeof volunteerProfileStatuses)[number];
+
+export function isVolunteerProfileStatus(value: string): value is VolunteerProfileStatus {
+	return volunteerProfileStatuses.includes(value as VolunteerProfileStatus);
+}
+
 // ---------------------------------------------------------------------------
 // Zod schemas
 // ---------------------------------------------------------------------------
@@ -63,6 +72,31 @@ export const setVolunteerInterestsSchema = z.object({
 	// Unchecking everything is a legitimate submission — it means "take me off
 	// the list" — so this bottoms out at an empty array rather than min(1).
 	roleIds: z.array(z.uuid()).max(VOLUNTEER_MAX_INTERESTS).default([])
+});
+
+/**
+ * The onboarding answer set. `isAdult` is a two-value enum rather than a boolean
+ * because it arrives from a required select: a checkbox submits nothing when
+ * unticked, which makes "I am under 18" and "I skipped the question"
+ * indistinguishable — and either default is wrong for somebody.
+ */
+export const startVolunteerOnboardingSchema = z.object({
+	firstName: z.string().trim().min(1).max(VOLUNTEER_NAME_MAX),
+	lastName: z.string().trim().min(1).max(VOLUNTEER_NAME_MAX),
+	isAdult: z.enum(['yes', 'no']),
+	pronouns: z.string().trim().max(50).optional(),
+	phone: z.string().trim().max(30).optional()
+});
+
+/**
+ * The same fields the member may change afterwards — deliberately without
+ * `isAdult` or `status`. Letting the age answer be re-submitted would let a
+ * blocked minor unblock themselves by reopening the profile modal.
+ */
+export const updateVolunteerProfileSchema = startVolunteerOnboardingSchema.omit({ isAdult: true });
+
+export const setVolunteerAvailabilitySchema = z.object({
+	availability: z.string().trim().max(VOLUNTEER_AVAILABILITY_MAX).optional()
 });
 
 export const submitHoursSchema = z.object({
@@ -393,6 +427,68 @@ export const volunteerRoleInterest = sqliteTable(
 );
 
 /**
+ * What we know about a person as a *volunteer*, as distinct from as a member.
+ *
+ * Exists for one reason the member row cannot cover: whether they are 18 or
+ * older. The collective owes minors a different process, so the answer has to be
+ * on file before anyone claims a shift, and it has to be asked once rather than
+ * inferred.
+ *
+ * `firstName`/`lastName` are here and not on `user`, which has a single `name`
+ * the member chose and the directory renders. A sign-in sheet and a waiver want
+ * the parts separately, and rewriting `name` to get them would change how they
+ * appear to everyone else.
+ *
+ * Pronouns and phone are deliberately *not* duplicated here — they already exist
+ * on `user`, `/member/account` edits them, and a second copy would diverge
+ * within a week. Onboarding writes back to those columns.
+ */
+export const volunteerProfile = sqliteTable(
+	'volunteer_profile',
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// One per member. The unique constraint is what actually enforces that —
+		// the service checks first, but two tabs racing would otherwise both write.
+		userId: text('user_id')
+			.notNull()
+			.unique()
+			.references(() => user.id, { onDelete: 'cascade' }),
+
+		firstName: text('first_name').notNull(),
+		lastName: text('last_name').notNull(),
+
+		// Kept after a staff override, so an approved minor still reads as a minor.
+		// Folding this into `status` would erase it at the moment it starts mattering.
+		isAdult: integer('is_adult', { mode: 'boolean' }).notNull(),
+
+		status: text('status', { enum: volunteerProfileStatuses }).notNull().default('active'),
+
+		// One note per member rather than per interest: "weekday evenings" is true
+		// of the person, not of the Door role.
+		availability: text('availability'),
+
+		// set-null, matching volunteerHourLog.reviewedByUserId — a departed staffer
+		// must not take the record of the approval with them.
+		approvedByUserId: text('approved_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		approvedAt: integer('approved_at', { mode: 'timestamp' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	// The staff review queue: blocked profiles, oldest first.
+	(t) => [index('volunteer_profile_status_idx').on(t.status, t.createdAt)]
+);
+
+/**
  * How a shift went, from the person who worked it.
  *
  * Keyed to the signup, so the unit is one person on one shift — the question
@@ -577,6 +673,7 @@ export const volunteerRoleCertification = sqliteTable(
 export type VolunteerRole = typeof volunteerRole.$inferSelect;
 export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
+export type VolunteerProfile = typeof volunteerProfile.$inferSelect;
 export type VolunteerShift = typeof volunteerShift.$inferSelect;
 export type VolunteerSignup = typeof volunteerSignup.$inferSelect;
 export type VolunteerShiftFeedback = typeof volunteerShiftFeedback.$inferSelect;

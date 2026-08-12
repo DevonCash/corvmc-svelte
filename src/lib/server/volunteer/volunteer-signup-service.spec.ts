@@ -66,6 +66,17 @@ vi.mock('./volunteer-shift-service', () => ({
 }));
 
 const missingRequirements = vi.fn();
+/**
+ * The onboarding gate `claimShift` now runs first. Stubbed to a cleared
+ * volunteer by default so the guards under test stay the subject; the blocked
+ * cases drive it explicitly. Real error classes come from the original module.
+ */
+const requireActiveVolunteer = vi.fn(async () => ({ id: 'vp-1', status: 'active' }));
+vi.mock('./volunteer-profile-service', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	requireActiveVolunteer: (...args: unknown[]) => requireActiveVolunteer(...(args as []))
+}));
+
 vi.mock('./member-certification-service', () => ({
 	missingRequirements: (...a: unknown[]) => missingRequirements(...a)
 }));
@@ -79,6 +90,10 @@ import {
 	ShiftClosedError,
 	NotClearedError
 } from './volunteer-signup-service';
+import {
+	VolunteerProfileBlockedError,
+	VolunteerProfileNotFoundError
+} from './volunteer-profile-service';
 
 const render = (q: SQL) => new SQLiteSyncDialect().sqlToQuery(q).sql;
 
@@ -107,9 +122,30 @@ beforeEach(() => {
 	rawWrites = [];
 	missingRequirements.mockResolvedValue([]);
 	getShiftById.mockResolvedValue(shift());
+	requireActiveVolunteer.mockResolvedValue({ id: 'vp-1', status: 'active' });
 });
 
 describe('claimShift', () => {
+	/**
+	 * The onboarding gate runs before every other guard, and it runs in the
+	 * service rather than only on the route: /member/volunteer redirects an
+	 * un-onboarded member, but a remote function is a directly callable endpoint
+	 * and a redirect stops nothing that isn't a browser following it. This is the
+	 * check that actually keeps an under-18 signup off a shift.
+	 */
+	it('refuses a claim from a member whose profile is blocked', async () => {
+		requireActiveVolunteer.mockRejectedValue(new VolunteerProfileBlockedError());
+
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(VolunteerProfileBlockedError);
+		expect(getShiftById).not.toHaveBeenCalled();
+	});
+
+	it('refuses a claim from a member who has not onboarded at all', async () => {
+		requireActiveVolunteer.mockRejectedValue(new VolunteerProfileNotFoundError());
+
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(VolunteerProfileNotFoundError);
+	});
+
 	it('claims an open shift', async () => {
 		// No existing signup, then the typed re-read of the row just written.
 		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];

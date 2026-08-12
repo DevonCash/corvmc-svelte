@@ -16,6 +16,13 @@ import {
 	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_FULL_NOTE,
 	SEED_VOL_SIGNUP_DONE_ID,
+	SEED_VOL_NEW_MEMBER_EMAIL,
+	SEED_VOL_MINOR_EMAIL,
+	SEED_VOL_MINOR_FIRST,
+	SEED_VOL_MINOR_LAST,
+	SEED_VOL_BLOCKED_MINOR_EMAIL,
+	SEED_VOL_BLOCKED_MINOR_FIRST,
+	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
 	readSignupStatus
 } from './fixtures/seed-volunteering';
@@ -45,6 +52,19 @@ async function login(page: Page, email: string, password: string) {
 	await page.locator('input[name="password"]').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+}
+
+/** Fill the onboarding form. `age` picks the 18-or-older answer. */
+async function fillOnboarding(
+	page: Page,
+	{ first, last, age }: { first: string; last: string; age: 'yes' | 'no' }
+) {
+	await page.locator('input[name="firstName"]').fill(first);
+	await page.locator('input[name="lastName"]').fill(last);
+	// A select, not a checkbox — an unticked box would be indistinguishable from
+	// an unanswered question, which is the one mistake this field cannot make.
+	await page.locator('select[name="isAdult"]').selectOption(age);
+	await page.getByRole('button', { name: 'Continue' }).click();
 }
 
 /** The row's action buttons are icon-only; scope by the row's description text. */
@@ -159,24 +179,27 @@ test.describe('volunteering — roles', () => {
 });
 
 test.describe('volunteering — member', () => {
-	test('the member page renders a role job description as markdown', async ({ page }) => {
+	test('the interests modal renders a role job description as markdown', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 
-		await expect(page.getByText(SEED_VOL_ROLE_NAME).first()).toBeVisible();
+		// The role picker used to sit open in the page body; it now lives behind
+		// this header button so the body is shifts.
+		await page.getByRole('button', { name: 'Interests' }).click();
+		const modal = page.getByRole('dialog');
+		await expect(modal).toBeVisible({ timeout: 15000 });
+
+		await expect(modal.getByText(SEED_VOL_ROLE_NAME).first()).toBeVisible();
 		// The seeded description bolds this phrase; rendered markdown means a
 		// <strong>, not literal asterisks. This was shipped broken — the page ran
 		// the markdown through `sanitizeBio`, an HTML sanitizer, which left the
 		// asterisks on screen.
-		await expect(page.locator('strong', { hasText: SEED_VOL_ROLE_BOLD_PHRASE })).toBeVisible();
-		await expect(page.getByText(`**${SEED_VOL_ROLE_BOLD_PHRASE}**`)).toHaveCount(0);
+		await expect(modal.locator('strong', { hasText: SEED_VOL_ROLE_BOLD_PHRASE })).toBeVisible();
+		await expect(modal.getByText(`**${SEED_VOL_ROLE_BOLD_PHRASE}**`)).toHaveCount(0);
 
 		// Archiving hides a role from the picker only — the member's own history
-		// still names it, so this is scoped to the browse section rather than the
-		// whole page.
-		const browse = page.getByRole('heading', { name: 'What you can help with' }).locator('..');
-		await expect(browse.getByText(SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
-		await expect(browse.getByText(SEED_VOL_ROLE_NAME)).toBeVisible();
+		// still names it, so this is scoped to the modal rather than the page.
+		await expect(modal.getByText(SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
 	});
 
 	test('a rejected log shows the member the reason', async ({ page }) => {
@@ -225,6 +248,113 @@ test.describe('volunteering — member', () => {
 function shiftCard(page: Page, text: string) {
 	return page.locator('li').filter({ hasText: text });
 }
+
+test.describe('volunteering — onboarding', () => {
+	/**
+	 * The gate. Before this, anybody could walk onto the shift board without the
+	 * app knowing their name or, more to the point, their age.
+	 */
+	test('a member who has not signed up is sent to the start step', async ({ page }) => {
+		await login(page, SEED_VOL_NEW_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		await page.waitForURL(/\/member\/volunteer\/start/, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: 'Volunteer with CMC' })).toBeVisible();
+	});
+
+	test('the adult path runs start → interests → the shift board', async ({ page }) => {
+		await login(page, SEED_VOL_NEW_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer/start');
+
+		await fillOnboarding(page, { first: 'Alex', last: 'Whitfield', age: 'yes' });
+
+		await page.waitForURL(/\/member\/volunteer\/interests/, { timeout: 15000 });
+
+		// Tick a role and leave a note, so the round trip through the JSON-free
+		// checkbox array and the profile's availability column is exercised.
+		await page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME }).check();
+		await page.locator('textarea[name="availability"]').fill('E2E weekday evenings');
+		await page.getByRole('button', { name: 'Finish' }).click();
+
+		await page.waitForURL(/\/member\/volunteer(\?|$)/, { timeout: 15000 });
+
+		// The body is shifts now — the picker must not be sitting open in it.
+		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible();
+
+		// Reopening shows the selection survived the replace-all write.
+		await page.getByRole('button', { name: 'Interests' }).click();
+		const modal = page.getByRole('dialog');
+		await expect(modal.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
+		await expect(modal.locator('textarea[name="availability"]')).toHaveValue(
+			'E2E weekday evenings'
+		);
+	});
+
+	/**
+	 * The whole reason the table exists. Answering "under 18" must be terminal
+	 * until a person intervenes — and must stay terminal across a reload, since
+	 * the gate is a redirect and not a one-shot flash.
+	 */
+	test('answering under 18 blocks self-signup and survives a reload', async ({ page }) => {
+		await login(page, SEED_VOL_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer/start');
+
+		await fillOnboarding(page, {
+			first: SEED_VOL_MINOR_FIRST,
+			last: SEED_VOL_MINOR_LAST,
+			age: 'no'
+		});
+
+		await page.waitForURL(/\/member\/volunteer\/blocked/, { timeout: 15000 });
+		await expect(page.getByText(/under 18/i)).toBeVisible();
+
+		// No way back in by hand.
+		await page.goto('/member/volunteer');
+		await page.waitForURL(/\/member\/volunteer\/blocked/, { timeout: 15000 });
+	});
+
+	/**
+	 * Uses its own already-blocked member rather than the one the test above
+	 * creates: the fixture runs once for the whole file, so chaining these would
+	 * break the moment either is run alone or retried.
+	 */
+	test('staff can approve a blocked minor, and then they get in', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer');
+
+		const row = rowFor(page, `${SEED_VOL_BLOCKED_MINOR_FIRST} ${SEED_VOL_BLOCKED_MINOR_LAST}`);
+		await expect(row).toBeVisible({ timeout: 15000 });
+		await row.getByRole('button', { name: 'Approve' }).click();
+		await modalSubmit(page, 'Approve').click();
+
+		// The queue is the blocked list, so approving empties the row out of it.
+		await expect(row).toHaveCount(0, { timeout: 15000 });
+
+		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible({
+			timeout: 15000
+		});
+	});
+
+	test('the profile modal saves a changed phone back to the account', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const phone = `(541) 555-${String(Date.now()).slice(-4)}`;
+		await page.getByRole('button', { name: 'Profile' }).click();
+		const modal = page.getByRole('dialog');
+		await expect(modal).toBeVisible({ timeout: 15000 });
+		await modal.locator('input[name="phone"]').fill(phone);
+		await modalSubmit(page, 'Save').click();
+		await expect(modal).toHaveCount(0, { timeout: 15000 });
+
+		// Written to `user`, not duplicated onto the profile — so it shows up on
+		// the account page, which is the other editor of the same column.
+		await page.goto('/member/account');
+		await expect(page.locator('input[name="phone"]')).toHaveValue(phone, { timeout: 15000 });
+	});
+});
 
 test.describe('volunteering — shifts', () => {
 	test('a member can claim an open shift and then drop out', async ({ page }) => {

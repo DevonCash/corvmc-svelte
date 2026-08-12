@@ -87,6 +87,51 @@ volunteer_role
 member picker and the staff interest filter. Nothing branches on it, so a role
 in the wrong group is a cosmetic bug rather than a broken workflow.
 
+### Volunteer profile
+
+What we know about somebody as a _volunteer_, as opposed to as a member. It
+exists for one question — "are you 18 or older?" — whose answer has to be on file
+before anybody claims a shift, because the collective owes minors a different
+process.
+
+```
+volunteer_profile
+  id                uuid pk
+  userId            uuid fk → user  (cascade, unique — one per member)
+  firstName         text
+  lastName          text
+  isAdult           boolean
+  status            'active' | 'blocked'   default 'active'
+  availability      text null
+  approvedByUserId  uuid fk → user null (set null)
+  approvedAt        timestamp null
+  createdAt, updatedAt
+```
+
+**Two statuses, not three.** There is exactly one reason to be `blocked` today —
+an under-18 self-signup — and it always means "a person has to look at this", so
+`blocked` doubles as the staff review queue.
+
+**`isAdult` is a separate fact from `status`, deliberately.** Approving a minor
+moves `status` and leaves `isAdult` alone, because staff still need to know they
+are working with a minor afterwards. A three-state status would have erased that
+at the exact moment it started mattering.
+
+**First and last name live here, not on `user`.** `user.name` is the display name
+the member chose, and the directory, staff tables and emails all render it. A
+sign-in sheet and a waiver want the parts separately, and rewriting `name` to get
+them would change how that member appears everywhere else.
+
+**Pronouns and phone are not duplicated here.** Both already exist on `user`,
+`/member/account` edits them, and a second copy would be stale by the next time
+anybody looked — so onboarding writes back to those columns. Use `user.phone`,
+not `directoryContact.phone`: the latter is opt-in _display_ data with its own
+visibility toggle, and reusing it would conflate "publish this" with "reach me".
+
+`availability` is a free-text note ("weekday evenings, some weekends"). It hangs
+off the profile rather than the interest join table because it describes the
+person, not the role.
+
 ### Role interest
 
 A member's standing "I'd help with this" — the gap between someone reading
@@ -583,6 +628,34 @@ CREATE TABLE volunteer_role (
 );
 ```
 
+### volunteer_profile
+
+```sql
+CREATE TABLE volunteer_profile (
+  id                  TEXT PRIMARY KEY,
+  user_id             TEXT NOT NULL UNIQUE REFERENCES user(id) ON DELETE CASCADE,
+  first_name          TEXT NOT NULL,
+  last_name           TEXT NOT NULL,
+  is_adult            INTEGER NOT NULL,
+  status              TEXT NOT NULL DEFAULT 'active',
+  availability        TEXT,
+  approved_by_user_id TEXT REFERENCES user(id) ON DELETE SET NULL,
+  approved_at         INTEGER,
+  created_at          INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at          INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- The staff review queue: blocked profiles, oldest first.
+CREATE INDEX volunteer_profile_status_idx ON volunteer_profile(status, created_at);
+```
+
+`user_id` cascades — the member is the subject of the row, the same call
+`volunteer_hour_log.user_id` makes. `approved_by_user_id` is set-null, matching
+`reviewed_by_user_id`: a departed staffer must not take the record of the
+approval with them. The unique constraint on `user_id` is what actually enforces
+one profile per member; the service checks first, but two tabs racing would
+otherwise both write.
+
 ### volunteer_hour_log
 
 ```sql
@@ -728,19 +801,55 @@ A separate route rather than a tab, mirroring `/staff/equipment` ↔
 
 ## Member UI
 
+### Onboarding — `/member/volunteer/{start,interests,blocked}`
+
+Three routes, gated in that order, reached by anybody who opens
+`/member/volunteer` without a profile.
+
+1. **`/start`** — first name, last name, pronouns, phone, and the 18-or-older
+   answer. Email is shown read-only with a link to account settings; it is the
+   login address and changing it runs through its own verification flow. Pronouns
+   and phone are _not_ read-only, because the account page edits both freely and
+   a read-only phone would strand the many members who have never set one.
+2. **`/interests`** — the role checkboxes and the availability note. Skippable:
+   the profile already exists by this point, so the gate passes either way, and a
+   member whose thing isn't in the catalogue must not be stuck here.
+3. **`/blocked`** — where an under-18 answer lands. Terminal by design: no form,
+   no retry, no way to re-answer. Staff clear them from `/staff/volunteer`.
+
+**Three routes rather than a `Form.Step` wizard**, for two reasons.
+`registerStep()` only ever increments `totalSteps` and nothing decrements on
+unmount, so a step that exists conditionally corrupts the index bookkeeping — and
+one wizard is one submit, so a minor would see the whole role list before the
+server ever saw their answer.
+
+**Gating happens inside the remote queries**, matching `getMemberLayout` — this
+app has no `+layout.server.ts` anywhere. The shared data query is deliberately
+_not_ one of the gates: every gated route reads it, so a redirect in there would
+make `/start` bounce itself in a loop.
+
 ### `/member/volunteer`
 
-One page, three stacked parts:
+The shift board. Three header actions over a body that is shifts and hours:
 
-1. **What you can do** — active roles as cards, each rendering its markdown job
-   description through `ProseBlock`. This is the part that makes the page worth
-   visiting when you have no hours to log.
-2. **Your hours** — `StatCard` row (approved, pending, this year) over a `Table`
-   of your logs, or an `EmptyState`.
-3. **Log Hours** — an `Action` modal off the page header, not a `/new` route.
-   Role select over active roles, date, hours (`step="0.25"`), description.
+1. **Log Hours** — an `Action` modal, not a `/new` route. Role select over active
+   roles, date, hours (`step="0.25"`), description.
+2. **Interests** — the same role checkboxes as the onboarding step, in a modal.
+   It used to sit open in the middle of the page, which pushed the shift board
+   below the fold on every visit. It belongs beside the board rather than in it,
+   since `OpenShifts` orders by exactly this set.
+3. **Profile** — the `/start` fields minus the age question. Re-submitting that
+   answer is how a blocked minor would unblock themselves, so
+   `updateVolunteerProfile` does not accept `isAdult` or `status` at all.
 
+Body: `StatCard` row (approved, this year, pending), completed shifts with no
+log yet, the open-shift board, then a `Table` of your logs or an `EmptyState`.
 Edit and withdraw actions appear on `pending` rows only.
+
+The role catalogue with its markdown job descriptions now lives inside the
+Interests modal and on the public `/contribute` page, rather than in the page
+body. A member who never opens the modal no longer sees it — the accepted cost of
+a body that is about shifts.
 
 ---
 
@@ -780,6 +889,22 @@ No new auth roles or permissions. Every remote function guards — the remote
 function is the security boundary, not the layout. Staff functions call
 `requireStaff()` alone; member functions call `requireFeature('volunteering')`
 and then `requireUser()`, because the flag gates the member surface only.
+
+### Where the minor block is enforced
+
+Not on the route. `/member/volunteer` redirects a blocked member, but a redirect
+only stops somebody driving a browser — every remote function is a directly
+callable endpoint. The check that actually keeps an under-18 signup off a shift
+lives in the service layer, in three places:
+
+- `claimShift` — before the shift lookup, so it runs ahead of the clearance and
+  capacity guards.
+- `submitHours` and `updateHourLog` — so a blocked member cannot file time either.
+
+`completeVolunteerOnboarding` maps `isAdult: false` to `status: 'blocked'` in the
+service for the same reason: a hand-crafted POST must not be able to route around
+it. And `updateVolunteerProfile` accepts neither `isAdult` nor `status`, which is
+the one thing that would let a blocked minor clear themselves.
 
 ### On the existing `volunteer` auth role
 

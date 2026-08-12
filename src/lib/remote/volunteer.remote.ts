@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
@@ -36,6 +36,16 @@ import {
 	listInterestedMembers,
 	countInterestsByRole
 } from '$lib/server/volunteer/volunteer-interest-service';
+import {
+	completeVolunteerOnboarding,
+	updateVolunteerProfile as updateProfileService,
+	setAvailability,
+	approveMinorVolunteer,
+	getVolunteerOnboarding,
+	listBlockedVolunteers,
+	stageOf,
+	type OnboardingStage
+} from '$lib/server/volunteer/volunteer-profile-service';
 import {
 	createCertification as createCertificationService,
 	updateCertification as updateCertificationService,
@@ -91,8 +101,10 @@ import {
 	CERT_REVOKED_REASON_MAX,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	SHIFT_FEEDBACK_COMMENT_MAX,
+	VOLUNTEER_AVAILABILITY_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_INTERESTS,
+	VOLUNTEER_NAME_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX
@@ -200,6 +212,34 @@ export const getVolunteerInterestCounts = query(async () => {
 	return countInterestsByRole();
 });
 
+/**
+ * Under-18 signups waiting on a person.
+ *
+ * Argless, so the approve form below can refresh it server-side — unlike the
+ * arg-keyed queue queries, which the page has to refresh itself.
+ */
+export const getBlockedVolunteers = query(async () => {
+	await requireStaff();
+	return listBlockedVolunteers();
+});
+
+/** Staff clearing a minor to volunteer. Leaves `isAdult` alone — see the service. */
+export const approveVolunteerSignup = form(
+	z.object({ userId: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await approveMinorVolunteer(data.userId, staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await getBlockedVolunteers().refresh();
+		return { success: true };
+	}
+);
+
 const reportRange = z.object({
 	from: z.string().optional(),
 	to: z.string().optional()
@@ -269,6 +309,151 @@ export const getMyVolunteerSummary = query(async () => {
 });
 
 // ---------------------------------------------------------------------------
+// Onboarding — queries and gates
+// ---------------------------------------------------------------------------
+// Before anybody claims a shift we need their name and, above all, whether they
+// are 18 or older. The gate is three routes, and each one is guarded by its own
+// query throwing a redirect — the pattern getMemberLayout uses, since this app
+// has no +layout.server.ts anywhere.
+//
+// `getMyVolunteerOnboarding` is deliberately NOT one of them. Every gated route
+// needs the same data, so if the shared query redirected, /member/volunteer/start
+// would bounce itself in a loop. It stays pure; the gates wrap it.
+// ---------------------------------------------------------------------------
+
+/** Split a display name for prefill. A guess, and the fields are editable. */
+function splitName(name: string): { firstName: string; lastName: string } {
+	const parts = name.trim().split(/\s+/).filter(Boolean);
+	if (parts.length === 0) return { firstName: '', lastName: '' };
+	const [first, ...rest] = parts;
+	return { firstName: first, lastName: rest.join(' ') };
+}
+
+async function loadOnboarding() {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	const { profile, account } = await getVolunteerOnboarding(currentUser.id);
+	const fallback = splitName(account.name);
+
+	return {
+		stage: stageOf(profile),
+		firstName: profile?.firstName ?? fallback.firstName,
+		lastName: profile?.lastName ?? fallback.lastName,
+		availability: profile?.availability ?? '',
+		// The login address. Shown so they can check it, changed elsewhere.
+		email: account.email,
+		pronouns: account.pronouns ?? '',
+		phone: account.phone ?? ''
+	};
+}
+
+export const getMyVolunteerOnboarding = query(loadOnboarding);
+
+/**
+ * Send a member to wherever they actually belong in the flow. `allow` is the set
+ * of stages the calling route is for; anything else redirects.
+ */
+function gate(stage: OnboardingStage, allow: OnboardingStage[]): void {
+	if (allow.includes(stage)) return;
+	if (stage === 'none') redirect(302, '/member/volunteer/start');
+	if (stage === 'blocked') redirect(302, '/member/volunteer/blocked');
+	redirect(302, '/member/volunteer');
+}
+
+export const getVolunteerStartStep = query(async () => {
+	const data = await loadOnboarding();
+	gate(data.stage, ['none']);
+	return data;
+});
+
+export const getVolunteerInterestsStep = query(async () => {
+	const data = await loadOnboarding();
+	gate(data.stage, ['active']);
+	return data;
+});
+
+export const getVolunteerBlockedNotice = query(async () => {
+	const data = await loadOnboarding();
+	gate(data.stage, ['blocked']);
+	return data;
+});
+
+/** /member/volunteer's own gate, and the data behind its two header modals. */
+export const getMyVolunteerAccess = query(async () => {
+	const data = await loadOnboarding();
+	gate(data.stage, ['active']);
+	return data;
+});
+
+// ---------------------------------------------------------------------------
+// Onboarding — forms
+// ---------------------------------------------------------------------------
+
+const profileFieldsSchema = z.object({
+	firstName: z
+		.string()
+		.min(1, 'Enter your first name')
+		.max(VOLUNTEER_NAME_MAX, `Keep this under ${VOLUNTEER_NAME_MAX} characters`),
+	lastName: z
+		.string()
+		.min(1, 'Enter your last name')
+		.max(VOLUNTEER_NAME_MAX, `Keep this under ${VOLUNTEER_NAME_MAX} characters`),
+	pronouns: z.string().max(50, 'Keep pronouns under 50 characters').optional().default(''),
+	phone: z.string().max(30, 'Keep this under 30 characters').optional().default('')
+});
+
+/**
+ * The age answer is a two-value select, never a checkbox.
+ *
+ * FormField gives a checkbox a `b:` name prefix, and an unticked box submits
+ * nothing at all — so "I am under 18" and "I did not answer" arrive identically.
+ * Whichever way the default fell, it would either block every adult or unblock
+ * every minor.
+ */
+const onboardingSchema = profileFieldsSchema.extend({
+	isAdult: z.enum(['yes', 'no'], { message: 'Let us know whether you are 18 or older' })
+});
+
+export const startVolunteerOnboarding = form(onboardingSchema, async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	let status: string;
+	try {
+		const profile = await completeVolunteerOnboarding(currentUser.id, {
+			firstName: data.firstName,
+			lastName: data.lastName,
+			isAdult: data.isAdult === 'yes',
+			pronouns: data.pronouns,
+			phone: data.phone
+		});
+		status = profile.status;
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	// Before the redirect, which throws.
+	await getMyVolunteerOnboarding().refresh();
+
+	redirect(303, status === 'blocked' ? '/member/volunteer/blocked' : '/member/volunteer/interests');
+});
+
+/** The Profile modal. No `isAdult` — see updateVolunteerProfile in the service. */
+export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	try {
+		await updateProfileService(currentUser.id, data);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await Promise.all([getMyVolunteerOnboarding().refresh(), getMyVolunteerAccess().refresh()]);
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
 // Forms — Hour logs (member)
 // ---------------------------------------------------------------------------
 
@@ -317,18 +502,30 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
  * would be worse than one that never offered the boxes.
  */
 export const saveVolunteerInterests = form(
-	z.object({ roleIds: z.array(z.string().min(1)).max(VOLUNTEER_MAX_INTERESTS).default([]) }),
+	z.object({
+		roleIds: z.array(z.string().min(1)).max(VOLUNTEER_MAX_INTERESTS).default([]),
+		availability: z
+			.string()
+			.max(VOLUNTEER_AVAILABILITY_MAX, `Keep this under ${VOLUNTEER_AVAILABILITY_MAX} characters`)
+			.optional()
+			.default('')
+	}),
 	async (data) => {
 		await requireFeature('volunteering');
 		const currentUser = requireUser();
 
 		try {
 			await setInterests(currentUser.id, data.roleIds);
+			// Availability lives on the profile, not the join table — it describes the
+			// person, not the role. Same form, two services.
+			await setAvailability(currentUser.id, data.availability || null);
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		void getMyVolunteerInterests().refresh();
+		await Promise.all([getMyVolunteerInterests().refresh(), getMyVolunteerAccess().refresh()]);
+		// No redirect: this form is shared by the onboarding step and the modal on
+		// /member/volunteer, and only the step wants to navigate. It does that itself.
 		return { success: true };
 	}
 );

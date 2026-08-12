@@ -59,6 +59,7 @@ export const tableOrder = [
 	'inbox_note',
 	'content_flag',
 	'volunteer_hour_log',
+	'volunteer_profile',
 	'volunteer_role_interest',
 	'volunteer_shift_feedback',
 	'member_certification',

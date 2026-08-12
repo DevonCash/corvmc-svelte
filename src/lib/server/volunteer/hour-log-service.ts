@@ -18,6 +18,7 @@ import {
 } from '$lib/config';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
+import { requireActiveVolunteer } from './volunteer-profile-service';
 import type { VolunteerHourLog, VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -169,6 +170,10 @@ export async function submitHours(
 	userId: string,
 	data: SubmitHoursData
 ): Promise<VolunteerHourLog> {
+	// Checked in the service, not just on the route: the remote function is a
+	// directly callable endpoint and the route gate is only a redirect.
+	await requireActiveVolunteer(userId);
+
 	const role = await requireActiveRole(data.volunteerRoleId);
 	const workedOn = toWorkedOn(data.workedOn);
 	const minutes = validateMinutes(data.minutes);
@@ -218,6 +223,8 @@ export async function updateHourLog(
 	userId: string,
 	data: Partial<SubmitHoursData>
 ): Promise<VolunteerHourLog> {
+	await requireActiveVolunteer(userId);
+
 	const existing = await requireOwnPendingLog(logId, userId);
 
 	const values: Partial<typeof volunteerHourLog.$inferInsert> = { updatedAt: new Date() };

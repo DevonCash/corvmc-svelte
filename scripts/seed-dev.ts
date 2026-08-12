@@ -72,6 +72,7 @@ import {
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 import {
 	volunteerRole,
+	volunteerProfile,
 	volunteerHourLog,
 	volunteerRoleInterest,
 	volunteerCertification,
@@ -438,6 +439,7 @@ async function deleteAll() {
 		'volunteer_certification',
 		'volunteer_role_interest',
 		'volunteer_hour_log',
+		'volunteer_profile',
 		'volunteer_role',
 		'content_flag',
 		'inbox_note',
@@ -2781,10 +2783,16 @@ async function main() {
 	const inbox = await seedInbox(adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
-	const volunteerHours = await seedVolunteerHours(allUsers, volunteerRoles);
-	const volunteerInterests = await seedVolunteerInterests(allUsers, volunteerRoles);
+	// Profiles first, and everything downstream is seeded against the members who
+	// actually finished onboarding. Hours or a shift signup belonging to somebody
+	// with no profile would be invisible to them — /member/volunteer would bounce
+	// them to /start before the page rendered.
+	const volunteerProfiles = await seedVolunteerProfiles(allUsers, adminUser);
+	const activeVolunteers = volunteerProfiles.active;
+	const volunteerHours = await seedVolunteerHours(activeVolunteers, volunteerRoles);
+	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
-	const volunteerShifts = await seedVolunteerShifts(allUsers, volunteerRoles);
+	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -2814,7 +2822,7 @@ async function main() {
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(`  ${flags.length} content flags`);
 	console.log(
-		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
+		`  ${volunteerRoles.length} volunteer roles, ${volunteerProfiles.rows.length} volunteer profiles (${volunteerProfiles.blocked} awaiting review), ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
 	);
 	console.log(
 		`  ${certifications.certs} certifications (${certifications.held} held), ${volunteerShifts.shifts} shifts, ${volunteerShifts.signups} signups, ${volunteerShifts.feedback} feedback`
@@ -2923,6 +2931,76 @@ const VOLUNTEER_REJECT_NOTES = [
 async function seedVolunteerRoles() {
 	console.log('Seeding volunteer roles...');
 	return batchInsert(volunteerRole, VOLUNTEER_ROLE_SEEDS);
+}
+
+const VOLUNTEER_AVAILABILITY = [
+	'Weekday evenings, and most Saturdays.',
+	'Anytime after 5pm. Weekends are easiest.',
+	'Sunday afternoons only — I work six days.',
+	'Flexible, just give me a few days notice.',
+	'Fridays and Saturdays, load-out included.',
+	null,
+	null
+];
+
+/**
+ * Volunteer profiles, and the gate they control.
+ *
+ * Deliberately not one per member: the last two users are left without a profile
+ * so the onboarding flow is reachable on a fresh seed instead of only ever being
+ * testable by hand-deleting a row.
+ *
+ * The minors are the point of the table, so both sides of the override are
+ * represented — two waiting in the staff queue, and one already cleared, which
+ * still reads as a minor because approval moves `status` and leaves `isAdult`
+ * alone. Same philosophy as the deliberately-archived role above.
+ */
+async function seedVolunteerProfiles(users: any[], reviewer: any) {
+	console.log('Seeding volunteer profiles...');
+	if (users.length < 4) return { rows: [], active: users, blocked: 0 };
+
+	// Reserved as "hasn't signed up to volunteer yet".
+	const notOnboarded = users.slice(-2);
+	const onboarded = users.slice(0, -2);
+
+	// Minors are picked from the front of the list rather than at random so a
+	// fresh seed always has the same three to click through.
+	const blockedMinors = onboarded.slice(1, 3);
+	const approvedMinor = onboarded[3];
+	const now = new Date();
+	const day = 86_400_000;
+
+	const rows = onboarded.map((u, i) => {
+		const [first = u.name, ...rest] = String(u.name).trim().split(/\s+/);
+		const isBlockedMinor = blockedMinors.includes(u);
+		const isApprovedMinor = u === approvedMinor;
+		const isAdult = !isBlockedMinor && !isApprovedMinor;
+
+		return {
+			id: randomUUID(),
+			userId: u.id,
+			firstName: first,
+			lastName: rest.join(' ') || 'Member',
+			isAdult,
+			status: isBlockedMinor ? 'blocked' : 'active',
+			// A blocked minor never reached the interests step, so no note either.
+			availability: isBlockedMinor ? null : pick(VOLUNTEER_AVAILABILITY),
+			approvedByUserId: isApprovedMinor ? reviewer.id : null,
+			approvedAt: isApprovedMinor ? new Date(now.getTime() - 3 * day) : null,
+			createdAt: new Date(now.getTime() - (i + 1) * day)
+		};
+	});
+
+	// 11 columns × the default batch of 10 is 110 bound parameters, over D1's
+	// 100-variable ceiling for a single statement. 8 × 11 = 88.
+	const inserted = await batchInsert(volunteerProfile, rows, 8);
+
+	const blockedIds = new Set(blockedMinors.map((u) => u.id));
+	return {
+		rows: inserted,
+		active: users.filter((u) => !blockedIds.has(u.id) && !notOnboarded.includes(u)),
+		blocked: blockedMinors.length
+	};
 }
 
 /**
