@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "08b5e39a-5f50-4f96-a99b-61b16b9d042e",
+  "id": "55187d9e-8646-4a48-b9f0-070292893423",
   "prevIds": [
-    "98587e8c-a032-4ccd-9e7d-56be64247eba"
+    "0860cdf0-2d0d-4e56-9f37-5e03b4bae2b4"
   ],
   "ddl": [
     {
@@ -68,6 +68,10 @@
     },
     {
       "name": "event",
+      "entityType": "tables"
+    },
+    {
+      "name": "event_band",
       "entityType": "tables"
     },
     {
@@ -1490,7 +1494,7 @@
     },
     {
       "type": "integer",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -1667,6 +1671,96 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "event"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "band_id",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "billing_order",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'unlinked'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "added_by_band_id",
+      "entityType": "columns",
+      "table": "event_band"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "event_band"
     },
     {
       "type": "text",
@@ -5359,6 +5453,51 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_event_band_event_id_event_id_fk",
+      "entityType": "fks",
+      "table": "event_band"
+    },
+    {
+      "columns": [
+        "band_id"
+      ],
+      "tableTo": "band",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_event_band_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "event_band"
+    },
+    {
+      "columns": [
+        "added_by_band_id"
+      ],
+      "tableTo": "band",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_band_added_by_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "event_band"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_ticket_event_id_event_id_fk",
       "entityType": "fks",
       "table": "ticket"
@@ -6342,6 +6481,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "event_band_pk",
+      "table": "event_band",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "ticket_pk",
       "table": "ticket",
       "entityType": "pks"
@@ -6990,6 +7138,60 @@
       "name": "uq_event_recurring_instance",
       "entityType": "indexes",
       "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "band_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "band_id IS NOT NULL",
+      "origin": "manual",
+      "name": "uq_event_band_event_band",
+      "entityType": "indexes",
+      "table": "event_band"
+    },
+    {
+      "columns": [
+        {
+          "value": "band_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_band_band_status",
+      "entityType": "indexes",
+      "table": "event_band"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "billing_order",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_band_event_order",
+      "entityType": "indexes",
+      "table": "event_band"
     },
     {
       "columns": [
@@ -8143,6 +8345,12 @@
     {
       "value": "ends_at > starts_at",
       "name": "event_time_order",
+      "entityType": "checks",
+      "table": "event"
+    },
+    {
+      "value": "source = 'band' OR ends_at IS NOT NULL",
+      "name": "event_cmc_needs_end",
       "entityType": "checks",
       "table": "event"
     },
