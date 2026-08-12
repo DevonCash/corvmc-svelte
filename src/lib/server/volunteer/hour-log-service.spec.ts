@@ -86,12 +86,16 @@ vi.mock('./volunteer-role-service', async () => {
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => 'member') }));
 
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
+import { db } from '$lib/server/db';
 import {
 	submitHours,
 	updateHourLog,
 	withdrawHourLog,
 	approveHourLog,
 	rejectHourLog,
+	getUserHourSummary,
 	HourLogNotFoundError,
 	HourLogAlreadyReviewedError,
 	HourLogNotEditableError,
@@ -428,5 +432,39 @@ describe('HourLogService', () => {
 			await new Promise((r) => setTimeout(r, 0));
 			expect(addCredits).not.toHaveBeenCalled();
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression — D1 bound parameter types
+// ---------------------------------------------------------------------------
+
+describe('getUserHourSummary', () => {
+	// The year-start boundary is interpolated into a raw `sql` fragment. Inside a
+	// raw fragment drizzle binds the JS value as-is — there is no column for it to
+	// read `mode: 'timestamp'` off — so a Date reaches the driver as an object and
+	// D1 rejects the statement outright:
+	//   D1_TYPE_ERROR: Type 'object' not supported for value 'Thu Jan 01 2026...'
+	// That 500s the whole member volunteering page, stat cards and all. The
+	// boundary has to be bound as the unix seconds the column actually stores.
+	it('binds the year-start boundary as a number, not a Date', async () => {
+		selectResult = [
+			{ approvedMinutes: 0, pendingMinutes: 0, approvedMinutesThisYear: 0, logCount: 0 }
+		];
+
+		await getUserHourSummary(USER_ID);
+
+		// Search the calls rather than indexing: other tests in this file call
+		// `select` too, and which one lands at index 0 depends on run order.
+		const selection = vi
+			.mocked(db.select)
+			.mock.calls.map(([arg]) => arg as Record<string, SQL> | undefined)
+			.find((arg) => arg && 'approvedMinutesThisYear' in arg);
+
+		expect(selection).toBeDefined();
+		const { params } = new SQLiteSyncDialect().sqlToQuery(selection!.approvedMinutesThisYear);
+
+		expect(params).not.toHaveLength(0);
+		expect(params.map((p) => typeof p)).not.toContain('object');
 	});
 });

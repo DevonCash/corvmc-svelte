@@ -4,3 +4,4 @@ export { default as Step } from './FormStep.svelte';
 export { default as Field } from './FormField.svelte';
 export { default as SubmitButton } from './SubmitButton.svelte';
 export { default as Select } from './Select.svelte';
+export { default as CheckboxGroup } from './CheckboxGroup.svelte';

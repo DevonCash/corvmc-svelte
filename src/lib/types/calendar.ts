@@ -15,6 +15,9 @@ export const gigGuideSchema = z.object({
 /** Page size for the gig guide list. */
 export const GIG_GUIDE_PAGE_SIZE = 20;
 
+/** Page size for the paged past-shows list on directory profiles. */
+export const PAST_SHOWS_PAGE_SIZE = 20;
+
 /** One event on the public calendar, shaped for the client. */
 export interface CalendarEntry {
 	id: string;
@@ -29,5 +32,4 @@ export interface CalendarEntry {
 	ticketingEnabled: boolean;
 	ticketPrice: number | null;
 	externalTicketUrl: string | null;
-	href: string;
 }

@@ -85,6 +85,11 @@ const issue = new Proxy(
 	{ get: (_, field) => (message: string) => ({ path: [field], message }) }
 ) as any;
 
+// Module scope, not inside each `it`: a cold Vite cache would otherwise pay the
+// transform of this module graph inside the 5s test timeout and report it as a
+// timeout. Same reason as commit 75fd70a.
+const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
@@ -97,8 +102,6 @@ beforeEach(() => {
 
 describe('changeBandAddress', () => {
 	it('moves the band to the requested address', async () => {
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
-
 		const result = await changeBandAddress({ newSlug: 'The Velvets' }, issue);
 
 		// Spaces collapse rather than hyphenating.
@@ -107,8 +110,6 @@ describe('changeBandAddress', () => {
 	});
 
 	it('takes the band from the owner guard, never from the submitted value', async () => {
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
-
 		// `newSlug` names a different band on purpose: if it were ever treated as a
 		// lookup key, an owner could move somebody else's address.
 		await changeBandAddress({ newSlug: 'some-other-band' }, issue);
@@ -119,7 +120,6 @@ describe('changeBandAddress', () => {
 
 	it('rejects admins', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
 
 		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
 		expect(changeBandSlug).not.toHaveBeenCalled();
@@ -127,15 +127,12 @@ describe('changeBandAddress', () => {
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
 
 		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
 		expect(changeBandSlug).not.toHaveBeenCalled();
 	});
 
 	it('treats the current address as a no-op without spending a change', async () => {
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
-
 		const result = await changeBandAddress({ newSlug: 'The-Velvet-Underground' }, issue);
 
 		expect(result).toEqual({ success: true, slug: 'the-velvet-underground', changed: false });
@@ -145,7 +142,6 @@ describe('changeBandAddress', () => {
 
 	it('stops once the band has used up its recent changes', async () => {
 		allowRateLimited.mockResolvedValue(false);
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
 
 		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
 		expect(allowRateLimited).toHaveBeenCalledWith('band-slug:band-1', 3, 60 * 60 * 24 * 30);
@@ -156,7 +152,6 @@ describe('changeBandAddress', () => {
 		changeBandSlug.mockRejectedValueOnce(
 			new SlugUnavailableError('That address is already taken.')
 		);
-		const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
 
 		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
 	});

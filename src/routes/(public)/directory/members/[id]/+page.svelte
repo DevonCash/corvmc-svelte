@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getPublicMemberProfile, getMemberShows } from '$lib/remote/directory.remote';
+	import {
+		getPublicMemberProfile,
+		getMemberShows,
+		getMemberPastShows
+	} from '$lib/remote/directory.remote';
 	import ProfileHeader, {
 		type ProfilePill
 	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
@@ -80,7 +84,14 @@
 		{#snippet main()}
 			<ProseBlock label="Bio" markdown={member.bio} />
 			<ListenStrip links={member.links} />
-			<ShowsBox upcoming={shows.upcoming} pastCount={shows.pastCount} bandHref={BANDS_BASE} />
+			<ShowsBox
+				upcoming={shows.upcoming}
+				past={shows.past}
+				pastCount={shows.pastCount}
+				pastHasMore={shows.pastHasMore}
+				loadMorePast={(offset) => getMemberPastShows({ id, offset })}
+				bandBase={BANDS_BASE}
+			/>
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { variants, badgeClass } from './StatusBadge.svelte';
+import { variants, badgeClass, labels } from './StatusBadge.svelte';
 import {
 	equipmentStatuses,
 	loanStatuses,
@@ -65,5 +65,15 @@ describe('StatusBadge coverage', () => {
 
 	it('keeps the two maps in agreement', () => {
 		expect(Object.keys(variants).sort()).toEqual(Object.keys(badgeClass).sort());
+	});
+
+	/**
+	 * A label override for a status that no longer exists is invisible — it just
+	 * never fires — so the wrong word silently outlives the rename that caused it.
+	 */
+	it('has no display label for a status that no longer exists', () => {
+		const known = new Set(Object.values(vocabularies).flat());
+		const stale = Object.keys(labels).filter((s) => !known.has(s));
+		expect(stale, 'these are not in any status vocabulary').toEqual([]);
 	});
 });

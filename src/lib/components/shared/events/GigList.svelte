@@ -12,8 +12,22 @@
 	import { groupGigs } from '$lib/utils/gig-groups';
 	import type { CalendarEntry } from '$lib/types/calendar';
 
-	let { events }: { events: CalendarEntry[] } = $props();
+	let {
+		events,
+		eventBase = '/events',
+		bandBase = '/directory/bands',
+		showByline = true
+	}: {
+		events: CalendarEntry[];
+		/** Base path for event links — member routes pass '/member/events'. */
+		eventBase?: string;
+		/** Base path for the byline band link. */
+		bandBase?: string;
+		/** Off on a band's own profile, where every row is that band. */
+		showByline?: boolean;
+	} = $props();
 
+	const now = new Date();
 	const today = toLocalDate(new Date());
 	const sections = $derived(groupGigs(events, today));
 
@@ -38,6 +52,8 @@
 			<h3 class="gig-list__section-head">{label}</h3>
 			<ul class="gig-list__rows">
 				{#each rows as evt (evt.id)}
+					{@const href = `${eventBase}/${evt.id}`}
+					{@const isPast = evt.startsAt < now}
 					<li
 						class="gig-row"
 						id={firstOfDay[evt.id] ? `day-${toLocalDate(evt.startsAt)}` : undefined}
@@ -47,7 +63,7 @@
 							<span class="gig-row__daynum">{formatDayNumber(evt.startsAt)}</span>
 							<span class="gig-row__weekday">{formatDayOfWeek(evt.startsAt)}</span>
 						</div>
-						<a href={evt.href} class="gig-row__thumb" aria-hidden="true" tabindex="-1">
+						<a {href} class="gig-row__thumb" aria-hidden="true" tabindex="-1">
 							{#if evt.posterUrl}
 								<img src={evt.posterUrl} alt="" loading="lazy" />
 							{:else}
@@ -55,21 +71,21 @@
 							{/if}
 						</a>
 						<div class="gig-row__info">
-							<a href={evt.href} class="gig-row__title">{evt.title}</a>
-							<span class="gig-row__byline">
-								{#if evt.source === 'band' && evt.bandName}
-									by
-									{#if evt.bandSlug}
-										<a href="/directory/bands/{evt.bandSlug}" class="gig-row__band"
-											>{evt.bandName}</a
-										>
+							<a {href} class="gig-row__title">{evt.title}</a>
+							{#if showByline}
+								<span class="gig-row__byline">
+									{#if evt.source === 'band' && evt.bandName}
+										by
+										{#if evt.bandSlug}
+											<a href="{bandBase}/{evt.bandSlug}" class="gig-row__band">{evt.bandName}</a>
+										{:else}
+											{evt.bandName}
+										{/if}
 									{:else}
-										{evt.bandName}
+										<span class="sticker-badge sticker-badge--sm sticker-badge--orange">CMC</span>
 									{/if}
-								{:else}
-									<span class="sticker-badge sticker-badge--sm sticker-badge--orange">CMC</span>
-								{/if}
-							</span>
+								</span>
+							{/if}
 							<span class="gig-row__meta">
 								{#if evt.location}
 									<span class="gig-row__venue">
@@ -84,7 +100,7 @@
 								{#if !evt.externalTicketUrl || evt.ticketPrice}
 									· {priceDisplay(evt).label}
 								{/if}
-								{#if evt.externalTicketUrl}
+								{#if evt.externalTicketUrl && !isPast}
 									·
 									<a
 										href={evt.externalTicketUrl}

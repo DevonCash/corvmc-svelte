@@ -18,6 +18,15 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { creditsToHours } from '$lib/config';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import { clubToday } from '$lib/config';
+	import { formatDateShortYear } from '$lib/utils/format';
+	import {
+		getMemberCertifications,
+		getActiveCertifications,
+		grantCertification,
+		revokeCertification
+	} from '$lib/remote/volunteer.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -116,6 +125,121 @@
 					</div>
 				</div>
 				<AdjustCreditsAction userId={id} />
+			</InfoCard>
+		{/await}
+
+		<!--
+			Clearances. Revoke rather than delete is the normal way to end one: the
+			window it covered stays answerable, which is the entire reason the table
+			is append-only. A renewal is a second Grant, not an edit.
+		-->
+		{#await Promise.all( [getMemberCertifications(id), getActiveCertifications()] ) then [held, catalog]}
+			<InfoCard title="Certifications">
+				{#snippet header(title)}
+					<div class="flex items-center justify-between gap-2">
+						<h3 class="card-title">{title}</h3>
+						{#if catalog.length > 0}
+							<Action
+								action={grantCertification}
+								label="Grant"
+								class="btn-sm"
+								modalTitle="Grant a certification"
+								submitLabel="Grant"
+								successToast="Certification granted"
+							>
+								{#snippet form()}
+									<input type="hidden" name="userId" value={id} />
+									<FormField
+										name="certificationId"
+										label="Certification"
+										type="select"
+										options={catalog.map((c) => ({ value: c.id, label: c.name }))}
+									/>
+									<FormField
+										name="grantedOn"
+										label="Granted on"
+										type="date"
+										value={clubToday()}
+										max={clubToday()}
+										description="Expiry is worked out from this date and locked in now — later edits to the catalog won't move it."
+									/>
+									<FormField
+										name="reference"
+										label="Card or licence number"
+										type="text"
+										description="For an external card. Leave blank for a CMC clearance."
+									/>
+									<FormField name="notes" label="Notes" type="textarea" />
+								{/snippet}
+							</Action>
+						{/if}
+					</div>
+				{/snippet}
+
+				{#if held.length === 0}
+					<p class="text-sm opacity-60">Nothing on record.</p>
+				{:else}
+					<ul class="flex flex-col gap-3">
+						{#each held as record (record.id)}
+							<li class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
+									<div class="flex flex-wrap items-center gap-2">
+										<span class="font-medium">{record.certificationName}</span>
+										<span
+											class="badge badge-sm {record.state === 'current'
+												? 'badge-success'
+												: record.state === 'expiring'
+													? 'badge-warning'
+													: record.state === 'expired'
+														? 'badge-error'
+														: 'badge-neutral'}">{record.state}</span
+										>
+									</div>
+									<div class="text-xs opacity-60">
+										Granted {formatDateShortYear(record.grantedAt)}{record.grantedByName
+											? ` by ${record.grantedByName}`
+											: ''}{record.expiresAt
+											? ` · expires ${formatDateShortYear(record.expiresAt)}`
+											: ' · no expiry'}
+									</div>
+									{#if record.reference}
+										<div class="text-xs opacity-60">#{record.reference}</div>
+									{/if}
+									{#if record.revokedReason}
+										<div class="text-xs text-error">Revoked: {record.revokedReason}</div>
+									{/if}
+								</div>
+
+								{#if !record.revokedAt}
+									<Action
+										action={revokeCertification.for(record.id)}
+										label="Revoke"
+										class="btn-ghost btn-xs text-error"
+										modalTitle="Revoke {record.certificationName}?"
+										submitLabel="Revoke"
+										submitClass="btn-error"
+										successToast="Certification revoked"
+									>
+										{#snippet form()}
+											<input type="hidden" name="id" value={record.id} />
+											<input type="hidden" name="userId" value={id} />
+											<p class="text-sm">
+												The record stays — the period it covered is history. They lose it from
+												today, so shifts they already worked still read as cleared.
+											</p>
+											<FormField
+												name="reason"
+												label="Why"
+												type="textarea"
+												description="Shown to staff on this page. Most reasons are blameless — a replaced desk, an expired card, a change of duties."
+											/>
+										{/snippet}
+									</Action>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</InfoCard>
 		{/await}
 
