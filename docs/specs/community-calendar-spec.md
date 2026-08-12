@@ -32,7 +32,35 @@ bands, including gigs at other venues.
   "Back to today" link appears when anchored.
 - Generalized `/events/[id]` detail: band events render with a band byline linking
   to `/directory/bands/[slug]`, an external Tickets button when `externalTicketUrl`
-  is set, and no internal RSVP/ticketing UI.
+  is set, and no internal RSVP UI.
+
+  **CMC never sells a band's gig — not for bands, not for staff.** The money
+  would land in CMC's Stripe account with no payout path back to the band, so a
+  band gig is sold at the door, sold off-site via `externalTicketUrl`, or free.
+  This is a rule about the event, not a permission split between bands and staff.
+
+  Scoped precisely to `ticketingEnabled`, the platform-checkout flag. The other
+  two ticketing fields are fine on a band gig and the band event forms offer
+  both: `ticketPrice` is the display price an attendee pays wherever they buy,
+  and `externalTicketUrl` is how a band sells at all. Only our checkout is off
+  limits — see `src/lib/utils/event-ticketing.ts` for the three modes.
+
+  Enforced in three places, because the UI is the weakest of them:
+  - `createBandEvent` / `updateBandEvent` accept a price and a ticket link but
+    have no `ticketingEnabled` param, and the band forms never submit one.
+  - `update()` — the staff path, and the only other writer that can reach the
+    flag — throws when a `source='band'` row tries to turn it on. Turning it
+    _off_ is allowed, so opening the staff edit form on a row written before this
+    rule clears the stale flag. The price is left alone either way.
+  - `/staff/events/[id]` hides the "Sell tickets through the site" toggle for a
+    band gig (keeping the price field) rather than offering an action the service
+    refuses. `getPublicTicketPage`, `purchaseTickets` and `claimFreeTicket` also
+    reject `source='band'` on source rather than on the `bandEvents` flag, so a
+    row that predates the rule still cannot reach checkout.
+
+  RSVPs are deliberately _not_ restricted: `rsvpToEvent` writes a headcount row,
+  takes no money and issues no code, so band gigs get it like any other event.
+
 - Home page "Upcoming Events" section shows the same next-3 CMC posters
   (`getPublicEvents`).
 - Sitemap lists `/events/[id]` detail pages (including published band events when

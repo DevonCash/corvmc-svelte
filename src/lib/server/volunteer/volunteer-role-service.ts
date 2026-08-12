@@ -3,7 +3,7 @@ import { volunteerRole, volunteerHourLog } from '$lib/server/db/schema/volunteer
 import { eq, and, asc, count, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { VOLUNTEER_ROLE_DESCRIPTION_MAX, VOLUNTEER_ROLE_NAME_MAX } from '$lib/config';
-import type { VolunteerRole } from '$lib/server/db/schema/volunteer';
+import type { VolunteerRole, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -47,6 +47,7 @@ export class VolunteerRoleValidationError extends DomainError {
 interface RoleInput {
 	name?: string;
 	description?: string | null;
+	group?: VolunteerRoleGroup;
 	displayOrder?: number;
 	isActive?: boolean;
 }
@@ -82,6 +83,8 @@ function normalize(data: RoleInput) {
 		normalized.displayOrder = data.displayOrder;
 	}
 
+	if (data.group !== undefined) normalized.group = data.group;
+
 	if (data.isActive !== undefined) normalized.isActive = data.isActive;
 
 	return normalized;
@@ -101,6 +104,7 @@ function isUniqueViolation(err: unknown): boolean {
 export async function createVolunteerRole(data: {
 	name: string;
 	description?: string | null;
+	group?: VolunteerRoleGroup;
 	displayOrder?: number;
 	isActive?: boolean;
 }): Promise<VolunteerRole> {
@@ -112,6 +116,9 @@ export async function createVolunteerRole(data: {
 			.values({
 				name: values.name!,
 				description: values.description ?? null,
+				// Column default covers the omitted case, but drizzle needs the key
+				// present to keep the insert shape stable across call sites.
+				...(values.group ? { group: values.group } : {}),
 				displayOrder: values.displayOrder ?? 0,
 				isActive: values.isActive ?? true
 			})

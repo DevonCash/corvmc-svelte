@@ -1,5 +1,17 @@
 import Emittery from 'emittery';
 
+export interface VolunteerShiftEvent {
+	signupId: string;
+	shiftId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	roleName: string;
+	/** ISO strings, like every other date on this bus. */
+	startsAt: string;
+	endsAt: string;
+}
+
 // ---------------------------------------------------------------------------
 // Domain event bus
 // ---------------------------------------------------------------------------
@@ -333,6 +345,9 @@ export type DomainEvents = {
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
+	'volunteer.shift_reminder_due': VolunteerShiftEvent;
+	'volunteer.shift_completed': VolunteerShiftEvent;
+	'volunteer.shift_feedback_due': VolunteerShiftEvent;
 };
 
 // ---------------------------------------------------------------------------
