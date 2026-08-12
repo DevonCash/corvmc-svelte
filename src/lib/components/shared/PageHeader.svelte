@@ -52,7 +52,14 @@
 			{/if}
 		</hgroup>
 	</div>
+	<!--
+		Actions are grouped rather than rendered as bare flex children: the header
+		is `justify-between`, so two or more loose buttons get spread across its
+		whole width instead of sitting together opposite the title.
+	-->
 	{#if children}
-		{@render children()}
+		<div class="flex flex-wrap items-center justify-end gap-2">
+			{@render children()}
+		</div>
 	{/if}
 </div>

@@ -8,48 +8,44 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import Form, { CheckboxGroup, SubmitButton } from '$lib/components/shared/Form';
 	import OpenShifts from '$lib/components/shared/volunteer/OpenShifts.svelte';
+	import InterestFields from '$lib/components/shared/volunteer/InterestFields.svelte';
+	import ProfileFields from '$lib/components/shared/volunteer/ProfileFields.svelte';
+	import { IconHeartHandshake, IconUserCog } from '@tabler/icons-svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {
 		clubToday,
 		formatVolunteerHours,
-		volunteerRoleGroups,
-		volunteerRoleGroupLabels,
 		DEFAULT_TIMEZONE,
 		VOLUNTEER_HOUR_STEP
 	} from '$lib/config';
 	import { IconPencil, IconTrash } from '@tabler/icons-svelte';
 	import {
 		getActiveVolunteerRoles,
+		getMyVolunteerAccess,
 		getMyVolunteerHours,
 		getMyVolunteerInterests,
 		getMyVolunteerSummary,
 		getOpenShifts,
 		getUnloggedShifts,
 		saveVolunteerInterests,
+		updateVolunteerProfile,
 		submitVolunteerHours,
 		editVolunteerHours,
 		withdrawVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
-	type Role = { id: string; name: string; group: string; descriptionHtml: string | null };
-
+	// The gate. This query redirects an un-onboarded member to /member/volunteer/start
+	// and a blocked one to /blocked, server-side — so the page never renders for
+	// either and needs no client-side check of its own. It also carries the data
+	// behind the two header modals.
+	let access = $derived(getMyVolunteerAccess());
 	let roles = $derived(getActiveVolunteerRoles());
 	let interests = $derived(getMyVolunteerInterests());
 	let openShifts = $derived(getOpenShifts());
 	let unloggedShifts = $derived(getUnloggedShifts());
 	let logs = $derived(getMyVolunteerHours());
 	let summary = $derived(getMyVolunteerSummary());
-
-	// Group order comes from the enum, not from the data, so the columns stay put
-	// as roles are added. Empty groups drop out rather than rendering a bare
-	// heading — a club with no committees shouldn't see the word.
-	function groupedRoles(all: Role[]) {
-		return volunteerRoleGroups
-			.map((key) => ({ key, roles: all.filter((r) => r.group === key) }))
-			.filter((g) => g.roles.length > 0);
-	}
 
 	// Club time, not UTC: after 5pm PT the UTC date is already tomorrow, and the
 	// service rejects a future date — so a UTC-defaulted input offered a value
@@ -72,6 +68,56 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Member">
+	<!--
+		Set-and-forget, so both are ghost buttons: Log Hours is the one people come
+		back for. Interests used to be a form sitting open in the middle of the
+		page, which pushed the shift board below the fold on every visit — and it
+		belongs beside the board, since OpenShifts orders by exactly this set.
+	-->
+	{#await Promise.all([roles, interests, access]) then [roleOptions, myInterests, me]}
+		{#if roleOptions.length > 0}
+			<Action
+				action={saveVolunteerInterests}
+				label="Interests"
+				icon={heartIcon}
+				class="btn-ghost btn-sm"
+				modalTitle="What you can help with"
+				submitLabel="Save"
+				successToast="Saved — we'll be in touch"
+			>
+				{#snippet form()}
+					<InterestFields
+						fields={saveVolunteerInterests.fields}
+						{roleOptions}
+						selected={myInterests}
+						availability={me.availability}
+					/>
+				{/snippet}
+			</Action>
+		{/if}
+
+		<Action
+			action={updateVolunteerProfile}
+			label="Profile"
+			icon={profileIcon}
+			class="btn-ghost btn-sm"
+			modalTitle="Your volunteer profile"
+			submitLabel="Save"
+			successToast="Profile updated"
+		>
+			{#snippet form()}
+				<ProfileFields
+					fields={updateVolunteerProfile.fields}
+					firstName={me.firstName}
+					lastName={me.lastName}
+					pronouns={me.pronouns}
+					phone={me.phone}
+					email={me.email}
+				/>
+			{/snippet}
+		</Action>
+	{/await}
+
 	{#await roles then roleOptions}
 		{#if roleOptions.length > 0}
 			<Action
@@ -184,44 +230,6 @@
 		<OpenShifts {shifts} />
 	{/await}
 
-	<!--
-		The role list is the reason this page is worth opening when you have no
-		hours to log: it's the only place that says what volunteering here involves,
-		and ticking a box here is how staff know who to ask.
-	-->
-	{#await Promise.all([roles, interests]) then [roleOptions, myInterests]}
-		<InfoCard title="What you can help with">
-			{#if roleOptions.length === 0}
-				<p class="text-sm opacity-60">
-					No volunteer roles are open right now. Get in touch and we'll find you something.
-				</p>
-			{:else}
-				<Form remote={saveVolunteerInterests} successToast="Saved — we'll be in touch">
-					<p class="text-sm text-base-content/70">
-						Tick anything that interests you. It isn't a commitment — it just tells us who to ask
-						when something comes up, and we'll show you how to do it.
-					</p>
-
-					{#each groupedRoles(roleOptions) as group (group.key)}
-						<CheckboxGroup
-							field={saveVolunteerInterests.fields.roleIds}
-							legend={volunteerRoleGroupLabels[group.key]}
-							selected={myInterests}
-							descriptionHtml
-							options={group.roles.map((r) => ({
-								value: r.id,
-								label: r.name,
-								description: r.descriptionHtml
-							}))}
-						/>
-					{/each}
-
-					<SubmitButton label="Save" class="btn-primary" />
-				</Form>
-			{/if}
-		</InfoCard>
-	{/await}
-
 	{#await logs then rows}
 		<InfoCard title="Your hours">
 			{#if rows.length === 0}
@@ -329,6 +337,14 @@
 		</InfoCard>
 	{/await}
 </PageContent>
+
+{#snippet heartIcon()}
+	<IconHeartHandshake size={16} />
+{/snippet}
+
+{#snippet profileIcon()}
+	<IconUserCog size={16} />
+{/snippet}
 
 {#snippet pencilIcon()}
 	<IconPencil size={16} />

@@ -623,6 +623,49 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Event unpublished by staff (notify band admins) ---
+	// --- Added to another band's bill (notify the invited band's admins) ---
+	// Only fires for a `pending` slot: an unlinked free-text credit names nobody
+	// with an account, so there is nobody to ask and nothing to notify.
+	domainEvents.on('event.lineup_invited', async ({ data: event }) => {
+		const href = `/band/${event.invitedBandSlug}/events`;
+		const host = event.ownerBandName ?? 'CMC staff';
+
+		for (const admin of event.bandAdmins) {
+			try {
+				await dispatch({
+					type: 'band_lineup_invited',
+					userId: admin.userId,
+					userEmail: admin.userEmail,
+					title: `${host} added ${event.invitedBandName} to a bill`,
+					body: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}". Confirm to show it on your profile.`,
+					href,
+					emailTemplate: {
+						alias: GENERIC_ALIAS,
+						model: {
+							subject: `${host} added ${event.invitedBandName} to a bill`,
+							heading: 'You were added to a lineup',
+							greeting: `Hi ${admin.userName},`,
+							paragraphs: [
+								{
+									text: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
+								},
+								{
+									text: 'The show will not appear on your band’s profile until you confirm it. If this is wrong, decline and your band will be unlinked from the listing.'
+								}
+							],
+							cta: { url: `${siteUrl}${href}`, label: 'Review the invitation' }
+						} satisfies NotificationEmailModel
+					}
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.band_lineup_invited',
+					to: admin.userEmail
+				});
+			}
+		}
+	});
+
 	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {

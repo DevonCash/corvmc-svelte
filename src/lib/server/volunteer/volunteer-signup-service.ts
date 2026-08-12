@@ -8,6 +8,7 @@ import {
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
+import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { getShiftById } from './volunteer-shift-service';
@@ -76,14 +77,21 @@ const unixNow = () => Math.floor(Date.now() / 1000);
 /**
  * Claim a shift.
  *
- * Three guards, in the order that gives the most useful message: the shift is
- * still open, you're cleared for it, and there's room. The room check is part of
- * the write (see hasRoomSql) rather than a separate read, so the last place goes
- * to exactly one of two simultaneous claimants; the loser gets ShiftFullError.
- * No transaction, per the lint rule — the conditional write is what makes that
- * safe.
+ * Four guards, in the order that gives the most useful message: you've finished
+ * onboarding, the shift is still open, you're cleared for it, and there's room.
+ * The room check is part of the write (see hasRoomSql) rather than a separate
+ * read, so the last place goes to exactly one of two simultaneous claimants; the
+ * loser gets ShiftFullError. No transaction, per the lint rule — the conditional
+ * write is what makes that safe.
+ *
+ * The onboarding check is here rather than only on the route because the remote
+ * function is a directly callable endpoint. A route gate is a redirect for
+ * somebody using a browser; it stops nothing else, and this is the check that
+ * keeps an under-18 signup off a shift.
  */
 export async function claimShift(shiftId: string, userId: string): Promise<VolunteerSignup> {
+	await requireActiveVolunteer(userId);
+
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');

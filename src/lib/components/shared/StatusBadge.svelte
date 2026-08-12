@@ -13,6 +13,7 @@
 		IconCircleCheck,
 		IconCircleCheckFilled,
 		IconUserX,
+		IconUserQuestion,
 		IconCircleX,
 		IconCircleOff,
 		IconPencil,
@@ -36,7 +37,7 @@
 		IconStar,
 		IconPointFilled
 	} from '@tabler/icons-svelte';
-	import { volunteerHourStatusLabels } from '$lib/config';
+	import { volunteerHourStatusLabels, volunteerProfileStatusLabels } from '$lib/config';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;
@@ -47,7 +48,10 @@
 	 * Statuses whose display text is not just the humanised enum value. Exported
 	 * so `StatusBadge.spec.ts` can assert no key here has outlived its vocabulary.
 	 */
-	export const labels: Record<string, string> = { ...volunteerHourStatusLabels };
+	export const labels: Record<string, string> = {
+		...volunteerHourStatusLabels,
+		...volunteerProfileStatusLabels
+	};
 
 	export const badgeClass: Record<string, string> = {
 		// Reservations
@@ -93,6 +97,9 @@
 		// Volunteer hour logs
 		approved: 'badge-success',
 		rejected: 'badge-error',
+		// Volunteer profiles. Warning, not error: an under-18 signup is somebody
+		// answering honestly, and staff owe them a conversation rather than a refusal.
+		blocked: 'badge-warning',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -154,6 +161,9 @@
 		// Volunteer hour log statuses
 		approved: { icon: IconCircleCheckFilled, color: 'text-success' },
 		rejected: { icon: IconCircleX, color: 'text-error' },
+
+		// Volunteer profile statuses
+		blocked: { icon: IconUserQuestion, color: 'text-warning' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },

@@ -273,6 +273,29 @@ export interface ContentFlaggedEvent {
 	reportedByName: string;
 }
 
+/**
+ * A band was named on someone else's bill and hasn't answered yet. Carries
+ * everything the listener needs so notification handlers stay DB-free, the
+ * same shape `EventUnpublishedByStaffEvent` uses.
+ */
+export interface EventLineupInvitedEvent {
+	eventId: string;
+	eventTitle: string;
+	/** ISO string — payload dates cross the bus serialized. */
+	startsAt: string;
+	invitedBandId: string;
+	invitedBandName: string;
+	invitedBandSlug: string;
+	/** Null for a CMC-produced show, where staff booked the bill. */
+	ownerBandName: string | null;
+	/** Owner/admins of the invited band. */
+	bandAdmins: Array<{
+		userId: string;
+		userName: string;
+		userEmail: string;
+	}>;
+}
+
 export interface EventUnpublishedByStaffEvent {
 	eventId: string;
 	eventTitle: string;
@@ -342,6 +365,7 @@ export type DomainEvents = {
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
+	'event.lineup_invited': EventLineupInvitedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;

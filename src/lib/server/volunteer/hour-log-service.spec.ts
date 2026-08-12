@@ -83,6 +83,17 @@ vi.mock('./volunteer-role-service', async () => {
 	};
 });
 
+/**
+ * The onboarding gate `submitHours` and `updateHourLog` now run first. Stubbed to a cleared
+ * volunteer by default so the guards under test stay the subject; the blocked
+ * cases drive it explicitly. Real error classes come from the original module.
+ */
+const requireActiveVolunteer = vi.fn(async () => ({ id: 'vp-1', status: 'active' }));
+vi.mock('./volunteer-profile-service', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	requireActiveVolunteer: (...args: unknown[]) => requireActiveVolunteer(...(args as []))
+}));
+
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => 'member') }));
 

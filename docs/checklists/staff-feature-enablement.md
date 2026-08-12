@@ -21,10 +21,10 @@ it is switched back off.
 - [x] **bandReservations** — `band` case in `BookerTypeIcon`; band joined into the staff list and
       detail queries; search covers band names; booker-type filter; create-on-behalf-of-band in
       `CreateModal` (picking a band prefills the member with its owner).
-- [x] **bandEvents** — source + band name on the staff list with a source filter; band attribution
-      on the detail page; `location` and `externalTicketUrl` editable by staff;
-      `unpublishWithBandNotice` extracted to the event service so both the flag queue and the staff
-      event page notify band admins.
+- [x] **band events** (no longer flagged) — source + band name on the staff list with a source
+      filter; band attribution on the detail page; `location` and `externalTicketUrl` editable by
+      staff; `unpublishWithBandNotice` extracted to the event service so both the flag queue and
+      the staff event page notify every band on the bill.
 - [x] **emailMarketing** — `Schedule` on campaign new/edit wired to the existing
       `createAndSchedule` / `scheduleCampaign`, with a client-side future-date guard;
       `PUBLIC_BASE_URL` consolidated onto `PUBLIC_SITE_URL` so unsubscribe links follow the

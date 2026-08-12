@@ -13,6 +13,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
 	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;
@@ -58,7 +59,7 @@
 				{#if evt.doorsAt}
 					· Doors {formatTime(evt.doorsAt)}
 				{/if}
-				· {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+				· {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			</p>
 			{#if !isFreeEvent}
 				<div class="mt-2 flex items-baseline gap-2">

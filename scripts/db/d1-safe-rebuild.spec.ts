@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 // @ts-expect-error -- plain .mjs helper, no types
 import {
 	rewriteMigration,
+	findCreatedTables,
 	findRebuiltTables,
 	findUnsafeDrops,
 	collapseCommentOnlyChunks
@@ -108,6 +109,47 @@ describe('findRebuiltTables', () => {
 
 	it('ignores a plain CREATE TABLE with no matching DROP', () => {
 		expect(findRebuiltTables('CREATE TABLE `venue` (`id` text);')).toEqual([]);
+	});
+});
+
+describe('findCreatedTables', () => {
+	it('finds plainly created tables', () => {
+		expect(findCreatedTables('CREATE TABLE `child` (\n\t`id` text\n);')).toEqual(['child']);
+	});
+
+	it('ignores rebuild and detach scratch tables', () => {
+		const sql = [
+			'CREATE TABLE `__new_parent` (`id` text);',
+			'CREATE TABLE `__detach_child` (`id` text);',
+			'CREATE TABLE `__reattach_child` (`id` text);'
+		].join('\n');
+		expect(findCreatedTables(sql)).toEqual([]);
+	});
+});
+
+// Regression: a migration that both adds a new child table AND rebuilds its
+// parent (e.g. relaxing a NOT NULL) used to emit a detach block for that child
+// — copying rows out of a table that the same migration had not created yet.
+// Applying it failed with "no such table". A table created here is empty, so
+// the parent's DROP cascading into it destroys nothing worth saving.
+describe('a child created by this same migration', () => {
+	const addChildAndRebuildParent = [
+		'CREATE TABLE `child` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`parent_id` text\n);',
+		generated
+	].join(BREAK);
+
+	const out = rewriteMigration(addChildAndRebuildParent, snapshot) as string;
+
+	it('is never detached', () => {
+		expect(out).not.toContain('__detach_child');
+	});
+
+	it('still detaches children that already exist', () => {
+		expect(out).toContain('__detach_grandchild');
+	});
+
+	it("keeps the new table's own CREATE", () => {
+		expect(out).toContain('CREATE TABLE `child`');
 	});
 });
 

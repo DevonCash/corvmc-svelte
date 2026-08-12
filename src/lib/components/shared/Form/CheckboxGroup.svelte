@@ -52,9 +52,14 @@
 	} = $props();
 </script>
 
-<fieldset class="flex flex-col gap-2">
+<!--
+	The legend is the category heading over a stack of option cards, so it needs
+	clear air under it and between groups — with only the fieldset's own gap it
+	reads as another row in the list rather than a label for the ones below.
+-->
+<fieldset class="flex flex-col gap-2 not-first:mt-6">
 	{#if legend}
-		<legend class="font-medium">{legend}</legend>
+		<legend class="mb-3 font-medium">{legend}</legend>
 	{/if}
 	{#if description}
 		<p class="text-sm opacity-60">{description}</p>

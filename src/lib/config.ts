@@ -197,6 +197,33 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
 	committee: 'Committees'
 };
 
+/**
+ * A volunteer profile is `active` or it is not. There is exactly one reason to be
+ * `blocked` today — an under-18 self-signup — and it always means "a person has to
+ * look at this", so `blocked` doubles as the staff review queue.
+ *
+ * Minor-ness is a separate fact (`isAdult`), not a status. Staff still need it
+ * after they approve someone, and folding the two together would lose it at the
+ * exact moment the override runs.
+ */
+export const volunteerProfileStatuses = ['active', 'blocked'] as const;
+
+export const volunteerProfileStatusLabels: Record<
+	(typeof volunteerProfileStatuses)[number],
+	string
+> = {
+	active: 'Active',
+	// "Blocked" reads as a punishment for answering honestly. Staff are being
+	// asked to make contact, not to police anyone.
+	blocked: 'Needs review'
+};
+
+/** First and last name on a volunteer profile. Matches VOLUNTEER_ROLE_NAME_MAX. */
+export const VOLUNTEER_NAME_MAX = 100;
+
+/** The free-text "when am I around" note. A sentence or two, not an essay. */
+export const VOLUNTEER_AVAILABILITY_MAX = 500;
+
 /** How many roles one member may express interest in — every role and then some. */
 export const VOLUNTEER_MAX_INTERESTS = 50;
 

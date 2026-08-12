@@ -20,11 +20,22 @@ The page lists the roles you can sign up for, grouped three ways:
 - **Committees** — Programming, Production, Development, Communications, Art and
   Merchandise, and Facility. Committees meet monthly to guide the organization.
 
-**Create a Free Account to Volunteer** goes to registration and lands you on your
-volunteering page, where the roles are checkboxes. Ticking one isn't a commitment
-— it tells us who to contact when something comes up, and we provide whatever
-training the role needs. Change your mind any time by ticking or unticking and
-saving again.
+**Create a Free Account to Volunteer** goes to registration, and the first time
+you open your volunteering page it asks for a few details: your name, a phone
+number so a coordinator can reach you about a shift, and whether you're 18 or
+older. That's a one-time thing.
+
+Then you pick the roles you're interested in — checkboxes, plus a note about when
+you're usually around. Ticking one isn't a commitment; it tells us who to contact
+when something comes up, and we provide whatever training the role needs. You can
+skip this and come back to it.
+
+After that you land on the shift board. Change your interests or your details any
+time from the **Interests** and **Profile** buttons at the top of that page.
+
+**If you're under 18** you're welcome to volunteer, but there's paperwork to sort
+out first — including a guardian's sign-off — so we'll get in touch to set it up
+rather than have you sign up for shifts straight away.
 
 Ideas that aren't a role — a program, a club, a class, showing art, performing —
 aren't part of that list. Use **Host a Workshop** further down the page, or the
