@@ -40,8 +40,9 @@ vi.mock('$lib/server/authorization', () => ({
 
 // A slug-derived band lookup, faithful to the real `requireBandAdmin()`:
 // it resolves the band from the *route param* slug, which for a remote request
-// comes from the `x-sveltekit-pathname` header the client sent. Renaming a band
-// rotates its slug, so the param goes stale mid-request.
+// comes from the `x-sveltekit-pathname` header the client sent. Keeping the two
+// slugs separate is what lets these tests prove the param never goes stale
+// mid-request — the failure mode that renaming used to cause.
 let routeParamSlug = 'the-regressions';
 let storedBandSlug = 'the-regressions';
 
@@ -62,14 +63,9 @@ vi.mock('$lib/server/event/event-service', () => ({
 	countMemberPastShows: vi.fn()
 }));
 
-// Faithful to band-service `update()`: changing the name regenerates the slug.
-const updateBandBasics = vi.fn(async (_bandId: string, data: { name?: string }) => {
-	if (data.name !== undefined) {
-		storedBandSlug = data.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-|-$/g, '');
-	}
+// Faithful to band-service `update()`: the name is stored, the slug is left
+// alone. Only an explicit address change moves a band's slug.
+const updateBandBasics = vi.fn(async (_bandId: string, _data: { name?: string }) => {
 	return { slug: storedBandSlug };
 });
 
@@ -246,26 +242,24 @@ describe('saveBandProfile', () => {
 		});
 	}
 
-	// Regression: saving the profile with a *new name* rotates the band's slug
-	// (band-service `update()` regenerates it), but the post-write
-	// `getBandProfile().refresh()` re-resolves the band through
-	// `requireBandAdmin()` → `getBySlug(params.slug)` — and `params.slug` is still
-	// the OLD slug, because for a remote request it is derived from the
+	// Regression, fixed at the source: renaming a band used to rotate its slug,
+	// while the post-write `getBandProfile().refresh()` re-resolves the band
+	// through `requireBandAdmin()` → `getBySlug(params.slug)` — and `params.slug`
+	// is still the OLD slug, because for a remote request it comes from the
 	// `x-sveltekit-pathname` header the client sent before the rename. The lookup
-	// misses and throws 404, so the save succeeds but the page's profile query is
-	// left in a failed state.
-	//
-	// This is the first save of every newly created band, since a new band starts
-	// out slugged after its creator and gets its real name on that first save.
-	it('does not fail the profile query refresh when the name change rotates the slug', async () => {
-		const result = (await directory.saveBandProfile({
+	// missed and threw 404, so the save succeeded but the page's profile query was
+	// left in a failed state. `update()` no longer derives the slug from the name,
+	// so the refresh is unconditional and the hazard is gone.
+	it('leaves the slug alone when the name changes, so the refresh still resolves', async () => {
+		const result = await directory.saveBandProfile({
 			...VALID_BAND,
 			name: 'Brand New Name'
-		})) as { success: boolean; slug: string };
+		});
 
 		await flush();
 
-		expect(result).toEqual({ success: true, slug: 'brand-new-name' });
+		expect(result).toEqual({ success: true });
+		expect(storedBandSlug).toBe('the-regressions');
 		expect(refreshFailures).toEqual([]);
 	});
 

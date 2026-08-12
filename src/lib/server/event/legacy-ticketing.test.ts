@@ -15,6 +15,31 @@ describe('mapLegacyEventTicketing', () => {
 			ticket_url: null
 		});
 		expect(result.ticketingEnabled).toBe(false);
+	});
+
+	// The target schema now stores a display price independently of platform
+	// ticketing, so the legacy door price is no longer dropped on import — those
+	// same events 1–4 kept showing "$10" on the old site and must here too.
+	it('keeps the display price of a non-ticketed event', () => {
+		const result = mapLegacyEventTicketing({
+			ticketing_enabled: false,
+			ticket_price: '10.00',
+			ticket_price_override: null,
+			ticket_quantity: null,
+			ticket_url: 'https://example.com/tickets'
+		});
+		expect(result.ticketPrice).toBe(1000);
+		expect(result.externalTicketUrl).toBe('https://example.com/tickets');
+	});
+
+	it('treats a zero legacy price as free', () => {
+		const result = mapLegacyEventTicketing({
+			ticketing_enabled: false,
+			ticket_price: '0.00',
+			ticket_price_override: null,
+			ticket_quantity: null,
+			ticket_url: null
+		});
 		expect(result.ticketPrice).toBeNull();
 	});
 

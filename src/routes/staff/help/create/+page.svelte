@@ -16,13 +16,14 @@
 	let titleValue = $state('');
 	let contentValue = $state('');
 
+	// Mirrors `generateSlug` on the server: spaces and punctuation are dropped,
+	// not hyphenated.
 	function slugify(t: string) {
 		return t
 			.toLowerCase()
-			.replace(/[^\w\s-]/g, '')
-			.replace(/\s+/g, '-')
-			.replace(/-+/g, '-')
-			.trim();
+			.replace(/[^a-z0-9-]+/g, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-|-$/g, '');
 	}
 
 	let autoSlug = $derived(slugify(titleValue));

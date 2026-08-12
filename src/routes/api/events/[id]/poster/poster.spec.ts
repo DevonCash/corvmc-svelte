@@ -69,6 +69,16 @@ function bytes(size: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { POST } = await import('./+server');
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -76,7 +86,6 @@ describe('POST /api/events/[id]/poster', () => {
 	it('rejects an oversized file with 400 and leaves the existing poster untouched', async () => {
 		const big = new File([bytes(11 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
 
-		const { POST } = await import('./+server');
 		await expect(POST(req(big))).rejects.toMatchObject({ status: 400 });
 
 		// Validation must run before any mutation — old poster not deleted, nothing uploaded.
@@ -87,7 +96,6 @@ describe('POST /api/events/[id]/poster', () => {
 	it('rejects a disallowed file type with 400 and does not delete or upload', async () => {
 		const pdf = new File([bytes(1024)], 'doc.pdf', { type: 'application/pdf' });
 
-		const { POST } = await import('./+server');
 		await expect(POST(req(pdf))).rejects.toMatchObject({ status: 400 });
 
 		expect(mockDeleteObject).not.toHaveBeenCalled();
@@ -97,7 +105,6 @@ describe('POST /api/events/[id]/poster', () => {
 	it('uploads a valid file, replacing the old poster', async () => {
 		const ok = new File([bytes(1024)], 'poster.png', { type: 'image/png' });
 
-		const { POST } = await import('./+server');
 		const res = await POST(req(ok));
 
 		expect(res.status).toBe(200);

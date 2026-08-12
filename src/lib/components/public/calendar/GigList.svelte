@@ -5,9 +5,9 @@
 		formatShortMonth,
 		formatDayNumber,
 		formatDayOfWeek,
-		formatTime,
-		formatCents
+		formatTime
 	} from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { groupGigs } from '$lib/utils/gig-groups';
 	import type { CalendarEntry } from '$lib/types/calendar';
@@ -79,11 +79,12 @@
 									·
 								{/if}
 								{formatTime(evt.startsAt)}
-								{#if evt.source === 'cmc'}
-									· {evt.ticketingEnabled && evt.ticketPrice
-										? formatCents(evt.ticketPrice)
-										: 'Free'}
-								{:else if evt.externalTicketUrl}
+								<!-- The price reads the same whoever sells it; the link is extra.
+								     Skipped only when an off-site seller sets a price we don't know. -->
+								{#if !evt.externalTicketUrl || evt.ticketPrice}
+									· {priceDisplay(evt).label}
+								{/if}
+								{#if evt.externalTicketUrl}
 									·
 									<a
 										href={evt.externalTicketUrl}

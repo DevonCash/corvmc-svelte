@@ -11,6 +11,7 @@
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
+	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
 	import { page } from '$app/state';
 
@@ -29,6 +30,13 @@
 
 <PageHeader title="Settings" subtitle={band.name} />
 <PageContent width="md">
+	<!-- The free subdomain is the band's primary address; the custom domain below
+	     is the upsell on top of it. -->
+	{#if layout.userRole === 'owner'}
+		<BandAddressSection slug={band.slug} />
+		<div class="h-8"></div>
+	{/if}
+
 	{#if customDomain}
 		<CustomDomainSection slug={band.slug} domain={customDomain} />
 		<div class="h-8"></div>

@@ -50,7 +50,7 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { band, bandMember, bandGenre } from '../src/lib/server/db/schema/band';
+import { band, bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
 	subscriber,
@@ -461,6 +461,7 @@ async function deleteAll() {
 		'band_page_config',
 		'band_genre',
 		'band_member',
+		'band_slug_history',
 		'band',
 		'payment_cache',
 		'credit_transaction',
@@ -841,21 +842,29 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		rows.push(e);
 	}
 
-	// Future events: 2 paid ticketed, 2 free RSVP, 2 open (no ticketing)
+	// Future events, one per ticketing shape: 2 paid ticketed, 2 free-ticketed,
+	// 1 sold off-site with a price, 1 door price, 1 genuinely free.
 	const futureConfigs: {
 		ticketingEnabled: boolean;
 		ticketPrice: number | null;
 		ticketQuantity: number | null;
+		externalTicketUrl?: string;
 	}[] = [
 		{ ticketingEnabled: true, ticketPrice: 1500, ticketQuantity: 50 },
 		{ ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 30 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: 40 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: null },
-		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null },
+		{
+			ticketingEnabled: false,
+			ticketPrice: 1800,
+			ticketQuantity: null,
+			externalTicketUrl: 'https://eventbrite.com/e/424242'
+		},
+		{ ticketingEnabled: false, ticketPrice: 1000, ticketQuantity: null },
 		{ ticketingEnabled: false, ticketPrice: null, ticketQuantity: null }
 	];
 
-	for (let i = 0; i < 6; i++) {
+	for (let i = 0; i < futureConfigs.length; i++) {
 		const day = randomInt(3, 28);
 		const hour = randomInt(18, 20);
 		const duration = pick([2, 3]);
@@ -880,9 +889,10 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(event)
 			.values({
 				title: pick(EVENT_TITLES),
-				description:
-					config.ticketingEnabled && !config.ticketPrice
-						? 'A free community event — RSVP to reserve your spot!'
+				description: config.externalTicketUrl
+					? 'Tickets for this one are sold through our partner venue.'
+					: config.ticketingEnabled && !config.ticketPrice
+						? 'A free community event — grab a ticket to reserve your spot!'
 						: 'An evening of live performances at the Collective.',
 				startsAt,
 				endsAt,
@@ -894,6 +904,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				ticketingEnabled: config.ticketingEnabled,
 				ticketPrice: config.ticketPrice,
 				ticketQuantity: config.ticketQuantity,
+				externalTicketUrl: config.externalTicketUrl ?? null,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -1074,10 +1085,12 @@ async function seedBands(users: SeedUser[]) {
 
 	for (let i = 0; i < BAND_NAMES.length; i++) {
 		const owner = users[i % users.length];
+		// Same rule as `generateSlug`, which is what a real band creation uses.
 		const slug = BAND_NAMES[i]
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/-$/, '');
+			.replace(/[^a-z0-9-]+/g, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-|-$/g, '');
 
 		const genres = pickN(GENRES, randomInt(1, 3));
 		const isPremiumBand = i < PREMIUM_BAND_COUNT;
@@ -1165,6 +1178,13 @@ async function seedBands(users: SeedUser[]) {
 				status: Math.random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
 			});
+		}
+
+		// Give the first premium and first free band a released address, so both
+		// old-address redirect paths (microsite and directory profile) have local
+		// data to exercise.
+		if (i === 0 || i === PREMIUM_BAND_COUNT) {
+			await db.insert(bandSlugHistory).values({ slug: `${slug}-old`, bandId: b.id });
 		}
 	}
 
@@ -1265,6 +1285,8 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
 						Math.random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
+					// Gigs are priced at the door or by the venue — never sold by us.
+					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: b.ownerId
 				})
 				.returning();

@@ -82,9 +82,18 @@ beforeEach(() => {
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
 });
 
+// ---------------------------------------------------------------------------
+// Module under test
+// ---------------------------------------------------------------------------
+
+// The import stays dynamic so it resolves after the `vi.mock` calls above, and
+// sits at module scope so the cold Vite transform of the whole module graph is
+// paid once, during file evaluation — not inside a test or hook, where it would
+// race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
+const { getCustomDomain } = await import('./band-custom-domain.remote');
+
 describe('getCustomDomain', () => {
 	it('returns the domain config to the band owner', async () => {
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		const result = await (getCustomDomain as unknown as (slug: string) => Promise<unknown>)(
 			'the-velvet-underground'
 		);
@@ -93,7 +102,6 @@ describe('getCustomDomain', () => {
 
 	it('rejects a member who does not own the band', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		await expect(
 			(getCustomDomain as unknown as (slug: string) => Promise<unknown>)('the-velvet-underground')
 		).rejects.toMatchObject({ status: 403 });
@@ -101,7 +109,6 @@ describe('getCustomDomain', () => {
 
 	it('rejects a logged-in user with no role in the band', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		const { getCustomDomain } = await import('./band-custom-domain.remote');
 		await expect(
 			(getCustomDomain as unknown as (slug: string) => Promise<unknown>)('the-velvet-underground')
 		).rejects.toMatchObject({ status: 403 });

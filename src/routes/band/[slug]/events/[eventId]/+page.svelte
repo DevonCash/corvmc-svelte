@@ -6,6 +6,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime } from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import {
 		getBandEventDetail,
 		updateBandEventForm,
@@ -55,6 +56,11 @@
 							<dd>{evt.location}</dd>
 						</div>
 					{/if}
+					<div>
+						<dt class="text-xs font-medium uppercase opacity-60">Price</dt>
+						<!-- Band gigs never sell through our checkout. -->
+						<dd>{priceDisplay({ ...evt, ticketingEnabled: false }).label}</dd>
+					</div>
 					{#if evt.externalTicketUrl}
 						<div class="sm:col-span-2">
 							<dt class="text-xs font-medium uppercase opacity-60">Ticket Link</dt>
@@ -203,6 +209,25 @@
 								)}
 								class="input input-bordered w-full"
 							/>
+						</div>
+
+						<div class="form-control">
+							<label class="label" for="editTicketPriceDollars"
+								><span class="label-text">Ticket price ($)</span></label
+							>
+							<input
+								{...updateBandEventForm.fields.ticketPriceDollars.as(
+									'text',
+									evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : ''
+								)}
+								id="editTicketPriceDollars"
+								class="input input-bordered w-full"
+								placeholder="10.00"
+								inputmode="decimal"
+							/>
+							<span class="label-text-alt opacity-60 mt-1">
+								What people pay, at the door or through the link. Leave blank if it's free.
+							</span>
 						</div>
 
 						<div class="flex justify-end pt-2">

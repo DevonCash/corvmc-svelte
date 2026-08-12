@@ -8,6 +8,12 @@
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import ReportEventAction from '$lib/components/shared/actions/ReportEventAction.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import {
+		ticketingMode,
+		isFreeEvent as isFree,
+		priceDisplay,
+		sustainingMemberPrice
+	} from '$lib/utils/event-ticketing';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
@@ -19,12 +25,12 @@
 	// Descriptions are rich text (legacy rows contain HTML), so sanitize before
 	// rendering to strip any XSS payload while keeping formatting.
 	const descriptionHtml = $derived(evt.description ? sanitizeHtml(evt.description) : '');
-	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
+	const mode = $derived(ticketingMode(evt));
+	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
 
-	const discountedPrice = $derived(
-		evt.ticketPrice && data.isSustainingMember ? Math.round(evt.ticketPrice / 2) : evt.ticketPrice
-	);
+	const price = $derived(priceDisplay(evt, { isSustainingMember: data.isSustainingMember }));
+	const memberPrice = $derived(sustainingMemberPrice(evt));
 
 	const capacityKnown = $derived(
 		evt.ticketingEnabled && evt.ticketQuantity != null && data.sold != null
@@ -37,7 +43,7 @@
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
 	const showUpsell = $derived(
-		evt.ticketingEnabled && !isFreeEvent && !data.isSustainingMember && !soldOut && !data.isPast
+		memberPrice !== null && !data.isSustainingMember && !soldOut && !data.isPast
 	);
 
 	const calendarEvt = $derived({
@@ -64,11 +70,12 @@
 	const isBandEvent = $derived(evt.source === 'band');
 	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
 
-	// Band gigs are ticketed off-site (if at all); CMC events sell through /tickets.
+	// /tickets only exists for events we sell — it 404s otherwise, so anything
+	// else follows the off-site seller (or the band, or the listing).
 	const ticketsHref = $derived(
-		isBandEvent
-			? (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
-			: resolve(`/events/${evt.id}/tickets`)
+		evt.ticketingEnabled
+			? resolve(`/events/${evt.id}/tickets`)
+			: (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
 	);
 
 	async function share() {
@@ -141,6 +148,7 @@
 					startsAt={evt.startsAt}
 					ticketingEnabled={evt.ticketingEnabled}
 					ticketPrice={evt.ticketPrice}
+					externalTicketUrl={evt.externalTicketUrl}
 					tags={evt.tags}
 					tapeLabel={primaryTag ?? undefined}
 					tapeColor={primaryTag ? tagToTapeVariant(primaryTag) : ''}
@@ -237,43 +245,33 @@
 							<span class="edet__fact-value">{evt.location}</span>
 						</div>
 					{/if}
-					{#if !isBandEvent}
-						<div class="edet__fact">
-							<span class="edet__fact-label">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.8"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									style="width:13px;height:13px"
-									><path
-										d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
-									/><path d="M13 6v12" /></svg
+					<div class="edet__fact">
+						<span class="edet__fact-label">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								style="width:13px;height:13px"
+								><path
+									d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
+								/><path d="M13 6v12" /></svg
+							>
+							Price
+						</span>
+						<span class="edet__fact-value">
+							{price.label}
+							{#if price.wasLabel}
+								<span
+									style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
+									>{price.wasLabel}</span
 								>
-								Price
-							</span>
-							<span class="edet__fact-value">
-								{#if !evt.ticketingEnabled}
-									Free
-								{:else if evt.ticketPrice}
-									{#if data.isSustainingMember && discountedPrice}
-										{formatCents(discountedPrice)}
-										<span
-											style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
-											>{formatCents(evt.ticketPrice)}</span
-										>
-									{:else}
-										{formatCents(evt.ticketPrice)}
-									{/if}
-								{:else}
-									Free
-								{/if}
-							</span>
-						</div>
-					{/if}
+							{/if}
+						</span>
+					</div>
 				</div>
 
 				{#if descriptionHtml}
@@ -302,22 +300,12 @@
 						<span class="text-base font-medium" style="color: var(--fg-2)"
 							>This event has ended.</span
 						>
-					{:else if isBandEvent}
-						<!-- Band gigs are handled by the venue — no internal RSVP or ticketing. -->
-						{#if evt.externalTicketUrl}
-							<a
-								href={evt.externalTicketUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="btn btn-primary btn-lg">Get Tickets</a
-							>
-						{/if}
-					{:else if evt.ticketingEnabled}
+					{:else if mode === 'platform'}
 						{#if soldOut}
 							<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
 						{:else}
 							<a href={ticketsHref} class="btn btn-primary btn-lg">
-								{isFreeEvent ? 'RSVP' : 'Get Tickets'}
+								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
 							</a>
 							{#if data.remaining !== null}
 								<span class="text-sm" style="color: var(--fg-2)"
@@ -326,9 +314,9 @@
 							{/if}
 						{/if}
 
-						{#if showUpsell && evt.ticketPrice}
+						{#if showUpsell && memberPrice}
 							<p class="edet__upsell">
-								Sustaining members pay {formatCents(Math.round(evt.ticketPrice / 2))}.
+								Sustaining members pay {formatCents(memberPrice)}.
 								<a href={resolve('/contribute')} class="link link-primary">Become a member →</a>
 							</p>
 						{:else if data.isSustainingMember && evt.ticketPrice}
@@ -337,8 +325,22 @@
 							</p>
 						{/if}
 					{:else}
-						<!-- Non-ticketed event: RSVP requires a member account -->
-						<a href={resolve('/login')} class="btn btn-primary btn-lg">Sign in to RSVP</a>
+						<!-- Sold off-site, at the door, or not at all. Tickets (when there's a
+						     seller) are the primary action; the RSVP is just headcount. -->
+						{#if mode === 'external'}
+							<a
+								href={evt.externalTicketUrl!}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="btn btn-primary btn-lg">Get Tickets ↗</a
+							>
+						{/if}
+						<a
+							href={resolve('/login')}
+							class="btn btn-lg {mode === 'external' ? 'btn-ghost' : 'btn-primary'}"
+						>
+							{mode === 'external' ? "Sign in to say you're going" : 'Sign in to RSVP'}
+						</a>
 						{#if data.rsvpCount > 0}
 							<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
 						{/if}
@@ -360,6 +362,7 @@
 							startsAt={e.startsAt}
 							ticketingEnabled={e.ticketingEnabled}
 							ticketPrice={e.ticketPrice}
+							externalTicketUrl={e.externalTicketUrl}
 							tags={e.tags}
 							tapeLabel={eTags[0] ?? undefined}
 							tapeColor={eTags[0] ? tagToTapeVariant(eTags[0]) : ''}

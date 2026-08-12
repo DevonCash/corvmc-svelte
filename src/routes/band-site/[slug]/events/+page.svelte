@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
-	import { formatDate, formatTime } from '$lib/utils/format';
+	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 
@@ -46,6 +46,9 @@
 						</p>
 						{#if evt.location}
 							<p class="text-sm opacity-60">{evt.location}</p>
+						{/if}
+						{#if evt.ticketPrice}
+							<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
 						{/if}
 						{#if evt.description}
 							<p class="text-sm mt-2 opacity-80">{evt.description}</p>

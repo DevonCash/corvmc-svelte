@@ -27,7 +27,8 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
+	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMusic } from '@tabler/icons-svelte';
@@ -63,11 +64,10 @@
 
 	let hasConflicts = $state(false);
 
-	// Compute ticket price in cents for hidden field
+	// Ticket price in cents for the hidden field. Independent of the ticketing
+	// toggle: it's the price attendees pay wherever they buy.
 	const editTicketPriceCents = $derived(
-		editTicketingEnabled && editTicketPriceDollars
-			? String(Math.round(parseFloat(editTicketPriceDollars) * 100))
-			: ''
+		editTicketPriceDollars ? String(Math.round(parseFloat(editTicketPriceDollars) * 100)) : ''
 	);
 
 	function startEditing() {
@@ -269,9 +269,9 @@
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
 						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled)} />
-						{#if editTicketingEnabled}
-							<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
-						{/if}
+						<!-- Always submitted: the price is the attendee's price whoever sells
+						     the ticket, so it has to survive the ticketing toggle being off. -->
+						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
 						{#if rebookNeeded && rebookConfirmed}
 							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
@@ -384,43 +384,45 @@
 								/>
 							</FormField>
 
+							<!-- The price is what attendees pay wherever they buy — our checkout,
+							     the link above, or the door — so it lives outside the ticketing
+							     toggle. Only capacity depends on us doing the selling. -->
+							<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
+								<input
+									id="editTicketPrice"
+									type="number"
+									bind:value={editTicketPriceDollars}
+									min="0.01"
+									step="0.01"
+									placeholder="15.00"
+									class="input input-bordered w-full"
+									required={editTicketingEnabled}
+								/>
+								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
+							</FormField>
+
 							<!-- Ticketing -->
 							<div class="form-control">
 								<label class="label cursor-pointer justify-start gap-3">
 									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-									<span class="label-text">Enable ticketing</span>
+									<span class="label-text">Sell tickets through the site</span>
 								</label>
 							</div>
 
 							{#if editTicketingEnabled}
 								<div class="card bg-base-200 p-4">
-									<div class="grid grid-cols-2 gap-4">
-										<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
-											<input
-												id="editTicketPrice"
-												type="number"
-												bind:value={editTicketPriceDollars}
-												min="0.01"
-												step="0.01"
-												placeholder="15.00"
-												class="input input-bordered w-full"
-												required
-											/>
-										</FormField>
-
-										<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
-											<input
-												id="editTicketQuantity"
-												name="ticketQuantity"
-												type="number"
-												bind:value={editTicketQuantity}
-												min="1"
-												step="1"
-												placeholder="Unlimited"
-												class="input input-bordered w-full"
-											/>
-										</FormField>
-									</div>
+									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+										<input
+											id="editTicketQuantity"
+											name="ticketQuantity"
+											type="number"
+											bind:value={editTicketQuantity}
+											min="1"
+											step="1"
+											placeholder="Unlimited"
+											class="input input-bordered w-full"
+										/>
+									</FormField>
 									<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
 								</div>
 							{/if}
@@ -560,17 +562,25 @@
 	</InfoCard>
 
 	<!-- Ticketing -->
-	{#if evt.ticketingEnabled}
+	{#if evt.ticketingEnabled || evt.ticketPrice}
 		<InfoCard title="Ticketing">
 			<div class="flex gap-6">
 				<div>
 					<p class="text-sm opacity-60">Price</p>
-					<p class="text-lg font-medium">{formatCents(evt.ticketPrice!)}</p>
+					<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
 				</div>
 				<div>
-					<p class="text-sm opacity-60">Capacity</p>
-					<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
+					<p class="text-sm opacity-60">Sold by</p>
+					<p class="text-lg font-medium">
+						{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
+					</p>
 				</div>
+				{#if evt.ticketingEnabled}
+					<div>
+						<p class="text-sm opacity-60">Capacity</p>
+						<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
+					</div>
+				{/if}
 				{#if data.ticketStats}
 					<div>
 						<p class="text-sm opacity-60">Sold</p>
@@ -583,7 +593,7 @@
 				{/if}
 			</div>
 
-			{#if evt.status === 'published'}
+			{#if evt.status === 'published' && evt.ticketingEnabled}
 				<div class="mt-3">
 					<a
 						href={resolve(`/events/${evt.id}/tickets`)}

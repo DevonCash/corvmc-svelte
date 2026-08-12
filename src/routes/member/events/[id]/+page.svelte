@@ -14,12 +14,18 @@
 	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
 	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import {
+		ticketingMode,
+		isFreeEvent as isFree,
+		priceDisplay,
+		sustainingMemberPrice
+	} from '$lib/utils/event-ticketing';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import {
 		purchaseTickets,
-		rsvpForEvent,
+		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
 		getMemberEventDetail,
@@ -27,7 +33,7 @@
 	} from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
-	const rsvpFields = rsvpForEvent.fields;
+	const rsvpFields = claimFreeTicket.fields;
 	const rsvpToEventFields = rsvpToEvent.fields;
 	const cancelRsvpFields = cancelRsvp.fields;
 
@@ -43,13 +49,14 @@
 	// Descriptions are rich text (legacy rows contain HTML), so sanitize before
 	// rendering to strip any XSS payload while keeping formatting.
 	const descriptionHtml = $derived(evt.description ? sanitizeHtml(evt.description) : '');
-	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
+	const mode = $derived(ticketingMode(evt));
+	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
-	const discountedPrice = $derived(
-		evt.ticketPrice && data.isSustainingMember ? Math.round(evt.ticketPrice / 2) : evt.ticketPrice
-	);
+	const price = $derived(priceDisplay(evt, { isSustainingMember: data.isSustainingMember }));
+	const memberPrice = $derived(sustainingMemberPrice(evt));
+	const discountedPrice = $derived(data.isSustainingMember ? memberPrice : null);
 
 	// Availability visuals (ticketed, capacity-capped events only)
 	const capacityKnown = $derived(
@@ -63,9 +70,7 @@
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
 	// Show the membership upsell to non-sustaining members on paid, available events.
-	const showUpsell = $derived(
-		evt.ticketingEnabled && !isFreeEvent && !data.isSustainingMember && !soldOut
-	);
+	const showUpsell = $derived(memberPrice !== null && !data.isSustainingMember && !soldOut);
 
 	const quantityOptions = $derived(
 		Array.from({ length: maxQuantity }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
@@ -87,7 +92,10 @@
 	let qrIndex = $state(0);
 	let copied = $state(false);
 
-	const subtotal = $derived((discountedPrice ?? 0) * quantity);
+	// What this member is actually charged per ticket — the member rate when it
+	// applies, the list price otherwise.
+	const unitPrice = $derived(discountedPrice ?? evt.ticketPrice ?? 0);
+	const subtotal = $derived(unitPrice * quantity);
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
@@ -191,6 +199,7 @@
 				startsAt={evt.startsAt}
 				ticketingEnabled={evt.ticketingEnabled}
 				ticketPrice={evt.ticketPrice}
+				externalTicketUrl={evt.externalTicketUrl}
 				tags={evt.tags}
 				tapeLabel={primaryTag ?? undefined}
 				tapeColor={primaryTag ? tagToTapeVariant(primaryTag) : ''}
@@ -293,20 +302,11 @@
 						Price
 					</span>
 					<span class="edet__fact-value">
-						{#if !evt.ticketingEnabled}
-							Free
-						{:else if evt.ticketPrice}
-							{#if data.isSustainingMember && discountedPrice}
-								{formatCents(discountedPrice)}
-								<span
-									style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
-									>{formatCents(evt.ticketPrice)}</span
-								>
-							{:else}
-								{formatCents(evt.ticketPrice)}
-							{/if}
-						{:else}
-							Free
+						{price.label}
+						{#if price.wasLabel}
+							<span style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
+								>{price.wasLabel}</span
+							>
 						{/if}
 					</span>
 				</div>
@@ -340,10 +340,10 @@
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
 							<Action
-								action={rsvpForEvent}
-								label="RSVP"
-								modalTitle="RSVP"
-								submitLabel="RSVP{quantity > 1 ? ` for ${quantity}` : ''}"
+								action={claimFreeTicket}
+								label="Get free ticket"
+								modalTitle="Get free ticket"
+								submitLabel="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 								class="btn-primary btn-lg"
 								onsuccess={handlePurchaseSuccess}
@@ -434,9 +434,9 @@
 						{/if}
 					{/if}
 
-					{#if showUpsell && evt.ticketPrice}
+					{#if showUpsell && memberPrice}
 						<p class="edet__upsell">
-							Sustaining members pay {formatCents(Math.round(evt.ticketPrice / 2))}.
+							Sustaining members pay {formatCents(memberPrice)}.
 							<a href={resolve('/member/membership')} class="link link-primary">Become a member →</a
 							>
 						</p>
@@ -449,8 +449,17 @@
 					{/if}
 				</div>
 			{:else}
-				<!-- Non-ticketed event: lightweight RSVP (join table, no QR / check-in) -->
+				<!-- Not sold by us: tickets (if any) come from an off-site seller, and
+				     the RSVP is the lightweight join row — no QR, no check-in. -->
 				<div class="edet__ctas">
+					{#if mode === 'external'}
+						<a
+							href={evt.externalTicketUrl!}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="btn btn-primary btn-lg">Get Tickets ↗</a
+						>
+					{/if}
 					{#if data.myRsvp}
 						<div class="tixbanner tixbanner--static">
 							<div class="tixbanner__icon">
@@ -467,7 +476,11 @@
 							</div>
 							<div class="tixbanner__text">
 								<strong>You're going!</strong>
-								<small>We'll see you there</small>
+								<small>
+									{mode === 'external'
+										? 'Tickets are sold separately — grab yours above'
+										: "We'll see you there"}
+								</small>
 							</div>
 						</div>
 						<Action
@@ -487,11 +500,11 @@
 					{:else}
 						<Action
 							action={rsvpToEvent}
-							label="RSVP"
-							modalTitle="RSVP"
-							submitLabel="RSVP"
+							label={mode === 'external' ? "I'm going" : 'RSVP'}
+							modalTitle={mode === 'external' ? "I'm going" : 'RSVP'}
+							submitLabel={mode === 'external' ? "I'm going" : 'RSVP'}
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-							class="btn-primary btn-lg"
+							class="btn-lg {mode === 'external' ? 'btn-outline' : 'btn-primary'}"
 							onsuccess={refreshDetail}
 							onfailure={(err) =>
 								toast.error(err instanceof Error ? err.message : 'Something went wrong')}
@@ -525,6 +538,7 @@
 						startsAt={e.startsAt}
 						ticketingEnabled={e.ticketingEnabled}
 						ticketPrice={e.ticketPrice}
+						externalTicketUrl={e.externalTicketUrl}
 						tags={e.tags}
 						tapeLabel={eTags[0] ?? undefined}
 						tapeColor={eTags[0] ? tagToTapeVariant(eTags[0]) : ''}
