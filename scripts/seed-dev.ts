@@ -1253,6 +1253,36 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 	console.log('Seeding band events...');
 	const rows = [];
 
+	// The first live band gets a two-year backlog so the profile's past-shows
+	// pager has more than one page to page through.
+	const veteran = bands.find((b: any) => !b.deletedAt);
+	if (veteran) {
+		for (let i = 0; i < 25; i++) {
+			const day = -randomInt(20, 730);
+			const hour = randomInt(19, 21);
+			const startsAt = ptDate(day, hour);
+			const [e] = await db
+				.insert(event)
+				.values({
+					title: pick(BAND_EVENT_TITLES),
+					description: `${veteran.name} live! An old favourite from the archives.`,
+					startsAt,
+					endsAt: ptDate(day, hour + pick([2, 3, 4])),
+					doorsAt: ptDate(day, hour - 0.5),
+					status: 'published',
+					publishedAt: new Date(startsAt.getTime() - 14 * 86400000),
+					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
+					bandId: veteran.id,
+					source: 'band',
+					location: pick(BAND_EVENT_LOCATIONS),
+					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
+					createdByUserId: veteran.ownerId
+				})
+				.returning();
+			rows.push(e);
+		}
+	}
+
 	for (const b of bands.slice(0, 6)) {
 		if (b.deletedAt) continue;
 		const eventCount = randomInt(2, 4);

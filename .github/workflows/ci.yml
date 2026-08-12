@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
 
+# A new push supersedes the run already in flight for the same ref, so stale runs
+# stop burning runner capacity that the replacement run then has to queue for.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint (full)
@@ -18,6 +24,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
+      # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
+      # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
+      # from runes mode), which ESLint refuses to serialize. ESLint is ~200s of this
+      # job's ~250s, so this only caches the small half.
+      - uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/prettier
+          key: prettier-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            prettier-cache-${{ runner.os }}-
       - run: pnpm lint
 
   lint-changed:
@@ -50,8 +67,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
-  test:
-    name: Test
+  # `unit` and `e2e` were one `Test` job that ran them back to back. They share
+  # nothing, so running them side by side halves the critical path. Deliberately no
+  # `needs:` between them.
+  unit:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +81,39 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The `client` and `storybook` vitest projects run in real chromium.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test
+      - run: pnpm run test:unit -- --run
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - run: pnpm exec playwright install --with-deps chromium
+      # Builds the app and seeds a local D1 via playwright.config.ts webServer +
+      # e2e/global-setup.ts.
+      - run: pnpm run test:e2e
 
   schema-drift:
     name: Schema drift

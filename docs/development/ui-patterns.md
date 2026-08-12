@@ -733,7 +733,7 @@ Components:
 - `QuickFacts` — a 4-up key/value strip; empty facts are dropped.
 - `ProseBlock` — bio/about markdown via `sanitizeBio`; hidden when empty.
 - `ListenStrip` — service tabs + one switchable in-page embed (Spotify/YouTube/etc.).
-- `ShowsBox` — Upcoming/Past toggle with a past-show count. Bands show their own events; members show shows aggregated across their active bands.
+- `ShowsBox` — Upcoming/Past toggle with a past-show count, rendering both tabs with the public gig guide's `GigList` rows. Past shows page in 20 at a time behind a "Show more" button. Bands show their own events (byline suppressed — every row is that band); members show shows aggregated across their active bands. Pass `eventBase`/`bandBase` to point row links at the member routes.
 - `CrossRefList` — the relational spine: a member's Bands ↔ a band's Members. Private members render as locked, unlinked rows in the public view so the count stays honest.
 - `TagCloud` — instrument/genre chips (`sticker-badge`).
 - `LinksBox` — streaming services as an icon ribbon, web/social as labelled rows. Distinct from `ListenStrip` (play here vs. go elsewhere).

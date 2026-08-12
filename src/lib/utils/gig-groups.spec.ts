@@ -17,8 +17,7 @@ function entry(id: string, day: string): CalendarEntry {
 		posterUrl: null,
 		ticketingEnabled: false,
 		ticketPrice: null,
-		externalTicketUrl: null,
-		href: `/events/${id}`
+		externalTicketUrl: null
 	};
 }
 

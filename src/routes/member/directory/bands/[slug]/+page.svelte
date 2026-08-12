@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getDirectoryBand, getBandShows } from '$lib/remote/directory.remote';
+	import { getDirectoryBand, getBandShows, getBandPastShows } from '$lib/remote/directory.remote';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { ReportContentAction } from '$lib/components/shared/actions';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -88,7 +88,15 @@
 		{#snippet main()}
 			<ProseBlock label="About" markdown={band.bio} />
 			<ListenStrip links={band.links} />
-			<ShowsBox upcoming={shows.upcoming} pastCount={shows.pastCount} />
+			<ShowsBox
+				upcoming={shows.upcoming}
+				past={shows.past}
+				pastCount={shows.pastCount}
+				pastHasMore={shows.pastHasMore}
+				loadMorePast={(offset) => getBandPastShows({ id: band.id, offset })}
+				eventBase="/member/events"
+				showByline={false}
+			/>
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
