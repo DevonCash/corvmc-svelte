@@ -4,7 +4,7 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, gte, lt } from 'drizzle-orm';
+import { eq, ne, and, gte, lt } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -14,7 +14,9 @@ const TZ = DEFAULT_TIMEZONE;
 /**
  * Cron endpoint for sending confirmation reminders.
  * Queries reservations in 'scheduled' (unconfirmed) status starting in the
- * next 24 hours and emits a confirmation reminder event for each.
+ * next 24 hours and emits a confirmation reminder event for each. Space booked
+ * for an event is excluded — it is staff-held, with no member confirm/pay flow
+ * to nag the staff creator about.
  *
  * Schedule: daily at 09:00 AM Pacific
  *   POST /api/cron/confirmation-reminders
@@ -46,6 +48,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		.where(
 			and(
 				eq(reservation.status, 'scheduled'),
+				ne(reservation.bookerType, 'event'),
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, in24h)
 			)

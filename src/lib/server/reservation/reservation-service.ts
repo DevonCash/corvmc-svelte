@@ -324,7 +324,9 @@ export async function cancel(
  * Cancel every `scheduled` reservation whose start time has passed without being
  * confirmed, freeing the slot. Members must confirm within the confirmation
  * window (or prepay via Stripe); anything still `scheduled` at start was never
- * committed. Delegates to `cancel()` with `staffOverride` so the already-started
+ * committed. Space booked for an event is excluded: it is staff-held, has no
+ * member confirm/pay flow, and releasing it at showtime handed a live event's
+ * room to the waitlist. Delegates to `cancel()` with `staffOverride` so the already-started
  * guard is bypassed and any refund/credit reversal runs idempotently (a still-
  * scheduled reservation has neither, so they are no-ops). The emitted
  * `reservation.cancelled` event cascades waitlist promotion for the freed slot.
@@ -336,7 +338,13 @@ export async function cancelUnconfirmedReservations(
 	const rows = await db
 		.select({ id: reservation.id })
 		.from(reservation)
-		.where(and(eq(reservation.status, 'scheduled'), lt(reservation.startsAt, now)));
+		.where(
+			and(
+				eq(reservation.status, 'scheduled'),
+				lt(reservation.startsAt, now),
+				ne(reservation.bookerType, 'event')
+			)
+		);
 
 	let cancelled = 0;
 	for (const row of rows) {

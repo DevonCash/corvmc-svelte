@@ -366,7 +366,10 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			bookerId: eventId,
 			startsAt: reservationStartsAt,
 			endsAt: reservationEndsAt,
-			status: existing.status === 'draft' ? 'scheduled' : 'confirmed'
+			// Event space is staff-held for drafts too: there is no member confirm/pay
+			// flow for it and publish() never touches the reservation, so a
+			// `scheduled` hold could only ever be swept away as unconfirmed.
+			status: 'confirmed'
 		});
 
 		updates.reservationId = newRes.id;
