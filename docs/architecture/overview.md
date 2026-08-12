@@ -393,7 +393,7 @@ otherwise the default. **Feature flags** are just `feature.*` config keys, wrapp
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
 missing page). Current flags: `staffInbox`, `bandPremium`, `bandReservations`,
-`bandEvents`, `emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
+`emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
 entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff
