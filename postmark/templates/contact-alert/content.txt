@@ -1,0 +1,15 @@
+{{{contactName}}} sent a message through the contact form on corvmc.org.
+
+{{{replyNote}}}
+
+From:    {{{contactName}}} <{{{contactEmail}}}>
+Subject: {{{formSubject}}}
+
+--- message ---
+
+{{{message}}}
+
+--- end of message ---
+
+Conversation history, internal notes and assignment:
+{{{threadUrl}}}

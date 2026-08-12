@@ -16,10 +16,8 @@
  *
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
-import 'dotenv/config';
-import { getPlatformProxy } from 'wrangler';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq, inArray } from 'drizzle-orm';
+import { withPlatformDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import {
@@ -173,11 +171,9 @@ function workedOnDaysAgo(days: number): Date {
 }
 
 export async function seedVolunteering(): Promise<void> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-	const kv = (env as { KV: KVNamespace }).KV;
+	await withPlatformEnv(async ({ db, env }) => {
+		const kv = (env as { KV: KVNamespace }).KV;
 
-	try {
 		// The flag lives in KV, not D1 — without this every volunteer route 404s.
 		await kv.put('site-config:feature.volunteering', JSON.stringify(true));
 
@@ -508,26 +504,19 @@ export async function seedVolunteering(): Promise<void> {
 				updatedAt: now
 			}
 		]);
-	} finally {
-		await dispose();
-	}
+	});
 }
 
 /** The member's signup status on a shift, for assertions the UI cannot make. */
 export async function readSignupStatus(shiftId: string): Promise<string | null> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-
-	try {
+	return withPlatformDb(async (db) => {
 		const [row] = await db
 			.select({ status: volunteerSignup.status })
 			.from(volunteerSignup)
 			.where(eq(volunteerSignup.shiftId, shiftId))
 			.limit(1);
 		return row?.status ?? null;
-	} finally {
-		await dispose();
-	}
+	});
 }
 
 /** Read back what the app wrote, for assertions the UI cannot make. */
@@ -535,24 +524,20 @@ export async function readVolunteerState(): Promise<{
 	approveLogStatus: string | null;
 	creditRowCount: number;
 }> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
+	const { creditTransaction } = await import('../../src/lib/server/db/schema/finance');
 
-	try {
+	return withPlatformDb(async (db) => {
 		const [log] = await db
 			.select({ status: volunteerHourLog.status })
 			.from(volunteerHourLog)
 			.where(eq(volunteerHourLog.id, SEED_VOL_LOG_APPROVE_ID))
 			.limit(1);
 
-		const { creditTransaction } = await import('../../src/lib/server/db/schema/finance');
 		const rows = await db
 			.select({ id: creditTransaction.id })
 			.from(creditTransaction)
 			.where(eq(creditTransaction.userId, SEED_VOL_MEMBER_ID));
 
 		return { approveLogStatus: log?.status ?? null, creditRowCount: rows.length };
-	} finally {
-		await dispose();
-	}
+	});
 }

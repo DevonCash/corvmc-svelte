@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BRAND } from './brand';
 import { CAMPAIGN_LAYOUT } from '$lib/server/marketing/campaign-layout';
@@ -39,6 +39,9 @@ function templateHtmlFiles(): { path: string; source: string }[] {
 				: [join(TEMPLATE_ROOT, entry.name)];
 		for (const dir of dirs) {
 			const path = join(dir, 'content.html');
+			// Text-only templates (the two-way, replyable ones) have no HTML part
+			// and so no palette to police.
+			if (!existsSync(path)) continue;
 			files.push({ path, source: readFileSync(path, 'utf8') });
 		}
 	}

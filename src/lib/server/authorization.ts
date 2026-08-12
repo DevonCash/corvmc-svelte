@@ -184,3 +184,29 @@ export async function listStaffUsers(): Promise<
 		return true;
 	});
 }
+
+/**
+ * Find a staff or admin user by email address, or null.
+ *
+ * Used to tell a staff member's emailed reply apart from a contact's, so the
+ * inbox can relay theirs instead of filing it as inbound. Matched
+ * case-insensitively: SQLite compares TEXT with `=` case-sensitively, and no
+ * mail client normalises the envelope From, so a plain `eq` would silently
+ * treat `Ada@corvmc.org` as a stranger.
+ */
+export async function findStaffUserByEmail(
+	email: string
+): Promise<{ id: string; name: string; email: string } | null> {
+	const normalized = email.trim().toLowerCase();
+	if (!normalized) return null;
+
+	const [row] = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
+		.innerJoin(role, eq(role.id, modelHasRole.roleId))
+		.where(and(eq(sql`lower(${user.email})`, normalized), inArray(role.name, ['admin', 'staff'])))
+		.limit(1);
+
+	return row ?? null;
+}

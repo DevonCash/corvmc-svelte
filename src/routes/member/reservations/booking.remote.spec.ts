@@ -107,6 +107,37 @@ vi.mock('$lib/server/db', () => ({
 	db: { select: () => chainable() }
 }));
 
+// Contact-phone gate. Mocked at the service boundary (like reservation-service
+// above) so these tests stay about the handler wiring, not the DB read/write.
+const ensureContactPhone = vi.fn(async () => true);
+vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+
+/** Stands in for the `issue` helper SvelteKit hands the form handler. */
+const issueProxy = new Proxy(
+	{},
+	{ get: (_t, name: string) => (message: string) => ({ name, message }) }
+);
+
+class InvalidError extends Error {
+	issues: { name: string; message: string }[];
+	constructor(issues: { name: string; message: string }[]) {
+		super('invalid');
+		this.issues = issues;
+	}
+}
+
+// `invalid()` needs a request context to build its real response; throwing a
+// recognisable error instead lets the specs assert on the field and message.
+vi.mock('@sveltejs/kit', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@sveltejs/kit')>();
+	return {
+		...actual,
+		invalid: (...issues: { name: string; message: string }[]) => {
+			throw new InvalidError(issues);
+		}
+	};
+});
+
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
 
 vi.mock('$app/server', () => ({
@@ -116,7 +147,7 @@ vi.mock('$app/server', () => ({
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
-		const fn = handler;
+		const fn = (data: unknown) => handler(data, issueProxy);
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
 		return fn;
@@ -134,6 +165,7 @@ const { bookAndPayReservation, bookMemberReservation } =
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	ensureContactPhone.mockResolvedValue(true);
 	selectResult = [];
 	reservationServiceMock.create.mockImplementation(async () => {
 		throw new ReservationConflictError();
@@ -216,5 +248,46 @@ describe('bookMemberReservation domain-error mapping', () => {
 		await expect(
 			bookMemberReservation({ date: '2026-08-01', startTime: '09:00', endTime: '10:00' })
 		).rejects.toMatchObject({ status: 400 });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Contact phone requirement
+// ---------------------------------------------------------------------------
+
+describe('contact phone requirement', () => {
+	it('rejects a booking with no usable number, before any row is written', async () => {
+		ensureContactPhone.mockResolvedValue(false);
+
+		await expect(
+			bookAndPayReservation({ date: '2026-06-15', startTime: '09:00', endTime: '10:00' })
+		).rejects.toMatchObject({
+			issues: [{ name: 'phone', message: expect.stringContaining('phone number is required') }]
+		});
+
+		// No orphan reservation left behind by a rejected booking.
+		expect(reservationServiceMock.create).not.toHaveBeenCalled();
+		expect(reservationServiceMock.createWaitlisted).not.toHaveBeenCalled();
+	});
+
+	it('passes a submitted number through to be saved, then books', async () => {
+		// The mock's default implementation throws, so its inferred return type is
+		// `never` — cast to override it for the success path.
+		reservationServiceMock.create.mockImplementation((async () => ({
+			id: 'res-1',
+			status: 'scheduled',
+			startsAt: new Date(),
+			endsAt: new Date()
+		})) as never);
+
+		const result = await bookMemberReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00',
+			phone: '(541) 555-0123'
+		});
+
+		expect(ensureContactPhone).toHaveBeenCalledWith('user-1', '(541) 555-0123');
+		expect(result).toMatchObject({ reservationId: 'res-1' });
 	});
 });

@@ -55,24 +55,25 @@ export const FIXTURES: Fixture[] = [
 	{
 		name: 'notification-with-quote',
 		alias: 'notification',
-		// The staff-facing contact-form forward: user-generated text in a quote block.
+		// The quote-block shape: user-generated text quoted back inside a one-way
+		// notification. (The contact-form forward used to live here; it is its own
+		// text-only template now — see `contact-alert` below.)
 		model: {
-			subject: 'New contact form message',
-			preview_text: 'Charlie Rivera: Booking question',
-			heading: 'New Contact Form Message',
-			paragraphs: [{ text: 'Someone sent a message through the contact form.' }],
+			subject: 'A band claimed your listing',
+			preview_text: 'Indigo Kiss added a note to their claim',
+			heading: 'Listing Claim Submitted',
+			paragraphs: [{ text: 'Indigo Kiss submitted a claim with this note:' }],
 			has_details: true,
 			details: [
-				{ label: 'From', value: 'Charlie Rivera' },
-				{ label: 'Email', value: 'charlie@example.com' },
-				{ label: 'Subject', value: 'Booking question' }
+				{ label: 'Band', value: 'Indigo Kiss' },
+				{ label: 'Submitted by', value: 'Charlie Rivera' }
 			],
 			// Post-normalization shape: `quote` is escaped HTML, `quote_text` is the raw source.
 			quote:
-				'Hi there,<br /><br />I run a small folk trio &amp; we&#39;re hoping to book the space for a Saturday in March.<br /><br />Thanks!',
+				'Hi there,<br /><br />I run a small folk trio &amp; we&#39;re the ones behind this listing.<br /><br />Thanks!',
 			quote_text:
-				"Hi there,\n\nI run a small folk trio & we're hoping to book the space for a Saturday in March.\n\nThanks!",
-			footnote: 'Reply directly to the sender at the email address above.'
+				"Hi there,\n\nI run a small folk trio & we're the ones behind this listing.\n\nThanks!",
+			footnote: 'Review the claim in the staff dashboard.'
 		}
 	},
 	{
@@ -142,13 +143,30 @@ export const FIXTURES: Fixture[] = [
 	{
 		name: 'inbox-reply',
 		alias: 'inbox-reply',
+		// Text-only: the recipient can reply, so it carries no layout. The body is
+		// exactly what the staffer typed into the composer textarea — plain text
+		// with real line breaks, and an apostrophe that must not become &#39;.
 		model: {
 			contactName: 'Charlie',
 			subject: 'Re: Booking question',
-			preview_text: 'Thanks for reaching out — March Saturdays are wide open right now.',
-			// Staff-authored rich text, intentionally rendered raw.
-			body: '<p>Thanks for reaching out — March Saturdays are wide open right now.</p><p>Give me two or three dates that work and I will hold one for you.</p>',
+			body: "Thanks for reaching out — March Saturdays are wide open right now.\n\nGive me two or three dates that work & I'll hold one for you.",
 			staffName: 'Devon'
+		}
+	},
+	{
+		name: 'contact-alert',
+		alias: 'contact-alert',
+		// Text-only: staff reply to this one straight from their mail client.
+		model: {
+			subject: 'Contact form: Performance Inquiry',
+			contactName: 'Charlie Rivera',
+			contactEmail: 'charlie@example.com',
+			formSubject: 'Performance Inquiry',
+			replyNote:
+				'Reply to this email to answer Charlie Rivera. Your reply is sent from CMC and saved on the conversation in the staff inbox.',
+			message:
+				"Hi there,\n\nI run a small folk trio & we're hoping to play a Saturday in March.\n\nThanks!",
+			threadUrl: 'https://corvmc.org/staff/inbox/thr-1'
 		}
 	}
 ];
