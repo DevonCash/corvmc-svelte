@@ -37,6 +37,7 @@
 	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
+	const isBandEvent = $derived(evt.source === 'band');
 	const recurringSeries = $derived(await getEventRecurringSeries(id));
 
 	// ── Edit state ────────────────────────────────────────────────────────
@@ -83,8 +84,13 @@
 		editEndTime = toLocalTime(evt.endsAt);
 		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
 
-		// Pre-fill ticketing fields
-		editTicketingEnabled = evt.ticketingEnabled;
+		// Pre-fill ticketing fields. Forced off for a band gig, which is never sold
+		// through our checkout. Submitting `false` rather than omitting the field
+		// means opening this form on a row that predates that rule also clears the
+		// stale flag — `update()` rejects enabling ticketing on a band event but
+		// allows disabling it. The price is untouched: a band gig legitimately has
+		// one for the door or an outside seller.
+		editTicketingEnabled = isBandEvent ? false : evt.ticketingEnabled;
 		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
@@ -386,7 +392,8 @@
 
 							<!-- The price is what attendees pay wherever they buy — our checkout,
 							     the link above, or the door — so it lives outside the ticketing
-							     toggle. Only capacity depends on us doing the selling. -->
+							     toggle and applies to band gigs too. Only capacity depends on us
+							     doing the selling. -->
 							<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
 								<input
 									id="editTicketPrice"
@@ -401,13 +408,22 @@
 								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
 							</FormField>
 
-							<!-- Ticketing -->
-							<div class="form-control">
-								<label class="label cursor-pointer justify-start gap-3">
-									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-									<span class="label-text">Sell tickets through the site</span>
-								</label>
-							</div>
+							<!-- Selling through our checkout is the one thing a band gig cannot
+							     do: `update()` throws on it, so offering the toggle here would
+							     only produce a failed save. The band's own link takes the money. -->
+							{#if isBandEvent}
+								<p class="text-sm opacity-60">
+									Band gigs aren't sold through CMC — the price above is what attendees pay at the
+									door or through the band's ticket link.
+								</p>
+							{:else}
+								<div class="form-control">
+									<label class="label cursor-pointer justify-start gap-3">
+										<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+										<span class="label-text">Sell tickets through the site</span>
+									</label>
+								</div>
+							{/if}
 
 							{#if editTicketingEnabled}
 								<div class="card bg-base-200 p-4">
