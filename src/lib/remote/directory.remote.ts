@@ -19,10 +19,14 @@ import {
 } from '$lib/server/directory/profile-service';
 import {
 	listBandEventsUpcoming,
+	listBandEventsPast,
 	countBandPastEvents,
 	listMemberUpcomingShows,
+	listMemberPastShows,
 	countMemberPastShows
 } from '$lib/server/event/event-service';
+import { toCalendarEntry } from '$lib/server/event/calendar-entry';
+import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -289,42 +293,61 @@ export const getPublicMemberProfile = query(z.string(), async (id) => {
 // Shows (ShowsBox) — band's own shows + member's aggregated shows
 // ---------------------------------------------------------------------------
 
-/** Upcoming + past-count for a band's own shows. Takes a band id. */
+/** Paged past-shows input: whose shows, and how far down the list. */
+const pastShowsSchema = z.object({
+	id: z.string(),
+	offset: z.number().int().min(0).default(0)
+});
+
+/** Splits a limit+1 fetch into a page of entries plus the hasMore flag. */
+function toPastPage(rows: Parameters<typeof toCalendarEntry>[0][]) {
+	return {
+		events: rows.slice(0, PAST_SHOWS_PAGE_SIZE).map(toCalendarEntry),
+		hasMore: rows.length > PAST_SHOWS_PAGE_SIZE
+	};
+}
+
+/** Upcoming + first page of past shows for a band's own profile. Takes a band id. */
 export const getBandShows = query(z.string(), async (bandId) => {
-	const [upcoming, pastCount] = await Promise.all([
+	const [upcoming, past, pastCount] = await Promise.all([
 		listBandEventsUpcoming(bandId),
+		listBandEventsPast(bandId, { limit: PAST_SHOWS_PAGE_SIZE, offset: 0 }),
 		countBandPastEvents(bandId)
 	]);
+	const page = toPastPage(past);
 	return {
 		pastCount,
-		upcoming: upcoming.map((e) => ({
-			id: e.id,
-			title: e.title,
-			startsAt: e.startsAt,
-			location: e.location,
-			tags: e.tags
-		}))
+		past: page.events,
+		pastHasMore: page.hasMore,
+		upcoming: upcoming.map(toCalendarEntry)
 	};
 });
 
-/** Upcoming + past-count aggregated across a member's active bands. */
+/** Older pages of a band's past shows, for the ShowsBox pager. */
+export const getBandPastShows = query(pastShowsSchema, async ({ id, offset }) =>
+	toPastPage(await listBandEventsPast(id, { limit: PAST_SHOWS_PAGE_SIZE, offset }))
+);
+
+/** Upcoming + first page of past shows aggregated across a member's active bands. */
 export const getMemberShows = query(z.string(), async (userId) => {
-	const [upcoming, pastCount] = await Promise.all([
+	const [upcoming, past, pastCount] = await Promise.all([
 		listMemberUpcomingShows(userId),
+		listMemberPastShows(userId, { limit: PAST_SHOWS_PAGE_SIZE, offset: 0 }),
 		countMemberPastShows(userId)
 	]);
+	const page = toPastPage(past);
 	return {
 		pastCount,
-		upcoming: upcoming.map((e) => ({
-			id: e.id,
-			title: e.title,
-			startsAt: e.startsAt,
-			location: e.location,
-			bandName: e.bandName,
-			bandSlug: e.bandSlug
-		}))
+		past: page.events,
+		pastHasMore: page.hasMore,
+		upcoming: upcoming.map(toCalendarEntry)
 	};
 });
+
+/** Older pages of a member's aggregated past shows. */
+export const getMemberPastShows = query(pastShowsSchema, async ({ id, offset }) =>
+	toPastPage(await listMemberPastShows(id, { limit: PAST_SHOWS_PAGE_SIZE, offset }))
+);
 
 export const getMyDirectoryVisibility = query(z.void(), async () => {
 	const { locals } = getRequestEvent();

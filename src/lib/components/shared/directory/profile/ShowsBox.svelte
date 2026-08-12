@@ -1,31 +1,55 @@
 <script lang="ts">
 	import ProfileSection from './ProfileSection.svelte';
-	import { formatDayNumber, formatShortMonth, formatDayOfWeek } from '$lib/utils/format';
-
-	export type Show = {
-		id: string;
-		title: string;
-		startsAt: Date;
-		location?: string | null;
-		/** member (aggregated) view: which band this show is with */
-		bandName?: string | null;
-		bandSlug?: string | null;
-		/** band (own) view: slot / role tags */
-		tags?: string | null;
-	};
+	import GigList from '$lib/components/shared/events/GigList.svelte';
+	import type { CalendarEntry } from '$lib/types/calendar';
 
 	let {
 		upcoming,
+		past,
 		pastCount,
-		bandHref
+		pastHasMore = false,
+		loadMorePast,
+		eventBase,
+		bandBase,
+		showByline = true
 	}: {
-		upcoming: Show[];
+		upcoming: CalendarEntry[];
+		/** First page of past shows, newest first. */
+		past: CalendarEntry[];
+		/** Total past shows, including pages not fetched yet. */
 		pastCount: number;
-		/** base path for band links from member-aggregated rows, e.g. /member/directory/bands */
-		bandHref?: string;
+		pastHasMore?: boolean;
+		/** Fetches the next page of past shows. Omit to disable the pager. */
+		loadMorePast?: (offset: number) => Promise<{ events: CalendarEntry[]; hasMore: boolean }>;
+		/** Base path for event links — member routes pass '/member/events'. */
+		eventBase?: string;
+		/** Base path for band links in the byline. */
+		bandBase?: string;
+		/** Off on a band's own profile, where every row is that band. */
+		showByline?: boolean;
 	} = $props();
 
 	let tab = $state<'upcoming' | 'past'>('upcoming');
+
+	// Pages fetched by "Show more", appended to the server-rendered first page.
+	let extra = $state<CalendarEntry[]>([]);
+	let extraHasMore = $state<boolean | null>(null);
+	let loading = $state(false);
+
+	const pastRows = $derived([...past, ...extra]);
+	const hasMore = $derived(extraHasMore ?? pastHasMore);
+
+	async function showMore() {
+		if (!loadMorePast) return;
+		loading = true;
+		try {
+			const next = await loadMorePast(pastRows.length);
+			extra = [...extra, ...next.events];
+			extraHasMore = next.hasMore;
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <ProfileSection title="Shows">
@@ -52,43 +76,19 @@
 
 	{#if tab === 'upcoming'}
 		{#if upcoming.length > 0}
-			<div class="shows">
-				{#each upcoming as show (show.id)}
-					<div class="show-row">
-						<div class="show-row__date">
-							<b>{formatDayNumber(show.startsAt)}</b>
-							<span>{formatShortMonth(show.startsAt)} · {formatDayOfWeek(show.startsAt)}</span>
-						</div>
-						<div class="show-row__title">
-							<p class="show-row__name">{show.title}</p>
-							{#if show.location}
-								<p class="show-row__sub">{show.location}</p>
-							{/if}
-						</div>
-						{#if show.bandName}
-							{#if bandHref && show.bandSlug}
-								<a
-									href="{bandHref}/{show.bandSlug}"
-									class="sticker-badge sticker-badge--orange sticker-badge--sm"
-								>
-									w/ {show.bandName}
-								</a>
-							{:else}
-								<span class="sticker-badge sticker-badge--orange sticker-badge--sm"
-									>w/ {show.bandName}</span
-								>
-							{/if}
-						{:else if show.tags}
-							<span class="sticker-badge sticker-badge--sm">{show.tags}</span>
-						{/if}
-					</div>
-				{/each}
-			</div>
+			<GigList events={upcoming} {eventBase} {bandBase} {showByline} />
 		{:else}
 			<p class="shows__empty">No upcoming dates.</p>
 		{/if}
-	{:else if pastCount > 0}
-		<p class="shows__empty">{pastCount} past {pastCount === 1 ? 'show' : 'shows'} played.</p>
+	{:else if pastRows.length > 0}
+		<GigList events={pastRows} {eventBase} {bandBase} {showByline} />
+		{#if hasMore && loadMorePast}
+			<div class="shows__more">
+				<button type="button" class="btn btn-ghost btn-sm" disabled={loading} onclick={showMore}>
+					{loading ? 'Loading…' : 'Show more'}
+				</button>
+			</div>
+		{/if}
 	{:else}
 		<p class="shows__empty">No past shows yet.</p>
 	{/if}
@@ -114,54 +114,13 @@
 		background: var(--color-secondary);
 		color: var(--color-secondary-content);
 	}
-	.shows {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	.show-row {
-		display: grid;
-		grid-template-columns: 56px 1fr auto;
-		gap: 12px;
-		align-items: center;
-		padding: 8px;
-		border: 1px solid var(--surface-border);
-		border-radius: var(--radius, 8px);
-		background: var(--bg-card);
-	}
-	.show-row__date {
-		text-align: center;
-		border-right: 1px dashed color-mix(in oklch, var(--cmc-brown) 22%, transparent);
-		padding-right: 10px;
-		font-variant-numeric: tabular-nums;
-	}
-	.show-row__date b {
-		display: block;
-		font-size: 18px;
-		line-height: 1;
-		color: var(--color-secondary);
-	}
-	.show-row__date span {
-		font-size: 10px;
-		color: var(--fg-3);
-	}
-	.show-row__title {
-		min-width: 0;
-	}
-	.show-row__name {
-		margin: 0;
-		font-weight: 600;
-		font-size: 14px;
-		color: var(--fg-1);
-	}
-	.show-row__sub {
-		margin: 2px 0 0;
-		font-size: 12px;
-		color: var(--fg-3);
-	}
 	.shows__empty {
 		margin: 0;
 		font-size: 13px;
 		color: var(--fg-3);
+	}
+	.shows__more {
+		margin-top: 12px;
+		text-align: center;
 	}
 </style>

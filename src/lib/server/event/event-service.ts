@@ -838,6 +838,25 @@ export async function countBandPastEvents(bandId: string): Promise<number> {
 	return row?.value ?? 0;
 }
 
+/**
+ * Published band shows already played, newest first. Fetches limit+1 rows so
+ * callers can derive hasMore.
+ */
+export async function listBandEventsPast(
+	bandId: string,
+	opts: { limit: number; offset: number }
+): Promise<EventRow[]> {
+	return db
+		.select()
+		.from(event)
+		.where(
+			and(eq(event.bandId, bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+		)
+		.orderBy(desc(event.startsAt))
+		.limit(opts.limit + 1)
+		.offset(opts.offset);
+}
+
 export interface MemberShowRow extends EventRow {
 	bandName: string;
 	bandSlug: string;
@@ -862,6 +881,34 @@ export async function listMemberUpcomingShows(userId: string): Promise<MemberSho
 		)
 		.where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
 		.orderBy(asc(event.startsAt));
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+/**
+ * Past published shows across a member's active bands, newest first. Fetches
+ * limit+1 rows so callers can derive hasMore.
+ */
+export async function listMemberPastShows(
+	userId: string,
+	opts: { limit: number; offset: number }
+): Promise<MemberShowRow[]> {
+	const rows = await db
+		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.innerJoin(band, eq(band.id, event.bandId))
+		.innerJoin(
+			bandMember,
+			and(
+				eq(bandMember.bandId, band.id),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		)
+		.where(and(eq(event.status, 'published'), lte(event.startsAt, new Date())))
+		.orderBy(desc(event.startsAt))
+		.limit(opts.limit + 1)
+		.offset(opts.offset);
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
 }

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
-	import GigList from '$lib/components/public/calendar/GigList.svelte';
+	import GigList from '$lib/components/shared/events/GigList.svelte';
 	import { getPublicEvents } from '$lib/remote/events.remote';
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import { toLocalDate } from '$lib/utils/format';
