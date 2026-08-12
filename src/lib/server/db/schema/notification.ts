@@ -178,6 +178,28 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Volunteer hours returned',
 		description: 'Notification when staff return volunteer hours you logged, with a reason',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_reminder',
+		label: 'Volunteer shift reminder',
+		// Email on by default: the whole point is reaching somebody who isn't
+		// looking at the site the day before a shift they agreed to work.
+		description: 'Reminder the day before a shift you are confirmed for',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_completed',
+		label: 'Volunteer shift finished',
+		// In-app only. The shift just happened — they know. This is the nudge to
+		// log the hours, and it sits where the pre-filled log lives.
+		description: 'A prompt to log your hours after a shift you worked',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_feedback',
+		label: 'How did your shift go?',
+		description: 'A short survey the day after a shift you worked',
+		defaults: { email: true, inApp: true, sms: false }
 	}
 ];
 

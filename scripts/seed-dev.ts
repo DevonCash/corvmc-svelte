@@ -70,7 +70,17 @@ import {
 	inboxChannelConfig
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
-import { volunteerRole, volunteerHourLog } from '../src/lib/server/db/schema/volunteer';
+import {
+	volunteerRole,
+	volunteerHourLog,
+	volunteerRoleInterest,
+	volunteerCertification,
+	memberCertification,
+	volunteerRoleCertification,
+	volunteerShift,
+	volunteerSignup,
+	volunteerShiftFeedback
+} from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
 const { env, dispose } = await getPlatformProxy();
@@ -418,7 +428,15 @@ async function deleteAll() {
 	console.log('Deleting all data...');
 	const tables = [
 		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first.
+		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
+		// cascades, but ordering it explicitly keeps the list readable.)
+		'volunteer_shift_feedback',
+		'volunteer_signup',
+		'volunteer_shift',
+		'member_certification',
+		'volunteer_role_certification',
+		'volunteer_certification',
+		'volunteer_role_interest',
 		'volunteer_hour_log',
 		'volunteer_role',
 		'content_flag',
@@ -2764,6 +2782,9 @@ async function main() {
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	const volunteerHours = await seedVolunteerHours(allUsers, volunteerRoles);
+	const volunteerInterests = await seedVolunteerInterests(allUsers, volunteerRoles);
+	const certifications = await seedCertifications(allUsers, volunteerRoles);
+	const volunteerShifts = await seedVolunteerShifts(allUsers, volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -2793,7 +2814,10 @@ async function main() {
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(`  ${flags.length} content flags`);
 	console.log(
-		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs`
+		`  ${volunteerRoles.length} volunteer roles, ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
+	);
+	console.log(
+		`  ${certifications.certs} certifications (${certifications.held} held), ${volunteerShifts.shifts} shifts, ${volunteerShifts.signups} signups, ${volunteerShifts.feedback} feedback`
 	);
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {
@@ -2810,47 +2834,55 @@ async function main() {
 const VOLUNTEER_ROLE_SEEDS: Array<{
 	name: string;
 	description: string;
+	group: 'at-shows' | 'away-from-shows' | 'committee';
 	displayOrder: number;
 	isActive?: boolean;
 }> = [
 	{
 		name: 'Sound Engineering',
+		group: 'at-shows' as const,
 		description:
 			'Run the board for a show or open mic. Line check, monitor mixes, and a house mix that respects the room.\n\n**No experience needed** — we will train you on the desk before you fly solo.',
 		displayOrder: 10
 	},
 	{
 		name: 'Event Setup',
+		group: 'at-shows' as const,
 		description:
 			'Get the room ready before doors: chairs, tables, PA, stage lighting, and the merch table.\n\nUsually a two-hour window starting three hours before the show.',
 		displayOrder: 20
 	},
 	{
 		name: 'Front Desk',
+		group: 'at-shows' as const,
 		description:
 			'Cover the door during open hours or at a show. Greet people, take entry, answer questions about membership, and point folks at the practice room.',
 		displayOrder: 30
 	},
 	{
 		name: 'Load-Out & Teardown',
+		group: 'at-shows' as const,
 		description:
 			'After the last set: strike the stage, coil cables, reset the floor, and take the trash out. The fastest way to make yourself indispensable.',
 		displayOrder: 40
 	},
 	{
 		name: 'Facilities & Maintenance',
+		group: 'away-from-shows' as const,
 		description:
 			'Keep the space working — patch drywall, swap bulbs, restring the loaner guitars, fix the door that sticks.\n\nBring whatever skills you have; there is always something.',
 		displayOrder: 50
 	},
 	{
 		name: 'Outreach & Tabling',
+		group: 'away-from-shows' as const,
 		description:
 			'Represent CMC at the farmers market, campus events, and other venues. Hand out info, talk to musicians, sign people up.',
 		displayOrder: 60
 	},
 	{
 		name: 'Administration',
+		group: 'committee' as const,
 		description:
 			'Behind-the-scenes work: data entry, grant paperwork, scheduling, and answering the inbox.',
 		displayOrder: 70
@@ -2859,6 +2891,7 @@ const VOLUNTEER_ROLE_SEEDS: Array<{
 		// Archived so the restore path and the "archived roles still resolve in
 		// reports" behaviour both have coverage on a fresh seed.
 		name: 'Zine & Print',
+		group: 'committee' as const,
 		description: 'Layout and printing for the quarterly zine. On hiatus while we rethink the run.',
 		displayOrder: 80,
 		isActive: false
@@ -2890,6 +2923,189 @@ const VOLUNTEER_REJECT_NOTES = [
 async function seedVolunteerRoles() {
 	console.log('Seeding volunteer roles...');
 	return batchInsert(volunteerRole, VOLUNTEER_ROLE_SEEDS);
+}
+
+/**
+ * Standing "I'd help with this" marks. About a third of members put their hand
+ * up for something — enough for the staff interest page to have rows and for
+ * the per-role filter to actually narrow, without every member matching every
+ * role and making the filter look broken.
+ */
+async function seedVolunteerInterests(users: any[], roles: any[]) {
+	console.log('Seeding volunteer role interests...');
+	const liveRoles = roles.filter((r: any) => r.isActive !== false);
+	if (liveRoles.length === 0 || users.length === 0) return [];
+
+	const rows = users
+		.filter(() => Math.random() < 0.35)
+		.flatMap((u: any) =>
+			pickN(liveRoles, randomInt(1, 3)).map((role: any) => ({
+				id: randomUUID(),
+				userId: u.id,
+				volunteerRoleId: role.id
+			}))
+		);
+
+	return batchInsert(volunteerRoleInterest, rows);
+}
+
+/**
+ * A small certification catalog with every derived state represented: one
+ * internal clearance that never lapses, one external card with holders who are
+ * current, expiring inside the warning window, and lapsed — so the clearances
+ * view has all its tabs populated on a fresh seed.
+ */
+async function seedCertifications(users: any[], roles: any[]) {
+	console.log('Seeding certifications...');
+	const now = new Date();
+	const day = 86_400_000;
+
+	const [deskCert, foodCert] = await batchInsert(volunteerCertification, [
+		{
+			id: randomUUID(),
+			name: 'Sound Desk Cleared',
+			description:
+				'Cleared to run the desk unsupervised. Ask a staff engineer to sign you off after two shadowed shifts.',
+			issuedBy: null,
+			validityMonths: null,
+			displayOrder: 10
+		},
+		{
+			id: randomUUID(),
+			name: 'Food Handler',
+			description: 'Oregon Food Handler card, required for concessions.',
+			issuedBy: 'Oregon Health Authority',
+			validityMonths: 36,
+			displayOrder: 20
+		}
+	]);
+
+	// Sound Engineering requires the desk clearance, so the member shift board
+	// has a visibly gated role out of the box.
+	const soundRole = roles.find((r: any) => r.name === 'Sound Engineering');
+	if (soundRole) {
+		await db
+			.insert(volunteerRoleCertification)
+			.values({ volunteerRoleId: soundRole.id, certificationId: deskCert.id });
+	}
+
+	const holders = pickN(users, Math.min(6, users.length));
+	const held = await batchInsert(
+		memberCertification,
+		holders.flatMap((u: any, i: number) => {
+			const rows: any[] = [
+				{
+					id: randomUUID(),
+					userId: u.id,
+					certificationId: deskCert.id,
+					grantedAt: new Date(now.getTime() - (30 + i * 10) * day),
+					expiresAt: null
+				}
+			];
+			// Rotate the card states: current / expiring soon / lapsed.
+			const granted = new Date(now.getTime() - 300 * day);
+			const expires =
+				i % 3 === 0
+					? new Date(now.getTime() + 400 * day)
+					: i % 3 === 1
+						? new Date(now.getTime() + 30 * day)
+						: new Date(now.getTime() - 20 * day);
+			rows.push({
+				id: randomUUID(),
+				userId: u.id,
+				certificationId: foodCert.id,
+				grantedAt: granted,
+				expiresAt: expires
+			});
+			return rows;
+		})
+	);
+
+	return { certs: 2, held: held.length };
+}
+
+/**
+ * A fortnight of shifts either side of today: past ones completed with
+ * feedback, today's confirmed, upcoming ones part-claimed so the staff list
+ * shows real needed-vs-claimed numbers and the member board has things to take.
+ */
+async function seedVolunteerShifts(users: any[], roles: any[]) {
+	console.log('Seeding volunteer shifts...');
+	const liveRoles = roles.filter((r: any) => r.isActive !== false);
+	if (liveRoles.length === 0 || users.length === 0) return { shifts: 0, signups: 0, feedback: 0 };
+
+	const now = new Date();
+	const day = 86_400_000;
+	const at = (daysOffset: number, hour: number) => {
+		const d = new Date(now.getTime() + daysOffset * day);
+		d.setHours(hour, 0, 0, 0);
+		return d;
+	};
+
+	const shiftRows = await batchInsert(
+		volunteerShift,
+		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => ({
+			id: randomUUID(),
+			volunteerRoleId: pick(liveRoles).id,
+			startsAt: at(offset, 18),
+			endsAt: at(offset, 22),
+			capacity: 1 + (i % 3),
+			notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
+		}))
+	);
+
+	const signupRows: any[] = [];
+	const feedbackRows: any[] = [];
+	for (const shift of shiftRows) {
+		const isPast = shift.startsAt < now;
+		const takers = pickN(users, Math.min(shift.capacity, users.length));
+		for (const [i, u] of takers.entries()) {
+			const signupId = randomUUID();
+			// Upcoming shifts mix claimed and confirmed; past ones completed, with
+			// the occasional no-show so the detail view shows the whole vocabulary.
+			const status = isPast
+				? i === 0 && Math.random() < 0.2
+					? 'no_show'
+					: 'completed'
+				: i === 0
+					? 'confirmed'
+					: 'claimed';
+			signupRows.push({
+				id: signupId,
+				shiftId: shift.id,
+				userId: u.id,
+				status,
+				claimedAt: new Date(shift.startsAt.getTime() - 5 * day),
+				confirmedAt: status === 'claimed' ? null : new Date(shift.startsAt.getTime() - 4 * day),
+				completedAt: status === 'completed' ? shift.endsAt : null
+			});
+			if (status === 'completed' && Math.random() < 0.7) {
+				feedbackRows.push({
+					id: randomUUID(),
+					signupId,
+					rating: 3 + Math.floor(Math.random() * 3),
+					wasSetUp: Math.random() < 0.75,
+					comment:
+						Math.random() < 0.5
+							? pick([
+									'Smooth night, good crowd.',
+									'Could use a checklist by the door.',
+									'Nobody told me where the float was kept.',
+									'More gaff tape by the desk, please.'
+								])
+							: null,
+					submittedAt: new Date(shift.endsAt.getTime() + day)
+				});
+			}
+		}
+	}
+
+	// 8 cols x default 10 rows = 80 bound params — inside D1's 100 ceiling, but
+	// batch smaller anyway to stay clear of drizzle's own additions.
+	const signups = await batchInsert(volunteerSignup, signupRows, 8);
+	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
+
+	return { shifts: shiftRows.length, signups: signups.length, feedback: feedback.length };
 }
 
 async function seedVolunteerHours(users: any[], roles: any[]) {

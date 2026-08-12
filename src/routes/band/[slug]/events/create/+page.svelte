@@ -1,12 +1,19 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 	import { createBandEventForm } from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
+
+	// Declared before the awaited query below: a declaration that follows a
+	// top-level await is async-gated, which would compile every `fields.X.as()`
+	// below into an async derived (the churn behind JAVASCRIPT-SVELTEKIT-W).
+	const fields = createBandEventForm.fields;
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	const band = $derived(layout.band);
@@ -14,144 +21,84 @@
 
 <PageHeader title="Create Event" subtitle={band.name} />
 <PageContent width="2xl">
-	<form
-		{...createBandEventForm.enhance(async (form) => {
-			try {
-				if (await form.submit()) {
-					const result = createBandEventForm.result;
-					toast.success('Event created');
-					if (result?.eventId) goto(resolve(`/band/${band.slug}/events/${result.eventId}`));
-				}
-			} catch {
-				toast.error('Failed to create event');
-			}
-		})}
+	<Form
+		remote={createBandEventForm}
+		successToast="Event created"
+		onsuccess={(result) => {
+			if (result?.eventId) goto(resolve(`/band/${band.slug}/events/${result.eventId}`));
+		}}
 		class="space-y-4"
 	>
-		<input {...createBandEventForm.fields.slug.as('hidden', band.slug)} />
+		<input {...fields.slug.as('hidden', band.slug)} />
 
-		<div class="form-control">
-			<label class="label" for="title"><span class="label-text">Title *</span></label>
-			<input
-				{...createBandEventForm.fields.title.as('text')}
-				class="input input-bordered w-full"
-				placeholder="e.g. Live at The Venue"
-				maxlength="200"
-				id="title"
-			/>
-			{#each createBandEventForm.fields.title.issues() as issue, i (i)}
-				<p class="text-error text-sm mt-1">{issue.message}</p>
-			{/each}
-		</div>
+		<FormField
+			field={fields.title}
+			type="text"
+			label="Title *"
+			placeholder="e.g. Live at The Venue"
+			maxlength="200"
+		/>
 
-		<div class="form-control">
-			<label class="label" for="description"><span class="label-text">Description</span></label>
+		<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
+		     maxlength and placeholder would be lost. Issues still resolve by name. -->
+		<FormField name="description" label="Description">
 			<textarea
-				{...createBandEventForm.fields.description.as('text')}
+				{...fields.description.as('text')}
 				class="textarea textarea-bordered w-full"
 				rows="4"
 				maxlength="5000"
 				placeholder="Tell people what to expect..."
-				id="description"
 			></textarea>
-		</div>
+		</FormField>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-			<div class="form-control">
-				<label class="label" for="eventDate"><span class="label-text">Date *</span></label>
-				<input
-					{...createBandEventForm.fields.eventDate.as('date')}
-					class="input input-bordered w-full"
-					id="eventDate"
-					required
-				/>
-			</div>
-			<div class="form-control">
-				<label class="label" for="eventStartTime"
-					><span class="label-text">Start Time *</span></label
-				>
-				<input
-					{...createBandEventForm.fields.eventStartTime.as('time')}
-					class="input input-bordered w-full"
-					id="eventStartTime"
-					required
-				/>
-			</div>
-			<div class="form-control">
-				<label class="label" for="eventEndTime"><span class="label-text">End Time *</span></label>
-				<input
-					{...createBandEventForm.fields.eventEndTime.as('time')}
-					class="input input-bordered w-full"
-					id="eventEndTime"
-					required
-				/>
-			</div>
+			<FormField field={fields.eventDate} type="date" label="Date *" required />
+			<FormField field={fields.eventStartTime} type="time" label="Start Time *" required />
+			<FormField field={fields.eventEndTime} type="time" label="End Time *" required />
 		</div>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-			<div class="form-control">
-				<label class="label" for="doorsTime"><span class="label-text">Doors Open</span></label>
-				<input
-					{...createBandEventForm.fields.doorsTime.as('time')}
-					class="input input-bordered w-full"
-					id="doorsTime"
-				/>
-			</div>
-			<div class="form-control">
-				<label class="label" for="location"><span class="label-text">Location</span></label>
-				<input
-					{...createBandEventForm.fields.location.as('text')}
-					class="input input-bordered w-full"
-					placeholder="Venue name & address"
-					maxlength="500"
-					id="location"
-				/>
-			</div>
-		</div>
-
-		<div class="form-control">
-			<label class="label" for="tags"><span class="label-text">Tags</span></label>
-			<input
-				{...createBandEventForm.fields.tags.as('text')}
-				class="input input-bordered w-full"
-				placeholder="Comma-separated tags"
+			<FormField field={fields.doorsTime} type="time" label="Doors Open" />
+			<FormField
+				field={fields.location}
+				type="text"
+				label="Location"
+				placeholder="Venue name & address"
 				maxlength="500"
-				id="tags"
 			/>
 		</div>
 
-		<div class="grid gap-4 md:grid-cols-2">
-			<div class="form-control">
-				<label class="label" for="externalTicketUrl"
-					><span class="label-text">Ticket Link (external)</span></label
-				>
-				<input
-					{...createBandEventForm.fields.externalTicketUrl.as('text')}
-					class="input input-bordered w-full"
-					placeholder="https://eventbrite.com/..."
-					id="externalTicketUrl"
-				/>
-			</div>
+		<FormField
+			field={fields.tags}
+			type="text"
+			label="Tags"
+			placeholder="Comma-separated tags"
+			maxlength="500"
+		/>
 
-			<div class="form-control">
-				<label class="label" for="ticketPriceDollars"
-					><span class="label-text">Ticket price ($)</span></label
-				>
-				<input
-					{...createBandEventForm.fields.ticketPriceDollars.as('text')}
-					class="input input-bordered w-full"
-					placeholder="10.00"
-					inputmode="decimal"
-					id="ticketPriceDollars"
-				/>
-				<span class="label-text-alt opacity-60 mt-1">
-					What people pay, at the door or through the link. Leave blank if it's free.
-				</span>
-			</div>
+		<div class="grid gap-4 md:grid-cols-2">
+			<FormField
+				field={fields.externalTicketUrl}
+				type="text"
+				label="Ticket Link (external)"
+				placeholder="https://eventbrite.com/..."
+			/>
+
+			<!-- `type="text"` with a decimal inputmode, not `type="number"`: a number
+			     FormField registers as `n:` and SvelteKit would hand the handler a
+			     number, which `ticketPriceDollars: z.string()` rejects outright. -->
+			<FormField
+				field={fields.ticketPriceDollars}
+				type="text"
+				label="Ticket price ($)"
+				placeholder="10.00"
+				inputmode="decimal"
+				description="What people pay, at the door or through the link. Leave blank if it's free."
+			/>
 		</div>
 
 		<div class="flex justify-end pt-4">
-			<button class="btn btn-primary">Create Event</button>
+			<SubmitButton label="Create Event" class="btn-primary" />
 		</div>
-	</form>
+	</Form>
 </PageContent>

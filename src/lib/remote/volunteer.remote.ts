@@ -31,8 +31,68 @@ import {
 	getHoursByMonth
 } from '$lib/server/volunteer/volunteer-report-service';
 import {
+	getInterestsForUser,
+	setInterests,
+	listInterestedMembers,
+	countInterestsByRole
+} from '$lib/server/volunteer/volunteer-interest-service';
+import {
+	createCertification as createCertificationService,
+	updateCertification as updateCertificationService,
+	archiveCertification as archiveCertificationService,
+	restoreCertification as restoreCertificationService,
+	deleteCertification as deleteCertificationService,
+	listCertifications,
+	getRequirementsForRole,
+	getRequirementsForRoles,
+	setRoleRequirements
+} from '$lib/server/volunteer/volunteer-certification-service';
+import {
+	createShift as createShiftService,
+	duplicateShift as duplicateShiftService,
+	updateShift as updateShiftService,
+	cancelShift as cancelShiftService,
+	listShifts,
+	listOpenShiftsForMember,
+	getShiftById
+} from '$lib/server/volunteer/volunteer-shift-service';
+import {
+	claimShift as claimShiftService,
+	cancelSignup as cancelSignupService,
+	confirmSignup as confirmSignupService,
+	markNoShow as markNoShowService,
+	listClaimants,
+	listUnloggedCompletions
+} from '$lib/server/volunteer/volunteer-signup-service';
+import {
+	submitFeedback as submitFeedbackService,
+	getFeedbackContext,
+	listFeedbackForShift,
+	summarizeFeedbackByRole
+} from '$lib/server/volunteer/volunteer-feedback-service';
+import {
+	grantCertification as grantCertificationService,
+	revokeCertification as revokeCertificationService,
+	deleteCertificationRecord,
+	listForUser as listCertificationsForUser,
+	listClearances,
+	listHeldForGate,
+	missingFrom,
+	missingRequirements,
+	flagUnclearedLogs
+} from '$lib/server/volunteer/member-certification-service';
+import {
 	volunteerHourStatuses,
+	volunteerRoleGroups,
+	CERT_DESCRIPTION_MAX,
+	CERT_NAME_MAX,
+	CERT_NOTES_MAX,
+	CERT_REFERENCE_MAX,
+	CERT_REVOKED_REASON_MAX,
+	VOLUNTEER_SHIFT_NOTES_MAX,
+	SHIFT_FEEDBACK_COMMENT_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
+	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX
@@ -73,7 +133,7 @@ const staffLogFilters = z.object({
 
 export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 	await requireStaff();
-	return listHourLogs(
+	const result = await listHourLogs(
 		{
 			status: asStatus(f.status),
 			volunteerRoleId: f.volunteerRoleId || undefined,
@@ -83,6 +143,24 @@ export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 		},
 		{ page: f.page ?? 1, pageSize: 50 }
 	);
+
+	// Advisory only: flags a log whose role required a clearance the member did
+	// not hold on the date worked. It never blocks approval — refusing the hours
+	// would not un-do the work, it would just lose the record. Flagged for the
+	// page in view, so the cost is one extra pair of queries per page load.
+	const uncleared = await flagUnclearedLogs(
+		result.rows.map((r) => ({
+			id: r.id,
+			userId: r.userId,
+			volunteerRoleId: r.volunteerRoleId,
+			workedOn: r.workedOn
+		}))
+	);
+
+	return {
+		...result,
+		rows: result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }))
+	};
 });
 
 export const getVolunteerStatusCounts = query(async () => {
@@ -90,10 +168,36 @@ export const getVolunteerStatusCounts = query(async () => {
 	return getStatusCounts();
 });
 
-/** Staff view of the role list — includes archived roles. */
+/**
+ * Staff view of the role list — includes archived roles, and each role's
+ * required certifications so the table can render them without a query per row.
+ */
 export const getVolunteerRoles = query(async () => {
 	await requireStaff();
-	return listVolunteerRoles({ includeInactive: true });
+	const roles = await listVolunteerRoles({ includeInactive: true });
+	const requirements = await getRequirementsForRoles(roles.map((r) => r.id));
+	return roles.map((r) => ({ ...r, requiredCertifications: requirements.get(r.id) ?? [] }));
+});
+
+const interestFilters = z.object({
+	volunteerRoleId: z.string().optional(),
+	search: z.string().optional(),
+	page: z.number().optional()
+});
+
+/** Who has said they'd help, and with what. */
+export const getInterestedVolunteers = query(interestFilters, async (f) => {
+	await requireStaff();
+	return listInterestedMembers(
+		{ roleId: f.volunteerRoleId || undefined, search: f.search || undefined },
+		{ page: f.page ?? 1, pageSize: 50 }
+	);
+});
+
+/** Per-role interest counts, for the filter chips above the table. */
+export const getVolunteerInterestCounts = query(async () => {
+	await requireStaff();
+	return countInterestsByRole();
 });
 
 const reportRange = z.object({
@@ -140,8 +244,16 @@ export const getActiveVolunteerRoles = query(async () => {
 	return roles.map((r) => ({
 		id: r.id,
 		name: r.name,
+		group: r.group,
 		descriptionHtml: r.description ? renderMarkdown(r.description) : null
 	}));
+});
+
+/** Role ids the member has ticked, for rendering their own interest form. */
+export const getMyVolunteerInterests = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return getInterestsForUser(currentUser.id);
 });
 
 export const getMyVolunteerHours = query(async () => {
@@ -165,6 +277,9 @@ export const getMyVolunteerSummary = query(async () => {
 // have >=1 characters".
 const hoursFormSchema = z.object({
 	volunteerRoleId: z.string().min(1, 'Pick what you helped with'),
+	// Present when the log comes from a completed shift's pre-fill; staff see
+	// those marked as scheduled in the queue and can approve with less scrutiny.
+	shiftId: z.string().optional(),
 	workedOn: z.string().min(1, 'Pick the date you worked'),
 	hours: z.string().min(1, 'Enter how long you worked'),
 	description: z
@@ -182,7 +297,8 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 			volunteerRoleId: data.volunteerRoleId,
 			workedOn: data.workedOn,
 			minutes: hoursToMinutes(data.hours),
-			description: data.description
+			description: data.description,
+			shiftId: data.shiftId || null
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -191,6 +307,31 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 	await refreshMemberViews();
 	return { success: true };
 });
+
+/**
+ * Save the member's whole interest set.
+ *
+ * The checkbox group posts nothing at all when every box is unchecked, so
+ * `roleIds` defaults to an empty array rather than failing validation — clearing
+ * the list is a legitimate thing to want, and a form that silently refused to
+ * would be worse than one that never offered the boxes.
+ */
+export const saveVolunteerInterests = form(
+	z.object({ roleIds: z.array(z.string().min(1)).max(VOLUNTEER_MAX_INTERESTS).default([]) }),
+	async (data) => {
+		await requireFeature('volunteering');
+		const currentUser = requireUser();
+
+		try {
+			await setInterests(currentUser.id, data.roleIds);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMyVolunteerInterests().refresh();
+		return { success: true };
+	}
+);
 
 export const editVolunteerHours = form(
 	hoursFormSchema.extend({ id: z.string().min(1) }),
@@ -289,6 +430,7 @@ const roleFormSchema = z.object({
 			`Keep the description under ${VOLUNTEER_ROLE_DESCRIPTION_MAX} characters`
 		)
 		.optional(),
+	group: z.enum(volunteerRoleGroups).optional(),
 	displayOrder: z.string().optional(),
 	isActive: z.string().optional()
 });
@@ -300,6 +442,7 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 		await createRoleService({
 			name: data.name,
 			description: data.description,
+			group: data.group,
 			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
 			isActive: data.isActive !== 'false'
 		});
@@ -321,6 +464,7 @@ export const updateVolunteerRole = form(
 			await updateRoleService(data.id, {
 				name: data.name,
 				description: data.description ?? '',
+				group: data.group,
 				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
 				isActive: data.isActive !== 'false'
 			});
@@ -377,7 +521,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	await Promise.all([getMyVolunteerHours().refresh(), getMyVolunteerSummary().refresh()]);
+	await Promise.all([
+		getMyVolunteerHours().refresh(),
+		getMyVolunteerSummary().refresh(),
+		// Logging against a shift clears it from the "log your hours" prompt.
+		getUnloggedShifts().refresh()
+	]);
 }
 
 /**
@@ -397,3 +546,516 @@ async function refreshStaffQueue() {
 async function refreshRoleViews() {
 	await Promise.all([getVolunteerRoles().refresh(), getActiveVolunteerRoles().refresh()]);
 }
+
+// ---------------------------------------------------------------------------
+// Certifications
+// ---------------------------------------------------------------------------
+
+/** Staff view of the catalog — includes archived entries. */
+export const getCertifications = query(async () => {
+	await requireStaff();
+	return listCertifications({ includeInactive: true });
+});
+
+/** Live catalog entries, for the grant form and the role requirements picker. */
+export const getActiveCertifications = query(async () => {
+	await requireStaff();
+	return listCertifications();
+});
+
+export const getMemberCertifications = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listCertificationsForUser(userId);
+});
+
+/** The member's own — what they hold, and what it unlocks. */
+export const getMyCertifications = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return listCertificationsForUser(currentUser.id);
+});
+
+const clearanceFilters = z.object({
+	certificationId: z.string().optional(),
+	state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
+});
+
+export const getClearances = query(clearanceFilters, async (f) => {
+	await requireStaff();
+	return listClearances({
+		certificationId: f.certificationId || undefined,
+		state: f.state
+	});
+});
+
+export const getRoleRequirements = query(z.string(), async (roleId) => {
+	await requireStaff();
+	return getRequirementsForRole(roleId);
+});
+
+/** What a member still needs before they could claim this role's shifts. */
+export const getMyMissingRequirements = query(z.string(), async (roleId) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return missingRequirements(currentUser.id, roleId);
+});
+
+const certificationFormSchema = z.object({
+	name: z
+		.string()
+		.min(1, 'Give the certification a name')
+		.max(CERT_NAME_MAX, `Keep the name under ${CERT_NAME_MAX} characters`),
+	description: z
+		.string()
+		.max(CERT_DESCRIPTION_MAX, `Keep the description under ${CERT_DESCRIPTION_MAX} characters`)
+		.optional(),
+	issuedBy: z.string().max(CERT_NAME_MAX).optional(),
+	validityMonths: z.string().optional(),
+	displayOrder: z.string().optional(),
+	isActive: z.string().optional()
+});
+
+/** Blank means "never expires", which is the normal case for internal clearances. */
+function parseValidityMonths(raw: string | undefined): number | null {
+	if (!raw?.trim()) return null;
+	const parsed = parseInt(raw, 10);
+	if (!Number.isFinite(parsed)) error(400, 'Validity must be a whole number of months');
+	return parsed;
+}
+
+export const createCertification = form(certificationFormSchema, async (data) => {
+	await requireStaff();
+
+	try {
+		await createCertificationService({
+			name: data.name,
+			description: data.description,
+			issuedBy: data.issuedBy,
+			validityMonths: parseValidityMonths(data.validityMonths),
+			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+			isActive: data.isActive !== 'false'
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const updateCertification = form(
+	certificationFormSchema.extend({ id: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await updateCertificationService(data.id, {
+				name: data.name,
+				description: data.description ?? '',
+				issuedBy: data.issuedBy ?? '',
+				validityMonths: parseValidityMonths(data.validityMonths),
+				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
+				isActive: data.isActive !== 'false'
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshCertificationViews();
+		return { success: true };
+	}
+);
+
+export const archiveCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await archiveCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const restoreCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await restoreCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const deleteCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+	try {
+		await deleteCertificationService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await refreshCertificationViews();
+	return { success: true };
+});
+
+export const setRoleCertifications = form(
+	z.object({
+		roleId: z.string().min(1),
+		// Clearing every requirement is legitimate, so this bottoms out empty.
+		certificationIds: z.array(z.string().min(1)).max(20).default([])
+	}),
+	async (data) => {
+		await requireStaff();
+		try {
+			await setRoleRequirements(data.roleId, data.certificationIds);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getRoleRequirements(data.roleId).refresh();
+		return { success: true };
+	}
+);
+
+export const grantCertification = form(
+	z.object({
+		userId: z.string().min(1),
+		certificationId: z.string().min(1, 'Pick a certification'),
+		grantedOn: z.string().min(1, 'Pick the date it was granted'),
+		reference: z.string().max(CERT_REFERENCE_MAX).optional(),
+		notes: z.string().max(CERT_NOTES_MAX).optional()
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await grantCertificationService({
+				userId: data.userId,
+				certificationId: data.certificationId,
+				grantedOn: data.grantedOn,
+				reference: data.reference,
+				notes: data.notes,
+				grantedByUserId: staff.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+export const revokeCertification = form(
+	z.object({
+		id: z.string().min(1),
+		userId: z.string().min(1),
+		reason: z
+			.string()
+			.min(1, 'Give a reason — the next staffer needs to know why they are off the list')
+			.max(CERT_REVOKED_REASON_MAX)
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await revokeCertificationService(data.id, staff.id, data.reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+export const deleteCertificationGrant = form(
+	z.object({ id: z.string().min(1), userId: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await deleteCertificationRecord(data.id, staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getMemberCertifications(data.userId).refresh();
+		return { success: true };
+	}
+);
+
+async function refreshCertificationViews() {
+	await Promise.all([getCertifications().refresh(), getActiveCertifications().refresh()]);
+}
+
+// ---------------------------------------------------------------------------
+// Shifts
+// ---------------------------------------------------------------------------
+
+const shiftFilters = z.object({
+	volunteerRoleId: z.string().optional(),
+	from: z.string().optional(),
+	to: z.string().optional(),
+	includeCancelled: z.boolean().optional()
+});
+
+export const getShifts = query(shiftFilters, async (f) => {
+	await requireStaff();
+	return listShifts({
+		volunteerRoleId: f.volunteerRoleId || undefined,
+		from: f.from ? new Date(f.from) : undefined,
+		to: f.to ? new Date(f.to) : undefined,
+		includeCancelled: f.includeCancelled
+	});
+});
+
+export const getShift = query(z.string(), async (id) => {
+	await requireStaff();
+	const shift = await getShiftById(id);
+	if (!shift) throw error(404, 'Shift not found');
+	const claimants = await listClaimants(id);
+	return { shift, claimants };
+});
+
+/**
+ * Open shifts for the member, with the reason they can't take one attached
+ * rather than the shift hidden — "you need Sound Desk Cleared" is the useful
+ * half of a refusal.
+ */
+export const getOpenShifts = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	const shifts = await listOpenShiftsForMember(currentUser.id);
+	if (shifts.length === 0) return [];
+
+	// Two queries for the whole board, not two per shift: requirements for every
+	// role at once, the member's certification rows once, then the gate evaluated
+	// in JS against each shift's own date (which is what makes it per-shift).
+	const [requirements, held] = await Promise.all([
+		getRequirementsForRoles([...new Set(shifts.map((s) => s.volunteerRoleId))]),
+		listHeldForGate(currentUser.id)
+	]);
+
+	return shifts.map((shift) => ({
+		...shift,
+		missingCertifications: shift.myStatus
+			? []
+			: missingFrom(requirements.get(shift.volunteerRoleId) ?? [], held, shift.startsAt)
+	}));
+});
+
+/** Completed shifts with no hour log yet — the pre-fill offer. */
+export const getUnloggedShifts = query(async () => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return listUnloggedCompletions(currentUser.id);
+});
+
+const shiftFormSchema = z.object({
+	volunteerRoleId: z.string().min(1, 'Pick a role'),
+	eventId: z.string().optional(),
+	startsAt: z.string().min(1, 'Pick when it starts'),
+	endsAt: z.string().min(1, 'Pick when it ends'),
+	capacity: z.string().min(1, 'How many people do you need?'),
+	notes: z
+		.string()
+		.max(VOLUNTEER_SHIFT_NOTES_MAX, `Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`)
+		.optional()
+});
+
+export const createShift = form(shiftFormSchema, async (data) => {
+	const staff = await requireStaff();
+
+	try {
+		await createShiftService({
+			volunteerRoleId: data.volunteerRoleId,
+			eventId: data.eventId,
+			startsAt: data.startsAt,
+			endsAt: data.endsAt,
+			capacity: parseInt(data.capacity, 10),
+			notes: data.notes,
+			createdByUserId: staff.id
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	return { success: true };
+});
+
+export const updateShift = form(
+	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await updateShiftService(data.id, {
+				volunteerRoleId: data.volunteerRoleId,
+				eventId: data.eventId,
+				startsAt: data.startsAt,
+				endsAt: data.endsAt,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const duplicateShift = form(
+	z.object({ id: z.string().min(1), offsetDays: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await duplicateShiftService(data.id, parseInt(data.offsetDays, 10), staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		return { success: true };
+	}
+);
+
+export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	try {
+		await cancelShiftService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getShift(data.id).refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Signups
+// ---------------------------------------------------------------------------
+
+export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	try {
+		await claimShiftService(data.shiftId, currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getOpenShifts().refresh();
+	return { success: true };
+});
+
+export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), async (data) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+
+	try {
+		await cancelSignupService(data.signupId, currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getOpenShifts().refresh();
+	return { success: true };
+});
+
+export const confirmSignup = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await confirmSignupService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.shiftId).refresh();
+		return { success: true };
+	}
+);
+
+export const markSignupNoShow = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await markNoShowService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShift(data.shiftId).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Post-shift feedback
+// ---------------------------------------------------------------------------
+
+/** What the form shows above the questions; null when it isn't theirs to answer. */
+export const getShiftFeedbackContext = query(z.string(), async (signupId) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return getFeedbackContext(signupId, currentUser.id);
+});
+
+export const submitShiftFeedback = form(
+	z.object({
+		signupId: z.string().min(1),
+		rating: z.string().min(1, 'Pick a rating'),
+		// FormField's checkbox registers with SvelteKit's `b:` prefix, which
+		// coerces to a real boolean before validation — absent means false, and
+		// "no, I wasn't set up" is a real answer.
+		wasSetUp: z.boolean().default(false),
+		comment: z
+			.string()
+			.max(
+				SHIFT_FEEDBACK_COMMENT_MAX,
+				`Keep the comment under ${SHIFT_FEEDBACK_COMMENT_MAX} characters`
+			)
+			.optional()
+	}),
+	async (data) => {
+		await requireFeature('volunteering');
+		const currentUser = requireUser();
+
+		try {
+			await submitFeedbackService({
+				signupId: data.signupId,
+				userId: currentUser.id,
+				rating: parseInt(data.rating, 10),
+				wasSetUp: data.wasSetUp,
+				comment: data.comment
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShiftFeedbackContext(data.signupId).refresh();
+		return { success: true };
+	}
+);
+
+/** Staff: responses on one shift's detail page. */
+export const getShiftFeedback = query(z.string(), async (shiftId) => {
+	await requireStaff();
+	return listFeedbackForShift(shiftId);
+});
+
+/** Staff: the per-role rollup — the version that changes how shifts are briefed. */
+export const getFeedbackByRole = query(async () => {
+	await requireStaff();
+	return summarizeFeedbackByRole();
+});
