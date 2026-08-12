@@ -16,7 +16,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import { IconCheck, IconX, IconAlertTriangle } from '@tabler/icons-svelte';
+	import { IconCheck, IconArrowBackUp, IconAlertTriangle } from '@tabler/icons-svelte';
 	import {
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
@@ -137,7 +137,7 @@
 				tabs={[
 					{ key: 'pending', label: 'Pending', badge: c.pending },
 					{ key: 'approved', label: 'Approved', badge: c.approved },
-					{ key: 'rejected', label: 'Rejected', badge: c.rejected },
+					{ key: 'rejected', label: 'Returned', badge: c.rejected },
 					{ key: 'all', label: 'All', badge: c.all }
 				]}
 				active={statusView}
@@ -312,14 +312,14 @@
 
 									<Action
 										action={rejectVolunteerHours.for(log.id)}
-										label="Reject"
+										label="Return"
 										iconOnly
-										icon={xIcon}
+										icon={returnIcon}
 										class="btn-ghost btn-sm text-error"
-										modalTitle="Reject these hours?"
-										submitLabel="Reject"
+										modalTitle="Return these hours?"
+										submitLabel="Return"
 										submitClass="btn-error"
-										successToast="Hours rejected"
+										successToast="Hours returned"
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
@@ -351,6 +351,6 @@
 	<IconCheck size={16} />
 {/snippet}
 
-{#snippet xIcon()}
-	<IconX size={16} />
+{#snippet returnIcon()}
+	<IconArrowBackUp size={16} />
 {/snippet}

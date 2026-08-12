@@ -101,7 +101,7 @@ auto-creates any missing).
 
 ### volunteering
 
-- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, saying what you're up for, claiming shifts, logging hours, the day-after survey
+- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, saying what interests you, claiming shifts, logging hours, the day-after survey
 - [x] `[H]` Reviewing volunteer hours (minRole=staff) — scheduling shifts, the approval queue, the interest list, roles and clearances, the feedback rollup, the report
 
 ## C. Band panel → `src/content/help/`

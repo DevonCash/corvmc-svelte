@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -217,14 +216,7 @@
 						/>
 					{/each}
 
-					<p class="text-sm opacity-60">
-						Got an idea for a program, club, or class, or want to show art or perform? <a
-							href={resolve('/contact')}
-							class="link">Get in touch</a
-						> — that's not a role, but we want to hear it.
-					</p>
-
-					<SubmitButton label="Save what I'm up for" class="btn-primary" />
+					<SubmitButton label="Save" class="btn-primary" />
 				</Form>
 			{/if}
 		</InfoCard>

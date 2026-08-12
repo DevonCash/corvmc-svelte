@@ -13,7 +13,8 @@ import {
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
-	VOLUNTEER_REVIEW_NOTES_MAX
+	VOLUNTEER_REVIEW_NOTES_MAX,
+	volunteerHourStatusLabels
 } from '$lib/config';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
@@ -35,7 +36,13 @@ export class HourLogNotFoundError extends DomainError {
 export class HourLogAlreadyReviewedError extends DomainError {
 	readonly httpStatus = 409;
 	constructor(status: string) {
-		super(`This log was already ${status}. Ask the member to submit a corrected one.`);
+		// The stored `rejected` reads as "returned" everywhere anyone sees it. The
+		// non-enum `'reviewed'` this is also thrown with falls through unchanged.
+		const label =
+			status in volunteerHourStatusLabels
+				? volunteerHourStatusLabels[status as VolunteerHourStatus].toLowerCase()
+				: status;
+		super(`This log was already ${label}. Ask the member to submit a corrected one.`);
 	}
 }
 
