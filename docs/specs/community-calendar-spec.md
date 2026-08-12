@@ -50,7 +50,7 @@ bands, including gigs at other venues.
     have no `ticketingEnabled` param, and the band forms never submit one.
   - `update()` — the staff path, and the only other writer that can reach the
     flag — throws when a `source='band'` row tries to turn it on. Turning it
-    *off* is allowed, so opening the staff edit form on a row written before this
+    _off_ is allowed, so opening the staff edit form on a row written before this
     rule clears the stale flag. The price is left alone either way.
   - `/staff/events/[id]` hides the "Sell tickets through the site" toggle for a
     band gig (keeping the price field) rather than offering an action the service
@@ -58,7 +58,7 @@ bands, including gigs at other venues.
     reject `source='band'` on source rather than on the `bandEvents` flag, so a
     row that predates the rule still cannot reach checkout.
 
-  RSVPs are deliberately *not* restricted: `rsvpToEvent` writes a headcount row,
+  RSVPs are deliberately _not_ restricted: `rsvpToEvent` writes a headcount row,
   takes no money and issues no code, so band gigs get it like any other event.
 
 - Home page "Upcoming Events" section shows the same next-3 CMC posters
