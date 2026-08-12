@@ -5,15 +5,18 @@
 	import {
 		getBandSlots,
 		getBandMembershipStatus,
+		getBookingContact,
 		bookBandReservation
 	} from '$lib/remote/reservations.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
+	import { isValidPhone } from '$lib/utils/phone';
 	import { toast } from 'svelte-sonner';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
@@ -34,8 +37,13 @@
 	let membershipStatus = $derived(await getBandMembershipStatus());
 	const hasSustainingMember = $derived(membershipStatus.hasSustainingMember);
 
+	// The band books, but a person is on the hook — staff need a number to call.
+	let contact = $derived(await getBookingContact());
+	const needsPhone = $derived(contact.needsPhone);
+
 	let selectedStart = $state('');
 	let selectedEnd = $state('');
+	let phone = $state('');
 	let recurring = $state('');
 	let monthlyMode = $state('weekday');
 
@@ -115,6 +123,8 @@
 		const [eh, em] = selectedEnd.split(':').map(Number);
 		return (eh * 60 + em - (sh * 60 + sm)) / 60;
 	});
+
+	const phoneOk = $derived(!needsPhone || isValidPhone(phone));
 
 	const { fields } = bookBandReservation;
 	let initial = $derived({ startTime: '', endTime: '', notes: '', recurring: '' });
@@ -252,12 +262,27 @@
 			</div>
 		{/if}
 
+		{#if needsPhone}
+			<!-- Bound by `name`, not `field`: FormField only wires bind:value on the
+			     name-only branch, and the submit gating below needs each keystroke. -->
+			<FormField
+				name="phone"
+				type="tel"
+				label="Contact phone"
+				bind:value={phone}
+				placeholder="(541) 555-0123"
+				required
+				class="mt-4"
+				description="Staff use this to reach you about your booking. Saved to your account."
+			/>
+		{/if}
+
 		<div class="mt-6">
 			<SubmitButton
 				label={recurring ? 'Book & Start Series' : 'Book Session'}
 				successLabel="Booked!"
 				errorLabel="Booking failed"
-				disabled={!selectedStart || !selectedEnd}
+				disabled={!selectedStart || !selectedEnd || !phoneOk}
 				class="w-full btn-primary"
 			/>
 		</div>

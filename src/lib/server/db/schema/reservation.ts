@@ -43,7 +43,10 @@ export const createReservationSchema = z.object({
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
 	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
 	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
-	notes: z.string().optional()
+	notes: z.string().optional(),
+	// Only submitted by members who have no usable number on file, so presence is
+	// decided in the handler (which knows what's stored) rather than here.
+	phone: z.string().trim().optional()
 });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;

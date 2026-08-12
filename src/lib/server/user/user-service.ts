@@ -5,6 +5,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, isNull, isNotNull, count } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -175,4 +176,39 @@ export async function purgeUser(userId: string) {
 		}
 		throw err;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Contact phone
+// ---------------------------------------------------------------------------
+
+/**
+ * A reservation is only reachable if staff can call whoever booked it, so a
+ * usable contact number is a precondition for creating one. Saves `submitted`
+ * when the member has nothing usable on file.
+ *
+ * Reads the column rather than `locals.user.phone`: updateProfile writes
+ * straight to the table, so the session copy can be stale.
+ *
+ * Returns false when the booking should be rejected for want of a number.
+ */
+export async function ensureContactPhone(userId: string, submitted?: string): Promise<boolean> {
+	const [row] = await db
+		.select({ phone: user.phone })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+
+	// Left exactly as stored — existing rows keep whatever formatting they have.
+	if (isValidPhone(row?.phone)) return true;
+
+	const normalized = normalizePhone(submitted);
+	if (!normalized) return false;
+
+	await db
+		.update(user)
+		.set({ phone: normalized, updatedAt: new Date() })
+		.where(eq(user.id, userId));
+
+	return true;
 }

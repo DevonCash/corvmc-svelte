@@ -1,20 +1,18 @@
 /**
- * Playwright global setup: reject a stale preview server, then seed the local
- * D1 with the e2e member + payable reservation.
+ * Playwright global setup: reject a stale preview server.
  *
  * Runs once per `playwright test` invocation. Playwright builds its startup
  * tasks as [remove output dirs, plugin setup, global setup], and `webServer` is
  * a plugin whose setup polls the URL until it responds — so by the time this
- * hook runs the preview server is already up and reachable.
+ * hook runs the preview server is already up and reachable. That makes it the
+ * right place to check *which* build is being served, and the wrong place to
+ * touch the database: migrating and seeding from here ran a second miniflare
+ * against `.wrangler/state` while the server held it, which killed the runtime
+ * outright once the file needed recovery. That work moved to `e2e/prepare.ts`,
+ * which the `test:e2e` script runs before Playwright starts.
  */
-import { execSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import type { FullConfig } from '@playwright/test';
-import { seedPayReservation } from './fixtures/seed-pay-reservation';
-import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
-import { seedStaffUser } from './fixtures/seed-staff-user';
-import { seedVolunteering } from './fixtures/seed-volunteering';
-import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 
 /**
  * Guard against a zombie `vite preview` serving a stale build.
@@ -74,17 +72,4 @@ async function assertPreviewMatchesBuild(config: FullConfig) {
 
 export default async function globalSetup(config: FullConfig) {
 	await assertPreviewMatchesBuild(config);
-
-	// CI starts from a fresh checkout with no local D1, so create + migrate it
-	// before seeding. Locally we skip this: the dev D1 is already migrated and the
-	// migration SQL uses plain CREATE TABLE (re-running it against an existing
-	// database would error). `pnpm db:reset` is the local equivalent.
-	if (process.env.CI) {
-		execSync('pnpm db:migrate:local', { stdio: 'inherit' });
-	}
-	await seedPayReservation();
-	await seedBandOnboarding();
-	await seedStaffUser();
-	await seedVolunteering();
-	await seedFeatureFlags();
 }
