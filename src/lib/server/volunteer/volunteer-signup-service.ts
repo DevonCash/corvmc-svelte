@@ -6,10 +6,11 @@ import {
 	volunteerShiftFeedback
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { primaryRoleFor } from '$lib/server/authorization';
-import { countActiveSignups, getShiftById } from './volunteer-shift-service';
+import { getShiftById } from './volunteer-shift-service';
 import { missingRequirements } from './member-certification-service';
 import type { VolunteerSignup } from '$lib/server/db/schema/volunteer';
 import type { VolunteerSignupStatus } from '$lib/config';
@@ -57,13 +58,30 @@ export class NotClearedError extends DomainError {
 // ---------------------------------------------------------------------------
 
 /**
+ * The seats a shift has left, as a SQL predicate rather than a number read into
+ * JS. Both write paths below embed it so the capacity test and the write are one
+ * statement — two members claiming the last place at the same moment would both
+ * pass a read-then-write check, and the unique index on (shiftId, userId) cannot
+ * arbitrate that because they are different users.
+ */
+function hasRoomSql(shiftId: string, capacity: number) {
+	return sql`(
+		select count(*) from "volunteer_signup"
+		where "shift_id" = ${shiftId} and "status" in ('claimed', 'confirmed', 'completed')
+	) < ${capacity}`;
+}
+
+const unixNow = () => Math.floor(Date.now() / 1000);
+
+/**
  * Put your hand up for a shift.
  *
  * Three guards, in the order that gives the most useful message: the shift is
- * still open, you're cleared for it, and there's room. The unique index on
- * (shiftId, userId) is the backstop for two requests passing the capacity check
- * at once — no transaction, per the lint rule, so the constraint does the
- * arbitration.
+ * still open, you're cleared for it, and there's room. The room check is part of
+ * the write (see hasRoomSql) rather than a separate read, so the last place goes
+ * to exactly one of two simultaneous claimants; the loser gets ShiftFullError.
+ * No transaction, per the lint rule — the conditional write is what makes that
+ * safe.
  */
 export async function claimShift(shiftId: string, userId: string): Promise<VolunteerSignup> {
 	const shift = await getShiftById(shiftId);
@@ -87,31 +105,40 @@ export async function claimShift(shiftId: string, userId: string): Promise<Volun
 	if (existing) {
 		if (existing.status !== 'cancelled') return reloadSignup(existing.id);
 
-		if ((await countActiveSignups(shiftId)) >= shift.capacity) throw new ShiftFullError();
+		const now = unixNow();
+		// `returning "id"` rather than `*`: raw SQL hands back snake_case columns,
+		// which would not match the camelCase row shape callers expect, so the
+		// typed read below is what actually produces the return value.
+		const revived = await db.all<{ id: string }>(sql`
+			update "volunteer_signup"
+			set "status" = 'claimed', "claimed_at" = ${now}, "cancelled_at" = null, "updated_at" = ${now}
+			where "id" = ${existing.id} and ${hasRoomSql(shiftId, shift.capacity)}
+			returning "id"
+		`);
 
-		const [row] = await db
-			.update(volunteerSignup)
-			.set({
-				status: 'claimed',
-				claimedAt: new Date(),
-				cancelledAt: null,
-				updatedAt: new Date()
-			})
-			.where(eq(volunteerSignup.id, existing.id))
-			.returning();
-		return row;
+		if (revived.length === 0) throw new ShiftFullError();
+		return reloadSignup(existing.id);
 	}
 
-	if ((await countActiveSignups(shiftId)) >= shift.capacity) throw new ShiftFullError();
+	const now = unixNow();
+	const id = crypto.randomUUID();
 
 	try {
-		const [row] = await db
-			.insert(volunteerSignup)
-			.values({ shiftId, userId, status: 'claimed' })
-			.returning();
-		return row;
+		// INSERT ... SELECT ... WHERE, so the row only lands if there was still
+		// room at the moment it landed.
+		const inserted = await db.all<{ id: string }>(sql`
+			insert into "volunteer_signup"
+				("id", "shift_id", "user_id", "status", "claimed_at", "created_at", "updated_at")
+			select ${id}, ${shiftId}, ${userId}, 'claimed', ${now}, ${now}, ${now}
+			where ${hasRoomSql(shiftId, shift.capacity)}
+			returning "id"
+		`);
+
+		if (inserted.length === 0) throw new ShiftFullError();
+		return reloadSignup(id);
 	} catch (err) {
-		// The unique index fired — two clicks, or two tabs.
+		if (err instanceof ShiftFullError) throw err;
+		// The unique index fired — two clicks, or two tabs, from the same member.
 		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
 			const [row] = await db
 				.select()
@@ -306,8 +333,16 @@ export async function listSignupsStartingBetween(from: Date, to: Date): Promise<
 		);
 }
 
-/** A member's completed shifts with no hour log yet — the pre-fill offer. */
+/**
+ * A member's completed shifts with no hour log yet — the pre-fill offer.
+ *
+ * Capped at the hour-log backdate window. Beyond it `submitHours` refuses the
+ * date, so listing an older shift would leave a "Log these hours" button on the
+ * page that can only ever error, with no way to dismiss it.
+ */
 export async function listUnloggedCompletions(userId: string) {
+	const earliest = new Date(Date.now() - VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000);
+
 	return db
 		.select({
 			signupId: volunteerSignup.id,
@@ -324,6 +359,7 @@ export async function listUnloggedCompletions(userId: string) {
 			and(
 				eq(volunteerSignup.userId, userId),
 				eq(volunteerSignup.status, 'completed'),
+				gte(volunteerShift.endsAt, earliest),
 				sql`not exists (
 					select 1 from "volunteer_hour_log" vhl
 					where vhl."shift_id" = ${volunteerShift.id} and vhl."user_id" = ${userId}

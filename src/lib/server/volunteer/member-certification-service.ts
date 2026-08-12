@@ -138,10 +138,17 @@ export async function grantCertification(data: {
 	// Month arithmetic on the calendar date, then re-anchored at noon: adding
 	// milliseconds would drift across a DST boundary and land an expiry an hour
 	// either side of midnight.
+	//
+	// The day is clamped to the target month's length. Date.UTC overflows a short
+	// month — a six-month card granted on 31 August would roll February 31 into
+	// March 3 and be honoured three days past what the catalog promised, always
+	// in the permissive direction.
 	let expiresAt: Date | null = null;
 	if (cert.validityMonths) {
 		const [y, m, d] = data.grantedOn.split('-').map(Number);
-		const target = new Date(Date.UTC(y, m - 1 + cert.validityMonths, d));
+		const targetMonth = m - 1 + cert.validityMonths;
+		const lastDayOfTarget = new Date(Date.UTC(y, targetMonth + 1, 0)).getUTCDate();
+		const target = new Date(Date.UTC(y, targetMonth, Math.min(d, lastDayOfTarget)));
 		expiresAt = atNoon(target.toISOString().slice(0, 10));
 	}
 
@@ -275,10 +282,54 @@ export async function heldCertificationIds(userId: string, at = new Date()): Pro
 	return new Set(rows.map((r) => r.id));
 }
 
+export interface HeldForGate {
+	certificationId: string;
+	grantedAt: Date;
+	expiresAt: Date | null;
+	revokedAt: Date | null;
+}
+
+/**
+ * Every certification row a member holds, dates included, in one query.
+ *
+ * The rows rather than a resolved set, because "do they hold this" depends on
+ * the date being asked about — a caller checking many shifts at once needs to
+ * re-evaluate per shift date without going back to the database each time.
+ */
+export async function listHeldForGate(userId: string): Promise<HeldForGate[]> {
+	return db
+		.select({
+			certificationId: memberCertification.certificationId,
+			grantedAt: memberCertification.grantedAt,
+			expiresAt: memberCertification.expiresAt,
+			revokedAt: memberCertification.revokedAt
+		})
+		.from(memberCertification)
+		.where(eq(memberCertification.userId, userId));
+}
+
+/**
+ * The pure half of the gate: which of `required` the member did not hold on
+ * `at`, given rows already fetched. Lets a page evaluate many shifts against one
+ * round trip instead of two queries per shift.
+ */
+export function missingFrom(
+	required: { id: string; name: string }[],
+	held: HeldForGate[],
+	at: Date
+): { id: string; name: string }[] {
+	return required.filter(
+		(req) => !held.some((h) => h.certificationId === req.id && wasHeldOn(h, at))
+	);
+}
+
 /**
  * Which of a role's required certifications a member is missing, as of a date.
  * Empty means they may claim. Used by the shift gate and by the member-facing
  * "why can't I claim this" copy.
+ *
+ * Two queries — fine for a single check like claiming. For a page of shifts use
+ * `getRequirementsForRoles` + `listHeldForGate` + `missingFrom` instead.
  */
 export async function missingRequirements(
 	userId: string,
@@ -299,19 +350,6 @@ export async function missingRequirements(
 
 	const held = await heldCertificationIds(userId, at);
 	return required.filter((r) => !held.has(r.id));
-}
-
-/**
- * Whether a member held every certification their role required on the date
- * they worked. Advisory only — it flags an hour log for a conversation, it
- * never rejects one.
- */
-export async function wasClearedForRoleOn(
-	userId: string,
-	roleId: string,
-	workedOn: Date
-): Promise<boolean> {
-	return (await missingRequirements(userId, roleId, workedOn)).length === 0;
 }
 
 export interface ClearanceRow {

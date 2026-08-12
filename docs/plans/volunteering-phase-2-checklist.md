@@ -60,7 +60,7 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
       TagInput: TagInput's encoding doesn't match an array field)
 - [x] `staff/users/[id]` — Certifications card, Grant + Revoke actions
 - [ ] `/member/volunteer` — Certifications block
-- [ ] Review queue — advisory glyph when the role required a cert the member
+- [x] Review queue — advisory glyph when the role required a cert the member
       did not hold on the date worked
 
 ## Step 3 — Shifts

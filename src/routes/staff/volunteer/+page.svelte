@@ -16,7 +16,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import { IconCheck, IconX } from '@tabler/icons-svelte';
+	import { IconCheck, IconX, IconAlertTriangle } from '@tabler/icons-svelte';
 	import {
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
@@ -222,6 +222,19 @@
 					<tr class="hover">
 						<td class="w-px">
 							<StatusBadge status={log.status} />
+							{#if log.uncleared}
+								<!--
+									The member didn't hold a clearance their role requires, on the
+									day they worked. Advisory: a prompt to have a conversation, not
+									a reason to refuse hours somebody already put in.
+								-->
+								<span
+									class="mt-1 block text-warning"
+									title="Missing a required clearance on the date worked"
+								>
+									<IconAlertTriangle size={14} />
+								</span>
+							{/if}
 							{#if log.shiftId}
 								<!-- Filed against a shift staff scheduled — the person was
 								     rostered, so this can be approved with less scrutiny. -->

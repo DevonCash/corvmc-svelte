@@ -12,6 +12,10 @@ let selectResultQueue: unknown[][] = [];
 let insertedValues: unknown[] = [];
 let updatedSets: unknown[] = [];
 let insertError: Error | null = null;
+/** Rows the conditional INSERT/UPDATE returns — empty means "no room left". */
+let rawWriteResult: unknown[] = [{ id: 'signup-new' }];
+/** The conditional write statements, kept so a test can render and inspect one. */
+let rawWrites: SQL[] = [];
 
 function chainable(sink?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
@@ -33,6 +37,14 @@ function chainable(sink?: unknown[]) {
 
 vi.mock('$lib/server/db', () => ({
 	db: {
+		// The claim path writes with a conditional statement through `all`, so the
+		// capacity test and the write are one round trip. Capturing the SQL lets
+		// the tests assert the guard is actually in the statement.
+		all: vi.fn((q: unknown) => {
+			rawWrites.push(q as SQL);
+			if (insertError) throw insertError;
+			return Promise.resolve(rawWriteResult);
+		}),
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
 			values: vi.fn((v: unknown) => {
@@ -49,10 +61,8 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => null) }));
 
 const getShiftById = vi.fn();
-const countActiveSignups = vi.fn();
 vi.mock('./volunteer-shift-service', () => ({
-	getShiftById: (...a: unknown[]) => getShiftById(...a),
-	countActiveSignups: (...a: unknown[]) => countActiveSignups(...a)
+	getShiftById: (...a: unknown[]) => getShiftById(...a)
 }));
 
 const missingRequirements = vi.fn();
@@ -60,6 +70,8 @@ vi.mock('./member-certification-service', () => ({
 	missingRequirements: (...a: unknown[]) => missingRequirements(...a)
 }));
 
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 import {
 	claimShift,
 	completeFinishedShifts,
@@ -67,6 +79,8 @@ import {
 	ShiftClosedError,
 	NotClearedError
 } from './volunteer-signup-service';
+
+const render = (q: SQL) => new SQLiteSyncDialect().sqlToQuery(q).sql;
 
 const FUTURE = new Date(Date.now() + 7 * 86_400_000);
 const LATER = new Date(Date.now() + 7 * 86_400_000 + 4 * 3_600_000);
@@ -89,26 +103,47 @@ beforeEach(() => {
 	insertedValues = [];
 	updatedSets = [];
 	insertError = null;
+	rawWriteResult = [{ id: 'signup-new' }];
+	rawWrites = [];
 	missingRequirements.mockResolvedValue([]);
-	countActiveSignups.mockResolvedValue(0);
 	getShiftById.mockResolvedValue(shift());
 });
 
 describe('claimShift', () => {
 	it('claims an open shift', async () => {
-		selectResultQueue = [[]]; // no existing signup
+		// No existing signup, then the typed re-read of the row just written.
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
+
+		const row = await claimShift('shift-1', 'user-1');
+
+		expect(row).toMatchObject({ id: 'signup-new' });
+	});
+
+	/**
+	 * The capacity test lives inside the write, not in a separate read. Two
+	 * members claiming the last place would both pass a read-then-write check,
+	 * and the unique index on (shiftId, userId) cannot arbitrate that — they are
+	 * different users. SQLite decides instead: the losing statement matches no
+	 * rows and returns nothing.
+	 */
+	it('makes the capacity test part of the write statement', async () => {
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
 
 		await claimShift('shift-1', 'user-1');
 
-		expect(insertedValues).toEqual([{ shiftId: 'shift-1', userId: 'user-1', status: 'claimed' }]);
+		expect(rawWrites).toHaveLength(1);
+		const written = render(rawWrites[0]);
+		expect(written).toContain('insert into "volunteer_signup"');
+		expect(written).toContain('select count(*) from "volunteer_signup"');
 	});
 
-	it('refuses a shift that is already full', async () => {
-		countActiveSignups.mockResolvedValue(2);
+	it('refuses when the conditional write finds no room', async () => {
 		selectResultQueue = [[]];
+		// The statement ran but matched nothing: somebody took the last place
+		// between this request reading the shift and writing its claim.
+		rawWriteResult = [];
 
 		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(ShiftFullError);
-		expect(insertedValues).toEqual([]);
 	});
 
 	it('refuses a cancelled shift', async () => {
@@ -147,7 +182,7 @@ describe('claimShift', () => {
 	// Clearance is asked about the shift's date, not today — a card that lapses
 	// before the shift shouldn't let someone claim it.
 	it('checks clearance as of the shift date', async () => {
-		selectResultQueue = [[]];
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
 
 		await claimShift('shift-1', 'user-1');
 
@@ -159,16 +194,24 @@ describe('claimShift', () => {
 
 		await claimShift('shift-1', 'user-1');
 
-		expect(insertedValues).toEqual([]);
+		expect(rawWrites).toEqual([]);
 	});
 
 	it('reuses the row when re-claiming after cancelling', async () => {
-		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }]];
+		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }], [{ id: 'signup-1' }]];
 
 		await claimShift('shift-1', 'user-1');
 
-		expect(insertedValues).toEqual([]);
-		expect(updatedSets[0]).toMatchObject({ status: 'claimed', cancelledAt: null });
+		expect(render(rawWrites[0])).toContain('update "volunteer_signup"');
+	});
+
+	// Re-claiming a place that filled up while they were away must not revive
+	// the row — the same conditional guards the update.
+	it('refuses to revive a cancelled claim when the shift filled up', async () => {
+		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }]];
+		rawWriteResult = [];
+
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(ShiftFullError);
 	});
 
 	it('falls back to the existing row when the unique index fires on a double click', async () => {

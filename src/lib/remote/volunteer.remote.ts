@@ -76,7 +76,10 @@ import {
 	deleteCertificationRecord,
 	listForUser as listCertificationsForUser,
 	listClearances,
-	missingRequirements
+	listHeldForGate,
+	missingFrom,
+	missingRequirements,
+	flagUnclearedLogs
 } from '$lib/server/volunteer/member-certification-service';
 import {
 	volunteerHourStatuses,
@@ -130,7 +133,7 @@ const staffLogFilters = z.object({
 
 export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 	await requireStaff();
-	return listHourLogs(
+	const result = await listHourLogs(
 		{
 			status: asStatus(f.status),
 			volunteerRoleId: f.volunteerRoleId || undefined,
@@ -140,6 +143,24 @@ export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 		},
 		{ page: f.page ?? 1, pageSize: 50 }
 	);
+
+	// Advisory only: flags a log whose role required a clearance the member did
+	// not hold on the date worked. It never blocks approval — refusing the hours
+	// would not un-do the work, it would just lose the record. Flagged for the
+	// page in view, so the cost is one extra pair of queries per page load.
+	const uncleared = await flagUnclearedLogs(
+		result.rows.map((r) => ({
+			id: r.id,
+			userId: r.userId,
+			volunteerRoleId: r.volunteerRoleId,
+			workedOn: r.workedOn
+		}))
+	);
+
+	return {
+		...result,
+		rows: result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }))
+	};
 });
 
 export const getVolunteerStatusCounts = query(async () => {
@@ -807,14 +828,22 @@ export const getOpenShifts = query(async () => {
 	const currentUser = requireUser();
 
 	const shifts = await listOpenShiftsForMember(currentUser.id);
-	return Promise.all(
-		shifts.map(async (shift) => ({
-			...shift,
-			missingCertifications: shift.myStatus
-				? []
-				: await missingRequirements(currentUser.id, shift.volunteerRoleId, shift.startsAt)
-		}))
-	);
+	if (shifts.length === 0) return [];
+
+	// Two queries for the whole board, not two per shift: requirements for every
+	// role at once, the member's certification rows once, then the gate evaluated
+	// in JS against each shift's own date (which is what makes it per-shift).
+	const [requirements, held] = await Promise.all([
+		getRequirementsForRoles([...new Set(shifts.map((s) => s.volunteerRoleId))]),
+		listHeldForGate(currentUser.id)
+	]);
+
+	return shifts.map((shift) => ({
+		...shift,
+		missingCertifications: shift.myStatus
+			? []
+			: missingFrom(requirements.get(shift.volunteerRoleId) ?? [], held, shift.startsAt)
+	}));
 });
 
 /** Completed shifts with no hour log yet — the pre-fill offer. */

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
-import { and, asc, count, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
@@ -154,14 +154,26 @@ export async function duplicateShift(
 		return buildDateInTz(moved.toISOString().slice(0, 10), hm, TZ);
 	};
 
+	const startsAt = shiftLocalDate(original.startsAt);
+	const endsAt = shiftLocalDate(original.endsAt);
+
+	// Copying an old shift forward by a week usually still lands in the past, and
+	// a past shift is invisible to members and unclaimable — so it would look
+	// scheduled to staff while the board stayed empty.
+	if (endsAt < new Date()) {
+		throw new ShiftValidationError(
+			'That copy would land in the past. Pick an offset that reaches a future date.'
+		);
+	}
+
 	const [row] = await db
 		.insert(volunteerShift)
 		.values({
 			volunteerRoleId: original.volunteerRoleId,
 			// Deliberately not copied: the new date is not that event's date.
 			eventId: null,
-			startsAt: shiftLocalDate(original.startsAt),
-			endsAt: shiftLocalDate(original.endsAt),
+			startsAt,
+			endsAt,
 			capacity: original.capacity,
 			notes: original.notes,
 			createdByUserId
@@ -348,6 +360,34 @@ export async function listOpenShiftsForMember(
 ): Promise<Omit<OpenShift, 'missingCertifications'>[]> {
 	const now = new Date();
 
+	// Built once and reused in both the select list and the ORDER BY. The
+	// ranking has to be in SQL: ordering by date and re-sorting in JS after the
+	// LIMIT would drop a member's own claimed shift off the board entirely once
+	// more than `limit` shifts are scheduled ahead of it.
+	const myStatusSql = sql<string | null>`(
+		select vs."status" from "volunteer_signup" vs
+		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
+			and vs."status" != 'cancelled'
+	)`;
+	const mySignupIdSql = sql<string | null>`(
+		select vs."id" from "volunteer_signup" vs
+		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
+			and vs."status" != 'cancelled'
+	)`;
+	const interestedSql = sql<number>`(
+		select count(*) from "volunteer_role_interest" vri
+		where vri."volunteer_role_id" = ${volunteerShift.volunteerRoleId}
+			and vri."user_id" = ${userId}
+	)`;
+
+	// Their own commitments first — the thing they most need to see — then roles
+	// they said they'd help with, then everything else.
+	const rankSql = sql`case
+		when ${myStatusSql} is not null then 0
+		when ${interestedSql} > 0 then 1
+		else 2
+	end`;
+
 	const rows = await db
 		.select({
 			shift: volunteerShift,
@@ -359,67 +399,28 @@ export async function listOpenShiftsForMember(
 				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('claimed', 'confirmed', 'completed')
 			)`,
-			myStatus: sql<string | null>`(
-				select vs."status" from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
-					and vs."status" != 'cancelled'
-			)`,
+			myStatus: myStatusSql,
 			// The id comes back too, so "drop out" has something to post without a
 			// second round trip per shift.
-			mySignupId: sql<string | null>`(
-				select vs."id" from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
-					and vs."status" != 'cancelled'
-			)`,
-			interested: sql<number>`(
-				select count(*) from "volunteer_role_interest" vri
-				where vri."volunteer_role_id" = ${volunteerShift.volunteerRoleId}
-					and vri."user_id" = ${userId}
-			)`
+			mySignupId: mySignupIdSql,
+			interested: interestedSql
 		})
 		.from(volunteerShift)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
 		.leftJoin(event, eq(event.id, volunteerShift.eventId))
 		.where(and(isNull(volunteerShift.cancelledAt), gte(volunteerShift.startsAt, now)))
-		.orderBy(asc(volunteerShift.startsAt))
+		.orderBy(asc(rankSql), asc(volunteerShift.startsAt))
 		.limit(opts.limit ?? 50);
 
-	return rows
-		.map((r) => ({
-			...r.shift,
-			roleName: r.roleName,
-			roleGroup: r.roleGroup,
-			eventTitle: r.eventTitle,
-			claimed: Number(r.claimed),
-			myStatus: r.myStatus,
-			mySignupId: r.mySignupId,
-			interested: Number(r.interested) > 0,
-			isFull: Number(r.claimed) >= r.shift.capacity
-		}))
-		.sort((a, b) => {
-			// Already claimed first — it's the thing they most need to see — then
-			// roles they said they'd help with, then everything else by date.
-			const rank = (s: typeof a) => (s.myStatus ? 0 : s.interested ? 1 : 2);
-			return rank(a) - rank(b) || a.startsAt.getTime() - b.startsAt.getTime();
-		});
-}
-
-/** A member's own upcoming and recent commitments. */
-export async function listMyShifts(userId: string): Promise<ShiftWithCounts[]> {
-	const rows = await db
-		.select({
-			shift: volunteerShift,
-			roleName: volunteerRole.name,
-			roleGroup: volunteerRole.group,
-			eventTitle: event.title,
-			claimed: sql<number>`0`
-		})
-		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
-		.leftJoin(event, eq(event.id, volunteerShift.eventId))
-		.where(and(eq(volunteerSignup.userId, userId), ne(volunteerSignup.status, 'cancelled')))
-		.orderBy(asc(volunteerShift.startsAt));
-
-	return withCounts(rows);
+	return rows.map((r) => ({
+		...r.shift,
+		roleName: r.roleName,
+		roleGroup: r.roleGroup,
+		eventTitle: r.eventTitle,
+		claimed: Number(r.claimed),
+		myStatus: r.myStatus,
+		mySignupId: r.mySignupId,
+		interested: Number(r.interested) > 0,
+		isFull: Number(r.claimed) >= r.shift.capacity
+	}));
 }

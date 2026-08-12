@@ -37,7 +37,8 @@ import {
 	wasHeldOn,
 	certificationState,
 	grantCertification,
-	missingRequirements
+	missingRequirements,
+	missingFrom
 } from './member-certification-service';
 import { CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -170,6 +171,36 @@ describe('grantCertification', () => {
 		expect(row.expiresAt).toEqual(noon('2029-06-15'));
 	});
 
+	// Date.UTC overflows a short month: (2026, 1, 31) is February 31, which rolls
+	// into March 3 and hands out three days of clearance the catalog never
+	// promised — always in the permissive direction, so a shift gets worked on a
+	// card that should have lapsed.
+	it('clamps to the end of a short target month rather than overflowing', async () => {
+		selectResultQueue = [[{ validityMonths: 6 }]];
+
+		await grantCertification({
+			userId: 'u1',
+			certificationId: 'c1',
+			grantedOn: '2024-08-31',
+			grantedByUserId: 'staff'
+		});
+
+		expect((insertedValues[0] as { expiresAt: Date }).expiresAt).toEqual(noon('2025-02-28'));
+	});
+
+	it('keeps the same day when the target month is long enough', async () => {
+		selectResultQueue = [[{ validityMonths: 12 }]];
+
+		await grantCertification({
+			userId: 'u1',
+			certificationId: 'c1',
+			grantedOn: '2024-08-31',
+			grantedByUserId: 'staff'
+		});
+
+		expect((insertedValues[0] as { expiresAt: Date }).expiresAt).toEqual(noon('2025-08-31'));
+	});
+
 	it('leaves expiresAt null for a certification that never lapses', async () => {
 		selectResultQueue = [[{ validityMonths: null }]];
 
@@ -219,5 +250,47 @@ describe('missingRequirements', () => {
 		expect(await missingRequirements('u1', 'role-1')).toEqual([
 			{ id: 'cert-b', name: 'First Aid' }
 		]);
+	});
+});
+
+// The batched half of the gate, used by the member shift board so a page of
+// shifts costs two queries instead of two per shift.
+describe('missingFrom', () => {
+	const required = [
+		{ id: 'cert-a', name: 'Sound Desk Cleared' },
+		{ id: 'cert-b', name: 'First Aid' }
+	];
+
+	it('returns what the member did not hold on the given date', () => {
+		const held = [
+			{ certificationId: 'cert-a', grantedAt: noon('2026-01-01'), expiresAt: null, revokedAt: null }
+		];
+
+		expect(missingFrom(required, held, noon('2026-06-15'))).toEqual([
+			{ id: 'cert-b', name: 'First Aid' }
+		]);
+	});
+
+	// The reason the rows are passed in rather than a resolved set: the same
+	// holdings answer differently for two shifts on different dates.
+	it('answers differently for two dates against the same holdings', () => {
+		const held = [
+			{
+				certificationId: 'cert-a',
+				grantedAt: noon('2026-01-01'),
+				expiresAt: noon('2026-06-30'),
+				revokedAt: null
+			},
+			{ certificationId: 'cert-b', grantedAt: noon('2026-01-01'), expiresAt: null, revokedAt: null }
+		];
+
+		expect(missingFrom(required, held, noon('2026-06-15'))).toEqual([]);
+		expect(missingFrom(required, held, noon('2026-07-15'))).toEqual([
+			{ id: 'cert-a', name: 'Sound Desk Cleared' }
+		]);
+	});
+
+	it('is empty when the role requires nothing', () => {
+		expect(missingFrom([], [], noon('2026-06-15'))).toEqual([]);
 	});
 });

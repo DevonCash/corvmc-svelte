@@ -11,6 +11,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { formatDateShort, formatDateTimeShort } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { claimShift, cancelMySignup } from '$lib/remote/volunteer.remote';
 
 	type Shift = {
@@ -35,7 +36,7 @@
 		const fmt = new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
-			timeZone: 'America/Los_Angeles'
+			timeZone: DEFAULT_TIMEZONE
 		});
 		return `${fmt.format(start)}–${fmt.format(end)}`;
 	}
