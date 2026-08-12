@@ -518,7 +518,10 @@ async function processEventSeries(
 						bookerId: newEventId,
 						startsAt: occResStart,
 						endsAt: occResEnd,
-						status: 'scheduled'
+						// Same as the one-off path: event space is staff-held. A `scheduled`
+						// hold reads as an uncommitted member booking that nothing can ever
+						// confirm, so the unconfirmed sweep released the room at showtime.
+						status: 'confirmed'
 					});
 					await db
 						.update(event)

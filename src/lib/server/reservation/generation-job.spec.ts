@@ -517,7 +517,9 @@ describe('generateRecurringEvents', () => {
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bookerType: 'event',
-				status: 'scheduled',
+				// Matches the one-off path: event-booked space is staff-held, so it
+				// must not look like an uncommitted member booking.
+				status: 'confirmed',
 				startsAt: new Date(OCC1.getTime() - 30 * 60 * 1000),
 				endsAt: new Date(OCC1_END.getTime() + 30 * 60 * 1000)
 			})

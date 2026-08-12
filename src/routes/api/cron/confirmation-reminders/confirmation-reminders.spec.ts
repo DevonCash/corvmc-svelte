@@ -28,6 +28,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	reservation: {
 		id: 'id',
 		status: 'status',
+		bookerType: 'booker_type',
 		startsAt: 'starts_at',
 		endsAt: 'ends_at',
 		createdByUserId: 'created_by_user_id'
@@ -38,11 +39,13 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name', email: 'email' }
 }));
 
+const mockNe = vi.fn();
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
 	and: vi.fn(),
 	gte: vi.fn(),
-	lt: vi.fn()
+	lt: vi.fn(),
+	ne: (...args: unknown[]) => mockNe(...args)
 }));
 
 vi.mock('luxon', () => ({
@@ -206,5 +209,18 @@ describe('POST /api/cron/confirmation-reminders', () => {
 		expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('res-fail'), expect.any(Error));
 
 		consoleSpy.mockRestore();
+	});
+
+	// Regression: space booked for an event is staff-held, with no member
+	// confirm/pay flow — nagging the staff creator to confirm it is noise.
+	it('excludes event-booked space from the query', async () => {
+		await POST({
+			request: new Request('http://localhost/api/cron/confirmation-reminders', {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-secret' }
+			})
+		} as any);
+
+		expect(mockNe).toHaveBeenCalledWith('booker_type', 'event');
 	});
 });

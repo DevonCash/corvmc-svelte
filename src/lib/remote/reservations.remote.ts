@@ -1892,6 +1892,10 @@ export const getReservations = query(
 
 		const filters = [
 			eq(reservation.createdByUserId, forUser ?? locals.user?.id),
+			// Space a staff member booked for an event is the venue's, not theirs —
+			// it has no member confirm/pay flow, so listing it here offered actions
+			// that don't apply.
+			ne(reservation.bookerType, 'event'),
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];

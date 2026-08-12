@@ -585,12 +585,15 @@ describe('EventService', () => {
 				expect.objectContaining({
 					bookerType: 'event',
 					bookerId: 'evt-1',
-					status: 'confirmed' // published event → confirmed reservation
+					status: 'confirmed' // event-booked space is staff-held, never member-confirmed
 				})
 			);
 		});
 
-		it('creates scheduled reservation for draft events', async () => {
+		// A draft event's space is held the same way a published one's is. Booking
+		// it as `scheduled` made it look like an uncommitted member booking, and
+		// publish() never confirms it, so the unconfirmed sweep released the room.
+		it('creates a confirmed reservation for draft events too', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: 'res-1' }];
 
 			await update('evt-1', {
@@ -602,7 +605,7 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(staffCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'scheduled' }));
+			expect(staffCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'confirmed' }));
 		});
 
 		it('throws on conflict when override is false', async () => {

@@ -45,6 +45,12 @@ import {
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { db } from '$lib/server/db';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
+
+// drizzle and the schema are real, so the predicates the service builds can be
+// rendered to actual SQL and asserted on rather than taken on faith.
+const dialect = new SQLiteSyncDialect();
 
 describe('ReservationService', () => {
 	beforeEach(() => {
@@ -495,6 +501,22 @@ describe('ReservationService', () => {
 			expect(result.errors).toHaveLength(1);
 			expect(result.errors[0]).toContain('res-1');
 			consoleSpy.mockRestore();
+		});
+
+		// Regression: space booked for an event is staff-held — there is no member
+		// confirm/pay flow for it and publishing an event never touches its
+		// reservation. Sweeping it as "unconfirmed" released the room at showtime
+		// and cascaded waitlist promotion into a live event.
+		it('excludes event-booked space from the sweep', async () => {
+			const sweepWhere = vi.fn().mockResolvedValue([]);
+			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
+			vi.mocked(db.select).mockReturnValue({ from: sweepFrom } as any);
+
+			await cancelUnconfirmedReservations(new Date());
+
+			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
+			expect(rendered).toContain('"booker_type" <>');
+			expect(params).toContain('event');
 		});
 	});
 
