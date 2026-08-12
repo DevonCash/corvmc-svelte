@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
-import { requireUser } from '$lib/server/authorization';
+import { requireUser, hasAnyRole } from '$lib/server/authorization';
 import { getBySlug, getUserRole } from '$lib/server/band/band-service';
 
 /**
@@ -24,6 +24,26 @@ export async function requireBandMember() {
 	const role = await getUserRole(band.id, user.id);
 	if (!role) throw error(403, 'Not a member of this band');
 	return { user, band, role };
+}
+
+/**
+ * Require membership OR staff, for band-panel *reads*.
+ *
+ * Staff administer band panels (`getBandLayout` falls back to `userRole:
+ * 'staff'`), so a plain `requireBandMember` would lock them out. Mutations stay
+ * on `requireBandAdmin` — this is the read-side guard, and it exists because
+ * `requireUser()` alone let any signed-in user pull another band's drafts.
+ */
+export async function requireBandMemberOrStaff() {
+	const user = requireUser();
+	const band = await requireBandBySlug();
+	const role = await getUserRole(band.id, user.id);
+	if (role) return { user, band, role };
+
+	if (await hasAnyRole(user.id, ['admin', 'staff'])) {
+		return { user, band, role: 'staff' as const };
+	}
+	throw error(403, 'Not a member of this band');
 }
 
 const HIERARCHY: Record<string, number> = { owner: 0, admin: 1, member: 2 };

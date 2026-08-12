@@ -55,6 +55,7 @@ import { event, createEventSchema, eventSources } from '$lib/server/db/schema/ev
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
+import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,10 @@ export const getMemberTickets = query(async () => {
 	const tickets = await getUserTickets(currentUser.id);
 
 	const eventIds = [...new Set(tickets.map((t) => t.eventId))];
+	// Tickets only exist for platform-ticketed events, which are always CMC —
+	// bands never sell through our checkout — so `event_cmc_needs_end` guarantees
+	// an end time here. Narrowed at this boundary so the ticket stub and QR modal
+	// keep their non-null contract.
 	let eventMap: Record<string, { title: string; startsAt: Date; endsAt: Date }> = {};
 
 	if (eventIds.length > 0) {
@@ -98,7 +103,9 @@ export const getMemberTickets = query(async () => {
 			.where(inArray(event.id, eventIds));
 
 		eventMap = Object.fromEntries(
-			events.map((e) => [e.id, { title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }])
+			events
+				.filter((e): e is typeof e & { endsAt: Date } => e.endsAt != null)
+				.map((e) => [e.id, { title: e.title, startsAt: e.startsAt, endsAt: e.endsAt }])
 		);
 	}
 
@@ -206,12 +213,6 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 
-	// Band events are public only while the bandEvents feature is on, matching
-	// the gate on the band listing queries.
-	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
-		throw error(404, 'Event not found');
-	}
-
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.bandId) {
 		const [row] = await db
@@ -232,7 +233,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	// Sustaining members see the discounted price; anonymous visitors don't.
 	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
 
-	const isPast = evt.endsAt.getTime() < Date.now();
+	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
 
 	// "More shows" tail: other upcoming events, excluding this one.
 	const upcomingRows = await listUpcoming();

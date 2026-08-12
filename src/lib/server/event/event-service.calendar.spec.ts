@@ -97,9 +97,7 @@ describe('listPublicCalendarEvents', () => {
 			{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes' }
 		];
 
-		const result = await listPublicCalendarEvents(windowStart, windowEnd, {
-			includeBandEvents: true
-		});
+		const result = await listPublicCalendarEvents(windowStart, windowEnd);
 
 		expect(result).toHaveLength(2);
 		expect(result[0]).toMatchObject({ id: 'evt-cmc', bandName: null, bandSlug: null });
@@ -110,18 +108,16 @@ describe('listPublicCalendarEvents', () => {
 		});
 	});
 
-	it('filters to CMC-only when band events are excluded', async () => {
-		await listPublicCalendarEvents(windowStart, windowEnd, { includeBandEvents: false });
-		expect(containsParam(capturedWhere, 'cmc')).toBe(true);
-	});
-
-	it('applies no source filter when band events are included', async () => {
-		await listPublicCalendarEvents(windowStart, windowEnd, { includeBandEvents: true });
+	// Band gigs used to be gated behind the `bandEvents` flag. The flag is gone,
+	// but "a band gig reaches the public calendar" is still the behaviour worth
+	// pinning — it just holds unconditionally now.
+	it('applies no source filter, so band gigs are on the calendar', async () => {
+		await listPublicCalendarEvents(windowStart, windowEnd);
 		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
 	});
 
 	it('always filters to published events', async () => {
-		await listPublicCalendarEvents(windowStart, windowEnd, { includeBandEvents: true });
+		await listPublicCalendarEvents(windowStart, windowEnd);
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
 	});
 });
@@ -130,24 +126,20 @@ describe('listPublicUpcomingEvents', () => {
 	it('maps joined band info and filters to published', async () => {
 		selectRows = [{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes' }];
 
-		const result = await listPublicUpcomingEvents(windowStart, {
-			includeBandEvents: true,
-			limit: 20,
-			offset: 0
-		});
+		const result = await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
 
 		expect(result[0]).toMatchObject({ id: 'evt-band', bandName: 'The Shakes' });
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
 	});
 
 	it('fetches limit+1 rows at the given offset (hasMore probe)', async () => {
-		await listPublicUpcomingEvents(windowStart, { includeBandEvents: true, limit: 20, offset: 40 });
+		await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 40 });
 		expect(capturedLimit).toBe(21);
 		expect(capturedOffset).toBe(40);
 	});
 
-	it('filters to CMC-only when band events are excluded', async () => {
-		await listPublicUpcomingEvents(windowStart, { includeBandEvents: false, limit: 20, offset: 0 });
-		expect(containsParam(capturedWhere, 'cmc')).toBe(true);
+	it('applies no source filter, so band gigs are in the gig guide', async () => {
+		await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
+		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
 	});
 });

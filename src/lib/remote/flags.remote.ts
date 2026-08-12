@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { requireFeature, isFeatureEnabled } from '$lib/server/feature-flags';
+import { requireFeature } from '$lib/server/feature-flags';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { getById as getEventById } from '$lib/server/event/event-service';
 import { flagEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
@@ -129,13 +129,9 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	}
 
 	// Only publicly visible events are reportable — mirrors getPublicEventDetail
-	// so draft/cancelled events (and band events while the flag is off) can't be
-	// probed by id.
+	// so draft/cancelled events can't be probed by id.
 	const evt = await getEventById(data.eventId);
 	if (!evt || evt.status !== 'published') error(404, 'Event not found');
-	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
-		error(404, 'Event not found');
-	}
 
 	try {
 		await createFlag({

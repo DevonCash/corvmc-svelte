@@ -266,6 +266,22 @@ export async function searchMembers(query: string, bandId: string) {
 		.limit(10);
 }
 
+/**
+ * Band lookup by name, for the lineup editor.
+ *
+ * Deliberately not the staff `searchBands` in reservations.remote, which is
+ * `requireStaff()` and returns owner contact details. This is the band-facing
+ * shape: just enough to render a chip and store an id.
+ */
+export async function searchBandsByName(query: string) {
+	return db
+		.select({ id: band.id, name: band.name, slug: band.slug, avatarKey: band.avatarKey })
+		.from(band)
+		.where(and(like(band.name, `%${query}%`), isNull(band.deletedAt)))
+		.orderBy(band.name)
+		.limit(10);
+}
+
 // ---------------------------------------------------------------------------
 // Membership management
 // ---------------------------------------------------------------------------

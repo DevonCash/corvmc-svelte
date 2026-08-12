@@ -21,11 +21,6 @@ vi.mock('$lib/server/event/event-service', () => ({
 	listPublicUpcomingEvents: (...args: unknown[]) => listPublicUpcomingEvents(...(args as []))
 }));
 
-let bandEventsEnabled = false;
-vi.mock('$lib/server/feature-flags', () => ({
-	isFeatureEnabled: vi.fn(async () => bandEventsEnabled)
-}));
-
 vi.mock('$lib/server/storage', () => ({
 	resolveImageUrl: (key: string | null) => key
 }));
@@ -89,7 +84,6 @@ describe('gigGuideSchema', () => {
 describe('getPublicCalendar', () => {
 	beforeEach(() => {
 		listPublicCalendarEvents.mockClear();
-		bandEventsEnabled = false;
 	});
 
 	it('queries a first-of-month to first-of-next-month window in venue time', async () => {
@@ -107,13 +101,12 @@ describe('getPublicCalendar', () => {
 		expect(formatDateInTz(end, DEFAULT_TIMEZONE)).toBe('2027-01-01');
 	});
 
-	it('passes the bandEvents flag through as includeBandEvents', async () => {
+	// Band gigs were once gated on the `bandEvents` flag, which passed through
+	// here as `includeBandEvents`. The flag is gone and the service takes no
+	// source option at all — asserted so a reintroduced filter is caught.
+	it('passes no source option, so band gigs are on the calendar', async () => {
 		await getPublicCalendar({ month: '2026-08' });
-		expect(listPublicCalendarEvents.mock.calls[0][2]).toEqual({ includeBandEvents: false });
-
-		bandEventsEnabled = true;
-		await getPublicCalendar({ month: '2026-08' });
-		expect(listPublicCalendarEvents.mock.calls[1][2]).toEqual({ includeBandEvents: true });
+		expect(listPublicCalendarEvents.mock.calls[0][2]).toBeUndefined();
 	});
 });
 
@@ -121,7 +114,6 @@ describe('getPublicGigGuide', () => {
 	beforeEach(() => {
 		listPublicUpcomingEvents.mockClear();
 		listPublicUpcomingEvents.mockResolvedValue([]);
-		bandEventsEnabled = false;
 	});
 
 	it('defaults the anchor to today in venue time', async () => {
@@ -156,11 +148,9 @@ describe('getPublicGigGuide', () => {
 		expect(result.events).toHaveLength(1);
 	});
 
-	it('passes the flag and paging through to the service', async () => {
-		bandEventsEnabled = true;
+	it('passes paging through to the service, with no source filter', async () => {
 		await getPublicGigGuide({ offset: 40 });
 		expect(listPublicUpcomingEvents.mock.calls[0][1]).toEqual({
-			includeBandEvents: true,
 			limit: GIG_GUIDE_PAGE_SIZE,
 			offset: 40
 		});

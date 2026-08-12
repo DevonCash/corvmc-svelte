@@ -1508,26 +1508,17 @@ export interface CalendarEventRow extends EventRow {
 
 /**
  * Published events with startsAt in [start, end), across sources, band info
- * joined for attribution. Band events are excluded unless includeBandEvents
- * (the bandEvents feature flag) is set.
+ * joined for attribution.
  */
 export async function listPublicCalendarEvents(
 	start: Date,
-	end: Date,
-	opts: { includeBandEvents: boolean }
+	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({ event, bandName: band.name, bandSlug: band.slug })
 		.from(event)
 		.leftJoin(band, eq(band.id, event.bandId))
-		.where(
-			and(
-				eq(event.status, 'published'),
-				gte(event.startsAt, start),
-				lt(event.startsAt, end),
-				opts.includeBandEvents ? undefined : eq(event.source, 'cmc')
-			)
-		)
+		.where(and(eq(event.status, 'published'), gte(event.startsAt, start), lt(event.startsAt, end)))
 		.orderBy(asc(event.startsAt));
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
@@ -1536,23 +1527,17 @@ export async function listPublicCalendarEvents(
 /**
  * Published events from `from` forward, across sources, ordered soonest-first,
  * band info joined. Fetches limit+1 rows so callers can derive hasMore; band
- * events are excluded unless includeBandEvents (the bandEvents feature flag).
+ * events are included alongside CMC ones.
  */
 export async function listPublicUpcomingEvents(
 	from: Date,
-	opts: { includeBandEvents: boolean; limit: number; offset: number }
+	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({ event, bandName: band.name, bandSlug: band.slug })
 		.from(event)
 		.leftJoin(band, eq(band.id, event.bandId))
-		.where(
-			and(
-				eq(event.status, 'published'),
-				gte(event.startsAt, from),
-				opts.includeBandEvents ? undefined : eq(event.source, 'cmc')
-			)
-		)
+		.where(and(eq(event.status, 'published'), gte(event.startsAt, from)))
 		.orderBy(asc(event.startsAt))
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
