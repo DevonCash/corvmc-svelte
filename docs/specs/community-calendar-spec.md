@@ -31,8 +31,19 @@ bands, including gigs at other venues.
   `/events?from=YYYY-MM-DD`, re-anchoring the list (works for past dates too);
   "Back to today" link appears when anchored.
 - Generalized `/events/[id]` detail: band events render with a band byline linking
-  to `/directory/bands/[slug]`, an external Tickets button when `externalTicketUrl`
-  is set, and no internal RSVP/ticketing UI.
+  to `/directory/bands/[slug]`. A band gig that sells through CMC
+  (`ticketingEnabled`) uses the same internal ticketing CTA as a CMC event; one
+  that does not gets an external Tickets button when `externalTicketUrl` is set.
+  Band events never get the member-only RSVP path.
+
+  > Superseded Aug 2026. This originally read "an external Tickets button when
+  > `externalTicketUrl` is set, and no internal RSVP/ticketing UI" — band gigs
+  > were deliberately kept off CMC's checkout. Bands can now opt a gig into CMC
+  > ticketing from the band panel, so `ticketingEnabled` rather than `source`
+  > decides where a buyer is sent. Money still lands in CMC's Stripe account and
+  > **there is no payout path back to the band** — that is settled off-platform
+  > with staff. See "Band ticketing" in the parity report.
+
 - Home page "Upcoming Events" section shows the same next-3 CMC posters
   (`getPublicEvents`).
 - Sitemap lists `/events/[id]` detail pages (including published band events when

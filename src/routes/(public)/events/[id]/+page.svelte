@@ -64,9 +64,11 @@
 	const isBandEvent = $derived(evt.source === 'band');
 	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
 
-	// Band gigs are ticketed off-site (if at all); CMC events sell through /tickets.
+	// `ticketingEnabled` — not the source — decides where a buyer goes. A band can
+	// now sell its gig through CMC, in which case it uses the same purchase page
+	// as a CMC event; a band gig without it is ticketed off-site (if at all).
 	const ticketsHref = $derived(
-		isBandEvent
+		isBandEvent && !evt.ticketingEnabled
 			? (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
 			: resolve(`/events/${evt.id}/tickets`)
 	);
@@ -302,8 +304,10 @@
 						<span class="text-base font-medium" style="color: var(--fg-2)"
 							>This event has ended.</span
 						>
-					{:else if isBandEvent}
-						<!-- Band gigs are handled by the venue — no internal RSVP or ticketing. -->
+					{:else if isBandEvent && !evt.ticketingEnabled}
+						<!-- Band gig sold elsewhere: hand off to the venue. Bands that sell
+						     through CMC fall into the ticketing branch below instead, and a
+						     band gig never gets the member-only RSVP path. -->
 						{#if evt.externalTicketUrl}
 							<a
 								href={evt.externalTicketUrl}

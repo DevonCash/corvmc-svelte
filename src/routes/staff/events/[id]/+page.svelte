@@ -28,6 +28,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import { fullDate, formatTime, toLocalDate, toLocalTime, formatCents } from '$lib/utils/format';
+	import { centsToDollars, dollarsToCents } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMusic } from '@tabler/icons-svelte';
@@ -65,9 +66,7 @@
 
 	// Compute ticket price in cents for hidden field
 	const editTicketPriceCents = $derived(
-		editTicketingEnabled && editTicketPriceDollars
-			? String(Math.round(parseFloat(editTicketPriceDollars) * 100))
-			: ''
+		editTicketingEnabled ? (dollarsToCents(editTicketPriceDollars)?.toString() ?? '') : ''
 	);
 
 	function startEditing() {
@@ -85,7 +84,7 @@
 
 		// Pre-fill ticketing fields
 		editTicketingEnabled = evt.ticketingEnabled;
-		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
+		editTicketPriceDollars = centsToDollars(evt.ticketPrice);
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation

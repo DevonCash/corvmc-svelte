@@ -672,6 +672,9 @@ export interface CreateBandEventParams {
 	location?: string;
 	tags?: string;
 	externalTicketUrl?: string;
+	ticketingEnabled?: boolean;
+	ticketPrice?: number | null;
+	ticketQuantity?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -690,11 +693,18 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		location,
 		tags,
 		externalTicketUrl,
+		ticketingEnabled = false,
+		ticketPrice,
+		ticketQuantity,
 		posterFile
 	} = params;
 
 	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
 	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+	if (ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
+		throw new Error('Ticket price is required when ticketing is enabled');
+	}
+	assertValidTicketPrice(ticketPrice);
 
 	const [row] = await db
 		.insert(event)
@@ -707,6 +717,12 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			tags: tags ?? null,
 			location: location ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
+			ticketingEnabled,
+			// Price and capacity only mean anything alongside the flag, so a
+			// disabled event stores neither — that keeps `ticketingEnabled=false`
+			// with a stale price from ever reaching the purchase page.
+			ticketPrice: ticketingEnabled ? ticketPrice! : null,
+			ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
 			bandId,
 			source: 'band',
 			createdByUserId
@@ -736,6 +752,9 @@ export interface UpdateBandEventParams {
 	location?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
+	ticketingEnabled?: boolean;
+	ticketPrice?: number | null;
+	ticketQuantity?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -762,6 +781,30 @@ export async function updateBandEvent(
 	if (params.location !== undefined) updates.location = params.location;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+
+	// Same shape as the staff `update()` path: toggling the flag on demands a
+	// price and rewrites capacity, toggling it off clears both, and leaving the
+	// flag alone lets price/capacity be edited on their own.
+	if (params.ticketingEnabled !== undefined) {
+		updates.ticketingEnabled = params.ticketingEnabled;
+		if (params.ticketingEnabled) {
+			assertValidTicketPrice(params.ticketPrice);
+			if (params.ticketPrice == null) {
+				throw new Error('Ticket price is required when ticketing is enabled');
+			}
+			updates.ticketPrice = params.ticketPrice;
+			updates.ticketQuantity = params.ticketQuantity ?? null;
+		} else {
+			updates.ticketPrice = null;
+			updates.ticketQuantity = null;
+		}
+	} else {
+		if (params.ticketPrice !== undefined) {
+			assertValidTicketPrice(params.ticketPrice);
+			updates.ticketPrice = params.ticketPrice;
+		}
+		if (params.ticketQuantity !== undefined) updates.ticketQuantity = params.ticketQuantity;
+	}
 
 	if (params.posterFile) {
 		if (existing.posterKey) {

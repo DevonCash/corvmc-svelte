@@ -15,6 +15,10 @@
 	// below into an async derived (the churn behind JAVASCRIPT-SVELTEKIT-W).
 	const fields = createBandEventForm.fields;
 
+	// Gates the price/capacity block. FormField's `toggle` submits this as a real
+	// boolean, so the schema default handles the unchecked case.
+	let ticketingEnabled = $state(false);
+
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	const band = $derived(layout.band);
 </script>
@@ -81,7 +85,43 @@
 			type="text"
 			label="Ticket Link (external)"
 			placeholder="https://eventbrite.com/..."
+			description="Selling somewhere else? Link it here instead of turning on ticketing below."
 		/>
+
+		<FormField
+			name="ticketingEnabled"
+			type="toggle"
+			label="Ticketing"
+			checkboxLabel="Sell tickets through CMC"
+			bind:value={ticketingEnabled}
+		/>
+
+		{#if ticketingEnabled}
+			<div class="card bg-base-200 p-4">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormField
+						field={fields.ticketPriceDollars}
+						type="number"
+						label="Ticket price ($)"
+						min="0.01"
+						step="0.01"
+						placeholder="15.00"
+					/>
+					<FormField
+						field={fields.ticketQuantity}
+						type="number"
+						label="Capacity"
+						min="1"
+						step="1"
+						placeholder="Unlimited"
+					/>
+				</div>
+				<p class="text-sm opacity-60 mt-2">
+					Leave capacity blank for unlimited tickets. Sales are collected by CMC — talk to staff
+					about getting paid out.
+				</p>
+			</div>
+		{/if}
 
 		<div class="flex justify-end pt-4">
 			<SubmitButton label="Create Event" class="btn-primary" />

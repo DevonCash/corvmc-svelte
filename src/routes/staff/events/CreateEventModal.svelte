@@ -9,6 +9,7 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
+	import { dollarsToCents } from '$lib/utils/event-ticketing';
 	import { responseErrorMessage } from '$lib/api';
 
 	const { fields } = createEvent;
@@ -64,9 +65,7 @@
 
 	// Compute the ticket price in cents for the hidden field
 	const ticketPriceCents = $derived(
-		ticketingEnabled && ticketPriceDollars
-			? String(Math.round(parseFloat(ticketPriceDollars) * 100))
-			: ''
+		ticketingEnabled ? (dollarsToCents(ticketPriceDollars)?.toString() ?? '') : ''
 	);
 
 	$effect(() => {

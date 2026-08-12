@@ -278,6 +278,12 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
+	// A band gig can sell through CMC, so this page is reachable for source='band'.
+	// It has to disappear with the flag exactly like the detail page does —
+	// otherwise turning the feature off hides the event but leaves its checkout live.
+	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
+		throw error(404, 'Event not found');
+	}
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -936,6 +942,11 @@ export const purchaseTickets = form(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
+		// Mirrors the guard on getPublicTicketPage — the page 404s with the flag
+		// off, and this is the endpoint that would still take money without it.
+		if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
+			throw error(400, 'Tickets not available');
+		}
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
