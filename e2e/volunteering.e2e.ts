@@ -10,7 +10,14 @@ import {
 	SEED_VOL_LOG_REJECT_DESC,
 	SEED_VOL_LOG_REJECTED_DESC,
 	SEED_VOL_REJECTED_REASON,
-	readVolunteerState
+	SEED_VOL_CERT_NAME,
+	SEED_VOL_GATED_ROLE_NAME,
+	SEED_VOL_SHIFT_OPEN_ID,
+	SEED_VOL_SHIFT_OPEN_NOTE,
+	SEED_VOL_SHIFT_FULL_NOTE,
+	SEED_VOL_SIGNUP_DONE_ID,
+	readVolunteerState,
+	readSignupStatus
 } from './fixtures/seed-volunteering';
 
 /**
@@ -90,8 +97,8 @@ test.describe('volunteering — staff review queue', () => {
 		await page.goto('/staff/volunteer');
 
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
-		await rowAction(row, 'Reject').click();
-		await modalSubmit(page, 'Reject').click();
+		await rowAction(row, 'Return').click();
+		await modalSubmit(page, 'Return').click();
 
 		await expect(page.getByText(/give the member a reason/i)).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(/expected string to have/i)).toHaveCount(0);
@@ -103,15 +110,15 @@ test.describe('volunteering — staff review queue', () => {
 
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
-		await rowAction(row, 'Reject').click();
+		await rowAction(row, 'Return').click();
 		await page.locator('textarea[name="notes"]').fill(reason);
-		await modalSubmit(page, 'Reject').click();
+		await modalSubmit(page, 'Return').click();
 		await expect(row).toHaveCount(0, { timeout: 15000 });
 
 		// Kept staff-side deliberately: signing a second user in over an existing
 		// session in the same browser context does not swap the session, so the
 		// member view is asserted separately from its own login.
-		await page.getByRole('radio', { name: /Rejected/ }).click();
+		await page.getByRole('radio', { name: /Returned/ }).click();
 		const rejected = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await expect(rejected).toBeVisible({ timeout: 15000 });
 		await expect(rejected).toContainText(reason);
@@ -202,5 +209,145 @@ test.describe('volunteering — member', () => {
 		await expect(row).toContainText('1.5 hrs');
 		// Editable only while pending — the controls are the proof of status.
 		await expect(rowAction(row, 'Withdraw')).toBeVisible();
+	});
+});
+
+/**
+ * Phase 2 — shifts.
+ *
+ * These exist because the pane-based manual pass could not reach them: the
+ * Browser pane drops its auth cookie, and a cached SSR page hides that as a 401
+ * on the next POST rather than a visible logout. Everything below is a real
+ * client-server round trip through a real session.
+ *
+ * The shift board lives on `/member/volunteer` above the interest form.
+ */
+function shiftCard(page: Page, text: string) {
+	return page.locator('li').filter({ hasText: text });
+}
+
+test.describe('volunteering — shifts', () => {
+	test('a member can claim an open shift and then drop out', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		await expect(card).toBeVisible({ timeout: 15000 });
+
+		await card.getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, 'Claim it').click();
+
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
+			timeout: 15000
+		});
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('claimed');
+
+		// Dropping out has to free the place, not just hide the button — the
+		// capacity count is computed from live signups.
+		await shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)
+			.getByRole('button', { name: 'Drop out' })
+			.click();
+		await modalSubmit(page, 'Drop out').click();
+
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText("I'll do it", {
+			timeout: 15000
+		});
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('cancelled');
+	});
+
+	test('a shift needing a clearance the member lacks says so instead of offering it', async ({
+		page
+	}) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_GATED_ROLE_NAME);
+		await expect(card).toBeVisible({ timeout: 15000 });
+
+		// The whole design decision: show it with the reason rather than hide it,
+		// because the reason is what tells them what to go and get.
+		await expect(card).toContainText(SEED_VOL_CERT_NAME);
+		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+	});
+
+	test('a full shift is not claimable', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const card = shiftCard(page, SEED_VOL_SHIFT_FULL_NOTE);
+		await expect(card).toBeVisible({ timeout: 15000 });
+		await expect(card).toContainText('Full');
+		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+	});
+
+	test('staff see the claim and can confirm it', async ({ page }) => {
+		// Claim as the member first, so staff have something to confirm. Separate
+		// contexts rather than two logins in one: signing a second user in over an
+		// existing session does not swap it.
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		await card.getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, 'Claim it').click();
+		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
+			timeout: 15000
+		});
+
+		await page.context().clearCookies();
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_OPEN_ID}`);
+
+		const claimant = page.locator('li').filter({ hasText: SEED_VOL_MEMBER_EMAIL });
+		await expect(claimant).toBeVisible({ timeout: 15000 });
+
+		await claimant.locator('button[data-button-root][aria-label="Confirm"]').click();
+		await modalSubmit(page, 'Confirm').click();
+
+		await expect(page.locator('li').filter({ hasText: SEED_VOL_MEMBER_EMAIL })).toContainText(
+			'confirmed',
+			{ timeout: 15000 }
+		);
+		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('confirmed');
+	});
+});
+
+test.describe('volunteering — post-shift feedback', () => {
+	test('the survey takes two answers once, then reads as already answered', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
+
+		// Four stars. RatingGroup items are the interactive stars in order.
+		await page.locator('[data-rating-group-item]').nth(3).click();
+		await page.locator('input[name="b:wasSetUp"]').check();
+		await page.locator('textarea[name="comment"]').fill('E2E: more gaff tape by the desk.');
+		await page.getByRole('button', { name: 'Send it' }).click();
+
+		await expect(page.getByText(/thanks for helping us run the next one/i)).toBeVisible({
+			timeout: 15000
+		});
+
+		// Second visit: the unique signupId row means asked-and-answered, and the
+		// form must not be offered again.
+		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
+		await expect(page.getByText(/already answered/i)).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('button', { name: 'Send it' })).toHaveCount(0);
+	});
+
+	test('staff see the response on the shift and in the per-role rollup', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+
+		await page.goto(`/staff/volunteer/shifts/e2e-vol-shift-done`);
+		await expect(page.getByText('E2E: more gaff tape by the desk.')).toBeVisible({
+			timeout: 15000
+		});
+
+		// The rollup is anonymous by design — the response appears under its role
+		// with no member name attached.
+		await page.goto('/staff/volunteer/report');
+		const rollupRow = page.locator('tr').filter({ hasText: SEED_VOL_ROLE_NAME }).last();
+		await expect(page.getByRole('heading', { name: 'How shifts are going' })).toBeVisible({
+			timeout: 15000
+		});
+		await expect(rollupRow).toContainText('/ 5');
 	});
 });

@@ -311,6 +311,19 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
 
+	// A band gig is never sold through *our* checkout. The money would land in
+	// CMC's Stripe account with no payout path back to the band, so the rule is
+	// absolute rather than a band-vs-staff permission: `createBandEvent` cannot
+	// set `ticketingEnabled`, and this is the only other writer that can.
+	//
+	// Scoped to `ticketingEnabled` alone. A band gig legitimately carries a
+	// `ticketPrice` — it is a display price for the door or an outside seller,
+	// and the band event forms let bands set one — and `externalTicketUrl` is
+	// how a band sells at all. Only the platform-checkout flag is off limits.
+	if (existing.source === 'band' && params.ticketingEnabled === true) {
+		throw new Error('Band events cannot be ticketed through CMC');
+	}
+
 	// Ticketing fields. The price survives whatever happens to the ticketing
 	// toggle — switching our checkout off doesn't make the show free, it just
 	// means somebody else (or the door) takes the money. Capacity does not: it's
@@ -841,6 +854,25 @@ export async function countBandPastEvents(bandId: string): Promise<number> {
 	return row?.value ?? 0;
 }
 
+/**
+ * Published band shows already played, newest first. Fetches limit+1 rows so
+ * callers can derive hasMore.
+ */
+export async function listBandEventsPast(
+	bandId: string,
+	opts: { limit: number; offset: number }
+): Promise<EventRow[]> {
+	return db
+		.select()
+		.from(event)
+		.where(
+			and(eq(event.bandId, bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+		)
+		.orderBy(desc(event.startsAt))
+		.limit(opts.limit + 1)
+		.offset(opts.offset);
+}
+
 export interface MemberShowRow extends EventRow {
 	bandName: string;
 	bandSlug: string;
@@ -865,6 +897,34 @@ export async function listMemberUpcomingShows(userId: string): Promise<MemberSho
 		)
 		.where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
 		.orderBy(asc(event.startsAt));
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+/**
+ * Past published shows across a member's active bands, newest first. Fetches
+ * limit+1 rows so callers can derive hasMore.
+ */
+export async function listMemberPastShows(
+	userId: string,
+	opts: { limit: number; offset: number }
+): Promise<MemberShowRow[]> {
+	const rows = await db
+		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.from(event)
+		.innerJoin(band, eq(band.id, event.bandId))
+		.innerJoin(
+			bandMember,
+			and(
+				eq(bandMember.bandId, band.id),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		)
+		.where(and(eq(event.status, 'published'), lte(event.startsAt, new Date())))
+		.orderBy(desc(event.startsAt))
+		.limit(opts.limit + 1)
+		.offset(opts.offset);
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
 }

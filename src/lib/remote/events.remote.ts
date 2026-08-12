@@ -288,6 +288,10 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
+	// Band gigs are never sold through CMC (see `update()` in event-service).
+	// Checked on source rather than the bandEvents flag so a row that predates
+	// that rule — or one written around it — still cannot reach checkout.
+	if (evt.source === 'band') throw error(404, 'Tickets not available for this event');
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -866,6 +870,12 @@ export const claimFreeTicket = form(
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
+		// Mints a real ticket row with a code and capacity, so it falls under the
+		// same rule as a paid purchase: CMC does not issue tickets for a band's
+		// gig at any price. Unreachable while `update()` holds — a band event
+		// cannot have `ticketingEnabled` — but this is the ticket-minting call, so
+		// it does not lean on that. (The headcount RSVP below is allowed.)
+		if (evt.source === 'band') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -909,6 +919,9 @@ export const rsvpToEvent = form(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (evt.ticketingEnabled) throw error(400, 'This event uses tickets, not RSVPs');
+		// Band gigs are deliberately allowed here. An RSVP is a headcount row, not
+		// a ticket — it takes no money and issues no code — so it is unaffected by
+		// the rule that CMC never sells a band's gig.
 
 		await createRsvp({
 			eventId: evt.id,
@@ -952,6 +965,9 @@ export const purchaseTickets = form(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
+		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
+		// money, so it repeats the check rather than trusting the page guard.
+		if (evt.source === 'band') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {

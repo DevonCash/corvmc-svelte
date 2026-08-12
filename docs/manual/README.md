@@ -21,18 +21,18 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
 Each row is one `help_categories` entry (defined in `scripts/seed-dev.ts`; `sync-help-articles.ts`
 auto-creates any missing).
 
-| slug                | Name                 | icon            | minRole | Covers                                   |
-| ------------------- | -------------------- | --------------- | ------- | ---------------------------------------- |
-| `getting-started`   | Getting Started      | book            | member  | account, navigation, basics              |
-| `reservations`      | Practice Space       | calendar        | member  | booking, recurring, payment, credits     |
-| `profile-directory` | Profile & Directory  | user            | member  | profile editing, visibility, being found |
-| `bands`             | Bands                | music           | member  | create/join, invites, membership         |
-| `band-pages`        | Band Pages (Premium) | layout          | member  | subscription, page editor, EPK           |
-| `events-tickets`    | Events & Tickets     | ticket          | member  | browsing, tickets, QR check-in           |
-| `equipment`         | Equipment Lending    | package         | member  | catalog, requesting loans                |
-| `membership`        | Membership & Billing | heart           | member  | sustaining membership, Stripe portal     |
-| `volunteering`      | Volunteering         | heart-handshake | member  | roles, logging hours, staff review       |
-| `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                     |
+| slug                | Name                 | icon            | minRole | Covers                                               |
+| ------------------- | -------------------- | --------------- | ------- | ---------------------------------------------------- |
+| `getting-started`   | Getting Started      | book            | member  | account, navigation, basics                          |
+| `reservations`      | Practice Space       | calendar        | member  | booking, recurring, payment, credits                 |
+| `profile-directory` | Profile & Directory  | user            | member  | profile editing, visibility, being found             |
+| `bands`             | Bands                | music           | member  | create/join, invites, membership                     |
+| `band-pages`        | Band Pages (Premium) | layout          | member  | subscription, page editor, EPK                       |
+| `events-tickets`    | Events & Tickets     | ticket          | member  | browsing, tickets, QR check-in                       |
+| `equipment`         | Equipment Lending    | package         | member  | catalog, requesting loans                            |
+| `membership`        | Membership & Billing | heart           | member  | sustaining membership, Stripe portal                 |
+| `volunteering`      | Volunteering         | heart-handshake | member  | roles, interest, shifts, clearances, hours, feedback |
+| `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                                 |
 
 **Coverage:** ~8 public + ~30 member + ~19 band + ~19 staff ≈ **76 articles**.
 
@@ -101,8 +101,8 @@ auto-creates any missing).
 
 ### volunteering
 
-- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, logging hours, review outcomes
-- [x] `[H]` Reviewing volunteer hours (minRole=staff) — the approval queue, managing roles, the report
+- [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, saying what interests you, claiming shifts, logging hours, the day-after survey
+- [x] `[H]` Reviewing volunteer hours (minRole=staff) — scheduling shifts, the approval queue, the interest list, roles and clearances, the feedback rollup, the report
 
 ## C. Band panel → `src/content/help/`
 

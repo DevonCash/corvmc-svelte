@@ -173,6 +173,34 @@ export const inboxMessageDirections = ['inbound', 'outbound'] as const;
 export const volunteerHourStatuses = ['pending', 'approved', 'rejected'] as const;
 
 /**
+ * The DB says `rejected`, but nothing user-facing does: staff return a log for
+ * correction and the member logs it again, which "rejected" reads as final. The
+ * stored value is unchanged — this is the display layer only.
+ */
+export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[number], string> = {
+	pending: 'Pending',
+	approved: 'Approved',
+	rejected: 'Returned'
+};
+
+/**
+ * How a role is grouped when roles are shown as a list to choose from. Purely
+ * presentational — nothing branches on it. Committee work is volunteering that
+ * happens in a monthly meeting rather than at the space, which is why it reads
+ * as its own group rather than as more "away from shows".
+ */
+export const volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee'] as const;
+
+export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[number], string> = {
+	'at-shows': 'At shows',
+	'away-from-shows': 'Away from shows',
+	committee: 'Committees'
+};
+
+/** How many roles one member may express interest in — every role and then some. */
+export const VOLUNTEER_MAX_INTERESTS = 50;
+
+/**
  * How far back a member may backdate an hour log. Too tight and someone loses a
  * busy season's hours after a stretch of not logging; too loose and the "this
  * quarter" figure keeps moving under the board.
@@ -189,6 +217,55 @@ export const VOLUNTEER_ROLE_DESCRIPTION_MAX = 2000;
 
 /** Hours a member may enter per log, as a step for the number input. */
 export const VOLUNTEER_HOUR_STEP = 0.25;
+
+// ---------------------------------------------------------------------------
+// Shifts
+// ---------------------------------------------------------------------------
+
+/**
+ * The same words `reservationStatuses` uses for the same states, deliberately:
+ * a shift claim and a room booking move through the same shape, and two
+ * vocabularies for one lifecycle is a tax on everyone reading the code.
+ *
+ * `claimed` is a member putting their hand up; `confirmed` is staff saying yes.
+ */
+export const volunteerSignupStatuses = [
+	'claimed',
+	'confirmed',
+	'completed',
+	'cancelled',
+	'no_show'
+] as const;
+export type VolunteerSignupStatus = (typeof volunteerSignupStatuses)[number];
+
+/** A single shift can't run longer than a day — a typo'd end date, not a real shift. */
+export const VOLUNTEER_SHIFT_MAX_MINUTES = 1440;
+
+/** How many people one shift can ask for. Higher than any real call. */
+export const VOLUNTEER_SHIFT_MAX_CAPACITY = 50;
+
+export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
+// Certifications
+// ---------------------------------------------------------------------------
+
+/** A card inside this window of expiry reads as "expiring soon" rather than current. */
+export const CERT_EXPIRY_WARNING_DAYS = 60;
+
+export const CERT_NAME_MAX = 100;
+export const CERT_DESCRIPTION_MAX = 2000;
+export const CERT_REFERENCE_MAX = 100;
+export const CERT_NOTES_MAX = 1000;
+export const CERT_REVOKED_REASON_MAX = 1000;
+
+// ---------------------------------------------------------------------------
+// Post-shift feedback
+// ---------------------------------------------------------------------------
+
+export const SHIFT_FEEDBACK_MIN_RATING = 1;
+export const SHIFT_FEEDBACK_MAX_RATING = 5;
+export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
 
 /**
  * Today's calendar date in club time, as YYYY-MM-DD.

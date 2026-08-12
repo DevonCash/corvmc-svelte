@@ -23,7 +23,10 @@
 		IconFlag,
 		IconHeartHandshake,
 		IconReportAnalytics,
-		IconListDetails
+		IconListDetails,
+		IconHandStop,
+		IconCertificate,
+		IconCalendarTime
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 
@@ -97,12 +100,29 @@
 			<Nav.Collapsible
 				href="/staff/volunteer"
 				label="Volunteering"
-				childHrefs={['/staff/volunteer', '/staff/volunteer/roles', '/staff/volunteer/report']}
+				childHrefs={[
+					'/staff/volunteer',
+					'/staff/volunteer/shifts',
+					'/staff/volunteer/interest',
+					'/staff/volunteer/roles',
+					'/staff/volunteer/certifications',
+					'/staff/volunteer/clearances',
+					'/staff/volunteer/report'
+				]}
 				badge={layout.volunteerPending}
 			>
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
+				<Nav.Item href="/staff/volunteer/shifts" label="Shifts">
+					{#snippet icon()}<IconCalendarTime />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/volunteer/interest" label="Interest">
+					{#snippet icon()}<IconHandStop />{/snippet}
+				</Nav.Item>
 				<Nav.Item href="/staff/volunteer/roles" label="Roles">
 					{#snippet icon()}<IconListDetails />{/snippet}
+				</Nav.Item>
+				<Nav.Item href="/staff/volunteer/certifications" label="Certifications">
+					{#snippet icon()}<IconCertificate />{/snippet}
 				</Nav.Item>
 				<Nav.Item href="/staff/volunteer/report" label="Report">
 					{#snippet icon()}<IconReportAnalytics />{/snippet}

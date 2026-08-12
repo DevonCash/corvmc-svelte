@@ -8,10 +8,14 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Form, { CheckboxGroup, SubmitButton } from '$lib/components/shared/Form';
+	import OpenShifts from '$lib/components/shared/volunteer/OpenShifts.svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {
 		clubToday,
 		formatVolunteerHours,
+		volunteerRoleGroups,
+		volunteerRoleGroupLabels,
 		DEFAULT_TIMEZONE,
 		VOLUNTEER_HOUR_STEP
 	} from '$lib/config';
@@ -19,15 +23,33 @@
 	import {
 		getActiveVolunteerRoles,
 		getMyVolunteerHours,
+		getMyVolunteerInterests,
 		getMyVolunteerSummary,
+		getOpenShifts,
+		getUnloggedShifts,
+		saveVolunteerInterests,
 		submitVolunteerHours,
 		editVolunteerHours,
 		withdrawVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
+	type Role = { id: string; name: string; group: string; descriptionHtml: string | null };
+
 	let roles = $derived(getActiveVolunteerRoles());
+	let interests = $derived(getMyVolunteerInterests());
+	let openShifts = $derived(getOpenShifts());
+	let unloggedShifts = $derived(getUnloggedShifts());
 	let logs = $derived(getMyVolunteerHours());
 	let summary = $derived(getMyVolunteerSummary());
+
+	// Group order comes from the enum, not from the data, so the columns stay put
+	// as roles are added. Empty groups drop out rather than rendering a bare
+	// heading — a club with no committees shouldn't see the word.
+	function groupedRoles(all: Role[]) {
+		return volunteerRoleGroups
+			.map((key) => ({ key, roles: all.filter((r) => r.group === key) }))
+			.filter((g) => g.roles.length > 0);
+	}
 
 	// Club time, not UTC: after 5pm PT the UTC date is already tomorrow, and the
 	// service rejects a future date — so a UTC-defaulted input offered a value
@@ -40,6 +62,12 @@
 
 	function toHoursInput(minutes: number): string {
 		return String(minutes / 60);
+	}
+
+	/** Shift duration → the hours input, rounded to the quarter-hour step. */
+	function shiftHours(startsAt: Date, endsAt: Date): string {
+		const hours = (endsAt.getTime() - startsAt.getTime()) / 3_600_000;
+		return String(Math.round(hours * 4) / 4);
 	}
 </script>
 
@@ -91,29 +119,105 @@
 	{/await}
 
 	<!--
-		The role list is the reason this page is worth opening when you have no
-		hours to log: it's the only place that says what volunteering here involves.
+		Shifts first: a dated "we need someone on Saturday" is more actionable than
+		a standing "I'd help with this", and the board is ordered so the roles they
+		already said yes to surface at the top.
 	-->
-	{#await roles then roleOptions}
+	<!--
+		Completed shifts with no hour log yet. The member confirms rather than
+		composes: role, date, and duration come from the shift, and the log lands
+		in the queue marked as scheduled so staff can approve it on sight.
+	-->
+	{#await unloggedShifts then unlogged}
+		{#if unlogged.length > 0}
+			<InfoCard title="Log your shift hours" class="border-l-4 border-primary">
+				<ul class="flex flex-col gap-3">
+					{#each unlogged as done (done.signupId)}
+						<li class="flex flex-wrap items-center justify-between gap-3">
+							<div class="min-w-0">
+								<span class="font-medium">{done.roleName}</span>
+								<span class="text-sm opacity-70"> — {formatDateShort(done.startsAt)}</span>
+							</div>
+							<Action
+								action={submitVolunteerHours.for(done.signupId)}
+								label="Log these hours"
+								class="btn-primary btn-sm"
+								modalTitle="Log hours for {done.roleName}"
+								submitLabel="Submit for review"
+								successToast="Hours submitted for review"
+							>
+								{#snippet form()}
+									<input type="hidden" name="shiftId" value={done.shiftId} />
+									<input type="hidden" name="volunteerRoleId" value={done.volunteerRoleId} />
+									<FormField
+										name="workedOn"
+										label="Date"
+										type="date"
+										value={toDateInput(done.startsAt)}
+										max={today}
+									/>
+									<FormField
+										name="hours"
+										label="Hours"
+										type="number"
+										step={VOLUNTEER_HOUR_STEP}
+										min="0.25"
+										value={shiftHours(done.startsAt, done.endsAt)}
+										description="Pre-filled from the shift — adjust if you stayed longer or left early."
+									/>
+									<FormField
+										name="description"
+										label="What you did"
+										type="textarea"
+										value="Worked the {done.roleName} shift"
+									/>
+								{/snippet}
+							</Action>
+						</li>
+					{/each}
+				</ul>
+			</InfoCard>
+		{/if}
+	{/await}
+
+	{#await openShifts then shifts}
+		<OpenShifts {shifts} />
+	{/await}
+
+	<!--
+		The role list is the reason this page is worth opening when you have no
+		hours to log: it's the only place that says what volunteering here involves,
+		and ticking a box here is how staff know who to ask.
+	-->
+	{#await Promise.all([roles, interests]) then [roleOptions, myInterests]}
 		<InfoCard title="What you can help with">
 			{#if roleOptions.length === 0}
 				<p class="text-sm opacity-60">
 					No volunteer roles are open right now. Get in touch and we'll find you something.
 				</p>
 			{:else}
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					{#each roleOptions as role (role.id)}
-						<div class="rounded-box bg-base-200 p-4">
-							<h3 class="font-medium">{role.name}</h3>
-							{#if role.descriptionHtml}
-								<div class="prose prose-sm mt-1 max-w-none text-base-content/80">
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -- staff-authored markdown, rendered and sanitized server-side by renderMarkdown -->
-									{@html role.descriptionHtml}
-								</div>
-							{/if}
-						</div>
+				<Form remote={saveVolunteerInterests} successToast="Saved — we'll be in touch">
+					<p class="text-sm text-base-content/70">
+						Tick anything that interests you. It isn't a commitment — it just tells us who to ask
+						when something comes up, and we'll show you how to do it.
+					</p>
+
+					{#each groupedRoles(roleOptions) as group (group.key)}
+						<CheckboxGroup
+							field={saveVolunteerInterests.fields.roleIds}
+							legend={volunteerRoleGroupLabels[group.key]}
+							selected={myInterests}
+							descriptionHtml
+							options={group.roles.map((r) => ({
+								value: r.id,
+								label: r.name,
+								description: r.descriptionHtml
+							}))}
+						/>
 					{/each}
-				</div>
+
+					<SubmitButton label="Save" class="btn-primary" />
+				</Form>
 			{/if}
 		</InfoCard>
 	{/await}

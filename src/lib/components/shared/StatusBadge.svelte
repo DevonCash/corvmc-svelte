@@ -36,11 +36,18 @@
 		IconStar,
 		IconPointFilled
 	} from '@tabler/icons-svelte';
+	import { volunteerHourStatusLabels } from '$lib/config';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;
 
 	export type StatusVariant = { icon: IconComponent; color: string };
+
+	/**
+	 * Statuses whose display text is not just the humanised enum value. Exported
+	 * so `StatusBadge.spec.ts` can assert no key here has outlived its vocabulary.
+	 */
+	export const labels: Record<string, string> = { ...volunteerHourStatusLabels };
 
 	export const badgeClass: Record<string, string> = {
 		// Reservations
@@ -177,6 +184,7 @@
 
 	const variant = $derived(variants[status] ?? fallback);
 	const label = $derived.by(() => {
+		if (labels[status]) return labels[status];
 		const s = status.replace(/_/g, ' ');
 		return s.charAt(0).toUpperCase() + s.slice(1);
 	});

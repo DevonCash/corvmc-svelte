@@ -722,6 +722,72 @@ describe('EventService', () => {
 		});
 	});
 
+	// Band gigs are never sold through CMC. `createBandEvent` has no ticketing
+	// params, so `update()` is the only remaining way a band row could acquire
+	// `ticketingEnabled` — these pin that shut.
+	describe('band events cannot be ticketed', () => {
+		const bandEvent = { ...mockEventRow, status: 'draft', source: 'band', bandId: 'band-1' };
+
+		it('rejects enabling ticketing on a band event', async () => {
+			selectResult = [bandEvent];
+
+			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 })).rejects.toThrow(
+				'Band events cannot be ticketed through CMC'
+			);
+		});
+
+		it('allows a door price on a band event', async () => {
+			// Only our checkout is off limits. `ticketPrice` is a display price for
+			// the door or an outside seller, and the band forms let bands set one.
+			selectResult = [bandEvent];
+
+			await update('evt-1', { ticketPrice: 2000 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2000 });
+			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+		});
+
+		it('allows an external ticket link on a band event', async () => {
+			selectResult = [bandEvent];
+
+			await update('evt-1', { externalTicketUrl: 'https://venue.test/tickets' });
+
+			expect(lastUpdateSet).toMatchObject({
+				externalTicketUrl: 'https://venue.test/tickets'
+			});
+		});
+
+		it('still allows disabling ticketing on a band event', async () => {
+			// The escape hatch for a row written before the rule existed: staff
+			// opening the edit form submits `false` and clears the stale flag. The
+			// price stays — turning our checkout off doesn't make the show free.
+			selectResult = [{ ...bandEvent, ticketingEnabled: true, ticketPrice: 2000 }];
+
+			await update('evt-1', { ticketingEnabled: false });
+
+			expect(lastUpdateSet).toMatchObject({
+				ticketingEnabled: false,
+				ticketQuantity: null
+			});
+		});
+
+		it('leaves non-ticketing edits to a band event alone', async () => {
+			selectResult = [bandEvent];
+
+			await update('evt-1', { title: 'New Title', location: 'The Whiteside' });
+
+			expect(lastUpdateSet).toMatchObject({ title: 'New Title', location: 'The Whiteside' });
+		});
+
+		it('does not restrict ticketing on a CMC event', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', source: 'cmc' }];
+
+			await update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketingEnabled: true, ticketPrice: 2000 });
+		});
+	});
+
 	describe('update ticketing fields', () => {
 		it('enables ticketing with price and quantity', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
