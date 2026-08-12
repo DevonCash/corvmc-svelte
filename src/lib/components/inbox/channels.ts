@@ -2,6 +2,7 @@ import {
 	IconMail,
 	IconMessageCircle,
 	IconWorld,
+	IconMessages,
 	IconBrandInstagram,
 	IconBrandFacebook
 } from '@tabler/icons-svelte';
@@ -18,6 +19,7 @@ export const channelLabels: Record<Channel, string> = {
 	email: 'Email',
 	sms: 'SMS',
 	web: 'Contact Form',
+	portal: 'Member Portal',
 	instagram: 'Instagram',
 	messenger: 'Messenger'
 };
@@ -26,6 +28,7 @@ export const channelIcons: Record<Channel, typeof IconMail> = {
 	email: IconMail,
 	sms: IconMessageCircle,
 	web: IconWorld,
+	portal: IconMessages,
 	instagram: IconBrandInstagram,
 	messenger: IconBrandFacebook
 };

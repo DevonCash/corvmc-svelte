@@ -17,6 +17,7 @@
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
 	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
+	import { isAlwaysEnabledChannel } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -41,6 +42,7 @@
 		IconMail,
 		IconMessageCircle,
 		IconWorld,
+		IconMessages,
 		IconBrandInstagram,
 		IconBrandFacebook,
 		IconToggleRight,
@@ -159,6 +161,12 @@
 			label: 'Contact Form',
 			icon: IconWorld,
 			description: 'Receive messages from the public contact form',
+			envHint: 'Always enabled'
+		},
+		portal: {
+			label: 'Member Portal',
+			icon: IconMessages,
+			description: 'Members message staff from their member portal',
 			envHint: 'Always enabled'
 		},
 		instagram: {
@@ -839,7 +847,7 @@
 
 			{#each channelConfigs as cfg (cfg.channel)}
 				{@const meta = channelMeta[cfg.channel]}
-				{@const isWeb = cfg.channel === 'web'}
+				{@const isAlwaysOn = isAlwaysEnabledChannel(cfg.channel)}
 				{@const ChannelIcon = meta.icon}
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
 				<div class="card bg-base-100 shadow">
@@ -852,7 +860,7 @@
 									<p class="text-xs opacity-60">{meta.description}</p>
 								</div>
 							</div>
-							{#if isWeb}
+							{#if isAlwaysOn}
 								<span class="badge badge-success badge-sm">Always On</span>
 							{:else}
 								<form
@@ -875,7 +883,7 @@
 								</form>
 							{/if}
 						</div>
-						{#if !isWeb}
+						{#if !isAlwaysOn}
 							<div class="mt-2 text-xs opacity-40">
 								Env: {meta.envHint}
 							</div>

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { inboxChannelConfig } from '$lib/server/db/schema/inbox';
 import { eq } from 'drizzle-orm';
-import { inboxChannels } from '$lib/config';
+import { inboxChannels, isAlwaysEnabledChannel } from '$lib/config';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
 
 export interface ChannelConfigRow {
@@ -18,14 +18,14 @@ export async function getAllChannelConfigs(): Promise<ChannelConfigRow[]> {
 		const row = byChannel.get(ch);
 		return {
 			channel: ch,
-			enabled: ch === 'web' ? true : (row?.enabled ?? false),
+			enabled: isAlwaysEnabledChannel(ch) ? true : (row?.enabled ?? false),
 			config: (row?.config as Record<string, unknown>) ?? {}
 		};
 	});
 }
 
 export async function getChannelConfig(channel: InboxChannel): Promise<ChannelConfigRow> {
-	if (channel === 'web') {
+	if (isAlwaysEnabledChannel(channel)) {
 		return { channel, enabled: true, config: {} };
 	}
 
@@ -43,7 +43,7 @@ export async function getChannelConfig(channel: InboxChannel): Promise<ChannelCo
 }
 
 export async function isChannelEnabled(channel: InboxChannel): Promise<boolean> {
-	if (channel === 'web') return true;
+	if (isAlwaysEnabledChannel(channel)) return true;
 
 	const [row] = await db
 		.select({ enabled: inboxChannelConfig.enabled })
@@ -60,6 +60,10 @@ export async function getEnabledChannels(): Promise<InboxChannel[]> {
 }
 
 export async function updateChannelConfig(channel: InboxChannel, enabled: boolean): Promise<void> {
+	// An always-on channel has no toggle in the UI. Writing a row anyway would
+	// store a disabled flag that every read ignores, which reads as a bug later.
+	if (isAlwaysEnabledChannel(channel)) return;
+
 	const [existing] = await db
 		.select()
 		.from(inboxChannelConfig)

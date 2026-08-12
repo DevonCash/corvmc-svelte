@@ -162,9 +162,31 @@ export const creditSourceLabels: Record<string, string> = {
 // Inbox enum values
 // ---------------------------------------------------------------------------
 
-export const inboxChannels = ['email', 'sms', 'web', 'instagram', 'messenger'] as const;
+export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'] as const;
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 export const inboxMessageDirections = ['inbound', 'outbound'] as const;
+
+/**
+ * How a participant relates to a thread. Only threads with signed-in parties
+ * have participants at all — the outward channels identify their contact by
+ * email/phone/external id, denormalized onto the thread.
+ */
+export const inboxParticipantRoles = ['member', 'staff'] as const;
+
+/**
+ * Channels with no external system behind them: nothing to authenticate, so
+ * nothing to turn off. The contact form and the member portal both deliver
+ * through the site itself. Lives here rather than in the inbox service so the
+ * settings page can ask the same question the server does.
+ */
+export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number][] = [
+	'web',
+	'portal'
+];
+
+export function isAlwaysEnabledChannel(channel: string): boolean {
+	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
+}
 
 // ---------------------------------------------------------------------------
 // Volunteering

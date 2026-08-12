@@ -59,6 +59,7 @@ export const tableOrder = [
 	'band_page_config',
 	'inbox_message',
 	'inbox_note',
+	'inbox_participant',
 	'content_flag',
 	'volunteer_hour_log',
 	'volunteer_profile',

@@ -1,6 +1,12 @@
 import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxNote } from '$lib/server/db/schema/inbox';
+import {
+	inboxThread,
+	inboxMessage,
+	inboxNote,
+	inboxParticipant
+} from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { eq, and, desc, count, like, or, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
@@ -67,7 +73,10 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 			.orderBy(desc(inboxThread.lastMessageAt))
 			.limit(1);
 	}
-	// channel === 'web' always creates a new thread
+	// 'web' and 'portal' always create a new thread. Both address a conversation
+	// explicitly — the contact form is one-shot, and a portal member picks a
+	// subject and replies into a thread by id — so folding a second one into an
+	// open thread would silently discard its subject.
 
 	if (existing) return existing;
 
@@ -112,6 +121,15 @@ export interface ListThreadsFilters {
 	search?: string;
 }
 
+/**
+ * The staff queue. Every channel here is the org talking to the outside world,
+ * so there is deliberately no ownership filter.
+ *
+ * This is the single enforcement point for thread visibility: if a channel is
+ * ever added whose threads are private to their participants (member-to-member
+ * messages), its exclusion belongs in `conditions` below, alongside whatever
+ * escalates a reported thread back into the queue.
+ */
 export async function listThreads(filters: ListThreadsFilters, pagination: PaginationInput) {
 	const conditions = [];
 
@@ -166,6 +184,11 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 }
 
 export async function getThread(id: string) {
+	// The member behind a portal thread, if there is one. Joined live rather than
+	// read off the thread's denormalized contactName, which goes stale the moment
+	// they rename themselves.
+	const contactUser = alias(user, 'contact_user');
+
 	const [thread] = await db
 		.select({
 			id: inboxThread.id,
@@ -178,6 +201,8 @@ export async function getThread(id: string) {
 			contactExternalId: inboxThread.contactExternalId,
 			assignedToUserId: inboxThread.assignedToUserId,
 			assignedToName: user.name,
+			contactUserId: contactUser.id,
+			contactUserName: contactUser.name,
 			snoozedUntil: inboxThread.snoozedUntil,
 			messageCount: inboxThread.messageCount,
 			lastMessageAt: inboxThread.lastMessageAt,
@@ -185,6 +210,11 @@ export async function getThread(id: string) {
 		})
 		.from(inboxThread)
 		.leftJoin(user, eq(inboxThread.assignedToUserId, user.id))
+		.leftJoin(
+			inboxParticipant,
+			and(eq(inboxParticipant.threadId, inboxThread.id), eq(inboxParticipant.role, 'member'))
+		)
+		.leftJoin(contactUser, eq(contactUser.id, inboxParticipant.userId))
 		.where(eq(inboxThread.id, id))
 		.limit(1);
 

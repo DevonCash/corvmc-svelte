@@ -67,7 +67,8 @@ import {
 	inboxThread,
 	inboxMessage,
 	inboxNote,
-	inboxChannelConfig
+	inboxChannelConfig,
+	inboxParticipant
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 import {
@@ -459,6 +460,7 @@ async function deleteAll() {
 		'content_flag',
 		'inbox_note',
 		'inbox_message',
+		'inbox_participant',
 		'inbox_thread',
 		'inbox_channel_config',
 		'help_articles',
@@ -2633,7 +2635,7 @@ async function seedHelp() {
 // Inbox threads
 // ---------------------------------------------------------------------------
 
-async function seedInbox(adminUser: SeedUser) {
+async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 	const now = new Date();
 	const hour = 3600_000;
 	const day = 24 * hour;
@@ -2707,9 +2709,66 @@ async function seedInbox(adminUser: SeedUser) {
 				lastMessageAt: new Date(now.getTime() - hour),
 				createdAt: new Date(now.getTime() - hour),
 				updatedAt: new Date(now.getTime() - hour)
+			},
+
+			// Portal threads. Unlike every channel above, these belong to a real
+			// account — the member reads and answers them at /member/messages, and
+			// the participant rows below are what make them theirs.
+			{
+				id: randomUUID(),
+				channel: 'portal' as const,
+				status: 'open' as const,
+				subject: 'Question about after-hours access',
+				preview:
+					"You're all set — your fob works until 11pm on weeknights. Let us know if it gives you trouble.",
+				contactName: memberUser.name,
+				contactEmail: memberUser.email,
+				messageCount: 2,
+				lastMessageAt: new Date(now.getTime() - 4 * hour),
+				createdAt: new Date(now.getTime() - day),
+				updatedAt: new Date(now.getTime() - 4 * hour)
+			},
+			{
+				id: randomUUID(),
+				channel: 'portal' as const,
+				status: 'resolved' as const,
+				subject: 'Amp buzzing in Room A',
+				preview: 'Swapped the cable — no buzz now. Thanks for flagging it.',
+				contactName: memberUser.name,
+				contactEmail: memberUser.email,
+				messageCount: 2,
+				lastMessageAt: new Date(now.getTime() - 6 * day),
+				createdAt: new Date(now.getTime() - 7 * day),
+				updatedAt: new Date(now.getTime() - 6 * day)
 			}
 		],
-		5
+		4
+	);
+
+	// Read cursors. The open thread is left unread so the member portal opens
+	// with a badge on the Messages nav item; the resolved one is caught up, which
+	// is what exercises the closed-conversation view.
+	await batchInsert(
+		inboxParticipant,
+		[
+			{
+				id: randomUUID(),
+				threadId: threads[5].id,
+				userId: memberUser.id,
+				role: 'member' as const,
+				lastReadAt: null,
+				createdAt: new Date(now.getTime() - day)
+			},
+			{
+				id: randomUUID(),
+				threadId: threads[6].id,
+				userId: memberUser.id,
+				role: 'member' as const,
+				lastReadAt: new Date(now.getTime() - 5 * day),
+				createdAt: new Date(now.getTime() - 7 * day)
+			}
+		],
+		2
 	);
 
 	const messages = await batchInsert(
@@ -2814,9 +2873,50 @@ async function seedInbox(adminUser: SeedUser) {
 				direction: 'inbound' as const,
 				body: "Is the studio open tomorrow? Google says you're closed on Mondays.",
 				createdAt: new Date(now.getTime() - hour)
+			},
+
+			// Thread 6: portal, still open. authorUserId is what puts the member's
+			// own message on their side of the timeline.
+			{
+				id: randomUUID(),
+				threadId: threads[5].id,
+				direction: 'inbound' as const,
+				body: 'Hi! Does my fob still work after 9pm? I got locked out last Tuesday around 9:30.',
+				authorName: memberUser.name,
+				authorUserId: memberUser.id,
+				createdAt: new Date(now.getTime() - day)
+			},
+			{
+				id: randomUUID(),
+				threadId: threads[5].id,
+				direction: 'outbound' as const,
+				body: "You're all set — your fob works until 11pm on weeknights. Let us know if it gives you trouble.",
+				authorName: adminUser.name,
+				authorUserId: adminUser.id,
+				createdAt: new Date(now.getTime() - 4 * hour)
+			},
+
+			// Thread 7: portal, resolved — the member can read it but not reply.
+			{
+				id: randomUUID(),
+				threadId: threads[6].id,
+				direction: 'inbound' as const,
+				body: 'The amp in Room A is buzzing pretty badly on the clean channel.',
+				authorName: memberUser.name,
+				authorUserId: memberUser.id,
+				createdAt: new Date(now.getTime() - 7 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: threads[6].id,
+				direction: 'outbound' as const,
+				body: 'Swapped the cable — no buzz now. Thanks for flagging it.',
+				authorName: adminUser.name,
+				authorUserId: adminUser.id,
+				createdAt: new Date(now.getTime() - 6 * day)
 			}
 		],
-		12
+		8
 	);
 
 	// Add a staff note to thread 3
@@ -2882,7 +2982,7 @@ async function main() {
 	const marketing = await seedMarketing(allUsers);
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
-	const inbox = await seedInbox(adminUser);
+	const inbox = await seedInbox(adminUser, users[0]);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who

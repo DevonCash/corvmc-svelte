@@ -15,6 +15,7 @@
 		direction: 'inbound' | 'outbound';
 		body: string;
 		authorName: string | null;
+		authorUserId?: string | null;
 		createdAt: Date;
 	};
 
@@ -27,13 +28,35 @@
 
 	let {
 		messages,
-		notes,
-		contactName
+		notes = [],
+		contactName,
+		viewerUserId
 	}: {
 		messages: Message[];
-		notes: Note[];
+		/** Staff-only annotations. Omitted entirely on member-facing timelines. */
+		notes?: Note[];
 		contactName?: string | null;
+		/**
+		 * Who is reading. Given, a bubble is "mine" when the viewer wrote it —
+		 * which is the only rule that works when both parties are members.
+		 * Omitted, sides fall back to inbound/outbound, i.e. the org's point of
+		 * view: that is the staff inbox, where a colleague's reply must still
+		 * read as ours.
+		 */
+		viewerUserId?: string | null;
 	} = $props();
+
+	// No direction fallback when viewerUserId is set: a message with no author
+	// account was written by someone else, and that is exactly what puts a staff
+	// reply on the left for the member reading it.
+	const isOwn = (message: Message) =>
+		viewerUserId ? message.authorUserId === viewerUserId : message.direction === 'outbound';
+
+	// Only used when a message has no stored author name. The member-facing
+	// timeline passes no contactName — naming the other side after the thread's
+	// contact would have staff replies signed with the member's own name.
+	const ownName = $derived(viewerUserId ? 'You' : 'Staff');
+	const otherName = $derived(contactName ?? (viewerUserId ? 'CorvMC' : 'Contact'));
 
 	type Entry =
 		| { kind: 'message'; at: number; message: Message }
@@ -60,18 +83,15 @@
 	{#each entries as entry (entry.kind === 'message' ? `m${entry.message.id}` : `n${entry.note.id}`)}
 		{#if entry.kind === 'message'}
 			{@const msg = entry.message}
-			<div class="chat {msg.direction === 'inbound' ? 'chat-start' : 'chat-end'}">
+			{@const own = isOwn(msg)}
+			<div class="chat {own ? 'chat-end' : 'chat-start'}">
 				<div class="chat-header mb-1">
-					{msg.authorName ?? (msg.direction === 'inbound' ? (contactName ?? 'Contact') : 'Staff')}
+					{msg.authorName ?? (own ? ownName : otherName)}
 					<time class="ml-2 text-xs opacity-50">{formatDateTime(msg.createdAt)}</time>
 				</div>
 				<!-- Bodies arrive as plain text; without this every multi-paragraph
 				     email collapsed into one run-on block. -->
-				<div
-					class="chat-bubble whitespace-pre-wrap {msg.direction === 'outbound'
-						? 'chat-bubble-primary'
-						: ''}"
-				>
+				<div class="chat-bubble whitespace-pre-wrap {own ? 'chat-bubble-primary' : ''}">
 					{msg.body}
 				</div>
 			</div>

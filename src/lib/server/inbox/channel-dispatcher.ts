@@ -37,6 +37,11 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 		case 'email':
 		case 'web':
 			return dispatchEmailReply(params);
+		// Nothing to send: the message row this returns to IS the delivery. The
+		// member reads it in /member/messages, and the inbox.message_sent
+		// listener notifies them.
+		case 'portal':
+			return null;
 		case 'sms':
 			return dispatchSmsReply(params);
 		case 'instagram':

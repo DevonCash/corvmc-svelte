@@ -12,6 +12,8 @@ export interface AddInboundMessageParams {
 	authorName?: string | null;
 	channelMessageId?: string | null;
 	channelMetadata?: unknown;
+	/** Set when the sender has an account, i.e. portal threads. */
+	authorUserId?: string | null;
 }
 
 export async function addInboundMessage(params: AddInboundMessageParams) {
@@ -23,6 +25,7 @@ export async function addInboundMessage(params: AddInboundMessageParams) {
 			body: params.body,
 			bodyHtml: params.bodyHtml ?? null,
 			authorName: params.authorName ?? null,
+			authorUserId: params.authorUserId ?? null,
 			channelMessageId: params.channelMessageId ?? null,
 			channelMetadata: params.channelMetadata ?? null
 		})

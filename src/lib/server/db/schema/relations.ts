@@ -155,7 +155,12 @@ export const relations = defineRelations(schema, (t) => ({
 	inboxThread: {
 		messages: t.many.inboxMessage(),
 		notes: t.many.inboxNote(),
+		participants: t.many.inboxParticipant(),
 		assignedTo: t.one.user({ from: t.inboxThread.assignedToUserId, to: t.user.id })
+	},
+	inboxParticipant: {
+		thread: t.one.inboxThread({ from: t.inboxParticipant.threadId, to: t.inboxThread.id }),
+		user: t.one.user({ from: t.inboxParticipant.userId, to: t.user.id })
 	},
 	inboxMessage: {
 		thread: t.one.inboxThread({ from: t.inboxMessage.threadId, to: t.inboxThread.id }),

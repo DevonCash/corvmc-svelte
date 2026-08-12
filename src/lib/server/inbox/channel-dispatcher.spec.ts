@@ -138,3 +138,26 @@ describe('dispatchReply — email channel', () => {
 		await expect(dispatchReply(params({ channel: 'email' }))).rejects.toThrow(/not enabled/i);
 	});
 });
+
+describe('dispatchReply — portal channel', () => {
+	// The member reads a portal reply in their own inbox: the stored message row
+	// IS the delivery. Sending it out as a support email as well would double up
+	// on the notification the inbox.message_sent listener already sends.
+	it('sends nothing and reports no external message id', async () => {
+		const result = await dispatchReply(
+			params({ channel: 'portal', contactEmail: 'member@example.com' })
+		);
+
+		expect(result).toBeNull();
+		expect(mockSendInboxReply).not.toHaveBeenCalled();
+		expect(mockSendSms).not.toHaveBeenCalled();
+	});
+
+	it('is not blocked by a disabled channel config', async () => {
+		// 'portal' is always-on, so isChannelEnabled reports true regardless of any
+		// stored row — but pin that a false answer could not silently break replies.
+		mockIsChannelEnabled.mockResolvedValue(true);
+
+		await expect(dispatchReply(params({ channel: 'portal' }))).resolves.toBeNull();
+	});
+});

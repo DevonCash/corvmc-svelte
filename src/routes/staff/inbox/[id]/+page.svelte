@@ -13,6 +13,7 @@
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { formatDateTime } from '$lib/utils/format';
 	import {
 		getInboxThread,
@@ -47,9 +48,12 @@
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
-	// Web threads reply by email regardless of whether the email channel is on —
-	// the contact form captured an address and the reply goes straight back to it.
-	const channelDisabled = $derived(t.channel !== 'web' && !enabledChannels.includes(t.channel));
+	// Always-on channels deliver through the site itself, so they are never
+	// disabled: a web thread replies by email to the address the contact form
+	// captured, and a portal thread's reply is the message row itself.
+	const channelDisabled = $derived(
+		!isAlwaysEnabledChannel(t.channel) && !enabledChannels.includes(t.channel)
+	);
 
 	const replyBlockedReason = $derived.by(() => {
 		if ((t.channel === 'web' || t.channel === 'email') && !t.contactEmail) {
@@ -67,7 +71,7 @@
 </script>
 
 <PageHeader
-	title={t.contactName ?? t.contactEmail ?? 'Conversation'}
+	title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
 	subtitle={t.subject ?? channelLabel(t.channel)}
 	backHref="/staff/inbox"
 >
@@ -100,6 +104,15 @@
 					<ChannelIcon size={16} class="opacity-60" />
 					{channelLabel(t.channel)}
 				</div>
+
+				{#if t.contactUserId}
+					<div class="text-sm">
+						<span class="opacity-60">Member:</span>
+						<a href={resolve(`/staff/users/${t.contactUserId}`)} class="link link-primary">
+							{t.contactUserName ?? t.contactName}
+						</a>
+					</div>
+				{/if}
 
 				{#if t.contactEmail}
 					<div class="text-sm">
