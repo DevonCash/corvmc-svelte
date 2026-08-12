@@ -65,6 +65,12 @@ import {
 	listUnloggedCompletions
 } from '$lib/server/volunteer/volunteer-signup-service';
 import {
+	submitFeedback as submitFeedbackService,
+	getFeedbackContext,
+	listFeedbackForShift,
+	summarizeFeedbackByRole
+} from '$lib/server/volunteer/volunteer-feedback-service';
+import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
 	deleteCertificationRecord,
@@ -81,6 +87,7 @@ import {
 	CERT_REFERENCE_MAX,
 	CERT_REVOKED_REASON_MAX,
 	VOLUNTEER_SHIFT_NOTES_MAX,
+	SHIFT_FEEDBACK_COMMENT_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_INTERESTS,
 	VOLUNTEER_REVIEW_NOTES_MAX,
@@ -963,3 +970,63 @@ export const markSignupNoShow = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Post-shift feedback
+// ---------------------------------------------------------------------------
+
+/** What the form shows above the questions; null when it isn't theirs to answer. */
+export const getShiftFeedbackContext = query(z.string(), async (signupId) => {
+	await requireFeature('volunteering');
+	const currentUser = requireUser();
+	return getFeedbackContext(signupId, currentUser.id);
+});
+
+export const submitShiftFeedback = form(
+	z.object({
+		signupId: z.string().min(1),
+		rating: z.string().min(1, 'Pick a rating'),
+		// FormField's checkbox registers with SvelteKit's `b:` prefix, which
+		// coerces to a real boolean before validation — absent means false, and
+		// "no, I wasn't set up" is a real answer.
+		wasSetUp: z.boolean().default(false),
+		comment: z
+			.string()
+			.max(
+				SHIFT_FEEDBACK_COMMENT_MAX,
+				`Keep the comment under ${SHIFT_FEEDBACK_COMMENT_MAX} characters`
+			)
+			.optional()
+	}),
+	async (data) => {
+		await requireFeature('volunteering');
+		const currentUser = requireUser();
+
+		try {
+			await submitFeedbackService({
+				signupId: data.signupId,
+				userId: currentUser.id,
+				rating: parseInt(data.rating, 10),
+				wasSetUp: data.wasSetUp,
+				comment: data.comment
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getShiftFeedbackContext(data.signupId).refresh();
+		return { success: true };
+	}
+);
+
+/** Staff: responses on one shift's detail page. */
+export const getShiftFeedback = query(z.string(), async (shiftId) => {
+	await requireStaff();
+	return listFeedbackForShift(shiftId);
+});
+
+/** Staff: the per-role rollup — the version that changes how shifts are briefed. */
+export const getFeedbackByRole = query(async () => {
+	await requireStaff();
+	return summarizeFeedbackByRole();
+});

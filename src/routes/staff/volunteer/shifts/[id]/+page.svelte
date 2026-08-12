@@ -11,6 +11,7 @@
 	import { IconCheck, IconUserX } from '@tabler/icons-svelte';
 	import {
 		getShift,
+		getShiftFeedback,
 		confirmSignup,
 		markSignupNoShow,
 		cancelShift
@@ -18,6 +19,7 @@
 
 	let id = $derived(page.params.id!);
 	let data = $derived(getShift(id));
+	let feedback = $derived(getShiftFeedback(id));
 
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
@@ -158,6 +160,31 @@
 				</ul>
 			{/if}
 		</InfoCard>
+		{#await feedback then responses}
+			{#if responses.length > 0}
+				<InfoCard title="How it went">
+					<ul class="flex flex-col gap-3">
+						{#each responses as response (response.signupId)}
+							<li class="text-sm">
+								<div class="flex items-center gap-2">
+									<span class="text-warning" aria-label="{response.rating} out of 5">
+										{'★'.repeat(response.rating)}{'☆'.repeat(5 - response.rating)}
+									</span>
+									{#if !response.wasSetUp}
+										<!-- The actionable signal: enjoyment and preparedness pull
+										     apart exactly where the briefing needs work. -->
+										<span class="badge badge-warning badge-sm">wasn't set up</span>
+									{/if}
+								</div>
+								{#if response.comment}
+									<p class="mt-1 opacity-80">{response.comment}</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</InfoCard>
+			{/if}
+		{/await}
 	</PageContent>
 {/await}
 

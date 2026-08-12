@@ -29,7 +29,8 @@ import {
 	memberCertification,
 	volunteerRoleCertification,
 	volunteerShift,
-	volunteerSignup
+	volunteerSignup,
+	volunteerShiftFeedback
 } from '../../src/lib/server/db/schema/volunteer';
 import { scryptHash } from './seed-pay-reservation';
 
@@ -89,7 +90,16 @@ export const SEED_VOL_SHIFT_FULL_ID = 'e2e-vol-shift-full';
 export const SEED_VOL_SHIFT_FULL_NOTE = 'E2E already spoken for';
 export const SEED_VOL_OTHER_MEMBER_ID = 'e2e-vol-other-member';
 
-const SHIFT_IDS = [SEED_VOL_SHIFT_OPEN_ID, SEED_VOL_SHIFT_GATED_ID, SEED_VOL_SHIFT_FULL_ID];
+/** Completed yesterday by the member under test — the feedback survey's subject. */
+export const SEED_VOL_SHIFT_DONE_ID = 'e2e-vol-shift-done';
+export const SEED_VOL_SIGNUP_DONE_ID = 'e2e-vol-signup-done';
+
+const SHIFT_IDS = [
+	SEED_VOL_SHIFT_OPEN_ID,
+	SEED_VOL_SHIFT_GATED_ID,
+	SEED_VOL_SHIFT_FULL_ID,
+	SEED_VOL_SHIFT_DONE_ID
+];
 
 /** Days out, at a fixed hour, so the board always has a future shift to claim. */
 function daysFromNow(days: number, hourUtc: number): Date {
@@ -126,6 +136,9 @@ export async function seedVolunteering(): Promise<void> {
 
 		// Child before parent: the role FK is ON DELETE RESTRICT, and signups and
 		// held certifications both point at rows recreated below.
+		await db
+			.delete(volunteerShiftFeedback)
+			.where(eq(volunteerShiftFeedback.signupId, SEED_VOL_SIGNUP_DONE_ID));
 		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, SHIFT_IDS));
 		await db.delete(volunteerShift).where(inArray(volunteerShift.id, SHIFT_IDS));
 		await db
@@ -266,6 +279,30 @@ export async function seedVolunteering(): Promise<void> {
 				updatedAt: now
 			}
 		]);
+
+		// Ended yesterday, completed, unreviewed — exactly what the day-after
+		// survey cron would have asked about.
+		await db.insert(volunteerShift).values({
+			id: SEED_VOL_SHIFT_DONE_ID,
+			volunteerRoleId: SEED_VOL_ROLE_ID,
+			startsAt: workedOnDaysAgo(1),
+			endsAt: new Date(workedOnDaysAgo(1).getTime() + 4 * 3_600_000),
+			capacity: 1,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(volunteerSignup).values({
+			id: SEED_VOL_SIGNUP_DONE_ID,
+			shiftId: SEED_VOL_SHIFT_DONE_ID,
+			userId: SEED_VOL_MEMBER_ID,
+			status: 'completed',
+			claimedAt: now,
+			confirmedAt: now,
+			completedAt: now,
+			createdAt: now,
+			updatedAt: now
+		});
 
 		await db.insert(volunteerSignup).values({
 			id: 'e2e-vol-signup-other',

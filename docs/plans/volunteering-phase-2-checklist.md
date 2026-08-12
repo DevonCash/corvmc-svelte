@@ -86,9 +86,9 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 5 — Feedback
 
-- [ ] `volunteer-feedback-service.ts` — submit once per signup, read for staff
-- [ ] Member form from the notification (Bits UI `RatingGroup`)
-- [ ] Staff: per-shift responses and the per-role aggregate
+- [x] `volunteer-feedback-service.ts` — submit once per signup, read for staff
+- [x] Member form from the notification (Bits UI `RatingGroup`)
+- [x] Staff: per-shift responses and the per-role aggregate
 
 ## Step 6 — Seeds, tests, docs
 
@@ -97,8 +97,7 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
       completed ones
 - [~] Specs: date asymmetry **done**, renewal appends, claim refusals (full / uncleared /
   duplicate), completion only touches confirmed-and-past, feedback once
-- [x] Extend `e2e/volunteering.e2e.ts` + its fixture — shifts done; feedback
-      still to add once Stage 5 lands
+- [x] Extend `e2e/volunteering.e2e.ts` + its fixture — shifts and feedback (15 tests)
 - [ ] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
 - [ ] `production-workflow-spec.md:1256` — close the staffing hook
 - [ ] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,

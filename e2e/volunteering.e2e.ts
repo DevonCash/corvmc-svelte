@@ -15,6 +15,7 @@ import {
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_FULL_NOTE,
+	SEED_VOL_SIGNUP_DONE_ID,
 	readVolunteerState,
 	readSignupStatus
 } from './fixtures/seed-volunteering';
@@ -307,5 +308,46 @@ test.describe('volunteering — shifts', () => {
 			{ timeout: 15000 }
 		);
 		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('confirmed');
+	});
+});
+
+test.describe('volunteering — post-shift feedback', () => {
+	test('the survey takes two answers once, then reads as already answered', async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
+
+		// Four stars. RatingGroup items are the interactive stars in order.
+		await page.locator('[data-rating-group-item]').nth(3).click();
+		await page.locator('input[name="b:wasSetUp"]').check();
+		await page.locator('textarea[name="comment"]').fill('E2E: more gaff tape by the desk.');
+		await page.getByRole('button', { name: 'Send it' }).click();
+
+		await expect(page.getByText(/thanks for helping us run the next one/i)).toBeVisible({
+			timeout: 15000
+		});
+
+		// Second visit: the unique signupId row means asked-and-answered, and the
+		// form must not be offered again.
+		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
+		await expect(page.getByText(/already answered/i)).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('button', { name: 'Send it' })).toHaveCount(0);
+	});
+
+	test('staff see the response on the shift and in the per-role rollup', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+
+		await page.goto(`/staff/volunteer/shifts/e2e-vol-shift-done`);
+		await expect(page.getByText('E2E: more gaff tape by the desk.')).toBeVisible({
+			timeout: 15000
+		});
+
+		// The rollup is anonymous by design — the response appears under its role
+		// with no member name attached.
+		await page.goto('/staff/volunteer/report');
+		const rollupRow = page.locator('tr').filter({ hasText: SEED_VOL_ROLE_NAME }).last();
+		await expect(page.getByRole('heading', { name: 'How shifts are going' })).toBeVisible({
+			timeout: 15000
+		});
+		await expect(rollupRow).toContainText('/ 5');
 	});
 });
