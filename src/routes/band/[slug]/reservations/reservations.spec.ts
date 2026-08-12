@@ -116,6 +116,36 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+// Contact-phone gate. Mocked at the service boundary, like reservation-service.
+const ensureContactPhone = vi.fn(async () => true);
+vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+
+/** Stands in for the `issue` helper SvelteKit hands the form handler. */
+const issueProxy = new Proxy(
+	{},
+	{ get: (_t, name: string) => (message: string) => ({ name, message }) }
+);
+
+class InvalidError extends Error {
+	issues: { name: string; message: string }[];
+	constructor(issues: { name: string; message: string }[]) {
+		super('invalid');
+		this.issues = issues;
+	}
+}
+
+// `invalid()` needs a request context to build its real response; throwing a
+// recognisable error instead lets the spec assert on the field and message.
+vi.mock('@sveltejs/kit', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@sveltejs/kit')>();
+	return {
+		...actual,
+		invalid: (...issues: { name: string; message: string }[]) => {
+			throw new InvalidError(issues);
+		}
+	};
+});
+
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
 vi.mock('$app/server', () => ({
@@ -125,7 +155,7 @@ vi.mock('$app/server', () => ({
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
-		const fn = handler;
+		const fn = (data: unknown) => handler(data, issueProxy);
 		(fn as any).__ = { type: 'form' };
 		(fn as any).for = () => fn;
 		return fn;
@@ -148,6 +178,7 @@ const {
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('member');
+	ensureContactPhone.mockResolvedValue(true);
 	selectResult = [];
 });
 
@@ -291,5 +322,35 @@ describe('bookReservation with recurring', () => {
 		});
 
 		expect(recurringSeriesServiceMock.create).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Contact phone requirement
+// ---------------------------------------------------------------------------
+
+describe('bookReservation contact phone', () => {
+	it('rejects the booking when the member has no usable number', async () => {
+		ensureContactPhone.mockResolvedValue(false);
+
+		await expect(
+			bookReservation({ date: '2026-06-15', startTime: '09:00', endTime: '10:00' })
+		).rejects.toMatchObject({
+			issues: [{ name: 'phone', message: expect.stringContaining('phone number is required') }]
+		});
+
+		// No orphan reservation left behind by a rejected booking.
+		expect(reservationServiceMock.create).not.toHaveBeenCalled();
+	});
+
+	it('gates on the booking member, not the band', async () => {
+		await bookReservation({
+			date: '2026-06-15',
+			startTime: '09:00',
+			endTime: '10:00',
+			phone: '(541) 555-0123'
+		});
+
+		expect(ensureContactPhone).toHaveBeenCalledWith('user-owner', '(541) 555-0123');
 	});
 });

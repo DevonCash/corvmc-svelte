@@ -9,7 +9,8 @@
 	import {
 		confirmWaitlisted,
 		getReservations,
-		getMembershipStatus
+		getMembershipStatus,
+		getBookingContact
 	} from '$lib/remote/reservations.remote';
 
 	const { fields } = confirmWaitlisted;
@@ -31,6 +32,10 @@
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
 
+	// Staff can't follow up on a booking they can't call about, so the wizard
+	// collects a number inline when the member has none on file.
+	let contact = $derived(await getBookingContact());
+
 	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
 	let allReservations = $state(getReservations({ includeTerminal: true }));
 
@@ -41,6 +46,7 @@
 		activeReservations.refresh();
 		allReservations.refresh();
 		getMembershipStatus().refresh();
+		getBookingContact().refresh();
 	}
 
 	// Waitlist confirmation via ?confirm={id}
@@ -70,7 +76,7 @@
 </script>
 
 <PageHeader title="Reserve Practice Space">
-	<CreateModal {isSustaining} onbooked={refreshReservations} />
+	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
 </PageHeader>
 <PageContent>
 	<BookingPolicy />

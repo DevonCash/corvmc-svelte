@@ -8,12 +8,19 @@
 	import * as Form from '$lib/components/shared/Form';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
+	import { isValidPhone } from '$lib/utils/phone';
 
 	let {
 		isSustaining = false,
+		needsPhone = false,
 		reloadToken = 0
 	}: {
 		isSustaining?: boolean;
+		/**
+		 * Member has no usable contact number on file. Asked for here, on the first
+		 * step, so the wizard can't be advanced at all without one.
+		 */
+		needsPhone?: boolean;
 		/** Bump to force a fresh reload of availability (e.g. after a slot conflict). */
 		reloadToken?: number;
 	} = $props();
@@ -27,6 +34,7 @@
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
+	let phone = $state('');
 	let frequency = $state('');
 	let monthlyMode = $state('weekday');
 
@@ -147,7 +155,9 @@
 		}
 	});
 
-	const step1Valid = $derived(!!date && !!startTime && !!endTime);
+	const step1Valid = $derived(
+		!!date && !!startTime && !!endTime && (!needsPhone || isValidPhone(phone))
+	);
 </script>
 
 <Form.Step valid={step1Valid}>
@@ -213,6 +223,22 @@
 				required
 			/>
 		</div>
+
+		{#if needsPhone}
+			<!-- Bound by `name`, not `field`: FormField only wires bind:value on the
+			     name-only branch, and step1Valid needs to see each keystroke. Issues
+			     resolve identically either way (Form.issuesFor reads
+			     remote.fields[name].issues()). -->
+			<Form.Field
+				name="phone"
+				type="tel"
+				label="Contact phone"
+				bind:value={phone}
+				placeholder="(541) 555-0123"
+				required
+				description="Staff use this to reach you about your booking. Saved to your account."
+			/>
+		{/if}
 
 		<Form.Field
 			name="notes"

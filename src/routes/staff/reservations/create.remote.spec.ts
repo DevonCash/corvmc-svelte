@@ -179,4 +179,12 @@ describe('createReservation (staff)', () => {
 			hourlyRateCents: 1500
 		});
 	});
+
+	it('books for a member with no phone on file — staff creation is exempt', async () => {
+		// The contact-phone gate is deliberately member-facing only: the front desk
+		// can book a walk-in without stopping to collect contact details.
+		await expect(createReservation(input)).resolves.toMatchObject({
+			reservationId: 'res-staff-1'
+		});
+	});
 });

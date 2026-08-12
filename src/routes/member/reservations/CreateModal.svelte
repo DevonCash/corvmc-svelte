@@ -16,9 +16,12 @@
 
 	let {
 		isSustaining = false,
+		needsPhone = false,
 		onbooked
 	}: {
 		isSustaining?: boolean;
+		/** Member has no usable contact number on file — collect one before booking. */
+		needsPhone?: boolean;
 		onbooked?: () => void;
 	} = $props();
 </script>
@@ -50,7 +53,7 @@
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
-		<DateTimeStep {isSustaining} {reloadToken} />
+		<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
 		<ConfirmStep />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />
 		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
