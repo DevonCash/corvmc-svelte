@@ -1237,12 +1237,6 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			const endsAt = ptDate(day, hour + duration);
 			const isPast = day < 0;
 
-			// A band gig either sells through CMC, links out to the venue's own
-			// ticketing, or neither — the three states the band event pages and the
-			// public detail page each branch on.
-			const sellsThroughCmc = Math.random() > 0.6;
-			const ticketPrice = sellsThroughCmc ? pick([500, 1000, 1500, 2000]) : null;
-
 			const [e] = await db
 				.insert(event)
 				.values({
@@ -1262,12 +1256,7 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
-						!sellsThroughCmc && Math.random() > 0.5
-							? `https://eventbrite.com/e/${randomInt(100000, 999999)}`
-							: null,
-					ticketingEnabled: sellsThroughCmc,
-					ticketPrice,
-					ticketQuantity: sellsThroughCmc && Math.random() > 0.5 ? randomInt(30, 120) : null,
+						Math.random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
 					createdByUserId: b.ownerId
 				})
 				.returning();

@@ -7,8 +7,7 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import { centsToDollars } from '$lib/utils/event-ticketing';
+	import { formatDate, formatTime } from '$lib/utils/format';
 	import {
 		getBandEventDetail,
 		updateBandEventForm,
@@ -17,7 +16,6 @@
 		cancelBandEventForm
 	} from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	// Declared before the awaited queries below: a declaration that follows a
@@ -36,16 +34,6 @@
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	let editing = $state(false);
-
-	// Gates the price/capacity block inside the edit form. Seeded from the event
-	// each time the form opens rather than derived from it, so an unsaved toggle
-	// survives until the band either submits or closes the form.
-	let ticketingEnabled = $state(false);
-
-	function toggleEditing() {
-		if (!editing) ticketingEnabled = evt.ticketingEnabled;
-		editing = !editing;
-	}
 </script>
 
 <PageHeader title={evt.title} subtitle={band.name}>
@@ -102,46 +90,6 @@
 			</div>
 		</div>
 
-		<!-- Ticketing -->
-		{#if evt.ticketingEnabled}
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
-					<h2 class="text-xs font-medium uppercase opacity-60">Ticketing</h2>
-					<div class="flex flex-wrap gap-6">
-						<div>
-							<p class="text-sm opacity-60">Price</p>
-							<p class="text-lg font-medium">{formatCents(evt.ticketPrice ?? 0)}</p>
-						</div>
-						<div>
-							<p class="text-sm opacity-60">Capacity</p>
-							<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
-						</div>
-						<div>
-							<p class="text-sm opacity-60">Sold</p>
-							<p class="text-lg font-medium">{evt.ticketsSold}</p>
-						</div>
-						<div>
-							<p class="text-sm opacity-60">Remaining</p>
-							<p class="text-lg font-medium">{evt.ticketsRemaining ?? '∞'}</p>
-						</div>
-					</div>
-
-					{#if evt.status === 'published'}
-						<div class="mt-3">
-							<a href={resolve(`/events/${evt.id}/tickets`)} class="link link-primary text-sm">
-								View purchase page →
-							</a>
-						</div>
-					{/if}
-
-					<p class="mt-3 text-sm opacity-60">
-						Ticket sales are collected by CMC. Contact staff about payouts, refunds, or comping
-						someone in.
-					</p>
-				</div>
-			</div>
-		{/if}
-
 		<!-- Actions -->
 		{#if isAdmin && evt.status !== 'cancelled'}
 			<div class="flex flex-wrap items-center gap-2">
@@ -177,7 +125,7 @@
 					<SubmitButton label="Cancel Event" class="btn-error btn-outline btn-sm" />
 				</Form>
 
-				<Button class="btn-ghost btn-sm" onclick={toggleEditing}>
+				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
 				</Button>
 			</div>
@@ -233,40 +181,6 @@
 							label="Ticket Link"
 							value={evt.externalTicketUrl ?? ''}
 						/>
-
-						<FormField
-							name="ticketingEnabled"
-							type="toggle"
-							label="Ticketing"
-							checkboxLabel="Sell tickets through CMC"
-							bind:value={ticketingEnabled}
-						/>
-
-						{#if ticketingEnabled}
-							<div class="card bg-base-100 p-4">
-								<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									<FormField
-										field={updateFields.ticketPriceDollars}
-										type="number"
-										label="Ticket price ($)"
-										value={centsToDollars(evt.ticketPrice)}
-										min="0.01"
-										step="0.01"
-										placeholder="15.00"
-									/>
-									<FormField
-										field={updateFields.ticketQuantity}
-										type="number"
-										label="Capacity"
-										value={evt.ticketQuantity ? String(evt.ticketQuantity) : ''}
-										min="1"
-										step="1"
-										placeholder="Unlimited"
-									/>
-								</div>
-								<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
-							</div>
-						{/if}
 
 						<div class="flex justify-end pt-2">
 							<SubmitButton label="Save Changes" class="btn-primary" />

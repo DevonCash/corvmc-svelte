@@ -15,37 +15,9 @@ import {
 	unpublish,
 	getById
 } from '$lib/server/event/event-service';
-import { getTicketsSold, getTicketsRemaining } from '$lib/server/ticket/ticket-service';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
-import { dollarsToCents, MAX_TICKET_PRICE_CENTS } from '$lib/utils/event-ticketing';
 import { DEFAULT_TIMEZONE } from '$lib/config';
-
-/** "$1,000.00" — the ceiling, rendered for the validation message. */
-function formatDollarCeiling(): string {
-	return `$${(MAX_TICKET_PRICE_CENTS / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-}
-
-/**
- * A `type="number"` FormField registers through `field.as('number')`, which
- * prefixes the submitted name with `n:`. SvelteKit's `convert_formdata` then
- * runs the value through `parseFloat` and turns an empty input into
- * `undefined` — so these fields arrive as numbers, never strings, and a blank
- * one is simply absent. Typing them as `z.string()` fails every submit with
- * "expected string, received number".
- */
-const numericField = z.number().optional();
-
-/**
- * Parse the capacity field. Absent means unlimited (`null`), and so does a value
- * the input should never have produced — callers separate the two by checking
- * `data.ticketQuantity !== undefined` before treating null as a validation error.
- */
-function parseCapacity(raw: number | undefined): number | null {
-	if (raw === undefined) return null;
-	if (!Number.isInteger(raw) || raw < 1) return null;
-	return raw;
-}
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -101,11 +73,6 @@ export const getBandEventDetail = query(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.bandId !== band.id) throw error(404, 'Event not found');
 
-		// Sales figures only matter for a ticketed event, so an unticketed one
-		// skips both counting queries entirely.
-		const sold = evt.ticketingEnabled ? await getTicketsSold(evt.id) : 0;
-		const remaining = evt.ticketingEnabled ? await getTicketsRemaining(evt.id) : null;
-
 		return {
 			id: evt.id,
 			title: evt.title,
@@ -117,11 +84,6 @@ export const getBandEventDetail = query(
 			location: evt.location,
 			tags: evt.tags,
 			externalTicketUrl: evt.externalTicketUrl,
-			ticketingEnabled: evt.ticketingEnabled,
-			ticketPrice: evt.ticketPrice,
-			ticketQuantity: evt.ticketQuantity,
-			ticketsSold: sold,
-			ticketsRemaining: remaining,
 			posterUrl: resolveImageUrl(evt.posterKey)
 		};
 	}
@@ -142,14 +104,7 @@ export const createBandEventForm = form(
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
-		externalTicketUrl: z.string().url().optional().or(z.literal('')),
-		ticketingEnabled: z.boolean().default(false),
-		// Dollars, not cents: the amount the band typed. The crossing to whole
-		// cents happens here on the server via `dollarsToCents`, so a client with
-		// JS disabled (or a stale hidden field) cannot submit a price the form
-		// never showed.
-		ticketPriceDollars: numericField,
-		ticketQuantity: numericField
+		externalTicketUrl: z.string().url().optional().or(z.literal(''))
 	}),
 	async (data, issue) => {
 		await requireFeature('bandEvents');
@@ -157,19 +112,6 @@ export const createBandEventForm = form(
 
 		if (!data.title) {
 			invalid(issue.title('Title is required'));
-		}
-
-		const ticketPrice = data.ticketingEnabled ? dollarsToCents(data.ticketPriceDollars) : null;
-		if (data.ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
-			invalid(
-				issue.ticketPriceDollars(
-					`Enter a ticket price between $0.01 and ${formatDollarCeiling()} to sell tickets`
-				)
-			);
-		}
-		const ticketQuantity = parseCapacity(data.ticketQuantity);
-		if (data.ticketingEnabled && data.ticketQuantity !== undefined && ticketQuantity == null) {
-			invalid(issue.ticketQuantity('Capacity must be a whole number of at least 1'));
 		}
 
 		const tz = DEFAULT_TIMEZONE;
@@ -193,10 +135,7 @@ export const createBandEventForm = form(
 			doorsAt,
 			location: data.location || undefined,
 			tags: data.tags || undefined,
-			externalTicketUrl: data.externalTicketUrl || undefined,
-			ticketingEnabled: data.ticketingEnabled,
-			ticketPrice,
-			ticketQuantity
+			externalTicketUrl: data.externalTicketUrl || undefined
 		});
 
 		return { eventId: evt.id };
@@ -215,12 +154,9 @@ export const updateBandEventForm = form(
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
-		externalTicketUrl: z.string().optional(),
-		ticketingEnabled: z.boolean().default(false),
-		ticketPriceDollars: numericField,
-		ticketQuantity: numericField
+		externalTicketUrl: z.string().optional()
 	}),
-	async (data, issue) => {
+	async (data) => {
 		await requireFeature('bandEvents');
 		const { band } = await requireBandAdmin();
 
@@ -243,36 +179,6 @@ export const updateBandEventForm = form(
 
 		if (data.doorsTime !== undefined && data.eventDate) {
 			params.doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
-		}
-
-		params.ticketingEnabled = data.ticketingEnabled;
-		if (data.ticketingEnabled) {
-			const ticketPrice = dollarsToCents(data.ticketPriceDollars);
-			if (ticketPrice == null || ticketPrice <= 0) {
-				invalid(
-					issue.ticketPriceDollars(
-						`Enter a ticket price between $0.01 and ${formatDollarCeiling()} to sell tickets`
-					)
-				);
-			}
-			const ticketQuantity = parseCapacity(data.ticketQuantity);
-			if (data.ticketQuantity !== undefined && ticketQuantity == null) {
-				invalid(issue.ticketQuantity('Capacity must be a whole number of at least 1'));
-			}
-			params.ticketPrice = ticketPrice;
-			params.ticketQuantity = ticketQuantity;
-		} else {
-			// Turning ticketing off would leave anyone who already paid holding a
-			// ticket to an event that no longer sells them, and the refund path is
-			// staff-only. Bands have to ask staff to unwind a sold show.
-			const sold = await getTicketsSold(data.eventId);
-			if (sold > 0) {
-				invalid(
-					issue.ticketingEnabled(
-						`${sold} ticket${sold === 1 ? ' has' : 's have'} already been sold — contact staff to change ticketing on this event`
-					)
-				);
-			}
 		}
 
 		await updateBandEvent(data.eventId, band.id, params);
