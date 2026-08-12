@@ -4,7 +4,8 @@ import {
 	equipmentStatuses,
 	loanStatuses,
 	inboxThreadStatuses,
-	volunteerHourStatuses
+	volunteerHourStatuses,
+	volunteerProfileStatuses
 } from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
@@ -47,6 +48,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	equipmentLoan: loanStatuses,
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,
+	volunteerProfile: volunteerProfileStatuses,
 	...derivedStatuses
 };
 

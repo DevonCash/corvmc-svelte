@@ -7,6 +7,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
+	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -21,6 +22,8 @@
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
 		getVolunteerRoles,
+		getBlockedVolunteers,
+		approveVolunteerSignup,
 		approveVolunteerHours,
 		rejectVolunteerHours
 	} from '$lib/remote/volunteer.remote';
@@ -92,6 +95,7 @@
 
 	let result = $derived(getStaffVolunteerLogs(filters));
 	let counts = $derived(getVolunteerStatusCounts());
+	let blocked = $derived(getBlockedVolunteers());
 	let roles = $derived(getVolunteerRoles());
 
 	// The status view is a view, not a filter — it always has a value, so counting
@@ -128,6 +132,73 @@
 </PageHeader>
 
 <PageContent>
+	<!--
+		Under-18 sign-ups, which are blocked until somebody looks at them. Above the
+		tabs and not one of them: the TabBar is keyed to volunteerHourStatuses and
+		drives getStaffVolunteerLogs, which returns hour logs — this is a queue of
+		people, and putting it in that machinery would break the URL filter mirroring
+		and the row shape. Hidden entirely when empty, which is most days.
+	-->
+	{#await blocked then rows}
+		{#if rows.length > 0}
+			<InfoCard title="Pending review" class="mb-4 border-l-4 border-warning">
+				<p class="text-sm opacity-70">
+					These members told us they're under 18, so they can't pick up shifts or log hours yet.
+					Approving lets them do both.
+				</p>
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">Status</span></th>
+						<th>Member</th>
+						<th class="col-support">Name given</th>
+						<th class="col-extra whitespace-nowrap">Signed up</th>
+						<th class="w-px"><span class="sr-only">Actions</span></th>
+					{/snippet}
+
+					{#each rows as row (row.userId)}
+						<tr>
+							<td class="w-px"><StatusBadge status="blocked" /></td>
+							<td class="cell-primary">
+								<MemberLink
+									variant="inline"
+									member={{
+										name: row.userName,
+										email: row.userEmail,
+										pronouns: row.userPronouns,
+										role: row.userRole,
+										userId: row.userId
+									}}
+								/>
+							</td>
+							<td class="col-support">{row.firstName} {row.lastName}</td>
+							<td class="col-extra whitespace-nowrap">{relativeDay(row.createdAt)}</td>
+							<td class="w-px">
+								<div class="flex justify-end">
+									<Action
+										action={approveVolunteerSignup.for(row.userId)}
+										label="Approve"
+										class="btn-primary btn-sm"
+										modalTitle="Approve {row.firstName} {row.lastName}?"
+										submitLabel="Approve"
+										successToast="Volunteer approved"
+									>
+										{#snippet form()}
+											<input type="hidden" name="userId" value={row.userId} />
+											<p class="text-sm">
+												Make sure a guardian's sign-off is on file first — approving lets them claim
+												shifts and log hours on their own.
+											</p>
+										{/snippet}
+									</Action>
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
+	{/await}
+
 	{#await counts then c}
 		<!-- Four tabs are wider than a phone; without this the last is clipped off
 		     the edge with no way to reach it. -->

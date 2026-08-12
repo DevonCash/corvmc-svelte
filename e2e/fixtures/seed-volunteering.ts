@@ -24,6 +24,7 @@ import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import {
 	volunteerRole,
+	volunteerProfile,
 	volunteerHourLog,
 	volunteerCertification,
 	memberCertification,
@@ -90,6 +91,38 @@ export const SEED_VOL_SHIFT_FULL_ID = 'e2e-vol-shift-full';
 export const SEED_VOL_SHIFT_FULL_NOTE = 'E2E already spoken for';
 export const SEED_VOL_OTHER_MEMBER_ID = 'e2e-vol-other-member';
 
+/**
+ * A member with an account but no volunteer profile, for the onboarding gate.
+ * Kept separate from SEED_VOL_MEMBER_ID, which every pre-existing member test
+ * expects to land straight on /member/volunteer.
+ */
+export const SEED_VOL_NEW_MEMBER_ID = 'e2e-vol-new-member';
+export const SEED_VOL_NEW_MEMBER_EMAIL = 'e2e.new.volunteer@example.com';
+export const SEED_VOL_NEW_MEMBER_NAME = 'E2E Newcomer Volunteer';
+
+/**
+ * Also profile-less: the minor path creates the profile through the real form
+ * by answering "no", so the staff approval test exercises the actual write
+ * rather than a hand-seeded `blocked` row.
+ */
+export const SEED_VOL_MINOR_ID = 'e2e-vol-minor';
+export const SEED_VOL_MINOR_EMAIL = 'e2e.minor.volunteer@example.com';
+export const SEED_VOL_MINOR_NAME = 'E2E Minor Volunteer';
+export const SEED_VOL_MINOR_FIRST = 'Robin';
+export const SEED_VOL_MINOR_LAST = 'Okonkwo';
+
+/**
+ * A second minor, already blocked when the fixture lands, for the staff
+ * approval path. Separate from SEED_VOL_MINOR_ID so neither test depends on the
+ * other having run — the blocking test needs a member with no profile, and the
+ * approval test needs one with a blocked profile.
+ */
+export const SEED_VOL_BLOCKED_MINOR_ID = 'e2e-vol-blocked-minor';
+export const SEED_VOL_BLOCKED_MINOR_EMAIL = 'e2e.blocked.volunteer@example.com';
+export const SEED_VOL_BLOCKED_MINOR_NAME = 'E2E Blocked Volunteer';
+export const SEED_VOL_BLOCKED_MINOR_FIRST = 'Jess';
+export const SEED_VOL_BLOCKED_MINOR_LAST = 'Almeida';
+
 /** Completed yesterday by the member under test — the feedback survey's subject. */
 export const SEED_VOL_SHIFT_DONE_ID = 'e2e-vol-shift-done';
 export const SEED_VOL_SIGNUP_DONE_ID = 'e2e-vol-signup-done';
@@ -116,6 +149,10 @@ const LOG_IDS = [
 	SEED_VOL_LOG_REJECTED_ID
 ];
 const ROLE_IDS = [SEED_VOL_ROLE_ID, SEED_VOL_ARCHIVED_ROLE_ID];
+
+/** Members added by this fixture on top of SEED_VOL_MEMBER_ID. */
+const EXTRA_MEMBER_IDS = [SEED_VOL_NEW_MEMBER_ID, SEED_VOL_MINOR_ID, SEED_VOL_BLOCKED_MINOR_ID];
+const MEMBER_IDS = [SEED_VOL_MEMBER_ID, SEED_VOL_OTHER_MEMBER_ID, ...EXTRA_MEMBER_IDS];
 
 /** Noon club time, N days back — matches how the service anchors workedOn. */
 function workedOnDaysAgo(days: number): Date {
@@ -149,6 +186,12 @@ export async function seedVolunteering(): Promise<void> {
 			.where(eq(memberCertification.certificationId, SEED_VOL_CERT_ID));
 		await db.delete(volunteerCertification).where(eq(volunteerCertification.id, SEED_VOL_CERT_ID));
 		await db.delete(user).where(eq(user.id, SEED_VOL_OTHER_MEMBER_ID));
+		// Profiles cascade from `user`, but the two extra members below are deleted
+		// by id and SEED_VOL_MEMBER_ID's profile has to go before its user row.
+		await db.delete(volunteerProfile).where(inArray(volunteerProfile.userId, MEMBER_IDS));
+		await db.delete(account).where(inArray(account.userId, EXTRA_MEMBER_IDS));
+		await db.delete(modelHasRole).where(inArray(modelHasRole.userId, EXTRA_MEMBER_IDS));
+		await db.delete(user).where(inArray(user.id, EXTRA_MEMBER_IDS));
 		await db.delete(volunteerHourLog).where(inArray(volunteerHourLog.id, LOG_IDS));
 		await db.delete(volunteerHourLog).where(eq(volunteerHourLog.userId, SEED_VOL_MEMBER_ID));
 		await db.delete(volunteerRole).where(inArray(volunteerRole.id, ROLE_IDS));
@@ -208,6 +251,75 @@ export async function seedVolunteering(): Promise<void> {
 				updatedAt: now
 			}
 		]);
+
+		// --- Onboarding ----------------------------------------------------
+		// The member under test is already onboarded. Without this every
+		// pre-existing member test would be redirected to /member/volunteer/start
+		// before its page rendered.
+		await db.insert(volunteerProfile).values({
+			id: 'e2e-vol-profile',
+			userId: SEED_VOL_MEMBER_ID,
+			firstName: 'E2E',
+			lastName: 'Volunteer',
+			isAdult: true,
+			status: 'active',
+			createdAt: now,
+			updatedAt: now
+		});
+
+		// Two more members who have *not* onboarded — one walks the adult path,
+		// one answers "under 18" and lands in the staff queue. Both get a real
+		// credential account so the tests log in the same way as everybody else.
+		for (const [id, name, email, accountId] of [
+			[
+				SEED_VOL_NEW_MEMBER_ID,
+				SEED_VOL_NEW_MEMBER_NAME,
+				SEED_VOL_NEW_MEMBER_EMAIL,
+				'e2e-vol-new-account'
+			],
+			[SEED_VOL_MINOR_ID, SEED_VOL_MINOR_NAME, SEED_VOL_MINOR_EMAIL, 'e2e-vol-minor-account'],
+			[
+				SEED_VOL_BLOCKED_MINOR_ID,
+				SEED_VOL_BLOCKED_MINOR_NAME,
+				SEED_VOL_BLOCKED_MINOR_EMAIL,
+				'e2e-vol-blocked-account'
+			]
+		] as const) {
+			await db.insert(user).values({
+				id,
+				name,
+				email,
+				emailVerified: true,
+				createdAt: now,
+				updatedAt: now
+			});
+
+			await db.insert(account).values({
+				id: accountId,
+				accountId: id,
+				providerId: 'credential',
+				userId: id,
+				password: await scryptHash(SEED_VOL_MEMBER_PASSWORD),
+				createdAt: now,
+				updatedAt: now
+			});
+
+			if (memberRole) {
+				await db.insert(modelHasRole).values({ roleId: memberRole.id, userId: id });
+			}
+		}
+
+		// Already in the staff queue when the suite starts.
+		await db.insert(volunteerProfile).values({
+			id: 'e2e-vol-blocked-profile',
+			userId: SEED_VOL_BLOCKED_MINOR_ID,
+			firstName: SEED_VOL_BLOCKED_MINOR_FIRST,
+			lastName: SEED_VOL_BLOCKED_MINOR_LAST,
+			isAdult: false,
+			status: 'blocked',
+			createdAt: now,
+			updatedAt: now
+		});
 
 		// --- Phase 2 -------------------------------------------------------
 		// A second member, so the "full" shift is taken by somebody who isn't the
