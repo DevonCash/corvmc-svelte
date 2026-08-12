@@ -99,6 +99,7 @@ export const blockSchema = z.discriminatedUnion('type', [
 		id: z.string(),
 		type: z.literal('events'),
 		limit: z.number().optional(),
+		showPast: z.boolean().optional(),
 		cssClass: z.string().optional()
 	}),
 	z.object({

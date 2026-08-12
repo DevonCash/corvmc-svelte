@@ -56,8 +56,9 @@ bands, including gigs at other venues.
   - `/staff/events/[id]` hides the "Sell tickets through the site" toggle for a
     band gig (keeping the price field) rather than offering an action the service
     refuses. `getPublicTicketPage`, `purchaseTickets` and `claimFreeTicket` also
-    reject `source='band'` on source rather than on the `bandEvents` flag, so a
-    row that predates the rule still cannot reach checkout.
+    reject `source='band'` on source, which is a property of the row itself
+    rather than a setting, so a row that predates the rule still cannot reach
+    checkout.
 
   RSVPs are deliberately _not_ restricted: `rsvpToEvent` writes a headcount row,
   takes no money and issues no code, so band gigs get it like any other event.
@@ -78,9 +79,8 @@ bands, including gigs at other venues.
 - Band-admin notice that published events appear on the public gig guide.
 - Unified cross-source "More shows" on event detail pages (currently CMC-only).
 - Per-band or per-event opt-out from the public gig guide.
-- Extending the `contentFlag` moderation system to events — worth doing before the
-  `bandEvents` flag turns on in production, since band events publish without staff
-  review.
+- Extending the `contentFlag` moderation system to events — band events publish
+  without staff review, so this is the only backstop.
 
 ## Decisions
 
@@ -95,10 +95,11 @@ bands, including gigs at other venues.
   "what's on the 20th?" case as a date-jumper.
 - **No new dependencies.** Mini-calendar and list are small custom components on the
   already-installed `@internationalized/date`.
-- **Feature flag, soft check.** The page is always live. Band rows are included only
-  when `feature.bandEvents` is enabled (`isFeatureEnabled`, not `requireFeature`).
-  `getPublicEventDetail` 404s a band event when the flag is off, consistent with
-  `getBandEventsPublic`.
+- **No feature flag.** Band gigs are part of the gig guide unconditionally. The
+  `bandEvents` flag this originally shipped behind has been removed — a
+  permanently-on flag is worse than none, and the soft/hard check split it forced
+  (`isFeatureEnabled` on public paths, `requireFeature` on band ones) was a
+  standing source of confusion.
 - **All entries link to `/events/[id]`.** Band microsites are subdomain-hosted and
   have no per-event detail page; the main-site detail page is the canonical URL for
   both sources.
@@ -106,12 +107,10 @@ bands, including gigs at other venues.
   dots, badges/links in rows). Off-site gigs are communicated by the venue line. No
   gradients.
 - **Moderation:** none in this phase — a band publishing an event is the existing
-  gate (band admins only, behind the flag).
+  gate (band admins only).
 
 ## Dev testing
 
-Feature flags live in KV site-config, not in `scripts/seed-dev.ts`. To see band
-events locally, enable `feature.bandEvents` via the staff settings flags UI or
-`wrangler kv key put --binding KV --local 'site-config:feature.bandEvents' 'true'`.
-Seeded band events (`seedBandEvents` in scripts/seed-dev.ts) already include
-published rows with off-site locations.
+Seeded band events (`seedBandEvents` in scripts/seed-dev.ts) include published
+rows with off-site locations, so they show up in the gig guide straight after a
+seed — no flag to enable.

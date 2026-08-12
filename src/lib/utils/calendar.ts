@@ -7,7 +7,20 @@ export interface CalendarEvent {
 	description?: string | null;
 	location?: string | null;
 	startsAt: Date;
-	endsAt: Date;
+	/** Null when unknown — see `endsForExport`. */
+	endsAt: Date | null;
+}
+
+/**
+ * ICS and Google Calendar both require an end, but `event.endsAt` is nullable
+ * because a band backfilling old gigs often doesn't know one. Rather than
+ * refuse to export, assume a two-hour set — a convention of the exported file,
+ * never written back to the database.
+ */
+const ASSUMED_DURATION_MS = 2 * 60 * 60 * 1000;
+
+function endsForExport(evt: CalendarEvent): Date {
+	return evt.endsAt ?? new Date(evt.startsAt.getTime() + ASSUMED_DURATION_MS);
 }
 
 /** Format a Date as a UTC iCalendar timestamp, e.g. 20260620T200000Z. */
@@ -32,7 +45,7 @@ export function googleCalendarUrl(evt: CalendarEvent): string {
 	const params = new URLSearchParams({
 		action: 'TEMPLATE',
 		text: evt.title,
-		dates: `${toICSDate(evt.startsAt)}/${toICSDate(evt.endsAt)}`
+		dates: `${toICSDate(evt.startsAt)}/${toICSDate(endsForExport(evt))}`
 	});
 	if (evt.description) params.set('details', evt.description);
 	if (evt.location) params.set('location', evt.location);
@@ -47,7 +60,7 @@ export function icsDataUrl(evt: CalendarEvent): string {
 		'PRODID:-//Corvallis Music Collective//Events//EN',
 		'BEGIN:VEVENT',
 		`DTSTART:${toICSDate(evt.startsAt)}`,
-		`DTEND:${toICSDate(evt.endsAt)}`,
+		`DTEND:${toICSDate(endsForExport(evt))}`,
 		`SUMMARY:${escapeICS(evt.title)}`
 	];
 	if (evt.description) lines.push(`DESCRIPTION:${escapeICS(evt.description)}`);

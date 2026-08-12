@@ -23,7 +23,8 @@ export interface CalendarEntry {
 	id: string;
 	title: string;
 	startsAt: Date;
-	endsAt: Date;
+	/** Null when the gig has no recorded end — common on backfilled band shows. */
+	endsAt: Date | null;
 	source: string;
 	location: string | null;
 	bandName: string | null;

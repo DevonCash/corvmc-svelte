@@ -42,7 +42,7 @@ import {
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
-import { event } from '../src/lib/server/db/schema/event';
+import { event, eventBand } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
@@ -359,6 +359,21 @@ const BAND_EVENT_LOCATIONS = [
 	'OSU MU Ballroom',
 	'Avery Park Amphitheater',
 	'Block 15 Brewery, 300 SW Jefferson Ave'
+];
+
+/**
+ * Support acts with no CMC account — the common case on a real bill, and what
+ * the `unlinked` lineup status exists for.
+ */
+const SUPPORT_BAND_NAMES = [
+	'Paper Wolves',
+	'Sun Kissed',
+	'The Filbert Set',
+	'Marys Peak Ramblers',
+	'Static Bloom',
+	'Willamette Static',
+	'Dead Air Radio',
+	'The Nine Volts'
 ];
 
 const PRESS_QUOTES = [
@@ -1251,6 +1266,44 @@ async function seedBands(users: SeedUser[]) {
 	return bands;
 }
 
+/**
+ * Write an event's bill: the owner confirmed at the top, then a mix of the
+ * three states a support slot can be in, so every render path has data —
+ * plain-text credits, an invitation waiting in a band's inbox, and a decline.
+ */
+async function seedLineup(
+	eventId: string,
+	owner: { id: string; name: string } | null,
+	support: { name: string; bandId?: string; status?: string }[]
+) {
+	const rows: any[] = [];
+	if (owner) {
+		rows.push({
+			eventId,
+			name: owner.name,
+			bandId: owner.id,
+			billingOrder: 0,
+			status: 'confirmed',
+			addedByBandId: owner.id
+		});
+	}
+	support.forEach((sup, i) => {
+		rows.push({
+			eventId,
+			name: sup.name,
+			bandId: sup.bandId ?? null,
+			billingOrder: rows.length + i,
+			status: sup.status ?? (sup.bandId ? 'pending' : 'unlinked'),
+			addedByBandId: owner?.id ?? null
+		});
+	});
+	if (rows.length === 0) return;
+	// D1 caps a statement at 100 bound params.
+	for (let i = 0; i < rows.length; i += 12) {
+		await db.insert(eventBand).values(rows.slice(i, i + 12));
+	}
+}
+
 async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 	console.log('Seeding band events...');
 	const rows = [];
@@ -1269,7 +1322,7 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					title: pick(BAND_EVENT_TITLES),
 					description: `${veteran.name} live! An old favourite from the archives.`,
 					startsAt,
-					endsAt: ptDate(day, hour + pick([2, 3, 4])),
+					endsAt: Math.random() > 0.5 ? ptDate(day, hour + pick([2, 3, 4])) : null,
 					doorsAt: ptDate(day, hour - 0.5),
 					status: 'published',
 					publishedAt: new Date(startsAt.getTime() - 14 * 86400000),
@@ -1281,6 +1334,15 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					createdByUserId: veteran.ownerId
 				})
 				.returning();
+
+			// Half the archive has no end time — a band backfilling old gigs
+			// rarely remembers when the night finished, which is why the column
+			// is nullable.
+			await seedLineup(
+				e.id,
+				{ id: veteran.id, name: veteran.name },
+				pickN(SUPPORT_BAND_NAMES, randomInt(0, 2)).map((name) => ({ name }))
+			);
 			rows.push(e);
 		}
 	}
@@ -1322,6 +1384,24 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					createdByUserId: b.ownerId
 				})
 				.returning();
+
+			// Roughly a third of gigs get support. Mostly off-platform names; the
+			// first band on the list also gets a real CMC band so the invitation
+			// inbox has something in it, and a declined slot so that render path
+			// is visible too.
+			const support: { name: string; bandId?: string; status?: string }[] = [];
+			if (Math.random() > 0.66) {
+				support.push(...pickN(SUPPORT_BAND_NAMES, randomInt(1, 2)).map((name) => ({ name })));
+			}
+			const otherBand = bands.find((x: any) => x.id !== b.id && !x.deletedAt);
+			if (otherBand && i === 0) {
+				support.push({
+					name: otherBand.name,
+					bandId: otherBand.id,
+					status: pick(['pending', 'pending', 'confirmed', 'declined'])
+				});
+			}
+			await seedLineup(e.id, { id: b.id, name: b.name }, support);
 			rows.push(e);
 		}
 	}
@@ -1334,6 +1414,27 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
  * bands do not exist yet at that point, and without these rows the staff
  * reservation queue has no band bookings to render, search or filter.
  */
+/**
+ * Credit member bands on a few CMC-produced shows.
+ *
+ * These have no owning band — `event.bandId` stays null, staff run the night —
+ * but the bands genuinely played, so the bill is pure attribution. Staff-set
+ * slots land confirmed: staff booked the show, the band already agreed.
+ */
+async function seedCmcEventLineups(events: any[], bands: any[]) {
+	const liveBands = bands.filter((b: any) => !b.deletedAt).slice(0, 4);
+	if (liveBands.length === 0) return;
+
+	const published = events.filter((e: any) => e.status === 'published').slice(0, 5);
+	for (const [i, evt] of published.entries()) {
+		const headliner = liveBands[i % liveBands.length];
+		await seedLineup(evt.id, null, [
+			{ name: headliner.name, bandId: headliner.id, status: 'confirmed' },
+			...pickN(SUPPORT_BAND_NAMES, randomInt(0, 2)).map((name) => ({ name }))
+		]);
+	}
+}
+
 async function seedBandReservations(bands: any[]) {
 	console.log('Seeding band reservations...');
 	const rows = [];
@@ -2768,6 +2869,7 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers);
+	await seedCmcEventLineups(events, bands);
 	const bandReservations = await seedBandReservations(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
 	const series = await seedRecurringSeries(allUsers);

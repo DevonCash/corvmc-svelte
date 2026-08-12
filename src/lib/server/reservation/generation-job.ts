@@ -391,8 +391,17 @@ async function processEventSeries(
 		.where(eq(user.id, prototype.createdByUserId))
 		.limit(1);
 
+	// Recurring series are staff-created and therefore always CMC-sourced, which
+	// `event_cmc_needs_end` guarantees an end time for. Checked rather than
+	// asserted because this runs unattended — a silent NaN duration would
+	// generate a whole series of broken occurrences.
+	if (!prototype.endsAt) {
+		throw new Error(`Recurring prototype ${prototype.id} has no end time`);
+	}
+	const protoEndsAt = prototype.endsAt;
+
 	// Offsets relative to the prototype event, applied to every occurrence
-	const durationMs = prototype.endsAt.getTime() - prototype.startsAt.getTime();
+	const durationMs = protoEndsAt.getTime() - prototype.startsAt.getTime();
 	const doorsLeadMs = prototype.doorsAt
 		? prototype.startsAt.getTime() - prototype.doorsAt.getTime()
 		: null;
@@ -410,7 +419,7 @@ async function processEventSeries(
 			.limit(1);
 		if (protoRes) {
 			resLeadMs = prototype.startsAt.getTime() - protoRes.startsAt.getTime();
-			resTailMs = protoRes.endsAt.getTime() - prototype.endsAt.getTime();
+			resTailMs = protoRes.endsAt.getTime() - protoEndsAt.getTime();
 		}
 	}
 
@@ -518,7 +527,10 @@ async function processEventSeries(
 						bookerId: newEventId,
 						startsAt: occResStart,
 						endsAt: occResEnd,
-						status: 'scheduled'
+						// Same as the one-off path: event space is staff-held. A `scheduled`
+						// hold reads as an uncommitted member booking that nothing can ever
+						// confirm, so the unconfirmed sweep released the room at showtime.
+						status: 'confirmed'
 					});
 					await db
 						.update(event)

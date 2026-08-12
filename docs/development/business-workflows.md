@@ -288,7 +288,7 @@ Spec: [specs/tickets-spec.md](../specs/tickets-spec.md)
 
 ### The story
 
-Staff (and bands, behind the `bandEvents` flag) create events. Publishing makes an event
+Staff and bands both create events. Publishing makes an event
 visible on the public site. Ticketed events sell through Stripe — guests can buy without an
 account — and each ticket gets a unique code rendered as a QR for door check-in. Free
 events use RSVP instead.

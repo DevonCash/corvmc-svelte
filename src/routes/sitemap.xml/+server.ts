@@ -1,7 +1,6 @@
 import type { RequestHandler } from './$types';
 import { listPublicUpcomingEvents } from '$lib/server/event/event-service';
 import { listPublicBands } from '$lib/server/directory/directory-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const STATIC_ROUTES = [
 	'/',
@@ -20,9 +19,8 @@ const STATIC_ROUTES = [
 export const GET: RequestHandler = async ({ url }) => {
 	const origin = url.origin;
 
-	const includeBandEvents = await isFeatureEnabled('bandEvents');
 	const [events, bands] = await Promise.all([
-		listPublicUpcomingEvents(new Date(), { includeBandEvents, limit: 500, offset: 0 }),
+		listPublicUpcomingEvents(new Date(), { limit: 500, offset: 0 }),
 		listPublicBands()
 	]);
 

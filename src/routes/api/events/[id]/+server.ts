@@ -29,7 +29,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			title: evt.title,
 			description: evt.description,
 			startsAt: evt.startsAt.toISOString(),
-			endsAt: evt.endsAt.toISOString(),
+			endsAt: evt.endsAt?.toISOString() ?? null,
 			doorsAt: evt.doorsAt?.toISOString() ?? null,
 			tags: evt.tags,
 			posterUrl,

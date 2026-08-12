@@ -1,10 +1,11 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { fullDate, formatTime } from '$lib/utils/format';
+	import { fullDate } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';
 	import { page } from '$app/state';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	const purchaseId = page.url.searchParams.get('purchase_id') ?? '';
 	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
@@ -26,7 +27,7 @@
 			<div>
 				<h2 class="text-xl font-bold">{evt.title}</h2>
 				<p class="opacity-70 mt-1">
-					{fullDate(evt.startsAt)} · {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+					{fullDate(evt.startsAt)} · {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 				</p>
 			</div>
 

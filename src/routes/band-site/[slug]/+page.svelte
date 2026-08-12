@@ -11,5 +11,6 @@
 	config={data.config}
 	members={data.members}
 	events={data.events}
+	pastEvents={data.pastEvents}
 	media={data.media}
 />

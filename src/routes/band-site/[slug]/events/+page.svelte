@@ -7,6 +7,7 @@
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const events = $derived(data.events);
+	const pastEvents = $derived(data.pastEvents);
 </script>
 
 <svelte:head>
@@ -23,8 +24,10 @@
 
 	<h1 class="text-3xl font-bold mb-8">All Events</h1>
 
-	{#if events.length === 0}
-		<p class="text-center opacity-60 py-12">No upcoming events.</p>
+	{#if events.length === 0 && pastEvents.length === 0}
+		<p class="text-center opacity-60 py-12">No events yet.</p>
+	{:else if events.length === 0}
+		<p class="opacity-60 py-4">No upcoming events.</p>
 	{:else}
 		<div class="space-y-4">
 			{#each events as evt (evt.id)}
@@ -63,6 +66,21 @@
 						>
 							Tickets
 						</a>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	{/if}
+
+	{#if pastEvents.length > 0}
+		<h2 class="text-xl font-bold mt-12 mb-4 opacity-70">Past Shows</h2>
+		<div class="space-y-2">
+			{#each pastEvents as evt (evt.id)}
+				<div class="flex items-baseline gap-3 text-sm">
+					<span class="opacity-60 tabular-nums shrink-0">{formatDate(evt.startsAt)}</span>
+					<span class="font-medium">{evt.title}</span>
+					{#if evt.location}
+						<span class="opacity-60 truncate">{evt.location}</span>
 					{/if}
 				</div>
 			{/each}

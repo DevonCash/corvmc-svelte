@@ -36,7 +36,8 @@
 		title: string;
 		description: string | null;
 		startsAt: Date;
-		endsAt: Date;
+		/** Null when unknown — common on backfilled band gigs. */
+		endsAt: Date | null;
 		location: string | null;
 		externalTicketUrl: string | null;
 		ticketPrice: number | null;
@@ -55,12 +56,14 @@
 		config,
 		members,
 		events,
+		pastEvents = [],
 		media
 	}: {
 		band: BandData;
 		config: ConfigData | null;
 		members: MemberData[];
 		events: EventData[];
+		pastEvents?: EventData[];
 		media: MediaData[];
 	} = $props();
 
@@ -170,6 +173,23 @@
 										>
 											Tickets
 										</a>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				{#if block.showPast && pastEvents.length > 0}
+					<div class="max-w-3xl mx-auto px-6 py-8">
+						<h2 class="text-2xl font-bold mb-4">Past Shows</h2>
+						<div class="space-y-2">
+							{#each pastEvents.slice(0, block.limit ?? 10) as evt (evt.id)}
+								<div class="flex items-baseline gap-3 text-sm">
+									<span class="opacity-60 tabular-nums shrink-0">{formatDate(evt.startsAt)}</span>
+									<span class="font-medium">{evt.title}</span>
+									{#if evt.location}
+										<span class="opacity-60 truncate">{evt.location}</span>
 									{/if}
 								</div>
 							{/each}
