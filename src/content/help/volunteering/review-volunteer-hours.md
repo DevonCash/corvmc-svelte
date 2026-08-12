@@ -2,7 +2,7 @@
 title: Reviewing Volunteer Hours
 slug: review-volunteer-hours
 category: volunteering
-summary: Working the approval queue, finding volunteers, managing roles, and pulling the report for the board.
+summary: Scheduling shifts, working the approval queue, finding volunteers, managing roles and clearances, and pulling the report.
 minRole: staff
 sortOrder: 2
 ---
@@ -25,6 +25,27 @@ a corrected log; there is no un-approve.
 
 Filters (member, role, date range) stay in the URL, so a reload or a back button
 keeps your view.
+
+## Scheduling shifts
+
+**Volunteering → Shifts** is the roster. Create a shift from a role (times and
+headcount prefill from the role's defaults), and duplicate it forward to make a
+standing weekly slot — there is no recurrence to configure. Members claim from
+their volunteering page; you confirm claimants on the shift's detail page, and
+only confirmed people get the day-before reminder and auto-complete afterwards.
+Mark no-shows there too — a no-show is different from a cancellation, and only
+one of them is worth remembering next time.
+
+A role can require certifications (**Volunteering → Certifications**) before its
+shifts can be claimed. Requirements are checked against the shift's date, so a
+lapsing card is caught before it matters. The clearances view shows who is
+current, expiring soon, or lapsed. Grant and revoke from the member's page —
+revoking keeps the record of the period it covered, which is the point.
+
+The day after a shift, workers get a two-question survey. Responses show on the
+shift detail and roll up per role on the report, anonymously. A role scoring
+badly on "were you set up to succeed?" is a briefing problem, not a volunteer
+problem — fix the checklist, not the person.
 
 ## Finding someone to ask
 

@@ -92,15 +92,15 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 
 ## Step 6 — Seeds, tests, docs
 
-- [ ] `scripts/seed-dev.ts` — catalog with one expiring + one lapsed card,
+- [x] `scripts/seed-dev.ts` — catalog with one expiring + one lapsed card,
       shifts either side of today, signups across every status, feedback on the
       completed ones
 - [~] Specs: date asymmetry **done**, renewal appends, claim refusals (full / uncleared /
   duplicate), completion only touches confirmed-and-past, feedback once
 - [x] Extend `e2e/volunteering.e2e.ts` + its fixture — shifts and feedback (15 tests)
-- [ ] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
-- [ ] `production-workflow-spec.md:1256` — close the staffing hook
-- [ ] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
+- [x] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
+- [x] `production-workflow-spec.md:1256` — close the staffing hook
+- [x] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
       `pnpm docs:check`, parity-report row + table count 32 → 38
 
 ## Verification notes

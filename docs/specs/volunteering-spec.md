@@ -263,13 +263,16 @@ after an approval is worse than a report that takes an extra 30ms.
 
 ## Phase 2: opportunities and shifts
 
-**None of this is built.** It is recorded here so the Phase 1 schema can be
-judged against where it is going, and so `production-workflow-spec.md`'s deferred
-staffing hook has something to point at.
+**Built.** `volunteer_shift` and `volunteer_signup` shipped as designed, with
+two deliberate narrowings: shifts do not recur (staff duplicate a shift forward
+— the copy is an ordinary shift with no series bookkeeping), and members claim
+but do not propose. A post-shift feedback survey (`volunteer_shift_feedback`,
+below) shipped alongside, which this section's original text did not anticipate.
 
-Role interest (built) is the standing half of this: it records who _would_ do a
-job. A shift is the dated half — who is doing it on Saturday. The natural join is
-that the claim UI offers shifts for roles you have expressed interest in first.
+Role interest is the standing half of this: it records who _would_ do a job. A
+shift is the dated half — who is doing it on Saturday. The join shipped as
+designed: the member board orders shifts you already claimed first, then roles
+you expressed interest in, then the rest.
 
 The shape: a `volunteer_shift` row is a dated, time-bounded need for a
 `volunteerRoleId` — "two Front Desk, Saturday 6–10pm" — optionally attached to an
@@ -278,34 +281,44 @@ The shape: a `volunteer_shift` row is a dated, time-bounded need for a
 member to shift with its own small lifecycle (`claimed → confirmed → completed`,
 plus `cancelled` and `no_show`).
 
-What connects it to Phase 1:
+How it connects to Phase 1, all shipped:
 
-- `volunteer_hour_log.shiftId` becomes a real FK. A completed shift pre-fills an
-  hour log — the member confirms rather than composes — and a log filed against a
-  shift can be approved with less scrutiny because staff already scheduled it.
-- `volunteer_role` grows the fields only shifts need: default duration and
-  default capacity. "Requires training" is **not** one of them — that is what
-  certifications express, and it is where shift-claiming gets gated.
-- Certifications stop being advisory and start gating: a member may only claim a
-  shift for a role whose required certifications they currently hold.
-- The daily 09:00 shift-reminder cron from the Laravel app
-  (`docs/reports/parity-report.md`) becomes buildable. It is deferred until then
-  because Phase 1 has nothing to remind anyone about.
-- `production_slot` gains volunteer staffing, closing the gap
-  `production-workflow-spec.md` left open.
+- `volunteer_hour_log.shiftId` is a real FK (set-null — deleting a shift must
+  not delete hours somebody worked). A completed shift pre-fills an hour log the
+  member confirms rather than composes, and the review queue badges shift-filed
+  logs as "scheduled" so staff can approve them with less scrutiny.
+- `volunteer_role` grew `defaultDurationMinutes` and `defaultCapacity`,
+  prefills for the shift form only. "Requires training" is not one of them —
+  that is what certifications express.
+- Certifications gate claiming, checked **as of the shift's date**: a card that
+  lapses next week does not cover a shift the week after. A member who can't
+  claim sees the missing clearance by name rather than a hidden shift.
+- Three crons: `complete-shifts` (15-minute group; only `confirmed` signups
+  complete — an unconfirmed claim is not evidence anyone worked),
+  `shift-reminders` (daily batch — the 09:00 reminder carried in the parity
+  report since the Laravel app), and `shift-feedback` (daily batch, window
+  tiled `[48h, 24h)` ago so a non-answer is asked exactly once).
+- `production_slot` staffing still waits for Productions itself.
 
-Not decided: whether shifts recur (the `recurring_series` prototype pattern would
-apply), and whether members can propose a shift or only claim one.
+### Post-shift feedback
+
+One row per signup (`volunteer_shift_feedback`, unique on signupId): a 1–5
+rating, a separate "were you set up to succeed?" boolean, and an optional
+comment. The two questions are deliberately distinct — enjoyment and
+preparedness pull apart exactly where a briefing needs work. Staff see
+responses on the shift detail and an **anonymous** per-role rollup on the
+report; names would just teach volunteers to answer politely. The emailed link
+carries the signup id, which is not a secret — the session authorizes, and
+somebody else's signup renders as absent.
 
 ---
 
 ## Certifications
 
-**None of this is built either.** It is a sibling of Phase 2 rather than part of
-it: certifications are useful on their own — they answer "who can run the desk?"
-without any shift scheduling — but they are also what Phase 2 checks before
-letting someone claim a shift. Either can be built first; building
-certifications first is the smaller piece and makes Phase 2 smaller in turn.
+**Built, as designed below** (the model survived contact with implementation
+unchanged; the only deviation is UI-level — the role requirements picker is a
+checkbox group rather than a TagInput). Certifications answer "who can run the
+desk?" on their own, and are what shift-claiming checks.
 
 Some volunteer work needs clearance before someone does it alone. Two different
 things wear that name and the model has to hold both:

@@ -38,6 +38,24 @@ takes you off the list entirely.
 Ideas that are not a role — a program, a club, a class, showing art, performing
 — go through [the contact form](/contact) instead.
 
+## Taking a shift
+
+Staff post dated shifts — "Door, Saturday 6–10pm" — and the **Volunteering**
+page lists the upcoming ones, with shifts for roles you said you're up for at
+the top. Claim one and staff will confirm you; you'll get a reminder the day
+before. If something comes up, drop the shift from the same page so somebody
+else can take it — that is far more useful to us than a no-show.
+
+Some roles need a clearance (First Aid, sound desk sign-off) before you can
+claim them. The shift will say exactly what's missing and the role's
+description says how to get it. Hours can always be logged either way —
+clearances gate scheduling, never the record of work you already did.
+
+After a shift you worked, the page offers a pre-filled hour log — check it and
+submit rather than typing it up. The day after, we'll ask two quick questions
+about how it went; answers reach staff without your name on the rollup, and
+they're what fix the briefing for the next person.
+
 ## Logging your hours
 
 After you have helped out, log the time from the same page:

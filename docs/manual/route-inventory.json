@@ -188,6 +188,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/feedback/[signupId]",
+		"panel": "member"
+	},
+	{
 		"route": "/membership",
 		"panel": "member"
 	},
@@ -332,6 +336,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/volunteer/certifications",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/clearances",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer/interest",
 		"panel": "staff"
 	},
@@ -341,6 +353,14 @@
 	},
 	{
 		"route": "/staff/volunteer/roles",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/shifts",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/shifts/[id]",
 		"panel": "staff"
 	},
 	{
