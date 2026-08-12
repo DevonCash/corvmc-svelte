@@ -14,7 +14,10 @@ const ALL_ENDPOINTS = [
 	'/api/cron/reservation-reminders',
 	'/api/cron/generate-recurring-reservations',
 	'/api/cron/lock-access',
-	'/api/cron/send-campaigns'
+	'/api/cron/send-campaigns',
+	'/api/cron/complete-shifts',
+	'/api/cron/shift-reminders',
+	'/api/cron/shift-feedback'
 ];
 
 function okFetcher() {
@@ -35,7 +38,11 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/lock-access',
 			'/api/cron/confirmation-reminders',
 			'/api/cron/reservation-reminders',
-			'/api/cron/cancel-stale-tickets'
+			'/api/cron/cancel-stale-tickets',
+			// Shift reminders after the reservation ones, and the feedback ask last:
+			// it reads signups that complete-shifts has been marking all night.
+			'/api/cron/shift-reminders',
+			'/api/cron/shift-feedback'
 		]);
 	});
 });
@@ -46,10 +53,11 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(4);
+		expect(fetcher).toHaveBeenCalledTimes(5);
 		const requests = fetcher.mock.calls.map(([request]: [Request]) => request);
 		expect(requests.map((r) => r.url)).toEqual([
 			'https://corvmc.test/api/cron/auto-complete',
+			'https://corvmc.test/api/cron/complete-shifts',
 			'https://corvmc.test/api/cron/cancel-unconfirmed',
 			'https://corvmc.test/api/cron/expire-waitlisted',
 			'https://corvmc.test/api/cron/wake-snoozed'
@@ -87,9 +95,10 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(4);
+		expect(fetcher).toHaveBeenCalledTimes(5);
 		expect(results).toEqual([
 			{ path: '/api/cron/auto-complete', ok: false, error: 'boom' },
+			{ path: '/api/cron/complete-shifts', ok: true, status: 200 },
 			{ path: '/api/cron/cancel-unconfirmed', ok: true, status: 200 },
 			{ path: '/api/cron/expire-waitlisted', ok: true, status: 200 },
 			{ path: '/api/cron/wake-snoozed', ok: true, status: 200 }
@@ -109,6 +118,7 @@ describe('runScheduledJobs', () => {
 			{ ok: false, status: 401 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
+			{ ok: true, status: 200 },
 			{ ok: true, status: 200 }
 		]);
 	});
@@ -125,12 +135,14 @@ describe('runScheduledJobs', () => {
 		expect(checkIn.mock.calls.map(([opts]) => opts)).toEqual([
 			{ slug: 'auto-complete', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'auto-complete', status: 'ok', checkInId: 'ci-1' },
+			{ slug: 'complete-shifts', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'complete-shifts', status: 'ok', checkInId: 'ci-2' },
 			{ slug: 'cancel-unconfirmed', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'cancel-unconfirmed', status: 'ok', checkInId: 'ci-2' },
+			{ slug: 'cancel-unconfirmed', status: 'ok', checkInId: 'ci-3' },
 			{ slug: 'expire-waitlisted', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' },
+			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-4' },
 			{ slug: 'wake-snoozed', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-4' }
+			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-5' }
 		]);
 	});
 
@@ -150,7 +162,7 @@ describe('runScheduledJobs', () => {
 		const closes = checkIn.mock.calls
 			.map(([opts]) => opts as { status: string; checkInId?: string })
 			.filter((o) => o.status !== 'in_progress');
-		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok', 'ok']);
+		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok', 'ok', 'ok']);
 		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
 	});
 

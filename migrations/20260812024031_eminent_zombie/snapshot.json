@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3a3674f0-9076-41ba-8539-25be3f53266e",
+  "id": "98587e8c-a032-4ccd-9e7d-56be64247eba",
   "prevIds": [
-    "b6b037d5-d939-462f-9e43-49d523576493"
+    "16801fa1-7bac-4453-afb4-ec24461626d3"
   ],
   "ddl": [
     {
@@ -132,6 +132,10 @@
     },
     {
       "name": "band_member",
+      "entityType": "tables"
+    },
+    {
+      "name": "band_slug_history",
       "entityType": "tables"
     },
     {
@@ -3168,6 +3172,46 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "band_slug_history"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "band_slug_history"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "band_id",
+      "entityType": "columns",
+      "table": "band_slug_history"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "band_slug_history"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "band_media"
     },
     {
@@ -5531,6 +5575,21 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_band_slug_history_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "band_slug_history"
+    },
+    {
+      "columns": [
+        "band_id"
+      ],
+      "tableTo": "band",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_band_media_band_id_band_id_fk",
       "entityType": "fks",
       "table": "band_media"
@@ -6258,6 +6317,15 @@
       "nameExplicit": false,
       "name": "band_member_pk",
       "table": "band_member",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "band_slug_history_pk",
+      "table": "band_slug_history",
       "entityType": "pks"
     },
     {
@@ -7149,6 +7217,34 @@
       "name": "idx_band_member_status",
       "entityType": "indexes",
       "table": "band_member"
+    },
+    {
+      "columns": [
+        {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_band_slug_history_slug",
+      "entityType": "indexes",
+      "table": "band_slug_history"
+    },
+    {
+      "columns": [
+        {
+          "value": "band_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_band_slug_history_band",
+      "entityType": "indexes",
+      "table": "band_slug_history"
     },
     {
       "columns": [
