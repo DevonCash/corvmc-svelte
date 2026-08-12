@@ -179,8 +179,10 @@ const editEquipmentSchema = z.object({
 	name: z.string().min(1).max(255).optional(),
 	description: z.string().max(2000).optional(),
 	categoryId: z.string().uuid().optional(),
-	totalQuantity: z.string().optional(),
-	outOfOrderQuantity: z.string().optional(),
+	// `<Field type="number">` submits through `field.as('number')`, so SvelteKit
+	// hands the handler a number (or `undefined` for an empty input) — never a string.
+	totalQuantity: z.number().int().min(0).optional(),
+	outOfOrderQuantity: z.number().int().min(0).optional(),
 	serialNumber: z.string().max(100).optional(),
 	resourceId: z.string().max(100).optional(),
 	condition: z.enum(equipmentConditions).optional(),
@@ -192,11 +194,7 @@ export const editEquipment = form(editEquipmentSchema.extend({ id: z.string() })
 	await requireStaff();
 	const data = raw as z.infer<typeof editEquipmentSchema> & { id: string };
 	const id = data.id;
-	await updateEquipment(id, {
-		...data,
-		totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : undefined,
-		outOfOrderQuantity: data.outOfOrderQuantity ? parseInt(data.outOfOrderQuantity, 10) : undefined
-	});
+	await updateEquipment(id, data);
 	void getEquipment(id).refresh();
 	return { success: true };
 });
@@ -206,8 +204,8 @@ export const createEquipment = form(
 		name: z.string().min(1).max(255),
 		description: z.string().max(2000).optional(),
 		categoryId: z.string(),
-		totalQuantity: z.string().optional(),
-		outOfOrderQuantity: z.string().optional(),
+		totalQuantity: z.number().int().min(0).optional(),
+		outOfOrderQuantity: z.number().int().min(0).optional(),
 		serialNumber: z.string().max(100).optional(),
 		resourceId: z.string().max(100).optional(),
 		condition: z.string(),
@@ -219,8 +217,8 @@ export const createEquipment = form(
 			name: string;
 			description?: string;
 			categoryId: string;
-			totalQuantity?: string;
-			outOfOrderQuantity?: string;
+			totalQuantity?: number;
+			outOfOrderQuantity?: number;
 			serialNumber?: string;
 			resourceId?: string;
 			condition: string;
@@ -231,8 +229,8 @@ export const createEquipment = form(
 			description: data.description,
 			categoryId: data.categoryId,
 			condition: data.condition as (typeof equipmentConditions)[number],
-			totalQuantity: data.totalQuantity ? parseInt(data.totalQuantity, 10) : 1,
-			outOfOrderQuantity: data.outOfOrderQuantity ? parseInt(data.outOfOrderQuantity, 10) : 0,
+			totalQuantity: data.totalQuantity ?? 1,
+			outOfOrderQuantity: data.outOfOrderQuantity ?? 0,
 			serialNumber: data.serialNumber,
 			resourceId: data.resourceId,
 			notes: data.notes
@@ -358,7 +356,10 @@ export const createLoan = form(
 	z.object({
 		userId: z.string(),
 		equipmentId: z.string().optional(),
-		quantity: z.string().optional(),
+		// Staff's Create Loan modal binds this with `field=`, so it arrives as a
+		// number. The member-facing `submitLoanRequest` below uses a bare `name=`
+		// and still gets a string.
+		quantity: z.number().int().min(1).optional(),
 		requestedPickupDate: z.string().min(1),
 		estimatedReturnDate: z.string().min(1),
 		memberNotes: z.string().max(1000).optional()
@@ -368,14 +369,14 @@ export const createLoan = form(
 		const data = raw as {
 			userId: string;
 			equipmentId?: string;
-			quantity?: string;
+			quantity?: number;
 			requestedPickupDate: string;
 			estimatedReturnDate: string;
 			memberNotes?: string;
 		};
 		await requestLoan(data.userId, {
 			equipmentId: data.equipmentId || undefined,
-			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
+			quantity: data.quantity ?? 1,
 			requestedPickupDate: new Date(data.requestedPickupDate),
 			estimatedReturnDate: new Date(data.estimatedReturnDate),
 			memberNotes: data.memberNotes

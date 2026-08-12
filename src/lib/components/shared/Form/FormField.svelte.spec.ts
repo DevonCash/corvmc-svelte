@@ -91,6 +91,36 @@ describe('FormField', () => {
 		expect(input.name).toBe('b:lookingForBand');
 	});
 
+	// Regression: `type="number"` with a `field` prop registers as `field.as('number')`,
+	// which `n:`-prefixes the name — SvelteKit then parseFloats the submitted value, so
+	// the handler receives a number. Schemas declaring those fields as `z.string()`
+	// rejected every submit with "expected string, received number" (equipment add/edit
+	// and the staff Create Loan modal). This asserts the render half against SvelteKit's
+	// own field proxy rather than the local `fakeField`, so it stays honest if kit
+	// changes the prefix. The parse half is covered in equipment-number-fields.remote.spec.ts.
+	it('n:-prefixes a field-based number input so the value is a number', async () => {
+		const { create_field_proxy } = await import(
+			/* @vite-ignore */ `${new URL('../../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js', import.meta.url).href}`
+		);
+		const field = create_field_proxy(
+			{},
+			() => ({}),
+			() => {},
+			() => ({}),
+			['totalQuantity']
+		);
+
+		const { container } = render(FormField, {
+			field,
+			type: 'number',
+			label: 'Total Quantity',
+			value: 3
+		});
+
+		const input = container.querySelector('input[type="number"]') as HTMLInputElement;
+		expect(input.name).toBe('n:totalQuantity');
+	});
+
 	// Regression: `value` is destructured into its own prop, so it was not part of
 	// `...rest` and the tags branch never forwarded it to TagInput. The hidden
 	// input therefore always serialised `[]`, and on the staff user page every
