@@ -109,10 +109,13 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
 	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
 
-	// Validate ticketing fields
+	// Validate ticketing fields. The price is what an attendee pays wherever they
+	// buy — our checkout, an off-site seller, or the door — so it stands on its
+	// own; only selling through us makes it mandatory.
 	if (ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
 		throw new Error('Ticket price is required when ticketing is enabled');
 	}
+	assertValidTicketPrice(ticketPrice);
 
 	// D1 has no interactive transactions, so we order the writes so the event row
 	// is never persisted in a half-linked state: check conflicts, create the
@@ -153,7 +156,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
 				ticketingEnabled,
-				ticketPrice: ticketingEnabled ? ticketPrice! : null,
+				ticketPrice: ticketPrice ?? null,
+				// Capacity is only meaningful while we're the ones counting.
 				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
 				reservationId,
 				createdByUserId
@@ -307,38 +311,41 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
 
-	// A band gig is never sold through CMC. Money for it would land in CMC's
-	// Stripe account with no payout path back to the band, so the rule is
-	// absolute rather than a band-vs-staff permission: `createBandEvent` has no
-	// ticketing params at all, and this is the only other way a row could get
-	// `ticketingEnabled`. Bands sell off-site through `externalTicketUrl`.
-	const enablingTicketing = params.ticketingEnabled === true || params.ticketPrice != null;
-	if (existing.source === 'band' && enablingTicketing) {
+	// A band gig is never sold through *our* checkout. The money would land in
+	// CMC's Stripe account with no payout path back to the band, so the rule is
+	// absolute rather than a band-vs-staff permission: `createBandEvent` cannot
+	// set `ticketingEnabled`, and this is the only other writer that can.
+	//
+	// Scoped to `ticketingEnabled` alone. A band gig legitimately carries a
+	// `ticketPrice` — it is a display price for the door or an outside seller,
+	// and the band event forms let bands set one — and `externalTicketUrl` is
+	// how a band sells at all. Only the platform-checkout flag is off limits.
+	if (existing.source === 'band' && params.ticketingEnabled === true) {
 		throw new Error('Band events cannot be ticketed through CMC');
 	}
 
-	// Ticketing fields
+	// Ticketing fields. The price survives whatever happens to the ticketing
+	// toggle — switching our checkout off doesn't make the show free, it just
+	// means somebody else (or the door) takes the money. Capacity does not: it's
+	// only enforceable while we're selling.
+	if (params.ticketPrice !== undefined) {
+		assertValidTicketPrice(params.ticketPrice);
+		updates.ticketPrice = params.ticketPrice;
+	}
+
 	if (params.ticketingEnabled !== undefined) {
 		updates.ticketingEnabled = params.ticketingEnabled;
 		if (params.ticketingEnabled) {
-			assertValidTicketPrice(params.ticketPrice);
-			if (params.ticketPrice == null) {
+			const price = params.ticketPrice === undefined ? existing.ticketPrice : params.ticketPrice;
+			if (price == null) {
 				throw new Error('Ticket price is required when ticketing is enabled');
 			}
-			updates.ticketPrice = params.ticketPrice;
 			updates.ticketQuantity = params.ticketQuantity ?? null;
 		} else {
-			updates.ticketPrice = null;
 			updates.ticketQuantity = null;
 		}
-	} else {
-		// Same price rules apply when the price is edited without toggling
-		// ticketing — otherwise a zero/negative/NaN price slips through here.
-		if (params.ticketPrice !== undefined) {
-			assertValidTicketPrice(params.ticketPrice);
-			updates.ticketPrice = params.ticketPrice;
-		}
-		if (params.ticketQuantity !== undefined) updates.ticketQuantity = params.ticketQuantity;
+	} else if (params.ticketQuantity !== undefined) {
+		updates.ticketQuantity = params.ticketQuantity;
 	}
 
 	// Handle reservation rebooking if requested
@@ -682,6 +689,8 @@ export interface CreateBandEventParams {
 	location?: string;
 	tags?: string;
 	externalTicketUrl?: string;
+	/** Door / off-site price in cents. Bands never sell through our checkout. */
+	ticketPrice?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -700,11 +709,13 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		location,
 		tags,
 		externalTicketUrl,
+		ticketPrice,
 		posterFile
 	} = params;
 
 	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
 	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+	assertValidTicketPrice(ticketPrice);
 
 	const [row] = await db
 		.insert(event)
@@ -717,6 +728,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			tags: tags ?? null,
 			location: location ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
+			ticketPrice: ticketPrice ?? null,
 			bandId,
 			source: 'band',
 			createdByUserId
@@ -746,6 +758,7 @@ export interface UpdateBandEventParams {
 	location?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
+	ticketPrice?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -772,6 +785,10 @@ export async function updateBandEvent(
 	if (params.location !== undefined) updates.location = params.location;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+	if (params.ticketPrice !== undefined) {
+		assertValidTicketPrice(params.ticketPrice);
+		updates.ticketPrice = params.ticketPrice;
+	}
 
 	if (params.posterFile) {
 		if (existing.posterKey) {

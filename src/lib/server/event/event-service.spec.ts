@@ -286,7 +286,7 @@ describe('EventService', () => {
 			});
 		});
 
-		it('stores null price and quantity when ticketing is disabled', async () => {
+		it('stores null price and quantity when ticketing is disabled and neither is given', async () => {
 			await create(baseParams);
 
 			expect(lastInsertedValues).toMatchObject({
@@ -294,6 +294,30 @@ describe('EventService', () => {
 				ticketPrice: null,
 				ticketQuantity: null
 			});
+		});
+
+		// The price is what an attendee pays, wherever they buy — an off-site
+		// seller or the door. Only capacity is ours to enforce, so only capacity
+		// is tied to platform ticketing.
+		it('keeps a display price when ticketing is disabled', async () => {
+			await create({
+				...baseParams,
+				ticketingEnabled: false,
+				ticketPrice: 1800,
+				ticketQuantity: 50
+			});
+
+			expect(lastInsertedValues).toMatchObject({
+				ticketingEnabled: false,
+				ticketPrice: 1800,
+				ticketQuantity: null
+			});
+		});
+
+		it('rejects a zero or negative display price', async () => {
+			await expect(
+				create({ ...baseParams, ticketingEnabled: false, ticketPrice: 0 })
+			).rejects.toThrow('Ticket price must be a positive amount');
 		});
 
 		it('throws when ticketing is enabled but price is missing', async () => {
@@ -709,24 +733,37 @@ describe('EventService', () => {
 			);
 		});
 
-		it('rejects setting a price on a band event without the flag', async () => {
+		it('allows a door price on a band event', async () => {
+			// Only our checkout is off limits. `ticketPrice` is a display price for
+			// the door or an outside seller, and the band forms let bands set one.
 			selectResult = [bandEvent];
 
-			await expect(update('evt-1', { ticketPrice: 2000 })).rejects.toThrow(
-				'Band events cannot be ticketed through CMC'
-			);
+			await update('evt-1', { ticketPrice: 2000 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2000 });
+			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+		});
+
+		it('allows an external ticket link on a band event', async () => {
+			selectResult = [bandEvent];
+
+			await update('evt-1', { externalTicketUrl: 'https://venue.test/tickets' });
+
+			expect(lastUpdateSet).toMatchObject({
+				externalTicketUrl: 'https://venue.test/tickets'
+			});
 		});
 
 		it('still allows disabling ticketing on a band event', async () => {
 			// The escape hatch for a row written before the rule existed: staff
-			// opening the edit form submits `false` and clears the stale flag.
+			// opening the edit form submits `false` and clears the stale flag. The
+			// price stays — turning our checkout off doesn't make the show free.
 			selectResult = [{ ...bandEvent, ticketingEnabled: true, ticketPrice: 2000 }];
 
 			await update('evt-1', { ticketingEnabled: false });
 
 			expect(lastUpdateSet).toMatchObject({
 				ticketingEnabled: false,
-				ticketPrice: null,
 				ticketQuantity: null
 			});
 		});
@@ -765,7 +802,9 @@ describe('EventService', () => {
 			});
 		});
 
-		it('clears price and quantity when disabling ticketing', async () => {
+		// Turning off our checkout doesn't make the show free — the price stays as
+		// the door / off-site price. Capacity is meaningless once we stop counting.
+		it('clears quantity but keeps the price when disabling ticketing', async () => {
 			selectResult = [
 				{
 					...mockEventRow,
@@ -782,9 +821,39 @@ describe('EventService', () => {
 
 			expect(lastUpdateSet).toMatchObject({
 				ticketingEnabled: false,
-				ticketPrice: null,
 				ticketQuantity: null
 			});
+			expect(lastUpdateSet).not.toHaveProperty('ticketPrice');
+		});
+
+		it('sets a display price alongside disabling ticketing', async () => {
+			selectResult = [
+				{
+					...mockEventRow,
+					status: 'draft',
+					ticketingEnabled: true,
+					ticketPrice: 2000,
+					ticketQuantity: 100
+				}
+			];
+
+			await update('evt-1', { ticketingEnabled: false, ticketPrice: 1800 });
+
+			expect(lastUpdateSet).toMatchObject({
+				ticketingEnabled: false,
+				ticketPrice: 1800,
+				ticketQuantity: null
+			});
+		});
+
+		it('clears the price when explicitly set to null', async () => {
+			selectResult = [
+				{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 2000 }
+			];
+
+			await update('evt-1', { ticketingEnabled: false, ticketPrice: null });
+
+			expect(lastUpdateSet).toMatchObject({ ticketingEnabled: false, ticketPrice: null });
 		});
 
 		it('throws when enabling ticketing without price', async () => {

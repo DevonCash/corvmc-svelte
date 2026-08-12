@@ -1,49 +1,83 @@
-/**
- * Ticket prices are entered in dollars and stored in whole cents. Both
- * conversions used to be written inline at each call site as
- * `Math.round(parseFloat(x) * 100)`, which silently produced `NaN` for an empty
- * or malformed field and then wrote it into a hidden form input.
- *
- * These helpers are the single place that crossing happens. They are pure and
- * carry no DB or Svelte dependency, so both the client (rendering a price back
- * into an input) and the server (parsing a submitted dollar amount) use them.
- */
+import { formatCents } from './format';
 
 /**
- * Parse a user-entered dollar amount into whole cents.
+ * Who sells the tickets, and what that means for the price.
  *
- * Returns `null` for anything that is not a usable price — empty, blank,
- * non-numeric, or negative. Callers that require a price should treat `null` as
- * a validation failure rather than substituting a default; a silent 0 would
- * publish a free show.
+ * The three ticketing fields on an event are independent:
+ *   - `ticketingEnabled` — we sell them through Stripe. Only this mode has a
+ *     capacity, a sold count, check-in codes, and the sustaining-member discount.
+ *   - `externalTicketUrl` — somebody else sells them (the venue, Eventbrite…).
+ *   - `ticketPrice` — what an attendee pays, in cents. It is a *display* price
+ *     and applies to all three modes: platform checkout, an off-site seller, or
+ *     cash at the door. A null price means free.
  *
- * Deliberately imposes no upper bound. An earlier version capped this at
- * $1,000, which silently broke a price staff could previously save: the value
- * became `null`, the hidden cents field submitted empty, and the save died as a
- * thrown "Ticket price is required" with the amount still visible in the form.
- * A ceiling is only safe alongside a `max` on the input and a field-level
- * validation message.
+ * Reading a missing price as "free" is only correct when nobody is selling
+ * tickets, which is why every price label goes through here.
  */
-export function dollarsToCents(dollars: string | number | null | undefined): number | null {
-	if (dollars == null) return null;
+export interface EventTicketing {
+	ticketingEnabled: boolean;
+	ticketPrice: number | null;
+	externalTicketUrl?: string | null;
+}
 
-	const raw = typeof dollars === 'number' ? dollars : dollars.trim();
-	if (raw === '') return null;
+export type TicketingMode = 'platform' | 'external' | 'free';
 
-	const parsed = typeof raw === 'number' ? raw : Number(raw);
-	if (!Number.isFinite(parsed) || parsed < 0) return null;
+/** Platform ticketing wins when both are set — that's the checkout we control. */
+export function ticketingMode(evt: EventTicketing): TicketingMode {
+	if (evt.ticketingEnabled) return 'platform';
+	if (evt.externalTicketUrl) return 'external';
+	return 'free';
+}
 
-	// `parseFloat('15.10') * 100` is 1509.9999999999998, so the rounding is
-	// load-bearing rather than cosmetic.
-	return Math.round(parsed * 100);
+/** True when the event costs nothing: no price, and nobody selling tickets. */
+export function isFreeEvent(evt: EventTicketing): boolean {
+	return !evt.ticketPrice && ticketingMode(evt) !== 'external';
+}
+
+export interface PriceDisplay {
+	/** What to show as the price. */
+	label: string;
+	/** Undiscounted price to strike through, or null when there's no discount. */
+	wasLabel: string | null;
 }
 
 /**
- * Render stored cents back into the dollar string a price input expects.
- * `null`/undefined becomes an empty string so an unpriced event leaves the
- * field blank instead of showing "0.00".
+ * The price to show for an event. Sustaining members get half off, but only on
+ * tickets we sell — we don't control an outside seller's pricing.
  */
-export function centsToDollars(cents: number | null | undefined): string {
-	if (cents == null || !Number.isFinite(cents)) return '';
-	return (cents / 100).toFixed(2);
+export function priceDisplay(
+	evt: EventTicketing,
+	opts: { isSustainingMember?: boolean } = {}
+): PriceDisplay {
+	const discounted = opts.isSustainingMember ? sustainingMemberPrice(evt) : null;
+	if (discounted !== null) {
+		return { label: formatCents(discounted), wasLabel: formatCents(evt.ticketPrice!) };
+	}
+
+	if (evt.ticketPrice && evt.ticketPrice > 0) {
+		return { label: formatCents(evt.ticketPrice), wasLabel: null };
+	}
+
+	// No price. Off-site sellers set their own, so we can't claim it's free.
+	return { label: ticketingMode(evt) === 'external' ? 'See tickets' : 'Free', wasLabel: null };
+}
+
+/**
+ * Parse a price typed in dollars into whole cents. Returns null for a blank
+ * field (no price) and `undefined` for anything that isn't a positive amount,
+ * so callers can tell "cleared" apart from "typo".
+ */
+export function dollarsToCents(input: string | undefined | null): number | null | undefined {
+	const raw = (input ?? '').trim().replace(/^\$/, '');
+	if (raw === '') return null;
+	const dollars = Number(raw);
+	if (!Number.isFinite(dollars) || dollars <= 0) return undefined;
+	return Math.round(dollars * 100);
+}
+
+/** The half-price sustaining-member rate, or null where the discount doesn't apply. */
+export function sustainingMemberPrice(evt: EventTicketing): number | null {
+	if (ticketingMode(evt) !== 'platform') return null;
+	if (!evt.ticketPrice || evt.ticketPrice <= 0) return null;
+	return Math.round(evt.ticketPrice / 2);
 }

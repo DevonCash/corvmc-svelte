@@ -76,12 +76,26 @@
 			maxlength="500"
 		/>
 
-		<FormField
-			field={fields.externalTicketUrl}
-			type="text"
-			label="Ticket Link (external)"
-			placeholder="https://eventbrite.com/..."
-		/>
+		<div class="grid gap-4 md:grid-cols-2">
+			<FormField
+				field={fields.externalTicketUrl}
+				type="text"
+				label="Ticket Link (external)"
+				placeholder="https://eventbrite.com/..."
+			/>
+
+			<!-- `type="text"` with a decimal inputmode, not `type="number"`: a number
+			     FormField registers as `n:` and SvelteKit would hand the handler a
+			     number, which `ticketPriceDollars: z.string()` rejects outright. -->
+			<FormField
+				field={fields.ticketPriceDollars}
+				type="text"
+				label="Ticket price ($)"
+				placeholder="10.00"
+				inputmode="decimal"
+				description="What people pay, at the door or through the link. Leave blank if it's free."
+			/>
+		</div>
 
 		<div class="flex justify-end pt-4">
 			<SubmitButton label="Create Event" class="btn-primary" />

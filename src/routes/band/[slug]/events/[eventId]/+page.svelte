@@ -8,6 +8,7 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate, formatTime } from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import {
 		getBandEventDetail,
 		updateBandEventForm,
@@ -65,6 +66,11 @@
 							<dd>{evt.location}</dd>
 						</div>
 					{/if}
+					<div>
+						<dt class="text-xs font-medium uppercase opacity-60">Price</dt>
+						<!-- Band gigs never sell through our checkout. -->
+						<dd>{priceDisplay({ ...evt, ticketingEnabled: false }).label}</dd>
+					</div>
 					{#if evt.externalTicketUrl}
 						<div class="sm:col-span-2">
 							<dt class="text-xs font-medium uppercase opacity-60">Ticket Link</dt>
@@ -180,6 +186,19 @@
 							type="text"
 							label="Ticket Link"
 							value={evt.externalTicketUrl ?? ''}
+						/>
+
+						<!-- `type="text"` with a decimal inputmode, not `type="number"`: a
+						     number FormField registers as `n:` and SvelteKit would hand the
+						     handler a number, which `ticketPriceDollars: z.string()` rejects. -->
+						<FormField
+							field={updateFields.ticketPriceDollars}
+							type="text"
+							label="Ticket price ($)"
+							value={evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : ''}
+							placeholder="10.00"
+							inputmode="decimal"
+							description="What people pay, at the door or through the link. Leave blank if it's free."
 						/>
 
 						<div class="flex justify-end pt-2">

@@ -1,79 +1,96 @@
 import { describe, it, expect } from 'vitest';
-import { dollarsToCents, centsToDollars } from './event-ticketing';
+import { ticketingMode, isFreeEvent, priceDisplay, sustainingMemberPrice } from './event-ticketing';
 
-describe('dollarsToCents', () => {
-	it('converts a whole-dollar amount', () => {
-		expect(dollarsToCents('15')).toBe(1500);
+// Regression: `ticketPrice` used to be meaningful only when `ticketingEnabled`
+// was on, so every price renderer read "no platform ticketing" as "free" — an
+// externally ticketed $15 show advertised itself as Free with a Get Tickets link
+// pointing at an outside seller.
+
+const platform = { ticketingEnabled: true, ticketPrice: 1500, externalTicketUrl: null };
+const platformFree = { ticketingEnabled: true, ticketPrice: null, externalTicketUrl: null };
+const external = {
+	ticketingEnabled: false,
+	ticketPrice: 1500,
+	externalTicketUrl: 'https://venue.test/tickets'
+};
+const externalNoPrice = {
+	ticketingEnabled: false,
+	ticketPrice: null,
+	externalTicketUrl: 'https://venue.test/tickets'
+};
+const door = { ticketingEnabled: false, ticketPrice: 1000, externalTicketUrl: null };
+const free = { ticketingEnabled: false, ticketPrice: null, externalTicketUrl: null };
+
+describe('ticketingMode', () => {
+	it('reads each combination of the three fields', () => {
+		expect(ticketingMode(platform)).toBe('platform');
+		expect(ticketingMode(platformFree)).toBe('platform');
+		expect(ticketingMode(external)).toBe('external');
+		expect(ticketingMode(externalNoPrice)).toBe('external');
+		expect(ticketingMode(door)).toBe('free');
+		expect(ticketingMode(free)).toBe('free');
 	});
 
-	it('converts an amount with cents', () => {
-		expect(dollarsToCents('12.50')).toBe(1250);
-	});
-
-	it('rounds away binary floating-point error', () => {
-		// 15.10 * 100 is 1509.9999999999998 in IEEE 754 — truncating here would
-		// under-charge by a cent on a very common price.
-		expect(dollarsToCents('15.10')).toBe(1510);
-	});
-
-	it('rounds a sub-cent amount to the nearest cent', () => {
-		expect(dollarsToCents('9.999')).toBe(1000);
-	});
-
-	it('accepts a number as well as a string', () => {
-		expect(dollarsToCents(7.25)).toBe(725);
-	});
-
-	it('ignores surrounding whitespace', () => {
-		expect(dollarsToCents('  20.00  ')).toBe(2000);
-	});
-
-	it('treats zero as a real price', () => {
-		expect(dollarsToCents('0')).toBe(0);
-	});
-
-	it.each([
-		['an empty string', ''],
-		['blank space', '   '],
-		['non-numeric text', 'free'],
-		['a partially numeric string', '12 dollars'],
-		['a negative amount', '-5']
-	])('returns null for %s', (_label, input) => {
-		expect(dollarsToCents(input)).toBeNull();
-	});
-
-	it.each([
-		['null', null],
-		['undefined', undefined]
-	])('returns null for %s', (_label, input) => {
-		expect(dollarsToCents(input)).toBeNull();
-	});
-
-	it('imposes no upper bound', () => {
-		// A ceiling here silently turned a price staff could previously save into
-		// a thrown "Ticket price is required" with the amount still on screen.
-		expect(dollarsToCents('1500.00')).toBe(150_000);
-		expect(dollarsToCents('25000')).toBe(2_500_000);
+	it('prefers our own checkout when an event has both', () => {
+		expect(ticketingMode({ ...platform, externalTicketUrl: 'https://venue.test/tickets' })).toBe(
+			'platform'
+		);
 	});
 });
 
-describe('centsToDollars', () => {
-	it('renders cents with two decimal places', () => {
-		expect(centsToDollars(1500)).toBe('15.00');
+describe('isFreeEvent', () => {
+	it('is free only with no price and no seller', () => {
+		expect(isFreeEvent(free)).toBe(true);
+		expect(isFreeEvent(platformFree)).toBe(true);
+		expect(isFreeEvent(door)).toBe(false);
+		expect(isFreeEvent(external)).toBe(false);
 	});
 
-	it('keeps a partial-dollar amount', () => {
-		expect(centsToDollars(1250)).toBe('12.50');
+	it('does not call an external event free just because we have no price for it', () => {
+		expect(isFreeEvent(externalNoPrice)).toBe(false);
+	});
+});
+
+describe('priceDisplay', () => {
+	it('shows the price whoever is selling', () => {
+		expect(priceDisplay(platform).label).toBe('$15.00');
+		expect(priceDisplay(external).label).toBe('$15.00');
+		expect(priceDisplay(door).label).toBe('$10.00');
 	});
 
-	it.each([
-		['null', null],
-		['undefined', undefined]
-	])('renders %s as an empty string so the input stays blank', (_label, input) => {
-		expect(centsToDollars(input)).toBe('');
+	it('says Free only when the event is actually free', () => {
+		expect(priceDisplay(free).label).toBe('Free');
+		expect(priceDisplay(platformFree).label).toBe('Free');
 	});
 
-	it('round-trips through dollarsToCents', () => {
-		expect(dollarsToCents(centsToDollars(1899))).toBe(1899);
+	it('points at the seller when an external price is unknown', () => {
+		expect(priceDisplay(externalNoPrice).label).toBe('See tickets');
+	});
+
+	it('halves the price for sustaining members on tickets we sell', () => {
+		expect(priceDisplay(platform, { isSustainingMember: true })).toEqual({
+			label: '$7.50',
+			wasLabel: '$15.00'
+		});
+	});
+
+	it("does not discount an outside seller's price", () => {
+		expect(priceDisplay(external, { isSustainingMember: true })).toEqual({
+			label: '$15.00',
+			wasLabel: null
+		});
+		expect(priceDisplay(door, { isSustainingMember: true })).toEqual({
+			label: '$10.00',
+			wasLabel: null
+		});
+	});
+});
+
+describe('sustainingMemberPrice', () => {
+	it('applies to platform tickets only', () => {
+		expect(sustainingMemberPrice(platform)).toBe(750);
+		expect(sustainingMemberPrice(external)).toBeNull();
+		expect(sustainingMemberPrice(door)).toBeNull();
+		expect(sustainingMemberPrice(platformFree)).toBeNull();
 	});
 });
