@@ -12,13 +12,23 @@ let selectResultQueue: unknown[][] = [];
 let insertedValues: unknown[][] = [];
 let deleteCalls: number = 0;
 
+// The read tests assert on the SQL the service builds, not on rows the proxy
+// hands back — a mock that returns whatever it was queued can't tell a
+// role-scoped `since` from a bare `min()`. So record both halves of each query:
+// the selection object passed to `db.select(...)` and every chained call.
+let selections: (Record<string, unknown> | undefined)[] = [];
+let chainCalls: { method: string; args: unknown[] }[] = [];
+
 function chainableSelect() {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
 				return (resolve: (v: unknown[]) => void) => resolve(selectResultQueue.shift() ?? []);
 			}
-			return () => proxy;
+			return (...args: unknown[]) => {
+				chainCalls.push({ method: String(prop), args });
+				return proxy;
+			};
 		}
 	});
 	return proxy;
@@ -36,7 +46,10 @@ function chainableDelete() {
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: vi.fn(() => chainableSelect()),
+		select: vi.fn((selection?: Record<string, unknown>) => {
+			selections.push(selection);
+			return chainableSelect();
+		}),
 		insert: vi.fn(() => ({
 			values: vi.fn((rows: unknown[]) => {
 				insertedValues.push(rows);
@@ -54,8 +67,30 @@ vi.mock('$lib/server/authorization', () => ({
 	primaryRoleFor: vi.fn(() => null)
 }));
 
-import { setInterests, VolunteerInterestValidationError } from './volunteer-interest-service';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
+import {
+	setInterests,
+	listInterestedMembers,
+	countInterestsByRole,
+	VolunteerInterestValidationError
+} from './volunteer-interest-service';
 import { VOLUNTEER_MAX_INTERESTS } from '$lib/config';
+
+/** Render a drizzle fragment so a test can read the SQL the service built. */
+function render(fragment: unknown) {
+	return new SQLiteSyncDialect().sqlToQuery(fragment as SQL);
+}
+
+/**
+ * The selection object for the query that asked for `key`.
+ *
+ * Searched rather than indexed: `listInterestedMembers` issues a data query and
+ * a count query, and `Promise.all` leaves their order unpinned.
+ */
+function selectionWith(key: string) {
+	return selections.find((sel) => sel && key in sel);
+}
 
 /**
  * Queue the reads `setInterests` makes and then run it.
@@ -146,5 +181,69 @@ describe('setInterests', () => {
 
 		expect(insertedValues.length).toBeGreaterThan(1);
 		expect(insertedValues.flat()).toHaveLength(40);
+	});
+});
+
+describe('listInterestedMembers', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		selectResultQueue = [];
+		selections = [];
+		chainCalls = [];
+	});
+
+	// On a role detail page "Since" means "since they picked *this* role". The
+	// unfiltered table wants the earliest of everything they picked, but reusing
+	// that `min()` under a role filter reads as though someone joined the door
+	// crew in January when what they did in January was tick Merch.
+	it('scopes `since` to the filtered role', async () => {
+		await listInterestedMembers({ roleId: 'role-1' });
+
+		const selection = selectionWith('since');
+		expect(selection).toBeDefined();
+
+		const { sql, params } = render(selection!.since);
+		expect(sql).toContain('volunteer_role_interest');
+		expect(params).toContain('role-1');
+	});
+
+	it('falls back to the earliest interest when no role is filtered', async () => {
+		await listInterestedMembers({});
+
+		const selection = selectionWith('since');
+		expect(selection).toBeDefined();
+
+		const { sql, params } = render(selection!.since);
+		expect(sql).toContain('min(');
+		expect(params).not.toContain('role-1');
+	});
+
+	// A filtered member still shows every role they picked — that list is the
+	// "also interested in" signal — so the role filter has to stay an EXISTS
+	// rather than becoming a WHERE on the joined rows.
+	it('keeps the role filter out of the joined rows', async () => {
+		await listInterestedMembers({ roleId: 'role-1' });
+
+		const selection = selectionWith('roleNames');
+		expect(selection).toBeDefined();
+		expect(render(selection!.roleNames).sql).not.toContain('role-1');
+	});
+});
+
+describe('countInterestsByRole', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		selectResultQueue = [];
+		selections = [];
+		chainCalls = [];
+	});
+
+	// The counts feed the staff roles table, which lists archived roles too — so
+	// a retired role has to come back with its count rather than drop out.
+	it('does not filter out archived roles', async () => {
+		await countInterestsByRole();
+
+		expect(chainCalls.some((c) => c.method === 'groupBy')).toBe(true);
+		expect(chainCalls.some((c) => c.method === 'where')).toBe(false);
 	});
 });

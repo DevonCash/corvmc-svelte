@@ -63,7 +63,11 @@ import {
 	VolunteerRoleInUseError,
 	VolunteerRoleValidationError
 } from './volunteer-role-service';
-import { VOLUNTEER_ROLE_DESCRIPTION_MAX, VOLUNTEER_ROLE_NAME_MAX } from '$lib/config';
+import {
+	VOLUNTEER_ROLE_DESCRIPTION_MAX,
+	VOLUNTEER_ROLE_NAME_MAX,
+	VOLUNTEER_SHIFT_MAX_CAPACITY
+} from '$lib/config';
 
 const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, displayOrder: 0 };
 
@@ -107,6 +111,47 @@ describe('VolunteerRoleService', () => {
 
 		it('rejects a negative display order', async () => {
 			await expect(createVolunteerRole({ name: 'Front Desk', displayOrder: -1 })).rejects.toThrow(
+				VolunteerRoleValidationError
+			);
+		});
+
+		// Both shift defaults are optional and clearable, so `null` has to survive
+		// validation — it is how "this role has no usual shape" is expressed.
+		it('accepts null shift defaults', async () => {
+			await expect(
+				createVolunteerRole({
+					name: 'Front Desk',
+					defaultDurationMinutes: null,
+					defaultCapacity: null
+				})
+			).resolves.toBeDefined();
+		});
+
+		it('rejects a zero or fractional shift length', async () => {
+			await expect(
+				createVolunteerRole({ name: 'Front Desk', defaultDurationMinutes: 0 })
+			).rejects.toThrow(VolunteerRoleValidationError);
+			await expect(
+				createVolunteerRole({ name: 'Front Desk', defaultDurationMinutes: 90.5 })
+			).rejects.toThrow(VolunteerRoleValidationError);
+		});
+
+		it('rejects a shift length longer than a day', async () => {
+			await expect(
+				createVolunteerRole({ name: 'Front Desk', defaultDurationMinutes: 1441 })
+			).rejects.toThrow(VolunteerRoleValidationError);
+		});
+
+		// A default that could never be submitted as an actual shift is a trap, so
+		// the ceiling here is the one the shift form and the CHECK already enforce.
+		it('rejects a default capacity above the shift ceiling', async () => {
+			await expect(
+				createVolunteerRole({
+					name: 'Front Desk',
+					defaultCapacity: VOLUNTEER_SHIFT_MAX_CAPACITY + 1
+				})
+			).rejects.toThrow(VolunteerRoleValidationError);
+			await expect(createVolunteerRole({ name: 'Front Desk', defaultCapacity: 0 })).rejects.toThrow(
 				VolunteerRoleValidationError
 			);
 		});

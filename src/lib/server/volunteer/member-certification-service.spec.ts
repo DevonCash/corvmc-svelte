@@ -38,7 +38,8 @@ import {
 	certificationState,
 	grantCertification,
 	missingRequirements,
-	missingFrom
+	missingFrom,
+	listHeldForGateMany
 } from './member-certification-service';
 import { CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -292,5 +293,64 @@ describe('missingFrom', () => {
 
 	it('is empty when the role requires nothing', () => {
 		expect(missingFrom([], [], noon('2026-06-15'))).toEqual([]);
+	});
+});
+
+describe('listHeldForGateMany', () => {
+	const row = (userId: string, certificationId: string) => ({
+		userId,
+		certificationId,
+		grantedAt: noon('2026-01-01'),
+		expiresAt: null,
+		revokedAt: null
+	});
+
+	it('groups rows by member', async () => {
+		selectResultQueue = [[row('u1', 'c1'), row('u2', 'c2'), row('u1', 'c3')]];
+
+		const held = await listHeldForGateMany(['u1', 'u2']);
+
+		expect(held.get('u1')?.map((h) => h.certificationId)).toEqual(['c1', 'c3']);
+		expect(held.get('u2')?.map((h) => h.certificationId)).toEqual(['c2']);
+	});
+
+	// Absent rather than present-and-empty, so callers read it with `?? []` and a
+	// member with nothing granted can't be mistaken for one who holds an empty set.
+	it('omits a member with no rows', async () => {
+		selectResultQueue = [[row('u1', 'c1')]];
+
+		const held = await listHeldForGateMany(['u1', 'u2']);
+
+		expect(held.has('u2')).toBe(false);
+		expect(held.get('u2') ?? []).toEqual([]);
+	});
+
+	it('does not query at all for an empty list', async () => {
+		const { db } = await import('$lib/server/db');
+
+		const held = await listHeldForGateMany([]);
+
+		expect(held.size).toBe(0);
+		expect(vi.mocked(db.select)).not.toHaveBeenCalled();
+	});
+
+	// D1 caps a statement at 100 bound parameters, so a list longer than the chunk
+	// has to arrive as several queries rather than one oversized IN.
+	it('chunks a list past the parameter ceiling', async () => {
+		const { db } = await import('$lib/server/db');
+		const ids = Array.from({ length: 200 }, (_, i) => `u${i}`);
+		selectResultQueue = [[], [], []];
+
+		await listHeldForGateMany(ids);
+
+		expect(vi.mocked(db.select).mock.calls.length).toBeGreaterThan(1);
+	});
+
+	it('deduplicates ids before querying', async () => {
+		selectResultQueue = [[row('u1', 'c1')]];
+
+		const held = await listHeldForGateMany(['u1', 'u1', 'u1']);
+
+		expect(held.get('u1')).toHaveLength(1);
 	});
 });

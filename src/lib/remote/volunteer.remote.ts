@@ -63,6 +63,7 @@ import {
 	updateShift as updateShiftService,
 	cancelShift as cancelShiftService,
 	listShifts,
+	countUnfilledByRole,
 	listOpenShiftsForMember,
 	getShiftById
 } from '$lib/server/volunteer/volunteer-shift-service';
@@ -87,6 +88,7 @@ import {
 	listForUser as listCertificationsForUser,
 	listClearances,
 	listHeldForGate,
+	listHeldForGateMany,
 	missingFrom,
 	missingRequirements,
 	flagUnclearedLogs
@@ -182,13 +184,41 @@ export const getVolunteerStatusCounts = query(async () => {
 
 /**
  * Staff view of the role list — includes archived roles, and each role's
- * required certifications so the table can render them without a query per row.
+ * required certifications, interest count, and count of upcoming shifts still
+ * short of capacity, so the table can render them without a query per row.
  */
 export const getVolunteerRoles = query(async () => {
 	await requireStaff();
 	const roles = await listVolunteerRoles({ includeInactive: true });
-	const requirements = await getRequirementsForRoles(roles.map((r) => r.id));
-	return roles.map((r) => ({ ...r, requiredCertifications: requirements.get(r.id) ?? [] }));
+	const [requirements, interestCounts, unfilled] = await Promise.all([
+		getRequirementsForRoles(roles.map((r) => r.id)),
+		countInterestsByRole(),
+		countUnfilledByRole()
+	]);
+
+	const interested = new Map(interestCounts.map((c) => [c.roleId, c.interested]));
+
+	return roles.map((r) => ({
+		...r,
+		requiredCertifications: requirements.get(r.id) ?? [],
+		interested: interested.get(r.id) ?? 0,
+		unfilled: unfilled.get(r.id) ?? 0
+	}));
+});
+
+/**
+ * One role, for its detail page.
+ *
+ * Reuses the list rather than adding a per-role query: it is the only thing that
+ * carries `logCount`, and a dozen rows is cheaper to filter than a second SQL
+ * path is to maintain. Requirements stay out of here — the page reads them from
+ * `getRoleRequirements`, which `setRoleCertifications` already refreshes.
+ */
+export const getVolunteerRoleDetail = query(z.string(), async (id) => {
+	await requireStaff();
+	const role = (await listVolunteerRoles({ includeInactive: true })).find((r) => r.id === id);
+	if (!role) error(404, 'Role not found');
+	return role;
 });
 
 const interestFilters = z.object({
@@ -197,19 +227,47 @@ const interestFilters = z.object({
 	page: z.number().optional()
 });
 
-/** Who has said they'd help, and with what. */
+/**
+ * Who has said they'd help, and with what.
+ *
+ * Filtered to one role, each member also carries what they'd still need before
+ * they could claim a shift for it — the difference between twelve names and the
+ * three a coordinator can actually roster. Two extra queries for the whole page
+ * (the role's requirements, then everyone's certification rows) rather than the
+ * two per member `missingRequirements` would cost; the same shape `getOpenShifts`
+ * uses for the member shift board.
+ */
 export const getInterestedVolunteers = query(interestFilters, async (f) => {
 	await requireStaff();
-	return listInterestedMembers(
-		{ roleId: f.volunteerRoleId || undefined, search: f.search || undefined },
+
+	const roleId = f.volunteerRoleId || undefined;
+	const result = await listInterestedMembers(
+		{ roleId, search: f.search || undefined },
 		{ page: f.page ?? 1, pageSize: 50 }
 	);
-});
 
-/** Per-role interest counts, for the filter chips above the table. */
-export const getVolunteerInterestCounts = query(async () => {
-	await requireStaff();
-	return countInterestsByRole();
+	if (!roleId || result.rows.length === 0) {
+		return { ...result, rows: result.rows.map((m) => ({ ...m, missing: [] })), gated: false };
+	}
+
+	const required = await getRequirementsForRole(roleId);
+	if (required.length === 0) {
+		// `gated: false` so the page can drop the readiness column outright — a role
+		// that needs no clearance shouldn't grow a row of meaningless ticks.
+		return { ...result, rows: result.rows.map((m) => ({ ...m, missing: [] })), gated: false };
+	}
+
+	const held = await listHeldForGateMany(result.rows.map((m) => m.userId));
+	const now = new Date();
+
+	return {
+		...result,
+		gated: true,
+		rows: result.rows.map((m) => ({
+			...m,
+			missing: missingFrom(required, held.get(m.userId) ?? [], now)
+		}))
+	};
 });
 
 /**
@@ -615,6 +673,29 @@ export const rejectVolunteerHours = form(
 // Forms — Roles (staff)
 // ---------------------------------------------------------------------------
 
+/**
+ * A number field reaches here two ways. Registered through `field.as('number')`
+ * — how the role detail page binds them — it posts a real number; posted by name
+ * from the create modal it arrives as a string. Cleared, it is `''`, `null`, or
+ * `NaN` depending on which path. So: `undefined` means the form didn't carry the
+ * field, `null` means "cleared", and anything else is a number for the service to
+ * range-check.
+ */
+const optionalNumber = z.union([z.string(), z.number()]).optional();
+
+/**
+ * `undefined` (field absent) and `null` (cleared) are different answers, so this
+ * keeps them apart rather than collapsing both to a falsy number. Kept out of the
+ * schema deliberately: a `.transform()` there makes the object a ZodEffects and
+ * SvelteKit's `form()` stops inferring `fields`.
+ */
+function optionalCount(raw: string | number | null | undefined): number | null | undefined {
+	if (raw === undefined) return undefined;
+	if (raw === null || raw === '') return null;
+	const n = Number(raw);
+	return Number.isNaN(n) ? null : n;
+}
+
 const roleFormSchema = z.object({
 	name: z
 		.string()
@@ -628,8 +709,11 @@ const roleFormSchema = z.object({
 		)
 		.optional(),
 	group: z.enum(volunteerRoleGroups).optional(),
-	displayOrder: z.string().optional(),
-	isActive: z.string().optional()
+	displayOrder: optionalNumber,
+	isActive: z.string().optional(),
+	// Blank means "no default", not zero. Range-checked in the service.
+	defaultDurationMinutes: optionalNumber,
+	defaultCapacity: optionalNumber
 });
 
 export const createVolunteerRole = form(roleFormSchema, async (data) => {
@@ -640,8 +724,10 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 			name: data.name,
 			description: data.description,
 			group: data.group,
-			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
-			isActive: data.isActive !== 'false'
+			displayOrder: optionalCount(data.displayOrder) ?? 0,
+			isActive: data.isActive !== 'false',
+			defaultDurationMinutes: optionalCount(data.defaultDurationMinutes),
+			defaultCapacity: optionalCount(data.defaultCapacity)
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -662,14 +748,18 @@ export const updateVolunteerRole = form(
 				name: data.name,
 				description: data.description ?? '',
 				group: data.group,
-				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
-				isActive: data.isActive !== 'false'
+				// A cleared display order falls back to 0 rather than being skipped —
+				// the column is NOT NULL and "no order" has always meant first.
+				displayOrder: optionalCount(data.displayOrder) ?? undefined,
+				isActive: data.isActive !== 'false',
+				defaultDurationMinutes: optionalCount(data.defaultDurationMinutes),
+				defaultCapacity: optionalCount(data.defaultCapacity)
 			});
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		await refreshRoleViews();
+		await refreshRoleViews(data.id);
 		return { success: true };
 	}
 );
@@ -683,7 +773,7 @@ export const archiveVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 		mapDomainError(err);
 	}
 
-	await refreshRoleViews();
+	await refreshRoleViews(data.id);
 	return { success: true };
 });
 
@@ -696,7 +786,7 @@ export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 		mapDomainError(err);
 	}
 
-	await refreshRoleViews();
+	await refreshRoleViews(data.id);
 	return { success: true };
 });
 
@@ -740,8 +830,18 @@ async function refreshStaffQueue() {
 
 // Role edits change the member picker, the staff table (log counts included),
 // and the report's role names all at once.
-async function refreshRoleViews() {
-	await Promise.all([getVolunteerRoles().refresh(), getActiveVolunteerRoles().refresh()]);
+//
+// `roleId` opts the detail page in. It is arg-keyed, so it can only be refreshed
+// where the id is known — which is here, unlike the filter-keyed queue queries
+// the comment above describes. Deleting a role leaves it out: refreshing a
+// detail query for a row that no longer exists just fetches a 404 behind the
+// redirect the page is already making.
+async function refreshRoleViews(roleId?: string) {
+	await Promise.all([
+		getVolunteerRoles().refresh(),
+		getActiveVolunteerRoles().refresh(),
+		...(roleId ? [getVolunteerRoleDetail(roleId).refresh()] : [])
+	]);
 }
 
 // ---------------------------------------------------------------------------
@@ -910,6 +1010,8 @@ export const setRoleCertifications = form(
 			mapDomainError(err);
 		}
 		void getRoleRequirements(data.roleId).refresh();
+		// The roles table renders each role's requirements too.
+		void getVolunteerRoles().refresh();
 		return { success: true };
 	}
 );

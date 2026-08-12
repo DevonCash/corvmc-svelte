@@ -3,6 +3,7 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 import {
 	SEED_VOL_MEMBER_EMAIL,
 	SEED_VOL_MEMBER_PASSWORD,
+	SEED_VOL_MEMBER_NAME,
 	SEED_VOL_ROLE_NAME,
 	SEED_VOL_ARCHIVED_ROLE_NAME,
 	SEED_VOL_ROLE_BOLD_PHRASE,
@@ -12,6 +13,8 @@ import {
 	SEED_VOL_REJECTED_REASON,
 	SEED_VOL_CERT_NAME,
 	SEED_VOL_GATED_ROLE_NAME,
+	SEED_VOL_ROLE_DEFAULT_CAPACITY,
+	SEED_VOL_GATED_DEFAULT_CAPACITY,
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_FULL_NOTE,
@@ -146,28 +149,169 @@ test.describe('volunteering — staff review queue', () => {
 });
 
 test.describe('volunteering — roles', () => {
+	/** The list is navigation now; role actions live on the detail page. */
+	async function openRole(page: Page, name: string) {
+		await rowFor(page, name).getByRole('link', { name }).click();
+		await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+	}
+
 	test('a role with logged hours cannot be deleted, and says to archive instead', async ({
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/roles');
-
-		const row = rowFor(page, SEED_VOL_ROLE_NAME);
-		await expect(row).toBeVisible();
+		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		// Delete is offered only for a role nothing was logged against, so the
 		// guard is that the control is absent for one that has history.
-		await expect(rowAction(row, 'Delete')).toHaveCount(0);
-		await expect(rowAction(row, 'Archive')).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
 	});
 
-	test('an archived role stays visible to staff', async ({ page }) => {
+	test('an archived role stays visible to staff, behind the retired filter', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/roles');
 
-		// Retiring a role must not hide the work done under it.
+		// Retired roles are off by default — a coordinator filling next week's
+		// shifts reads the live list.
+		await expect(rowFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
+
+		await page.goto('/staff/volunteer/roles?retired=1');
+
+		// But retiring a role must never hide the work done under it.
 		await expect(rowFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toBeVisible();
-		await expect(rowAction(rowFor(page, SEED_VOL_ARCHIVED_ROLE_NAME), 'Restore')).toBeVisible();
+		await openRole(page, SEED_VOL_ARCHIVED_ROLE_NAME);
+		await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+	});
+
+	test('the role detail lists who is interested, and whether they are cleared', async ({
+		page
+	}) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/roles');
+
+		// Ungated role: the member is simply on the list.
+		await openRole(page, SEED_VOL_ROLE_NAME);
+		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
+
+		// Gated role: same member, but holding none of what it requires — the
+		// difference between "interested" and "can actually be rostered".
+		await page.goto('/staff/volunteer/roles');
+		await openRole(page, SEED_VOL_GATED_ROLE_NAME);
+		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
+		await expect(page.getByText(`needs ${SEED_VOL_CERT_NAME}`)).toBeVisible();
+		await expect(page.getByText('0 of 1 ready')).toBeVisible();
+	});
+
+	test('roles are sectioned by group, with a short-staffed count', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/roles');
+
+		// Group order comes from the enum, so "At shows" heads the first section
+		// and the seeded e2e roles sit under it.
+		await expect(page.getByRole('heading', { name: 'At shows' })).toBeVisible();
+		await expect(rowFor(page, SEED_VOL_ROLE_NAME)).toBeVisible();
+
+		// The open seeded shift is unclaimed, so its role reads as short. The
+		// column is the reason to land here before anywhere else.
+		const gatedRow = rowFor(page, SEED_VOL_GATED_ROLE_NAME);
+		await expect(gatedRow).toBeVisible();
+		await expect(gatedRow.locator('.badge-warning')).toBeVisible();
+	});
+
+	test('editing a role from its detail page saves', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/roles');
+		await openRole(page, SEED_VOL_ROLE_NAME);
+
+		// The edit form moved off the list into this page, so the round trip is
+		// worth asserting rather than assuming.
+		const order = page.locator('input[name$="displayOrder"]');
+		await order.fill('4');
+		await page.getByRole('button', { name: /Save/ }).click();
+		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+
+		await page.reload();
+		await expect(page.locator('input[name$="displayOrder"]')).toHaveValue('4');
+
+		// The shift defaults must survive an edit that never touched them.
+		await expect(page.locator('input[name$="defaultCapacity"]')).toHaveValue(
+			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
+		);
+	});
+
+	// Blank means "no default", which is a different answer from zero and has to
+	// survive the round trip as such.
+	test('a shift default can be cleared', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/roles');
+		await openRole(page, SEED_VOL_ROLE_NAME);
+
+		await page.locator('input[name$="defaultCapacity"]').fill('');
+		await page.getByRole('button', { name: /Save/ }).click();
+		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+
+		await page.reload();
+		await expect(page.locator('input[name$="defaultCapacity"]')).toHaveValue('');
+
+		// And the New Shift form falls back rather than carrying a stale number.
+		await page.getByRole('button', { name: 'New shift' }).click();
+		await expect(page.getByRole('dialog').locator('input[name="capacity"]')).toHaveValue('1');
+		await page.keyboard.press('Escape');
+
+		// Put it back: the fixture seeds once per run, and the prefill tests below
+		// read this same role.
+		await page
+			.locator('input[name$="defaultCapacity"]')
+			.fill(String(SEED_VOL_ROLE_DEFAULT_CAPACITY));
+		await page.getByRole('button', { name: /Save/ }).click();
+		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+	});
+
+	// The columns were dead in the schema before this — nothing read or wrote
+	// them — so the whole path from role row to prefilled form is new.
+	test("a role's shift defaults prefill the New Shift form", async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/roles');
+		await openRole(page, SEED_VOL_ROLE_NAME);
+
+		await page.getByRole('button', { name: 'New shift' }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
+		);
+	});
+
+	// On the shifts board the role is chosen inside the modal, so the prefill has
+	// to follow the select. The select is bound, which is also how it could break:
+	// a bound value matching no option posts an empty role.
+	test('the shifts board prefill follows the role picked in the modal', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/shifts');
+
+		await page.getByRole('button', { name: 'New Shift' }).click();
+		const dialog = page.getByRole('dialog');
+		const roleSelect = dialog.locator('select[name="volunteerRoleId"]');
+
+		// Never left on nothing — that is the failure mode this guards.
+		await expect(roleSelect).not.toHaveValue('');
+
+		await roleSelect.selectOption({ label: SEED_VOL_ROLE_NAME });
+		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
+		);
+
+		await roleSelect.selectOption({ label: SEED_VOL_GATED_ROLE_NAME });
+		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+			String(SEED_VOL_GATED_DEFAULT_CAPACITY)
+		);
+	});
+
+	test('the retired interest route redirects onto roles', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/interest');
+
+		await expect(page).toHaveURL(/\/staff\/volunteer\/roles$/);
 	});
 
 	test('the report counts hours logged under a since-archived role', async ({ page }) => {
