@@ -1,19 +1,13 @@
 import { query } from '$app/server';
 import {
 	listPublicCalendarEvents,
-	listPublicUpcomingEvents,
-	type CalendarEventRow
+	listPublicUpcomingEvents
 } from '$lib/server/event/event-service';
+import { toCalendarEntry } from '$lib/server/event/calendar-entry';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { resolveImageUrl } from '$lib/server/storage';
 import { DEFAULT_TIMEZONE } from '$lib/config';
-import {
-	monthSchema,
-	gigGuideSchema,
-	GIG_GUIDE_PAGE_SIZE,
-	type CalendarEntry
-} from '$lib/types/calendar';
+import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '$lib/types/calendar';
 
 // ---------------------------------------------------------------------------
 // Public calendar — unified month view across CMC and band events
@@ -27,24 +21,6 @@ function monthBounds(month: string): { start: string; end: string } {
 	return {
 		start: `${month}-01`,
 		end: `${nextYear}-${String(nextMo).padStart(2, '0')}-01`
-	};
-}
-
-function toCalendarEntry(e: CalendarEventRow): CalendarEntry {
-	return {
-		id: e.id,
-		title: e.title,
-		startsAt: e.startsAt,
-		endsAt: e.endsAt,
-		source: e.source,
-		location: e.location,
-		bandName: e.bandName,
-		bandSlug: e.bandSlug,
-		posterUrl: resolveImageUrl(e.posterKey),
-		ticketingEnabled: e.ticketingEnabled,
-		ticketPrice: e.ticketPrice,
-		externalTicketUrl: e.externalTicketUrl,
-		href: `/events/${e.id}`
 	};
 }
 

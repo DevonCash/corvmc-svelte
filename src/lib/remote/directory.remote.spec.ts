@@ -58,8 +58,10 @@ vi.mock('$lib/server/band/band-context', () => ({
 
 vi.mock('$lib/server/event/event-service', () => ({
 	listBandEventsUpcoming: vi.fn(),
+	listBandEventsPast: vi.fn(),
 	countBandPastEvents: vi.fn(),
 	listMemberUpcomingShows: vi.fn(),
+	listMemberPastShows: vi.fn(),
 	countMemberPastShows: vi.fn()
 }));
 
