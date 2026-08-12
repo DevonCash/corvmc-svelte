@@ -20,6 +20,13 @@ function fakeField(name: string) {
 	} as never;
 }
 
+// Resolved at module scope: `@vite-ignore` means this import is never cached or
+// optimised, so paying it inside the test timeout reports a cold run as a timeout.
+// Same reason as commit 75fd70a.
+const { create_field_proxy } = await import(
+	/* @vite-ignore */ `${new URL('../../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js', import.meta.url).href}`
+);
+
 describe('FormField', () => {
 	it('pre-fills a field-based text input from the value prop', async () => {
 		// Regression: when both `field` and `value` were provided, the value prop was
@@ -99,9 +106,6 @@ describe('FormField', () => {
 	// own field proxy rather than the local `fakeField`, so it stays honest if kit
 	// changes the prefix. The parse half is covered in equipment-number-fields.remote.spec.ts.
 	it('n:-prefixes a field-based number input so the value is a number', async () => {
-		const { create_field_proxy } = await import(
-			/* @vite-ignore */ `${new URL('../../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js', import.meta.url).href}`
-		);
 		const field = create_field_proxy(
 			{},
 			() => ({}),
