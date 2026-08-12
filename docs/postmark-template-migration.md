@@ -16,24 +16,24 @@ are files in `postmark/templates/`, pushed to Postmark via `postmark-cli`).
 
 **In scope** — migrate to Postmark templates (16 functions in `templates.ts`):
 
-| Function                       | Postmark alias                | Notes                                                                          |
-| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------ |
-| ticketConfirmation             | `ticket-confirmation`         | `{{#each ticketCodes}}` loop + singular/plural via `{{#if multiple}}`          |
-| eventCancellation              | `event-cancellation`          |                                                                                |
-| checkInReminder                | `check-in-reminder`           |                                                                                |
-| reservationReminder            | `reservation-reminder`        |                                                                                |
-| confirmationReminder           | `confirmation-reminder`       |                                                                                |
-| bandInvitation                 | `band-invitation`             |                                                                                |
-| bandInvitationAccepted         | `band-invitation-accepted`    |                                                                                |
-| platformInvitation             | `platform-invitation`         |                                                                                |
-| contactFormForward             | `contact-form-forward`        |                                                                                |
-| loanScheduledConfirmation      | `loan-scheduled-confirmation` |                                                                                |
-| loanRequestedStaffNotification | `loan-requested-staff`        | conditional notes/item via `{{#if}}`                                           |
-| recurringSkipped               | `recurring-skipped`           |                                                                                |
-| recurringWaitlisted            | `recurring-waitlisted`        |                                                                                |
-| waitlistSlotAvailable          | `waitlist-slot-available`     |                                                                                |
-| waitlistExpired                | `waitlist-expired`            |                                                                                |
-| inboxReply                     | `inbox-reply`                 | freeform `{{{body}}}` (unescaped); keeps threading headers + returns MessageID |
+| Function                       | Postmark alias                | Notes                                                                       |
+| ------------------------------ | ----------------------------- | --------------------------------------------------------------------------- |
+| ticketConfirmation             | `ticket-confirmation`         | `{{#each ticketCodes}}` loop + singular/plural via `{{#if multiple}}`       |
+| eventCancellation              | `event-cancellation`          |                                                                             |
+| checkInReminder                | `check-in-reminder`           |                                                                             |
+| reservationReminder            | `reservation-reminder`        |                                                                             |
+| confirmationReminder           | `confirmation-reminder`       |                                                                             |
+| bandInvitation                 | `band-invitation`             |                                                                             |
+| bandInvitationAccepted         | `band-invitation-accepted`    |                                                                             |
+| platformInvitation             | `platform-invitation`         |                                                                             |
+| contactFormForward             | `contact-form-forward`        |                                                                             |
+| loanScheduledConfirmation      | `loan-scheduled-confirmation` |                                                                             |
+| loanRequestedStaffNotification | `loan-requested-staff`        | conditional notes/item via `{{#if}}`                                        |
+| recurringSkipped               | `recurring-skipped`           |                                                                             |
+| recurringWaitlisted            | `recurring-waitlisted`        |                                                                             |
+| waitlistSlotAvailable          | `waitlist-slot-available`     |                                                                             |
+| waitlistExpired                | `waitlist-expired`            |                                                                             |
+| inboxReply                     | `inbox-reply`                 | text-only (see Plaintext rule); keeps threading headers + returns MessageID |
 
 Plus one **Layout** template `corvmc-transactional` (the wrapper), reusing the
 HTML the MJML build currently produces.
@@ -50,11 +50,30 @@ error is pre-existing and unrelated.
 - **Subjects** move into each template's `meta.json` `Subject` (Mustachio), so
   listeners no longer build subject strings.
 - **Preview text** becomes a `preview_text` model field rendered by the layout.
-- **inboxReply** moves too (uses `{{{body}}}`), enabling full deletion of
-  `templates.ts`. Easily reverted if freeform HTML misbehaves in Mustachio.
-- **Escaping:** Mustachio escapes `{{var}}` by default. Fields that intentionally
-  carry HTML (`body` in inbox-reply) use triple `{{{body}}}`. All others stay
-  double-brace. The current code hand-escapes; Postmark handles it.
+- **inboxReply** moves too, enabling full deletion of `templates.ts`.
+- **Escaping:** Mustachio escapes `{{var}}` by default, in the text part as well
+  as the HTML one. HTML templates stay double-brace, except `notification`'s
+  `quote` (below). Text-only templates use triple braces throughout — an
+  entity-encoded `&` or `'` is simply wrong in a `text/plain` body.
+
+## Plaintext rule
+
+**An email the recipient can reply to is sent as plain text with no layout.
+`corvmc-transactional` is for one-way mail only.**
+
+Brand chrome on a message someone is meant to answer buries the content and
+makes the reply feel like it goes to a robot. Two templates qualify today —
+`inbox-reply` (staff answering a contact) and `contact-alert` (staff answering
+the contact form from their own mail client). Both are a `meta.json` with no
+`LayoutTemplate` plus a `content.txt`, and **no `content.html` at all**;
+`postmark-cli` pushes the HtmlBody as empty, so Postmark sends a single-part
+`text/plain` message.
+
+`render.spec.ts` derives the split from the absence of `LayoutTemplate` and
+asserts the rule on every fixture, including that each plaintext body actually
+tells the reader they can reply. The tooling that reads `content.html`
+(`render-preview.ts`, `email-validate.ts`, `email-preview.ts`, `brand.spec.ts`)
+all guards on `existsSync` for this reason.
 
 ## Template directory format (`postmark-cli`)
 
@@ -142,10 +161,12 @@ Notes that affect how you edit them:
 - **`has_details`**: the details-card wrapper is guarded by a derived boolean, not by
   `{{#details}}` — a bare section over an array _iterates_ in both engines and would
   repeat the whole card per row. `normalizeNotificationModel` sets it.
-- **Escaping**: `{{{…}}}` survives in exactly two places — `notification`'s `quote`
-  (fed only through `normalizeNotificationModel`, which escapes it and converts
-  newlines to `<br />`) and `inbox-reply`'s `body` (staff-authored). Everything else
-  is escaped by the engine, so listeners must pass plain text.
+- **Escaping**: in the HTML templates `{{{…}}}` survives in exactly one place —
+  `notification`'s `quote`, fed only through `normalizeNotificationModel`, which
+  escapes it and converts newlines to `<br />`. Everything else there is escaped by
+  the engine, so listeners must pass plain text. The text-only templates are the
+  opposite: triple-brace throughout, since HTML entities have no business in a
+  `text/plain` part.
 - **Preview locally**: `pnpm email:preview`, then open `.email-preview/index.html`.
   It rewrites the logo URL to a local copy so the header renders before deploy.
 

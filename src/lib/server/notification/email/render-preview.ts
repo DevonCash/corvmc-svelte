@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------
 
 import Handlebars from 'handlebars';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const TEMPLATE_ROOT = 'postmark/templates';
@@ -82,12 +82,16 @@ function compile(source: string, model: object): string {
  *
  * The layout's content tag is substituted *after* the layout is compiled, so
  * rendered template output is never re-processed as Handlebars source.
+ *
+ * A template directory with no `content.html` is a text-only template: Postmark
+ * sends it with an empty HtmlBody, so the rendered `html` here is `''` too.
  */
 export function renderTemplate(alias: string, model: Record<string, unknown>): RenderedTemplate {
 	const meta = readMeta(alias);
 	const dir = templateDir(alias);
 
-	const innerHtml = compile(readFileSync(join(dir, 'content.html'), 'utf8'), model);
+	const htmlPath = join(dir, 'content.html');
+	const innerHtml = existsSync(htmlPath) ? compile(readFileSync(htmlPath, 'utf8'), model) : '';
 	const innerText = compile(readFileSync(join(dir, 'content.txt'), 'utf8'), model);
 	const subject = meta.Subject ? compile(meta.Subject, model) : '';
 
@@ -103,7 +107,8 @@ export function renderTemplate(alias: string, model: Record<string, unknown>): R
 		).replaceAll(CONTENT_SENTINEL, inner);
 
 	return {
-		html: wrap('content.html', innerHtml),
+		// Wrapping an empty body would manufacture an HTML part Postmark never sends.
+		html: innerHtml ? wrap('content.html', innerHtml) : '',
 		text: wrap('content.txt', innerText),
 		subject
 	};
