@@ -297,6 +297,45 @@ function withCounts(
 }
 
 /**
+ * Upcoming shifts still short of capacity, per role — the "what needs attention"
+ * column on the staff roles table.
+ *
+ * Only roles with at least one short shift come back; read the map with `?? 0`.
+ * Past and cancelled shifts are excluded: neither is something anyone can still
+ * fill, and counting them would leave every role permanently red.
+ */
+export async function countUnfilledByRole(from = new Date()): Promise<Map<string, number>> {
+	// Built from ACTIVE_SIGNUP_STATUSES rather than spelled out, so a new status
+	// that holds a place can't quietly stop counting here.
+	const holdsAPlace = sql.join(
+		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
+		sql`, `
+	);
+	const claimed = sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		where vs."shift_id" = ${volunteerShift.id}
+			and vs."status" in (${holdsAPlace})
+	)`;
+
+	const rows = await db
+		.select({
+			volunteerRoleId: volunteerShift.volunteerRoleId,
+			unfilled: count()
+		})
+		.from(volunteerShift)
+		.where(
+			and(
+				isNull(volunteerShift.cancelledAt),
+				gte(volunteerShift.startsAt, from),
+				sql`${claimed} < ${volunteerShift.capacity}`
+			)
+		)
+		.groupBy(volunteerShift.volunteerRoleId);
+
+	return new Map(rows.map((r) => [r.volunteerRoleId, Number(r.unfilled)]));
+}
+
+/**
  * The staff list. Counts only the signups that hold a place, so a cancelled
  * claim reopens the slot rather than leaving the shift looking full.
  */

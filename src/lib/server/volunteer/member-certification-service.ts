@@ -308,6 +308,46 @@ export async function listHeldForGate(userId: string): Promise<HeldForGate[]> {
 		.where(eq(memberCertification.userId, userId));
 }
 
+// D1 rejects a statement with more than 100 bound parameters. A page of
+// interested members is 50, so this only ever chunks under a much larger caller,
+// but the ceiling is the driver's and not worth rediscovering.
+const GATE_LOOKUP_CHUNK = 90;
+
+/**
+ * The same rows as `listHeldForGate`, for many members at once, keyed by user.
+ *
+ * For a page of members against one role — "who on this list is actually
+ * cleared" — this is the second of two queries, the other being the role's
+ * requirements. The per-member alternative is two queries each. Members with no
+ * certification rows are absent from the map rather than present and empty; read
+ * it with `?? []`.
+ */
+export async function listHeldForGateMany(userIds: string[]): Promise<Map<string, HeldForGate[]>> {
+	const byUser = new Map<string, HeldForGate[]>();
+	const unique = [...new Set(userIds)];
+
+	for (let i = 0; i < unique.length; i += GATE_LOOKUP_CHUNK) {
+		const rows = await db
+			.select({
+				userId: memberCertification.userId,
+				certificationId: memberCertification.certificationId,
+				grantedAt: memberCertification.grantedAt,
+				expiresAt: memberCertification.expiresAt,
+				revokedAt: memberCertification.revokedAt
+			})
+			.from(memberCertification)
+			.where(inArray(memberCertification.userId, unique.slice(i, i + GATE_LOOKUP_CHUNK)));
+
+		for (const { userId, ...held } of rows) {
+			const existing = byUser.get(userId);
+			if (existing) existing.push(held);
+			else byUser.set(userId, [held]);
+		}
+	}
+
+	return byUser;
+}
+
 /**
  * The pure half of the gate: which of `required` the member did not hold on
  * `at`, given rows already fetched. Lets a page evaluate many shifts against one

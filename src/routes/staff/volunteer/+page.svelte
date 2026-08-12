@@ -126,7 +126,6 @@
 
 <PageHeader title="Volunteering" subtitle="Staff">
 	<Button href="/staff/volunteer/shifts" class="btn-ghost btn-sm">Shifts</Button>
-	<Button href="/staff/volunteer/interest" class="btn-ghost btn-sm">Interest</Button>
 	<Button href="/staff/volunteer/roles" class="btn-ghost btn-sm">Roles</Button>
 	<Button href="/staff/volunteer/report" class="btn-ghost btn-sm">Report</Button>
 </PageHeader>

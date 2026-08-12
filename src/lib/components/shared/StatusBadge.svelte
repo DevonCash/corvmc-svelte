@@ -100,6 +100,10 @@
 		// Volunteer profiles. Warning, not error: an under-18 signup is somebody
 		// answering honestly, and staff owe them a conversation rather than a refusal.
 		blocked: 'badge-warning',
+		// Whether someone holds what a role requires. Warning, not error, for the
+		// same reason: an uncleared volunteer needs training booked, not refusing.
+		cleared: 'badge-success',
+		uncleared: 'badge-warning',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -164,6 +168,10 @@
 
 		// Volunteer profile statuses
 		blocked: { icon: IconUserQuestion, color: 'text-warning' },
+
+		// Volunteer clearance readiness
+		cleared: { icon: IconCircleCheck, color: 'text-success' },
+		uncleared: { icon: IconAlertTriangle, color: 'text-warning' },
 
 		// Generic
 		active: { icon: IconCircleCheck, color: 'text-success' },

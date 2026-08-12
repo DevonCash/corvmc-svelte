@@ -32,6 +32,8 @@ const derivedStatuses = {
 	activation: ['active', 'deactivated'],
 	// payment-service.ts writes `completed`; refunds write `refunded`
 	payment: ['completed', 'refunded'],
+	// roles/[id] — whether a member holds what the role requires
+	clearance: ['cleared', 'uncleared'],
 	// generic
 	generic: ['pending', 'error']
 } as const;
