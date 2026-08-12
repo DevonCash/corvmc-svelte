@@ -8,12 +8,13 @@
 	import { IconMusic } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import CreateEventModal from './CreateEventModal.svelte';
-	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	let page = $state(1);
 	let showCreateModal = $state(false);
@@ -95,7 +96,7 @@
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{e.title}</a>
 							<div class="text-sm whitespace-nowrap opacity-60">
-								{formatTimeRange(e.startsAt, e.endsAt)}
+								{formatEventTimeRange(e.startsAt, e.endsAt)}
 							</div>
 						</td>
 						<td class="col-support">

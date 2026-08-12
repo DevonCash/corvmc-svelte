@@ -32,6 +32,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMusic } from '@tabler/icons-svelte';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
@@ -81,7 +82,7 @@
 		// Parse existing dates into form values
 		editDate = toLocalDate(evt.startsAt);
 		editStartTime = toLocalTime(evt.startsAt);
-		editEndTime = toLocalTime(evt.endsAt);
+		editEndTime = evt.endsAt ? toLocalTime(evt.endsAt) : '';
 		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
 
 		// Pre-fill ticketing fields. Forced off for a band gig, which is never sold
@@ -546,9 +547,9 @@
 		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
 		<p class="opacity-70">
 			{#if evt.doorsAt}
-				Doors {formatTime(evt.doorsAt)} · Show {formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+				Doors {formatTime(evt.doorsAt)} · Show {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			{:else}
-				{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+				{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			{/if}
 		</p>
 

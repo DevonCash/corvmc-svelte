@@ -1,4 +1,4 @@
-import { formatTime } from './format';
+import { formatTime, formatTimeRange } from './format';
 
 /**
  * What a missing end time means.
@@ -17,8 +17,7 @@ import { formatTime } from './format';
 
 /** "8:00 PM – 11:00 PM", or just "8:00 PM" when the end is unknown. */
 export function formatEventTimeRange(startsAt: Date, endsAt: Date | null): string {
-	if (!endsAt) return formatTime(startsAt);
-	return `${formatTime(startsAt)}–${formatTime(endsAt)}`;
+	return endsAt ? formatTimeRange(startsAt, endsAt) : formatTime(startsAt);
 }
 
 /**

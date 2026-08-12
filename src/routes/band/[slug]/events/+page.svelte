@@ -4,24 +4,98 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { formatDate, formatTime } from '$lib/utils/format';
-	import { getBandEvents } from '$lib/remote/band-events.remote';
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import ImportGigsModal from './ImportGigsModal.svelte';
+	import { formatDate } from '$lib/utils/format';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import {
+		getBandEvents,
+		getBandLineupInvites,
+		confirmLineupSlotForm,
+		declineLineupSlotForm
+	} from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
+	// Hoisted above the awaited queries: a declaration after a top-level await is
+	// async-gated, which compiles every `fields.X.as()` into an async derived.
+	const confirmFields = confirmLineupSlotForm.fields;
+	const declineFields = declineLineupSlotForm.fields;
+
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let events = $derived(await getBandEvents(page.params.slug!));
+	let invites = $derived(await getBandLineupInvites(page.params.slug!));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
+
+	let importing = $state(false);
+
+	/** Other acts on the bill, for the "w/" byline. */
+	function supportNames(lineup: { name: string; bandId: string | null }[]): string {
+		return lineup
+			.filter((l) => l.bandId !== band.id)
+			.map((l) => l.name)
+			.join(', ');
+	}
 </script>
 
 <PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
+		<Button class="btn-ghost btn-sm" onclick={() => (importing = true)}>Import past gigs</Button>
 		<Button href="events/create" class="btn-sm">Create Event</Button>
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
+	<!-- Bills this band was named on but hasn't answered. Until it confirms,
+	     the show is on the other band's listing only — never on this profile. -->
+	{#if invites.length > 0}
+		<div class="mb-6 space-y-3">
+			<h2 class="text-sm font-semibold uppercase opacity-60">Invitations</h2>
+			{#each invites as invite (invite.eventId)}
+				<div class="card bg-warning/10 border border-warning/40">
+					<div class="card-body flex-row items-center justify-between gap-4 py-4">
+						<div>
+							<p class="font-medium">{invite.eventTitle}</p>
+							<p class="text-sm opacity-70">
+								{formatDate(invite.startsAt)}{invite.location ? ` · ${invite.location}` : ''}
+							</p>
+							<p class="text-xs opacity-60">
+								Added by {invite.ownerBandName ?? 'CMC staff'}
+							</p>
+						</div>
+						{#if isAdmin}
+							<div class="flex shrink-0 gap-2">
+								<Form
+									remote={confirmLineupSlotForm}
+									successToast="Added to your profile"
+									onsuccess={() => invalidateAll()}
+									class="inline"
+								>
+									<input {...confirmFields.slug.as('hidden', band.slug)} />
+									<input {...confirmFields.eventId.as('hidden', invite.eventId)} />
+									<SubmitButton label="Confirm" class="btn-primary btn-sm" />
+								</Form>
+								<Form
+									remote={declineLineupSlotForm}
+									successToast="Declined"
+									onsuccess={() => invalidateAll()}
+									class="inline"
+								>
+									<input {...declineFields.slug.as('hidden', band.slug)} />
+									<input {...declineFields.eventId.as('hidden', invite.eventId)} />
+									<SubmitButton label="Decline" class="btn-ghost btn-sm" />
+								</Form>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+
 	{#if events.length === 0}
 		<EmptyState>
 			<p>No events yet</p>
@@ -45,18 +119,26 @@
 						<div>
 							<p class="font-medium">{evt.title}</p>
 							<p class="text-sm opacity-70">
-								{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}–{formatTime(
-									evt.endsAt
-								)}
+								{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 							</p>
 							{#if evt.location}
 								<p class="text-xs opacity-60">{evt.location}</p>
 							{/if}
+							{#if supportNames(evt.lineup)}
+								<p class="text-xs opacity-60">w/ {supportNames(evt.lineup)}</p>
+							{/if}
 						</div>
-						<StatusBadge status={evt.status} />
+						<div class="flex shrink-0 items-center gap-2">
+							{#if !evt.isOwner}
+								<span class="badge badge-ghost badge-sm">guest</span>
+							{/if}
+							<StatusBadge status={evt.status} />
+						</div>
 					</div>
 				</a>
 			{/each}
 		</div>
 	{/if}
 </PageContent>
+
+<ImportGigsModal bind:open={importing} bandSlug={band.slug} />

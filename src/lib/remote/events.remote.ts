@@ -12,7 +12,8 @@ import {
 	getById,
 	listAll as listAllEvents,
 	listUpcoming,
-	listPast
+	listPast,
+	getEventLineup
 } from '$lib/server/event/event-service';
 import {
 	getConflictDetails,
@@ -223,6 +224,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		bandInfo = row ?? null;
 	}
 
+	const lineup = await getEventLineup(id);
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -270,7 +272,15 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			source: evt.source,
 			externalTicketUrl: evt.externalTicketUrl,
 			bandName: bandInfo?.name ?? null,
-			bandSlug: bandInfo?.slug ?? null
+			bandSlug: bandInfo?.slug ?? null,
+			// The whole bill, every status. Only `confirmed` entries carry a slug
+			// and therefore link out — an unconfirmed credit must not push traffic
+			// to a band that hasn't agreed to be listed.
+			lineup: lineup.map((l) => ({
+				id: l.id,
+				name: l.name,
+				slug: l.status === 'confirmed' ? l.bandSlug : null
+			}))
 		},
 		remaining,
 		sold,
