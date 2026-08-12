@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dollarsToCents, centsToDollars, MAX_TICKET_PRICE_CENTS } from './event-ticketing';
+import { dollarsToCents, centsToDollars } from './event-ticketing';
 
 describe('dollarsToCents', () => {
 	it('converts a whole-dollar amount', () => {
@@ -49,12 +49,11 @@ describe('dollarsToCents', () => {
 		expect(dollarsToCents(input)).toBeNull();
 	});
 
-	it('returns null above the sanity ceiling', () => {
-		expect(dollarsToCents(MAX_TICKET_PRICE_CENTS / 100 + 1)).toBeNull();
-	});
-
-	it('accepts an amount exactly at the ceiling', () => {
-		expect(dollarsToCents(MAX_TICKET_PRICE_CENTS / 100)).toBe(MAX_TICKET_PRICE_CENTS);
+	it('imposes no upper bound', () => {
+		// A ceiling here silently turned a price staff could previously save into
+		// a thrown "Ticket price is required" with the amount still on screen.
+		expect(dollarsToCents('1500.00')).toBe(150_000);
+		expect(dollarsToCents('25000')).toBe(2_500_000);
 	});
 });
 

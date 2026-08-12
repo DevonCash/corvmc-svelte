@@ -307,6 +307,16 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
 
+	// A band gig is never sold through CMC. Money for it would land in CMC's
+	// Stripe account with no payout path back to the band, so the rule is
+	// absolute rather than a band-vs-staff permission: `createBandEvent` has no
+	// ticketing params at all, and this is the only other way a row could get
+	// `ticketingEnabled`. Bands sell off-site through `externalTicketUrl`.
+	const enablingTicketing = params.ticketingEnabled === true || params.ticketPrice != null;
+	if (existing.source === 'band' && enablingTicketing) {
+		throw new Error('Band events cannot be ticketed through CMC');
+	}
+
 	// Ticketing fields
 	if (params.ticketingEnabled !== undefined) {
 		updates.ticketingEnabled = params.ticketingEnabled;

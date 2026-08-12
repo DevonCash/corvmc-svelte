@@ -278,12 +278,10 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
-	// A band gig can sell through CMC, so this page is reachable for source='band'.
-	// It has to disappear with the flag exactly like the detail page does —
-	// otherwise turning the feature off hides the event but leaves its checkout live.
-	if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
-		throw error(404, 'Event not found');
-	}
+	// Band gigs are never sold through CMC (see `update()` in event-service).
+	// Checked on source rather than the bandEvents flag so a row that predates
+	// that rule — or one written around it — still cannot reach checkout.
+	if (evt.source === 'band') throw error(404, 'Tickets not available for this event');
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -858,6 +856,9 @@ export const rsvpForEvent = form(
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (!evt.ticketingEnabled) throw error(400, 'RSVPs not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
+		// Issues a real ticket row, so it falls under the same rule as a paid
+		// purchase: a band gig is not ticketed through CMC at any price.
+		if (evt.source === 'band') throw error(400, 'RSVPs not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -899,6 +900,9 @@ export const rsvpToEvent = form(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (evt.ticketingEnabled) throw error(400, 'This event uses tickets, not RSVPs');
+		// The detail page never offers RSVP on a band gig — it is the venue's show
+		// to run. Enforced here too so the rule does not live only in the markup.
+		if (evt.source === 'band') throw error(400, 'RSVPs not available');
 
 		await createRsvp({
 			eventId: evt.id,
@@ -942,11 +946,9 @@ export const purchaseTickets = form(
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
-		// Mirrors the guard on getPublicTicketPage — the page 404s with the flag
-		// off, and this is the endpoint that would still take money without it.
-		if (evt.source === 'band' && !(await isFeatureEnabled('bandEvents'))) {
-			throw error(400, 'Tickets not available');
-		}
+		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
+		// money, so it repeats the check rather than trusting the page guard.
+		if (evt.source === 'band') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {

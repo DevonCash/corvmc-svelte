@@ -10,18 +10,19 @@
  */
 
 /**
- * A sanity ceiling on a single ticket, well above anything the space sells but
- * low enough to catch a misplaced decimal ("1500" meant as $15.00).
- */
-export const MAX_TICKET_PRICE_CENTS = 100_000;
-
-/**
  * Parse a user-entered dollar amount into whole cents.
  *
  * Returns `null` for anything that is not a usable price — empty, blank,
- * non-numeric, negative, or beyond {@link MAX_TICKET_PRICE_CENTS}. Callers that
- * require a price should treat `null` as a validation failure rather than
- * substituting a default; a silent 0 would publish a free show.
+ * non-numeric, or negative. Callers that require a price should treat `null` as
+ * a validation failure rather than substituting a default; a silent 0 would
+ * publish a free show.
+ *
+ * Deliberately imposes no upper bound. An earlier version capped this at
+ * $1,000, which silently broke a price staff could previously save: the value
+ * became `null`, the hidden cents field submitted empty, and the save died as a
+ * thrown "Ticket price is required" with the amount still visible in the form.
+ * A ceiling is only safe alongside a `max` on the input and a field-level
+ * validation message.
  */
 export function dollarsToCents(dollars: string | number | null | undefined): number | null {
 	if (dollars == null) return null;
@@ -34,10 +35,7 @@ export function dollarsToCents(dollars: string | number | null | undefined): num
 
 	// `parseFloat('15.10') * 100` is 1509.9999999999998, so the rounding is
 	// load-bearing rather than cosmetic.
-	const cents = Math.round(parsed * 100);
-	if (cents > MAX_TICKET_PRICE_CENTS) return null;
-
-	return cents;
+	return Math.round(parsed * 100);
 }
 
 /**

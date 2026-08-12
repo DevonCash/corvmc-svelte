@@ -34,20 +34,27 @@ bands, including gigs at other venues.
   to `/directory/bands/[slug]`, an external Tickets button when `externalTicketUrl`
   is set, and no internal RSVP UI.
 
-  **Bands cannot sell through CMC.** There is no ticketing control anywhere in the
-  band panel, and `createBandEventForm` / `updateBandEventForm` do not accept
-  ticketing fields — the schema is the guard, since remote functions are the only
-  thing standing between a POST and the database. Money for a band's gig would
+  **A band gig is never ticketed through CMC — by anyone.** Money for it would
   land in CMC's Stripe account with no payout path back to the band, so a band
-  gig is either sold off-site via `externalTicketUrl` or not sold at all.
+  gig is either sold off-site via `externalTicketUrl` or not sold at all. This is
+  a rule about the event, not a permission split between bands and staff.
 
-  Staff are a different matter: `/staff/events/[id]` has never restricted its
-  ticketing toggle by source, so a staff member can ticket a band event. When one
-  is ticketed the public detail page treats it like any other ticketed event —
-  the buy button keys off `ticketingEnabled`, not `source`. Before Aug 2026 the
-  `source === 'band'` branch short-circuited first and such an event rendered no
-  buy button at all, which is a silent failure rather than a policy. Band events
-  still never get the member-only RSVP path.
+  Enforced at four layers, because the UI is the weakest of them:
+  - `createBandEvent` / `updateBandEvent` take no ticketing params, and
+    `createBandEventForm` / `updateBandEventForm` do not declare the fields — a
+    POST carrying them is stripped before the handler runs.
+  - `update()` (the staff path, and the only other writer that can reach
+    `ticketingEnabled`) throws on any attempt to enable ticketing or set a price
+    on a `source='band'` row. Disabling is still allowed, so opening the staff
+    edit form on a row written before this rule clears the stale flag.
+  - `/staff/events/[id]` hides the ticketing toggle for a band gig rather than
+    offering an action the service refuses.
+  - `getPublicTicketPage`, `purchaseTickets`, `rsvpForEvent` and `rsvpToEvent`
+    reject `source='band'` outright — checked on source, not on the `bandEvents`
+    flag, so a row that predates the rule still cannot reach checkout.
+
+  Band events never get the member-only RSVP path either, and that is enforced
+  in the remote functions rather than only in the detail page's markup.
 
 - Home page "Upcoming Events" section shows the same next-3 CMC posters
   (`getPublicEvents`).

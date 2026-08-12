@@ -37,6 +37,7 @@
 	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
+	const isBandEvent = $derived(evt.source === 'band');
 	const recurringSeries = $derived(await getEventRecurringSeries(id));
 
 	// ── Edit state ────────────────────────────────────────────────────────
@@ -83,7 +84,11 @@
 		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
 
 		// Pre-fill ticketing fields
-		editTicketingEnabled = evt.ticketingEnabled;
+		// Forced off for a band gig, which is never sold through CMC. Submitting
+		// `false` rather than omitting the field means opening the edit form on a
+		// row that predates that rule also clears the stale flag — `update()`
+		// rejects enabling ticketing on a band event but allows disabling it.
+		editTicketingEnabled = isBandEvent ? false : evt.ticketingEnabled;
 		editTicketPriceDollars = centsToDollars(evt.ticketPrice);
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
@@ -383,13 +388,22 @@
 								/>
 							</FormField>
 
-							<!-- Ticketing -->
-							<div class="form-control">
-								<label class="label cursor-pointer justify-start gap-3">
-									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-									<span class="label-text">Enable ticketing</span>
-								</label>
-							</div>
+							<!-- Ticketing. Hidden for band gigs: `update()` throws on any attempt
+							     to ticket a band event, so offering the toggle here would only
+							     produce a failed save. Bands sell off-site via the ticket link. -->
+							{#if isBandEvent}
+								<p class="text-sm opacity-60">
+									Band gigs aren't sold through CMC — use the ticket link above for the venue's own
+									ticketing.
+								</p>
+							{:else}
+								<div class="form-control">
+									<label class="label cursor-pointer justify-start gap-3">
+										<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+										<span class="label-text">Enable ticketing</span>
+									</label>
+								</div>
+							{/if}
 
 							{#if editTicketingEnabled}
 								<div class="card bg-base-200 p-4">
