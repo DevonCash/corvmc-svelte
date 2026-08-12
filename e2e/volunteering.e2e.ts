@@ -330,6 +330,10 @@ test.describe('volunteering — onboarding', () => {
 		// The queue is the blocked list, so approving empties the row out of it.
 		await expect(row).toHaveCount(0, { timeout: 15000 });
 
+		// Signing a second user in over an existing session does not swap it — the
+		// staff session would survive, and staff have no volunteer profile, so the
+		// assertion below would land on /start instead of the board.
+		await page.context().clearCookies();
 		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible({
