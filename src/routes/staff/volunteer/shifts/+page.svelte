@@ -152,7 +152,7 @@
 		{#if rows.length === 0}
 			<EmptyState
 				title="No shifts scheduled"
-				description="Put one up and members who said they're up for that role see it first."
+				description="Post one and members interested in that role see it first."
 			/>
 		{:else}
 			<Table>

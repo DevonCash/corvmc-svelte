@@ -87,7 +87,7 @@
 			{#if claimants.length === 0}
 				<EmptyState
 					title="Nobody yet"
-					description="Members who said they're up for this role see it at the top of their list."
+					description="Members interested in this role see it at the top of their list."
 				/>
 			{:else}
 				<ul class="flex flex-col gap-3">

@@ -74,7 +74,7 @@ function hasRoomSql(shiftId: string, capacity: number) {
 const unixNow = () => Math.floor(Date.now() / 1000);
 
 /**
- * Put your hand up for a shift.
+ * Claim a shift.
  *
  * Three guards, in the order that gives the most useful message: the shift is
  * still open, you're cleared for it, and there's room. The room check is part of

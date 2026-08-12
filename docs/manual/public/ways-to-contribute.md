@@ -20,11 +20,15 @@ The page lists the roles you can sign up for, grouped three ways:
 - **Committees** — Programming, Production, Development, Communications, Art and
   Merchandise, and Facility. Committees meet monthly to guide the organization.
 
-**Sign Up to Volunteer** opens our volunteer interest form in a new tab. Picking
-a role isn't a commitment — it tells us who to contact when something comes up,
-and we provide whatever training the role needs. The form also has room for
-program, club, or class ideas, for showing art or performing, and for "not sure,
-I just want to help."
+**Create a Free Account to Volunteer** goes to registration and lands you on your
+volunteering page, where the roles are checkboxes. Ticking one isn't a commitment
+— it tells us who to contact when something comes up, and we provide whatever
+training the role needs. Change your mind any time by ticking or unticking and
+saving again.
+
+Ideas that aren't a role — a program, a club, a class, showing art, performing —
+aren't part of that list. Use **Host a Workshop** further down the page, or the
+[contact form](contact-and-perform.md) directly.
 
 ## Become a sustaining member
 

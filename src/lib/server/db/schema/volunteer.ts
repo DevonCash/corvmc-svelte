@@ -386,7 +386,7 @@ export const volunteerRoleInterest = sqliteTable(
 	(t) => [
 		// Re-saving the same set must not stack duplicate rows.
 		unique('uq_volunteer_role_interest').on(t.userId, t.volunteerRoleId),
-		// "Who's up for Door?" — the staff page's only query.
+		// "Who is interested in Door?" — the staff page's only query.
 		index('volunteer_role_interest_role_idx').on(t.volunteerRoleId),
 		index('volunteer_role_interest_user_idx').on(t.userId)
 	]

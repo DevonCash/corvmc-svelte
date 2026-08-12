@@ -26,11 +26,11 @@ from shows**, and **committees**, which meet monthly to steer the organization.
 If nothing fits what you have to offer, [get in touch](/contact) and we will
 find something.
 
-## Telling us what you are up for
+## Telling us what interests you
 
-Tick the roles that interest you and press **Save what I'm up for**. That is not
-a commitment to any particular date — it is a standing note to staff about who
-to contact when something comes up, and we will show you how to do the job.
+Tick the roles that interest you and press **Save**. That is not a commitment
+to any particular date — it is a standing note to staff about who to contact
+when something comes up, and we will show you how to do the job.
 
 Change your mind any time: tick or untick and save again. Unticking everything
 takes you off the list entirely.
@@ -41,10 +41,10 @@ Ideas that are not a role — a program, a club, a class, showing art, performin
 ## Taking a shift
 
 Staff post dated shifts — "Door, Saturday 6–10pm" — and the **Volunteering**
-page lists the upcoming ones, with shifts for roles you said you're up for at
-the top. Claim one and staff will confirm you; you'll get a reminder the day
-before. If something comes up, drop the shift from the same page so somebody
-else can take it — that is far more useful to us than a no-show.
+page lists the upcoming ones, with shifts for roles you picked at the top. Claim
+one and staff will confirm you; you'll get a reminder the day before. If
+something comes up, drop the shift from the same page so somebody else can take
+it — that is far more useful to us than a no-show.
 
 Some roles need a clearance (First Aid, sound desk sign-off) before you can
 claim them. The shift will say exactly what's missing and the role's

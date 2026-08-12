@@ -29,26 +29,20 @@ const FAKE_ROW = {
 	createdAt: new Date('2026-01-01T00:00:00Z')
 };
 
+// Module scope, not per-`beforeEach`: on a cold Vite cache the first import pays
+// the transform of this module graph inside the hook timeout and reports as a
+// timeout rather than a slow build. Same reason as commit 75fd70a. These are the
+// mocked modules, so the bindings are stable — `vi.resetAllMocks()` clears their
+// recorded calls without replacing the function objects.
+const { sendEmailWithTemplate } = (await import('./email/postmark-client')) as any;
+const { createNotification } = (await import('./in-app-service')) as any;
+const { getPreference } = (await import('./preference-service')) as any;
+const { pushToUser } = (await import('./sse')) as any;
+const { dispatch, dispatchEmailOnly } = (await import('./dispatcher')) as any;
+
 describe('dispatch', () => {
-	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
-	let createNotification: ReturnType<typeof vi.fn>;
-	let getPreference: ReturnType<typeof vi.fn>;
-	let pushToUser: ReturnType<typeof vi.fn>;
-	let dispatch: (params: any) => Promise<void>;
-
-	beforeEach(async () => {
+	beforeEach(() => {
 		vi.resetAllMocks();
-
-		sendEmailWithTemplate = (await import('./email/postmark-client'))
-			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
-		createNotification = (await import('./in-app-service'))
-			.createNotification as unknown as ReturnType<typeof vi.fn>;
-		getPreference = (await import('./preference-service')).getPreference as unknown as ReturnType<
-			typeof vi.fn
-		>;
-		pushToUser = (await import('./sse')).pushToUser as unknown as ReturnType<typeof vi.fn>;
-		dispatch = (await import('./dispatcher')).dispatch as any;
-
 		createNotification.mockResolvedValue(FAKE_ROW);
 	});
 
@@ -142,15 +136,8 @@ describe('dispatch', () => {
 });
 
 describe('dispatchEmailOnly', () => {
-	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
-	let dispatchEmailOnly: (params: any) => Promise<void>;
-
-	beforeEach(async () => {
+	beforeEach(() => {
 		vi.resetAllMocks();
-
-		sendEmailWithTemplate = (await import('./email/postmark-client'))
-			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
-		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
 	});
 
 	it('sends a templated email with the provided params', async () => {
@@ -194,14 +181,8 @@ describe('dispatchEmailOnly', () => {
 // ---------------------------------------------------------------------------
 
 describe('notification model normalization', () => {
-	let sendEmailWithTemplate: ReturnType<typeof vi.fn>;
-	let dispatchEmailOnly: (params: any) => Promise<void>;
-
-	beforeEach(async () => {
+	beforeEach(() => {
 		vi.resetAllMocks();
-		sendEmailWithTemplate = (await import('./email/postmark-client'))
-			.sendEmailWithTemplate as unknown as ReturnType<typeof vi.fn>;
-		dispatchEmailOnly = (await import('./dispatcher')).dispatchEmailOnly as any;
 	});
 
 	async function sentModel(model: Record<string, unknown>) {

@@ -14,10 +14,10 @@ work: hours members have logged and nobody has looked at yet. The count in the
 sidebar is how many are waiting.
 
 For each log you get the member, the role, the date, the hours, and their
-description of what they did. Approve or reject from the row.
+description of what they did. Approve or return from the row.
 
 - **Approve** takes an optional note, shared with the member.
-- **Reject** requires a reason. The member cannot correct and resubmit without
+- **Return** requires a reason. The member cannot correct and resubmit without
   one, so say what was wrong — wrong duration, duplicate, not volunteer time.
 
 Review is one-way. If you approve something by mistake, ask the member to submit
@@ -52,7 +52,7 @@ problem — fix the checklist, not the person.
 **Volunteering → Interest** is the standing list of who has said they would help
 and with what. Filter by role to answer "who can work the door on Saturday" — the
 count beside each role in the filter tells you how deep the bench is before you
-select it. Each row still shows everything that member is up for, so you can see
+select it. Each row still shows every role that member picked, so you can see
 at a glance whether you are about to ask the same three people again.
 
 Expressing interest is not a commitment to a date, so treat the list as a place

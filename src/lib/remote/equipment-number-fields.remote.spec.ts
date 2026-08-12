@@ -89,18 +89,23 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
+// `form-utils.js` is internal to the package and not reachable through its
+// `exports` map, so resolve the installed package directory and import the file
+// directly. Skipping this test would leave the premise unproven.
+//
+// Resolved at module scope, not inside the `it`: `@vite-ignore` means this import
+// is never cached or optimised, so paying it inside the 5s test timeout reports a
+// cold run as a timeout. Same reason as commit 75fd70a.
+const { convert_formdata } = await (async () => {
+	const { createRequire } = await import('node:module');
+	const { pathToFileURL } = await import('node:url');
+	const require = createRequire(import.meta.url);
+	const pkg = require.resolve('@sveltejs/kit/package.json').replace(/package\.json$/, '');
+	return import(/* @vite-ignore */ pathToFileURL(`${pkg}src/runtime/form-utils.js`).href);
+})();
+
 describe('number fields submitted through field.as("number")', () => {
 	it('SvelteKit converts an `n:`-prefixed form value to a number', async () => {
-		// `form-utils.js` is internal to the package and not reachable through its
-		// `exports` map, so resolve the installed package directory and import the
-		// file directly. Skipping this test would leave the premise unproven.
-		const { createRequire } = await import('node:module');
-		const { pathToFileURL } = await import('node:url');
-		const require = createRequire(import.meta.url);
-		const pkg = require.resolve('@sveltejs/kit/package.json').replace(/package\.json$/, '');
-		const { convert_formdata } = await import(
-			/* @vite-ignore */ pathToFileURL(`${pkg}src/runtime/form-utils.js`).href
-		);
 		const data = new FormData();
 		data.set('n:totalQuantity', '3');
 		data.set('name', 'SM58');
