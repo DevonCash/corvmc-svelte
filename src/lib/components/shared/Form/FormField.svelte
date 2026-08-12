@@ -49,7 +49,8 @@
 		field?: RemoteFormField<any>;
 		input?: Snippet<[id: string]>;
 		children?: Snippet;
-		description?: string;
+		/** Hint under the label. A snippet when the hint needs an inline link. */
+		description?: string | Snippet;
 		type?: InputType;
 		class?: string;
 		value?: any;
@@ -147,8 +148,10 @@
 		{#each issues as issue (issue.message)}
 			<p class="text-sm text-error">{issue.message}</p>
 		{/each}
-	{:else if description}
+	{:else if typeof description === 'string'}
 		<p class="text-muted text-sm">{description}</p>
+	{:else if description}
+		<p class="text-muted text-sm">{@render description()}</p>
 	{/if}
 	{#if children}
 		{@render children()}

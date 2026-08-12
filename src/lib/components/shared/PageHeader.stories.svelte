@@ -19,6 +19,15 @@
 	</PageHeader>
 {/snippet}
 
+<!-- Several actions must stay grouped opposite the title, not spread across the header. -->
+{#snippet manyActionsTemplate(args: ComponentProps<typeof PageHeader>)}
+	<PageHeader {...args}>
+		<button class="btn btn-ghost btn-sm">Interests</button>
+		<button class="btn btn-ghost btn-sm">Profile</button>
+		<button class="btn btn-primary btn-sm">Log Hours</button>
+	</PageHeader>
+{/snippet}
+
 <Story name="Title only" args={{ title: 'Reservations' }} />
 <Story name="With subtitle" args={{ title: 'Reservations', subtitle: 'Member' }} />
 <Story
@@ -29,4 +38,10 @@
 	name="With actions"
 	args={{ title: 'Bands', subtitle: 'Member' }}
 	template={actionsTemplate}
+/>
+
+<Story
+	name="With several actions"
+	args={{ title: 'Volunteering', subtitle: 'Member' }}
+	template={manyActionsTemplate}
 />

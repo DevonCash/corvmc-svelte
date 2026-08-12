@@ -61,13 +61,9 @@
 	with, and changing it runs through its own verification flow. Shown so they
 	can check we have the right one.
 -->
-<FormField
-	type="email"
-	label="Email"
-	value={email}
-	readonly
-	description="Change this in your account settings."
-/>
-<a href={resolve('/member/account')} class="btn btn-link btn-xs -mt-2 self-start px-0">
-	Account settings
-</a>
+<FormField type="email" label="Email" value={email} readonly description={emailHint} />
+
+{#snippet emailHint()}
+	Change this in your
+	<a href={resolve('/member/account')} class="link link-primary">account settings</a>.
+{/snippet}
