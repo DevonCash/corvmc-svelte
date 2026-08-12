@@ -29,7 +29,7 @@ export type Block =
 	| { id: string; type: 'bio'; content: string; cssClass?: string }
 	| { id: string; type: 'links'; style: 'buttons' | 'icons' | 'list'; cssClass?: string }
 	| { id: string; type: 'members'; showPositions: boolean; cssClass?: string }
-	| { id: string; type: 'events'; limit?: number; cssClass?: string }
+	| { id: string; type: 'events'; limit?: number; showPast?: boolean; cssClass?: string }
 	| { id: string; type: 'gallery'; imageKeys: string[]; downloadable?: boolean; cssClass?: string }
 	| { id: string; type: 'embed'; platform: string; url: string; cssClass?: string }
 	| { id: string; type: 'press'; cssClass?: string }

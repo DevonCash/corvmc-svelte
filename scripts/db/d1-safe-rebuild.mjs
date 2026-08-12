@@ -87,6 +87,27 @@ export function findRebuiltTables(sql) {
 }
 
 /**
+ * Tables this migration *creates outright*, i.e. new tables rather than
+ * rebuilds of existing ones.
+ *
+ * These must never be detached. A detach copies rows out of the table before
+ * dropping it, but a table created by this same migration does not exist yet
+ * when the detach block runs — the copy fails with "no such table". It also has
+ * nothing worth preserving: it is empty, so the parent's DROP cascading into it
+ * deletes nothing.
+ */
+export function findCreatedTables(sql) {
+	const out = [];
+	for (const m of sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?`([A-Za-z0-9_]+)`/g)) {
+		const table = m[1];
+		// Skip drizzle's rebuild scratch tables and our own detach/reattach ones.
+		if (/^__(new|detach|reattach)_/.test(table)) continue;
+		out.push(table);
+	}
+	return [...new Set(out)];
+}
+
+/**
  * Any `DROP TABLE x` where `x` has foreign-key children, beyond the rebuilds
  * handled above.
  *
@@ -157,12 +178,16 @@ export function rewriteMigration(sql, snapshot) {
 	const kids = childGraph(snap);
 
 	// Only descendants that aren't themselves being rebuilt need detaching —
-	// a table the migration already rebuilds gets its DDL from drizzle.
+	// a table the migration already rebuilds gets its DDL from drizzle. Tables
+	// this migration creates are skipped too: they don't exist when the detach
+	// block runs, and they're empty, so there is nothing to protect.
 	const rebuiltSet = new Set(rebuilt);
+	const createdSet = new Set(findCreatedTables(sql));
 	const toDetach = [];
 	for (const table of rebuilt) {
 		for (const d of descendantsDeepestFirst(table, kids)) {
-			if (!rebuiltSet.has(d) && !toDetach.includes(d)) toDetach.push(d);
+			if (rebuiltSet.has(d) || createdSet.has(d)) continue;
+			if (!toDetach.includes(d)) toDetach.push(d);
 		}
 	}
 	if (!toDetach.length) return null; // nothing references these tables — drizzle's output is fine

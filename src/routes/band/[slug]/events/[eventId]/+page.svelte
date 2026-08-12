@@ -6,15 +6,18 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import LineupEditor, { type LineupChip } from '../LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDate, formatTime } from '$lib/utils/format';
+	import { formatDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import {
 		getBandEventDetail,
 		updateBandEventForm,
 		publishBandEvent,
 		unpublishBandEvent,
-		cancelBandEventForm
+		cancelBandEventForm,
+		removeBandEventPoster
 	} from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
@@ -26,6 +29,7 @@
 	const publishFields = publishBandEvent.fields;
 	const unpublishFields = unpublishBandEvent.fields;
 	const cancelFields = cancelBandEventForm.fields;
+	const posterFields = removeBandEventPoster.fields;
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let evt = $derived(
@@ -35,6 +39,17 @@
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
 	let editing = $state(false);
+
+	// Seeded from the saved bill so an edit that doesn't touch the lineup
+	// round-trips it unchanged rather than wiping it. Writable derived: edits
+	// stick, but reloading the event resets to what the server has.
+	let lineup = $derived<LineupChip[]>(
+		evt.lineup.map((l) => ({
+			name: l.name,
+			bandId: l.bandId ?? undefined,
+			status: l.status
+		}))
+	);
 </script>
 
 <PageHeader title={evt.title} subtitle={band.name}>
@@ -52,7 +67,7 @@
 					</div>
 					<div>
 						<dt class="text-xs font-medium uppercase opacity-60">Time</dt>
-						<dd>{formatTime(evt.startsAt)}–{formatTime(evt.endsAt)}</dd>
+						<dd>{formatEventTimeRange(evt.startsAt, evt.endsAt)}</dd>
 					</div>
 					{#if evt.doorsAt}
 						<div>
@@ -87,6 +102,24 @@
 						</div>
 					{/if}
 				</dl>
+
+				{#if evt.lineup.length > 1}
+					<div class="mt-4 border-t pt-4">
+						<p class="text-xs font-medium uppercase opacity-60">Bill</p>
+						<ul class="mt-1 space-y-1">
+							{#each evt.lineup as act (act.id)}
+								<li class="flex items-center gap-2 text-sm">
+									<span>{act.name}</span>
+									{#if act.status === 'pending'}
+										<span class="badge badge-warning badge-xs">awaiting reply</span>
+									{:else if act.status === 'declined'}
+										<span class="badge badge-ghost badge-xs">declined</span>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
 
 				{#if evt.description}
 					<div class="mt-4 border-t pt-4">
@@ -134,6 +167,19 @@
 				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
 				</Button>
+
+				{#if evt.posterUrl}
+					<Form
+						remote={removeBandEventPoster}
+						successToast="Poster removed"
+						onsuccess={() => invalidateAll()}
+						class="inline"
+					>
+						<input {...posterFields.slug.as('hidden', band.slug)} />
+						<input {...posterFields.eventId.as('hidden', evt.id)} />
+						<SubmitButton label="Remove Poster" class="btn-ghost btn-sm" />
+					</Form>
+				{/if}
 			</div>
 		{/if}
 
@@ -173,6 +219,37 @@
 							></textarea>
 						</FormField>
 
+						<!-- The whole point of the edit form for backfill: without these a
+						     band could never correct the date of a gig it entered. -->
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+							<FormField
+								field={updateFields.eventDate}
+								type="date"
+								label="Date"
+								value={toLocalDate(evt.startsAt)}
+							/>
+							<FormField
+								field={updateFields.eventStartTime}
+								type="time"
+								label="Start Time"
+								value={toLocalTime(evt.startsAt)}
+							/>
+							<FormField
+								field={updateFields.eventEndTime}
+								type="time"
+								label="End Time"
+								value={evt.endsAt ? toLocalTime(evt.endsAt) : ''}
+								description="Optional — clear it if you don't know."
+							/>
+						</div>
+
+						<FormField
+							field={updateFields.doorsTime}
+							type="time"
+							label="Doors Open"
+							value={evt.doorsAt ? toLocalTime(evt.doorsAt) : ''}
+						/>
+
 						<FormField
 							field={updateFields.location}
 							type="text"
@@ -200,6 +277,25 @@
 							inputmode="decimal"
 							description="What people pay, at the door or through the link. Leave blank if it's free."
 						/>
+
+						<FormField name="lineup" label="Who's playing">
+							<LineupEditor bind:value={lineup} ownerBandId={band.id} />
+						</FormField>
+
+						<FormField name="posterFile" label="Poster">
+							{#if evt.posterUrl}
+								<img
+									src={evt.posterUrl}
+									alt="Current poster"
+									class="mb-2 h-32 w-32 rounded object-cover"
+								/>
+							{/if}
+							<input
+								{...updateFields.posterFile.as('file')}
+								accept="image/jpeg,image/png,image/webp"
+								class="file-input file-input-bordered w-full"
+							/>
+						</FormField>
 
 						<div class="flex justify-end pt-2">
 							<SubmitButton label="Save Changes" class="btn-primary" />

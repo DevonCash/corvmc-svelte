@@ -3,9 +3,8 @@
 ## Purpose
 
 The unified gig guide (`/events`, community-calendar spec phase 1) shows member
-bands' events published by band admins with no staff review. Before
-`feature.bandEvents` turns on in production, staff need a way to hear about and
-act on problem listings. This extends the existing `contentFlag` moderation
+bands' events published by band admins with no staff review, so staff need a
+way to hear about and act on problem listings. This extends the existing `contentFlag` moderation
 system (member/band profile reports, `/staff/flags` triage queue) to events.
 
 ## Decisions

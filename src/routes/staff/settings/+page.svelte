@@ -117,10 +117,6 @@
 			label: 'Band Reservations',
 			description: 'Lets bands book the practice room from their band dashboard'
 		},
-		bandEvents: {
-			label: 'Band Events',
-			description: 'Lets bands create and manage their own events'
-		},
 		emailMarketing: {
 			label: 'Email Marketing',
 			description: 'Audience management, campaigns, and broadcast emails'

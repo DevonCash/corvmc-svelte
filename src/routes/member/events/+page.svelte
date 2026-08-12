@@ -14,7 +14,8 @@
 		id: string;
 		title: string;
 		startsAt: Date;
-		endsAt: Date;
+		/** Null when unknown — common on backfilled band gigs. */
+		endsAt: Date | null;
 		doorsAt: Date | null;
 		tags: string | null;
 		ticketingEnabled: boolean;

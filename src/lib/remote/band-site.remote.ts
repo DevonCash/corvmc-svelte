@@ -15,7 +15,11 @@ import { bandGenre } from '$lib/server/db/schema/band';
 import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, asc } from 'drizzle-orm';
-import { listBandEventsUpcoming } from '$lib/server/event/event-service';
+import {
+	listBandEventsUpcoming,
+	listBandEventsPast,
+	type EventRow
+} from '$lib/server/event/event-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
@@ -25,6 +29,21 @@ import type { Block } from '$lib/server/db/schema/band-page';
 // ---------------------------------------------------------------------------
 // Band Site Data — loads everything needed to render a premium band page
 // ---------------------------------------------------------------------------
+
+/** Shape an event row for the microsite. */
+function toSiteEvent(e: EventRow) {
+	return {
+		id: e.id,
+		title: e.title,
+		description: e.description,
+		startsAt: e.startsAt,
+		endsAt: e.endsAt,
+		location: e.location,
+		externalTicketUrl: e.externalTicketUrl,
+		ticketPrice: e.ticketPrice,
+		posterUrl: resolveImageUrl(e.posterKey)
+	};
+}
 
 export const getBandSiteData = query(z.string(), async (slug) => {
 	await requireFeature('bandPremium');
@@ -75,8 +94,11 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		.from(bandGenre)
 		.where(eq(bandGenre.bandId, bandRow.id));
 
-	// Fetch upcoming events
-	const events = await listBandEventsUpcoming(bandRow.id, 10);
+	// Upcoming, plus enough history for a "past shows" section
+	const [events, pastEvents] = await Promise.all([
+		listBandEventsUpcoming(bandRow.id, 10),
+		listBandEventsPast(bandRow.id, { limit: 20, offset: 0 })
+	]);
 
 	// Fetch media
 	const media = await db
@@ -114,17 +136,10 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			position: m.position,
 			role: m.role
 		})),
-		events: events.map((e) => ({
-			id: e.id,
-			title: e.title,
-			description: e.description,
-			startsAt: e.startsAt,
-			endsAt: e.endsAt,
-			location: e.location,
-			externalTicketUrl: e.externalTicketUrl,
-			ticketPrice: e.ticketPrice,
-			posterUrl: resolveImageUrl(e.posterKey)
-		})),
+		events: events.map(toSiteEvent),
+		// listBandEventsPast fetches limit+1 to derive hasMore; the microsite
+		// just shows a fixed slice.
+		pastEvents: pastEvents.slice(0, 20).map(toSiteEvent),
 		media: media.map((m) => ({
 			id: m.id,
 			url: resolveImageUrl(m.key),

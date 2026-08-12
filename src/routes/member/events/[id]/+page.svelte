@@ -23,6 +23,7 @@
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
@@ -255,7 +256,7 @@
 						Time
 					</span>
 					<span class="edet__fact-value">
-						{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+						{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 						{#if evt.doorsAt}
 							<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span>
 						{/if}

@@ -4,7 +4,6 @@ import {
 	listPublicUpcomingEvents
 } from '$lib/server/event/event-service';
 import { toCalendarEntry } from '$lib/server/event/calendar-entry';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '$lib/types/calendar';
@@ -32,9 +31,7 @@ export const getPublicGigGuide = query(gigGuideSchema, async ({ from, offset }) 
 	const anchor = from ?? formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const windowStart = buildDateInTz(anchor, '00:00', DEFAULT_TIMEZONE);
 
-	const bandEventsEnabled = await isFeatureEnabled('bandEvents');
 	const rows = await listPublicUpcomingEvents(windowStart, {
-		includeBandEvents: bandEventsEnabled,
 		limit: GIG_GUIDE_PAGE_SIZE,
 		offset
 	});
@@ -42,7 +39,6 @@ export const getPublicGigGuide = query(gigGuideSchema, async ({ from, offset }) 
 	const hasMore = rows.length > GIG_GUIDE_PAGE_SIZE;
 	return {
 		from: anchor,
-		bandEventsEnabled,
 		hasMore,
 		events: rows.slice(0, GIG_GUIDE_PAGE_SIZE).map(toCalendarEntry)
 	};
@@ -54,14 +50,10 @@ export const getPublicCalendar = query(monthSchema, async ({ month }) => {
 	const windowStart = buildDateInTz(start, '00:00', DEFAULT_TIMEZONE);
 	const windowEnd = buildDateInTz(end, '00:00', DEFAULT_TIMEZONE);
 
-	const bandEventsEnabled = await isFeatureEnabled('bandEvents');
-	const rows = await listPublicCalendarEvents(windowStart, windowEnd, {
-		includeBandEvents: bandEventsEnabled
-	});
+	const rows = await listPublicCalendarEvents(windowStart, windowEnd);
 
 	return {
 		month,
-		bandEventsEnabled,
 		events: rows.map(toCalendarEntry)
 	};
 });

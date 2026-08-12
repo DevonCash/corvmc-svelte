@@ -18,6 +18,7 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -168,7 +169,20 @@
 
 				<h1 class="edet__title">{evt.title}</h1>
 
-				{#if isBandEvent && evt.bandName}
+				<!-- The whole bill, in billing order. An act only links out once it has
+				     confirmed — a credit the named band hasn't agreed to is plain text. -->
+				{#if evt.lineup.length > 1}
+					<p class="edet__byline">
+						{#each evt.lineup as act, i (act.id)}
+							{#if i > 0}<span aria-hidden="true"> · </span>{/if}
+							{#if act.slug}
+								<a href={resolve(`/directory/bands/${act.slug}`)} class="link">{act.name}</a>
+							{:else}
+								{act.name}
+							{/if}
+						{/each}
+					</p>
+				{:else if isBandEvent && evt.bandName}
 					<p class="edet__byline">
 						by
 						{#if bandHref}
@@ -215,7 +229,7 @@
 							Time
 						</span>
 						<span class="edet__fact-value">
-							{formatTime(evt.startsAt)} – {formatTime(evt.endsAt)}
+							{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 							{#if evt.doorsAt}
 								<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span
 								>

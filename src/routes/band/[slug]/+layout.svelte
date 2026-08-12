@@ -63,11 +63,9 @@
 				{#snippet icon()}<IconCalendar />{/snippet}
 			</Nav.Item>
 		{/if}
-		{#if layout.features.bandEvents}
-			<Nav.Item href={`${base}/events`} label="Events">
-				{#snippet icon()}<IconCalendarEvent />{/snippet}
-			</Nav.Item>
-		{/if}
+		<Nav.Item href={`${base}/events`} label="Events">
+			{#snippet icon()}<IconCalendarEvent />{/snippet}
+		</Nav.Item>
 		{#if isOwnerOrAdmin}
 			<Nav.Item href={`${base}/edit`} label="Edit Profile">
 				{#snippet icon()}<IconPencil />{/snippet}

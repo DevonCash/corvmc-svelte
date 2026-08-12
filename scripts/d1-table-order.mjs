@@ -50,6 +50,8 @@ export const tableOrder = [
 	'payment_cache',
 	'ticket',
 	'event_rsvp',
+	// The bill: references event and band, so it wipes before either.
+	'event_band',
 	'platform_invite',
 	'credit_transaction',
 	'help_articles',
