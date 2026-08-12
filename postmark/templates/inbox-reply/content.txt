@@ -1,6 +1,12 @@
-Hi {{contactName}},
+Hi {{{contactName}}},
 
 {{{body}}}
 
-—
-{{staffName}} · Corvallis Music Collective
+-- 
+{{{staffName}}}
+Corvallis Music Collective
+https://corvmc.org
+
+You're getting this because you contacted the Corvallis Music Collective.
+Just reply to this email and your message comes straight back to us; we'll
+pick it up in the same conversation.

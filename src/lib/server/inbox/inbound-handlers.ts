@@ -1,7 +1,9 @@
 import { findOrCreateThread, findThreadById, reopenThread } from './thread-service';
-import { addInboundMessage } from './message-service';
+import { addInboundMessage, addOutboundMessage, addNote } from './message-service';
 import { parseReplyMailboxHash } from './reply-address';
 import { isChannelEnabled } from './channel-config-service';
+import { findStaffUserByEmail } from '$lib/server/authorization';
+import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
 
 export interface ContactFormParams {
@@ -63,6 +65,50 @@ function extractMessageIdHeader(headers: PostmarkInboundPayload['Headers']): str
 	return value && value.includes('@') ? value : null;
 }
 
+function headerValue(headers: PostmarkInboundPayload['Headers'], name: string): string | null {
+	const header = headers?.find((h) => h.Name?.toLowerCase() === name.toLowerCase());
+	return header?.Value?.trim().toLowerCase() ?? null;
+}
+
+/**
+ * Machine-generated mail: vacation responders, bounce notices, ticket robots.
+ * Worth detecting only on the relay path — a staff out-of-office would
+ * otherwise be forwarded to the contact and logged as a considered reply.
+ */
+function isAutoResponse(headers: PostmarkInboundPayload['Headers']): boolean {
+	const autoSubmitted = headerValue(headers, 'Auto-Submitted');
+	if (autoSubmitted && autoSubmitted !== 'no') return true;
+	if (headerValue(headers, 'X-Autoreply')) return true;
+	const precedence = headerValue(headers, 'Precedence');
+	return precedence === 'bulk' || precedence === 'auto_reply';
+}
+
+/**
+ * Cut a reply at the start of the text it quotes.
+ *
+ * Postmark's `StrippedTextReply` does this for us and is preferred, but it comes
+ * back empty for some clients and for bottom-posted replies. On the relay path
+ * the quoted text is the staff alert itself — carrying the inbox URL and the
+ * internal reply note — so shipping it to a member of the public is worse than
+ * over-trimming.
+ */
+function stripQuotedReply(text: string): string {
+	const lines = text.split('\n');
+	const cut = lines.findIndex(
+		(line) =>
+			/^\s*>/.test(line) ||
+			/^\s*On .+ wrote:\s*$/.test(line) ||
+			/^--- (message|end of message) ---\s*$/.test(line)
+	);
+	return (cut === -1 ? lines : lines.slice(0, cut)).join('\n').trim();
+}
+
+/** Same mailbox, ignoring the case no mail client normalises. */
+function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
+	if (!a || !b) return false;
+	return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
 export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 	const fromEmail = payload.FromFull?.Email ?? payload.From;
 	const fromName = payload.FromName || fromEmail;
@@ -81,6 +127,31 @@ export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 		if (thread) {
 			if (thread.status === 'resolved') {
 				await reopenThread(thread.id);
+			}
+
+			// Staff answer the contact-form alert straight from their mail client.
+			// Their reply arrives here looking like any other inbound message, but
+			// filing it as one would attribute their words to the contact and never
+			// deliver them — so relay it instead.
+			//
+			// A staffer who is themselves the thread contact is skipped: relaying
+			// would mail them their own words, and their reply to that would relay
+			// again. A sender we don't recognise as staff keeps the existing inbound
+			// behaviour — that covers a contact forwarding our reply to a colleague
+			// who answers. Note the signed address now circulates in staff mailboxes,
+			// so anyone an alert is forwarded to can write into the thread.
+			const staffSender = sameAddress(fromEmail, thread.contactEmail)
+				? null
+				: await findStaffUserByEmail(fromEmail);
+
+			if (staffSender && !isAutoResponse(payload.Headers)) {
+				return relayStaffReply({
+					threadId: thread.id,
+					thread,
+					staff: staffSender,
+					body: payload.StrippedTextReply?.trim() || stripQuotedReply(payload.TextBody || ''),
+					fromEmail
+				});
 			}
 
 			const message = await addInboundMessage({
@@ -195,4 +266,50 @@ export async function handleMetaInbound(params: MetaInboundParams) {
 	});
 
 	return { thread, message };
+}
+
+/**
+ * Deliver a staff member's emailed reply to the contact and record it on the
+ * thread. `addOutboundMessage` does both halves in the right order, so the
+ * thread never shows a reply that was not actually sent.
+ *
+ * Both failure paths fall back to a note rather than throwing: the webhook route
+ * answers 200 unconditionally, so Postmark never retries, and without a note the
+ * staff member's text would be gone with nothing to show for it.
+ */
+async function relayStaffReply(params: {
+	threadId: string;
+	thread: Awaited<ReturnType<typeof findThreadById>>;
+	staff: { id: string; name: string };
+	body: string;
+	fromEmail: string;
+}) {
+	const { threadId, thread, staff, body, fromEmail } = params;
+
+	if (!body) {
+		const note = await addNote({
+			threadId,
+			authorUserId: staff.id,
+			body: `An empty reply arrived by email from ${fromEmail}. Nothing was sent to the contact.`
+		});
+		return { thread, message: null, note };
+	}
+
+	try {
+		const message = await addOutboundMessage({
+			threadId,
+			body,
+			authorUserId: staff.id,
+			authorName: staff.name
+		});
+		return { thread, message };
+	} catch (err) {
+		captureException(err, { event: 'inbox.relay_failed', threadId, fromEmail });
+		const note = await addNote({
+			threadId,
+			authorUserId: staff.id,
+			body: `This emailed reply could not be delivered to the contact — send it from here:\n\n${body}`
+		});
+		return { thread, message: null, note };
+	}
 }

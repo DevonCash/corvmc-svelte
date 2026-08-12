@@ -158,6 +158,22 @@ describe('dispatchEmailOnly', () => {
 		});
 	});
 
+	it('forwards replyTo so the recipient can answer a two-way email', async () => {
+		sendEmailWithTemplate.mockResolvedValue(undefined);
+
+		await dispatchEmailOnly({
+			type: 'contact_form',
+			toEmail: 'staff@example.com',
+			templateAlias: 'contact-alert',
+			model: {},
+			replyTo: 'reply+thread-1.sig@replies.example.com'
+		});
+
+		expect(sendEmailWithTemplate.mock.calls[0][0].replyTo).toBe(
+			'reply+thread-1.sig@replies.example.com'
+		);
+	});
+
 	it('logs error but does not throw on send failure', async () => {
 		sendEmailWithTemplate.mockRejectedValue(new Error('Network error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

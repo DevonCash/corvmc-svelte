@@ -24,11 +24,32 @@ mkdirSync(OUTDIR, { recursive: true });
 // before the asset has been deployed.
 copyFileSync('static/email/cmc-speaker.png', `${OUTDIR}/cmc-speaker.png`);
 
+/** Escape for a `<pre>` — text-only emails are shown as-is, not interpreted. */
+function escapeHtml(text: string): string {
+	return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Text-only templates have no HTML part at all. Show the text in a `<pre>` so
+ * the iframe isn't blank, and make it obvious that is *all* the email contains.
+ */
+function textOnlyPage(text: string): string {
+	return `<!doctype html><meta charset="utf-8">
+<body style="margin:0;padding:24px;background:#fff;">
+<p style="margin:0 0 16px;font:12px/1.4 system-ui,sans-serif;color:#5f6368;">No HTML part — this email is sent as text/plain only.</p>
+<pre style="margin:0;font:14px/1.6 ui-monospace,Menlo,monospace;color:#202124;white-space:pre-wrap;">${escapeHtml(text)}</pre>
+</body>`;
+}
+
 const rendered = FIXTURES.map((f) => {
 	const { html, text, subject } = renderTemplate(f.alias, f.model);
-	writeFileSync(`${OUTDIR}/${f.name}.html`, html.replaceAll(EMAIL_LOGO_URL, 'cmc-speaker.png'));
+	const plaintext = html === '';
+	writeFileSync(
+		`${OUTDIR}/${f.name}.html`,
+		plaintext ? textOnlyPage(text) : html.replaceAll(EMAIL_LOGO_URL, 'cmc-speaker.png')
+	);
 	writeFileSync(`${OUTDIR}/${f.name}.txt`, text);
-	return { ...f, subject };
+	return { ...f, subject, plaintext };
 });
 
 const cards = rendered
@@ -37,8 +58,8 @@ const cards = rendered
     <section class="card">
       <header>
         <h2>${f.name}</h2>
-        <p class="alias">${f.alias}${f.subject ? ` · <em>${f.subject}</em>` : ''}</p>
-        <p class="links"><a href="${f.name}.html" target="_blank">Open HTML</a> · <a href="${f.name}.txt" target="_blank">Plain text</a></p>
+        <p class="alias">${f.alias}${f.plaintext ? ' · <strong>text-only</strong>' : ''}${f.subject ? ` · <em>${f.subject}</em>` : ''}</p>
+        <p class="links">${f.plaintext ? '' : `<a href="${f.name}.html" target="_blank">Open HTML</a> · `}<a href="${f.name}.txt" target="_blank">Plain text</a></p>
       </header>
       <iframe src="${f.name}.html" title="${f.name}"></iframe>
     </section>`

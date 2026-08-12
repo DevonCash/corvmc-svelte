@@ -105,12 +105,15 @@ export async function dispatchEmailOnly(params: {
 	toEmail: string;
 	templateAlias: string;
 	model: Record<string, unknown>;
+	/** Set when the recipient is expected to reply — see SendTemplateParams. */
+	replyTo?: string | null;
 }): Promise<void> {
 	try {
 		await sendEmailWithTemplate({
 			to: params.toEmail,
 			templateAlias: params.templateAlias,
 			model: prepareModel(params.templateAlias, params.model),
+			replyTo: params.replyTo,
 			tag: params.type
 		});
 	} catch (err) {

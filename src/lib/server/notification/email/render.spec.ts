@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { renderTemplate } from './render-preview';
+import { existsSync } from 'node:fs';
+import { renderTemplate, readMeta } from './render-preview';
 import { FIXTURES } from './fixtures';
 import { normalizeNotificationModel } from './normalize-model';
 
@@ -19,15 +20,27 @@ const byName = (name: string) => {
 	return renderTemplate(fixture.alias, fixture.model);
 };
 
-describe.each(FIXTURES)('$name', (fixture) => {
-	const { html, text } = renderTemplate(fixture.alias, fixture.model);
+// An email the recipient can reply to is sent as text/plain with no layout;
+// `corvmc-transactional` is for one-way mail only. The absence of a
+// LayoutTemplate is the authoritative marker, so derive the split from it
+// rather than tagging fixtures by hand.
+const isPlaintext = (alias: string) => !readMeta(alias).LayoutTemplate;
+const LAYOUT_FIXTURES = FIXTURES.filter((f) => !isPlaintext(f.alias));
+const PLAINTEXT_FIXTURES = FIXTURES.filter((f) => isPlaintext(f.alias));
 
-	it('leaves no unresolved template tags in the HTML part', () => {
-		expect(html).not.toMatch(/\{\{/);
-	});
+describe.each(FIXTURES)('$name', (fixture) => {
+	const { text } = renderTemplate(fixture.alias, fixture.model);
 
 	it('leaves no unresolved template tags in the text part', () => {
 		expect(text).not.toMatch(/\{\{/);
+	});
+});
+
+describe.each(LAYOUT_FIXTURES)('$name (layout)', (fixture) => {
+	const { html } = renderTemplate(fixture.alias, fixture.model);
+
+	it('leaves no unresolved template tags in the HTML part', () => {
+		expect(html).not.toMatch(/\{\{/);
 	});
 
 	it('populates the hidden preheader', () => {
@@ -45,6 +58,33 @@ describe.each(FIXTURES)('$name', (fixture) => {
 
 	it('links to notification preferences in the footer', () => {
 		expect(html).toContain('https://corvmc.org/member/account');
+	});
+});
+
+describe.each(PLAINTEXT_FIXTURES)('$name (plaintext)', (fixture) => {
+	const { html, text } = renderTemplate(fixture.alias, fixture.model);
+
+	it('ships no HTML part at all', () => {
+		expect(html).toBe('');
+		expect(existsSync(`postmark/templates/${fixture.alias}/content.html`)).toBe(false);
+	});
+
+	it('puts no markup in the text part', () => {
+		// Not a blanket `<...>` ban — `Name <addr@host>` is RFC 5322 address
+		// syntax and belongs in a plain-text body. This catches HTML leaking in.
+		expect(text).not.toMatch(/<\/?(?:p|div|br|a|span|table|tr|td|img|strong|em)\b[^>]*>/i);
+	});
+
+	it('carries none of the one-way layout chrome', () => {
+		for (const marker of ['#00859b', 'cmc-speaker.png', '6775 SW Philomath Blvd']) {
+			expect(text).not.toContain(marker);
+		}
+	});
+
+	it('tells the reader how to reply', () => {
+		// The whole point of the plaintext treatment: these are two-way emails,
+		// so every one of them has to say so in the body.
+		expect(text).toMatch(/repl(y|ies)/i);
 	});
 });
 
@@ -130,8 +170,45 @@ describe('ticket-confirmation', () => {
 });
 
 describe('inbox-reply', () => {
-	it('renders the staff-authored body as HTML — the one documented raw field', () => {
-		const { html } = byName('inbox-reply');
-		expect(html).toContain('<p>Thanks for reaching out');
+	// Regression: the body used to be injected as `{{{body}}}` into an HTML
+	// <div>, but the composer is a textarea and the body is plain text — so a
+	// two-paragraph reply reached the contact as one run-on line.
+	it("keeps the staffer's paragraph break", () => {
+		const { text } = byName('inbox-reply');
+		expect(text).toContain(
+			"wide open right now.\n\nGive me two or three dates that work & I'll hold one for you."
+		);
+	});
+
+	it('leaves the ampersand and apostrophe unencoded', () => {
+		const { text } = byName('inbox-reply');
+		expect(text).not.toContain('&amp;');
+		expect(text).not.toContain('&#39;');
+	});
+
+	it('signs off with the RFC 3676 signature delimiter', () => {
+		// `-- ` on its own line is what makes clients collapse the signature and
+		// what Postmark's StrippedTextReply cuts on when the contact replies.
+		expect(byName('inbox-reply').text).toContain('\n-- \n');
+	});
+});
+
+describe('contact-alert', () => {
+	const { text } = byName('contact-alert');
+
+	it('says what it is and who sent it', () => {
+		expect(text).toContain('Charlie Rivera');
+		expect(text).toContain('charlie@example.com');
+		expect(text).toContain('contact form');
+	});
+
+	it("keeps the submitter's line breaks and leaves their text unencoded", () => {
+		expect(text).toContain("I run a small folk trio & we're hoping to play a Saturday in March.");
+		expect(text).not.toContain('&amp;');
+		expect(text).not.toContain('&#39;');
+	});
+
+	it('links the thread as a bare URL', () => {
+		expect(text).toContain('https://corvmc.org/staff/inbox/thr-1');
 	});
 });

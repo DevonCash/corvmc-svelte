@@ -25,9 +25,24 @@ interface InboundMessageArgs {
 }
 
 const mockAddInboundMessage = vi.fn(async (_params: InboundMessageArgs) => ({ id: 'msg-1' }));
-vi.mock('./message-service', () => ({
-	addInboundMessage: (params: InboundMessageArgs) => mockAddInboundMessage(params)
+const mockAddOutboundMessage = vi.fn(async (_params: Record<string, unknown>) => ({
+	id: 'out-1'
 }));
+const mockAddNote = vi.fn(async (_params: Record<string, unknown>) => ({ id: 'note-1' }));
+vi.mock('./message-service', () => ({
+	addInboundMessage: (params: InboundMessageArgs) => mockAddInboundMessage(params),
+	addOutboundMessage: (params: Record<string, unknown>) => mockAddOutboundMessage(params),
+	addNote: (params: Record<string, unknown>) => mockAddNote(params)
+}));
+
+const mockFindStaffUserByEmail = vi.fn(
+	async (_email: string): Promise<{ id: string; name: string; email: string } | null> => null
+);
+vi.mock('$lib/server/authorization', () => ({
+	findStaffUserByEmail: (email: string) => mockFindStaffUserByEmail(email)
+}));
+
+vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 const mockParseReplyMailboxHash = vi.fn((): string | null => null);
 vi.mock('./reply-address', () => ({
@@ -49,6 +64,9 @@ beforeEach(() => {
 	mockFindOrCreateThread.mockResolvedValue({ id: 'new-thread', channel: 'email' });
 	mockFindThreadById.mockResolvedValue(undefined);
 	mockAddInboundMessage.mockResolvedValue({ id: 'msg-1' });
+	mockAddOutboundMessage.mockResolvedValue({ id: 'out-1' });
+	mockAddNote.mockResolvedValue({ id: 'note-1' });
+	mockFindStaffUserByEmail.mockResolvedValue(null);
 	mockParseReplyMailboxHash.mockReturnValue(null);
 	mockIsChannelEnabled.mockResolvedValue(true);
 });
@@ -151,6 +169,141 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 		expect(result.thread).toMatchObject({ contactEmail: 'charlie@example.com' });
 		const metadata = mockAddInboundMessage.mock.calls[0][0].channelMetadata!;
 		expect(metadata.fromEmail).toBe('someone-else@example.com');
+	});
+});
+
+describe('handlePostmarkInbound — staff reply relay', () => {
+	const STAFF = { id: 'staff-1', name: 'Ada', email: 'ada@corvmc.org' };
+
+	/** A thread the hash resolves, plus a staff member on the From line. */
+	function staffReplying(overrides: Partial<PostmarkInboundPayload> = {}) {
+		mockParseReplyMailboxHash.mockReturnValue('thread-1');
+		mockFindThreadById.mockResolvedValue({
+			id: 'thread-1',
+			channel: 'web',
+			status: 'open',
+			contactEmail: 'charlie@example.com'
+		});
+		mockFindStaffUserByEmail.mockResolvedValue(STAFF);
+		return payload({
+			From: STAFF.email,
+			FromName: 'Ada',
+			FromFull: { Email: STAFF.email, Name: 'Ada' },
+			...overrides
+		});
+	}
+
+	it('relays a staff reply to the contact and records it as outbound', async () => {
+		await handlePostmarkInbound(staffReplying());
+
+		expect(mockAddOutboundMessage).toHaveBeenCalledWith({
+			threadId: 'thread-1',
+			body: 'thanks!',
+			authorUserId: 'staff-1',
+			authorName: 'Ada'
+		});
+		// Recording it as inbound would attribute the staffer's words to the
+		// contact and never deliver them.
+		expect(mockAddInboundMessage).not.toHaveBeenCalled();
+	});
+
+	it('sends only the stripped reply, never the quoted alert', async () => {
+		// The quoted alert carries the staff inbox URL and the internal reply
+		// note — relaying it would ship both to a member of the public.
+		await handlePostmarkInbound(
+			staffReplying({
+				StrippedTextReply: 'Sure, March works.',
+				TextBody: 'Sure, March works.\n\nOn Tue, CorvMC wrote:\n> the whole alert'
+			})
+		);
+
+		expect(mockAddOutboundMessage.mock.calls[0][0].body).toBe('Sure, March works.');
+	});
+
+	it('strips the quote itself when Postmark hands back nothing', async () => {
+		await handlePostmarkInbound(
+			staffReplying({
+				StrippedTextReply: '',
+				TextBody: 'Sure, March works.\n\nOn Tue, CorvMC wrote:\n> the whole alert'
+			})
+		);
+
+		expect(mockAddOutboundMessage.mock.calls[0][0].body).toBe('Sure, March works.');
+	});
+
+	it('records a note instead of relaying an empty message', async () => {
+		await handlePostmarkInbound(staffReplying({ StrippedTextReply: '', TextBody: '' }));
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockAddNote).toHaveBeenCalledTimes(1);
+	});
+
+	it('keeps the text as a note when the relay fails to send', async () => {
+		// The webhook route always returns 200, so Postmark never retries — without
+		// this the staff member's reply would vanish with no trace.
+		mockAddOutboundMessage.mockRejectedValue(new Error('Postmark 502'));
+
+		const result = await handlePostmarkInbound(staffReplying());
+
+		expect(mockAddNote.mock.calls[0][0].body).toContain('thanks!');
+		expect(result.message).toBeNull();
+	});
+
+	it('does not relay an out-of-office auto-reply', async () => {
+		await handlePostmarkInbound(
+			staffReplying({
+				Headers: [
+					{ Name: 'Message-ID', Value: '<ooo@example.com>' },
+					{ Name: 'Auto-Submitted', Value: 'auto-replied' }
+				]
+			})
+		);
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockAddInboundMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not relay when the staff member is the thread contact', async () => {
+		// A staffer who used the contact form themselves — relaying would mail
+		// them their own words and loop.
+		mockParseReplyMailboxHash.mockReturnValue('thread-1');
+		mockFindThreadById.mockResolvedValue({
+			id: 'thread-1',
+			channel: 'web',
+			status: 'open',
+			contactEmail: 'ADA@corvmc.org'
+		});
+		mockFindStaffUserByEmail.mockResolvedValue(STAFF);
+
+		await handlePostmarkInbound(
+			payload({
+				From: 'ada@corvmc.org',
+				FromFull: { Email: 'ada@corvmc.org', Name: 'Ada' }
+			})
+		);
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockAddInboundMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it('still records a non-staff sender as inbound', async () => {
+		// A contact forwarding our reply to a colleague who answers. The signed
+		// address now circulates in staff mailboxes, so anyone holding it can
+		// write to the thread — deliberately unchanged, pinned so tightening it
+		// later is a decision rather than a side effect.
+		mockParseReplyMailboxHash.mockReturnValue('thread-1');
+		mockFindThreadById.mockResolvedValue({
+			id: 'thread-1',
+			channel: 'web',
+			status: 'open',
+			contactEmail: 'charlie@example.com'
+		});
+		mockFindStaffUserByEmail.mockResolvedValue(null);
+
+		await handlePostmarkInbound(payload({ From: 'someone-else@example.com' }));
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockAddInboundMessage).toHaveBeenCalledTimes(1);
 	});
 });
 

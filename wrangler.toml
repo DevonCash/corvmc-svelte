@@ -86,8 +86,15 @@ POSTMARK_BROADCAST_STREAM = "broadcast"
 # Reply-To (reply+<threadId>.<sig>@...) so the response threads back into the same
 # conversation via Postmark's MailboxHash. Requires an MX record on this subdomain
 # pointing at inbound.postmarkapp.com — do NOT use corvmc.org itself, which
-# receives real mail. Until that MX is live, leave this UNSET: replies then fall
-# back to Reply-To: STAFF_CONTACT_EMAIL, which reaches a human instead of bouncing.
+# receives real mail. Until that MX is live, leave this UNSET: replies to a contact
+# fall back to Reply-To: STAFF_CONTACT_EMAIL, which reaches a human instead of
+# bouncing.
+#
+# This also gates the contact-form alert's relay. Set, a staff member can answer
+# the alert straight from their mail client and the inbox both delivers the reply
+# to the sender and records it on the thread. Unset, the alert's Reply-To is the
+# sender's own address: the reply still arrives, but nothing is logged, and the
+# email says so.
 # INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
 # Public Cloudflare Turnstile site key for the bot-protection widget on the public
 # sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
