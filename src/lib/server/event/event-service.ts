@@ -1,5 +1,11 @@
 import { db, getRowCount } from '$lib/server/db';
-import { event, type EventSource } from '$lib/server/db/schema/event';
+import {
+	event,
+	eventBand,
+	type EventSource,
+	type EventBandStatus,
+	type LineupEntry
+} from '$lib/server/db/schema/event';
 import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -18,6 +24,7 @@ import {
 	count,
 	getTableColumns
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -45,7 +52,8 @@ export interface EventRow {
 	title: string;
 	description: string | null;
 	startsAt: Date;
-	endsAt: Date;
+	/** Null when unknown — see the column comment on `event.endsAt`. */
+	endsAt: Date | null;
 	doorsAt: Date | null;
 	status: string;
 	publishedAt: Date | null;
@@ -277,11 +285,14 @@ export async function checkRebookNeeded(
  * raw `event_time_order` CHECK-constraint failure (a 500 with no explanation).
  */
 function assertTimeOrder(
-	existing: { startsAt: Date; endsAt: Date },
-	params: { startsAt?: Date; endsAt?: Date }
+	existing: { startsAt: Date; endsAt: Date | null },
+	params: { startsAt?: Date; endsAt?: Date | null }
 ): void {
 	const startsAt = params.startsAt ?? existing.startsAt;
-	const endsAt = params.endsAt ?? existing.endsAt;
+	const endsAt = params.endsAt !== undefined ? params.endsAt : existing.endsAt;
+	// An open-ended gig has nothing to order against — a band backfilling old
+	// shows usually can't say when the night finished.
+	if (endsAt == null) return;
 	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
 }
 
@@ -474,13 +485,24 @@ export async function unpublishWithBandNotice(
 
 	if (row.source !== 'band' || !row.bandId || !row.bandName) return;
 
+	// Everyone on the bill loses the date, not just the band that booked it, so
+	// notify every confirmed act. `bandId`/`bandName` in the payload stay the
+	// owner's, which is what the listeners and email template already expect.
+	const onBill = await db
+		.select({ bandId: eventBand.bandId })
+		.from(eventBand)
+		.where(and(eq(eventBand.eventId, eventId), eq(eventBand.status, 'confirmed')));
+	const notifyBandIds = [
+		...new Set([row.bandId, ...onBill.map((r) => r.bandId).filter((id): id is string => !!id)])
+	];
+
 	const admins = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
 		.where(
 			and(
-				eq(bandMember.bandId, row.bandId),
+				inArray(bandMember.bandId, notifyBandIds),
 				inArray(bandMember.role, ['owner', 'admin']),
 				eq(bandMember.status, 'active')
 			)
@@ -675,6 +697,338 @@ export async function listAll(
 }
 
 // ---------------------------------------------------------------------------
+// Lineup (the bill)
+// ---------------------------------------------------------------------------
+//
+// Two different things live here and must not be conflated:
+//
+//   event.bandId  — who MANAGES the record. One band. Edits, publishes, cancels.
+//   event_band    — who PLAYED. A list of names, each optionally linked to a
+//                   platform band.
+//
+// The asymmetry that follows is deliberate and load-bearing:
+//
+//   reads scoped to a band's profile  filter to `confirmed`
+//   reads scoped to an event          filter not at all
+//
+// So a band can credit anyone on its own bill (it's their factual statement
+// about their own show) without that credit appearing on the named band's
+// profile until they agree. See `docs/specs/event-lineup-spec.md`.
+
+export interface LineupRow {
+	id: string;
+	name: string;
+	bandId: string | null;
+	bandSlug: string | null;
+	billingOrder: number;
+	status: EventBandStatus;
+	note: string | null;
+}
+
+const LINEUP_MAX = 12;
+
+function lineupSelect() {
+	return db
+		.select({
+			id: eventBand.id,
+			eventId: eventBand.eventId,
+			name: eventBand.name,
+			bandId: eventBand.bandId,
+			bandSlug: band.slug,
+			billingOrder: eventBand.billingOrder,
+			status: eventBand.status,
+			note: eventBand.note
+		})
+		.from(eventBand)
+		.leftJoin(band, eq(band.id, eventBand.bandId));
+}
+
+/** The whole bill, every status, ordered. For rendering an event. */
+export async function getEventLineup(eventId: string): Promise<LineupRow[]> {
+	const rows = await lineupSelect()
+		.where(eq(eventBand.eventId, eventId))
+		.orderBy(asc(eventBand.billingOrder));
+	return rows.map(({ eventId: _eventId, ...r }) => r);
+}
+
+/** Batched variant — list pages would otherwise fire one query per row. */
+export async function getEventLineups(eventIds: string[]): Promise<Map<string, LineupRow[]>> {
+	const out = new Map<string, LineupRow[]>();
+	if (eventIds.length === 0) return out;
+
+	const rows = await lineupSelect()
+		.where(inArray(eventBand.eventId, eventIds))
+		.orderBy(asc(eventBand.billingOrder));
+
+	for (const { eventId, ...r } of rows) {
+		const list = out.get(eventId);
+		if (list) list.push(r);
+		else out.set(eventId, [r]);
+	}
+	return out;
+}
+
+export interface SetLineupOptions {
+	/** The band performing the edit. Its own slot is auto-confirmed. */
+	actingBandId?: string;
+	/** Staff booked the show, so every act they name is already agreed. */
+	asStaff?: boolean;
+}
+
+/**
+ * Replace an event's bill.
+ *
+ * Status resolution per entry:
+ *   no bandId                        -> unlinked  (nobody to ask)
+ *   bandId is the acting band/staff  -> confirmed
+ *   otherwise                        -> pending, and the band is notified
+ *
+ * Rows that already exist keep their status, with one hard rule: a `declined`
+ * row is never resurrected. Re-adding a band that said no leaves it declined,
+ * which is what stops an owner from re-inviting on a loop.
+ */
+export async function setEventLineup(
+	eventId: string,
+	entries: LineupEntry[],
+	opts: SetLineupOptions = {}
+): Promise<void> {
+	if (entries.length > LINEUP_MAX) {
+		throw new Error(`At most ${LINEUP_MAX} acts on a bill`);
+	}
+
+	const evt = await getById(eventId);
+	if (!evt) throw new Error('Event not found');
+
+	// Dedupe on band identity first, then on the visible name, so "Paper Wolves"
+	// typed twice collapses even when neither entry is linked.
+	const seenBands = new Set<string>();
+	const seenNames = new Set<string>();
+	const deduped: LineupEntry[] = [];
+	for (const e of entries) {
+		const name = e.name.trim();
+		if (!name) continue;
+		const nameKey = name.toLowerCase();
+		if (e.bandId) {
+			if (seenBands.has(e.bandId)) continue;
+			seenBands.add(e.bandId);
+		} else if (seenNames.has(nameKey)) {
+			continue;
+		}
+		seenNames.add(nameKey);
+		deduped.push({ ...e, name });
+	}
+
+	const existing = await db.select().from(eventBand).where(eq(eventBand.eventId, eventId));
+	const byBand = new Map(existing.filter((r) => r.bandId).map((r) => [r.bandId!, r]));
+	const byName = new Map(existing.filter((r) => !r.bandId).map((r) => [r.name.toLowerCase(), r]));
+
+	// The owner's slot is not the owner's to delete.
+	const ownerRow = evt.bandId ? byBand.get(evt.bandId) : undefined;
+	const hasOwner = deduped.some((e) => e.bandId && e.bandId === evt.bandId);
+	if (ownerRow && !hasOwner) {
+		deduped.unshift({
+			name: ownerRow.name,
+			bandId: ownerRow.bandId ?? undefined,
+			billingOrder: 0,
+			note: ownerRow.note ?? undefined
+		});
+	}
+
+	const invited: { bandId: string; name: string }[] = [];
+	const rows = deduped.map((e, i) => {
+		const prior = e.bandId ? byBand.get(e.bandId) : byName.get(e.name.toLowerCase());
+
+		let status: EventBandStatus;
+		if (!e.bandId) {
+			status = 'unlinked';
+		} else if (prior) {
+			// Keep whatever the band already decided. Notably: declined stays declined.
+			status = prior.status === 'unlinked' ? 'pending' : prior.status;
+		} else if (opts.asStaff || e.bandId === opts.actingBandId) {
+			status = 'confirmed';
+		} else {
+			status = 'pending';
+		}
+
+		if (status === 'pending' && !prior && e.bandId) {
+			invited.push({ bandId: e.bandId, name: e.name });
+		}
+
+		return {
+			eventId,
+			name: e.name,
+			bandId: e.bandId ?? null,
+			billingOrder: i,
+			status,
+			note: e.note ?? null,
+			addedByBandId: opts.actingBandId ?? null
+		};
+	});
+
+	await db.delete(eventBand).where(eq(eventBand.eventId, eventId));
+	if (rows.length) {
+		// D1 caps a statement at 100 bound params; ~7 columns per row.
+		for (let i = 0; i < rows.length; i += 12) {
+			await db.insert(eventBand).values(rows.slice(i, i + 12));
+		}
+	}
+
+	if (invited.length)
+		await notifyLineupInvites(
+			evt,
+			invited.map((i) => i.bandId)
+		);
+}
+
+/**
+ * Tell each newly-invited band's owners/admins they're on a bill. Resolved here
+ * rather than in the listener so notification handlers stay DB-free — the same
+ * split `unpublishWithBandNotice` uses.
+ */
+async function notifyLineupInvites(
+	evt: { id: string; title: string; startsAt: Date; bandId: string | null },
+	invitedBandIds: string[]
+): Promise<void> {
+	const [owner] = evt.bandId
+		? await db.select({ name: band.name }).from(band).where(eq(band.id, evt.bandId)).limit(1)
+		: [undefined];
+
+	const rows = await db
+		.select({
+			bandId: band.id,
+			bandName: band.name,
+			bandSlug: band.slug,
+			userId: user.id,
+			userName: user.name,
+			userEmail: user.email
+		})
+		.from(bandMember)
+		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.innerJoin(user, eq(user.id, bandMember.userId))
+		.where(
+			and(
+				inArray(bandMember.bandId, invitedBandIds),
+				inArray(bandMember.role, ['owner', 'admin']),
+				eq(bandMember.status, 'active')
+			)
+		);
+
+	const byBand = new Map<string, typeof rows>();
+	for (const r of rows) {
+		const list = byBand.get(r.bandId);
+		if (list) list.push(r);
+		else byBand.set(r.bandId, [r]);
+	}
+
+	// Fire-and-forget: a slow mail hop must not stall saving the bill.
+	Promise.resolve().then(async () => {
+		for (const [bandId, admins] of byBand) {
+			try {
+				await domainEvents.emit('event.lineup_invited', {
+					eventId: evt.id,
+					eventTitle: evt.title,
+					startsAt: evt.startsAt.toISOString(),
+					invitedBandId: bandId,
+					invitedBandName: admins[0].bandName,
+					invitedBandSlug: admins[0].bandSlug,
+					ownerBandName: owner?.name ?? null,
+					bandAdmins: admins.map((a) => ({
+						userId: a.userId,
+						userName: a.userName,
+						userEmail: a.userEmail
+					}))
+				});
+			} catch (err) {
+				captureException(err, { event: 'event.lineup_invited', eventId: evt.id });
+			}
+		}
+	});
+}
+
+async function setLineupSlotStatus(
+	eventId: string,
+	bandId: string,
+	status: Extract<EventBandStatus, 'confirmed' | 'declined'>
+): Promise<void> {
+	await db
+		.update(eventBand)
+		.set({ status })
+		.where(and(eq(eventBand.eventId, eventId), eq(eventBand.bandId, bandId)));
+}
+
+/** The invited band agrees. Only now does the show reach their profile. */
+export async function confirmLineupSlot(eventId: string, bandId: string): Promise<void> {
+	await setLineupSlotStatus(eventId, bandId, 'confirmed');
+}
+
+/**
+ * The invited band says no. The row keeps both its name and its bandId — the
+ * name so the owner's bill still reads correctly, the bandId so the partial
+ * unique index blocks a re-invite.
+ */
+export async function declineLineupSlot(eventId: string, bandId: string): Promise<void> {
+	await setLineupSlotStatus(eventId, bandId, 'declined');
+}
+
+/** Staff: attach a platform band to a name that was typed in free-text. */
+export async function linkLineupSlot(eventBandId: string, bandId: string): Promise<void> {
+	await db
+		.update(eventBand)
+		.set({ bandId, status: 'pending' })
+		.where(and(eq(eventBand.id, eventBandId), eq(eventBand.status, 'unlinked')));
+}
+
+export interface LineupInvite {
+	eventId: string;
+	eventTitle: string;
+	startsAt: Date;
+	location: string | null;
+	billingOrder: number;
+	note: string | null;
+	ownerBandName: string | null;
+}
+
+/** Bills this band has been named on but hasn't answered yet. */
+export async function listBandLineupInvites(bandId: string): Promise<LineupInvite[]> {
+	const owner = alias(band, 'owner_band');
+	return db
+		.select({
+			eventId: event.id,
+			eventTitle: event.title,
+			startsAt: event.startsAt,
+			location: event.location,
+			billingOrder: eventBand.billingOrder,
+			note: eventBand.note,
+			ownerBandName: owner.name
+		})
+		.from(eventBand)
+		.innerJoin(event, eq(event.id, eventBand.eventId))
+		.leftJoin(owner, eq(owner.id, event.bandId))
+		.where(
+			and(
+				eq(eventBand.bandId, bandId),
+				eq(eventBand.status, 'pending'),
+				ne(event.status, 'cancelled')
+			)
+		)
+		.orderBy(asc(event.startsAt));
+}
+
+/**
+ * Events a band is publicly credited on: ones it owns, plus ones it confirmed.
+ * The subquery is the single definition of "shows on this band's profile".
+ */
+function confirmedForBand(bandId: string) {
+	return inArray(
+		event.id,
+		db
+			.select({ id: eventBand.eventId })
+			.from(eventBand)
+			.where(and(eq(eventBand.bandId, bandId), eq(eventBand.status, 'confirmed')))
+	);
+}
+
+// ---------------------------------------------------------------------------
 // Band Events
 // ---------------------------------------------------------------------------
 
@@ -684,13 +1038,16 @@ export interface CreateBandEventParams {
 	title: string;
 	description?: string;
 	startsAt: Date;
-	endsAt: Date;
+	/** Omit when the band doesn't know — common when backfilling old gigs. */
+	endsAt?: Date | null;
 	doorsAt?: Date;
 	location?: string;
 	tags?: string;
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. Bands never sell through our checkout. */
 	ticketPrice?: number | null;
+	/** Other acts on the bill. The owner's own slot is written automatically. */
+	support?: LineupEntry[];
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -710,10 +1067,11 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		tags,
 		externalTicketUrl,
 		ticketPrice,
-		posterFile
+		posterFile,
+		support
 	} = params;
 
-	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+	if (endsAt != null && startsAt >= endsAt) throw new Error('Event must end after it starts');
 	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
 	assertValidTicketPrice(ticketPrice);
 
@@ -723,7 +1081,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			title,
 			description: description ?? null,
 			startsAt,
-			endsAt,
+			endsAt: endsAt ?? null,
 			doorsAt: doorsAt ?? null,
 			tags: tags ?? null,
 			location: location ?? null,
@@ -734,6 +1092,32 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			createdByUserId
 		})
 		.returning();
+
+	// Invariant: setting event.bandId always writes the matching confirmed
+	// lineup row. The owner heads its own bill until told otherwise.
+	const [owner] = await db
+		.select({ name: band.name })
+		.from(band)
+		.where(eq(band.id, bandId))
+		.limit(1);
+	await db.insert(eventBand).values({
+		eventId: row.id,
+		name: owner?.name ?? 'Unknown band',
+		bandId,
+		billingOrder: 0,
+		status: 'confirmed',
+		addedByBandId: bandId
+	});
+
+	if (support?.length) {
+		await setEventLineup(
+			row.id,
+			[{ name: owner?.name ?? '', bandId, billingOrder: 0 }, ...support],
+			{
+				actingBandId: bandId
+			}
+		);
+	}
 
 	if (posterFile) {
 		const ext = extensionFromType(posterFile.contentType);
@@ -753,7 +1137,8 @@ export interface UpdateBandEventParams {
 	title?: string;
 	description?: string | null;
 	startsAt?: Date;
-	endsAt?: Date;
+	/** `undefined` leaves it alone; `null` clears a previously-set end time. */
+	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string | null;
 	tags?: string | null;
@@ -821,13 +1206,111 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 	}
 }
 
+/** Remove a gig's poster. Owner-only, like every other edit. */
+export async function clearBandEventPoster(eventId: string, bandId: string): Promise<void> {
+	const existing = await getById(eventId);
+	if (!existing) throw new Error('Event not found');
+	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (!existing.posterKey) return;
+
+	await deleteObject(existing.posterKey);
+	await db
+		.update(event)
+		.set({ posterKey: null, updatedAt: new Date() })
+		.where(eq(event.id, eventId));
+}
+
+/** One backfilled gig, already parsed and validated by `parseGigImport`. */
+export interface ImportGigRow {
+	title: string;
+	startsAt: Date;
+	location?: string;
+	externalTicketUrl?: string;
+	/** Free-text support credits. Always unlinked — see `importBandEvents`. */
+	support?: string[];
+}
+
+const IMPORT_MAX = 100;
+
+/**
+ * Bulk-create past gigs for a band.
+ *
+ * Imported rows are published (they already happened) and carry no end time —
+ * that's what the nullable column is for. Support acts land as `unlinked`
+ * credits no matter what: a hundred-gig backfill must never fan out a hundred
+ * invites, so linking a name to an account stays a deliberate, separate act.
+ */
+export async function importBandEvents(
+	bandId: string,
+	createdByUserId: string,
+	rows: ImportGigRow[]
+): Promise<number> {
+	if (rows.length === 0) return 0;
+	if (rows.length > IMPORT_MAX) throw new Error(`At most ${IMPORT_MAX} gigs per import`);
+
+	const [owner] = await db
+		.select({ name: band.name })
+		.from(band)
+		.where(eq(band.id, bandId))
+		.limit(1);
+	if (!owner) throw new Error('Band not found');
+
+	const values = rows.map((r) => ({
+		title: r.title,
+		startsAt: r.startsAt,
+		endsAt: null,
+		location: r.location ?? null,
+		externalTicketUrl: r.externalTicketUrl ?? null,
+		bandId,
+		source: 'band' as const,
+		status: 'published' as const,
+		publishedAt: new Date(),
+		createdByUserId
+	}));
+
+	// D1 caps a statement at 100 bound params; ~10 columns per row here.
+	const inserted: { id: string }[] = [];
+	for (let i = 0; i < values.length; i += 8) {
+		const chunk = await db
+			.insert(event)
+			.values(values.slice(i, i + 8))
+			.returning({ id: event.id });
+		inserted.push(...chunk);
+	}
+
+	const credits = inserted.flatMap((row, i) => [
+		{
+			eventId: row.id,
+			name: owner.name,
+			bandId,
+			billingOrder: 0,
+			status: 'confirmed' as const,
+			addedByBandId: bandId
+		},
+		...(rows[i].support ?? []).slice(0, 11).map((name, j) => ({
+			eventId: row.id,
+			name,
+			bandId: null,
+			billingOrder: j + 1,
+			status: 'unlinked' as const,
+			addedByBandId: bandId
+		}))
+	]);
+
+	for (let i = 0; i < credits.length; i += 12) {
+		await db.insert(eventBand).values(credits.slice(i, i + 12));
+	}
+
+	return inserted.length;
+}
+
 /** Published band events with startsAt in the future. */
 export async function listBandEventsUpcoming(bandId: string, limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
 		.from(event)
 		.where(
-			and(eq(event.bandId, bandId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
+			and(confirmedForBand(bandId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
 		)
 		.orderBy(asc(event.startsAt));
 
@@ -835,9 +1318,19 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 	return query;
 }
 
-/** All events for a band (all statuses), newest first. */
-export async function listBandEvents(bandId: string): Promise<EventRow[]> {
-	return db.select().from(event).where(eq(event.bandId, bandId)).orderBy(desc(event.startsAt));
+export interface BandEventRow extends EventRow {
+	/** False for shows the band was credited on but doesn't manage. */
+	isOwner: boolean;
+}
+
+/** All events on a band's bill (all statuses), newest first. */
+export async function listBandEvents(bandId: string): Promise<BandEventRow[]> {
+	const rows = await db
+		.select()
+		.from(event)
+		.where(confirmedForBand(bandId))
+		.orderBy(desc(event.startsAt));
+	return rows.map((r) => ({ ...r, isOwner: r.bandId === bandId }));
 }
 
 /** Count of a band's published past shows — the legacy / veteran signal. */
@@ -846,7 +1339,7 @@ export async function countBandPastEvents(bandId: string): Promise<number> {
 		.select({ value: count() })
 		.from(event)
 		.where(
-			and(eq(event.bandId, bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+			and(confirmedForBand(bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
 		);
 	return row?.value ?? 0;
 }
@@ -863,7 +1356,7 @@ export async function listBandEventsPast(
 		.select()
 		.from(event)
 		.where(
-			and(eq(event.bandId, bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+			and(confirmedForBand(bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
 		)
 		.orderBy(desc(event.startsAt))
 		.limit(opts.limit + 1)
@@ -879,23 +1372,89 @@ export interface MemberShowRow extends EventRow {
  * Upcoming published shows aggregated across all of a member's *active* bands,
  * each tagged with the band it belongs to. Soonest first.
  */
-export async function listMemberUpcomingShows(userId: string): Promise<MemberShowRow[]> {
-	const rows = await db
-		.select({ event, bandName: band.name, bandSlug: band.slug })
-		.from(event)
-		.innerJoin(band, eq(band.id, event.bandId))
+/**
+ * Events any of this member's active bands is confirmed on.
+ *
+ * Expressed as a subquery rather than a join so one row comes back per event.
+ * A member in two bands on the same bill would otherwise be counted twice —
+ * and with limit+1 paging, a post-hoc dedupe would make `hasMore` lie.
+ */
+function confirmedForMember(userId: string) {
+	return inArray(
+		event.id,
+		db
+			.select({ id: eventBand.eventId })
+			.from(eventBand)
+			.innerJoin(
+				bandMember,
+				and(
+					eq(bandMember.bandId, eventBand.bandId),
+					eq(bandMember.userId, userId),
+					eq(bandMember.status, 'active')
+				)
+			)
+			.where(eq(eventBand.status, 'confirmed'))
+	);
+}
+
+/**
+ * Attach the byline band to each event: whichever of the member's own bands is
+ * credited on it, taking the highest-billed when there is more than one.
+ */
+async function withMemberBylines(rows: EventRow[], userId: string): Promise<MemberShowRow[]> {
+	if (rows.length === 0) return [];
+
+	const credits = await db
+		.select({
+			eventId: eventBand.eventId,
+			billingOrder: eventBand.billingOrder,
+			bandName: band.name,
+			bandSlug: band.slug
+		})
+		.from(eventBand)
+		.innerJoin(band, eq(band.id, eventBand.bandId))
 		.innerJoin(
 			bandMember,
 			and(
-				eq(bandMember.bandId, band.id),
+				eq(bandMember.bandId, eventBand.bandId),
 				eq(bandMember.userId, userId),
 				eq(bandMember.status, 'active')
 			)
 		)
-		.where(and(eq(event.status, 'published'), gt(event.startsAt, new Date())))
+		.where(
+			and(
+				inArray(
+					eventBand.eventId,
+					rows.map((r) => r.id)
+				),
+				eq(eventBand.status, 'confirmed')
+			)
+		)
+		.orderBy(asc(eventBand.billingOrder));
+
+	const byEvent = new Map<string, { bandName: string; bandSlug: string }>();
+	for (const c of credits) {
+		if (!byEvent.has(c.eventId))
+			byEvent.set(c.eventId, { bandName: c.bandName, bandSlug: c.bandSlug });
+	}
+
+	return rows.map((r) => ({
+		...r,
+		bandName: byEvent.get(r.id)?.bandName ?? '',
+		bandSlug: byEvent.get(r.id)?.bandSlug ?? ''
+	}));
+}
+
+export async function listMemberUpcomingShows(userId: string): Promise<MemberShowRow[]> {
+	const rows = await db
+		.select()
+		.from(event)
+		.where(
+			and(confirmedForMember(userId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
+		)
 		.orderBy(asc(event.startsAt));
 
-	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+	return withMemberBylines(rows, userId);
 }
 
 /**
@@ -907,23 +1466,20 @@ export async function listMemberPastShows(
 	opts: { limit: number; offset: number }
 ): Promise<MemberShowRow[]> {
 	const rows = await db
-		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.select()
 		.from(event)
-		.innerJoin(band, eq(band.id, event.bandId))
-		.innerJoin(
-			bandMember,
+		.where(
 			and(
-				eq(bandMember.bandId, band.id),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				confirmedForMember(userId),
+				eq(event.status, 'published'),
+				lte(event.startsAt, new Date())
 			)
 		)
-		.where(and(eq(event.status, 'published'), lte(event.startsAt, new Date())))
 		.orderBy(desc(event.startsAt))
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
 
-	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+	return withMemberBylines(rows, userId);
 }
 
 /** Count of past published shows across a member's active bands. */
@@ -931,15 +1487,13 @@ export async function countMemberPastShows(userId: string): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
 		.from(event)
-		.innerJoin(
-			bandMember,
+		.where(
 			and(
-				eq(bandMember.bandId, event.bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				confirmedForMember(userId),
+				eq(event.status, 'published'),
+				lte(event.startsAt, new Date())
 			)
-		)
-		.where(and(eq(event.status, 'published'), lte(event.startsAt, new Date())));
+		);
 	return row?.value ?? 0;
 }
 

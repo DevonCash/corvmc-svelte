@@ -153,6 +153,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: false, inApp: true, sms: false }
 	},
 	{
+		key: 'band_lineup_invited',
+		label: 'Added to a bill',
+		description: 'Notification when another band lists yours on the lineup for their show',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'band_event_unpublished',
 		label: 'Event unlisted by staff',
 		description: 'Notification when staff unpublish one of your band’s events after a report',

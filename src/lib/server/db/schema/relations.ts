@@ -24,7 +24,15 @@ export const relations = defineRelations(schema, (t) => ({
 	band: {
 		genres: t.many.bandGenre(),
 		members: t.many.bandMember(),
-		events: t.many.event()
+		/** Events this band OWNS. Shows it merely played are `lineups`. */
+		events: t.many.event(),
+		// eventBand points at band twice (the act, and who added it), so both
+		// sides need a matching alias to say which FK this relation follows.
+		lineups: t.many.eventBand({
+			from: t.band.id,
+			to: t.eventBand.bandId,
+			alias: 'eventBand_band'
+		})
 	},
 	bandGenre: {
 		band: t.one.band({ from: t.bandGenre.bandId, to: t.band.id })
@@ -43,7 +51,18 @@ export const relations = defineRelations(schema, (t) => ({
 	event: {
 		reservation: t.one.reservation({ from: t.event.reservationId, to: t.reservation.id }),
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
-		band: t.one.band({ from: t.event.bandId, to: t.band.id })
+		/** The owning band, not the bill. Who played is `lineup`. */
+		band: t.one.band({ from: t.event.bandId, to: t.band.id }),
+		lineup: t.many.eventBand()
+	},
+	eventBand: {
+		event: t.one.event({ from: t.eventBand.eventId, to: t.event.id }),
+		band: t.one.band({ from: t.eventBand.bandId, to: t.band.id, alias: 'eventBand_band' }),
+		addedByBand: t.one.band({
+			from: t.eventBand.addedByBandId,
+			to: t.band.id,
+			alias: 'eventBand_addedBy'
+		})
 	},
 	equipmentCategory: {
 		equipment: t.many.equipment()

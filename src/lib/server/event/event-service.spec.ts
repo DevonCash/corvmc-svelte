@@ -673,6 +673,7 @@ describe('EventService', () => {
 			selectResultQueue = [
 				[publishedBandEvent], // event + band lookup
 				[{ ...mockEventRow, status: 'published' }], // getById inside unpublish()
+				[{ bandId: 'band-1' }], // confirmed lineup
 				[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }] // band admins
 			];
 
@@ -690,6 +691,33 @@ describe('EventService', () => {
 					bandName: 'The Squares',
 					notes: 'Poster violated guidelines',
 					bandAdmins: [{ userId: 'u9', userName: 'Admin', userEmail: 'admin@example.com' }]
+				})
+			);
+		});
+
+		it('notifies every confirmed band on the bill, not just the owner', async () => {
+			selectResultQueue = [
+				[publishedBandEvent],
+				[{ ...mockEventRow, status: 'published' }],
+				// A two-band bill: the owner plus a confirmed support act.
+				[{ bandId: 'band-1' }, { bandId: 'band-2' }],
+				[
+					{ id: 'u9', name: 'Admin', email: 'admin@example.com' },
+					{ id: 'u10', name: 'Support Admin', email: 'support@example.com' }
+				]
+			];
+
+			await unpublishWithBandNotice('evt-1');
+
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(mockEmit).toHaveBeenCalledWith(
+				'event.unpublished_by_staff',
+				expect.objectContaining({
+					bandAdmins: [
+						{ userId: 'u9', userName: 'Admin', userEmail: 'admin@example.com' },
+						{ userId: 'u10', userName: 'Support Admin', userEmail: 'support@example.com' }
+					]
 				})
 			);
 		});
