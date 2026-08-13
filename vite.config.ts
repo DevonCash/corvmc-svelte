@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
@@ -19,6 +20,15 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit()
 	],
+	server: {
+		fs: {
+			// Worktrees under .claude/worktrees/ symlink node_modules to the main
+			// checkout. Vite's allow-list is rooted at the worktree, so requests that
+			// resolve through the symlink to the real path 403 and the page never
+			// hydrates. Allowing the realpath covers both layouts.
+			allow: [dirname, fs.realpathSync(path.resolve(dirname, 'node_modules'))]
+		}
+	},
 	test: {
 		expect: {
 			requireAssertions: true
