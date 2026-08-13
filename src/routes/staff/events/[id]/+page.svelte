@@ -13,6 +13,7 @@
 		PublishEventAction,
 		UnpublishEventAction,
 		CancelEventAction,
+		DeleteEventAction,
 		CompTicketsAction
 	} from '$lib/components/shared/actions';
 	import {
@@ -263,6 +264,8 @@
 		{#if evt.status !== 'cancelled'}
 			<CancelEventAction eventId={evt.id} />
 		{/if}
+
+		<DeleteEventAction eventId={evt.id} />
 	</div>
 </PageHeader>
 <PageContent width="3xl">

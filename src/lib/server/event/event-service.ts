@@ -11,6 +11,8 @@ import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
+import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
+import { contentFlag } from '$lib/server/db/schema/flag';
 import {
 	eq,
 	and,
@@ -597,6 +599,106 @@ export async function unpublishWithNotice(
 			captureException(err, { event: 'event.unpublished_by_staff', eventId });
 		}
 	});
+}
+
+// ---------------------------------------------------------------------------
+// remove()
+// ---------------------------------------------------------------------------
+
+/** What a delete would destroy, so staff can see it before confirming. */
+export interface EventDeletionImpact {
+	ticketCount: number;
+	rsvpCount: number;
+	lineupCount: number;
+	hasReservation: boolean;
+	/** False when tickets exist — cancel is the end state for those. */
+	deletable: boolean;
+}
+
+export async function getDeletionImpact(eventId: string): Promise<EventDeletionImpact> {
+	const [[tickets], [rsvps], [lineup], existing] = await Promise.all([
+		db.select({ value: count() }).from(ticket).where(eq(ticket.eventId, eventId)),
+		db.select({ value: count() }).from(eventRsvp).where(eq(eventRsvp.eventId, eventId)),
+		db.select({ value: count() }).from(eventBand).where(eq(eventBand.eventId, eventId)),
+		getById(eventId)
+	]);
+
+	const ticketCount = tickets?.value ?? 0;
+	return {
+		ticketCount,
+		rsvpCount: rsvps?.value ?? 0,
+		lineupCount: lineup?.value ?? 0,
+		hasReservation: !!existing?.reservationId,
+		deletable: ticketCount === 0
+	};
+}
+
+/**
+ * Delete an event outright.
+ *
+ * This is for a row that should never have existed — a test event, a duplicate,
+ * a spam listing. It is NOT a lifecycle transition: a show that is no longer
+ * happening gets `cancel()`, which announces it to the people who were coming.
+ *
+ * Refused once any ticket exists, in any status. Cancelling voids tickets and
+ * emails their holders, but the rows themselves are payment and check-in
+ * records, so cancel is the *end state* for a ticketed event rather than a step
+ * on the way here. `ticket.eventId` cascades, so without this guard a delete
+ * would silently take that history with it.
+ *
+ * Four things need doing by hand, because the FKs alone get them wrong:
+ *
+ *   - The linked reservation is *cancelled*, not deleted. Deleted, the room
+ *     would stay booked (event.reservationId has no onDelete rule, so the row
+ *     would simply orphan) — and for a recurring instance the generation job,
+ *     which dedupes on reservation rows rather than events, would quietly
+ *     recreate the event on its next run.
+ *   - The poster is removed from R2. Nothing about that object's URL consults
+ *     the database, so leaving it behind means a deleted event's artwork stays
+ *     world-readable.
+ *   - `content_flag` rows are polymorphic with no FK, so any report against
+ *     this event would survive pointing at nothing and break the triage queue.
+ *   - `event_band` and `event_rsvp` cascade, which is right: the bill and the
+ *     headcount describe an event that, after this, never happened.
+ */
+export async function remove(eventId: string, userId: string): Promise<void> {
+	const existing = await getById(eventId);
+	if (!existing) throw new Error('Event not found');
+
+	const [tickets] = await db
+		.select({ value: count() })
+		.from(ticket)
+		.where(eq(ticket.eventId, eventId));
+
+	if ((tickets?.value ?? 0) > 0) {
+		throw new Error(
+			'This event has tickets and cannot be deleted. Cancel it instead — that voids the tickets and tells the people holding them.'
+		);
+	}
+
+	if (existing.reservationId) {
+		try {
+			await cancelReservation(existing.reservationId, userId, 'Event deleted', {
+				staffOverride: true
+			});
+		} catch {
+			// Already cancelled, or gone — either way the room is free.
+		}
+	}
+
+	if (existing.posterKey) {
+		try {
+			await deleteObject(existing.posterKey);
+		} catch (err) {
+			captureException(err, { event: 'event.deleted_poster', eventId });
+		}
+	}
+
+	await db
+		.delete(contentFlag)
+		.where(and(eq(contentFlag.entityType, 'event'), eq(contentFlag.entityId, eventId)));
+
+	await db.delete(event).where(eq(event.id, eventId));
 }
 
 // ---------------------------------------------------------------------------

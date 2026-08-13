@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { pageTitle } from '$lib/config';
+	import { pageTitle, EVENT_TIP_SUBJECT } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import { EVENT_TIP_SUBJECT } from '$lib/server/db/schema/inbox';
+
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';

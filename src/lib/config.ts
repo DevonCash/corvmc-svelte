@@ -163,6 +163,15 @@ export const creditSourceLabels: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'] as const;
+
+/**
+ * The contact-form subject that reveals the event-tip fields.
+ *
+ * Here rather than beside the schema it validates: the public contact page has
+ * to branch on it, and anything under `$lib/server/**` is barred from the
+ * browser bundle.
+ */
+export const EVENT_TIP_SUBJECT = 'Event Tip';
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 export const inboxMessageDirections = ['inbound', 'outbound'] as const;
 

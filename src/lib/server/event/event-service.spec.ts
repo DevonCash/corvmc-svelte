@@ -138,7 +138,8 @@ import {
 	update,
 	checkRebookNeeded,
 	unpublishWithNotice,
-	listPublicUpcomingEvents
+	listPublicUpcomingEvents,
+	remove
 } from './event-service';
 import {
 	staffCreate,
@@ -826,6 +827,106 @@ describe('EventService', () => {
 			await unpublishWithNotice('evt-1');
 
 			expect(deleteObject).not.toHaveBeenCalled();
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// remove()
+	// -----------------------------------------------------------------------
+	//
+	// Deleting is for a row that should never have existed. The FKs alone get
+	// four things wrong, and each of these pins one of them.
+
+	describe('remove', () => {
+		const deletableEvent = {
+			...mockEventRow,
+			status: 'draft',
+			reservationId: 'res-1',
+			posterKey: 'events/posters/evt-1.jpg'
+		};
+
+		it('refuses once any ticket exists, and says to cancel instead', async () => {
+			selectResultQueue = [
+				[deletableEvent], // getById
+				[{ value: 2 }] // ticket count
+			];
+
+			// One call, both assertions: the select queue drains, so re-invoking
+			// would be asserting against an empty fixture rather than this case.
+			const err = await remove('evt-1', 'staff-1').catch((e: Error) => e);
+
+			expect(err).toBeInstanceOf(Error);
+			expect((err as Error).message).toMatch(/tickets/i);
+			// The sentence has to point somewhere useful, not just refuse.
+			expect((err as Error).message).toMatch(/[Cc]ancel/);
+		});
+
+		it('does not delete anything when it refuses', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 1 }]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow();
+
+			expect(eventDelete).not.toHaveBeenCalled();
+			expect(deleteObject).not.toHaveBeenCalled();
+			expect(cancelReservation).not.toHaveBeenCalled();
+		});
+
+		it('refuses a ticket in any status, not just live ones', async () => {
+			// Cancelled tickets are still payment records. `cancel()` voids tickets
+			// rather than removing them, so a cancelled ticketed event must not
+			// become deletable afterwards.
+			selectResultQueue = [[{ ...deletableEvent, status: 'cancelled' }], [{ value: 3 }]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(/tickets/i);
+		});
+
+		it('cancels the linked reservation rather than deleting it', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// Deleting the reservation would leave the room booked (no onDelete rule
+			// on event.reservationId), and for a recurring instance the generation
+			// job — which dedupes on reservation rows, not events — would quietly
+			// recreate the event on its next run.
+			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event deleted', {
+				staffOverride: true
+			});
+		});
+
+		it('takes the poster with it', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// Nothing about the R2 URL consults the database, so an orphaned object
+			// stays world-readable forever.
+			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+		});
+
+		it('deletes the row, and the flags that would dangle', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// content_flag is polymorphic with no FK — a surviving report would
+			// point at nothing and break the triage queue.
+			expect(eventDelete).toHaveBeenCalledTimes(2);
+		});
+
+		it('survives a reservation that was already cancelled', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+			vi.mocked(cancelReservation).mockRejectedValueOnce(new Error('Already cancelled'));
+
+			await expect(remove('evt-1', 'staff-1')).resolves.toBeUndefined();
+			expect(eventDelete).toHaveBeenCalled();
+		});
+
+		it('throws when the event does not exist', async () => {
+			selectResultQueue = [[]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow('Event not found');
+			expect(eventDelete).not.toHaveBeenCalled();
 		});
 	});
 

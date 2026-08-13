@@ -8,6 +8,8 @@ import {
 	checkRebookNeeded,
 	publish,
 	unpublishWithNotice,
+	remove as removeEvent,
+	getDeletionImpact,
 	cancel,
 	getById,
 	listAll as listAllEvents,
@@ -788,6 +790,30 @@ export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (d
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireStaff();
 	await cancel(data.id, staff.id);
+	return { success: true };
+});
+
+/**
+ * What a delete would destroy. Drives the confirmation copy, so a staffer can
+ * tell a mistake from a real event before it is gone.
+ */
+export const getEventDeletionImpact = query(z.string(), async (id) => {
+	await requireStaff();
+	return getDeletionImpact(id);
+});
+
+export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const staff = await requireStaff();
+	try {
+		await removeEvent(data.id, staff.id);
+	} catch (err) {
+		// The ticket refusal is a business rule with a written explanation, not an
+		// internal fault — surfacing it as a 500 would hide the sentence that
+		// tells the staffer to cancel instead.
+		const message = err instanceof Error ? err.message : 'Could not delete this event';
+		throw error(message.includes('tickets') ? 409 : 500, message);
+	}
+	void getStaffEvents({}).refresh();
 	return { success: true };
 });
 

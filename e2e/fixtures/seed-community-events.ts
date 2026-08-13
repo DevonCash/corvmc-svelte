@@ -25,6 +25,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { event, communityEventStanding } from '../../src/lib/server/db/schema/event';
+import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_CE_PASSWORD = 'e2e-password-123';
@@ -52,15 +53,36 @@ export const SEED_CE_PUBLISHED_TITLE = 'E2E Published Warehouse Show';
 export const SEED_CE_QUEUE_DRAFT_ID = 'e2e-ce-queue-draft';
 export const SEED_CE_QUEUE_DRAFT_TITLE = 'E2E Queued Songwriter Round';
 
+/**
+ * Already in the queue, owned by the review-required member. Separate from the
+ * draft above so the rejection test stands on its own rather than depending on
+ * the submit test having run first.
+ */
+export const SEED_CE_PENDING_ID = 'e2e-ce-pending';
+export const SEED_CE_PENDING_TITLE = 'E2E Pending Jazz Night';
+
+/**
+ * Two CMC events for the staff delete control: one clean, one with a ticket
+ * sold. The ticketed one must be undeletable — cancel is the end state there,
+ * because the ticket row is a payment record and `ticket.eventId` cascades.
+ */
+export const SEED_CE_DELETABLE_ID = 'e2e-ce-deletable';
+export const SEED_CE_DELETABLE_TITLE = 'E2E Deletable Test Event';
+export const SEED_CE_TICKETED_ID = 'e2e-ce-ticketed';
+export const SEED_CE_TICKETED_TITLE = 'E2E Ticketed Event';
+
 /** Cancelled, and still on the guide — the cancellation is the announcement. */
 export const SEED_CE_CANCELLED_ID = 'e2e-ce-cancelled';
-export const SEED_CE_CANCELLED_TITLE = 'E2E Cancelled Folk Night';
+export const SEED_CE_CANCELLED_TITLE = 'E2E Called Off Folk Night';
 
 const MEMBER_IDS = [SEED_CE_TRUSTED_ID, SEED_CE_REVIEW_ID];
 const EVENT_IDS = [
 	SEED_CE_DRAFT_ID,
 	SEED_CE_PUBLISHED_ID,
 	SEED_CE_QUEUE_DRAFT_ID,
+	SEED_CE_PENDING_ID,
+	SEED_CE_DELETABLE_ID,
+	SEED_CE_TICKETED_ID,
 	SEED_CE_CANCELLED_ID
 ];
 
@@ -77,6 +99,7 @@ export async function seedCommunityEvents(): Promise<void> {
 		await db
 			.delete(communityEventStanding)
 			.where(inArray(communityEventStanding.userId, MEMBER_IDS));
+		await db.delete(ticket).where(inArray(ticket.eventId, EVENT_IDS));
 		await db.delete(event).where(inArray(event.id, EVENT_IDS));
 		await db.delete(event).where(inArray(event.createdByUserId, MEMBER_IDS));
 		await db.delete(account).where(inArray(account.userId, MEMBER_IDS));
@@ -154,6 +177,45 @@ export async function seedCommunityEvents(): Promise<void> {
 				updatedAt: now
 			},
 			{
+				id: SEED_CE_PENDING_ID,
+				title: SEED_CE_PENDING_TITLE,
+				startsAt: daysFromNow(16),
+				endsAt: null,
+				location: 'E2E Side Room',
+				source: 'community',
+				status: 'pending_review',
+				createdByUserId: SEED_CE_REVIEW_ID,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_CE_DELETABLE_ID,
+				title: SEED_CE_DELETABLE_TITLE,
+				startsAt: daysFromNow(20),
+				endsAt: daysFromNow(20, 23),
+				location: 'E2E Practice Room',
+				source: 'cmc',
+				status: 'draft',
+				createdByUserId: SEED_CE_TRUSTED_ID,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_CE_TICKETED_ID,
+				title: SEED_CE_TICKETED_TITLE,
+				startsAt: daysFromNow(22),
+				endsAt: daysFromNow(22, 23),
+				location: 'E2E Main Room',
+				source: 'cmc',
+				status: 'published',
+				publishedAt: now,
+				ticketingEnabled: true,
+				ticketPrice: 1000,
+				createdByUserId: SEED_CE_TRUSTED_ID,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
 				id: SEED_CE_CANCELLED_ID,
 				title: SEED_CE_CANCELLED_TITLE,
 				startsAt: daysFromNow(7),
@@ -167,6 +229,30 @@ export async function seedCommunityEvents(): Promise<void> {
 				updatedAt: now
 			}
 		]);
+
+		await db.insert(ticket).values({
+			id: 'e2e-ce-ticket',
+			eventId: SEED_CE_TICKETED_ID,
+			purchaseId: 'e2e-ce-purchase',
+			attendeeName: 'E2E Attendee',
+			attendeeEmail: 'e2e.attendee@example.com',
+			code: 'E2E-TICKET-1',
+			status: 'valid',
+			createdAt: now,
+			updatedAt: now
+		});
+	});
+}
+
+/** Whether a row still exists, for the delete assertions. */
+export async function eventExists(eventId: string): Promise<boolean> {
+	return withPlatformDb(async (db) => {
+		const [row] = await db
+			.select({ id: event.id })
+			.from(event)
+			.where(eq(event.id, eventId))
+			.limit(1);
+		return !!row;
 	});
 }
 

@@ -22,9 +22,6 @@ export type InboxParticipantRole = (typeof inboxParticipantRoles)[number];
 // Zod schemas
 // ---------------------------------------------------------------------------
 
-/** The subject that reveals the event-tip fields on /contact. */
-export const EVENT_TIP_SUBJECT = 'Event Tip';
-
 export const submitContactFormSchema = z.object({
 	name: z.string().trim().min(1).max(200),
 	email: z.string().trim().email().max(320),

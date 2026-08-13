@@ -199,6 +199,46 @@ listing:
    `UserHasPublishedListingsError`. The show still happens after someone leaves
    the Collective, and other people's plans are attached to it.
 
+## Deleting an event
+
+Cancelling used to double as "make this go away" — it dropped the row off the
+guide. Now that a cancelled show _stays_ on the guide (above), staff had no way
+to remove a row that should never have existed: a test event, a duplicate, a
+spam listing. `remove()` in `event-service.ts` is that control, on
+`/staff/events/[id]`.
+
+It is not a lifecycle transition. A show that was real and isn't happening gets
+`cancel()`, which announces it to the people who were coming.
+
+**Refused once any ticket exists, in any status.** Cancelling voids tickets and
+emails their holders, but the rows themselves are payment and check-in records —
+so cancel is the _end state_ for a ticketed event rather than a step on the way
+to deletion. `ticket.eventId` cascades, so without this guard a delete would
+take that history with it silently. The button renders disabled, with the reason
+in its tooltip, rather than failing after the click.
+
+Four things the FKs get wrong on their own, all handled explicitly:
+
+- **The linked reservation is cancelled, not deleted.** `event.reservationId`
+  has no `onDelete` rule, so deleting the event would orphan the reservation and
+  leave the room booked forever. Worse, for a recurring instance the generation
+  job dedupes on _reservation_ rows rather than events, so a deleted-and-orphaned
+  instance would be quietly recreated on the next cron run. Cancelling keeps the
+  row, which is what makes the job skip it.
+- **The poster is removed from R2.** Same lesson as the takedown path: nothing
+  about that object's URL consults the database.
+- **`content_flag` rows are deleted.** They're polymorphic with no FK, so a
+  report against the event would survive pointing at nothing and break triage.
+- **`event_band` and `event_rsvp` cascade**, which is correct — the bill and the
+  headcount describe an event that, after this, never happened. The confirmation
+  names both counts so a staffer can tell a mistake from a real show before
+  confirming; `volunteer_shift.eventId` is `set null`, so shifts survive
+  detached.
+
+Members already have the equivalent for their own listings — a draft (or a
+returned one) can be deleted outright, and a published listing reaches that by
+being unpublished first.
+
 ## Dev testing
 
 `seedCommunityEvents` in `scripts/seed-dev.ts` leaves every state reachable

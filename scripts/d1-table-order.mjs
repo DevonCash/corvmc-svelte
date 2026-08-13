@@ -61,6 +61,9 @@ export const tableOrder = [
 	'inbox_note',
 	'inbox_participant',
 	'content_flag',
+	// After content_flag as well as user: it carries the report that cost the
+	// member their standing.
+	'community_event_standing',
 	'volunteer_hour_log',
 	'volunteer_profile',
 	'volunteer_role_interest',
