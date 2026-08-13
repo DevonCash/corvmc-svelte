@@ -14,6 +14,10 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
+
+	const restoreFields = restoreListingTrust.fields;
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -111,6 +115,37 @@
 				</div>
 			</InfoCard>
 		</div>
+
+		{#await getMemberStanding(id) then standing}
+			{#if standing.requiresReview}
+				<!-- Only rendered when it's true: a "standing: fine" card on every
+				     member would be noise, and the point of this one is that it
+				     appears when something happened. -->
+				<InfoCard title="Community listings">
+					<p class="text-sm">
+						This member's listings are reviewed by staff before they go on the public calendar,
+						after a report was upheld against one of them.
+					</p>
+					{#if standing.reason}
+						<p class="mt-1 text-sm opacity-70">Staff note: "{standing.reason}"</p>
+					{/if}
+					<div class="mt-3">
+						<Action
+							action={restoreListingTrust}
+							label="Restore direct publishing"
+							successToast="Trust restored"
+							class="btn-sm"
+							onsuccess={() => invalidateAll()}
+						>
+							{#snippet form()}
+								<input {...restoreFields.userId.as('hidden', id)} />
+								<p class="py-2">Let this member publish listings straight to the calendar again?</p>
+							{/snippet}
+						</Action>
+					</div>
+				</InfoCard>
+			{/if}
+		{/await}
 
 		{#await getUserCredits(id) then credits}
 			<InfoCard title="Credits">

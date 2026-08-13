@@ -46,8 +46,17 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 // with the staff event page) and is covered by `event-service.spec.ts`; here we
 // only assert the flag queue delegates to it.
 const unpublishMock = vi.fn().mockResolvedValue(undefined);
+const getByIdMock = vi.fn().mockResolvedValue(null);
 vi.mock('$lib/server/event/event-service', () => ({
-	unpublishWithBandNotice: (...args: unknown[]) => unpublishMock(...args)
+	unpublishWithNotice: (...args: unknown[]) => unpublishMock(...args),
+	getById: (...args: unknown[]) => getByIdMock(...args)
+}));
+
+// Standing changes are the community service's job; here we assert only that
+// resolving reaches for it and dismissing does not.
+const revokeTrustMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/event/community-event-service', () => ({
+	revokeCommunityTrust: (...args: unknown[]) => revokeTrustMock(...args)
 }));
 
 import {
@@ -64,6 +73,9 @@ beforeEach(() => {
 	updateResult = [];
 	emitMock.mockClear();
 	unpublishMock.mockClear();
+	revokeTrustMock.mockClear();
+	getByIdMock.mockReset();
+	getByIdMock.mockResolvedValue(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -230,5 +242,75 @@ describe('resolveFlag', () => {
 		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 
 		expect(unpublishMock).not.toHaveBeenCalled();
+	});
+
+	// ---------------------------------------------------------------------
+	// Community listing standing
+	// ---------------------------------------------------------------------
+	//
+	// The trust rule is wired in exactly one place, and this is the pair of
+	// tests that pins it. Event reports are public and anonymous, so if a bare
+	// accusation could cost a member their standing, any visitor would have a
+	// griefing tool. Only an *upheld* report counts.
+
+	it('revokes the submitter’s standing when a community listing’s report is upheld', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getByIdMock.mockResolvedValue({
+			id: 'e1',
+			source: 'community',
+			createdByUserId: 'member-1'
+		});
+
+		await resolveFlag('f1', {
+			resolution: 'resolved',
+			staffId: 's1',
+			notes: 'No venue given'
+		});
+
+		expect(revokeTrustMock).toHaveBeenCalledWith({
+			userId: 'member-1',
+			flagId: 'f1',
+			staffId: 's1',
+			reason: 'No venue given'
+		});
+	});
+
+	it('leaves standing alone when the report is dismissed', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
+		updateResult = [{ id: 'f1', status: 'dismissed' }];
+		getByIdMock.mockResolvedValue({
+			id: 'e1',
+			source: 'community',
+			createdByUserId: 'member-1'
+		});
+
+		await resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' });
+
+		expect(revokeTrustMock).not.toHaveBeenCalled();
+	});
+
+	it('does not touch standing for a band gig — there is no member to hold responsible', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getByIdMock.mockResolvedValue({
+			id: 'e1',
+			source: 'band',
+			createdByUserId: 'member-1'
+		});
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
+
+		expect(revokeTrustMock).not.toHaveBeenCalled();
+	});
+
+	it('leaves standing alone for a flagged member profile', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'member_profile', entityId: 'u9' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
+
+		expect(revokeTrustMock).not.toHaveBeenCalled();
+		expect(getByIdMock).not.toHaveBeenCalled();
 	});
 });

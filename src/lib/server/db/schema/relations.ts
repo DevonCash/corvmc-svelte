@@ -64,6 +64,24 @@ export const relations = defineRelations(schema, (t) => ({
 			alias: 'eventBand_addedBy'
 		})
 	},
+	// Two FKs to user (the member, and the staffer who last changed it), so both
+	// need an alias to say which one they follow.
+	communityEventStanding: {
+		user: t.one.user({
+			from: t.communityEventStanding.userId,
+			to: t.user.id,
+			alias: 'communityEventStanding_user'
+		}),
+		updatedBy: t.one.user({
+			from: t.communityEventStanding.updatedByUserId,
+			to: t.user.id,
+			alias: 'communityEventStanding_updatedBy'
+		}),
+		triggeringFlag: t.one.contentFlag({
+			from: t.communityEventStanding.triggeringFlagId,
+			to: t.contentFlag.id
+		})
+	},
 	equipmentCategory: {
 		equipment: t.many.equipment()
 	},

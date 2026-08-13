@@ -50,7 +50,10 @@
 	 */
 	export const labels: Record<string, string> = {
 		...volunteerHourStatusLabels,
-		...volunteerProfileStatusLabels
+		...volunteerProfileStatusLabels,
+		// "Pending review" reads as a state; the humanised enum ("Pending_review")
+		// does not.
+		pending_review: 'In review'
 	};
 
 	export const badgeClass: Record<string, string> = {
@@ -64,6 +67,7 @@
 		refunded: 'badge-error',
 		// Events
 		draft: 'badge-warning',
+		pending_review: 'badge-info',
 		published: 'badge-success',
 		// Inbox
 		open: 'badge-info',
@@ -123,7 +127,11 @@
 
 		// Event statuses
 		draft: { icon: IconPencil, color: 'text-warning' },
+		// Waiting on staff, not on its author — the hourglass is the whole point.
+		pending_review: { icon: IconClockPause, color: 'text-info' },
 		published: { icon: IconWorld, color: 'text-success' },
+		// `rejected` is shared with volunteer hour logs below — same meaning
+		// (sent back to its author to fix), same glyph, labelled "Returned".
 
 		// Inbox statuses
 		open: { icon: IconClock, color: 'text-info' },

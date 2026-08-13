@@ -885,4 +885,103 @@ export function registerAllNotificationListeners(): void {
 			}
 		});
 	});
+	// --- Community listing submitted for review (notify staff) ---
+	domainEvents.on('community_event.submitted', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'community_event_submitted',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.submitterName} submitted "${event.eventTitle}"`,
+					body: 'A community listing is waiting for review',
+					href: '/staff/events?status=pending_review'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.community_event_submitted',
+					to: member.email
+				});
+			}
+		}
+	});
+
+	// --- Community listing approved or turned down (notify the member) ---
+	domainEvents.on('community_event.reviewed', async ({ data: event }) => {
+		const approved = event.approved;
+		await dispatch({
+			type: 'community_event_reviewed',
+			userId: event.submitterUserId,
+			userEmail: event.submitterEmail,
+			title: approved
+				? `"${event.eventTitle}" is on the calendar`
+				: `"${event.eventTitle}" wasn't published`,
+			body: event.notes ?? undefined,
+			href: approved ? `/events/${event.eventId}` : `/member/events/${event.eventId}/manage`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: approved
+						? `Your listing is live: ${event.eventTitle}`
+						: `About your listing: ${event.eventTitle}`,
+					heading: approved ? 'Your listing is live' : 'Your listing needs a change',
+					greeting: `Hi ${event.submitterName},`,
+					paragraphs: approved
+						? [
+								{
+									text: `"${event.eventTitle}" is now on the community calendar. Thanks for adding it.`
+								}
+							]
+						: [
+								{
+									text: `We didn't publish "${event.eventTitle}". You can fix it and submit it again — the listing is still there with everything you entered.`
+								}
+							],
+					// The reason is the entire point of a rejection email; a member
+					// who can't see what was wrong can't fix it.
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: approved
+						? { url: `${siteUrl}/events/${event.eventId}`, label: 'View listing' }
+						: {
+								url: `${siteUrl}/member/events/${event.eventId}/manage`,
+								label: 'Edit and resubmit'
+							}
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Community listing pulled by staff (notify the member) ---
+	domainEvents.on('community_event.unpublished', async ({ data: event }) => {
+		await dispatch({
+			type: 'community_event_unpublished',
+			userId: event.submitterUserId,
+			userEmail: event.submitterEmail,
+			title: `"${event.eventTitle}" was removed from the calendar`,
+			body: event.notes ?? undefined,
+			href: `/member/events/${event.eventId}/manage`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your listing was removed: ${event.eventTitle}`,
+					heading: 'Your listing was removed',
+					greeting: `Hi ${event.submitterName},`,
+					paragraphs: [
+						{
+							text: `Staff took "${event.eventTitle}" off the community calendar. It's back in your drafts, so you can correct it and publish again.`
+						},
+						{
+							text: 'Listings you publish from now on will be checked by staff first.'
+						}
+					],
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: {
+						url: `${siteUrl}/member/events/${event.eventId}/manage`,
+						label: 'View listing'
+					}
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
 }

@@ -54,6 +54,9 @@ export const getPublicCalendar = query(monthSchema, async ({ month }) => {
 
 	return {
 		month,
-		events: rows.map(toCalendarEntry)
+		// Published only, unlike the gig list. This drives the mini-calendar's
+		// per-day dots, and a dot means "something is on that night" — a
+		// cancelled show advertising a day would send someone out for nothing.
+		events: rows.filter((e) => e.status === 'published').map(toCalendarEntry)
 	};
 });

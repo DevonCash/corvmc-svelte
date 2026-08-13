@@ -7,7 +7,7 @@ import {
 	update,
 	checkRebookNeeded,
 	publish,
-	unpublishWithBandNotice,
+	unpublishWithNotice,
 	cancel,
 	getById,
 	listAll as listAllEvents,
@@ -44,6 +44,8 @@ import {
 	getUserRsvp,
 	countRsvps
 } from '$lib/server/event/rsvp-service';
+import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
+import { getCommunityStanding } from '$lib/server/event/community-event-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
@@ -212,7 +214,13 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
-	if (evt.status !== 'published') throw error(404, 'Event not found');
+	// Cancelled events still render, with a banner and no buy affordances. A
+	// shared link to a cancelled show must say "cancelled" rather than behave as
+	// though the show never existed — the people following that link are exactly
+	// the ones who need to know. Draft, pending_review and rejected stay 404.
+	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
+		throw error(404, 'Event not found');
+	}
 
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.bandId) {
@@ -270,6 +278,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			ticketPrice: evt.ticketPrice,
 			ticketQuantity: evt.ticketQuantity,
 			source: evt.source,
+			status: evt.status,
 			externalTicketUrl: evt.externalTicketUrl,
 			bandName: bandInfo?.name ?? null,
 			bandSlug: bandInfo?.slug ?? null,
@@ -288,7 +297,10 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		isSustainingMember,
 		isPast,
 		isAuthenticated: !!locals.user,
-		canReport: await isFeatureEnabled('contentFlags'),
+		// Cancelled listings aren't reportable: they're already on their way
+		// off the guide, so opening them up only widens the id-probing surface
+		// the moderation spec closed.
+		canReport: evt.status === 'published' && (await isFeatureEnabled('contentFlags')),
 		upcoming
 	};
 });
@@ -299,10 +311,12 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
-	// Band gigs are never sold through CMC (see `update()` in event-service).
-	// Checked on source rather than the bandEvents flag so a row that predates
-	// that rule — or one written around it — still cannot reach checkout.
-	if (evt.source === 'band') throw error(404, 'Tickets not available for this event');
+	// CMC only sells shows CMC produces (see `update()` in event-service): a
+	// band's gig or a member's community listing would put money in CMC's Stripe
+	// account with no payout path back to whoever is actually putting it on.
+	// Checked on source so a row written before the rule still cannot reach
+	// checkout.
+	if (evt.source !== 'cmc') throw error(404, 'Tickets not available for this event');
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -395,10 +409,17 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 });
 
 export const getStaffEvents = query(
-	z.object({ source: z.enum(eventSources).optional(), page: z.number().optional() }),
+	z.object({
+		source: z.enum(eventSources).optional(),
+		status: z.enum(eventStatuses).optional(),
+		page: z.number().optional()
+	}),
 	async (filters) => {
 		await requireStaff();
-		return listAllEvents({ source: filters.source }, { page: filters.page ?? 1, pageSize: 50 });
+		return listAllEvents(
+			{ source: filters.source, status: filters.status },
+			{ page: filters.page ?? 1, pageSize: 50 }
+		);
 	}
 );
 
@@ -500,6 +521,12 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		band: bookingBand,
 		posterUrl,
 		creator,
+		// Standing only matters for a community listing, and only staff see it.
+		// It's what tells a reviewer whether this member is here because of a
+		// past problem or because they're new.
+		submitterStanding:
+			evt.source === 'community' ? await getCommunityStanding(evt.createdByUserId) : null,
+		submitterId: evt.createdByUserId,
 		linkedReservation,
 		ticketStats,
 		tickets
@@ -754,7 +781,7 @@ export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (d
 	await requireStaff();
 	// Band-sourced events notify the band's admins — pulling a gig silently is
 	// the one unpublish that needs a word back to whoever posted it.
-	await unpublishWithBandNotice(data.id);
+	await unpublishWithNotice(data.id);
 	return { success: true };
 });
 
@@ -882,11 +909,12 @@ export const claimFreeTicket = form(
 		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
 		// Mints a real ticket row with a code and capacity, so it falls under the
-		// same rule as a paid purchase: CMC does not issue tickets for a band's
-		// gig at any price. Unreachable while `update()` holds — a band event
-		// cannot have `ticketingEnabled` — but this is the ticket-minting call, so
-		// it does not lean on that. (The headcount RSVP below is allowed.)
-		if (evt.source === 'band') throw error(400, 'Tickets not available');
+		// same rule as a paid purchase: CMC does not issue tickets for a show it
+		// doesn't produce, at any price. Unreachable while `update()` holds — a
+		// band or community row cannot have `ticketingEnabled` — but this is the
+		// ticket-minting call, so it does not lean on that. (The headcount RSVP
+		// below is allowed, deliberately: it takes no money and issues no code.)
+		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -978,7 +1006,7 @@ export const purchaseTickets = form(
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
 		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
 		// money, so it repeats the check rather than trusting the page guard.
-		if (evt.source === 'band') throw error(400, 'Tickets not available');
+		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {

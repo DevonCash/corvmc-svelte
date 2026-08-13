@@ -25,6 +25,13 @@ export class UserHasOwnedBandsError extends Error {
 	}
 }
 
+export class UserHasPublishedListingsError extends Error {
+	constructor() {
+		super('This member has community listings on the public calendar');
+		this.name = 'UserHasPublishedListingsError';
+	}
+}
+
 export class UserNotDeactivatedError extends Error {
 	constructor() {
 		super('User must be deactivated before it can be purged');
@@ -166,6 +173,16 @@ export async function purgeUser(userId: string) {
 		.where(eq(band.ownerId, userId));
 
 	if (ownedBands > 0) throw new UserHasOwnedBandsError();
+
+	// event.createdByUserId cascades, so purging would silently take this
+	// member's listings off the public calendar with them. The shows still
+	// happen after someone leaves the Collective, and other people's plans are
+	// attached to them — so a staffer has to deal with the listings on purpose
+	// rather than discovering later that the calendar lost a week of gigs.
+	const { countPublishedListingsBy } = await import('$lib/server/event/community-event-service');
+	if ((await countPublishedListingsBy(userId)) > 0) {
+		throw new UserHasPublishedListingsError();
+	}
 
 	try {
 		await db.delete(user).where(eq(user.id, userId));

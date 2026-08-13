@@ -477,6 +477,11 @@ p {
 	color: #fff;
 	box-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
 }
+.sticker-badge--green {
+	background: var(--cmc-green);
+	color: #fff;
+	box-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
+}
 .sticker-badge--sm {
 	padding: 3px 8px;
 	font-size: 10px;

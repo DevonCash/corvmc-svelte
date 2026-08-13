@@ -54,8 +54,10 @@
 				{#each rows as evt (evt.id)}
 					{@const href = `${eventBase}/${evt.id}`}
 					{@const isPast = evt.startsAt < now}
+					{@const isCancelled = evt.status === 'cancelled'}
 					<li
 						class="gig-row"
+						class:gig-row--cancelled={isCancelled}
 						id={firstOfDay[evt.id] ? `day-${toLocalDate(evt.startsAt)}` : undefined}
 					>
 						<div class="gig-row__date">
@@ -72,6 +74,12 @@
 						</a>
 						<div class="gig-row__info">
 							<a {href} class="gig-row__title">{evt.title}</a>
+							{#if isCancelled}
+								<!-- The row exists to be read: the cancellation IS the
+								     announcement, so mark it plainly rather than greying it
+								     down into something people skim past. -->
+								<span class="gig-row__cancelled-tag">Cancelled</span>
+							{/if}
 							{#if showByline}
 								<span class="gig-row__byline">
 									{#if evt.source === 'band' && evt.bandName}
@@ -81,6 +89,10 @@
 										{:else}
 											{evt.bandName}
 										{/if}
+									{:else if evt.source === 'community'}
+										<span class="sticker-badge sticker-badge--sm sticker-badge--green"
+											>Community</span
+										>
 									{:else}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--orange">CMC</span>
 									{/if}
@@ -100,7 +112,7 @@
 								{#if !evt.externalTicketUrl || evt.ticketPrice}
 									· {priceDisplay(evt).label}
 								{/if}
-								{#if evt.externalTicketUrl && !isPast}
+								{#if evt.externalTicketUrl && !isPast && !isCancelled}
 									·
 									<a
 										href={evt.externalTicketUrl}
@@ -208,6 +220,30 @@
 		flex-direction: column;
 		gap: 0.15rem;
 		min-width: 0;
+	}
+
+	/* Struck date, not a faded row — a cancelled show has to stay legible. */
+	.gig-row--cancelled .gig-row__daynum,
+	.gig-row--cancelled .gig-row__month,
+	.gig-row--cancelled .gig-row__weekday {
+		text-decoration: line-through;
+		opacity: 0.7;
+	}
+	.gig-row--cancelled .gig-row__thumb {
+		opacity: 0.55;
+	}
+	.gig-row__cancelled-tag {
+		display: inline-block;
+		margin-left: 0.4rem;
+		padding: 1px 6px;
+		border: 1px solid currentColor;
+		border-radius: 3px;
+		font-size: 10px;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--cmc-red-orange);
+		vertical-align: middle;
 	}
 
 	.gig-row__title {

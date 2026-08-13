@@ -214,6 +214,29 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'How did your shift go?',
 		description: 'A short survey the day after a shift you worked',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_submitted',
+		label: 'Community listing needs review (staff)',
+		// In-app only, for the same reason as the volunteer queue above. Fires
+		// only when a listing actually enters pending_review — a member saving a
+		// draft is nobody's business but theirs.
+		description: 'Notification when a member submits a community listing for review',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_reviewed',
+		label: 'Your community listing was reviewed',
+		description: 'Notification when staff approve or turn down a listing you submitted',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_unpublished',
+		label: 'Your community listing was taken down',
+		// Email on: the listing is off the guide and they need to know why,
+		// which is not something to leave sitting in a bell icon.
+		description: 'Notification when staff remove a listing you published',
+		defaults: { email: true, inApp: true, sms: false }
 	}
 ];
 

@@ -311,6 +311,38 @@ export interface EventUnpublishedByStaffEvent {
 	}>;
 }
 
+/** A member's community listing entered the staff review queue. */
+export interface CommunityEventSubmittedEvent {
+	eventId: string;
+	eventTitle: string;
+	submitterUserId: string;
+	submitterName: string;
+	/** ISO string, like every other date on this bus. */
+	startsAt: string;
+}
+
+/** Staff approved or turned down a community listing. */
+export interface CommunityEventReviewedEvent {
+	eventId: string;
+	eventTitle: string;
+	submitterUserId: string;
+	submitterName: string;
+	submitterEmail: string;
+	approved: boolean;
+	/** Required on a rejection so the member can fix it and resubmit. */
+	notes: string | null;
+}
+
+/** Staff pulled a published community listing off the guide. */
+export interface CommunityEventUnpublishedEvent {
+	eventId: string;
+	eventTitle: string;
+	submitterUserId: string;
+	submitterName: string;
+	submitterEmail: string;
+	notes: string | null;
+}
+
 export interface VolunteerHoursSubmittedEvent {
 	logId: string;
 	userId: string;
@@ -365,6 +397,9 @@ export type DomainEvents = {
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
+	'community_event.submitted': CommunityEventSubmittedEvent;
+	'community_event.reviewed': CommunityEventReviewedEvent;
+	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;

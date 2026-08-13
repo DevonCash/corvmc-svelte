@@ -11,18 +11,27 @@
 
 	let {
 		value = $bindable<LineupChip[]>([]),
-		ownerBandId
+		ownerBandId,
+		search = searchBandsForLineup
 	}: {
 		value?: LineupChip[];
-		/** The band doing the editing; its own slot can't be removed. */
-		ownerBandId: string;
+		/**
+		 * The band doing the editing; its own slot can't be removed. Absent on a
+		 * community listing, where nobody on the bill is the author — every act is
+		 * a credit and every credit is removable.
+		 */
+		ownerBandId?: string;
+		/**
+		 * Band lookup. Defaults to the band-panel query, which is guarded by
+		 * band membership; a community listing passes its own `requireUser`
+		 * version, since its author may not be in a band at all.
+		 */
+		search?: (q: string) => Promise<Array<{ id: string; name: string }>>;
 	} = $props();
 
 	let query = $state('');
 
-	const matches = $derived(
-		query.trim().length >= 2 ? await searchBandsForLineup(query.trim()) : []
-	);
+	const matches = $derived(query.trim().length >= 2 ? await search(query.trim()) : []);
 
 	/** Suggestions minus anyone already on the bill. */
 	const suggestions = $derived(matches.filter((m) => !value.some((v) => v.bandId === m.id)));
@@ -104,7 +113,7 @@
 				<Button
 					type="button"
 					class="btn-ghost btn-xs text-error"
-					disabled={chip.bandId === ownerBandId}
+					disabled={!!ownerBandId && chip.bandId === ownerBandId}
 					onclick={() => remove(i)}
 					aria-label="Remove {chip.name}">✕</Button
 				>
