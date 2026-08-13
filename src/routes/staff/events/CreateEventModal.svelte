@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -68,13 +69,52 @@
 		ticketPriceDollars ? String(Math.round(parseFloat(ticketPriceDollars) * 100)) : ''
 	);
 
+	const toMinutes = (t: string) => {
+		const [h, m] = t.split(':').map(Number);
+		return h * 60 + m;
+	};
+
+	/** Move an "HH:MM" time by a signed number of minutes, wrapping at midnight. */
+	function shiftTime(time: string, minutes: number): string {
+		const total = (((toMinutes(time) + minutes) % 1440) + 1440) % 1440;
+		return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+	}
+
+	// The reservation window is really setup and teardown padding around the show,
+	// so it rides along when the event is re-timed. Seeding it only while empty
+	// left a window still pointing at the times the event used to have — visible
+	// but easy to miss, and it books the wrong slot.
+	let lastEventStartTime = '';
+	let lastEventEndTime = '';
+
 	$effect(() => {
-		if (reserveSpace && !reservationStartTime && eventStartTime) {
-			reservationStartTime = eventStartTime;
-		}
-		if (reserveSpace && !reservationEndTime && eventEndTime) {
-			reservationEndTime = eventEndTime;
-		}
+		const start = eventStartTime;
+		const end = eventEndTime;
+		if (!reserveSpace) return;
+
+		untrack(() => {
+			if (start) {
+				reservationStartTime =
+					reservationStartTime && lastEventStartTime
+						? shiftTime(reservationStartTime, toMinutes(start) - toMinutes(lastEventStartTime))
+						: start;
+				lastEventStartTime = start;
+			}
+			if (end) {
+				reservationEndTime =
+					reservationEndTime && lastEventEndTime
+						? shiftTime(reservationEndTime, toMinutes(end) - toMinutes(lastEventEndTime))
+						: end;
+				lastEventEndTime = end;
+			}
+		});
+	});
+
+	// ConflictWarnings owns this flag but unmounts with the toggle, so a stale
+	// `true` would keep the hidden overrideConflicts input in the form and make
+	// the next submission skip the server's double-booking check.
+	$effect(() => {
+		if (!reserveSpace) hasConflicts = false;
 	});
 
 	function handleFileSelect(e: Event) {
@@ -120,6 +160,12 @@
 		reserveSpace = false;
 		reservationStartTime = '';
 		reservationEndTime = '';
+		lastEventStartTime = '';
+		lastEventEndTime = '';
+		// This one outlives the form unless cleared here: ConflictWarnings writes it
+		// only while mounted, so a conflict seen before Cancel would arm the
+		// override for the next event entered in this modal.
+		hasConflicts = false;
 		posterFile = null;
 		recurring = false;
 		recurringFrequency = 'weekly';
@@ -176,7 +222,7 @@
 			<Field
 				name="ticketingEnabled"
 				type="toggle"
-				value={ticketingEnabled}
+				bind:value={ticketingEnabled}
 				checkboxLabel="Sell tickets through the site"
 			/>
 
@@ -190,7 +236,7 @@
 			<Field
 				name="reserveSpace"
 				type="toggle"
-				value={reserveSpace}
+				bind:value={reserveSpace}
 				checkboxLabel="Reserve practice space"
 			/>
 
@@ -215,15 +261,13 @@
 						/>
 					</div>
 
-					{#if reserveSpace}
-						<ConflictWarnings
-							date={eventDate}
-							startTime={reservationStartTime}
-							endTime={reservationEndTime}
-							{checkConflicts}
-							bind:hasConflicts
-						/>
-					{/if}
+					<ConflictWarnings
+						date={eventDate}
+						startTime={reservationStartTime}
+						endTime={reservationEndTime}
+						{checkConflicts}
+						bind:hasConflicts
+					/>
 				</div>
 			{/if}
 
