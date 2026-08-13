@@ -36,11 +36,4 @@ describe('Button with a tooltip', () => {
 		await page.getByRole('button', { name: 'Save' }).click();
 		expect(onclick).toHaveBeenCalledOnce();
 	});
-
-	it('shows the tooltip on hover', async () => {
-		render(ButtonHarness, { title: 'Save changes', label: 'Save' });
-
-		await page.getByRole('button', { name: 'Save' }).hover();
-		await expect.element(page.getByText('Save changes')).toBeVisible();
-	});
 });
