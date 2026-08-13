@@ -176,7 +176,7 @@
 			<Field
 				name="ticketingEnabled"
 				type="toggle"
-				value={ticketingEnabled}
+				bind:value={ticketingEnabled}
 				checkboxLabel="Sell tickets through the site"
 			/>
 
@@ -190,7 +190,7 @@
 			<Field
 				name="reserveSpace"
 				type="toggle"
-				value={reserveSpace}
+				bind:value={reserveSpace}
 				checkboxLabel="Reserve practice space"
 			/>
 
@@ -215,15 +215,13 @@
 						/>
 					</div>
 
-					{#if reserveSpace}
-						<ConflictWarnings
-							date={eventDate}
-							startTime={reservationStartTime}
-							endTime={reservationEndTime}
-							{checkConflicts}
-							bind:hasConflicts
-						/>
-					{/if}
+					<ConflictWarnings
+						date={eventDate}
+						startTime={reservationStartTime}
+						endTime={reservationEndTime}
+						{checkConflicts}
+						bind:hasConflicts
+					/>
 				</div>
 			{/if}
 
