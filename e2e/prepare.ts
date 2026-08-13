@@ -23,6 +23,7 @@ import { execSync } from 'node:child_process';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
+import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
@@ -38,6 +39,7 @@ if (process.env.CI) {
 await seedPayReservation();
 await seedBandOnboarding();
 await seedStaffUser();
+await seedStaffEvent();
 await seedVolunteering();
 await seedCommunityEvents();
 await seedFeatureFlags();

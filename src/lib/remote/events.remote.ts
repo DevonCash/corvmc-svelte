@@ -609,18 +609,26 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	);
 	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
-	const reservation =
-		reserveSpace && data.reservationStartTime && data.reservationEndTime
-			? {
-					...buildTimeRangeInTz(
-						data.eventDate,
-						data.reservationStartTime,
-						data.reservationEndTime,
-						tz
-					),
-					overrideConflicts
-				}
-			: undefined;
+	// The reservation times are an optional override for setup and teardown, not a
+	// precondition: without them the space is held for the event's own window.
+	// Gating on them meant a submission that checked the box but sent no times
+	// created the event with no reservation and no error.
+	//
+	// All-or-nothing, because buildTimeRangeInTz reads an end before the start as
+	// an overnight range: pairing a supplied 23:00 start with a defaulted 22:00
+	// end would roll the end onto the next day and hold the room for 23 hours.
+	const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
+	const reservation = reserveSpace
+		? {
+				...buildTimeRangeInTz(
+					data.eventDate,
+					customWindow ? data.reservationStartTime! : data.eventStartTime,
+					customWindow ? data.reservationEndTime! : data.eventEndTime,
+					tz
+				),
+				overrideConflicts
+			}
+		: undefined;
 
 	const event = await create({
 		title: data.title,
