@@ -150,12 +150,27 @@
 										bind:value={notes}
 									></textarea>
 								</label>
+								{#if flag.entityType === 'event' && flag.eventContext?.source === 'community' && resolution === 'resolved'}
+									<!-- Say this out loud. Resolving a community-listing flag is
+									     the only thing in the app that changes a member's
+									     standing, and a staffer shouldn't discover that
+									     afterwards. -->
+									<p class="text-sm text-wrap opacity-70">
+										Resolving this also means the member who posted it has their future listings
+										checked by staff before they publish. Dismissing changes nothing.
+									</p>
+								{/if}
 								{#if canUnpublish && resolution === 'resolved'}
 									<label class="label cursor-pointer justify-start gap-2">
 										<input class="checkbox checkbox-sm" {...fields.unpublishEvent.as('checkbox')} />
 										<span class="label-text text-wrap">
-											Also unpublish this event (removes it from the public gig guide; the band's
-											admins are notified with your note)
+											{#if flag.eventContext?.source === 'community'}
+												Also unpublish this listing (removes it from the public gig guide and
+												deletes its poster; the member is notified with your note)
+											{:else}
+												Also unpublish this event (removes it from the public gig guide; the band's
+												admins are notified with your note)
+											{/if}
 										</span>
 									</label>
 								{/if}

@@ -9,10 +9,18 @@ system (member/band profile reports, `/staff/flags` triage queue) to events.
 
 ## Decisions
 
-- **Reactive, not proactive.** No `pending_review` status and no staff
-  pre-approval queue. Publishing is already gated to band admins; a flag is the
-  kill switch. (Pre-approval was considered and deliberately deferred in the
-  community-calendar spec.)
+- **Reactive, not proactive.** No staff pre-approval queue. Publishing is
+  already gated to band admins; a flag is the kill switch. (Pre-approval was
+  considered and deliberately deferred in the community-calendar spec.)
+
+  > **Amended by `docs/specs/community-events-spec.md`.** This decision
+  > originally read "No `pending_review` status and no staff pre-approval
+  > queue." The status now exists — community listings need somewhere to sit
+  > while staff look at them. What still holds, and what this decision was
+  > actually defending, is that **publishing is not gated by default for
+  > anyone**. Pre-approval applies only to a member who has had a report upheld
+  > against them, and never to band or CMC events.
+
 - **Anyone can report, Turnstile-gated.** The gig guide is public, so the
   report form on `/events/[id]` is public too, protected by the site's existing
   Cloudflare Turnstile pattern (`verifyTurnstile` + `svelte-turnstile` widget).
@@ -69,7 +77,8 @@ a SQLite table rebuild).
 
 ## Out of scope (deferred)
 
-- Staff pre-approval / `pending_review` status.
+- ~~Staff pre-approval / `pending_review` status.~~ Narrowed and shipped for
+  community listings only — see the amendment above.
 - Per-band or per-event opt-out from the public guide.
 - Rate limiting beyond Turnstile (per-IP caps, shadow bans).
 - Reporter-facing status updates ("your report was reviewed").

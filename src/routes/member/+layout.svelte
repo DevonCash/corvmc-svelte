@@ -54,9 +54,12 @@
 		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconMetronome />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/events" label="Events">
+		<Nav.Collapsible href="/member/events" label="Events" childHrefs={['/member/events']}>
 			{#snippet icon()}<IconCalendarEvent />{/snippet}
-		</Nav.Item>
+			<Nav.Item href="/member/events/submit" label="Add a Show">
+				{#snippet icon()}<IconPlus />{/snippet}
+			</Nav.Item>
+		</Nav.Collapsible>
 		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
 		</Nav.Item>

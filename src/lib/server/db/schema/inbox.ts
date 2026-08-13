@@ -27,6 +27,14 @@ export const submitContactFormSchema = z.object({
 	email: z.string().trim().email().max(320),
 	subject: z.string().trim().min(1).max(200),
 	message: z.string().trim().min(1).max(5000),
+	// Event tips, from anyone with no account. Optional and free-text on
+	// purpose: a tip is a lead for a staffer to chase, not a record. They get
+	// formatted into the message body in handleContactForm, so a tip is an
+	// ordinary web thread in the inbox rather than a second queue to remember.
+	tipEventName: z.string().trim().max(200).optional(),
+	tipEventDate: z.string().trim().max(100).optional(),
+	tipVenue: z.string().trim().max(200).optional(),
+	tipLink: z.string().trim().max(500).optional(),
 	turnstileToken: z.string().min(1)
 });
 

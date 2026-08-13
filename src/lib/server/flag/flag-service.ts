@@ -186,13 +186,28 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		.where(eq(contentFlag.id, flagId))
 		.returning();
 
-	if (
-		params.unpublishEvent &&
-		params.resolution === 'resolved' &&
-		existing.entityType === 'event'
-	) {
-		const { unpublishWithBandNotice } = await import('$lib/server/event/event-service');
-		await unpublishWithBandNotice(existing.entityId, { notes: params.notes });
+	if (params.resolution === 'resolved' && existing.entityType === 'event') {
+		const { getById } = await import('$lib/server/event/event-service');
+		const evt = await getById(existing.entityId);
+
+		// An *upheld* report is the only thing that costs a member their standing.
+		// A dismissed one deliberately does nothing: event reports are public and
+		// anonymous, so letting a bare accusation trip probation would hand any
+		// visitor a griefing tool. This is the single place the rule is wired.
+		if (evt?.source === 'community') {
+			const { revokeCommunityTrust } = await import('$lib/server/event/community-event-service');
+			await revokeCommunityTrust({
+				userId: evt.createdByUserId,
+				flagId,
+				staffId: params.staffId,
+				reason: params.notes
+			});
+		}
+
+		if (params.unpublishEvent) {
+			const { unpublishWithNotice } = await import('$lib/server/event/event-service');
+			await unpublishWithNotice(existing.entityId, { notes: params.notes });
+		}
 	}
 
 	return row;

@@ -11,6 +11,33 @@ export interface ContactFormParams {
 	email: string;
 	subject: string;
 	message: string;
+	/** Event-tip fields. All optional — a tip is a lead, not a record. */
+	tipEventName?: string;
+	tipEventDate?: string;
+	tipVenue?: string;
+	tipLink?: string;
+}
+
+/**
+ * Fold the event-tip fields into the message body.
+ *
+ * A tip stays an ordinary web thread rather than growing its own table and its
+ * own queue: the inbox exists so staff have one place to look, and a second
+ * triage surface is a second thing to forget. Prepended rather than appended so
+ * the details are the first thing a staffer reads.
+ */
+function withTipDetails(params: ContactFormParams): string {
+	const details = [
+		['Event', params.tipEventName],
+		['Date', params.tipEventDate],
+		['Venue', params.tipVenue],
+		['Link', params.tipLink]
+	].filter(([, value]) => value && value.trim());
+
+	if (details.length === 0) return params.message;
+
+	const block = details.map(([label, value]) => `${label}: ${value!.trim()}`).join('\n');
+	return `${block}\n\n---\n\n${params.message}`;
 }
 
 export async function handleContactForm(params: ContactFormParams) {
@@ -21,9 +48,11 @@ export async function handleContactForm(params: ContactFormParams) {
 		subject: params.subject
 	});
 
+	const body = withTipDetails(params);
+
 	const message = await addInboundMessage({
 		threadId: thread.id,
-		body: params.message,
+		body,
 		authorName: params.name
 	});
 
@@ -32,7 +61,7 @@ export async function handleContactForm(params: ContactFormParams) {
 		name: params.name,
 		email: params.email,
 		subject: params.subject,
-		message: params.message
+		message: body
 	});
 
 	return { thread, message };

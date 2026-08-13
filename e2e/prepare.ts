@@ -26,6 +26,7 @@ import { seedStaffUser } from './fixtures/seed-staff-user';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
+import { seedCommunityEvents } from './fixtures/seed-community-events';
 
 // CI starts from a fresh checkout with no local D1, so create + migrate it before
 // seeding. Locally we skip this: the dev D1 is already migrated and the migration
@@ -40,4 +41,5 @@ await seedBandOnboarding();
 await seedStaffUser();
 await seedStaffEvent();
 await seedVolunteering();
+await seedCommunityEvents();
 await seedFeatureFlags();

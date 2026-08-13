@@ -16,6 +16,7 @@ export function toCalendarEntry(
 		startsAt: e.startsAt,
 		endsAt: e.endsAt,
 		source: e.source,
+		status: e.status,
 		location: e.location,
 		bandName: e.bandName ?? null,
 		bandSlug: e.bandSlug ?? null,

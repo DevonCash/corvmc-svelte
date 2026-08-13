@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { IconShare3, IconCheck, IconCalendarPlus } from '@tabler/icons-svelte';
+	import { IconShare3, IconCheck, IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
@@ -67,6 +67,10 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
+
+	// A cancelled show stays on the guide so the people who already had the date
+	// find out. Everything transactional comes off; the facts stay.
+	const isCancelled = $derived(evt.status === 'cancelled');
 
 	const isBandEvent = $derived(evt.source === 'band');
 	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
@@ -167,7 +171,14 @@
 					</div>
 				{/if}
 
-				<h1 class="edet__title">{evt.title}</h1>
+				<h1 class="edet__title" class:edet__title--cancelled={isCancelled}>{evt.title}</h1>
+
+				{#if isCancelled}
+					<div class="edet__cancelled" role="status">
+						<IconAlertTriangle size={18} />
+						<span>This event has been cancelled.</span>
+					</div>
+				{/if}
 
 				<!-- The whole bill, in billing order. An act only links out once it has
 				     confirmed — a credit the named band hasn't agreed to is plain text. -->
@@ -310,7 +321,11 @@
 				{/if}
 
 				<div class="edet__ctas">
-					{#if data.isPast}
+					{#if isCancelled}
+						<span class="text-base font-medium" style="color: var(--fg-2)"
+							>Tickets and RSVPs are closed.</span
+						>
+					{:else if data.isPast}
 						<span class="text-base font-medium" style="color: var(--fg-2)"
 							>This event has ended.</span
 						>
@@ -392,6 +407,25 @@
 	/* Layout (.edet, .edet__poster/main/tags/title/facts/fact/desc/ctas) is
 	   shared with the member event detail page and lives in routes/layout.css.
 	   Only the rules unique to this page are defined locally below. */
+	/* A cancelled show is still worth reading — struck and flagged, not faded
+	   into something people skim past. */
+	.edet__cancelled {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.75rem 0 0.25rem;
+		padding: 0.6rem 0.85rem;
+		border: 2px solid var(--cmc-red-orange);
+		border-radius: 6px;
+		color: var(--cmc-red-orange);
+		font-weight: 500;
+	}
+
+	:global(.edet__title--cancelled) {
+		text-decoration: line-through;
+		text-decoration-thickness: 2px;
+	}
+
 	.edet__byline {
 		font-size: 0.95rem;
 		color: var(--fg-2);

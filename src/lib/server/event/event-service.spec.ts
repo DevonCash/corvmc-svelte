@@ -19,6 +19,14 @@ const mockEventRow = {
 	ticketingEnabled: false,
 	ticketPrice: null,
 	ticketQuantity: null,
+	// The column default, and the only source CMC sells tickets for. Left
+	// implicit before the community layer existed, when the ticketing guard
+	// tested for 'band' rather than not-'cmc'.
+	source: 'cmc',
+	bandId: null,
+	location: null,
+	externalTicketUrl: null,
+	reviewNotes: null,
 	createdByUserId: 'staff-1',
 	createdAt: new Date(),
 	updatedAt: new Date()
@@ -129,7 +137,9 @@ import {
 	cancel,
 	update,
 	checkRebookNeeded,
-	unpublishWithBandNotice
+	unpublishWithNotice,
+	listPublicUpcomingEvents,
+	remove
 } from './event-service';
 import {
 	staffCreate,
@@ -137,6 +147,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
 describe('EventService', () => {
 	beforeEach(() => {
@@ -662,7 +673,7 @@ describe('EventService', () => {
 	// update ticketing fields
 	// -----------------------------------------------------------------------
 
-	describe('unpublishWithBandNotice', () => {
+	describe('unpublishWithNotice', () => {
 		const publishedBandEvent = {
 			id: 'evt-1',
 			title: 'Loud Show',
@@ -680,7 +691,7 @@ describe('EventService', () => {
 				[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }] // band admins
 			];
 
-			await unpublishWithBandNotice('evt-1', { notes: 'Poster violated guidelines' });
+			await unpublishWithNotice('evt-1', { notes: 'Poster violated guidelines' });
 
 			expect(lastUpdateSet).toMatchObject({ status: 'draft', publishedAt: null });
 			await Promise.resolve();
@@ -710,7 +721,7 @@ describe('EventService', () => {
 				]
 			];
 
-			await unpublishWithBandNotice('evt-1');
+			await unpublishWithNotice('evt-1');
 
 			await Promise.resolve();
 			await Promise.resolve();
@@ -728,7 +739,7 @@ describe('EventService', () => {
 		it('is a no-op when the event is already off the guide', async () => {
 			selectResultQueue = [[{ ...publishedBandEvent, status: 'draft' }]];
 
-			await unpublishWithBandNotice('evt-1');
+			await unpublishWithNotice('evt-1');
 
 			expect(lastUpdateSet).toBeNull();
 			await Promise.resolve();
@@ -741,27 +752,250 @@ describe('EventService', () => {
 				[{ ...mockEventRow, status: 'published' }]
 			];
 
-			await unpublishWithBandNotice('evt-1');
+			await unpublishWithNotice('evt-1');
 
 			expect(lastUpdateSet).toMatchObject({ status: 'draft' });
 			await Promise.resolve();
 			await Promise.resolve();
 			expect(mockEmit).not.toHaveBeenCalled();
 		});
+
+		// -------------------------------------------------------------------
+		// Community listings
+		// -------------------------------------------------------------------
+		//
+		// Posters are served straight from R2 at a guessable key, and that URL
+		// consults nothing — not status, not source. So for a community listing
+		// this path has to destroy the object, not just drop the row off the
+		// guide: it is the advertised kill switch, and an image is the riskiest
+		// thing on the page.
+
+		const publishedCommunityListing = {
+			id: 'evt-1',
+			title: 'Basement show',
+			status: 'published',
+			source: 'community',
+			bandId: null,
+			bandName: null,
+			posterKey: 'events/posters/evt-1.jpg',
+			createdByUserId: 'member-1'
+		};
+
+		it('deletes the poster when it pulls a community listing', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+			expect(lastUpdateSet).toMatchObject({ posterKey: null, reviewNotes: 'No venue given' });
+		});
+
+		it('notifies the member who posted it, with the staff note', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(mockEmit).toHaveBeenCalledWith(
+				'community_event.unpublished',
+				expect.objectContaining({
+					eventId: 'evt-1',
+					submitterUserId: 'member-1',
+					submitterEmail: 'ada@example.com',
+					notes: 'No venue given'
+				})
+			);
+		});
+
+		it('leaves a band gig’s artwork alone — that takedown is reversible', async () => {
+			selectResultQueue = [
+				[{ ...publishedBandEvent, posterKey: 'events/posters/evt-1.jpg' }],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ bandId: 'band-1' }],
+				[{ id: 'u9', name: 'Admin', email: 'admin@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(deleteObject).not.toHaveBeenCalled();
+		});
 	});
 
-	// Band gigs are never sold through CMC. `createBandEvent` has no ticketing
-	// params, so `update()` is the only remaining way a band row could acquire
-	// `ticketingEnabled` — these pin that shut.
-	describe('band events cannot be ticketed', () => {
+	// -----------------------------------------------------------------------
+	// remove()
+	// -----------------------------------------------------------------------
+	//
+	// Deleting is for a row that should never have existed. The FKs alone get
+	// four things wrong, and each of these pins one of them.
+
+	describe('remove', () => {
+		const deletableEvent = {
+			...mockEventRow,
+			status: 'draft',
+			reservationId: 'res-1',
+			posterKey: 'events/posters/evt-1.jpg'
+		};
+
+		it('refuses once any ticket exists, and says to cancel instead', async () => {
+			selectResultQueue = [
+				[deletableEvent], // getById
+				[{ value: 2 }] // ticket count
+			];
+
+			// One call, both assertions: the select queue drains, so re-invoking
+			// would be asserting against an empty fixture rather than this case.
+			const err = await remove('evt-1', 'staff-1').catch((e: Error) => e);
+
+			expect(err).toBeInstanceOf(Error);
+			expect((err as Error).message).toMatch(/tickets/i);
+			// The sentence has to point somewhere useful, not just refuse.
+			expect((err as Error).message).toMatch(/[Cc]ancel/);
+		});
+
+		it('does not delete anything when it refuses', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 1 }]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow();
+
+			expect(eventDelete).not.toHaveBeenCalled();
+			expect(deleteObject).not.toHaveBeenCalled();
+			expect(cancelReservation).not.toHaveBeenCalled();
+		});
+
+		it('refuses a ticket in any status, not just live ones', async () => {
+			// Cancelled tickets are still payment records. `cancel()` voids tickets
+			// rather than removing them, so a cancelled ticketed event must not
+			// become deletable afterwards.
+			selectResultQueue = [[{ ...deletableEvent, status: 'cancelled' }], [{ value: 3 }]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(/tickets/i);
+		});
+
+		it('cancels the linked reservation rather than deleting it', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// Deleting the reservation would leave the room booked (no onDelete rule
+			// on event.reservationId), and for a recurring instance the generation
+			// job — which dedupes on reservation rows, not events — would quietly
+			// recreate the event on its next run.
+			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event deleted', {
+				staffOverride: true
+			});
+		});
+
+		it('takes the poster with it', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// Nothing about the R2 URL consults the database, so an orphaned object
+			// stays world-readable forever.
+			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+		});
+
+		it('deletes the row, and the flags that would dangle', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			// content_flag is polymorphic with no FK — a surviving report would
+			// point at nothing and break the triage queue.
+			expect(eventDelete).toHaveBeenCalledTimes(2);
+		});
+
+		it('survives a reservation that was already cancelled', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+			vi.mocked(cancelReservation).mockRejectedValueOnce(new Error('Already cancelled'));
+
+			await expect(remove('evt-1', 'staff-1')).resolves.toBeUndefined();
+			expect(eventDelete).toHaveBeenCalled();
+		});
+
+		it('throws when the event does not exist', async () => {
+			selectResultQueue = [[]];
+
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow('Event not found');
+			expect(eventDelete).not.toHaveBeenCalled();
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// Public visibility
+	// -----------------------------------------------------------------------
+	//
+	// This is the line between "announced" and "never public". A cancelled show
+	// belongs on the guide — the cancellation IS the announcement, and the
+	// people who need it are the ones who already had the date. A `rejected`
+	// listing is its exact opposite and must never reach these queries.
+
+	describe('public queries', () => {
+		it('selects published and cancelled, and nothing else', async () => {
+			const { publicEventStatuses } = await import('$lib/server/db/schema/event');
+
+			expect([...publicEventStatuses]).toEqual(['published', 'cancelled']);
+			expect(publicEventStatuses).not.toContain('rejected');
+			expect(publicEventStatuses).not.toContain('draft');
+			expect(publicEventStatuses).not.toContain('pending_review');
+		});
+
+		it('binds those two statuses into listPublicUpcomingEvents', async () => {
+			selectResult = [];
+			await listPublicUpcomingEvents(new Date('2026-01-01'), { limit: 20, offset: 0 });
+
+			// The chainable proxy erases the call shape, so assert on the SQL the
+			// filter renders to instead.
+			const { inArray } = await import('drizzle-orm');
+			const { event, publicEventStatuses } = await import('$lib/server/db/schema/event');
+			const { params } = new SQLiteSyncDialect().sqlToQuery(
+				inArray(event.status, [...publicEventStatuses])
+			);
+			expect(params).toEqual(['published', 'cancelled']);
+		});
+	});
+
+	// CMC only sells shows CMC produces: the money would otherwise land in CMC's
+	// Stripe account with no payout path back to whoever is putting the show on.
+	// Neither `createBandEvent` nor `createCommunityEvent` takes ticketing
+	// params, so `update()` is the only remaining way a non-CMC row could
+	// acquire `ticketingEnabled` — these pin that shut.
+	describe('only CMC events can be ticketed', () => {
 		const bandEvent = { ...mockEventRow, status: 'draft', source: 'band', bandId: 'band-1' };
+		const communityListing = { ...mockEventRow, status: 'draft', source: 'community' };
 
 		it('rejects enabling ticketing on a band event', async () => {
 			selectResult = [bandEvent];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 })).rejects.toThrow(
-				'Band events cannot be ticketed through CMC'
+				'CMC only sells tickets for its own events'
 			);
+		});
+
+		it('rejects enabling ticketing on a community listing', async () => {
+			selectResult = [communityListing];
+
+			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 })).rejects.toThrow(
+				'CMC only sells tickets for its own events'
+			);
+		});
+
+		it('allows a door price on a community listing', async () => {
+			selectResult = [communityListing];
+
+			await update('evt-1', { ticketPrice: 2000 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2000 });
+			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
 		});
 
 		it('allows a door price on a band event', async () => {

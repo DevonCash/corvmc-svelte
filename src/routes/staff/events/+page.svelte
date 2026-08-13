@@ -7,6 +7,8 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { IconMusic } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import { page as pageState } from '$app/state';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -14,13 +16,52 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
+	import { getPendingSubmissionCount } from '$lib/remote/community-events.remote';
+	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+
+	// Read once, at mount: the notification a staffer follows links straight to
+	// ?status=pending_review, and landing on the All tab would make that link a
+	// lie.
+	const initial = new URLSearchParams(pageState.url.search);
 
 	let page = $state(1);
 	let showCreateModal = $state(false);
-	let source = $state<'cmc' | 'band' | ''>('');
+	let source = $state<'cmc' | 'band' | 'community' | ''>(
+		(initial.get('source') as 'cmc' | 'band' | 'community' | null) ?? ''
+	);
+	let view = $state<'all' | 'review'>(
+		initial.get('status') === 'pending_review' ? 'review' : 'all'
+	);
 
-	let result = $derived(getStaffEvents({ source: source || undefined, page }));
+	// Writes the URL, never state — the tab above stays the source of truth.
+	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
+	// rewrites the address bar, and the router overwrites that entry on the next
+	// navigation, so back from an event landed on the wrong tab.
+	$effect(() => {
+		const pairs: [string, string][] = [];
+		if (view === 'review') pairs.push(['status', 'pending_review']);
+		if (source) pairs.push(['source', source]);
+		if (page > 1) pairs.push(['page', String(page)]);
+
+		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		const href = `${resolve('/staff/events')}${search ? `?${search}` : ''}`;
+		if (location.pathname + location.search !== href) {
+			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+		}
+	});
+
+	// The review queue is exactly `pending_review`, never `draft` — a member's
+	// unfinished listing is not staff's to read, and listAll holds those back.
+	let result = $derived(
+		getStaffEvents({
+			source: source || undefined,
+			status: view === 'review' ? 'pending_review' : undefined,
+			page
+		})
+	);
+
+	let pendingCount = $derived(await getPendingSubmissionCount());
 
 	type Event = Awaited<typeof result>['rows'][number];
 
@@ -48,6 +89,18 @@
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
+	<TabBar
+		tabs={[
+			{ key: 'all', label: 'All events' },
+			{ key: 'review', label: 'Needs review', badge: pendingCount || undefined }
+		]}
+		active={view}
+		onchange={(k) => {
+			view = k as 'all' | 'review';
+			page = 1;
+		}}
+	/>
+
 	<FilterBar activeCount={source ? 1 : 0} onclear={clearFilters}>
 		<Select
 			class="select-bordered select-sm"
@@ -58,6 +111,7 @@
 			<option value="">All events</option>
 			<option value="cmc">CMC events</option>
 			<option value="band">Band events</option>
+			<option value="community">Community listings</option>
 		</Select>
 	</FilterBar>
 

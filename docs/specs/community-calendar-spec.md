@@ -71,9 +71,9 @@ bands, including gigs at other venues.
 
 **Out (deferred to later phases):**
 
-- Community-submitted events. Extension point: a `source='community'` enum value
-  slots into the same source filters in `listPublicCalendarEvents` /
-  `listPublicUpcomingEvents` — no structural change.
+- ~~Community-submitted events.~~ **Shipped in phase 2** — the extension point
+  held: `source='community'` slotted into the same queries with no structural
+  change to them. See `docs/specs/community-events-spec.md`.
 - Partner feed imports; subscribable `.ics` / RSS feeds (the RFC-5545 helpers in
   `src/lib/utils/calendar.ts` make this cheap when wanted).
 - Band-admin notice that published events appear on the public gig guide.
@@ -108,6 +108,22 @@ bands, including gigs at other venues.
   gradients.
 - **Moderation:** none in this phase — a band publishing an event is the existing
   gate (band admins only).
+
+## Superseded by phase 2
+
+Two statements above no longer describe the code:
+
+- **The guide is no longer published-only.** `listPublicCalendarEvents` and
+  `listPublicUpcomingEvents` now select `publicEventStatuses` —
+  `['published', 'cancelled']`. A cancelled show stays on the guide, marked,
+  until its date passes, because cancelling is an announcement and the people
+  who need it are the ones who already had the date; dropping it silently left
+  them with nothing. Applies to all three sources. The hero posters
+  (`listUpcoming`) and the mini-calendar dots stay published-only.
+- **"CMC never sells a band's gig" is now "CMC only sells what CMC produces."**
+  The rule is unchanged in substance; the four `source === 'band'` checks are
+  `source !== 'cmc'`, so community listings are covered by the same three
+  enforcement layers.
 
 ## Dev testing
 

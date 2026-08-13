@@ -11,6 +11,7 @@ function entry(id: string, day: string): CalendarEntry {
 		startsAt: new Date(y, m - 1, d, 12, 0),
 		endsAt: new Date(y, m - 1, d, 14, 0),
 		source: 'cmc',
+		status: 'published',
 		location: null,
 		bandName: null,
 		bandSlug: null,

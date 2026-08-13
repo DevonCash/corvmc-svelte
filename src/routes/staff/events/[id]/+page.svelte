@@ -13,6 +13,7 @@
 		PublishEventAction,
 		UnpublishEventAction,
 		CancelEventAction,
+		DeleteEventAction,
 		CompTicketsAction
 	} from '$lib/components/shared/actions';
 	import {
@@ -33,12 +34,21 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMusic } from '@tabler/icons-svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import Action from '$lib/components/shared/Action.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { rejectListing } from '$lib/remote/community-events.remote';
+
+	const rejectFields = rejectListing.fields;
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
+	const isCommunityEvent = $derived(evt.source === 'community');
+	// CMC only sells shows CMC produces — see the rule in event-service.update().
+	const cmcCanSell = $derived(evt.source === 'cmc');
 	const recurringSeries = $derived(await getEventRecurringSeries(id));
 
 	// ── Edit state ────────────────────────────────────────────────────────
@@ -91,7 +101,7 @@
 		// stale flag — `update()` rejects enabling ticketing on a band event but
 		// allows disabling it. The price is untouched: a band gig legitimately has
 		// one for the door or an outside seller.
-		editTicketingEnabled = isBandEvent ? false : evt.ticketingEnabled;
+		editTicketingEnabled = cmcCanSell ? evt.ticketingEnabled : false;
 		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
@@ -222,6 +232,31 @@
 			<PublishEventAction eventId={evt.id} />
 		{/if}
 
+		{#if evt.status === 'pending_review'}
+			<!-- Approving is the same transition as publishing a draft, so it goes
+			     through the same action. Turning it down is its own thing: it needs
+			     a reason, because `rejected` exists so the member can fix and
+			     resubmit. -->
+			<PublishEventAction eventId={evt.id} label="Approve" />
+			<Action
+				action={rejectListing}
+				label="Turn down"
+				successToast="Sent back to the member"
+				class="btn-warning btn-sm"
+				onsuccess={() => invalidateAll()}
+			>
+				{#snippet form()}
+					<input {...rejectFields.eventId.as('hidden', evt.id)} />
+					<FormField
+						field={rejectFields.notes}
+						type="textarea"
+						label="What needs to change?"
+						description="The member sees this. Without it they can't fix the listing."
+					/>
+				{/snippet}
+			</Action>
+		{/if}
+
 		{#if evt.status === 'published'}
 			<UnpublishEventAction eventId={evt.id} />
 		{/if}
@@ -229,6 +264,8 @@
 		{#if evt.status !== 'cancelled'}
 			<CancelEventAction eventId={evt.id} />
 		{/if}
+
+		<DeleteEventAction eventId={evt.id} />
 	</div>
 </PageHeader>
 <PageContent width="3xl">
@@ -412,10 +449,11 @@
 							<!-- Selling through our checkout is the one thing a band gig cannot
 							     do: `update()` throws on it, so offering the toggle here would
 							     only produce a failed save. The band's own link takes the money. -->
-							{#if isBandEvent}
+							{#if !cmcCanSell}
 								<p class="text-sm opacity-60">
-									Band gigs aren't sold through CMC — the price above is what attendees pay at the
-									door or through the band's ticket link.
+									CMC doesn't sell tickets for shows it isn't producing — the price above is what
+									attendees pay at the door or through the {isBandEvent ? "band's" : 'listed'} ticket
+									link.
 								</p>
 							{:else}
 								<div class="form-control">
@@ -527,6 +565,30 @@
 				</div>
 			{/snippet}
 		</svelte:boundary>
+	{/if}
+
+	{#if isCommunityEvent}
+		<!-- Enough to judge the listing without leaving the page: who posted it,
+		     and whether they're here because of a past problem. -->
+		<InfoCard title="Submitted by">
+			<p class="flex flex-wrap items-center gap-2 text-sm">
+				<a href={resolve(`/staff/users/${data.submitterId}`)} class="link font-medium">
+					{data.creator?.name ?? 'Unknown member'}
+				</a>
+				{#if data.creator?.email}
+					<span class="opacity-60">{data.creator.email}</span>
+				{/if}
+			</p>
+			{#if data.submitterStanding?.requiresReview}
+				<Alert type="warning" class="mt-2">
+					This member's listings are checked before they publish, after a report was upheld against
+					one of them.
+					{#if data.submitterStanding.reason}
+						Staff note: "{data.submitterStanding.reason}"
+					{/if}
+				</Alert>
+			{/if}
+		</InfoCard>
 	{/if}
 
 	<!-- Event info card -->

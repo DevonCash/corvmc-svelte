@@ -56,10 +56,17 @@ vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn
 
 import { listPublicCalendarEvents, listPublicUpcomingEvents } from './event-service';
 
-/** Depth-first search of a drizzle SQL tree for a bound parameter value. */
+/**
+ * Depth-first search of a drizzle SQL tree for a bound parameter value.
+ *
+ * Walks plain arrays as well as `queryChunks`: `inArray()` puts its bound
+ * params in a bare array, so a chunks-only walk silently reports `false` for
+ * every value in an IN clause.
+ */
 function containsParam(node: unknown, value: unknown): boolean {
 	if (!node || typeof node !== 'object') return false;
 	if ((node as { value?: unknown }).value === value) return true;
+	if (Array.isArray(node)) return node.some((c) => containsParam(c, value));
 	const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
 	return Array.isArray(chunks) && chunks.some((c) => containsParam(c, value));
 }
@@ -116,20 +123,33 @@ describe('listPublicCalendarEvents', () => {
 		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
 	});
 
-	it('always filters to published events', async () => {
+	// A cancelled show belongs on the guide: the cancellation IS the
+	// announcement, and the people who need it are the ones who already had the
+	// date. A `rejected` listing is its exact opposite — never public, and it
+	// must not become public by riding along here.
+	it('shows published and cancelled events, and nothing else', async () => {
 		await listPublicCalendarEvents(windowStart, windowEnd);
+
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
+		expect(containsParam(capturedWhere, 'cancelled')).toBe(true);
+		expect(containsParam(capturedWhere, 'rejected')).toBe(false);
+		expect(containsParam(capturedWhere, 'draft')).toBe(false);
+		expect(containsParam(capturedWhere, 'pending_review')).toBe(false);
 	});
 });
 
 describe('listPublicUpcomingEvents', () => {
-	it('maps joined band info and filters to published', async () => {
+	it('maps joined band info and shows only publicly visible statuses', async () => {
 		selectRows = [{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes' }];
 
 		const result = await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
 
 		expect(result[0]).toMatchObject({ id: 'evt-band', bandName: 'The Shakes' });
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
+		expect(containsParam(capturedWhere, 'cancelled')).toBe(true);
+		// The one that would publish something staff turned down.
+		expect(containsParam(capturedWhere, 'rejected')).toBe(false);
+		expect(containsParam(capturedWhere, 'pending_review')).toBe(false);
 	});
 
 	it('fetches limit+1 rows at the given offset (hasMore probe)', async () => {
