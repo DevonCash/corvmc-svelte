@@ -108,6 +108,12 @@ export interface SendTemplateParams {
 	templateAlias: string;
 	/** Mustachio model — values substituted into the template */
 	model: Record<string, unknown>;
+	/**
+	 * Where a reply should go. Set it for any template the recipient can answer —
+	 * From is `noreply@`, so without this their reply is silently lost. Templates
+	 * that carry one are plaintext by convention (see postmark/templates).
+	 */
+	replyTo?: string | null;
 	tag?: string;
 	metadata?: Record<string, string>;
 }
@@ -121,6 +127,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 		await getClient().sendEmailWithTemplate({
 			From: `${fromName} <${fromAddress}>`,
 			To: params.to,
+			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: params.templateAlias,
 			TemplateModel: params.model,
 			Tag: params.tag,
@@ -145,7 +152,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 
 export interface SendInboxReplyTemplateParams {
 	to: string;
-	/** Mustachio model: { subject, contactName, staffName, body } (body is unescaped HTML) */
+	/** Mustachio model: { subject, contactName, staffName, body } — `body` is plain text */
 	model: Record<string, unknown>;
 	/** Where the recipient's response should go — a plus-addressed thread address */
 	replyTo?: string | null;

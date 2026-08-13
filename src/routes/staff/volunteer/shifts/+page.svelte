@@ -68,8 +68,44 @@
 		return `${date}T${time}`;
 	}
 
-	const defaultStart = localInput(new Date(Date.now() + 86_400_000));
-	const defaultEnd = localInput(new Date(Date.now() + 86_400_000 + 4 * 3_600_000));
+	// Tomorrow, so the form opens on a plausible date rather than one already past.
+	const START_MS = Date.now() + 86_400_000;
+	const defaultStart = localInput(new Date(START_MS));
+
+	// The role carries the shape of its own shift, so the end time and headcount
+	// follow whichever role is picked in the modal. Roles that never had defaults
+	// set fall back to the four hours and one person this form always assumed.
+	const FALLBACK_DURATION_MINUTES = 4 * 60;
+	const FALLBACK_CAPACITY = 1;
+
+	let pickedRoleId = $state('');
+
+	// Seeded from the first live role rather than left empty. The select has no
+	// placeholder option, so a bound value matching nothing leaves it with nothing
+	// selected — which posts an empty role instead of the one on screen. Guarded on
+	// `pickedRoleId` so it seeds once and never clobbers an actual choice.
+	$effect(() => {
+		void roles.then((all) => {
+			if (pickedRoleId) return;
+			const first = all.find((r) => r.isActive);
+			if (first) pickedRoleId = first.id;
+		});
+	});
+
+	type RoleDefaults = {
+		id: string;
+		defaultDurationMinutes: number | null;
+		defaultCapacity: number | null;
+	};
+
+	function defaultsFor(all: RoleDefaults[]) {
+		const picked = all.find((r) => r.id === pickedRoleId) ?? all[0];
+		const minutes = picked?.defaultDurationMinutes ?? FALLBACK_DURATION_MINUTES;
+		return {
+			end: localInput(new Date(START_MS + minutes * 60_000)),
+			capacity: String(picked?.defaultCapacity ?? FALLBACK_CAPACITY)
+		};
+	}
 </script>
 
 <PageHeader title="Shifts" subtitle="Staff" backHref="/staff/volunteer">
@@ -84,20 +120,22 @@
 				successToast="Shift scheduled"
 			>
 				{#snippet form()}
+					{@const defaults = defaultsFor(live)}
 					<FormField
 						name="volunteerRoleId"
 						label="Role"
 						type="select"
+						bind:value={pickedRoleId}
 						options={live.map((r) => ({ value: r.id, label: r.name }))}
 					/>
 					<FormField name="startsAt" label="Starts" type="datetime-local" value={defaultStart} />
-					<FormField name="endsAt" label="Ends" type="datetime-local" value={defaultEnd} />
+					<FormField name="endsAt" label="Ends" type="datetime-local" value={defaults.end} />
 					<FormField
 						name="capacity"
 						label="People needed"
 						type="number"
 						min="1"
-						value="1"
+						value={defaults.capacity}
 						description="Claims beyond this are refused."
 					/>
 					<FormField

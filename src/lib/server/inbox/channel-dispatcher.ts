@@ -59,15 +59,6 @@ async function dispatchSmsReply(params: DispatchReplyParams): Promise<string> {
 	return sid;
 }
 
-/** Inbox-preview snippet for a reply: the opening line of the body, tags stripped. */
-function previewTextFrom(body: string): string {
-	const flat = body
-		.replace(/<[^>]+>/g, ' ')
-		.replace(/\s+/g, ' ')
-		.trim();
-	return flat.length > 140 ? `${flat.slice(0, 139).trimEnd()}…` : flat;
-}
-
 async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> {
 	if (!params.contactEmail) {
 		throw new Error('Cannot send email reply: no contact email on thread');
@@ -85,12 +76,13 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 
 	const messageId = await sendInboxReply({
 		to: params.contactEmail,
+		// The template is text-only, so there is no preheader to fill — the mail
+		// client's snippet is just the opening of the body.
 		model: {
 			subject,
 			contactName: params.contactName ?? 'there',
 			staffName: params.staffName,
-			body: params.body,
-			preview_text: previewTextFrom(params.body)
+			body: params.body
 		},
 		replyTo,
 		inReplyTo: params.lastInboundMessageId,

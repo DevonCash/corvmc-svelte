@@ -22,6 +22,7 @@ import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import {
 	volunteerRole,
+	volunteerRoleInterest,
 	volunteerProfile,
 	volunteerHourLog,
 	volunteerCertification,
@@ -47,6 +48,15 @@ export const SEED_VOL_ROLE_NAME = 'E2E Front Desk';
  * assertion match two cards and trip strict mode.
  */
 export const SEED_VOL_ROLE_BOLD_PHRASE = 'E2E training provided on site';
+
+/**
+ * Shift defaults, deliberately unlike the form's own fallback of 4 hours and one
+ * person — a prefill test that matched the fallback would pass with the wiring
+ * cut.
+ */
+export const SEED_VOL_ROLE_DEFAULT_CAPACITY = 3;
+export const SEED_VOL_ROLE_DEFAULT_MINUTES = 240;
+export const SEED_VOL_GATED_DEFAULT_CAPACITY = 7;
 export const SEED_VOL_ROLE_DESCRIPTION = `Cover the door during open hours.\n\n**${SEED_VOL_ROLE_BOLD_PHRASE}** — we will show you the ropes.`;
 
 /** A already-reviewed rejection, so the member-side rendering of the reason can
@@ -188,6 +198,7 @@ export async function seedVolunteering(): Promise<void> {
 		await db.delete(account).where(inArray(account.userId, EXTRA_MEMBER_IDS));
 		await db.delete(modelHasRole).where(inArray(modelHasRole.userId, EXTRA_MEMBER_IDS));
 		await db.delete(user).where(inArray(user.id, EXTRA_MEMBER_IDS));
+		await db.delete(volunteerRoleInterest).where(inArray(volunteerRoleInterest.userId, MEMBER_IDS));
 		await db.delete(volunteerHourLog).where(inArray(volunteerHourLog.id, LOG_IDS));
 		await db.delete(volunteerHourLog).where(eq(volunteerHourLog.userId, SEED_VOL_MEMBER_ID));
 		await db.delete(volunteerRole).where(inArray(volunteerRole.id, ROLE_IDS));
@@ -234,6 +245,8 @@ export async function seedVolunteering(): Promise<void> {
 				description: SEED_VOL_ROLE_DESCRIPTION,
 				displayOrder: 0,
 				isActive: true,
+				defaultDurationMinutes: SEED_VOL_ROLE_DEFAULT_MINUTES,
+				defaultCapacity: SEED_VOL_ROLE_DEFAULT_CAPACITY,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -345,6 +358,7 @@ export async function seedVolunteering(): Promise<void> {
 			description: 'Run the desk.',
 			displayOrder: 2,
 			isActive: true,
+			defaultCapacity: SEED_VOL_GATED_DEFAULT_CAPACITY,
 			createdAt: now,
 			updatedAt: now
 		});
@@ -355,6 +369,25 @@ export async function seedVolunteering(): Promise<void> {
 			volunteerRoleId: SEED_VOL_GATED_ROLE_ID,
 			certificationId: SEED_VOL_CERT_ID
 		});
+
+		// Standing interest in both roles, so the staff role detail page has someone
+		// to list. The gated role is the useful half: the member is interested but
+		// holds nothing, which is exactly the "interested but not rosterable" case
+		// the readiness column exists to surface.
+		await db.insert(volunteerRoleInterest).values([
+			{
+				id: 'e2e-vol-interest-active',
+				userId: SEED_VOL_MEMBER_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				createdAt: now
+			},
+			{
+				id: 'e2e-vol-interest-gated',
+				userId: SEED_VOL_MEMBER_ID,
+				volunteerRoleId: SEED_VOL_GATED_ROLE_ID,
+				createdAt: now
+			}
+		]);
 
 		await db.insert(volunteerShift).values([
 			{

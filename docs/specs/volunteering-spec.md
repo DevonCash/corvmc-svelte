@@ -527,7 +527,8 @@ through its expiry date. The asymmetry is deliberate and easy to get backwards.
   `/staff/volunteer/roles` exactly: table, create/edit modals, archive rather
   than delete, and delete offered only for an entry nothing references. Editing
   `validityMonths` warns that it applies to future grants only.
-- **Role editing** gains a required-certifications multi-select (`TagInput`).
+- **Role editing** gains a required certifications editor, on the role detail
+  page (a `CheckboxGroup` in its own `Action`, not a field on the edit form).
 - **Member detail** gains a Certifications card: what they hold, when granted,
   when it expires, who granted it, and a Grant action. Revoke takes a required
   reason. Delete is offered only for a record created today by the same staffer
@@ -779,14 +780,57 @@ it.
 No `/staff/volunteer/[id]` detail route — the modal shows the whole record, and
 another route is another thing to guard.
 
-### `/staff/volunteer/roles` — role management
+### `/staff/volunteer/roles` — the coordinator's home
 
-- `Table` of roles: name, description preview, log count, active badge, display
-  order.
-- Create and edit `Action` modals: name, markdown description (textarea),
-  display order, active toggle.
-- Archive, restore, and delete row actions. Delete on a role with logs surfaces
-  `VolunteerRoleInUseError` as a message pointing at archive.
+The list and its detail page absorbed the standing-interest table, which used to
+live at `/staff/volunteer/interest`. One nav item, because the two were halves of
+one dataset: per-role interest counts were already the interest page's filter
+dropdown, and "who would do this" is a fact about a role.
+
+- One `InfoCard` per role group, group order taken from `volunteerRoleGroups`
+  rather than the data so sections stay put as roles are added; empty groups drop
+  out rather than rendering a bare heading.
+- `Table` per section: active/retired glyph, name with description preview and
+  required-certification badges, unfilled-shift count, interest count, log count,
+  display order. Rows navigate; there are no row actions.
+- Retired roles are hidden behind an **Include retired** filter, URL-backed as
+  `?retired=1`. They are hidden, never dropped — the work done under them still
+  resolves in every report.
+- **Unfilled** counts upcoming, uncancelled shifts still short of capacity, so
+  landing on the page answers "what needs attention" before "how many are
+  interested". An em dash at zero, so a short role is the only thing drawing the
+  eye.
+
+### `/staff/volunteer/roles/[id]` — role detail
+
+Every mutation lives here rather than on the list. Note that each `Action` sits
+_outside_ the edit `<Form>`: `Button` renders a bits-ui `Button.Root` which
+leaves `type` unset, so a trigger nested in the form would post the role edit.
+
+- **Role Info** — an edit `Form`: name, markdown description, group, display
+  order, plus the shift defaults (`defaultDurationMinutes`, `defaultCapacity`)
+  that prefill the New Shift form. Defaults, not limits.
+- **Requirements** — the role's certifications, edited through
+  `setRoleCertifications`. Its own `Action` rather than a field on the edit form:
+  it posts an array to a different remote, and folding it in would mean one form
+  writing to two services.
+- **Upcoming Shifts** — next shifts with `claimed/capacity` and a short marker,
+  and a New shift action prefilled from this role's defaults. The `from` bound is
+  pinned once at page setup: `refresh()` is keyed by argument, so a clock-derived
+  bound would mint a new key per evaluation and the post-create refresh would
+  miss.
+- **Interested Members** — who picked this role, paginated, with copy-emails.
+  `since` is when they picked _this_ role, not the earliest thing they ticked.
+  When the role requires certifications the list gains a readiness glyph and a
+  "N of M ready" count, computed from two queries for the whole page rather than
+  two per member; a role that requires nothing renders no such column.
+- **How it's going** — the anonymous per-role feedback rollup.
+- Archive, restore, and delete live in the page header. Delete on a role with
+  logs surfaces `VolunteerRoleInUseError` as a message pointing at archive.
+
+`/staff/volunteer/interest` remains as a 308 redirect. Searching _members_ across
+roles is deliberately not carried over — that belongs on the users table, and is
+tracked in `CHORES.md`.
 
 ### `/staff/volunteer/report`
 

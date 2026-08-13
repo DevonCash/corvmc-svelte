@@ -2,6 +2,7 @@ import { domainEvents } from '$lib/server/events/event-bus';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
+import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import type {
 	NotificationEmailDetail,
@@ -15,12 +16,17 @@ import type {
 // appropriate channels. Each listener maps a domain event to one or more
 // notification dispatches.
 //
-// All transactional emails render through a single Postmark template,
+// Most transactional emails render through a single Postmark template,
 // `notification` (source: postmark/templates/notification, pushed via
 // `pnpm email:push`). Listeners supply the copy as a NotificationEmailModel —
-// subject, heading, body paragraphs, optional details + CTA. The two
-// exceptions are `ticket-confirmation` (ticket-code list) and `inbox-reply`
-// (raw passthrough + threading), which keep dedicated templates.
+// subject, heading, body paragraphs, optional details + CTA. The exceptions
+// keep dedicated templates: `ticket-confirmation` (ticket-code list), and the
+// two conversational ones, `inbox-reply` and `contact-alert`.
+//
+// Those last two follow a rule worth keeping: an email the recipient can reply
+// to is sent as plain text with no layout. The `notification` template's brand
+// chrome belongs to one-way mail — on a message someone is meant to answer it
+// buries the content and makes the reply feel like it goes to a robot.
 // ---------------------------------------------------------------------------
 
 const GENERIC_ALIAS = 'notification';
@@ -575,31 +581,40 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Contact form submission ---
+	// Plain text, and replyable: staff answer this from whatever mail client
+	// they already have open instead of clicking through to the inbox.
 	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
 		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
+
+		// The signed thread address routes a staff reply back through the inbox,
+		// which relays it to the sender and records it on the conversation. With
+		// no inbound address configured we fall back to the sender's own address:
+		// an unlogged reply that arrives beats a logged one that never sends.
+		// Deliberately not STAFF_CONTACT_EMAIL — that returns the reply to this
+		// same alias carrying no thread hash, where it is dropped or opens a new
+		// thread whose "contact" is the staff member.
+		const threadReplyTo = buildReplyToAddress(event.threadId);
+		const replyNote = threadReplyTo
+			? `Reply to this email to answer ${event.name}. Your reply is sent from CMC and saved on the conversation in the staff inbox.`
+			: `Reply to this email to answer ${event.name} directly. Note: with no inbox reply address configured, your reply goes straight to them and is NOT saved to the staff inbox — post it there yourself if it should be on the record.`;
 
 		await dispatchEmailOnly({
 			type: 'contact_form',
 			toEmail: staffEmail,
-			templateAlias: GENERIC_ALIAS,
+			templateAlias: 'contact-alert',
+			replyTo: threadReplyTo ?? event.email,
 			model: {
 				subject: `Contact form: ${event.subject}`,
-				preview_text: `${event.name}: ${event.subject}`,
-				heading: 'New Contact Form Message',
-				details: [
-					{ label: 'From', value: event.name },
-					{ label: 'Email', value: event.email },
-					{ label: 'Subject', value: event.subject }
-				],
-				// Raw — the dispatcher escapes it and preserves the line breaks.
-				quote: event.message,
-				footnote:
-					'Reply from the staff inbox — replies sent there go to the sender and thread their response back into the same conversation.',
-				cta: {
-					url: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`,
-					label: 'Open in Staff Inbox'
-				}
-			} satisfies NotificationEmailModel
+				contactName: event.name,
+				// Body text only, never a To/Cc header — that keeps Reply All
+				// equivalent to Reply, so the sender can't get a direct copy
+				// alongside the relayed one.
+				contactEmail: event.email,
+				formSubject: event.subject,
+				replyNote,
+				message: event.message,
+				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
+			}
 		});
 	});
 

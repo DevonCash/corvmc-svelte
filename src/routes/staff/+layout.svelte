@@ -24,7 +24,6 @@
 		IconHeartHandshake,
 		IconReportAnalytics,
 		IconListDetails,
-		IconHandStop,
 		IconCertificate,
 		IconCalendarTime
 	} from '@tabler/icons-svelte';
@@ -103,7 +102,6 @@
 				childHrefs={[
 					'/staff/volunteer',
 					'/staff/volunteer/shifts',
-					'/staff/volunteer/interest',
 					'/staff/volunteer/roles',
 					'/staff/volunteer/certifications',
 					'/staff/volunteer/clearances',
@@ -114,9 +112,6 @@
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
 				<Nav.Item href="/staff/volunteer/shifts" label="Shifts">
 					{#snippet icon()}<IconCalendarTime />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/volunteer/interest" label="Interest">
-					{#snippet icon()}<IconHandStop />{/snippet}
 				</Nav.Item>
 				<Nav.Item href="/staff/volunteer/roles" label="Roles">
 					{#snippet icon()}<IconListDetails />{/snippet}

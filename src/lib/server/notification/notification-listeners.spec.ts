@@ -23,6 +23,13 @@ vi.mock('$lib/server/authorization', () => ({
 	listStaffUsers: () => mockStaffUsers()
 }));
 
+// Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
+// production state — both branches are exercised below.
+const mockBuildReplyToAddress = vi.fn((threadId: string) => `reply+${threadId}.sig@replies.test`);
+vi.mock('$lib/server/inbox/reply-address', () => ({
+	buildReplyToAddress: (threadId: string) => mockBuildReplyToAddress(threadId)
+}));
+
 vi.mock('$env/dynamic/private', () => ({
 	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
 }));
@@ -258,43 +265,49 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.model.footnote).toBe('This invitation expires in 7 days.');
 	});
 
-	it('contact.form_submitted → email-only notification alias to staff', async () => {
-		await emit('contact.form_submitted', {
-			threadId: 'thread-9',
-			name: 'Charlie',
-			email: 'charlie@test.com',
-			subject: 'General Inquiry',
-			message: 'Hello, I have a question'
-		});
+	const contactFormEvent = {
+		threadId: 'thread-9',
+		name: 'Charlie',
+		email: 'charlie@test.com',
+		subject: 'General Inquiry',
+		message: 'Hello, I have a question'
+	};
+
+	it('contact.form_submitted → plaintext contact-alert template to staff', async () => {
+		await emit('contact.form_submitted', contactFormEvent);
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
 		expect(params.type).toBe('contact_form');
 		expect(params.toEmail).toBe('staff@test.com');
-		expect(params.templateAlias).toBe(GENERIC);
-		expect(params.model.details).toEqual([
-			{ label: 'From', value: 'Charlie' },
-			{ label: 'Email', value: 'charlie@test.com' },
-			{ label: 'Subject', value: 'General Inquiry' }
-		]);
-		// The message is user-generated — it goes to `quote`, which the dispatcher
-		// escapes, not into a paragraph.
-		expect(params.model.quote).toBe('Hello, I have a question');
-		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/inbox/thread-9');
+		// Not the generic template: staff can reply to this one, so it is
+		// plaintext with no layout.
+		expect(params.templateAlias).toBe('contact-alert');
+		expect(params.model.subject).toBe('Contact form: General Inquiry');
+		expect(params.model.contactName).toBe('Charlie');
+		expect(params.model.contactEmail).toBe('charlie@test.com');
+		expect(params.model.formSubject).toBe('General Inquiry');
+		expect(params.model.message).toBe('Hello, I have a question');
+		expect(params.model.threadUrl).toBe('https://test.corvmc.com/staff/inbox/thread-9');
 	});
 
-	it('contact.form_submitted → points staff at the inbox, not at replying by email', async () => {
-		await emit('contact.form_submitted', {
-			threadId: 'thread-9',
-			name: 'Charlie',
-			email: 'charlie@test.com',
-			subject: 'General Inquiry',
-			message: 'Hello, I have a question'
-		});
+	it('contact.form_submitted → replies route back through the thread address', async () => {
+		await emit('contact.form_submitted', contactFormEvent);
 
-		// The alert is sent from noreply@ with no Reply-To — telling staff to reply
-		// to it would silently drop their response.
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
-		expect(paragraphText(params.model)).not.toContain('Reply directly to this email');
+		expect(params.replyTo).toBe('reply+thread-9.sig@replies.test');
+		expect(params.model.replyNote).toContain('saved on the conversation in the staff inbox');
+	});
+
+	it('contact.form_submitted → falls back to the sender when no reply address is configured', async () => {
+		mockBuildReplyToAddress.mockReturnValueOnce(null as unknown as string);
+
+		await emit('contact.form_submitted', contactFormEvent);
+
+		// An unlogged reply that arrives beats a logged one that never sends —
+		// and the copy has to say which mode staff are in.
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.replyTo).toBe('charlie@test.com');
+		expect(params.model.replyNote).toContain('NOT saved to the staff inbox');
 	});
 
 	it('loan_requested → notification alias, omits notes line when none', async () => {

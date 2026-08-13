@@ -3041,40 +3041,53 @@ async function main() {
 // Volunteering
 // ---------------------------------------------------------------------------
 
+// `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
+// with, so they are only set on the roles that really are scheduled as shifts —
+// leaving the committee roles blank exercises the fallback path too.
 const VOLUNTEER_ROLE_SEEDS: Array<{
 	name: string;
 	description: string;
 	group: 'at-shows' | 'away-from-shows' | 'committee';
 	displayOrder: number;
 	isActive?: boolean;
+	defaultDurationMinutes?: number;
+	defaultCapacity?: number;
 }> = [
 	{
 		name: 'Sound Engineering',
 		group: 'at-shows' as const,
 		description:
 			'Run the board for a show or open mic. Line check, monitor mixes, and a house mix that respects the room.\n\n**No experience needed** — we will train you on the desk before you fly solo.',
-		displayOrder: 10
+		displayOrder: 10,
+		defaultDurationMinutes: 300,
+		defaultCapacity: 1
 	},
 	{
 		name: 'Event Setup',
 		group: 'at-shows' as const,
 		description:
 			'Get the room ready before doors: chairs, tables, PA, stage lighting, and the merch table.\n\nUsually a two-hour window starting three hours before the show.',
-		displayOrder: 20
+		displayOrder: 20,
+		defaultDurationMinutes: 120,
+		defaultCapacity: 3
 	},
 	{
 		name: 'Front Desk',
 		group: 'at-shows' as const,
 		description:
 			'Cover the door during open hours or at a show. Greet people, take entry, answer questions about membership, and point folks at the practice room.',
-		displayOrder: 30
+		displayOrder: 30,
+		defaultDurationMinutes: 240,
+		defaultCapacity: 2
 	},
 	{
 		name: 'Load-Out & Teardown',
 		group: 'at-shows' as const,
 		description:
 			'After the last set: strike the stage, coil cables, reset the floor, and take the trash out. The fastest way to make yourself indispensable.',
-		displayOrder: 40
+		displayOrder: 40,
+		defaultDurationMinutes: 90,
+		defaultCapacity: 4
 	},
 	{
 		name: 'Facilities & Maintenance',

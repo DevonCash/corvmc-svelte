@@ -2,7 +2,11 @@ import { db } from '$lib/server/db';
 import { volunteerRole, volunteerHourLog } from '$lib/server/db/schema/volunteer';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
-import { VOLUNTEER_ROLE_DESCRIPTION_MAX, VOLUNTEER_ROLE_NAME_MAX } from '$lib/config';
+import {
+	VOLUNTEER_ROLE_DESCRIPTION_MAX,
+	VOLUNTEER_ROLE_NAME_MAX,
+	VOLUNTEER_SHIFT_MAX_CAPACITY
+} from '$lib/config';
 import type { VolunteerRole, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 
 // ---------------------------------------------------------------------------
@@ -50,7 +54,14 @@ interface RoleInput {
 	group?: VolunteerRoleGroup;
 	displayOrder?: number;
 	isActive?: boolean;
+	/** What the New Shift form starts with. `null` clears it. Not a limit. */
+	defaultDurationMinutes?: number | null;
+	defaultCapacity?: number | null;
 }
+
+// A day. Long enough for anything the club actually schedules, short enough
+// that a mistyped "480" hours can't produce a shift ending next year.
+const MAX_DEFAULT_DURATION_MINUTES = 1440;
 
 function normalize(data: RoleInput) {
 	const normalized: RoleInput = {};
@@ -83,6 +94,40 @@ function normalize(data: RoleInput) {
 		normalized.displayOrder = data.displayOrder;
 	}
 
+	// Both defaults are optional and clearable, so `null` is a legitimate value and
+	// only a present non-null one gets range-checked. The ceilings match what the
+	// shift form and the `volunteer_shift_capacity_positive` check already allow —
+	// a default that couldn't be submitted as a shift is just a trap.
+	if (data.defaultDurationMinutes !== undefined) {
+		const minutes = data.defaultDurationMinutes;
+		if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1)) {
+			throw new VolunteerRoleValidationError(
+				'Usual length must be a whole number of minutes, or blank'
+			);
+		}
+		if (minutes !== null && minutes > MAX_DEFAULT_DURATION_MINUTES) {
+			throw new VolunteerRoleValidationError(
+				`Usual length must be ${MAX_DEFAULT_DURATION_MINUTES} minutes or fewer`
+			);
+		}
+		normalized.defaultDurationMinutes = minutes;
+	}
+
+	if (data.defaultCapacity !== undefined) {
+		const capacity = data.defaultCapacity;
+		if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) {
+			throw new VolunteerRoleValidationError(
+				'People needed must be a whole number of 1 or more, or blank'
+			);
+		}
+		if (capacity !== null && capacity > VOLUNTEER_SHIFT_MAX_CAPACITY) {
+			throw new VolunteerRoleValidationError(
+				`People needed must be ${VOLUNTEER_SHIFT_MAX_CAPACITY} or fewer`
+			);
+		}
+		normalized.defaultCapacity = capacity;
+	}
+
 	if (data.group !== undefined) normalized.group = data.group;
 
 	if (data.isActive !== undefined) normalized.isActive = data.isActive;
@@ -101,13 +146,9 @@ function isUniqueViolation(err: unknown): boolean {
 // Mutations
 // ---------------------------------------------------------------------------
 
-export async function createVolunteerRole(data: {
-	name: string;
-	description?: string | null;
-	group?: VolunteerRoleGroup;
-	displayOrder?: number;
-	isActive?: boolean;
-}): Promise<VolunteerRole> {
+export async function createVolunteerRole(
+	data: RoleInput & { name: string }
+): Promise<VolunteerRole> {
 	const values = normalize(data);
 
 	try {
@@ -120,7 +161,9 @@ export async function createVolunteerRole(data: {
 				// present to keep the insert shape stable across call sites.
 				...(values.group ? { group: values.group } : {}),
 				displayOrder: values.displayOrder ?? 0,
-				isActive: values.isActive ?? true
+				isActive: values.isActive ?? true,
+				defaultDurationMinutes: values.defaultDurationMinutes ?? null,
+				defaultCapacity: values.defaultCapacity ?? null
 			})
 			.returning();
 		return row;

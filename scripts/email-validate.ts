@@ -14,7 +14,7 @@
  */
 import 'dotenv/config';
 import { ServerClient } from 'postmark';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FIXTURES } from '../src/lib/server/notification/email/fixtures';
 import { readMeta } from '../src/lib/server/notification/email/render-preview';
@@ -110,11 +110,15 @@ for (const fixture of FIXTURES) {
 	const meta = readMeta(fixture.alias);
 	const dir = join(root, fixture.alias);
 
+	// A template dir with no content.html is text-only — Postmark accepts a blank
+	// HtmlBody as long as the TextBody is non-empty.
+	const htmlPath = join(dir, 'content.html');
+
 	await validate(
 		`${fixture.name} (${fixture.alias})`,
 		{
 			Subject: meta.Subject ?? '',
-			HtmlBody: readFileSync(join(dir, 'content.html'), 'utf8'),
+			HtmlBody: existsSync(htmlPath) ? readFileSync(htmlPath, 'utf8') : '',
 			TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
 			TemplateType: 'Standard',
 			TestRenderModel: fixture.model

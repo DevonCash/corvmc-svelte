@@ -119,7 +119,14 @@ export async function getInterestsForUser(userId: string): Promise<string[]> {
 	return rows.map((r) => r.roleId);
 }
 
-/** How many people are interested in each role — the counts beside the staff filter. */
+/**
+ * How many people are interested in each role — the count column on the staff
+ * roles table.
+ *
+ * Archived roles included. The table lists them (behind "Include retired"), and
+ * a retired role dropping to a blank count would read as "nobody wants this"
+ * rather than "this isn't offered".
+ */
 export async function countInterestsByRole(): Promise<
 	{ roleId: string; roleName: string; group: VolunteerRoleGroup; interested: number }[]
 > {
@@ -132,7 +139,6 @@ export async function countInterestsByRole(): Promise<
 		})
 		.from(volunteerRole)
 		.leftJoin(volunteerRoleInterest, eq(volunteerRoleInterest.volunteerRoleId, volunteerRole.id))
-		.where(eq(volunteerRole.isActive, true))
 		.groupBy(volunteerRole.id)
 		.orderBy(asc(volunteerRole.displayOrder), asc(volunteerRole.name));
 
@@ -172,6 +178,19 @@ export async function listInterestedMembers(
 			)`
 		: undefined;
 
+	// "Since" answers a different question either side of the role filter. Unfiltered
+	// the table is about the member, so it's the earliest thing they ticked. Filtered
+	// — which is how the role detail page reads it — it has to be when they ticked
+	// *this* role, or someone who joined the door crew last week reads as a January
+	// regular because that's when they ticked Merch.
+	const since = filters.roleId
+		? sql<number>`(
+				select vri."created_at" from "volunteer_role_interest" vri
+				where vri."user_id" = ${user.id}
+					and vri."volunteer_role_id" = ${filters.roleId}
+			)`
+		: sql<number>`min(${volunteerRoleInterest.createdAt})`;
+
 	const matchesSearch = filters.search
 		? or(like(user.name, `%${filters.search}%`), like(user.email, `%${filters.search}%`))
 		: undefined;
@@ -190,7 +209,7 @@ export async function listInterestedMembers(
 			// this module does no work (the trap hourLogSelect() documents).
 			role: primaryRoleFor(user.id),
 			roleNames: sql<string>`group_concat(${volunteerRole.name}, ${ROLE_NAME_SEPARATOR})`,
-			since: sql<number>`min(${volunteerRoleInterest.createdAt})`
+			since
 		})
 		.from(volunteerRoleInterest)
 		.innerJoin(user, eq(user.id, volunteerRoleInterest.userId))

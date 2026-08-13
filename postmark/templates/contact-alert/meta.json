@@ -1,6 +1,6 @@
 {
-  "Name": "Inbox Reply",
-  "Alias": "inbox-reply",
+  "Name": "Contact Form Alert",
+  "Alias": "contact-alert",
   "Subject": "{{subject}}",
   "TemplateType": "Standard"
 }
