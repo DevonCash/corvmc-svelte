@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
+	SEED_CONFLICT_DATE,
+	SEED_CONFLICT_END,
+	SEED_CONFLICT_START,
 	SEED_EVENT_DATE,
 	SEED_EVENT_END,
 	SEED_EVENT_START,
@@ -81,5 +84,54 @@ test.describe('staff event creation — reserve space', () => {
 		// the reservation was created AND linked.
 		await expect(page.getByText('Space Reservation')).toBeVisible();
 		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
+	});
+
+	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'New Event' }).click();
+
+		await page.locator('input[name="eventStartTime"]').fill('19:00');
+		await page.locator('input[name="eventEndTime"]').fill('22:00');
+		await page.locator(RESERVE_TOGGLE).check();
+
+		// An hour either side of the show for load-in and load-out.
+		await page.locator('input[name="reservationStartTime"]').fill('18:00');
+		await page.locator('input[name="reservationEndTime"]').fill('23:00');
+		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('18:00');
+
+		// The show moves two hours earlier.
+		await page.locator('input[name="eventStartTime"]').fill('17:00');
+		await page.locator('input[name="eventEndTime"]').fill('20:00');
+
+		// Seeding only-while-empty left the hold at 18:00–23:00, booking a window
+		// that no longer wrapped the show. Re-seeding from the event outright would
+		// give 17:00–20:00 and throw the padding away. The padding moves with it.
+		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('16:00');
+		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue('21:00');
+	});
+
+	test('unchecking the toggle drops the conflict override it raised', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'New Event' }).click();
+
+		await page.locator('input[name="title"]').fill('E2E Conflict Probe');
+		await page.locator('input[name="eventDate"]').fill(SEED_CONFLICT_DATE);
+		await page.locator('input[name="eventStartTime"]').fill(SEED_CONFLICT_START);
+		await page.locator('input[name="eventEndTime"]').fill(SEED_CONFLICT_END);
+		await page.locator(RESERVE_TOGGLE).check();
+
+		// The seeded booking holds this window, so the warning has to fire.
+		await expect(page.getByText(/Conflicts with reservation/)).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('button', { name: 'Create with Override' })).toBeVisible();
+
+		// ConflictWarnings unmounts with the toggle and stops maintaining the flag.
+		// Left stale, it keeps the hidden overrideConflicts input in the form and
+		// the next submission skips the server's double-booking check.
+		await page.locator(RESERVE_TOGGLE).uncheck();
+
+		await expect(page.getByRole('button', { name: 'Create Event' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Create with Override' })).toHaveCount(0);
 	});
 });

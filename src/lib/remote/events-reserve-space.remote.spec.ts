@@ -119,11 +119,15 @@ describe('createEvent — reserve space', () => {
 		expect(inClubTime(reservation.endsAt)).toBe('2026-08-15 22:00');
 	});
 
-	it('falls back per-field when only one reservation time is supplied', async () => {
-		await createEvent({ ...base, reserveSpace: true, reservationStartTime: '18:00' }, issue);
+	// Falling back per-field would pair a supplied start with a defaulted end, and
+	// buildTimeRangeInTz reads an end before the start as an overnight range — a
+	// 23:00 start against the event's 22:00 end rolls onto the next day and holds
+	// the room for 23 hours. Half a window is no window.
+	it('holds the event window when only one reservation time is supplied', async () => {
+		await createEvent({ ...base, reserveSpace: true, reservationStartTime: '23:00' }, issue);
 
 		const { reservation } = eventServiceMock.create.mock.calls[0][0];
-		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 18:00');
+		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 19:00');
 		expect(inClubTime(reservation.endsAt)).toBe('2026-08-15 22:00');
 	});
 
