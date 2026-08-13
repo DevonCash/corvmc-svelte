@@ -7,6 +7,7 @@
 		IconPlus,
 		IconHelp,
 		IconMetronome,
+		IconMessages,
 		IconUser,
 		IconSettings,
 		IconUsersGroup,
@@ -46,6 +47,9 @@
 	{#snippet navigation()}
 		<Nav.Item href="/member" label="Dashboard">
 			{#snippet icon()}<IconLayoutDashboard />{/snippet}
+		</Nav.Item>
+		<Nav.Item href="/member/messages" label="Messages" badge={layout.messagesUnread}>
+			{#snippet icon()}<IconMessages />{/snippet}
 		</Nav.Item>
 		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconMetronome />{/snippet}

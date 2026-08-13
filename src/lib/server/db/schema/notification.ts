@@ -141,6 +141,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: false, inApp: true, sms: false }
 	},
 	{
+		key: 'portal_message_reply',
+		label: 'Reply to your message',
+		description: 'Notification when staff reply to a conversation you started from your portal',
+		// Email defaults on: they asked a question and may not come back to the
+		// site on their own to find the answer.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'inbox_assigned',
 		label: 'Inbox conversation assigned (staff)',
 		description: 'Notification when a staff inbox conversation is assigned to you',

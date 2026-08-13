@@ -26,3 +26,14 @@ export {
 	getEnabledChannels,
 	updateChannelConfig
 } from './channel-config-service';
+export {
+	listPortalThreads,
+	getPortalThread,
+	startPortalConversation,
+	replyToPortalThread,
+	markPortalThreadRead,
+	countPortalUnread,
+	countOpenPortalThreads,
+	listThreadParticipants,
+	MAX_OPEN_PORTAL_THREADS
+} from './portal-service';

@@ -6,6 +6,7 @@ import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
+import { countPortalUnread } from '$lib/server/inbox/portal-service';
 import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunteer/hour-log-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
@@ -31,10 +32,11 @@ export const getMemberLayout = query(async () => {
 	if (!locals.user) throw redirect(302, '/login');
 	const user = locals.user;
 
-	const [userBands, isStaff, features] = await Promise.all([
+	const [userBands, isStaff, features, messagesUnread] = await Promise.all([
 		listForUser(user.id).catch(() => []),
 		hasAnyRole(user.id, ['admin', 'staff']),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		countPortalUnread(user.id).catch(() => 0)
 	]);
 
 	return {
@@ -47,7 +49,8 @@ export const getMemberLayout = query(async () => {
 			role: b.role
 		})),
 		isStaff,
-		features
+		features,
+		messagesUnread
 	};
 });
 

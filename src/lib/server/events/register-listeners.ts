@@ -71,7 +71,9 @@ async function registerNotificationListeners(): Promise<void> {
 // ---------------------------------------------------------------------------
 // Inbox listeners
 // ---------------------------------------------------------------------------
-// When a new inbound message arrives in the inbox, notify staff users.
+// Inbound messages notify staff. Outbound messages on the portal channel notify
+// the member who is waiting on them — every other channel delivers the reply
+// itself (email, SMS, Meta), so there is nothing to tell them about.
 // ---------------------------------------------------------------------------
 
 async function registerInboxListeners(): Promise<void> {
@@ -94,6 +96,64 @@ async function registerInboxListeners(): Promise<void> {
 				});
 			} catch (err) {
 				console.error(`[inbox] Failed to notify staff ${staff.email}:`, err);
+			}
+		}
+	});
+
+	domainEvents.on('inbox.message_sent', async ({ data: event }) => {
+		if (event.channel !== 'portal') return;
+
+		// The event carries only ids. Everything the notification needs — the
+		// subject, and the preview that addOutboundMessage just set to this
+		// reply's opening line — is on the thread row.
+		const { findThreadById } = await import('$lib/server/inbox/thread-service');
+		const { listThreadParticipants } = await import('$lib/server/inbox/portal-service');
+		const { db } = await import('$lib/server/db');
+		const { user } = await import('$lib/server/db/schema/authentication');
+		const { inArray } = await import('drizzle-orm');
+		const { env } = await import('$env/dynamic/private');
+
+		const thread = await findThreadById(event.threadId);
+		if (!thread) return;
+
+		const participants = await listThreadParticipants(event.threadId);
+		const recipientIds = participants.map((p) => p.userId);
+		if (recipientIds.length === 0) return;
+
+		const recipients = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(inArray(user.id, recipientIds));
+
+		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+		const url = `${siteUrl}/member/messages/${event.threadId}`;
+		const subject = thread.subject ?? 'your message';
+
+		for (const recipient of recipients) {
+			try {
+				await dispatch({
+					type: 'portal_message_reply',
+					userId: recipient.id,
+					userEmail: recipient.email,
+					title: `CorvMC replied to "${subject}"`,
+					body: thread.preview ?? undefined,
+					href: `/member/messages/${event.threadId}`,
+					emailTemplate: {
+						alias: 'notification',
+						model: {
+							subject: `Re: ${subject}`,
+							preview_text: thread.preview ?? 'You have a new reply.',
+							heading: 'New reply',
+							greeting: `Hi ${recipient.name},`,
+							paragraphs: [{ text: 'A staff member replied to your conversation with CorvMC.' }],
+							// Raw — the dispatcher escapes it and preserves the line breaks.
+							quote: thread.preview ?? '',
+							cta: { url, label: 'View Conversation' }
+						}
+					}
+				});
+			} catch (err) {
+				console.error(`[inbox] Failed to notify member ${recipient.email}:`, err);
 			}
 		}
 	});

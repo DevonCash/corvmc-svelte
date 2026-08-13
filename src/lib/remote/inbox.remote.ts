@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff, listStaffUsers } from '$lib/server/authorization';
+import { requireStaff, requireUser, listStaffUsers } from '$lib/server/authorization';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
-import { getStaffLayout } from '$lib/remote/layout.remote';
+import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
 import {
 	listThreads,
 	getThread,
@@ -20,6 +20,14 @@ import {
 	updateChannelConfig as updateChannelConfigSvc
 } from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
+import {
+	listPortalThreads,
+	getPortalThread,
+	startPortalConversation,
+	replyToPortalThread,
+	markPortalThreadRead,
+	MAX_OPEN_PORTAL_THREADS
+} from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses } from '$lib/config';
@@ -233,4 +241,92 @@ export const updateInboxChannelConfig = form(channelConfigSchema, async (data) =
 	void getInboxChannelConfigs().refresh();
 	void getInboxEnabledChannels().refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Member portal
+// ---------------------------------------------------------------------------
+// A member's own conversations with staff. Remote functions are the only guard
+// on these — nothing upstream has checked anything — so each one hands the
+// caller's id to a portal-service function that enforces participation in SQL.
+// None of them can reach an internal note: the portal service never queries
+// inbox_note, which is why they don't reuse getThread().
+
+export const getMyConversations = query(
+	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
+	async (args) => {
+		const user = requireUser();
+		return listPortalThreads(user.id, { page: args?.page ?? 1, pageSize: 25 });
+	}
+);
+
+export const getMyConversation = query(z.string(), async (id) => {
+	const user = requireUser();
+	const thread = await getPortalThread(id, user.id);
+	// Same 404 whether the thread is someone else's, is not a portal thread, or
+	// does not exist — the caller has no business telling those apart.
+	if (!thread) throw error(404, 'Conversation not found');
+	return thread;
+});
+
+const startConversationSchema = z.object({
+	subject: z.string().trim().min(1).max(200),
+	body: z.string().trim().min(1).max(10000)
+});
+
+export const startConversation = form(startConversationSchema, async (data, issue) => {
+	const user = requireUser();
+
+	const result = await startPortalConversation({
+		userId: user.id,
+		userName: user.name,
+		userEmail: user.email,
+		subject: data.subject,
+		body: data.body
+	});
+
+	if (!result) {
+		invalid(
+			issue.subject(
+				`You already have ${MAX_OPEN_PORTAL_THREADS} conversations open. Continue one of those, or wait for staff to close it.`
+			)
+		);
+	}
+
+	void getMyConversations().refresh();
+	void getMemberLayout().refresh();
+	return { threadId: result.threadId };
+});
+
+const sendConversationMessageSchema = z.object({
+	threadId: z.string().min(1),
+	body: z.string().trim().min(1).max(10000)
+});
+
+export const sendConversationMessage = form(sendConversationMessageSchema, async (data, issue) => {
+	const user = requireUser();
+
+	const result = await replyToPortalThread({
+		threadId: data.threadId,
+		userId: user.id,
+		userName: user.name,
+		body: data.body
+	});
+
+	if (!result) {
+		invalid(issue.body('This conversation is closed. Start a new one instead.'));
+	}
+
+	void getMyConversation(data.threadId).refresh();
+	void getMyConversations().refresh();
+	void getMemberLayout().refresh();
+	return { success: true };
+});
+
+// A command rather than a write inside getMyConversation: queries are cached and
+// deduped, so a write hidden in a read fires an unpredictable number of times.
+export const markConversationRead = command(z.string(), async (id) => {
+	const user = requireUser();
+	await markPortalThreadRead(id, user.id);
+	void getMemberLayout().refresh();
 });

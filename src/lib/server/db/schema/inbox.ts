@@ -1,8 +1,13 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { inboxChannels, inboxThreadStatuses, inboxMessageDirections } from '../../../config';
+import {
+	inboxChannels,
+	inboxThreadStatuses,
+	inboxMessageDirections,
+	inboxParticipantRoles
+} from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -11,6 +16,7 @@ import { inboxChannels, inboxThreadStatuses, inboxMessageDirections } from '../.
 export type InboxChannel = (typeof inboxChannels)[number];
 export type InboxThreadStatus = (typeof inboxThreadStatuses)[number];
 export type InboxMessageDirection = (typeof inboxMessageDirections)[number];
+export type InboxParticipantRole = (typeof inboxParticipantRoles)[number];
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -112,6 +118,40 @@ export const inboxNote = sqliteTable(
 	(t) => [index('idx_inbox_note_thread').on(t.threadId, t.createdAt)]
 );
 
+/**
+ * Who is party to a conversation, and how far each has read.
+ *
+ * Threads on the outward channels (email/sms/web/instagram/messenger) have no
+ * participants — their contact has no account, and their identity is
+ * denormalized onto the thread instead. A 'portal' thread has exactly one: the
+ * member who opened it. This is a table rather than a column pair on the thread
+ * so that a conversation between two signed-in people needs no schema change.
+ */
+export const inboxParticipant = sqliteTable(
+	'inbox_participant',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => inboxThread.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		role: text('role', { enum: inboxParticipantRoles }).notNull().default('member'),
+		/** Read cursor for this participant. Unread ⇔ thread.lastMessageAt > lastReadAt. */
+		lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('idx_inbox_participant_thread_user').on(t.threadId, t.userId),
+		index('idx_inbox_participant_user').on(t.userId)
+	]
+);
+
 export const inboxChannelConfig = sqliteTable('inbox_channel_config', {
 	id: text('id')
 		.primaryKey()
@@ -134,3 +174,4 @@ export const inboxChannelConfig = sqliteTable('inbox_channel_config', {
 export type InboxThread = typeof inboxThread.$inferSelect;
 export type InboxMessage = typeof inboxMessage.$inferSelect;
 export type InboxNote = typeof inboxNote.$inferSelect;
+export type InboxParticipant = typeof inboxParticipant.$inferSelect;
