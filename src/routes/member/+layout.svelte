@@ -10,7 +10,6 @@
 		IconMessages,
 		IconUser,
 		IconSettings,
-		IconUsersGroup,
 		IconHeartHandshake
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
@@ -69,27 +68,10 @@
 			</Nav.Item>
 		{/if}
 
-		<Nav.Group title="Bands">
+		<Nav.Group title="My Bands">
 			{#snippet action()}
-				<!-- data-sveltekit-reload: a client-side navigation that lands on the
-				     bands page while this layout's async queries are still settling can
-				     leave the ?create=1 modal permanently unmounted (svelte
-				     experimental-async scheduling gap, still present in 5.56.8 — see
-				     the band-onboarding e2e test). A full-document load initializes the
-				     dialog deterministically. -->
-				<Button
-					href="/member/bands?create=1"
-					data-sveltekit-reload
-					class="btn-ghost btn-xs btn-square"
-					title="Create Band"
-					aria-label="Create Band"
-				>
-					<IconPlus size={14} />
-				</Button>
+				<Button href="/member/bands" class="btn-ghost btn-xs">All</Button>
 			{/snippet}
-			<Nav.Item href="/member/bands" label="My Bands">
-				{#snippet icon()}<IconUsersGroup />{/snippet}
-			</Nav.Item>
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
