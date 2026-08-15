@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -28,6 +28,7 @@ import {
 	setBandAvatar,
 	clearBandAvatar,
 	BandNotFoundError,
+	BandMemberExistsError,
 	BandTierManagedByStripeError
 } from '$lib/server/band/band-service';
 import { bandTiers } from '$lib/server/db/schema/band';
@@ -336,16 +337,21 @@ export const inviteByEmailApi = form(
 		role: z.enum(['admin', 'member']),
 		position: z.string().optional()
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const staff = await requireStaff();
-		const result = await createPlatformInvite(
-			data.email,
-			data.bandId,
-			data.role,
-			data.position ?? null,
-			staff.id
-		);
-		return { success: true, ...result };
+		try {
+			const result = await createPlatformInvite(
+				data.email,
+				data.bandId,
+				data.role,
+				data.position ?? null,
+				staff.id
+			);
+			return { success: true, ...result };
+		} catch (err) {
+			if (err instanceof BandMemberExistsError) invalid(issue.email(err.message));
+			throw err;
+		}
 	}
 );
 
@@ -379,25 +385,36 @@ export const createBand = form(
 	}
 );
 
+// `bandId`, not a band_member row id: the invite list only ever knows the band.
+// Both outcomes are returned in-band rather than thrown — a stale or
+// already-taken invite is an ordinary user state, and a thrown error would
+// reach Sentry as a 500 while showing the member only a generic toast.
 export const acceptInvite = form(
 	z.object({
-		memberId: z.string().min(1)
+		bandId: z.string().min(1)
 	}),
 	async (data) => {
 		const currentUser = requireUser();
-		await acceptInvitation(data.memberId, currentUser.id);
-		return { success: true };
+		const result = await acceptInvitation(data.bandId, currentUser.id);
+
+		if (result.status === 'not_found') {
+			return { success: false as const, reason: 'not_found' as const };
+		}
+		return { success: true as const };
 	}
 );
 
 export const declineInvite = form(
 	z.object({
-		memberId: z.string().min(1)
+		bandId: z.string().min(1)
 	}),
 	async (data) => {
 		const currentUser = requireUser();
-		await declineInvitation(data.memberId, currentUser.id);
-		return { success: true };
+		const declined = await declineInvitation(data.bandId, currentUser.id);
+
+		return declined
+			? { success: true as const }
+			: { success: false as const, reason: 'not_found' as const };
 	}
 );
 
@@ -506,16 +523,24 @@ export const inviteByEmail = form(
 		role: z.enum(['admin', 'member']),
 		position: z.string().max(100).optional().default('')
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const { user, band } = await requireBandAdmin();
-		const result = await createPlatformInvite(
-			data.email,
-			band.id,
-			data.role,
-			data.position || null,
-			user.id
-		);
-		return { success: true, ...result };
+		try {
+			const result = await createPlatformInvite(
+				data.email,
+				band.id,
+				data.role,
+				data.position || null,
+				user.id
+			);
+			return { success: true, ...result };
+		} catch (err) {
+			// Already a member / already invited is an ordinary state, not a fault.
+			// Thrown, it reached Sentry as a 500 and showed the admin only a
+			// generic toast (JAVASCRIPT-SVELTEKIT-2D).
+			if (err instanceof BandMemberExistsError) invalid(issue.email(err.message));
+			throw err;
+		}
 	}
 );
 

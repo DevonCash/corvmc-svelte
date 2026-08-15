@@ -40,7 +40,8 @@
 	const actions = $derived(
 		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), {
 			cashDueCents: r.cashDueCents,
-			paidAt: r.paidAt
+			paidAt: r.paidAt,
+			refundedAt: r.refundedAt
 		})
 	);
 

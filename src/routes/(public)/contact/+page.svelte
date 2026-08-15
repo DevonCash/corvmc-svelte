@@ -7,7 +7,6 @@
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
-	import Select from '$lib/components/shared/Form/Select.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -35,6 +34,7 @@
 		'Volunteer Opportunities',
 		'Donations'
 	];
+	const subjectOptions = subjects.map((s) => ({ value: s, label: s }));
 
 	// Anyone can tip us off about a show without an account. The extra fields are
 	// optional and free-text: a tip is a lead for a staffer to chase, not a
@@ -70,17 +70,13 @@
 						<FormField field={fields.email} type="email" label="Email" required />
 					</div>
 
-					<FormField name="subject" label="Subject">
-						<Select
-							{...fields.subject.as('select')}
-							bind:value={subject}
-							class="select-bordered w-full"
-						>
-							{#each subjects as s (s)}
-								<option value={s}>{s}</option>
-							{/each}
-						</Select>
-					</FormField>
+					<FormField
+						field={fields.subject}
+						label="Subject"
+						type="select"
+						options={subjectOptions}
+						bind:value={subject}
+					/>
 
 					{#if isEventTip}
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

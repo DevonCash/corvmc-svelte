@@ -51,11 +51,47 @@ export function isWebviewBridgeError(event: Sentry.ErrorEvent, error: unknown): 
 	return Boolean(top?.function && WEBVIEW_BRIDGE_FUNCTIONS.includes(top.function));
 }
 
+/**
+ * SvelteKit's own control-flow values reaching `window.onunhandledrejection`.
+ *
+ * `redirect()` and `error()` throw plain class instances — `Redirect
+ * {status, location}` and `HttpError {status, body}` — that are NOT `Error`
+ * subclasses, so they arrive with no message and no stacktrace and Sentry
+ * titles them "Object captured as promise rejection with keys: …"
+ * (JAVASCRIPT-SVELTEKIT-X and -3).
+ *
+ * They escape because a remote function's rejection outlives its consumer: for
+ * a redirect, Kit awaits `goto()` and *then* throws to settle the dangling
+ * query promise, by which point the component and its boundary are unmounted,
+ * so no boundary can ever catch it. The existing 4xx filter can't help either
+ * — it lives in `reportError`, a manual sink that unhandled rejections never
+ * reach.
+ *
+ * Redirects are always control flow. HttpErrors are dropped only below 500, so
+ * a genuine server fault still reports.
+ */
+export function isFrameworkControlFlow(error: unknown): boolean {
+	if (!error || typeof error !== 'object') return false;
+	const { status, location, body } = error as {
+		status?: unknown;
+		location?: unknown;
+		body?: unknown;
+	};
+	if (typeof status !== 'number') return false;
+
+	// Redirect: 3xx with a destination.
+	if (typeof location === 'string') return status >= 300 && status < 400;
+
+	// HttpError: expected 4xx carrying a body.
+	return body !== undefined && status >= 400 && status < 500;
+}
+
 Sentry.init({
 	beforeSend(event, hint) {
 		if (isStaleChunkError(hint?.originalException)) return null;
 		if (isNetworkAbortError(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
+		if (isFrameworkControlFlow(hint?.originalException)) return null;
 		return event;
 	},
 
