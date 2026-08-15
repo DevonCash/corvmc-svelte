@@ -34,6 +34,9 @@ const derivedStatuses = {
 	payment: ['completed', 'refunded'],
 	// roles/[id] — whether a member holds what the role requires
 	clearance: ['cleared', 'uncleared'],
+	// member-certification-service.ts `certificationState` — the state of one
+	// held clearance, shown on the staff user record and the clearances list
+	certificationState: ['current', 'expiring', 'expired', 'revoked'],
 	// generic
 	generic: ['pending', 'error']
 } as const;

@@ -148,3 +148,25 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	}
 	return { success: true };
 });
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getFlagsAgainstUser = query(z.string(), async (userId) => {
+	await requireStaff();
+	const { rows } = await listFlags(
+		{ entityType: 'member_profile', entityId: userId },
+		{ page: 1, pageSize: 10 }
+	);
+	return rows;
+});
+
+export const getFlagsByUser = query(z.string(), async (userId) => {
+	await requireStaff();
+	const { rows } = await listFlags({ reportedByUserId: userId }, { page: 1, pageSize: 10 });
+	return rows;
+});

@@ -12,7 +12,8 @@ import {
 	assignThread as assignThreadSvc,
 	updateStatus,
 	getUnresolvedCount,
-	countThreadsByStatus
+	countThreadsByStatus,
+	listThreadsByContactEmail
 } from '$lib/server/inbox/thread-service';
 import {
 	getAllChannelConfigs,
@@ -22,6 +23,8 @@ import {
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
 import {
 	listPortalThreads,
+	countOpenPortalThreads,
+	countPortalUnread,
 	getPortalThread,
 	startPortalConversation,
 	replyToPortalThread,
@@ -330,3 +333,37 @@ export const markConversationRead = command(z.string(), async (id) => {
 	await markPortalThreadRead(id, user.id);
 	void getMemberLayout().refresh();
 });
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserThreads = query(
+	z.object({ userId: z.string(), email: z.string() }),
+	async ({ userId, email }) => {
+		await requireStaff();
+		const [portal, open, unread, byEmail] = await Promise.all([
+			listPortalThreads(userId, { page: 1, pageSize: 10 }),
+			countOpenPortalThreads(userId),
+			countPortalUnread(userId),
+			// Threads that predate the account, or came in by email rather than
+			// through the portal, have no participant row and are invisible to
+			// listPortalThreads. Matched on the denormalized contact address.
+			email ? listThreadsByContactEmail(email, { page: 1, pageSize: 10 }) : null
+		]);
+
+		const portalIds = new Set(portal.rows.map((t) => t.id));
+
+		return {
+			portal: portal.rows,
+			open,
+			unread,
+			// Deduped against the portal list: a portal thread whose contact
+			// address is also theirs would otherwise appear in both sections.
+			byEmail: (byEmail?.rows ?? []).filter((t) => !portalIds.has(t.id))
+		};
+	}
+);
