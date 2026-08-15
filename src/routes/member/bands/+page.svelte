@@ -73,12 +73,16 @@
 									<Form
 										remote={accept}
 										onfailure={() => toast.error('Failed to accept')}
-										onsuccess={() => {
-											toast.success('Invitation accepted');
+										onsuccess={(result) => {
+											if (result?.success === false) {
+												toast.error('That invitation is no longer available.');
+											} else {
+												toast.success('Invitation accepted');
+											}
 											invalidateAll();
 										}}
 									>
-										<input {...accept.fields.memberId.as('hidden', invite.id)} />
+										<input {...accept.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
 											label="Accept"
 											successLabel="Accepted"
@@ -88,12 +92,16 @@
 									<Form
 										remote={decline}
 										onfailure={() => toast.error('Failed to decline')}
-										onsuccess={() => {
-											toast.success('Invitation declined');
+										onsuccess={(result) => {
+											if (result?.success === false) {
+												toast.error('That invitation is no longer available.');
+											} else {
+												toast.success('Invitation declined');
+											}
 											invalidateAll();
 										}}
 									>
-										<input {...decline.fields.memberId.as('hidden', invite.id)} />
+										<input {...decline.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
 											label="Decline"
 											successLabel="Declined"

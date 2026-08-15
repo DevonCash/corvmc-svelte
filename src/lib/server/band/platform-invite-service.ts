@@ -4,7 +4,8 @@ import { band, bandMember } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
-import { invite } from './band-service';
+import { BandMemberExistsError, invite } from './band-service';
+import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
 
@@ -33,6 +34,23 @@ export async function createInvite(
 		.limit(1);
 
 	if (existingUser) {
+		// Distinguish "already in the band" from "already invited" before the
+		// insert, so the admin gets a precise message instead of a generic
+		// constraint failure (JAVASCRIPT-SVELTEKIT-2D).
+		const [membership] = await db
+			.select({ status: bandMember.status })
+			.from(bandMember)
+			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, existingUser.id)))
+			.limit(1);
+
+		if (membership) {
+			throw new BandMemberExistsError(
+				membership.status === 'active'
+					? 'That person is already in this band.'
+					: 'That person already has a pending invitation to this band.'
+			);
+		}
+
 		const row = await invite(bandId, existingUser.id, role, position, invitedById);
 		return { type: 'existing_user', id: row.id };
 	}
@@ -150,7 +168,7 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 			resolved++;
 		} catch (err: unknown) {
 			// Unique constraint = user already in band, just mark accepted
-			if (err instanceof Error && err.message.includes('UNIQUE')) {
+			if (isUniqueConstraintError(err)) {
 				await db
 					.update(platformInvite)
 					.set({ status: 'accepted', acceptedAt: now })

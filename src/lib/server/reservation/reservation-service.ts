@@ -281,18 +281,28 @@ export async function cancel(
 	// reservation live in the ledger (not the payment record breakdown), so reverse
 	// them separately — this also covers cash-owed confirms that have credits
 	// committed but no payment record yet. Both paths are idempotent / no-ops when
-	// nothing applies.
+	// nothing applies (`refund()` returns early on an already-refunded payment).
+	let refundError: unknown;
 	if (row.stripePaymentRecordId) {
-		await refund({
-			// Owner, not the canceller: any checkout credits_breakdown reversal must
-			// credit the member who paid (the canceller may be staff or the cron).
-			userId: row.createdByUserId,
-			stripePaymentRecordId: row.stripePaymentRecordId
-		});
-		await db
-			.update(reservation)
-			.set({ refundedAt: new Date() })
-			.where(eq(reservation.id, reservationId));
+		try {
+			await refund({
+				// Owner, not the canceller: any checkout credits_breakdown reversal must
+				// credit the member who paid (the canceller may be staff or the cron).
+				userId: row.createdByUserId,
+				stripePaymentRecordId: row.stripePaymentRecordId
+			});
+			await db
+				.update(reservation)
+				.set({ refundedAt: new Date() })
+				.where(eq(reservation.id, reservationId));
+		} catch (err) {
+			// The row is already `cancelled` at this point and the status guard
+			// above rejects a retry, so throwing here left it stranded: credits
+			// never reversed, no `reservation.cancelled` event, so no waitlist
+			// promotion and no cancellation email (JAVASCRIPT-SVELTEKIT-29).
+			// Finish the cancellation, then surface the refund failure.
+			refundError = err;
+		}
 	}
 	await reverseReservationCredits(row.createdByUserId, reservationId);
 
@@ -314,6 +324,10 @@ export async function cancel(
 		endTime: formatTimeInTz(row.endsAt, TZ),
 		cancelledBy: options?.staffOverride ? 'staff' : 'member'
 	});
+
+	// Cancellation is complete and consistent; the refund is not. Surface it so
+	// staff can follow up rather than silently keeping the member's money.
+	if (refundError) throw refundError;
 }
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,12 @@ vi.mock('@sentry/sveltekit', () => ({
 vi.mock('$app/environment', () => ({ dev: false }));
 vi.mock('$env/dynamic/public', () => ({ env: {} }));
 
-import { isStaleChunkError, isNetworkAbortError, isWebviewBridgeError } from './hooks.client';
+import {
+	isStaleChunkError,
+	isNetworkAbortError,
+	isWebviewBridgeError,
+	isFrameworkControlFlow
+} from './hooks.client';
 
 function eventWithTopFrame(fn: string | undefined): ErrorEvent {
 	return {
@@ -96,5 +101,40 @@ describe('existing noise filters', () => {
 		expect(isNetworkAbortError(new TypeError('Failed to fetch'))).toBe(true);
 		expect(isNetworkAbortError(new Error('Load failed'))).toBe(true);
 		expect(isNetworkAbortError(new Error('boom'))).toBe(false);
+	});
+});
+
+describe('framework control-flow rejections', () => {
+	// Both payloads are copied from the real Sentry events. Neither is an Error,
+	// so they carry no message and no stack — every message-based filter misses
+	// them.
+	it('drops a Redirect thrown to settle a remote query promise', () => {
+		expect(isFrameworkControlFlow({ status: 307, location: '/member/volunteer/start' })).toBe(true);
+	});
+
+	it('drops an expected 4xx HttpError', () => {
+		expect(
+			isFrameworkControlFlow({
+				status: 403,
+				body: { message: 'You are not a member of this band' }
+			})
+		).toBe(true);
+	});
+
+	it('keeps a 5xx HttpError — a genuine server fault is still worth seeing', () => {
+		expect(isFrameworkControlFlow({ status: 500, body: { message: 'Internal Error' } })).toBe(
+			false
+		);
+	});
+
+	it('ignores ordinary errors and non-objects', () => {
+		expect(isFrameworkControlFlow(new Error('boom'))).toBe(false);
+		expect(isFrameworkControlFlow(null)).toBe(false);
+		expect(isFrameworkControlFlow('nope')).toBe(false);
+		expect(isFrameworkControlFlow({ status: 'not-a-number', location: '/x' })).toBe(false);
+	});
+
+	it('does not drop a bare status-bearing object with neither shape', () => {
+		expect(isFrameworkControlFlow({ status: 404 })).toBe(false);
 	});
 });
