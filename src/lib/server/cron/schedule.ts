@@ -62,6 +62,12 @@ export interface CronJobResult {
  * its origin from the first request URL it sees, and on a cold start the
  * scheduled invocation can be that first request.
  */
+/**
+ * Per-job ceiling. Below the 15-minute Workers cron cap so a stuck job fails its
+ * own check-in instead of taking the rest of the batch down with it.
+ */
+const JOB_TIMEOUT_MS = 5 * 60_000;
+
 export async function runScheduledJobs(
 	cron: string,
 	env: CronEnv,
@@ -78,12 +84,16 @@ export async function runScheduledJobs(
 	for (const path of paths) {
 		const slug = path.split('/').at(-1) ?? path;
 		const checkInId = await checkIn?.({ slug, status: 'in_progress', cron });
-		let result: CronJobResult;
+		let result: CronJobResult | undefined;
 		try {
 			const response = await fetcher(
 				new Request(`${env.ORIGIN}${path}`, {
 					method: 'POST',
-					headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` }
+					headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` },
+					// The jobs share one 15-minute wall clock. Unbounded, a single
+					// hung job starves every job after it AND their check-ins, which
+					// then time out as phantom outages.
+					signal: AbortSignal.timeout(JOB_TIMEOUT_MS)
 				})
 			);
 			const body = await response.text();
@@ -96,8 +106,11 @@ export async function runScheduledJobs(
 		} catch (err) {
 			console.error(`[cron] ${path} threw:`, err);
 			result = { path, ok: false, error: err instanceof Error ? err.message : String(err) };
+		} finally {
+			// In `finally` so an unexpected throw between here and the close still
+			// closes the check-in rather than leaving it to time out.
+			await checkIn?.({ slug, status: result?.ok ? 'ok' : 'error', checkInId });
 		}
-		await checkIn?.({ slug, status: result.ok ? 'ok' : 'error', checkInId });
 		results.push(result);
 	}
 	return results;

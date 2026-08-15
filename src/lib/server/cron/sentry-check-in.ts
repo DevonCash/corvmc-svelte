@@ -16,7 +16,7 @@ export type CronCheckIn = (opts: {
 	status: CronCheckInStatus;
 	/** Cron expression; sent as monitor_config on in_progress to upsert the monitor. */
 	cron?: string;
-	/** Pairs a closing ok/error with its in_progress check-in. */
+	/** Pairs a closing ok/error with its in_progress check-in. Generated if absent. */
 	checkInId?: string;
 }) => Promise<string | undefined>;
 
@@ -31,28 +31,27 @@ function checkInUrl(slug: string): string {
 }
 
 /**
- * A closing check-in (ok/error) gets one retry; an opening one does not.
+ * Every check-in carries a client-generated `check_in_id`, so each attempt is an
+ * idempotent update rather than a create, and one retry is always safe.
  *
- * The asymmetry is deliberate. If an `in_progress` never lands there is simply
- * no open check-in, and the job's own result is reported by the next run. But if
- * the `in_progress` lands and its closing check-in is dropped, the check-in stays
- * open until Sentry times it out at `max_runtime` and raises an outage — a
- * phantom alert for a job that actually succeeded. That is
- * JAVASCRIPT-SVELTEKIT-20: the other four jobs in the same 16:00 UTC batch
- * reported fine, so the invocation did not die; only the close went missing.
+ * This replaces an earlier asymmetry (retry the close, never the open) that
+ * fixed JAVASCRIPT-SVELTEKIT-20 and caused JAVASCRIPT-SVELTEKIT-21. Reading the
+ * id out of the opening RESPONSE meant a slow, aborted, or unparseable response
+ * lost it — even though Sentry had already recorded the open check-in. The close
+ * then went out with no id, which CREATES a second check-in instead of closing
+ * the first, leaving the original to time out at `max_runtime` and raise a
+ * phantom outage for a job that ran fine.
  *
- * The retry is deliberately narrow. It fires only when BOTH hold:
+ * Generating the id up front (Sentry's HTTP API accepts a client-supplied
+ * `check_in_id`) makes the opening response irrelevant: the close always targets
+ * the check-in the open created.
  *
- * - The attempt THREW (dropped connection — the failure the retry exists for).
- *   A non-2xx response is Sentry answering; an identical immediate re-POST
- *   would just repeat a deterministic 4xx or land in the same rate-limit
- *   window, so those give up on the first answer.
- * - The check-in carries a `check_in_id`. With an id the retry is an
- *   idempotent update; without one it would CREATE a second check-in if the
- *   first POST actually landed and only its response was lost — with status
- *   `error`, double-counting against the monitor's failure threshold.
+ * The retry still fires only when the attempt THREW — a dropped connection, the
+ * failure it exists for. A non-2xx is Sentry answering, and an identical
+ * immediate re-POST would repeat a deterministic 4xx or land in the same
+ * rate-limit window.
  */
-const CLOSING_ATTEMPTS = 2;
+const ATTEMPTS = 2;
 
 /**
  * Bound each attempt: the check-ins are awaited on runScheduledJobs' critical
@@ -70,8 +69,9 @@ const ATTEMPT_TIMEOUT_MS = 10_000;
  */
 export function createSentryCheckIn(environment = 'production'): CronCheckIn {
 	return async ({ slug, status, cron, checkInId }) => {
-		const body: Record<string, unknown> = { status, environment };
-		if (checkInId) body.check_in_id = checkInId;
+		// Client-generated so the id survives a lost opening response.
+		const id = checkInId ?? crypto.randomUUID();
+		const body: Record<string, unknown> = { status, environment, check_in_id: id };
 		if (status === 'in_progress' && cron) {
 			body.monitor_config = {
 				schedule: { type: 'crontab', value: cron },
@@ -85,11 +85,10 @@ export function createSentryCheckIn(environment = 'production'): CronCheckIn {
 		}
 
 		const payload = JSON.stringify(body);
-		const attempts = status !== 'in_progress' && checkInId ? CLOSING_ATTEMPTS : 1;
 		const failures: string[] = [];
 		let lastThrown: unknown;
 
-		for (let attempt = 1; attempt <= attempts; attempt++) {
+		for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
 			try {
 				const response = await fetch(checkInUrl(slug), {
 					method: 'POST',
@@ -102,8 +101,9 @@ export function createSentryCheckIn(environment = 'production'): CronCheckIn {
 					failures.push(`rejected with ${response.status}`);
 					break;
 				}
-				const data = (await response.json().catch(() => undefined)) as { id?: string } | undefined;
-				return data?.id;
+				// The response body is not consulted: the id is ours already, and
+				// depending on reading it back is exactly what broke before.
+				return id;
 			} catch (err) {
 				failures.push(String(err));
 				lastThrown = err;
@@ -117,6 +117,8 @@ export function createSentryCheckIn(environment = 'production'): CronCheckIn {
 			`[cron] Sentry check-in for ${slug} failed: ${failures.join('; ')}`,
 			...(lastThrown !== undefined ? [lastThrown] : [])
 		);
-		return undefined;
+		// Still hand back the id. If the open actually landed and only its response
+		// was lost, the close must target it; a fresh id would orphan it.
+		return id;
 	};
 }

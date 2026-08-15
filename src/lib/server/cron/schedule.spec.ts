@@ -166,9 +166,11 @@ describe('runScheduledJobs', () => {
 		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
 	});
 
-	it('still closes the check-in when the opening check-in returned no id', async () => {
+	// JAVASCRIPT-SVELTEKIT-21: the close must carry the id the open used, or it
+	// creates a second check-in and the first times out as a phantom outage.
+	it('closes with the id the opening check-in reported', async () => {
 		const fetcher = okFetcher();
-		const checkIn = vi.fn<CronCheckIn>(async () => undefined);
+		const checkIn = vi.fn<CronCheckIn>(async () => 'ci-generated');
 
 		await runScheduledJobs('*/5 * * * *', env, fetcher, checkIn);
 
@@ -176,7 +178,7 @@ describe('runScheduledJobs', () => {
 		expect(checkIn.mock.calls[1][0]).toEqual({
 			slug: 'send-campaigns',
 			status: 'ok',
-			checkInId: undefined
+			checkInId: 'ci-generated'
 		});
 	});
 

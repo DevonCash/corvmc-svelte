@@ -1,187 +1,282 @@
-# Sentry Triage — 2026-07-27
+# Sentry Triage — 2026-08-15
 
-All 9 unresolved issues in
+All issues in
 [corvallis-music-collective/javascript-sveltekit](https://corvallis-music-collective.sentry.io/issues/?project=javascript-sveltekit&query=is%3Aunresolved)
-collected via the Sentry MCP and traced to root cause. Supersedes the
-2026-07-10 pass (see git history of this file); the delta against that
-report's conclusions is called out per issue. Environment: production only.
-Short IDs below link to Sentry; timestamps UTC.
+collected via the Sentry MCP and traced to root cause. Supersedes the 2026-07-27
+pass (see git history of this file). Environment: production only. Short IDs
+link to Sentry; timestamps UTC. The `php-laravel` project has **zero** unresolved
+issues.
+
+Every issue from the 07-27 pass is now closed, and its code fixes are merged and
+verified present at `f4668ff` (ProfileForm extraction, `isWebviewBridgeError`,
+`user_not_found` → warning). The two operator follow-ups from that pass
+(Postmark templates, bcrypt member check) are superseded by issue **22** below.
+
+## The unresolved list understates the problem
+
+Nine issues show as `is:unresolved`. Querying **events** rather than issues
+surfaced three more that are still firing but invisible in that view — one
+marked `resolved`, two `archived_forever`. One of them, **22**, was the
+highest-volume error of the last 14 days.
+
+Sentry-side archiving does not suppress a regression on a new release: **3** and
+**X** are `archived_forever` and still firing on the current deploy. Only a
+code-side filter is durable.
 
 ## Summary
 
-| Sentry issue                                                                      | Title                                           | Events/Users | Last seen                | Classification                              | Action                                  |
-| --------------------------------------------------------------------------------- | ----------------------------------------------- | ------------ | ------------------------ | ------------------------------------------- | --------------------------------------- |
-| [18](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-18) | Postmark: Template 'Alias' not valid            | 14/6         | **2026-07-26 (ongoing)** | **Active ops bug** (unchanged since 07-10)  | Push templates to Postmark (see below)  |
-| [W](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-W)   | effect_update_depth_exceeded on /member/profile | 17/6         | **2026-07-24**           | **Live client crash** — 07-10 verdict wrong | Fix in code (see below)                 |
-| [10](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-10) | bcrypt migration: Laravel rejected credentials  | 3/3          | 2026-07-25               | New branch, not the fixed 404               | Investigate affected members            |
-| [1F](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1F) | `window.webkit.messageHandlers` undefined       | 3/1          | 2026-07-15               | Third-party (Instagram webview bridge)      | Filter in `beforeSend`                  |
-| [1E](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1E) | auth.sign_in: user_not_found                    | 4/4          | 2026-07-26               | Working as intended (anomaly telemetry)     | **Resolved in Sentry**; downgrade level |
-| [1B](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1B) | Cannot book more than 14 days in advance (500)  | 1/1          | 2026-07-01               | Fixed by #128, quiet since                  | **Resolved in Sentry**                  |
-| [15](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-15) | Balance cannot be negative                      | 7/3          | 2026-06-28               | Fixed by #130, quiet since                  | **Resolved in Sentry**                  |
-| [1D](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1D) | Blocking Operation (AI-detected perf)           | 1/0          | 2026-07-05               | Perf observation                            | Report-only                             |
-| [1C](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1C) | Degraded UI Performance (AI-detected perf)      | 1/0          | 2026-07-02               | Perf observation                            | Report-only                             |
+| Sentry issue                                                                      | Title                                    | Events/Users | Last seen | Classification                                  | Action                      |
+| --------------------------------------------------------------------------------- | ---------------------------------------- | ------------ | --------- | ----------------------------------------------- | --------------------------- |
+| [2A](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2A) | Invitation not found or already accepted | 7/5          | 08-13     | **Feature 100% broken since it shipped**        | Fixed in this branch        |
+| [2C](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2C) | Cannot redefine property: value          | 11/10        | **08-15** | **Live SSR crash**, regression from #207        | Fixed in this branch        |
+| [21](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-21) | Cron failure: cancel-stale-tickets       | 6/0          | **08-15** | Phantom outage — monitoring bug, not the job    | Fixed in this branch        |
+| [29](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-29) | Charge already refunded                  | 1/1          | 08-12     | Double refund; strands a half-cancelled booking | Fixed in this branch        |
+| [2D](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2D) | UNIQUE constraint: band_member           | 1/1          | 08-14     | Case-sensitive guard; downstream of 2A          | Fixed in this branch        |
+| [3](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-3)   | UnhandledRejection `{body, status}` 403  | 28/15        | 08-13     | Blank page for pending-invite members           | Fixed in this branch        |
+| [X](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-X)   | UnhandledRejection `{location, status}`  | 10/9         | 08-14     | Pure noise — framework control flow             | Filtered in this branch     |
+| [22](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-22) | Postmark stream does not exist           | 17/9         | 08-10     | **All transactional email down 08-03→08-10**    | **Operator: verify config** |
+| [25](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-25) | `c.async_deriveds` null                  | 1/1          | 08-11     | Upstream Svelte bug, unfixed in 5.56.9          | Report-only                 |
+| [24](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-24) | JSON.parse on remote form envelope       | 1/1          | 08-10     | **Not** deploy skew this time — see correction  | Report-only                 |
+| [2B](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2B) | Blocking Operation (AI-detected)         | 1/0          | 08-13     | Perf observation                                | Report-only                 |
+| [26](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-26) | Degraded UI Performance (AI-detected)    | 1/0          | 08-12     | Perf observation                                | Report-only                 |
 
-## Active — needs action
+## One story, three issues: 2A → 3 → 2D
 
-### 18 — Postmark template aliases still missing on the production server (ongoing, customer-facing)
+These are not independent. **A member is invited to a band and cannot accept
+(2A).** The invitation therefore stays `pending` forever. The pending band still
+appears in their sidebar and panel switcher, and clicking it renders a blank
+page **(3)**. The band admin, seeing the invite unaccepted, sends it again — and
+hits the unique constraint **(2D)**. Fixing 2A drains the other two at the
+source; each was also fixed on its own merits.
 
-Unchanged root cause from 07-10, still firing 16 days later — and the blast
-radius has grown. The 07-10 events were all ticket confirmations
-(`ticket-confirmation` alias); the latest event (2026-07-26 20:02 UTC) is a
-**reservation-cancellation notice** failing on the generic `notification`
-alias, thrown from `cancelReservation` via `sendEmailWithTemplate` (extra data:
-`tag: reservation_cancelled`, `templateAlias: notification`, recipient
-`dylanneuhaus@icloud.com`). So it is not just the post-#96 templates: the
-production Postmark server token in use appears to have **no matching
-templates at all** (or the token points at the wrong Postmark server).
+### 2A — accepting a band invitation has never worked
 
-**Fix (operator):** run `pnpm email:push` against the production
-`POSTMARK_SERVER_TOKEN`, then verify in Postmark's template preview that both
-`notification` and `ticket-confirmation` aliases exist on the same server the
-runtime token targets. If they already exist on _a_ server, compare the
-server ID against the deployed token — the mismatch theory fits the
-`notification` alias failing despite predating #96.
+Not a race, not a double-submit. `acceptInvitation` matched on `band_member.id`:
 
-**Follow-up:** 6 affected users never received transactional mail (ticket
-codes, a cancellation notice). Codes are recoverable from the success page/DB;
-consider re-sending once templates resolve.
+```ts
+eq(bandMember.id, memberId); // band-service.ts:353
+```
 
-### W — effect_update_depth_exceeded on /member/profile is NOT gone (07-10 verdict falsified)
+but the only id the invite list has is the **band** id — `listForUser` selects
+`id: band.id` ([band-service.ts:203](src/lib/server/band/band-service.ts:203)), which flows through
+`getMemberBands` into the hidden input the Accept form submits
+([+page.svelte:85](src/routes/member/bands/+page.svelte:85)). The predicate matched zero rows for every
+user, every time, and the bare `throw new Error(...)` became a 500 —
+7 events across 5 users in one day.
 
-The 07-10 report left this as "monitor; quiet 15 days, remnant probably rode
-the error path #128/#130 eliminated." That hypothesis is now falsified: 5 new
-events (2026-07-21 → 07-24, latest on **release `5b1a882` — the current
-deploy**, Edge/Windows, Corvallis user). Total now 17 events / 6 users, with 9
-attached replays.
+`declineInvitation` had the identical mismatch but discarded its delete result,
+so the UI toasted "Invitation declined" and the invite reappeared on reload.
 
-The infinite loop guard trips inside Svelte's batch processing
-(`batch.js #process` recursion) with no first-party frame, so the trigger is
-reactive write-back, not an event handler. The page
-([+page.svelte](src/routes/member/profile/+page.svelte)) still has the
-suspect shape despite #102's seed-once fix:
+**Fixed:** both now key on `(bandId, userId)` — the pair the unique constraint
+already enforces — and the parameter is named `bandId` so the type no longer
+lies. Accept is idempotent: an already-`active` row is success, not an error.
+Decline returns whether a row was actually removed. Both outcomes are returned
+in-band rather than thrown, so a stale invite no longer reaches Sentry as a 500.
 
-- `let profile = $derived(await getMemberProfile())` (line 24) plus a second
-  top-level `await getMemberProfile()` for `initial` (line 34), plus a
-  `refresh()` of the same query after avatar upload (line 61).
-- `bind:value` editors (`RichTextEditor`, `FreeformTagInput`,
-  `LinkListEditor`) writing into `$state` seeded from that data.
+**Why the tests missed it:** [bands.spec.ts](src/routes/member/bands/bands.spec.ts) called the remote
+function with a synthetic `{ memberId: 'member-42' }`, so the UI→service key was
+never exercised. The tests now drive the id the UI really sends.
 
-**Root cause (confirmed by local reproduction, 2026-07-27):** the top-level
-`await getMemberProfile()` used to seed the editable `$state` marked every
-later declaration in the instance script as _blocked_, which compiles every
-`bind:value` and `fields.X.as(...)` expression in the template into an async
-derived; combined with the query cache's ref/deref churn this recursed the
-batch processor past the 1000-flush guard. Reproduced deterministically in dev
-on the pre-fix code (crash banner on page load, zero interaction — matching
-the replay evidence of crashes at T+1s) and gone after the fix.
+### 2C — `/contact` crashed on every server render (regression from #207)
 
-**Fixed in this branch:** the form is extracted into
-[ProfileForm.svelte](src/routes/member/profile/ProfileForm.svelte), which
-receives the resolved profile as a plain prop and keeps its script fully
-synchronous; [+page.svelte](src/routes/member/profile/+page.svelte) is a thin
-shell that awaits the queries. The redundant client-side
-`getMemberProfile().refresh()` after avatar upload is removed, the Form
-dirty-tracking `$effect` is folded into the mutation site
-([Form.svelte](src/lib/components/shared/Form/Form.svelte)), and
-[RichTextEditor.svelte](src/lib/components/shared/Form/RichTextEditor.svelte)
-treats an empty value and Tiptap's empty document as equal content. Verified
-in the browser: load, edit, save, and reload-with-data all clean.
+`{...fields.subject.as('select')}` and `bind:value` on the same `<Select>`.
+Kit's `.as('select')` defines `value` via `Object.defineProperties` **without
+`configurable`**, so it is a non-configurable accessor; Svelte's _server_
+`spread_props` copies descriptors with `Object.defineProperty`, and the second
+`value` source throws.
 
-### 10 — bcrypt migration rejections: different branch than the "fixed" 07-10 issue
+Server-only: the _client_ `spread_props` is a Proxy that forces
+`configurable: true`. That is why it passed dev and every client-side test while
+failing on every production render — 10 users in two days on a public page.
 
-The 07-10 report resolved this as the trailing-slash 404 fixed by #99. The 3
-new events (2026-06-22 → 07-25) are a **different code path**: the deliberate
-`captureException` at [auth.ts:242](src/lib/server/auth.ts:242) — Laravel was
-reached, answered 200, and said the credentials are **invalid**. That capture
-exists precisely because this used to fail silently.
+Introduced by `f4668ff` (#207), which added `bind:value` to drive the new
+Event Tip conditional; the spread was already there.
 
-Two readings:
+**Fixed:** the field goes through `FormField type="select"`, which builds its
+select props as a plain object literal and deliberately excludes `value`
+([FormField.svelte:74-84](src/lib/components/shared/Form/FormField.svelte:74)). Regression test in
+[contact.ssr.spec.ts](<src/routes/(public)/contact/contact.ssr.spec.ts>) reproduces the exact
+`TypeError` against the pre-fix page; its field mock replicates Kit's
+non-configurable descriptor, because a plain `{ value }` would not catch it.
 
-1. **Noise** — legacy-bcrypt members simply typing a wrong password; Laravel
-   correctly rejects, and each attempt emits an error-level Sentry event.
-2. **Real bug** — a known-good password rejected (hash drift between the
-   Laravel DB export and what members actually use), which would mean these 3
-   members cannot log in at all.
+### 21 — the cron alert is a monitoring bug, not a failing job
 
-One event is `hannah@corvmc.org` — a staff address, easy to check directly.
-Decidable from data: a successful bcrypt verify rewrites the hash to `scrypt:`
-([auth.ts:237](src/lib/server/auth.ts:237)), so
-`SELECT substr(password,1,7)` for the affected accounts settles it —
-`scrypt:` means they later logged in fine (noise), `$2` means they're stuck
-(real bug). The check was attempted 2026-07-27 but is **blocked on wrangler
-auth** in this environment (`wrangler login` or `CLOUDFLARE_API_TOKEN`
-needed). Capture level left at error until the data says otherwise.
+`cancel-stale-tickets` is a single `UPDATE`
+([ticket-service.ts:140](src/lib/server/ticket/ticket-service.ts:140)) — it cannot take 15 minutes.
+The check-in id was read out of the opening **response**
+(`sentry-check-in.ts:105`), opening check-ins got no retry (`:88`), and every
+attempt carried a 10s abort (`:63,98`). When Sentry recorded the open check-in
+but the response was slow, aborted, or unparseable, the id was lost; the close
+then went out with `checkInId: undefined`, which **creates a second check-in
+instead of closing the first**. The orphan timed out at `max_runtime`.
 
-### 1F — Instagram in-app webview bridge crash (not our code)
+Introduced by `d1730fb` — which was itself the fix for JAVASCRIPT-SVELTEKIT-20.
+It closed the drop on the close side and opened one on the open side.
 
-New since 07-10. `TypeError: undefined is not an object (evaluating
-'window.webkit.messageHandlers')` on `/contact`, 3 events from 1 user,
-`browser: Instagram 438.0.0` on iOS. The frames (`sendDataToNative`,
-`sendPageHideMessage`) are Instagram's injected native-bridge script running
-in its webview — attributed to `https://corvmc.org/:1` because injected
-scripts inherit the document URL. Nothing in this repo references
-`webkit.messageHandlers`.
+**Fixed:** the id is generated client-side with `crypto.randomUUID()` before the
+opening POST (Sentry's HTTP API accepts a client-supplied `check_in_id`), so the
+opening response is irrelevant and every attempt is an idempotent update — which
+also makes the retry safe on both sides. The terminal check-in moved into a
+`finally`, and the monitored job call is now bounded (it was unbounded while the
+monitoring call was capped at 10s, so one hung job could starve the whole batch).
+The test that pinned the buggy `checkInId: undefined` behaviour is replaced.
 
-**Fixed in this branch:** `isWebviewBridgeError` in
-[hooks.client.ts](src/hooks.client.ts) drops events whose message references
-`window.webkit.messageHandlers` or whose crashing frame is a known bridge
-entry point (`sendDataToNative`/`sendPageHideMessage`); regression spec in
-[hooks.client.spec.ts](src/hooks.client.spec.ts).
+### 29 — double refund strands a half-cancelled reservation
 
-## Resolved in Sentry during this pass
+`refundPaymentIntent` guarded on `pi.amount > 0 && pi.status === 'succeeded'`,
+but a PaymentIntent stays `succeeded` after a refund and its `amount` is never
+decremented — the guard could not detect a prior refund. `reservation.refundedAt`
+was written in three places and read in none.
 
-- **1B** — `ReservationValidationError` surfaced as a 500 from
-  `bookAndPayReservation`. Single event 2026-07-01 17:56 UTC, two hours before
-  #128 merged (validation errors now returned in-band,
-  [reservations.remote.ts:1136](src/lib/remote/reservations.remote.ts:1136)).
-  26 days quiet → resolved.
-- **15** — negative `freeHours` reached `setBalance` because the invoice
-  contribution-line picker could select a negative proration line; #130
-  excludes prorations and the fee product. Last event 2026-06-28, 29 days
-  quiet → resolved.
-- **1E** — `auth.sign_in: user_not_found` is the intentional sign-in anomaly
-  telemetry (`deriveSignInAnomaly`, [auth.ts:304](src/lib/server/auth.ts:304))
-  doing exactly its job: the 4 events are people typing addresses that have no
-  account (e.g. `kevin@thenettles.com`, `hasCredentialAccount: false`).
-  Resolved as working-as-intended; Sentry will auto-reopen on regression-style
-  volume. **Fixed in this branch:** the `user_not_found` anomaly now captures
-  at `warning` level ([auth.ts](src/lib/server/auth.ts) via a new optional
-  `level` param on the [sentry.ts](src/lib/server/sentry.ts) wrapper); the
-  structural anomalies (`no_credential_account`, `no_password`) stay at error.
+Staff **Refund** deliberately does not cancel, and both buttons stayed enabled
+([reservation-actions.ts:108](src/lib/utils/reservation-actions.ts:108)), so Refund-then-Cancel
+refunded twice. The throw landed _after_ `cancel()` had flipped the row to
+`cancelled` and nulled `cashDueCents`/`creditsUsed`, so credits were never
+reversed, `reservation.cancelled` never emitted (no waitlist promotion, no
+cancellation email), and retry was impossible because the status guard now
+rejected it.
+
+**Fixed:** `refund()` returns early when the payment is already marked refunded —
+which also protects the credit ledger, since `reverseDeductions` has no dedupe
+and a second pass would double-credit the member. `refundPaymentIntent` now
+consults the charge's `amount_refunded` rather than the PaymentIntent status.
+Refund is hidden once `refundedAt` is set. `cancel()` completes
+the credit reversal and cancellation event before surfacing a refund failure, so
+a Stripe error can no longer strand the row.
+
+> **Check before deploying:** one reservation from 2026-08-12 is likely sitting
+> in the half-cancelled state — cancelled, credits un-reversed, no cancellation
+> event. It needs manual repair; the code fix does not heal existing rows.
+
+**Deliberately not changed:** `reservationPaymentState`
+([reservation-actions.ts:68](src/lib/utils/reservation-actions.ts:68)) still infers "refunded" from
+`status === 'cancelled' && stripePaymentRecordId`, so a cancel whose refund
+failed displays as refunded. Keying it on `refundedAt` is the correct fix, but
+any reservation cancelled before that column was reliably populated would flip
+to "cancelled" — a wider misdisplay than the one being fixed. It needs a query
+against production first (`select count(*) from reservation where status =
+'cancelled' and stripe_payment_record_id is not null and refunded_at is null`),
+which is blocked on wrangler auth in this environment. The existing test pins
+the current behaviour.
+
+### 2D — the UNIQUE guard never fired
+
+```ts
+err.message.includes('unique'); // band-service.ts:346
+```
+
+D1 raises `UNIQUE constraint failed: ...`. The lowercase check never matched, so
+the raw `D1_ERROR` escaped as a 500. The sibling at
+[platform-invite-service.ts](src/lib/server/band/platform-invite-service.ts) had it right with
+`'UNIQUE'`. The unit test "covering" this fabricated a lowercase message.
+
+**Fixed:** the predicate moved to
+[constraint-errors.ts](src/lib/server/db/constraint-errors.ts) — schema-free, so specs that mock
+`drizzle-orm` can use the real implementation — matches case-insensitively, and
+walks `cause`, since drizzle wraps the driver message. `createInvite` now
+pre-checks `band_member` and distinguishes "already in this band" from "already
+has a pending invitation", surfaced in-band via `invalid(issue.email(...))`;
+`bands.remote.ts` previously never mapped domain errors at all, so even a caught
+`BandMemberExistsError` became a 500. Both tests now use the real D1 message.
+
+### 3 — a blank page for anyone with an unaccepted invite
+
+`/band/[slug]` is the _private_ band dashboard. `listForUser` does not filter by
+membership status and the layout queries mapped every row into `userBands`,
+discarding `status` — so a pending invite appeared in the sidebar and panel
+switcher as a live link. Clicking it hit `error(403, 'You are not a member of
+this band')` and rendered **nothing at all**: the layout's own
+`$derived(await getBandLayout(...))` sits _outside_ the `ErrorToastBoundary`
+that wraps only `{@render children()}`. 15 users over two months.
+
+**Fixed:** the three `layout.remote.ts` consumers filter to `status === 'active'`
+(matching what [bands.remote.ts:180](src/lib/remote/bands.remote.ts:180) already did for the invite
+list); the 403 itself stays, as the security boundary. A new
+[band/+layout.svelte](src/routes/band/+layout.svelte) puts a boundary one level up so the layout's
+own await is covered and a genuine 403 renders an error instead of a blank page.
+It passes `showPending={false}` to keep server rendering identical — a boundary
+with a pending snippet renders that snippet during SSR _instead of_ awaiting its
+contents, which would have replaced the whole band shell with a spinner.
+
+### X — framework control flow, not a bug
+
+`redirect()` and `error()` throw plain `Redirect {status, location}` and
+`HttpError {status, body}` instances that are **not** `Error` subclasses — no
+message, no stack, hence Sentry's "Object captured as promise rejection with
+keys: …".
+
+The redirect at [volunteer.remote.ts:414](src/lib/remote/volunteer.remote.ts:414) is correct and
+works. Kit runs `await goto(location)` and _then_ throws `Redirect(307)` purely
+to settle the dangling query promise, by which point the component and its
+boundary are unmounted — so no boundary can ever catch it. The thrown status is
+302 at the source; the 307 is manufactured client-side, and the `location`
+matches the transaction name only because `goto` already renamed the
+transaction. Not a redirect loop.
+
+The existing 4xx filter could not help: it lives in `reportError`
+([report-error.ts:13](src/lib/report-error.ts:13)), a manual sink that unhandled rejections never
+reach, and its `status >= 400` test would miss a 307 anyway. All three
+`beforeSend` filters key on `message`, which these payloads do not have.
+
+**Fixed:** `isFrameworkControlFlow` in [hooks.client.ts](src/hooks.client.ts) drops Redirects
+and **4xx** HttpErrors in `beforeSend`, bounded so a 5xx still reports.
+
+## Operator action required
+
+### 22 — the production Postmark server has no matching message streams
+
+Marked `resolved` and quiet since 08-10, but this was the highest-volume error of
+the period and the blast radius was total. The event history shows the configured
+stream changed mid-window and **neither value existed** on the server the
+production `POSTMARK_SERVER_TOKEN` points at:
+
+| Window        | `POSTMARK_TRANSACTIONAL_STREAM` | Failing paths                                                                                                                           |
+| ------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 08-03 → 08-05 | `corvmc-transactional`          | `/contact`, `/member/reservations`, `/staff/inbox/[id]`, crons: `reservation-reminders`, `cancel-unconfirmed`, `confirmation-reminders` |
+| 08-08 → 08-10 | `outgoing`                      | `/api/stripe/webhook` (×4), `/contact`, `/staff/inbox/[id]` (×2)                                                                        |
+
+Every transactional email path was failing, including Stripe receipts and three
+scheduled jobs. The code is correct —
+[postmark-client.ts:31-41](src/lib/server/notification/email/postmark-client.ts:31) reads both
+stream ids from the environment with no fallback, by design.
+
+This corroborates the 07-27 report's unproven hypothesis that the production
+token points at the **wrong Postmark server**, which would explain the missing
+_templates_ in that pass's issue 18 as well.
+
+1. Confirm which Postmark server the production `POSTMARK_SERVER_TOKEN` belongs to.
+2. Confirm streams matching `POSTMARK_TRANSACTIONAL_STREAM` and
+   `POSTMARK_BROADCAST_STREAM` exist on **that** server, along with the template
+   aliases.
+3. Consider a health check so a missing stream fails loudly once rather than
+   silently per send.
+
+Mail lost in the 08-03 → 08-10 window (reservation reminders, receipts, inbox
+replies) may warrant a re-send.
 
 ## Report-only
 
-- **1D / 1C** — Sentry AI-detected long-animation-frame observations on
-  `/(public)` and `/contribute`, 1 event each, 0 users impacted, none in 3+
-  weeks. Nothing actionable; revisit only if they recur with real user impact.
+- **25** — `TypeError: null is not an object (evaluating 'c.async_deriveds')` on
+  `/member/reservations`, inside Svelte's async internals at
+  `batch.async_deriveds.set(effect, d)` where the batch is null. Matches a known
+  upstream class — the batch is flushed before the next top-level await gets hold
+  of the current batch — and is **not fixed in 5.56.9**, the newest release. The
+  page has several concurrent `$derived(await …)` and `{#each await …}`
+  ([+page.svelte:32-114](src/routes/member/reservations/+page.svelte:32)), which is the shape that
+  triggers it. 1 event, 1 user. No app-side fix; worth reporting upstream.
+- **24** — `SyntaxError: JSON.parse` on a remote form envelope, `/band/[slug]/edit`.
+  **Correction to the note carried from the previous occurrence:** this was _not_
+  deploy skew. The event fired on release `aad2773`, which was the newest commit
+  at the time — nothing merged between that commit and the event — so the
+  client and server were on the same build. 1 event, 1 user; not diagnosed
+  further. Do not re-apply the stale skew explanation without re-checking the
+  release tag.
+- **2B / 26** — Sentry AI-detected performance observations on
+  `saveMemberProfile` and `/about`, 1 event each, 0 users impacted. Same
+  disposition as the previous pass's 1C/1D: revisit only on real user impact.
 
-## Resolved-issue watchlist (from the 07-10 pass)
+## Sentry statuses
 
-Q, 1A (NotificationBell teardown), D (HTTP-shaped client echo), 11
-(constructEventAsync), 12 (rotated Stripe key) — all remain quiet; no
-regressions observed in this pass.
-
-> **Correction (2026-07-31):** Q/1A's root cause was misdiagnosed. The crash
-> was not a teardown-after-destroy race — it fires when the window click
-> handler runs _before_ NotificationBell's post-`await` continuation
-> initializes its state: with `experimental.async`, every declaration after a
-> top-level `await` is "blocked", so an early click read `get(undefined)`
-> (→ `reading 'f'`), and the `destroyed` guard variable was itself still
-> `undefined`, so the guard never protected anything. Reproduced ~60% of the
-> time in headless Chromium by clicking within ~1s of login. The same
-> svelte runtime bug family also silently prevented async template blocks from
-> committing after a client-side navigation (dead create-band modal on
-> /member/bands). Both fixed upstream by svelte 5.56.4 (#18453, "always unset
-> reactivity context after restoring it"); we upgraded to 5.56.8 and added
-> e2e/create-band-modal.e2e.ts as a regression test.
-
-## Recommended follow-ups (in priority order)
-
-1. **Ops:** `pnpm email:push` with the prod `POSTMARK_SERVER_TOKEN`; verify
-   both aliases; re-send lost mail (issue 18).
-2. **Code:** fix the `/member/profile` reactive loop (issue W) — replays are
-   attached and it reproduces on the current release.
-3. **Check:** confirm whether the bcrypt-rejected members (issue 10, incl.
-   `hannah@corvmc.org`) can log in; downgrade capture level if they can.
-4. **Code (low):** filter Instagram webview bridge errors in `beforeSend`
-   (issue 1F); downgrade `user_not_found` anomaly to warning (issue 1E).
+Unchanged by this pass — nothing was written to Sentry. Commit messages carry
+`Fixes JAVASCRIPT-SVELTEKIT-XX` so merges auto-close. **3** and **X** are
+`archived_forever` and will need un-archiving manually if they should resurface.

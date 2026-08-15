@@ -407,6 +407,22 @@ export interface RefundOptions {
 export async function refund(options: RefundOptions): Promise<void> {
 	const { userId, stripePaymentRecordId } = options;
 
+	// Idempotency guard (JAVASCRIPT-SVELTEKIT-29). Refund and Cancel are separate
+	// staff actions that both land here, so refund-then-cancel called Stripe
+	// twice; the second raised "charge has already been refunded" *after*
+	// cancel() had flipped the reservation to cancelled, stranding it with
+	// credits un-reversed and no cancellation event.
+	//
+	// This also protects the credit ledger: reverseDeductions has no dedupe of
+	// its own, so a second pass would credit the member twice.
+	const [cached] = await db
+		.select({ status: paymentCache.status })
+		.from(paymentCache)
+		.where(eq(paymentCache.id, stripePaymentRecordId))
+		.limit(1);
+
+	if (cached?.status === 'refunded') return;
+
 	if (stripePaymentRecordId.startsWith('pi_')) {
 		await refundPaymentIntent(stripePaymentRecordId, userId);
 	} else {
@@ -420,9 +436,19 @@ export async function refund(options: RefundOptions): Promise<void> {
 }
 
 async function refundPaymentIntent(paymentIntentId: string, userId?: string): Promise<void> {
-	const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+	const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+		expand: ['latest_charge']
+	});
 
-	if (pi.amount > 0 && pi.status === 'succeeded') {
+	// A PaymentIntent stays `succeeded` after being refunded and its `amount` is
+	// the requested amount, never decremented — so neither field can tell you
+	// whether a refund already happened. Only the charge knows.
+	const charge = typeof pi.latest_charge === 'object' ? pi.latest_charge : null;
+	const captured = charge?.amount_captured ?? pi.amount;
+	const alreadyRefunded = charge?.amount_refunded ?? 0;
+	const outstanding = captured - alreadyRefunded;
+
+	if (pi.status === 'succeeded' && outstanding > 0) {
 		await stripe.refunds.create({ payment_intent: paymentIntentId });
 	}
 
