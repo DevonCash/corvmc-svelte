@@ -96,15 +96,23 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 	mapDbSubscription: vi.fn(() => null)
 }));
 
+// Hoisted so the purge-mapping tests can drive rejections; the mock factory
+// below closes over these rather than creating its own.
+const purgeUserService = vi.fn<(id: string) => Promise<void>>(async () => undefined);
+class UserHasOwnedBandsError extends Error {}
+class UserHasLinkedRecordsError extends Error {}
+class UserHasPublishedListingsError extends Error {}
+
 vi.mock('$lib/server/user/user-service', () => ({
 	deactivateUser: vi.fn(async () => undefined),
 	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
 	reactivateUser: vi.fn(async () => undefined),
-	purgeUser: vi.fn(async () => undefined),
+	purgeUser: purgeUserService,
 	UserNotFoundError: class UserNotFoundError extends Error {},
 	UserNotDeactivatedError: class UserNotDeactivatedError extends Error {},
-	UserHasOwnedBandsError: class UserHasOwnedBandsError extends Error {},
-	UserHasLinkedRecordsError: class UserHasLinkedRecordsError extends Error {}
+	UserHasOwnedBandsError,
+	UserHasLinkedRecordsError,
+	UserHasPublishedListingsError
 }));
 
 vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
@@ -283,5 +291,32 @@ describe('users.remote lockout guards', () => {
 		otherAdminCount = 1;
 		await users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] });
 		expect(dbBatch).toHaveBeenCalled();
+	});
+});
+
+describe('users.remote purge error mapping', () => {
+	beforeEach(() => {
+		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+	});
+
+	/**
+	 * purgeUser's service refuses to delete a member who still has published
+	 * community listings, because event.createdByUserId cascades and the purge
+	 * would quietly take those shows off the public calendar. The service throws
+	 * a dedicated error with a staff-readable message; the remote handler mapped
+	 * its four siblings and missed this one, so the message never reached the
+	 * staffer — they got an opaque 500 instead.
+	 */
+	it('maps UserHasPublishedListingsError to 409 rather than letting it 500', async () => {
+		purgeUserService.mockRejectedValueOnce(
+			new UserHasPublishedListingsError('This member has community listings on the public calendar')
+		);
+
+		await expectHttpError(users.purgeUser({ id: 'victim-user' }), 409, 'community listings');
+	});
+
+	it('still maps the sibling purge errors it already handled', async () => {
+		purgeUserService.mockRejectedValueOnce(new UserHasOwnedBandsError('still owns bands'));
+		await expectHttpError(users.purgeUser({ id: 'victim-user' }), 409, 'still owns bands');
 	});
 });

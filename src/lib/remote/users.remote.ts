@@ -45,7 +45,8 @@ import {
 	UserNotFoundError,
 	UserNotDeactivatedError,
 	UserHasOwnedBandsError,
-	UserHasLinkedRecordsError
+	UserHasLinkedRecordsError,
+	UserHasPublishedListingsError
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { isProfileComplete } from '$lib/server/directory/directory-service';
@@ -437,6 +438,10 @@ export const purgeUser = form(
 			if (err instanceof UserNotDeactivatedError) error(409, err.message);
 			if (err instanceof UserHasOwnedBandsError) error(409, err.message);
 			if (err instanceof UserHasLinkedRecordsError) error(409, err.message);
+			// Purging cascades event.createdByUserId, so the service refuses while
+			// the member still has listings on the public calendar. Staff need the
+			// reason, not a 500 — see users.remote.spec.ts.
+			if (err instanceof UserHasPublishedListingsError) error(409, err.message);
 			throw err;
 		}
 		return { success: true };

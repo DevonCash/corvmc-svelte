@@ -64,3 +64,9 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ blocked
   sites render as `${cents(x)}` inside spans mixed with other text; a component would have added
   ceremony without removing anything. Consolidating on the existing `formatCents`/`formatDollars`
   deleted every duplicate on its own. Revisit only if a real need for `perUnit`/`zeroLabel` appears.
+- (2026-08-16) C2 corrected a second time. 10 of the 11 "fall-through" classes are handled inline
+  in remote catch blocks; only `UserHasPublishedListingsError` actually 500'd. Fixed + tested.
+  **Pattern to note: every severity claim in the original audit was inflated because it inferred
+  behaviour from structure instead of tracing call paths.** Trace before believing the next one.
+- Remaining in tranche 4: migrate the 22 remote files onto `mapDomainError` so a new error class
+  no longer has to be remembered in a hand-written ladder. That is the mechanism that hid this bug.

@@ -77,7 +77,7 @@ match nothing. That one is worth fixing on its own.
 `reportRange.extend({ page: z.number().optional() })`. Hoist a shared `listFilters` schema and
 extend it.
 
-### C2. 11 error classes cannot produce their intended status code
+### C2. One error class reaches the user as a 500 — not eleven
 
 `mapDomainError()` ([errors.ts:69](../../src/lib/server/errors.ts)) is the documented catch-block
 idiom. It is imported by **4 of 26** remote files — `membership`, `reservations`,
@@ -88,17 +88,26 @@ The deeper issue is underneath it. Of **64 distinct error classes** under `src/l
 extend `DomainError` (handled generically via `httpStatus`) and 19 more are named in the
 `instanceof` ladder at `errors.ts:76-117`. Anything else is re-thrown (`:120`) and surfaces as a 500.
 
-**Corrected count (2026-08-16): 11 classes, not the ~32 an earlier draft claimed** — that figure
-came from subtracting raw counts instead of deduplicating and accounting for the ladder overlap.
-The actual fall-through set is:
+**Corrected twice (2026-08-16).** The first draft said ~32 classes, from subtracting raw counts
+instead of deduplicating against the ladder. The corrected figure was 11. Tracing the actual call
+paths during implementation showed even that was wrong in the way that matters: **10 of those 11
+are handled**, just inline in each remote file's catch block
+(`if (err instanceof FlagNotFoundError) error(404, …)`) rather than through `mapDomainError`. They
+never reach a 500.
 
-`BandTierManagedByStripeError`, `CustomDomainError`, `FlagAlreadyResolvedError`,
-`FlagNotFoundError`, `FlagTargetNotFoundError`, `SlugUnavailableError`,
-`UserHasLinkedRecordsError`, `UserHasOwnedBandsError`, `UserHasPublishedListingsError`,
-`UserNotDeactivatedError`, `UserNotFoundError`
+Exactly **one** class was thrown and handled nowhere: `UserHasPublishedListingsError`. `purgeUser`
+mapped its four siblings and omitted it, so a staffer purging a member who still had community
+listings on the public calendar got an opaque 500 instead of the service's deliberate, readable
+"This member has community listings on the public calendar". Fixed, with a regression test that
+was confirmed failing first.
 
-Note the flag and user clusters — those are exactly the domains whose remote files don't call the
-mapper at all, so the class-level gap and the adoption gap compound.
+So the honest form of C2 is: **one real bug, plus status-mapping duplicated across 22 remote files
+that the existing `mapDomainError` was built to absorb.** The duplication is worth removing — every
+new error class has to be remembered in a hand-written ladder, which is exactly how this one got
+missed — but it is a maintainability finding, not a live outage.
+
+The flag and user clusters are exactly the domains whose remote files hand-roll their ladders
+instead of calling the mapper — which is why the one omission happened there.
 
 Corroborating signal: `error(422, …)` appears **zero** times across all remote files, because 422
 is only reachable _through_ the mapper.
