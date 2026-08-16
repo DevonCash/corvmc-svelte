@@ -33,7 +33,12 @@
 							class="flex items-center gap-3 rounded-box px-2 py-2 hover:bg-base-200"
 						>
 							<!-- Band avatars are square; member avatars are round. -->
-							<Avatar src={b.avatarUrl ?? undefined} name={b.name} class="size-10 !rounded" />
+							<Avatar
+								src={b.avatarUrl ?? undefined}
+								name={b.name}
+								size="avatar-sm"
+								class="size-10 !rounded"
+							/>
 							<div class="min-w-0 flex-1">
 								<div class="font-medium">{b.name}</div>
 								<div class="text-sm opacity-60">{b.memberCount} active members</div>
