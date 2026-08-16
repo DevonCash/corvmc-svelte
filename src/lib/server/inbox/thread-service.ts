@@ -7,10 +7,33 @@ import {
 } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { eq, and, desc, count, like, or, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import { eq, ne, and, desc, count, like, or, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
+
+/**
+ * The one expression that keeps private member↔member conversations out of
+ * every staff view.
+ *
+ * A `direct` thread is nobody's business but its two participants' — it is not
+ * the org talking to the outside world, and staff have no queue role in it. It
+ * becomes visible only by being reported, and drops back out when the report is
+ * resolved.
+ *
+ * **If a query in this file reads `inbox_thread` and does not use this, it is a
+ * leak.** That includes the aggregates: an unfiltered COUNT puts live DMs in the
+ * staff badge, and `listThreads`' search does a LIKE over `preview`, which for a
+ * direct thread is a member's private text.
+ */
+export const staffVisibleThread = or(
+	ne(inboxThread.channel, 'direct'),
+	sql`EXISTS (SELECT 1 FROM content_flag cf
+	            WHERE cf.entity_type = 'inbox_thread'
+	              AND cf.entity_id = ${inboxThread.id}
+	              AND cf.status = 'pending')`
+)!;
 
 const PREVIEW_LENGTH = 200;
 
@@ -131,7 +154,9 @@ export interface ListThreadsFilters {
  * escalates a reported thread back into the queue.
  */
 export async function listThreads(filters: ListThreadsFilters, pagination: PaginationInput) {
-	const conditions = [];
+	// Unconditional, and first: behind an `if` it would be one refactor away from
+	// only applying when some filter happens to be set.
+	const conditions: (SQL | undefined)[] = [staffVisibleThread];
 
 	if (filters.status) conditions.push(eq(inboxThread.status, filters.status));
 	if (filters.channel) conditions.push(eq(inboxThread.channel, filters.channel));
@@ -154,7 +179,7 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 		);
 	}
 
-	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	const where = and(...conditions);
 
 	const dataQuery = db
 		.select({
@@ -183,10 +208,34 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 	return paginate(dataQuery, countQuery, pagination);
 }
 
+/**
+ * The staff detail read: thread, every message, and the staff-only notes.
+ *
+ * There is no ownership check here and there does not need to be — every other
+ * channel is the org's own correspondence. `direct` is the exception, so it is
+ * refused outright. That one line is what stops a staff member reading a
+ * private conversation by knowing its id, and it covers three endpoints at
+ * once: the detail page, the reply box and the note box all go through here.
+ *
+ * A reported conversation is read through `getFlaggedDirectThread`, which is
+ * keyed on the flag rather than the thread — so the report is the only handle
+ * staff ever have on a DM.
+ */
 export async function getThread(id: string) {
+	// Refused before any message or note is fetched, not filtered afterwards.
+	const [visible] = await db
+		.select({ channel: inboxThread.channel })
+		.from(inboxThread)
+		.where(eq(inboxThread.id, id))
+		.limit(1);
+	if (!visible || visible.channel === 'direct') return null;
+
 	// The member behind a portal thread, if there is one. Joined live rather than
 	// read off the thread's denormalized contactName, which goes stale the moment
 	// they rename themselves.
+	//
+	// Filtered to role='member' and safe because of the guard above: a direct
+	// thread has two member participants and would multiply rows here.
 	const contactUser = alias(user, 'contact_user');
 
 	const [thread] = await db
@@ -269,7 +318,7 @@ export async function getUnresolvedCount(): Promise<number> {
 	const [row] = await db
 		.select({ count: count() })
 		.from(inboxThread)
-		.where(eq(inboxThread.status, 'open'));
+		.where(and(eq(inboxThread.status, 'open'), staffVisibleThread));
 	return row?.count ?? 0;
 }
 
@@ -283,6 +332,7 @@ export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
 	const rows = await db
 		.select({ status: inboxThread.status, count: count() })
 		.from(inboxThread)
+		.where(staffVisibleThread)
 		.groupBy(inboxThread.status);
 
 	const counts = { open: 0, resolved: 0, snoozed: 0, all: 0 } satisfies ThreadStatusCounts;
@@ -329,7 +379,12 @@ export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woke
  * denormalized `contactEmail`, which is the only link that exists.
  */
 export async function listThreadsByContactEmail(email: string, pagination: PaginationInput) {
-	const where = eq(inboxThread.contactEmail, email);
+	// staffVisibleThread even though a direct thread has no contactEmail to match
+	// on. Relying on that would make this safe by accident: the day anyone
+	// denormalises an address onto a direct thread — for search, for a digest —
+	// this would start showing a member's private preview on the staff user page,
+	// and nothing here would look wrong. Cheap to state, expensive to rediscover.
+	const where = and(eq(inboxThread.contactEmail, email), staffVisibleThread);
 
 	const dataQuery = db
 		.select({

@@ -172,6 +172,64 @@ describe('handlePostmarkInbound — MailboxHash routing', () => {
 	});
 });
 
+describe('handlePostmarkInbound — direct threads are never writable by email', () => {
+	// The routing below this guard is deliberately channel-agnostic ("route it
+	// straight back, whatever the thread's channel"), and its own comment notes
+	// that anyone a forwarded alert reaches can write into the thread. That is
+	// fine for the channels the org actually corresponds on. It is not fine for a
+	// private member↔member conversation: a message filed this way lands with a
+	// null authorUserId and renders as "not yours" to *both* participants.
+	//
+	// Nothing we send carries a reply address for a direct thread, so a hash
+	// arriving for one is misrouted or forged either way. This is easy to lose in
+	// a later refactor precisely because being channel-agnostic is the point of
+	// the surrounding code.
+	beforeEach(() => {
+		mockParseReplyMailboxHash.mockReturnValue('dm-thread');
+		mockFindThreadById.mockResolvedValue({ id: 'dm-thread', channel: 'direct', status: 'open' });
+	});
+
+	it('files nothing when a valid signed hash names a direct thread', async () => {
+		await handlePostmarkInbound(payload());
+		expect(mockAddInboundMessage).not.toHaveBeenCalled();
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockAddNote).not.toHaveBeenCalled();
+	});
+
+	it('reports the mail as ignored rather than pretending it landed', async () => {
+		const result = await handlePostmarkInbound(payload());
+		expect(result).toEqual({ thread: null, message: null });
+	});
+
+	it('does not reopen a resolved direct thread', async () => {
+		mockFindThreadById.mockResolvedValue({
+			id: 'dm-thread',
+			channel: 'direct',
+			status: 'resolved'
+		});
+		await handlePostmarkInbound(payload());
+		expect(mockReopenThread).not.toHaveBeenCalled();
+	});
+
+	it('does not relay it even when the sender is staff', async () => {
+		// Staff replying by mail is relayed on other channels. Not here: staff do
+		// not write into member conversations at all.
+		mockFindStaffUserByEmail.mockResolvedValue({
+			id: 'staff-1',
+			name: 'Sam',
+			email: 'sam@corvmc.org'
+		});
+		await handlePostmarkInbound(payload());
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+	});
+
+	it('does not fall through to creating a fresh email thread', async () => {
+		// The failure mode if this were a `return` in the wrong place.
+		await handlePostmarkInbound(payload());
+		expect(mockFindOrCreateThread).not.toHaveBeenCalled();
+	});
+});
+
 describe('handlePostmarkInbound — staff reply relay', () => {
 	const STAFF = { id: 'staff-1', name: 'Ada', email: 'ada@corvmc.org' };
 

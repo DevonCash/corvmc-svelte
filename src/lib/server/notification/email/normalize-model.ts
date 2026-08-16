@@ -31,13 +31,27 @@ function derivePreviewText(model: NotificationEmailPayload): string {
 		: flat;
 }
 
+export interface NormalizeOptions {
+	/**
+	 * Drop any member-written text before it reaches the mail server.
+	 *
+	 * Set from the notification type's `emailOmitsUserContent`, not by the
+	 * caller. The point is that the ~23 hand-built email models across the
+	 * listeners cannot get this wrong: `quote` is the one field carrying
+	 * user-generated text, and this is already the one place that knows it.
+	 * Dropping it here is the same argument as escaping it here.
+	 */
+	omitUserContent?: boolean;
+}
+
 /**
  * Fill in the derived fields the `notification` template needs.
  *
  * Idempotent, and never overwrites a `preview_text` the caller set deliberately.
  */
 export function normalizeNotificationModel(
-	model: NotificationEmailPayload
+	model: NotificationEmailPayload,
+	options: NormalizeOptions = {}
 ): Record<string, unknown> {
 	const normalized: NotificationEmailPayload = {
 		...model,
@@ -45,7 +59,15 @@ export function normalizeNotificationModel(
 		has_details: (model.details?.length ?? 0) > 0
 	};
 
-	if (model.quote) {
+	if (options.omitUserContent) {
+		// Deliberate and unconditional: a type marked emailOmitsUserContent never
+		// carries member-written text, whatever the caller passed. Also clears
+		// preview_text, which is derived from the body and would otherwise leak
+		// the opening line into the inbox preview pane.
+		delete normalized.quote;
+		delete normalized.quote_text;
+		normalized.preview_text = model.preview_text?.trim() || '';
+	} else if (model.quote) {
 		// `quote` is the only field rendered unescaped ({{{quote}}}), because the
 		// line breaks have to survive as <br /> — Outlook's Word engine ignores
 		// white-space:pre-wrap. Escaping it here is what makes that safe.

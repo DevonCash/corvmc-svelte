@@ -64,6 +64,9 @@ export const tableOrder = [
 	// After content_flag as well as user: it carries the report that cost the
 	// member their standing.
 	'community_event_standing',
+	// Same shape: messaging_standing carries the report that restricted them.
+	'messaging_standing',
+	'user_block',
 	'suggestion',
 	'suggestion_vote',
 	'suggestion_edit',

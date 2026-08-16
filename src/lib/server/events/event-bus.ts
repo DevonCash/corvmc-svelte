@@ -247,6 +247,25 @@ export interface WaitlistExpiredEvent {
 	endTime: string;
 }
 
+/**
+ * A member wrote to another member. Carries the recipient explicitly rather
+ * than leaving a listener to fan out over participants and remember to drop the
+ * author — a two-party thread makes that mistake easy, and the mistake is
+ * notifying someone about their own message.
+ *
+ * Deliberately carries no message text. The notification for a DM says who
+ * wrote (or, for a request, not even that) and never what they said.
+ */
+export interface InboxDirectMessageEvent {
+	threadId: string;
+	messageId: string;
+	senderId: string;
+	senderName: string;
+	recipientId: string;
+	/** True when this is a first message awaiting acceptance. */
+	isRequest: boolean;
+}
+
 export interface InboxMessageReceivedEvent {
 	threadId: string;
 	messageId: string;
@@ -436,6 +455,7 @@ export type DomainEvents = {
 	'platform_invite.created': PlatformInviteCreatedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
+	'inbox.direct_message': InboxDirectMessageEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;
