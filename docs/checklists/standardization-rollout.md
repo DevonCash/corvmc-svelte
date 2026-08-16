@@ -60,3 +60,7 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ blocked
 - (2026-08-16) Watch for `class:` directives when converting an element to a component — they do
   not forward to the inner element. Two silent styling regressions were caught this way
   (`staff/equipment/[id]`, `staff/equipment/loans/[id]`); both became `class={cond ? 'x' : ''}`.
+- (2026-08-16) Tranche 3 landed **without** the `<Money>` component the audit proposed. The call
+  sites render as `${cents(x)}` inside spans mixed with other text; a component would have added
+  ceremony without removing anything. Consolidating on the existing `formatCents`/`formatDollars`
+  deleted every duplicate on its own. Revisit only if a real need for `perUnit`/`zeroLabel` appears.

@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { creditsToHours } from '$lib/config';
-	import { formatDateLong, formatTime } from '$lib/utils/format';
+	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -38,16 +39,7 @@
 		committed ? (data.cashDueCents ?? 0) : totalCents - creditDiscountCents
 	);
 
-	function cents(amount: number): string {
-		return (amount / 100).toFixed(2);
-	}
-
-	function calcFeeCents(baseCents: number): number {
-		if (baseCents <= 0) return 0;
-		return Math.ceil((baseCents + 30) / (1 - 0.029)) - baseCents;
-	}
-
-	const feeCents = $derived(coverFees ? calcFeeCents(remainingCents) : 0);
+	const feeCents = $derived(coverFees ? calculateTotalWithFeeCoverage(remainingCents).feeCents : 0);
 	const chargeTotal = $derived(remainingCents + feeCents);
 </script>
 
@@ -71,8 +63,10 @@
 	<div class="card bg-base-100 shadow-sm">
 		<div class="card-body space-y-2">
 			<div class="flex justify-between">
-				<span>Room rental ({durationHours}hr × ${cents(totalCents / durationHours)}/hr)</span>
-				<span>${cents(totalCents)}</span>
+				<span
+					>Room rental ({durationHours}hr × ${formatDollars(totalCents / durationHours)}/hr)</span
+				>
+				<span>${formatDollars(totalCents)}</span>
 			</div>
 
 			{#if creditsApplicable > 0}
@@ -84,14 +78,14 @@
 							Free hours ({creditsApplicable} of {availableHours} available)
 						{/if}
 					</span>
-					<span>−${cents(creditDiscountCents)}</span>
+					<span>−${formatDollars(creditDiscountCents)}</span>
 				</div>
 			{/if}
 
 			{#if remainingCents > 0 && coverFees}
 				<div class="flex justify-between text-sm opacity-60">
 					<span>Processing fee coverage</span>
-					<span>+${cents(feeCents)}</span>
+					<span>+${formatDollars(feeCents)}</span>
 				</div>
 			{/if}
 
@@ -103,7 +97,7 @@
 					{#if remainingCents <= 0}
 						$0.00 (covered by free hours)
 					{:else}
-						${cents(chargeTotal)}
+						${formatDollars(chargeTotal)}
 					{/if}
 				</span>
 			</div>
@@ -124,7 +118,7 @@
 		<!-- SubmitButton renders its `label` prop, not children. -->
 		<SubmitButton
 			class="btn-primary w-full mt-4"
-			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${cents(chargeTotal)}`}
+			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${formatDollars(chargeTotal)}`}
 		/>
 	</Form>
 

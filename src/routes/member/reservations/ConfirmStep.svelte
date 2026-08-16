@@ -7,10 +7,11 @@
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
-		fullDate,
 		formatDate,
-		formatTimeRange,
+		formatDollars,
 		formatScheduleLabel,
+		formatTimeRange,
+		fullDate,
 		toLocalDate,
 		toLocalTime
 	} from '$lib/utils/format';
@@ -58,10 +59,6 @@
 	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
 	// (which skips payment) is the single action — no redundant payment screen.
 	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
-
-	function cents(amount: number): string {
-		return (amount / 100).toFixed(2);
-	}
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));
@@ -158,14 +155,16 @@
 		{:else}
 			<div class="py-2 text-sm">
 				<div class="flex justify-between">
-					<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
+					<span>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</span>
 					{#if pricing.creditsApplicable > 0}
 						<span>
-							<span class="line-through opacity-60">${cents(pricing.totalCents)}</span>
-							<span class="ml-1 font-medium text-success">${cents(pricing.remainingCents)}</span>
+							<span class="line-through opacity-60">${formatDollars(pricing.totalCents)}</span>
+							<span class="ml-1 font-medium text-success"
+								>${formatDollars(pricing.remainingCents)}</span
+							>
 						</span>
 					{:else}
-						<span>${cents(pricing.totalCents)}</span>
+						<span>${formatDollars(pricing.totalCents)}</span>
 					{/if}
 				</div>
 				{#if pricing.creditsApplicable > 0}

@@ -8,7 +8,13 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import LineupEditor, { type LineupChip } from '../LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import {
+		formatDate,
+		formatDollars,
+		formatTime,
+		toLocalDate,
+		toLocalTime
+	} from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import {
@@ -272,7 +278,7 @@
 							field={updateFields.ticketPriceDollars}
 							type="text"
 							label="Ticket price ($)"
-							value={evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : ''}
+							value={evt.ticketPrice ? formatDollars(evt.ticketPrice) : ''}
 							placeholder="10.00"
 							inputmode="decimal"
 							description="What people pay, at the door or through the link. Leave blank if it's free."

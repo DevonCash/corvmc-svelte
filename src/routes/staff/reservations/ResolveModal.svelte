@@ -5,7 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let {
 		open = $bindable(false),
@@ -33,7 +33,7 @@
 		const hrs = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
 		const dueCents = r.cashDueCents ?? Math.round(hrs * hourlyRateCents);
 		const hrsLabel = hrs === 1 ? '1 hr' : `${hrs} hrs`;
-		return `${hrsLabel} · $${(dueCents / 100).toFixed(2)} due`;
+		return `${hrsLabel} · ${formatCents(dueCents)} due`;
 	}
 
 	let resolved = $state<Set<string>>(new Set());
