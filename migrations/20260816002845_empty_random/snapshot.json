@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "304b5e76-64f1-4530-acd7-35af06a0e891",
+  "id": "3002f912-f666-44dd-954c-7aec3837ca9b",
   "prevIds": [
-    "5ddfc727-22dc-485f-a553-0777b26226a6"
+    "0af96a7a-1260-4565-ac04-3f1c6e9bb9fb"
   ],
   "ddl": [
     {
@@ -191,11 +191,19 @@
       "entityType": "tables"
     },
     {
-      "name": "messaging_standing",
+      "name": "suggestion",
       "entityType": "tables"
     },
     {
-      "name": "user_block",
+      "name": "suggestion_edit",
+      "entityType": "tables"
+    },
+    {
+      "name": "suggestion_standing",
+      "entityType": "tables"
+    },
+    {
+      "name": "suggestion_vote",
       "entityType": "tables"
     },
     {
@@ -4120,16 +4128,6 @@
     },
     {
       "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "accepted_at",
-      "entityType": "columns",
-      "table": "inbox_participant"
-    },
-    {
-      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": "(unixepoch())",
@@ -4414,29 +4412,69 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "user_id",
+      "name": "id",
       "entityType": "columns",
-      "table": "messaging_standing"
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_user_id",
+      "entityType": "columns",
+      "table": "suggestion"
     },
     {
       "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'other'",
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
       "generated": null,
       "name": "status",
       "entityType": "columns",
-      "table": "messaging_standing"
+      "table": "suggestion"
     },
     {
       "type": "text",
       "notNull": true,
       "autoincrement": false,
-      "default": null,
+      "default": "'visible'",
       "generated": null,
-      "name": "source",
+      "name": "visibility",
       "entityType": "columns",
-      "table": "messaging_standing"
+      "table": "suggestion"
     },
     {
       "type": "text",
@@ -4444,39 +4482,19 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "reason",
+      "name": "visibility_note",
       "entityType": "columns",
-      "table": "messaging_standing"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "triggering_flag_id",
-      "entityType": "columns",
-      "table": "messaging_standing"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "updated_by_user_id",
-      "entityType": "columns",
-      "table": "messaging_standing"
+      "table": "suggestion"
     },
     {
       "type": "integer",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
-      "default": "(unixepoch())",
+      "default": null,
       "generated": null,
-      "name": "updated_at",
+      "name": "visibility_changed_at",
       "entityType": "columns",
-      "table": "messaging_standing"
+      "table": "suggestion"
     },
     {
       "type": "text",
@@ -4484,39 +4502,79 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "id",
+      "name": "visibility_changed_by_user_id",
       "entityType": "columns",
-      "table": "user_block"
+      "table": "suggestion"
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "blocker_user_id",
+      "name": "response_body",
       "entityType": "columns",
-      "table": "user_block"
+      "table": "suggestion"
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "blocked_user_id",
+      "name": "response_by_user_id",
       "entityType": "columns",
-      "table": "user_block"
+      "table": "suggestion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "response_at",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "edited_at",
+      "entityType": "columns",
+      "table": "suggestion"
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
-      "default": "'manual'",
+      "default": null,
       "generated": null,
-      "name": "source",
+      "name": "merged_into_id",
       "entityType": "columns",
-      "table": "user_block"
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merged_by_user_id",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merged_at",
+      "entityType": "columns",
+      "table": "suggestion"
     },
     {
       "type": "integer",
@@ -4526,7 +4584,257 @@
       "generated": null,
       "name": "created_at",
       "entityType": "columns",
-      "table": "user_block"
+      "table": "suggestion"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "suggestion"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requested_by_user_id",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proposed_title",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proposed_body",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proposed_category",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_title",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_body",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_category",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reviewed_by_user_id",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "review_notes",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reviewed_at",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "suggestion_edit"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "requires_review",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "triggering_flag_id",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_by_user_id",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "suggestion_standing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "suggestion_vote"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "suggestion_vote"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "suggestion_vote"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "suggestion_vote"
     },
     {
       "type": "text",
@@ -6380,6 +6688,111 @@
     },
     {
       "columns": [
+        "author_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_author_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        "visibility_changed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_visibility_changed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        "response_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_response_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        "merged_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_merged_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_suggestion_edit_suggestion_id_suggestion_id_fk",
+      "entityType": "fks",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
+        "requested_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_edit_requested_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
+        "reviewed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_suggestion_edit_reviewed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -6389,9 +6802,9 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "fk_messaging_standing_user_id_user_id_fk",
+      "name": "fk_suggestion_standing_user_id_user_id_fk",
       "entityType": "fks",
-      "table": "messaging_standing"
+      "table": "suggestion_standing"
     },
     {
       "columns": [
@@ -6404,9 +6817,9 @@
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
-      "name": "fk_messaging_standing_triggering_flag_id_content_flag_id_fk",
+      "name": "fk_suggestion_standing_triggering_flag_id_content_flag_id_fk",
       "entityType": "fks",
-      "table": "messaging_standing"
+      "table": "suggestion_standing"
     },
     {
       "columns": [
@@ -6419,13 +6832,28 @@
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
-      "name": "fk_messaging_standing_updated_by_user_id_user_id_fk",
+      "name": "fk_suggestion_standing_updated_by_user_id_user_id_fk",
       "entityType": "fks",
-      "table": "messaging_standing"
+      "table": "suggestion_standing"
     },
     {
       "columns": [
-        "blocker_user_id"
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_suggestion_vote_suggestion_id_suggestion_id_fk",
+      "entityType": "fks",
+      "table": "suggestion_vote"
+    },
+    {
+      "columns": [
+        "user_id"
       ],
       "tableTo": "user",
       "columnsTo": [
@@ -6434,24 +6862,9 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "fk_user_block_blocker_user_id_user_id_fk",
+      "name": "fk_suggestion_vote_user_id_user_id_fk",
       "entityType": "fks",
-      "table": "user_block"
-    },
-    {
-      "columns": [
-        "blocked_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_user_block_blocked_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "user_block"
+      "table": "suggestion_vote"
     },
     {
       "columns": [
@@ -7156,11 +7569,11 @@
     },
     {
       "columns": [
-        "user_id"
+        "id"
       ],
       "nameExplicit": false,
-      "name": "messaging_standing_pk",
-      "table": "messaging_standing",
+      "name": "suggestion_pk",
+      "table": "suggestion",
       "entityType": "pks"
     },
     {
@@ -7168,8 +7581,26 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "user_block_pk",
-      "table": "user_block",
+      "name": "suggestion_edit_pk",
+      "table": "suggestion_edit",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "suggestion_standing_pk",
+      "table": "suggestion_standing",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "suggestion_vote_pk",
+      "table": "suggestion_vote",
       "entityType": "pks"
     },
     {
@@ -8244,24 +8675,6 @@
     {
       "columns": [
         {
-          "value": "user_id",
-          "isExpression": false
-        },
-        {
-          "value": "accepted_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_inbox_participant_user_accepted",
-      "entityType": "indexes",
-      "table": "inbox_participant"
-    },
-    {
-      "columns": [
-        {
           "value": "status",
           "isExpression": false
         }
@@ -8396,34 +8809,160 @@
     {
       "columns": [
         {
-          "value": "blocker_user_id",
-          "isExpression": false
-        },
-        {
-          "value": "blocked_user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "origin": "manual",
-      "name": "uq_user_block_pair",
-      "entityType": "indexes",
-      "table": "user_block"
-    },
-    {
-      "columns": [
-        {
-          "value": "blocked_user_id",
+          "value": "status",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_user_block_blocked",
+      "name": "suggestion_status_idx",
       "entityType": "indexes",
-      "table": "user_block"
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "category",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_category_idx",
+      "entityType": "indexes",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "visibility",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_visibility_idx",
+      "entityType": "indexes",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "author_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_author_idx",
+      "entityType": "indexes",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "merged_into_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_merged_into_idx",
+      "entityType": "indexes",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_created_idx",
+      "entityType": "indexes",
+      "table": "suggestion"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_edit_suggestion_idx",
+      "entityType": "indexes",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_edit_status_idx",
+      "entityType": "indexes",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
+        {
+          "value": "requested_by_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "suggestion_edit_requested_by_idx",
+      "entityType": "indexes",
+      "table": "suggestion_edit"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_suggestion_vote_suggestion_user",
+      "entityType": "indexes",
+      "table": "suggestion_vote"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_suggestion_vote_user",
+      "entityType": "indexes",
+      "table": "suggestion_vote"
     },
     {
       "columns": [

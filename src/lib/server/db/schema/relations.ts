@@ -190,6 +190,31 @@ export const relations = defineRelations(schema, (t) => ({
 		reportedBy: t.one.user({ from: t.contentFlag.reportedByUserId, to: t.user.id }),
 		resolvedBy: t.one.user({ from: t.contentFlag.resolvedByUserId, to: t.user.id })
 	},
+	// Forward-only, like contentFlag above: `suggestion` points at `user` five
+	// times, and a reverse t.many.suggestion() on the user block would need a
+	// matching alias on both sides to say which FK it follows. No self-relation
+	// for mergedIntoId either — the service aliases the table explicitly.
+	suggestion: {
+		author: t.one.user({ from: t.suggestion.authorUserId, to: t.user.id }),
+		respondedBy: t.one.user({ from: t.suggestion.responseByUserId, to: t.user.id }),
+		votes: t.many.suggestionVote(),
+		edits: t.many.suggestionEdit()
+	},
+	suggestionVote: {
+		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),
+		user: t.one.user({ from: t.suggestionVote.userId, to: t.user.id })
+	},
+	suggestionEdit: {
+		suggestion: t.one.suggestion({ from: t.suggestionEdit.suggestionId, to: t.suggestion.id }),
+		requestedBy: t.one.user({ from: t.suggestionEdit.requestedByUserId, to: t.user.id })
+	},
+	suggestionStanding: {
+		user: t.one.user({ from: t.suggestionStanding.userId, to: t.user.id }),
+		triggeringFlag: t.one.contentFlag({
+			from: t.suggestionStanding.triggeringFlagId,
+			to: t.contentFlag.id
+		})
+	},
 	helpCategory: {
 		articles: t.many.helpArticle()
 	},

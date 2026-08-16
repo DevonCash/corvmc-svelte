@@ -15,7 +15,8 @@
 	const entityLabels: Record<string, string> = {
 		member_profile: 'Member',
 		band_profile: 'Band',
-		event: 'Event'
+		event: 'Event',
+		suggestion: 'Suggestion'
 	};
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
