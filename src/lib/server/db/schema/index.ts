@@ -15,6 +15,7 @@ export * from './platform-invite';
 export * from './help';
 export * from './inbox';
 export * from './flag';
+export * from './moderation';
 export * from './suggestion';
 export * from './volunteer';
 export * from './api';

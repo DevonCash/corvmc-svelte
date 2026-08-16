@@ -47,6 +47,7 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'feature.equipment': false,
 	'feature.helpArticles': false,
 	'feature.contentFlags': false,
+	'feature.directMessages': false,
 	'feature.volunteering': false
 };
 

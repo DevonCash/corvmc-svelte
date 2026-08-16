@@ -272,3 +272,99 @@ describe('notification model normalization', () => {
 		expect(sendEmailWithTemplate.mock.calls[0][0].model).toEqual({ attendeeName: 'Ada' });
 	});
 });
+
+describe('emailOmitsUserContent', () => {
+	// The rule: a direct-message email says a message is waiting, never what it
+	// says. Email is the one channel blocking and reporting cannot reach — once a
+	// member's words are in someone's mailbox they are there permanently.
+	//
+	// These assert against the DISPATCHER, deliberately. A test that only checked
+	// the listener's literal would pass again the moment someone added a `quote`
+	// back there, and would say nothing about the other ~22 call sites.
+	beforeEach(() => {
+		vi.resetAllMocks();
+		getPreference.mockResolvedValue({ email: true, inApp: false, sms: false });
+	});
+
+	it('strips a quote a caller passed on a direct-message email', async () => {
+		await dispatch({
+			type: 'direct_message_received',
+			userId: 'user-1',
+			userEmail: 'user@example.com',
+			title: 'Robin sent you a message',
+			emailTemplate: {
+				alias: 'notification',
+				model: { heading: 'New message', quote: 'the private words of a member' }
+			}
+		});
+
+		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		expect(model.quote).toBeUndefined();
+		expect(model.quote_text).toBeUndefined();
+		expect(JSON.stringify(model)).not.toContain('the private words of a member');
+	});
+
+	it('does the same for a message request', async () => {
+		await dispatch({
+			type: 'direct_message_request',
+			userId: 'user-1',
+			userEmail: 'user@example.com',
+			title: 'New message request',
+			emailTemplate: {
+				alias: 'notification',
+				model: { heading: 'New request', quote: 'let me in' }
+			}
+		});
+		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		expect(model.quote).toBeUndefined();
+	});
+
+	it('does not derive preview text from the body either', async () => {
+		// preview_text is derived from the first paragraph when the caller leaves
+		// it unset, which would put the message's opening line in the inbox
+		// preview pane — the one place a recipient sees text without opening
+		// anything.
+		await dispatch({
+			type: 'direct_message_received',
+			userId: 'user-1',
+			userEmail: 'user@example.com',
+			title: 'New message',
+			emailTemplate: {
+				alias: 'notification',
+				model: { paragraphs: [{ text: 'the private words of a member' }] }
+			}
+		});
+		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		expect(model.preview_text).toBe('');
+	});
+
+	it('leaves other notification types alone', async () => {
+		// The asymmetry is the point, not an inconsistency: a staff reply is CorvMC
+		// writing, and quoting it is right.
+		await dispatch({
+			type: 'portal_message_reply',
+			userId: 'user-1',
+			userEmail: 'user@example.com',
+			title: 'CorvMC replied',
+			emailTemplate: {
+				alias: 'notification',
+				model: { heading: 'Reply', quote: 'here is your answer' }
+			}
+		});
+		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		expect(model.quote).toContain('here is your answer');
+	});
+
+	it('applies to dispatchEmailOnly too', async () => {
+		// Same per-type policy on both routes. A rule that holds on one and not
+		// the other is a rule waiting to be routed around.
+		await dispatchEmailOnly({
+			type: 'direct_message_received',
+			toEmail: 'user@example.com',
+			templateAlias: 'notification',
+			model: { heading: 'New message', quote: 'private' }
+		});
+		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		expect(model.quote).toBeUndefined();
+	});
+});

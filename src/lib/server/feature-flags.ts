@@ -9,6 +9,7 @@ export type FeatureFlag =
 	| 'equipment'
 	| 'helpArticles'
 	| 'contentFlags'
+	| 'directMessages'
 	| 'volunteering';
 
 export const ALL_FLAGS: FeatureFlag[] = [
@@ -19,6 +20,7 @@ export const ALL_FLAGS: FeatureFlag[] = [
 	'equipment',
 	'helpArticles',
 	'contentFlags',
+	'directMessages',
 	'volunteering'
 ];
 

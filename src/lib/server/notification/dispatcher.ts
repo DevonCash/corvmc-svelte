@@ -1,5 +1,6 @@
 import { sendEmailWithTemplate } from './email/postmark-client';
 import { normalizeNotificationModel } from './email/normalize-model';
+import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
@@ -24,9 +25,19 @@ import type { NotificationEmailPayload } from '$lib/types/notification-email';
 /** The generic template whose model gets normalized. */
 const GENERIC_ALIAS = 'notification';
 
-function prepareModel(alias: string, model: Record<string, unknown>): Record<string, unknown> {
+function prepareModel(
+	alias: string,
+	model: Record<string, unknown>,
+	type: string
+): Record<string, unknown> {
+	// Looked up from the registry rather than passed by the caller: whether a
+	// notification may quote a member is a property of what kind of notification
+	// it is, which is where every other per-type policy already lives.
+	const omitUserContent = NOTIFICATION_TYPES.find((t) => t.key === type)?.emailOmitsUserContent;
 	return alias === GENERIC_ALIAS
-		? normalizeNotificationModel(model as unknown as NotificationEmailPayload)
+		? normalizeNotificationModel(model as unknown as NotificationEmailPayload, {
+				omitUserContent
+			})
 		: model;
 }
 
@@ -87,7 +98,7 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 			await sendEmailWithTemplate({
 				to: params.userEmail,
 				templateAlias: params.emailTemplate.alias,
-				model: prepareModel(params.emailTemplate.alias, params.emailTemplate.model),
+				model: prepareModel(params.emailTemplate.alias, params.emailTemplate.model, params.type),
 				tag: params.type
 			});
 		} catch (err) {
@@ -112,7 +123,9 @@ export async function dispatchEmailOnly(params: {
 		await sendEmailWithTemplate({
 			to: params.toEmail,
 			templateAlias: params.templateAlias,
-			model: prepareModel(params.templateAlias, params.model),
+			// Same per-type policy as dispatch(): this path takes a `type` too, and
+			// leaving it out would make the rule hold on one route and not the other.
+			model: prepareModel(params.templateAlias, params.model, params.type),
 			replyTo: params.replyTo,
 			tag: params.type
 		});
