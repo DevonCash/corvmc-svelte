@@ -83,7 +83,11 @@ function hasBlockedAsyncExpression(code: string, filename: string): boolean {
 }
 
 describe('async template effects', () => {
-	it('never combine blockers with async expressions', () => {
+	// Compiling every component is a few seconds of real work — ~2.5s locally and
+	// 6.5s on CI's slower runners, which overran vitest's 5s default. The timeout
+	// is generous rather than tight so a slow runner reports a genuine offender
+	// instead of a timeout; the test itself does not get slower.
+	it('never combine blockers with async expressions', { timeout: 60_000 }, () => {
 		const files = svelteFiles(SRC);
 		// Canary: if the walk ever stops finding components, the assertion below
 		// passes vacuously and this guard is silently dead.
