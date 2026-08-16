@@ -87,9 +87,10 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## reports
 
-| Doc                                          | Status | Notes                                                   |
-| -------------------------------------------- | ------ | ------------------------------------------------------- |
-| [parity-report.md](reports/parity-report.md) | ✅     | Authoritative feature parity vs. the legacy Laravel app |
+| Doc                                                          | Status | Notes                                                                    |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------------------ |
+| [parity-report.md](reports/parity-report.md)                 | ✅     | Authoritative feature parity vs. the legacy Laravel app                  |
+| [standardization-audit.md](reports/standardization-audit.md) | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues |
 
 ## manual
 
