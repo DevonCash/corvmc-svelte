@@ -110,15 +110,14 @@ LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com"
 # zone — the code path is inert until this var is set, so enable the zone setting
 # first and verify with:
 #   curl -sI 'https://media.corvmc.org/cdn-cgi/image/width=200,format=auto/<key>'
-# If /cdn-cgi/ turns out not to be intercepted on the R2 custom domain, point
-# this at "https://corvmc.org/cdn-cgi/image" and set R2_TRANSFORM_SOURCE_ABSOLUTE
-# to any non-empty value; no code change is needed.
-# Uncomment ONLY after the zone setting above is on and the curl returns a
-# transformed image — a deploy with this set but the zone setting off would 404
-# every image on the site. Until then images serve as raw originals, as today.
-# R2_TRANSFORM_URL = "https://media.corvmc.org/cdn-cgi/image"
-# Intentionally unset: TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL (see above),
-# R2_TRANSFORM_SOURCE_ABSOLUTE (only needed for the apex-zone fallback).
+# Verified live on 2026-08-16: transformations are enabled on the zone and
+# /cdn-cgi/image/ IS intercepted on the R2 custom domain, so the source stays a
+# bare key. A 462KB JPEG poster returns 19.8KB of AVIF at width=200.
+R2_TRANSFORM_URL = "https://media.corvmc.org/cdn-cgi/image"
+# The apex zone (https://corvmc.org/cdn-cgi/image) also works and is the fallback
+# if the R2 custom domain ever stops intercepting; it needs an absolute source,
+# which is what R2_TRANSFORM_SOURCE_ABSOLUTE switches on. No code change either way.
+# Intentionally unset: TWILIO_PHONE_NUMBER, R2_TRANSFORM_SOURCE_ABSOLUTE.
 
 [[d1_databases]]
 binding = "DB"
