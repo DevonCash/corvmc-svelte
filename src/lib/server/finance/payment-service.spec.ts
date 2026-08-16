@@ -78,11 +78,17 @@ const mockDbUpdate = vi.fn().mockReturnValue({
 		where: vi.fn().mockResolvedValue(undefined)
 	})
 });
+// refund() reads paymentCache.status to stay idempotent. Default: no cached row.
+let paymentCacheRows: unknown[] = [];
+const mockDbSelect = vi.fn().mockImplementation(() => ({
+	from: () => ({ where: () => ({ limit: () => Promise.resolve(paymentCacheRows) }) })
+}));
 
 vi.mock('$lib/server/db', () => ({
 	db: {
 		insert: (...args: any[]) => mockDbInsert(...args),
-		update: (...args: any[]) => mockDbUpdate(...args)
+		update: (...args: any[]) => mockDbUpdate(...args),
+		select: (...args: any[]) => mockDbSelect(...args)
 	}
 }));
 
@@ -768,5 +774,62 @@ describe('cancel', () => {
 		});
 
 		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// refund() idempotency — JAVASCRIPT-SVELTEKIT-29
+// ---------------------------------------------------------------------------
+// Staff Refund and staff Cancel are separate actions and both reach refund().
+// Refund-then-Cancel called Stripe twice; the second raised "Charge ... has
+// already been refunded" *after* cancel() had flipped the reservation to
+// cancelled, leaving it with credits un-reversed and no cancellation event.
+describe('refund idempotency', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		paymentCacheRows = [];
+	});
+
+	it('does nothing when the payment is already marked refunded', async () => {
+		paymentCacheRows = [{ status: 'refunded' }];
+
+		await refund({ userId: 'user-1', stripePaymentRecordId: 'pi_abc123' });
+
+		expect(mockStripe.paymentIntents.retrieve).not.toHaveBeenCalled();
+		expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+		// Critically, credits are not reversed a second time — reverseDeductions
+		// has no dedupe of its own, so this would double-credit the member.
+		expect(mockCreditService.addCredits).not.toHaveBeenCalled();
+	});
+
+	it('does not re-refund a charge Stripe already refunded in full', async () => {
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			id: 'pi_abc123',
+			amount: 5000,
+			// A PaymentIntent stays `succeeded` after a refund and its `amount` is
+			// never decremented, so only the charge reveals the refund.
+			status: 'succeeded',
+			metadata: {},
+			latest_charge: { amount_captured: 5000, amount_refunded: 5000 }
+		});
+
+		await refund({ stripePaymentRecordId: 'pi_abc123' });
+
+		expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+	});
+
+	it('still refunds when the charge has an outstanding amount', async () => {
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			id: 'pi_abc123',
+			amount: 5000,
+			status: 'succeeded',
+			metadata: {},
+			latest_charge: { amount_captured: 5000, amount_refunded: 0 }
+		});
+		mockStripe.refunds.create.mockResolvedValue({});
+
+		await refund({ stripePaymentRecordId: 'pi_abc123' });
+
+		expect(mockStripe.refunds.create).toHaveBeenCalledWith({ payment_intent: 'pi_abc123' });
 	});
 });

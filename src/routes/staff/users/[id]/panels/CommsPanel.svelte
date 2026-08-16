@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
+	import { getSuggestionStandingFor, restoreSuggestionTrust } from '$lib/remote/suggestions.remote';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
 	import { getUserThreads } from '$lib/remote/inbox.remote';
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
@@ -20,6 +21,7 @@
 	let { id, email }: { id: string; email: string } = $props();
 
 	const restoreFields = restoreListingTrust.fields;
+	const restoreSuggestionFields = restoreSuggestionTrust.fields;
 </script>
 
 <!--
@@ -51,6 +53,48 @@
 					{#snippet form()}
 						<input {...restoreFields.userId.as('hidden', id)} />
 						<p class="py-2">Let this member publish listings straight to the calendar again?</p>
+					{/snippet}
+				</Action>
+			</div>
+		</InfoCard>
+	{/if}
+{/await}
+
+<!--
+	Suggestion standing is tracked separately from listing standing: an upheld
+	report about an event shouldn't quietly cost someone their suggestion-posting
+	rights, or the reverse. Same render-only-when-revoked rule as above.
+-->
+{#await getSuggestionStandingFor(id) then suggestionStanding}
+	{#if suggestionStanding.requiresReview}
+		<InfoCard title="Suggestions">
+			<p class="text-sm">
+				This member's suggestions are reviewed by staff before they go on the board, after a report
+				was upheld against one of them.
+			</p>
+			{#if suggestionStanding.reason}
+				<p class="mt-1 text-sm opacity-70">Staff note: "{suggestionStanding.reason}"</p>
+			{/if}
+			{#if suggestionStanding.triggeringFlagId}
+				<p class="mt-1 text-sm">
+					<a class="link" href={resolve(`/staff/flags/${suggestionStanding.triggeringFlagId}`)}>
+						See the report
+					</a>
+				</p>
+			{/if}
+			<div class="mt-3">
+				<Action
+					action={restoreSuggestionTrust}
+					label="Restore posting trust"
+					successToast="Trust restored"
+					class="btn-sm"
+					onsuccess={() => {
+						void getSuggestionStandingFor(id).refresh();
+					}}
+				>
+					{#snippet form()}
+						<input {...restoreSuggestionFields.userId.as('hidden', id)} />
+						<p class="py-2">Let this member post suggestions straight to the board again?</p>
 					{/snippet}
 				</Action>
 			</div>

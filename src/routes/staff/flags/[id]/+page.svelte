@@ -14,7 +14,8 @@
 	const entityLabels: Record<string, string> = {
 		member_profile: 'Member profile',
 		band_profile: 'Band profile',
-		event: 'Event listing'
+		event: 'Event listing',
+		suggestion: 'Suggestion'
 	};
 
 	let id = $derived(page.params.id!);
@@ -25,7 +26,9 @@
 			? resolve(`/staff/bands/${flag.entityId}`)
 			: flag.entityType === 'event'
 				? resolve(`/events/${flag.entityId}`)
-				: resolve(`/staff/users/${flag.entityId}`)
+				: flag.entityType === 'suggestion'
+					? resolve(`/staff/suggestions/${flag.entityId}`)
+					: resolve(`/staff/users/${flag.entityId}`)
 	);
 
 	// Staff can pull a still-published flagged event off the public guide while
@@ -158,6 +161,20 @@
 									<p class="text-sm text-wrap opacity-70">
 										Resolving this also means the member who posted it has their future listings
 										checked by staff before they publish. Dismissing changes nothing.
+									</p>
+								{/if}
+								{#if flag.entityType === 'suggestion'}
+									<!-- Same reason as the community-listing note above: this is the
+									     other place resolving a report changes a member's standing,
+									     and it also decides whether their post ever comes back. -->
+									<p class="text-sm text-wrap opacity-70">
+										{#if resolution === 'resolved'}
+											Resolving keeps this suggestion off the board and means the member who posted
+											it has their future suggestions checked by staff first.
+										{:else}
+											Dismissing puts the suggestion straight back on the board. The member's
+											standing is unchanged.
+										{/if}
 									</p>
 								{/if}
 								{#if canUnpublish && resolution === 'resolved'}

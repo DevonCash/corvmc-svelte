@@ -59,6 +59,11 @@ vi.mock('$lib/server/event/community-event-service', () => ({
 	getCommunityStanding: vi.fn(async () => ({ requiresReview: true, reason: 'Upheld report' }))
 }));
 
+let suggestionStanding = { requiresReview: false, reason: null as string | null };
+vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+	getSuggestionStanding: vi.fn(async () => suggestionStanding)
+}));
+
 vi.mock('$lib/server/volunteer/hour-log-service', () => ({
 	getUserHourSummary: vi.fn(async () => ({
 		approvedMinutes: 600,
@@ -113,6 +118,7 @@ beforeEach(() => {
 	certifications = [];
 	volunteerProfile = null;
 	subscriber = null;
+	suggestionStanding = { requiresReview: false, reason: null };
 });
 
 describe('getUserOverview', () => {
@@ -186,6 +192,21 @@ describe('getUserOverview', () => {
 		expect(overview.membership.sustaining).toBe(true);
 		expect(overview.membership.cancelAtPeriodEnd).toBe(true);
 		expect(overview.membership.hoursPerReset).toBe(8);
+	});
+
+	it('keeps suggestion standing separate from listing standing', async () => {
+		// An upheld report about an event must not cost someone their
+		// suggestion-posting rights, or the reverse — so the two are read and
+		// reported independently rather than folded into one flag.
+		suggestionStanding = { requiresReview: true, reason: 'Off-topic posts' };
+
+		const overview = await getUserOverview('u1');
+
+		expect(overview.standing.requiresReview).toBe(true);
+		expect(overview.suggestionStanding).toEqual({
+			requiresReview: true,
+			reason: 'Off-topic posts'
+		});
 	});
 
 	it('surfaces marketing suppression with its reason', async () => {

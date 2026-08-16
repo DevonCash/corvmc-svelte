@@ -5,7 +5,9 @@ import {
 	loanStatuses,
 	inboxThreadStatuses,
 	volunteerHourStatuses,
-	volunteerProfileStatuses
+	volunteerProfileStatuses,
+	suggestionStatuses,
+	suggestionVisibilities
 } from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
@@ -34,6 +36,9 @@ const derivedStatuses = {
 	payment: ['completed', 'refunded'],
 	// roles/[id] — whether a member holds what the role requires
 	clearance: ['cleared', 'uncleared'],
+	// suggestion-service.ts `displayStatus` — derived from mergedIntoId, never stored
+	suggestionDerived: ['merged'],
+
 	// member-certification-service.ts `certificationState` — the state of one
 	// held clearance, shown on the staff user record and the clearances list
 	certificationState: ['current', 'expiring', 'expired', 'revoked'],
@@ -54,6 +59,9 @@ const vocabularies: Record<string, readonly string[]> = {
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,
 	volunteerProfile: volunteerProfileStatuses,
+	suggestion: suggestionStatuses,
+	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.
+	suggestionVisibility: suggestionVisibilities.filter((v) => v !== 'visible'),
 	...derivedStatuses
 };
 

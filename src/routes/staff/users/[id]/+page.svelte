@@ -69,6 +69,7 @@
 		[
 			!!member.deletedAt,
 			overview.standing.requiresReview,
+			overview.suggestionStanding.requiresReview,
 			overview.counts.openFlagsAgainst > 0,
 			overview.counts.overdueLoans > 0,
 			overview.counts.unpaidReservations > 0,

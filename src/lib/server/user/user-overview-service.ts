@@ -15,6 +15,7 @@ import { and, count, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from 'drizz
 import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { getCommunityStanding } from '$lib/server/event/community-event-service';
+import { getSuggestionStanding } from '$lib/server/suggestion/suggestion-service';
 import { getUserHourSummary } from '$lib/server/volunteer/hour-log-service';
 import { listForUser as listCertificationsForUser } from '$lib/server/volunteer/member-certification-service';
 import { getVolunteerProfile, stageOf } from '$lib/server/volunteer/volunteer-profile-service';
@@ -81,6 +82,8 @@ export interface UserOverview {
 		hoursPerReset: number | null;
 	};
 	standing: { requiresReview: boolean; reason: string | null };
+	/** Suggestion-board posting trust, tracked separately from listing trust. */
+	suggestionStanding: { requiresReview: boolean; reason: string | null };
 	volunteer: { stage: OnboardingStage };
 	marketing: { suppressed: boolean; suppressionReason: string | null };
 	directory: { visibility: string; profileComplete: boolean };
@@ -170,6 +173,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		credits,
 		dbSubscription,
 		standing,
+		suggestions,
 		hourSummary,
 		certifications,
 		volunteerProfile,
@@ -305,6 +309,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		getAllBalances(userId),
 		getMemberSubscription(userId),
 		getCommunityStanding(userId),
+		getSuggestionStanding(userId),
 		getUserHourSummary(userId),
 		listCertificationsForUser(userId),
 		getVolunteerProfile(userId),
@@ -362,6 +367,10 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			hoursPerReset: dbSubscription?.hoursPerReset ?? null
 		},
 		standing: { requiresReview: standing.requiresReview, reason: standing.reason },
+		suggestionStanding: {
+			requiresReview: suggestions.requiresReview,
+			reason: suggestions.reason
+		},
 		volunteer: { stage: stageOf(volunteerProfile) },
 		marketing: {
 			suppressed: subscriber?.suppressedAt != null,

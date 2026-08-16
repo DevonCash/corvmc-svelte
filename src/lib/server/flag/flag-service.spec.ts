@@ -59,6 +59,21 @@ vi.mock('$lib/server/event/community-event-service', () => ({
 	revokeCommunityTrust: (...args: unknown[]) => revokeTrustMock(...args)
 }));
 
+// Same arrangement for suggestions: the visibility and standing changes belong
+// to the suggestion service, so here we assert only which of them the queue
+// reaches for — and, crucially, that dismissing RESTORES rather than doing
+// nothing (the deliberate asymmetry with event reports).
+const withholdMock = vi.fn().mockResolvedValue(undefined);
+const setVisibilityMock = vi.fn().mockResolvedValue(undefined);
+const revokeSuggestionTrustMock = vi.fn().mockResolvedValue(undefined);
+const getSuggestionForModerationMock = vi.fn().mockResolvedValue(null);
+vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+	withholdForReview: (...args: unknown[]) => withholdMock(...args),
+	setVisibility: (...args: unknown[]) => setVisibilityMock(...args),
+	revokeSuggestionTrust: (...args: unknown[]) => revokeSuggestionTrustMock(...args),
+	getSuggestionForModeration: (...args: unknown[]) => getSuggestionForModerationMock(...args)
+}));
+
 import {
 	createFlag,
 	resolveFlag,
@@ -76,6 +91,11 @@ beforeEach(() => {
 	revokeTrustMock.mockClear();
 	getByIdMock.mockReset();
 	getByIdMock.mockResolvedValue(null);
+	withholdMock.mockClear();
+	setVisibilityMock.mockClear();
+	revokeSuggestionTrustMock.mockClear();
+	getSuggestionForModerationMock.mockReset();
+	getSuggestionForModerationMock.mockResolvedValue(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -312,5 +332,96 @@ describe('resolveFlag', () => {
 
 		expect(revokeTrustMock).not.toHaveBeenCalled();
 		expect(getByIdMock).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Suggestion reports
+//
+// This is where a bug is worst: it can leave a member's post hidden forever, or
+// silently put them on probation for a report staff threw out.
+// ---------------------------------------------------------------------------
+
+describe('suggestion reports', () => {
+	it('pulls the suggestion off the board as soon as it is reported', async () => {
+		selectResultQueue = [[{ title: 'Buy a better PA' }]]; // entity label lookup
+		insertResult = [{ id: 'f1', entityType: 'suggestion', entityId: 'sg1', reason: 'spam' }];
+
+		await createFlag({
+			entityType: 'suggestion',
+			entityId: 'sg1',
+			reportedByUserId: 'u1',
+			reportedByName: 'Reporter',
+			reason: 'spam'
+		});
+
+		expect(withholdMock).toHaveBeenCalledWith('sg1', { flagId: 'f1' });
+	});
+
+	it('does not withhold anything when the report is about something else', async () => {
+		selectResultQueue = [[{ name: 'Jordan' }]];
+		insertResult = [{ id: 'f1', entityType: 'member_profile', entityId: 'u2', reason: 'spam' }];
+
+		await createFlag({
+			entityType: 'member_profile',
+			entityId: 'u2',
+			reportedByUserId: 'u1',
+			reportedByName: 'Reporter',
+			reason: 'spam'
+		});
+
+		expect(withholdMock).not.toHaveBeenCalled();
+	});
+
+	it('upholding hides the suggestion and costs the author their posting trust', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'suggestion', entityId: 'sg1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getSuggestionForModerationMock.mockResolvedValue({ id: 'sg1', authorUserId: 'member-1' });
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1', notes: 'Not acceptable' });
+
+		expect(setVisibilityMock).toHaveBeenCalledWith(
+			'sg1',
+			expect.objectContaining({ visibility: 'hidden', note: 'Not acceptable' })
+		);
+		expect(revokeSuggestionTrustMock).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'member-1', flagId: 'f1', staffId: 's1' })
+		);
+	});
+
+	it('dismissing puts the suggestion back on the board and leaves standing alone', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'suggestion', entityId: 'sg1' }]];
+		updateResult = [{ id: 'f1', status: 'dismissed' }];
+
+		await resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' });
+
+		// The asymmetry with event reports, which do nothing on dismissal: a report
+		// here has ALREADY hidden the post, so leaving it hidden would hand every
+		// member a permanent takedown button.
+		expect(setVisibilityMock).toHaveBeenCalledWith(
+			'sg1',
+			expect.objectContaining({ visibility: 'visible' })
+		);
+		expect(revokeSuggestionTrustMock).not.toHaveBeenCalled();
+	});
+
+	it('upholds without a standing change when the author has deleted their account', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'suggestion', entityId: 'sg1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getSuggestionForModerationMock.mockResolvedValue({ id: 'sg1', authorUserId: null });
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
+
+		expect(setVisibilityMock).toHaveBeenCalled();
+		expect(revokeSuggestionTrustMock).not.toHaveBeenCalled();
+	});
+
+	it('refuses to act twice on a report that is already resolved', async () => {
+		selectResultQueue = [[{ status: 'resolved', entityType: 'suggestion', entityId: 'sg1' }]];
+
+		await expect(
+			resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' })
+		).rejects.toBeInstanceOf(FlagAlreadyResolvedError);
+		expect(setVisibilityMock).not.toHaveBeenCalled();
 	});
 });

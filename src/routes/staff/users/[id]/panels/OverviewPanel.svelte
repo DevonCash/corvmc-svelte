@@ -45,6 +45,13 @@
 				tone: 'warning'
 			});
 		}
+		if (overview.suggestionStanding.requiresReview) {
+			items.push({
+				text: `Suggestions are held for review${overview.suggestionStanding.reason ? ` — ${overview.suggestionStanding.reason}` : ''}.`,
+				tab: 'comms',
+				tone: 'warning'
+			});
+		}
 		if (c.openFlagsAgainst > 0) {
 			items.push({
 				text: `${c.openFlagsAgainst} unresolved report${c.openFlagsAgainst === 1 ? '' : 's'} against this member.`,
