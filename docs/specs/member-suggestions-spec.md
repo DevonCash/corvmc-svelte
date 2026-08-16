@@ -8,13 +8,13 @@ This is the "lightweight feature-request board where members upvote ideas to hel
 
 ## Scope
 
-**In:** a categorized board of member-authored suggestions; one upvote per member per suggestion, toggled; sort by votes or recency; a staff status (`open` → `planned` → `in_progress` → `done`, or `declined`) with a public written response; member reporting that pulls a suggestion off the board pending staff review; posting-under-review for members who have had a report upheld; duplicate merging with vote transfer.
+**In:** a categorized board of member-authored suggestions; one upvote per member per suggestion, toggled; sort by votes or recency; a staff status (`open` → `planned` → `in_progress` → `done`, or `declined`) with a public written response; member reporting that pulls a suggestion off the board pending staff review; posting-under-review for members who have had a report upheld; duplicate merging with vote transfer; author editing, free until the first outside vote and reviewed after.
 
 **Out (deliberately):**
 
-- **Editing your own suggestion.** "I made a typo" will come up. Deferred, not overlooked.
 - **Comments or threads.** The one staff response is the whole conversation surface. Discussion belongs in `/member/messages`, and a comment system is a moderation surface of its own.
-- **Appealing a takedown.** A member who thinks staff got it wrong messages staff. Fine at this size.
+- **Appealing a takedown.** A member who thinks staff got it wrong messages staff. Workable now and clearly not workable at three times the size — the person who most needs a channel is the one just told they aren't trusted, which is exactly when "just ask us" breaks down. Written up under **Moderation Appeals** in `IDEAS.md`.
+- **Editing after staff have hidden or merged a suggestion.** Editing a hidden post would be a way to launder it back past the reason it went down.
 - **Formal balloting.** Board elections and policy votes need ballot secrecy, eligibility rules, and a close date. None of that is here, and grafting it onto an upvote counter would produce a bad version of both.
 - **Public visibility.** The board is members-only. Nothing here renders for signed-out visitors.
 
@@ -45,6 +45,20 @@ The board filter is then exactly `eq(visibility, 'visible')` — one predicate, 
 
 **Status and response are one mutation.** Split, the normal staff workflow — mark Planned, then write the reply — would fire two notifications for what the member experiences as one act. One form, one event, one notification. This is why the service exposes `respondToSuggestion` and not `setStatus` + `setResponse`, and it is load-bearing: splitting them later reintroduces the double-notify.
 
+**Editing is free until the first outside vote, then it is a request.**
+
+The attack is a bait-and-switch: post something agreeable, collect the votes, then swap in what you actually wanted, carrying the endorsement across. The trigger is therefore votes rather than time — an author may rewrite freely while the only person who has voted is themselves, because nobody has been misled by a change nobody endorsed, and typo fixes overwhelmingly happen in the first minutes. The moment another member upvotes, the words become something they put their name to, and an edit stops being a write and becomes a `suggestion_edit` row staff approve or reject.
+
+An author's _own_ vote never locks their post; the count is `votes where userId != authorUserId`. Otherwise a member who upvoted their own idea would be locked out of fixing their own typo by their own click.
+
+Two properties this buys that a blanket "all edits need review" would not: zero staff burden in the overwhelmingly common case, and a UI that can tell the truth — the button says **Edit** or **Request an edit** depending on which one it is, rather than promising a save and delivering a queue.
+
+The alternative considered and rejected was letting edits through but resetting the vote count. It needs no staff at all and is self-policing, but it makes fixing a typo cost a popular suggestion everything it earned, so in practice nobody fixes typos and the board fills with visible errors nobody dares touch.
+
+The request stores a **snapshot** of the text it would replace, not a live join, so staff review the change the author was actually looking at even if the suggestion moved underneath them. Approving writes the new text first and marks the request second: with no transactions, a crash between them leaves an approved-in-substance request still showing pending — visible and re-runnable — where the reverse order would show "approved" over text that never changed. Approving never touches the votes; the endorsement was of the idea, and staff have just confirmed the idea is the same one.
+
+`editedAt` is stamped only when the title or body actually differs, so opening the form and saving without typing doesn't mark a suggestion as edited.
+
 **A separate `suggestion_standing` table, duplicating `community_event_standing`.** Generalizing means renaming a shipped table and touching working community-events code for no user-visible gain. Sharing it means an upheld report about an event listing silently puts someone on probation for suggestions, which is surprising and wasn't asked for. Two domains is not a pattern; when a third needs standing, merge all three into a scoped `member_standing`. This is knowing duplication, recorded here so the next person doesn't think it was an oversight.
 
 **No denormalized vote counter.** Counts come from a `leftJoin` + `groupBy`. At this scale that is free, and — more to the point — `custom/no-db-transaction` makes an _incrementing_ counter genuinely unsafe: a read-modify-write has no transaction to protect it, so concurrent votes would lose counts permanently. If a counter is ever needed, the only safe form is an absolute recompute (`SET vote_count = (SELECT count(*) …)`), never `+= 1`.
@@ -65,6 +79,7 @@ Merging into an already-merged suggestion is **rejected rather than followed**. 
 
 - **`suggestion`** — author (`set null`, so a deleted account doesn't take community history), title, body, `category`, `status`, `visibility` + `visibilityNote`/`visibilityChangedAt`/`visibilityChangedByUserId` (null when the _system_ moved it, i.e. an incoming report), `responseBody`/`responseByUserId`/`responseAt`, `mergedIntoId`/`mergedByUserId`/`mergedAt`, timestamps. Indexed on status, category, visibility, author, mergedIntoId, createdAt.
 - **`suggestion_vote`** — `uniqueIndex(suggestionId, userId)`. That index is both the double-submit backstop and the merge dedup.
+- **`suggestion_edit`** — the proposed title/body/category, a snapshot of the original three, `status` (`pending`/`approved`/`rejected`), reviewer, notes. Plus `suggestion.editedAt`, null until the text actually changes.
 - **`suggestion_standing`** — `userId` pk, `requiresReview`, `reason`, `triggeringFlagId` → `content_flag` (so "why am I in review?" always resolves), `updatedByUserId`, `updatedAt`.
 
 `mergedIntoId` is a **plain indexed column with no FK**. No self-referencing FK exists anywhere in the schema, and `scripts/db/d1-safe-rebuild.mjs` walks a child graph on every `db:generate` that has never had to order a table against itself. This mirrors `contentFlag.entityId`, FK-less for the same reason. Nothing hard-deletes a suggestion, and the service validates the target.
@@ -95,7 +110,7 @@ Elsewhere: `'suggestion'` added to `flagEntityTypes` in `schema/flag.ts` — tha
 | `/staff/flags` + `/staff/flags/[id]` | Where suggestion reports are resolved — the only place                         |
 | `/staff/users/[id]`                  | Suggestion standing, with a link to the triggering report and a restore button |
 
-Notifications: `suggestion_responded` and `suggestion_moderated`, both defaulting to email + in-app. The second one is not politeness — a suggestion can vanish because someone reported it, and silence there reads as a shadowban.
+Notifications: `suggestion_responded`, `suggestion_moderated`, and `suggestion_edit_reviewed`, all defaulting to email + in-app. The second one is not politeness — a suggestion can vanish because someone reported it, and silence there reads as a shadowban.
 
 ## Dev testing
 
@@ -104,5 +119,8 @@ Notifications: `suggestion_responded` and `suggestion_moderated`, both defaultin
 - a **merged pair with overlapping voters** — the target shows 8 votes where the naive sum would be 10, so a broken merge is visible at a glance rather than plausible
 - an **`under_review`** suggestion with its pending `content_flag`, so report → resolve/dismiss is testable end to end
 - a **`pending_review`** post from a member with a `suggestion_standing` row and an already-upheld flag behind it
+- a **pending edit** on the most-voted suggestion, so the staff before/after card has something at stake
 
 Then: vote and unvote from the board and the detail page; report another member's suggestion and watch it leave the board; dismiss the report in `/staff/flags` and watch it come back; uphold a second one and check `/staff/users/[id]` shows the author on review with a link to the report; post as that member and approve it out of the review tab; merge two suggestions with overlapping voters and confirm the union; click Merge again and confirm nothing changes.
+
+Then, for editing: open your own unvoted suggestion and confirm the button says **Edit** and saves; open one with votes on it and confirm it says **Request an edit**, that submitting leaves the board text untouched, and that the author sees a pending banner; approve it from `/staff/suggestions/[id]` and confirm the text changes while the vote count does not.

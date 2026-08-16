@@ -292,6 +292,17 @@ export interface SuggestionModeratedEvent {
 	flagId?: string;
 }
 
+/** Staff approved or turned down a proposed edit to a member's suggestion. */
+export interface SuggestionEditReviewedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	approved: boolean;
+	notes: string | null;
+}
+
 export interface ContentFlaggedEvent {
 	flagId: string;
 	entityType: string;
@@ -428,6 +439,7 @@ export type DomainEvents = {
 	'content.flagged': ContentFlaggedEvent;
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;
+	'suggestion.edit_reviewed': SuggestionEditReviewedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;

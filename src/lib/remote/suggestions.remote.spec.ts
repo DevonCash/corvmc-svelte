@@ -45,6 +45,13 @@ const svc = {
 	setVisibility: vi.fn(async () => undefined),
 	mergeSuggestions: vi.fn(async () => ({ transferred: 0 })),
 	restoreSuggestionTrust: vi.fn(async () => undefined),
+	getEditableState: vi.fn(async () => ({ canEdit: true, direct: true, pendingEditId: null })),
+	editSuggestion: vi.fn(async () => ({ applied: true, editId: null })),
+	cancelEditRequest: vi.fn(async () => undefined),
+	reviewEdit: vi.fn(async () => undefined),
+	getPendingEditFor: vi.fn(async () => null),
+	getEditRequest: vi.fn(async () => null),
+	listPendingEdits: vi.fn(async () => []),
 	SuggestionNotFoundError: class extends Error {}
 };
 vi.mock('$lib/server/suggestion/suggestion-service', () => svc);
@@ -167,7 +174,13 @@ const staffEndpoints: Array<[string, () => Promise<unknown>]> = [
 		() => remote.setSuggestionVisibility({ suggestionId: 's1', visibility: 'hidden' })
 	],
 	['mergeSuggestion', () => remote.mergeSuggestion({ sourceId: 's1', targetId: 's2' })],
-	['restoreSuggestionTrust', () => remote.restoreSuggestionTrust({ userId: 'm1' })]
+	['restoreSuggestionTrust', () => remote.restoreSuggestionTrust({ userId: 'm1' })],
+	['getPendingSuggestionEdits', () => remote.getPendingSuggestionEdits()],
+	['getSuggestionPendingEdit', () => remote.getSuggestionPendingEdit('s1')],
+	[
+		'reviewSuggestionEdit',
+		() => remote.reviewSuggestionEdit({ suggestionId: 's1', editId: 'e1', decision: 'approve' })
+	]
 ];
 
 describe('signed-out callers', () => {
@@ -294,6 +307,69 @@ describe('staff endpoints accept staff', () => {
 		expect(svc.respondToSuggestion).toHaveBeenCalledWith(
 			's1',
 			expect.objectContaining({ status: 'planned', staffId: staff.id })
+		);
+	});
+});
+
+describe('editing', () => {
+	it('never lets the caller choose whether an edit applies directly', async () => {
+		currentUser = member;
+		await remote.editSuggestion({
+			suggestionId: 's1',
+			title: 'T',
+			body: 'B',
+			category: 'other',
+			// A hand-rolled request trying to force the direct-write path.
+			direct: true,
+			applied: true
+		});
+
+		// The service decides from the vote count; only the four real fields and
+		// the caller's own id reach it.
+		expect(svc.editSuggestion).toHaveBeenCalledWith('s1', {
+			title: 'T',
+			body: 'B',
+			category: 'other',
+			userId: member.id
+		});
+	});
+
+	it('attributes an edit to the signed-in member, not to a supplied id', async () => {
+		currentUser = member;
+		await remote.editSuggestion({
+			suggestionId: 's1',
+			title: 'T',
+			body: 'B',
+			category: 'other',
+			userId: 'someone-else'
+		});
+
+		expect(svc.editSuggestion).toHaveBeenCalledWith(
+			's1',
+			expect.objectContaining({ userId: member.id })
+		);
+	});
+
+	it('cancels an edit as the signed-in member', async () => {
+		currentUser = member;
+		await remote.cancelSuggestionEdit({ suggestionId: 's1', editId: 'e1' });
+
+		expect(svc.cancelEditRequest).toHaveBeenCalledWith('e1', member.id);
+	});
+
+	it('attributes a review to the staff member who made it', async () => {
+		currentUser = staff;
+		isStaff = true;
+		await remote.reviewSuggestionEdit({
+			suggestionId: 's1',
+			editId: 'e1',
+			decision: 'reject',
+			notes: 'Changes the meaning'
+		});
+
+		expect(svc.reviewEdit).toHaveBeenCalledWith(
+			'e1',
+			expect.objectContaining({ decision: 'reject', staffId: staff.id })
 		);
 	});
 });

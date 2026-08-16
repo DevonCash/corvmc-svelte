@@ -248,6 +248,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'suggestion_edit_reviewed',
+		label: 'Your edit was reviewed',
+		// Email on: the member asked for something and is waiting on an answer.
+		description:
+			'Notification when staff approve or turn down an edit you proposed to your own suggestion',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'community_event_unpublished',
 		label: 'Your community listing was taken down',
 		// Email on: the listing is off the guide and they need to know why,

@@ -66,6 +66,7 @@ export const tableOrder = [
 	'community_event_standing',
 	'suggestion',
 	'suggestion_vote',
+	'suggestion_edit',
 	// After content_flag as well as user, for the same reason as
 	// community_event_standing: it carries the report that cost the member their
 	// posting trust.

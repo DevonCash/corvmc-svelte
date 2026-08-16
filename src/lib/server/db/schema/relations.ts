@@ -166,11 +166,16 @@ export const relations = defineRelations(schema, (t) => ({
 	suggestion: {
 		author: t.one.user({ from: t.suggestion.authorUserId, to: t.user.id }),
 		respondedBy: t.one.user({ from: t.suggestion.responseByUserId, to: t.user.id }),
-		votes: t.many.suggestionVote()
+		votes: t.many.suggestionVote(),
+		edits: t.many.suggestionEdit()
 	},
 	suggestionVote: {
 		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),
 		user: t.one.user({ from: t.suggestionVote.userId, to: t.user.id })
+	},
+	suggestionEdit: {
+		suggestion: t.one.suggestion({ from: t.suggestionEdit.suggestionId, to: t.suggestion.id }),
+		requestedBy: t.one.user({ from: t.suggestionEdit.requestedByUserId, to: t.user.id })
 	},
 	suggestionStanding: {
 		user: t.one.user({ from: t.suggestionStanding.userId, to: t.user.id }),

@@ -17,7 +17,7 @@
 		suggestionCategoryLabels,
 		suggestionStatusLabels
 	} from '$lib/config';
-	import { getSuggestionsQueue } from '$lib/remote/suggestions.remote';
+	import { getSuggestionsQueue, getPendingSuggestionEdits } from '$lib/remote/suggestions.remote';
 
 	// One tab per reason a suggestion is or isn't on the board. "Needs review" is
 	// the time-sensitive one: everything in it is invisible to members until
@@ -67,6 +67,7 @@
 	// The second half of the review tab. Kept separate so its pagination and the
 	// pending one don't fight over a single `page`.
 	let underReview = $derived(getSuggestionsQueue(underReviewFilters));
+	let pendingEdits = $derived(await getPendingSuggestionEdits());
 
 	const activeFilterCount = $derived(
 		(searchDebounced ? 1 : 0) + (categoryFilter ? 1 : 0) + (statusFilter ? 1 : 0)
@@ -183,6 +184,33 @@
 			</Table>
 		{/snippet}
 	</DataList>
+
+	{#if tab === 'review' && pendingEdits.length > 0}
+		<h2 class="text-sm font-medium opacity-70">Edits waiting on approval</h2>
+		<!-- These sit apart from the two lists above: the suggestion itself is
+		     still on the board and untouched, it's only the proposed change that
+		     is waiting. -->
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th>Proposed change</th>
+				<th class="col-extra whitespace-nowrap">Requested</th>
+			{/snippet}
+			{#each pendingEdits as e (e.id)}
+				{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
+				<tr class="hover cursor-pointer" use:rowLink={href}>
+					<td class="w-px"><StatusBadge status="pending_review" /></td>
+					<td class="cell-primary">
+						<a {href} class="block truncate font-medium hover:underline">{e.proposedTitle}</a>
+						<div class="truncate text-sm opacity-60">
+							was "{e.originalTitle}" · {e.requestedByName ?? 'A former member'}
+						</div>
+					</td>
+					<td class="col-extra whitespace-nowrap">{relativeDay(e.createdAt)}</td>
+				</tr>
+			{/each}
+		</Table>
+	{/if}
 
 	{#if tab === 'review'}
 		<h2 class="text-sm font-medium opacity-70">Reported and pulled from the board</h2>

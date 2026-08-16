@@ -1070,4 +1070,39 @@ export function registerAllNotificationListeners(): void {
 			}
 		});
 	});
+
+	// --- Staff decided on a proposed edit (notify its author) ---
+	domainEvents.on('suggestion.edit_reviewed', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+		await dispatch({
+			type: 'suggestion_edit_reviewed',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: event.approved
+				? `Your edit to "${event.title}" is live`
+				: `Your edit to "${event.title}" wasn't applied`,
+			body: event.notes ?? undefined,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: event.approved
+						? `Your edit is live: ${event.title}`
+						: `About your edit: ${event.title}`,
+					heading: event.approved ? 'Your edit is live' : 'Your edit was not applied',
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [
+						{
+							text: event.approved
+								? `The changes you asked for on "${event.title}" are on the board now. The votes it had already carried over.`
+								: `Staff kept the original wording of "${event.title}" — the version other members voted for. Your suggestion is still on the board, unchanged.`
+						}
+					],
+					// A rejection without a reason is the thing members write in about.
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
 }

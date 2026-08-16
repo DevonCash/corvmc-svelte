@@ -22,6 +22,20 @@ Formal voting system for a member-driven non-profit. Staff or board create propo
 
 **Progress:** The lightweight half is built. `/member/suggestions` is a categorized board where members post ideas about anything — gear, programming, the space, policy, the website — upvote what they agree with, and read a public staff response with a status. Staff get the board sorted by votes, plus duplicate merging (votes transfer, deduped) and moderation: a member's report pulls a suggestion off the board pending review, and an upheld report puts the author's future suggestions through review first, reusing the standing rule community listings established. Not flag-gated, deliberately — a board with no audience collects single-vote posts. Specced in `docs/specs/member-suggestions-spec.md`. Formal balloting is still unbuilt and is a different feature: ballot secrecy, eligibility rules, and a close date have no counterpart in an upvote counter.
 
+### Moderation Appeals
+
+There is no way for a member to contest a moderation decision. When staff uphold a report — on
+a community listing or a suggestion — the post comes down and the member's future posts go
+through review, and their only recourse is to message staff and hope. That is workable at the
+current size and clearly not workable at three times it: the person who most needs a channel is
+the one who has just been told they are not trusted, which is exactly when an informal "just ask
+us" breaks down.
+
+Wants a lightweight appeal attached to the upheld flag rather than a new inbox thread, so staff
+see the decision and the objection together, and a second staffer can be the one to answer it.
+Would also want an outcome that restores standing automatically when an appeal succeeds, since
+the manual "Restore posting trust" button is easy to forget after the conversation has moved on.
+
 ### Merch Consignment
 
 Let bands list merch for sale at the venue. Track inventory, sales splits, and payouts. Ties into the existing band and payments systems.

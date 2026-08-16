@@ -86,6 +86,11 @@ import {
 	respondToSuggestion,
 	withholdForReview,
 	revokeSuggestionTrust,
+	getEditableState,
+	editSuggestion,
+	reviewEdit,
+	cancelEditRequest,
+	SuggestionEditError,
 	displayStatus,
 	SuggestionNotFoundError,
 	SuggestionClosedError,
@@ -435,5 +440,264 @@ describe('notification safety', () => {
 		await flushMicrotasks();
 
 		expect(emit).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Editing
+//
+// The rule these pin is the anti-bait-and-switch one: an author may rewrite
+// their suggestion freely until somebody ELSE has voted for it, after which the
+// words are what other members endorsed and a change has to go past staff.
+// ---------------------------------------------------------------------------
+
+describe('getEditableState', () => {
+	it('lets the author edit directly while nobody else has voted', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[], // no pending edit request
+			[{ count: 0 }] // no votes from anyone but the author
+		];
+		await expect(getEditableState('s1', 'u1')).resolves.toMatchObject({
+			canEdit: true,
+			direct: true
+		});
+	});
+
+	it("stops direct editing the moment someone else's vote lands", async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[],
+			[{ count: 1 }]
+		];
+		await expect(getEditableState('s1', 'u1')).resolves.toMatchObject({
+			canEdit: true,
+			direct: false
+		});
+	});
+
+	it('refuses anyone who is not the author', async () => {
+		selectResultQueue = [[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }]];
+		await expect(getEditableState('s1', 'someone-else')).resolves.toEqual({
+			canEdit: false,
+			direct: false,
+			pendingEditId: null
+		});
+	});
+
+	it('refuses a merged suggestion', async () => {
+		selectResultQueue = [[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: 's2' }]];
+		await expect(getEditableState('s1', 'u1')).resolves.toMatchObject({ canEdit: false });
+	});
+
+	it.each(['under_review', 'hidden'])(
+		'refuses a %s suggestion, so an edit cannot launder it back',
+		async (visibility) => {
+			selectResultQueue = [[{ authorUserId: 'u1', visibility, mergedIntoId: null }]];
+			await expect(getEditableState('s1', 'u1')).resolves.toMatchObject({ canEdit: false });
+		}
+	);
+
+	it('surfaces a request already waiting on staff', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[{ id: 'edit-1' }],
+			[{ count: 3 }]
+		];
+		await expect(getEditableState('s1', 'u1')).resolves.toMatchObject({ pendingEditId: 'edit-1' });
+	});
+});
+
+describe('editSuggestion', () => {
+	const edit = { title: 'New title', body: 'New body', category: 'other' as const, userId: 'u1' };
+
+	it('writes straight through when nobody else has voted', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[],
+			[{ count: 0 }],
+			[{ id: 's1', title: 'Old', body: 'Old body', category: 'other', authorUserId: 'u1' }]
+		];
+		const result = await editSuggestion('s1', edit);
+
+		expect(result).toEqual({ applied: true, editId: null });
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({ title: 'New title', body: 'New body' })
+		);
+	});
+
+	it('stamps editedAt only when the words actually changed', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[],
+			[{ count: 0 }],
+			// Same title and body: the member opened the form and saved without typing.
+			[{ id: 's1', title: 'New title', body: 'New body', category: 'other', authorUserId: 'u1' }]
+		];
+		await editSuggestion('s1', edit);
+
+		expect(updateSet.mock.calls[0][0]).not.toHaveProperty('editedAt');
+	});
+
+	it('files a request instead of writing once someone else has voted', async () => {
+		insertResult = [{ id: 'edit-9' }];
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[],
+			[{ count: 2 }],
+			[{ id: 's1', title: 'Old', body: 'Old body', category: 'policy', authorUserId: 'u1' }]
+		];
+		const result = await editSuggestion('s1', edit);
+
+		expect(result).toEqual({ applied: false, editId: 'edit-9' });
+		// The suggestion itself is untouched — that is the whole point.
+		expect(updateSet).not.toHaveBeenCalled();
+		// And the request carries a snapshot of what it would replace, so staff
+		// review a real before/after.
+		expect(insertValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				proposedTitle: 'New title',
+				originalTitle: 'Old',
+				originalBody: 'Old body',
+				originalCategory: 'policy'
+			})
+		);
+	});
+
+	it('refuses a second request while one is already waiting', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'u1', visibility: 'visible', mergedIntoId: null }],
+			[{ id: 'edit-1' }],
+			[{ count: 2 }]
+		];
+		await expect(editSuggestion('s1', edit)).rejects.toThrow(SuggestionEditError);
+	});
+
+	it('refuses an edit from someone who is not the author', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'someone-else', visibility: 'visible', mergedIntoId: null }]
+		];
+		await expect(editSuggestion('s1', edit)).rejects.toThrow(SuggestionEditError);
+	});
+});
+
+describe('reviewEdit', () => {
+	it('approving writes the proposed text and marks the post edited', async () => {
+		selectResultQueue = [
+			[
+				{
+					id: 'edit-1',
+					suggestionId: 's1',
+					status: 'pending',
+					proposedTitle: 'Approved title',
+					proposedBody: 'Approved body',
+					proposedCategory: 'policy'
+				}
+			],
+			[{ id: 's1', title: 'Old', authorUserId: 'u1', authorName: 'Ada', authorEmail: 'a@x.com' }]
+		];
+		await reviewEdit('edit-1', { decision: 'approve', staffId: 'staff1' });
+
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({ title: 'Approved title', editedAt: expect.any(Date) })
+		);
+	});
+
+	it('applies the text BEFORE marking the request approved', async () => {
+		selectResultQueue = [
+			[
+				{
+					id: 'edit-1',
+					suggestionId: 's1',
+					status: 'pending',
+					proposedTitle: 'T',
+					proposedBody: 'B',
+					proposedCategory: 'other'
+				}
+			],
+			[{ id: 's1', title: 'Old', authorUserId: 'u1', authorName: 'Ada', authorEmail: 'a@x.com' }]
+		];
+		await reviewEdit('edit-1', { decision: 'approve', staffId: 'staff1' });
+
+		// A crash between the two leaves a still-pending request whose text landed
+		// — visible and re-runnable. The reverse would show "approved" over text
+		// that never changed.
+		const [suggestionWrite, requestWrite] = updateSet.mock.calls;
+		expect(suggestionWrite[0]).toHaveProperty('title');
+		expect(requestWrite[0]).toMatchObject({ status: 'approved' });
+	});
+
+	it('rejecting leaves the suggestion alone', async () => {
+		selectResultQueue = [
+			[
+				{
+					id: 'edit-1',
+					suggestionId: 's1',
+					status: 'pending',
+					proposedTitle: 'Nope',
+					proposedBody: 'Nope',
+					proposedCategory: 'other'
+				}
+			],
+			[{ id: 's1', title: 'Old', authorUserId: 'u1', authorName: 'Ada', authorEmail: 'a@x.com' }]
+		];
+		await reviewEdit('edit-1', {
+			decision: 'reject',
+			notes: 'Changes the meaning',
+			staffId: 'staff1'
+		});
+
+		expect(updateSet).toHaveBeenCalledTimes(1);
+		expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'rejected' }));
+	});
+
+	it('refuses to review the same request twice', async () => {
+		selectResultQueue = [[{ id: 'edit-1', suggestionId: 's1', status: 'approved' }]];
+		await expect(reviewEdit('edit-1', { decision: 'approve', staffId: 'staff1' })).rejects.toThrow(
+			SuggestionEditError
+		);
+	});
+
+	it('tells the author either way', async () => {
+		selectResultQueue = [
+			[
+				{
+					id: 'edit-1',
+					suggestionId: 's1',
+					status: 'pending',
+					proposedTitle: 'T',
+					proposedBody: 'B',
+					proposedCategory: 'other'
+				}
+			],
+			[{ id: 's1', title: 'Old', authorUserId: 'u1', authorName: 'Ada', authorEmail: 'a@x.com' }]
+		];
+		await reviewEdit('edit-1', { decision: 'reject', staffId: 'staff1' });
+		await flushMicrotasks();
+
+		expect(emit).toHaveBeenCalledWith(
+			'suggestion.edit_reviewed',
+			expect.objectContaining({ authorUserId: 'u1', approved: false })
+		);
+	});
+});
+
+describe('cancelEditRequest', () => {
+	it('lets the author take back a request staff have not reached', async () => {
+		selectResultQueue = [[{ id: 'edit-1', requestedByUserId: 'u1', status: 'pending' }]];
+		await cancelEditRequest('edit-1', 'u1');
+
+		expect(deleteCalled).toHaveBeenCalledOnce();
+	});
+
+	it("refuses to cancel somebody else's request", async () => {
+		selectResultQueue = [[{ id: 'edit-1', requestedByUserId: 'u1', status: 'pending' }]];
+		await expect(cancelEditRequest('edit-1', 'intruder')).rejects.toThrow(SuggestionEditError);
+		expect(deleteCalled).not.toHaveBeenCalled();
+	});
+
+	it('refuses once staff have already decided', async () => {
+		selectResultQueue = [[{ id: 'edit-1', requestedByUserId: 'u1', status: 'approved' }]];
+		await expect(cancelEditRequest('edit-1', 'u1')).rejects.toThrow(SuggestionEditError);
 	});
 });

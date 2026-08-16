@@ -11,14 +11,17 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { IconFlag, IconCaretUpFilled } from '@tabler/icons-svelte';
+	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
 	import { formatDateTime } from '$lib/utils/format';
-	import { suggestionCategoryLabels } from '$lib/config';
+	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
 	import {
 		getSuggestionDetail,
 		getMySuggestionStanding,
 		toggleSuggestionVote,
-		flagSuggestion
+		flagSuggestion,
+		getSuggestionEditState,
+		editSuggestion,
+		cancelSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
@@ -26,11 +29,13 @@
 	let standing = $derived(await getMySuggestionStanding());
 
 	let isMine = $derived(s.authorUserId === standing.viewerUserId);
+	let editState = $derived(await getSuggestionEditState(id));
 	let vote = $derived(toggleSuggestionVote.for(s.id));
 	let flag = $derived(flagSuggestion.for(s.id));
 
 	function refresh() {
 		void getSuggestionDetail(id).refresh();
+		void getSuggestionEditState(id).refresh();
 	}
 
 	// Only the author ever sees these — everyone else 404s before reaching here.
@@ -66,6 +71,34 @@
 		</Alert>
 	{/if}
 
+	{#if editState.pendingEdit}
+		<Alert type="info">
+			<div class="flex w-full flex-wrap items-center justify-between gap-2">
+				<p>
+					Your edit is with staff. The suggestion below is still what everyone else sees until they
+					approve it.
+				</p>
+				<Action
+					action={cancelSuggestionEdit}
+					label="Withdraw"
+					submitLabel="Withdraw edit"
+					modalTitle="Withdraw your edit?"
+					successToast="Edit withdrawn"
+					class="btn-ghost btn-xs"
+					onsuccess={refresh}
+				>
+					{#snippet form()}
+						<input {...cancelSuggestionEdit.fields.suggestionId.as('hidden', s.id)} />
+						<input
+							{...cancelSuggestionEdit.fields.editId.as('hidden', editState.pendingEdit?.id ?? '')}
+						/>
+						<p class="py-2">Take this edit back? You can submit a different one afterwards.</p>
+					{/snippet}
+				</Action>
+			</div>
+		</Alert>
+	{/if}
+
 	<InfoCard title="Suggestion">
 		<div class="flex items-start gap-4">
 			<Form remote={vote} class="shrink-0" onsuccess={refresh}>
@@ -87,8 +120,50 @@
 				<p class="whitespace-pre-wrap">{s.body}</p>
 				<div class="text-sm opacity-60">
 					Suggested by {s.authorName ?? 'a former member'} · {formatDateTime(s.createdAt)}
+					{#if s.editedAt}
+						· edited {formatDateTime(s.editedAt)}
+					{/if}
 				</div>
 			</div>
+
+			{#if isMine && editState.canEdit && !editState.pendingEdit}
+				<Action
+					action={editSuggestion}
+					label={editState.direct ? 'Edit' : 'Request an edit'}
+					iconOnly
+					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
+					submitLabel={editState.direct ? 'Save' : 'Send to staff'}
+					successToast={editState.direct ? 'Updated' : 'Sent to staff'}
+					class="btn-ghost btn-sm shrink-0"
+					onsuccess={refresh}
+				>
+					{#snippet icon()}<IconPencil size={16} />{/snippet}
+					{#snippet form()}
+						<input {...editSuggestion.fields.suggestionId.as('hidden', s.id)} />
+						{#if !editState.direct}
+							<!-- Say why, plainly. Being told "this needs review" without a
+							     reason reads as the site distrusting you personally. -->
+							<p class="mb-3 text-sm opacity-70">
+								Other members have already voted for this, so staff check changes before they go
+								live — otherwise the words people backed could be swapped out from under them. Your
+								suggestion stays up unchanged in the meantime.
+							</p>
+						{/if}
+						<FormField name="title" type="text" label="What should we do?" value={s.title} />
+						<FormField name="body" type="textarea" label="Tell us a bit more" value={s.body} />
+						<FormField
+							name="category"
+							type="select"
+							label="Category"
+							value={s.category}
+							options={suggestionCategories.map((c) => ({
+								value: c,
+								label: suggestionCategoryLabels[c]
+							}))}
+						/>
+					{/snippet}
+				</Action>
+			{/if}
 
 			{#if !isMine && s.visibility === 'visible'}
 				<Action

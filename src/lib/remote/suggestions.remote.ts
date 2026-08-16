@@ -25,6 +25,13 @@ import {
 	setVisibility,
 	mergeSuggestions,
 	restoreSuggestionTrust as restoreSuggestionTrustSvc,
+	getEditableState,
+	editSuggestion as editSuggestionSvc,
+	cancelEditRequest,
+	reviewEdit,
+	getPendingEditFor,
+	getEditRequest,
+	listPendingEdits,
 	SuggestionNotFoundError
 } from '$lib/server/suggestion/suggestion-service';
 import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
@@ -80,6 +87,24 @@ export const getSuggestionDetail = query(z.string(), async (id) => {
 	return row;
 });
 
+/**
+ * Whether the signed-in member may change this suggestion, and whether it would
+ * apply straight away. The page needs both to label the button honestly — "Edit"
+ * versus "Request an edit" is the difference between a write and a review.
+ */
+export const getSuggestionEditState = query(z.string(), async (suggestionId) => {
+	const me = requireUser();
+	try {
+		const state = await getEditableState(suggestionId, me.id);
+		return {
+			...state,
+			pendingEdit: state.pendingEditId ? await getEditRequest(state.pendingEditId) : null
+		};
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
 export const getMySuggestionStanding = query(async () => {
 	const me = requireUser();
 	// viewerUserId rides along so the board can tell which cards are the member's
@@ -109,6 +134,16 @@ export const getStaffSuggestionDetail = query(z.string(), async (id) => {
 export const getMergeCandidates = query(z.string(), async (excludeId) => {
 	await requireStaff();
 	return listMergeCandidates(excludeId);
+});
+
+export const getPendingSuggestionEdits = query(async () => {
+	await requireStaff();
+	return listPendingEdits();
+});
+
+export const getSuggestionPendingEdit = query(z.string(), async (suggestionId) => {
+	await requireStaff();
+	return getPendingEditFor(suggestionId);
 });
 
 export const getSuggestionStandingFor = query(z.string(), async (userId) => {
@@ -149,6 +184,48 @@ export const toggleSuggestionVote = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+	}
+);
+
+export const editSuggestion = form(
+	z.object({
+		suggestionId: z.string().min(1),
+		title: z.string().trim().min(1, 'A title is required').max(SUGGESTION_TITLE_MAX),
+		body: z.string().trim().min(1, 'Tell us a bit more').max(SUGGESTION_BODY_MAX),
+		category: z.enum(suggestionCategories)
+	}),
+	async (data) => {
+		const me = requireUser();
+		try {
+			// Whether this applies or queues is the service's call, not the
+			// client's — a request that could ask for a direct write would be asking
+			// to skip the check.
+			const result = await editSuggestionSvc(data.suggestionId, {
+				title: data.title,
+				body: data.body,
+				category: data.category,
+				userId: me.id
+			});
+			void getSuggestionDetail(data.suggestionId).refresh();
+			void getSuggestionEditState(data.suggestionId).refresh();
+			return result;
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const cancelSuggestionEdit = form(
+	z.object({ suggestionId: z.string().min(1), editId: z.string().min(1) }),
+	async (data) => {
+		const me = requireUser();
+		try {
+			await cancelEditRequest(data.editId, me.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getSuggestionEditState(data.suggestionId).refresh();
+		return { success: true };
 	}
 );
 
@@ -272,6 +349,31 @@ export const mergeSuggestion = form(
 		void getStaffSuggestionDetail(data.sourceId).refresh();
 		void getStaffSuggestionDetail(data.targetId).refresh();
 		return { targetId: data.targetId };
+	}
+);
+
+export const reviewSuggestionEdit = form(
+	z.object({
+		suggestionId: z.string().min(1),
+		editId: z.string().min(1),
+		decision: z.enum(['approve', 'reject']),
+		notes: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
+	}),
+	async (data) => {
+		const staff = await requireStaff();
+		try {
+			await reviewEdit(data.editId, {
+				decision: data.decision,
+				notes: data.notes,
+				staffId: staff.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getStaffSuggestionDetail(data.suggestionId).refresh();
+		void getSuggestionPendingEdit(data.suggestionId).refresh();
+		void getPendingSuggestionEdits().refresh();
+		return { success: true };
 	}
 );
 

@@ -74,7 +74,8 @@ import { contentFlag } from '../src/lib/server/db/schema/flag';
 import {
 	suggestion,
 	suggestionVote,
-	suggestionStanding
+	suggestionStanding,
+	suggestionEdit
 } from '../src/lib/server/db/schema/suggestion';
 import {
 	volunteerRole,
@@ -465,6 +466,7 @@ async function deleteAll() {
 		// Before content_flag and user: they reference both.
 		'community_event_standing',
 		'suggestion_standing',
+		'suggestion_edit',
 		'suggestion_vote',
 		'suggestion',
 		'content_flag',
@@ -3311,6 +3313,24 @@ async function seedSuggestions(users: any[], adminUser: any) {
 		.returning();
 	rows.push(pending);
 
+	// --- A pending edit on a suggestion that already has votes ---
+	//
+	// The most-voted suggestion, so the staff diff card shows a real "11 members
+	// already voted for this" and the before/after has something at stake.
+	await db.insert(suggestionEdit).values({
+		suggestionId: rows[0].id,
+		requestedByUserId: rows[0].authorUserId,
+		proposedTitle: 'Gear checkout calendar (and a sign-out sheet)',
+		proposedBody:
+			"Right now you have to ask in the group chat whether the good SM58s are free. A shared calendar showing what's out and when it's back would save a lot of back-and-forth — plus a paper sheet by the cage for anyone who grabs something on the way in.",
+		proposedCategory: 'gear_equipment',
+		originalTitle: SUGGESTION_SEEDS[0].title,
+		originalBody: SUGGESTION_SEEDS[0].body,
+		originalCategory: SUGGESTION_SEEDS[0].category,
+		status: 'pending',
+		createdAt: ptDate(-1, 15)
+	});
+
 	// --- Hidden by staff, with the reason on it ---
 	const [hidden] = await db
 		.insert(suggestion)
@@ -3339,7 +3359,7 @@ async function seedSuggestions(users: any[], adminUser: any) {
 	});
 	await batchInsert(suggestionVote, uniqueVotes);
 
-	return { total: rows.length, votes: uniqueVotes.length };
+	return { total: rows.length, votes: uniqueVotes.length, pendingEdits: 1 };
 }
 
 async function main() {
@@ -3419,7 +3439,9 @@ async function main() {
 	console.log(
 		`  ${certifications.certs} certifications (${certifications.held} held), ${volunteerShifts.shifts} shifts, ${volunteerShifts.signups} signups, ${volunteerShifts.feedback} feedback`
 	);
-	console.log(`  ${suggestions.total} suggestions (${suggestions.votes} votes)`);
+	console.log(
+		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
+	);
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {
 		console.log(`    http://localhost:5173/?__band_subdomain=${b.slug}`);

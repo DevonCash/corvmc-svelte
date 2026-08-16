@@ -3,6 +3,7 @@ import {
 	suggestion,
 	suggestionVote,
 	suggestionStanding,
+	suggestionEdit,
 	type Suggestion,
 	type SuggestionCategory,
 	type SuggestionStatus,
@@ -22,6 +23,7 @@ import {
 	SUGGESTION_NOTE_MAX,
 	suggestionStatusLabels
 } from '$lib/config';
+import { ne } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -61,6 +63,10 @@ export class SuggestionClosedError extends DomainError {
 
 export class SuggestionMergeError extends DomainError {
 	readonly httpStatus = 422;
+}
+
+export class SuggestionEditError extends DomainError {
+	readonly httpStatus = 409;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +134,7 @@ function selection(viewerUserId: string | undefined) {
 		responseBody: suggestion.responseBody,
 		responseAt: suggestion.responseAt,
 		mergedIntoId: suggestion.mergedIntoId,
+		editedAt: suggestion.editedAt,
 		authorUserId: suggestion.authorUserId,
 		authorName: user.name,
 		createdAt: suggestion.createdAt,
@@ -438,6 +445,291 @@ export async function mergeSuggestions(params: MergeParams): Promise<{ transferr
 }
 
 // ---------------------------------------------------------------------------
+// Editing
+// ---------------------------------------------------------------------------
+
+export interface EditableState {
+	/** Whether this user may change the text at all. */
+	canEdit: boolean;
+	/**
+	 * False once somebody else has voted: from then on an edit is a request
+	 * staff approve, not a write.
+	 */
+	direct: boolean;
+	/** A request already waiting on staff, if any. */
+	pendingEditId: string | null;
+}
+
+/**
+ * Who may change a suggestion, and whether it applies straight away.
+ *
+ * The rule is votes, not time. An author can rewrite freely while the only
+ * person who has voted is themselves — typo fixes overwhelmingly happen in the
+ * first minutes, and nobody is misled by a change nobody has endorsed. The
+ * moment another member upvotes, the words become something they put their
+ * name to, so changing them silently would be a bait-and-switch.
+ */
+export async function getEditableState(
+	suggestionId: string,
+	userId: string
+): Promise<EditableState> {
+	const [row] = await db
+		.select({
+			authorUserId: suggestion.authorUserId,
+			visibility: suggestion.visibility,
+			mergedIntoId: suggestion.mergedIntoId
+		})
+		.from(suggestion)
+		.where(eq(suggestion.id, suggestionId))
+		.limit(1);
+
+	if (!row) throw new SuggestionNotFoundError();
+
+	// Merged or taken down: there is nothing useful to edit, and editing a
+	// hidden post would be a way to launder it back past the reason it went down.
+	const editable =
+		row.authorUserId === userId &&
+		!row.mergedIntoId &&
+		(row.visibility === 'visible' || row.visibility === 'pending_review');
+
+	if (!editable) return { canEdit: false, direct: false, pendingEditId: null };
+
+	const [pending] = await db
+		.select({ id: suggestionEdit.id })
+		.from(suggestionEdit)
+		.where(and(eq(suggestionEdit.suggestionId, suggestionId), eq(suggestionEdit.status, 'pending')))
+		.limit(1);
+
+	return {
+		canEdit: true,
+		direct: (await countOtherVotes(suggestionId, userId)) === 0,
+		pendingEditId: pending?.id ?? null
+	};
+}
+
+/** Votes from anyone but the author. An author's own vote never locks their post. */
+async function countOtherVotes(suggestionId: string, authorUserId: string): Promise<number> {
+	const [row] = await db
+		.select({ count: count() })
+		.from(suggestionVote)
+		.where(
+			and(eq(suggestionVote.suggestionId, suggestionId), ne(suggestionVote.userId, authorUserId))
+		);
+	return row?.count ?? 0;
+}
+
+export interface EditSuggestionParams {
+	title: string;
+	body: string;
+	category: SuggestionCategory;
+	userId: string;
+}
+
+/**
+ * Apply an edit, or file it for review — the caller does not choose which.
+ *
+ * Returning the outcome rather than taking it as an argument is deliberate: a
+ * client that could ask for `direct` would be asking to skip the check.
+ */
+export async function editSuggestion(
+	suggestionId: string,
+	params: EditSuggestionParams
+): Promise<{ applied: boolean; editId: string | null }> {
+	const title = trimTo(params.title, SUGGESTION_TITLE_MAX);
+	const body = trimTo(params.body, SUGGESTION_BODY_MAX);
+	if (!title) throw new SuggestionValidationError('A title is required');
+	if (!body) throw new SuggestionValidationError('A description is required');
+
+	const state = await getEditableState(suggestionId, params.userId);
+	if (!state.canEdit) throw new SuggestionEditError('This suggestion can no longer be edited');
+	if (state.pendingEditId) {
+		throw new SuggestionEditError('You already have an edit waiting for staff on this suggestion');
+	}
+
+	const current = await getSuggestionForModeration(suggestionId);
+	if (!current) throw new SuggestionNotFoundError();
+
+	if (state.direct) {
+		await db
+			.update(suggestion)
+			.set({
+				title,
+				body,
+				category: params.category,
+				// Only stamp editedAt when something actually changed, so a member who
+				// opens the form and saves without touching it doesn't mark the post.
+				...(title !== current.title || body !== current.body ? { editedAt: new Date() } : {}),
+				updatedAt: new Date()
+			})
+			.where(eq(suggestion.id, suggestionId));
+		return { applied: true, editId: null };
+	}
+
+	const [row] = await db
+		.insert(suggestionEdit)
+		.values({
+			suggestionId,
+			requestedByUserId: params.userId,
+			proposedTitle: title,
+			proposedBody: body,
+			proposedCategory: params.category,
+			// Snapshot, not a live join: staff should review the change the author
+			// was actually looking at, even if the post moved underneath them.
+			originalTitle: current.title,
+			originalBody: current.body,
+			originalCategory: current.category
+		})
+		.returning();
+
+	return { applied: false, editId: row.id };
+}
+
+/** Let the author take back a request staff have not got to yet. */
+export async function cancelEditRequest(editId: string, userId: string): Promise<void> {
+	const [row] = await db
+		.select({
+			id: suggestionEdit.id,
+			requestedByUserId: suggestionEdit.requestedByUserId,
+			status: suggestionEdit.status
+		})
+		.from(suggestionEdit)
+		.where(eq(suggestionEdit.id, editId))
+		.limit(1);
+
+	if (!row) throw new SuggestionNotFoundError('Edit request not found');
+	if (row.requestedByUserId !== userId)
+		throw new SuggestionEditError('That is not your edit request');
+	if (row.status !== 'pending')
+		throw new SuggestionEditError('That edit has already been reviewed');
+
+	await db.delete(suggestionEdit).where(eq(suggestionEdit.id, editId));
+}
+
+/**
+ * Staff decide on a proposed edit.
+ *
+ * Approving writes the new text FIRST, then marks the request. No transactions
+ * on D1, so a crash between the two leaves an approved-in-substance request
+ * still showing as pending — visible and re-runnable, where the reverse order
+ * would show "approved" over text that never changed.
+ */
+export async function reviewEdit(
+	editId: string,
+	params: { decision: 'approve' | 'reject'; notes?: string | null; staffId: string }
+): Promise<void> {
+	const [row] = await db
+		.select({
+			id: suggestionEdit.id,
+			suggestionId: suggestionEdit.suggestionId,
+			status: suggestionEdit.status,
+			proposedTitle: suggestionEdit.proposedTitle,
+			proposedBody: suggestionEdit.proposedBody,
+			proposedCategory: suggestionEdit.proposedCategory
+		})
+		.from(suggestionEdit)
+		.where(eq(suggestionEdit.id, editId))
+		.limit(1);
+
+	if (!row) throw new SuggestionNotFoundError('Edit request not found');
+	if (row.status !== 'pending')
+		throw new SuggestionEditError('That edit has already been reviewed');
+
+	const target = await loadForNotification(row.suggestionId);
+
+	if (params.decision === 'approve') {
+		await db
+			.update(suggestion)
+			.set({
+				title: row.proposedTitle,
+				body: row.proposedBody,
+				category: row.proposedCategory,
+				editedAt: new Date(),
+				updatedAt: new Date()
+			})
+			.where(eq(suggestion.id, row.suggestionId));
+	}
+
+	await db
+		.update(suggestionEdit)
+		.set({
+			status: params.decision === 'approve' ? 'approved' : 'rejected',
+			reviewNotes: params.notes ? trimTo(params.notes, SUGGESTION_NOTE_MAX) : null,
+			reviewedByUserId: params.staffId,
+			reviewedAt: new Date()
+		})
+		.where(and(eq(suggestionEdit.id, editId), eq(suggestionEdit.status, 'pending')));
+
+	if (target) {
+		notifyAuthor('suggestion.edit_reviewed', target, params.staffId, {
+			suggestionId: row.suggestionId,
+			title: params.decision === 'approve' ? row.proposedTitle : target.title,
+			approved: params.decision === 'approve',
+			notes: params.notes ?? null
+		});
+	}
+}
+
+export async function getEditRequest(editId: string) {
+	const requester = alias(user, 'edit_requester');
+	const [row] = await db
+		.select({
+			id: suggestionEdit.id,
+			suggestionId: suggestionEdit.suggestionId,
+			status: suggestionEdit.status,
+			proposedTitle: suggestionEdit.proposedTitle,
+			proposedBody: suggestionEdit.proposedBody,
+			proposedCategory: suggestionEdit.proposedCategory,
+			originalTitle: suggestionEdit.originalTitle,
+			originalBody: suggestionEdit.originalBody,
+			originalCategory: suggestionEdit.originalCategory,
+			reviewNotes: suggestionEdit.reviewNotes,
+			createdAt: suggestionEdit.createdAt,
+			requestedByName: requester.name
+		})
+		.from(suggestionEdit)
+		.leftJoin(requester, eq(requester.id, suggestionEdit.requestedByUserId))
+		.where(eq(suggestionEdit.id, editId))
+		.limit(1);
+	return row ?? null;
+}
+
+/** The pending edit for a suggestion, if there is one. */
+export async function getPendingEditFor(suggestionId: string) {
+	const [row] = await db
+		.select({ id: suggestionEdit.id })
+		.from(suggestionEdit)
+		.where(and(eq(suggestionEdit.suggestionId, suggestionId), eq(suggestionEdit.status, 'pending')))
+		.limit(1);
+	return row ? getEditRequest(row.id) : null;
+}
+
+/** Every edit waiting on staff, newest last so the oldest is dealt with first. */
+export async function listPendingEdits() {
+	const requester = alias(user, 'edit_requester');
+	return db
+		.select({
+			id: suggestionEdit.id,
+			suggestionId: suggestionEdit.suggestionId,
+			proposedTitle: suggestionEdit.proposedTitle,
+			originalTitle: suggestionEdit.originalTitle,
+			createdAt: suggestionEdit.createdAt,
+			requestedByName: requester.name
+		})
+		.from(suggestionEdit)
+		.leftJoin(requester, eq(requester.id, suggestionEdit.requestedByUserId))
+		.where(eq(suggestionEdit.status, 'pending'))
+		.orderBy(desc(suggestionEdit.createdAt));
+}
+
+export async function countPendingEdits(): Promise<number> {
+	const [row] = await db
+		.select({ count: count() })
+		.from(suggestionEdit)
+		.where(eq(suggestionEdit.status, 'pending'));
+	return row?.count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // Standing
 // ---------------------------------------------------------------------------
 
@@ -597,6 +889,8 @@ export async function getSuggestionForModeration(id: string) {
 		.select({
 			id: suggestion.id,
 			title: suggestion.title,
+			body: suggestion.body,
+			category: suggestion.category,
 			authorUserId: suggestion.authorUserId,
 			visibility: suggestion.visibility
 		})
@@ -669,7 +963,9 @@ export async function countAwaitingResponse(): Promise<number> {
  * Fire-and-forget domain event, skipped when there is nobody to tell or when
  * the actor IS the author (nobody needs notifying of their own action).
  */
-function notifyAuthor<K extends 'suggestion.responded' | 'suggestion.moderated'>(
+function notifyAuthor<
+	K extends 'suggestion.responded' | 'suggestion.moderated' | 'suggestion.edit_reviewed'
+>(
 	name: K,
 	author: { authorUserId: string | null; authorName: string | null; authorEmail: string | null },
 	actorId: string | null,

@@ -67,6 +67,13 @@ export const suggestion = sqliteTable(
 		// db:generate that has never had to order a table against itself. Mirrors
 		// contentFlag.entityId, which is FK-less for the same "don't fight the
 		// tooling" reason. The service validates the target instead.
+		/**
+		 * Set the first time the text changes, so the board can say "edited"
+		 * without anyone having to diff it. Null means the words on screen are the
+		 * words people voted for.
+		 */
+		editedAt: integer('edited_at', { mode: 'timestamp' }),
+
 		mergedIntoId: text('merged_into_id'),
 		mergedByUserId: text('merged_by_user_id').references(() => user.id, { onDelete: 'set null' }),
 		mergedAt: integer('merged_at', { mode: 'timestamp' }),
@@ -116,6 +123,64 @@ export const suggestionVote = sqliteTable(
 	]
 );
 
+export const suggestionEditStatuses = ['pending', 'approved', 'rejected'] as const;
+export type SuggestionEditStatus = (typeof suggestionEditStatuses)[number];
+
+/**
+ * A proposed change to a suggestion that already has votes behind it.
+ *
+ * An author can rewrite their own suggestion freely right up until somebody
+ * else upvotes it. After that the words are what other members put their name
+ * to, and changing them silently is a bait-and-switch: post something popular,
+ * collect the votes, then swap in what you actually wanted. So once a vote
+ * lands from anyone but the author, an edit stops being a write and becomes
+ * this — a request staff approve or reject.
+ *
+ * Both the proposed text and a snapshot of what it would replace are stored, so
+ * staff review an actual before/after rather than guessing what changed. The
+ * snapshot is taken at request time and deliberately not refreshed: if the
+ * suggestion moved underneath the request, staff should see the text the author
+ * was actually looking at.
+ */
+export const suggestionEdit = sqliteTable(
+	'suggestion_edit',
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		suggestionId: text('suggestion_id')
+			.notNull()
+			.references(() => suggestion.id, { onDelete: 'cascade' }),
+		requestedByUserId: text('requested_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		proposedTitle: text('proposed_title').notNull(),
+		proposedBody: text('proposed_body').notNull(),
+		proposedCategory: text('proposed_category', { enum: suggestionCategories }).notNull(),
+
+		originalTitle: text('original_title').notNull(),
+		originalBody: text('original_body').notNull(),
+		originalCategory: text('original_category', { enum: suggestionCategories }).notNull(),
+
+		status: text('status', { enum: suggestionEditStatuses }).notNull().default('pending'),
+		reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		reviewNotes: text('review_notes'),
+		reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('suggestion_edit_suggestion_idx').on(t.suggestionId),
+		index('suggestion_edit_status_idx').on(t.status),
+		index('suggestion_edit_requested_by_idx').on(t.requestedByUserId)
+	]
+);
+
 /**
  * Posting trust. A row exists only once a member has had a report upheld
  * against one of their suggestions; absence means good standing.
@@ -145,3 +210,4 @@ export const suggestionStanding = sqliteTable('suggestion_standing', {
 export type Suggestion = typeof suggestion.$inferSelect;
 export type SuggestionVote = typeof suggestionVote.$inferSelect;
 export type SuggestionStanding = typeof suggestionStanding.$inferSelect;
+export type SuggestionEdit = typeof suggestionEdit.$inferSelect;

@@ -30,7 +30,8 @@ import { contentFlag } from '../../src/lib/server/db/schema/flag';
 import {
 	suggestion,
 	suggestionVote,
-	suggestionStanding
+	suggestionStanding,
+	suggestionEdit
 } from '../../src/lib/server/db/schema/suggestion';
 import { scryptHash } from './seed-pay-reservation';
 
@@ -59,6 +60,24 @@ export const SEED_SG_DISMISS_TITLE = 'E2E Restore Me After Dismissal';
 export const SEED_SG_UPHOLD_ID = 'e2e-sg-uphold';
 export const SEED_SG_UPHOLD_TITLE = 'E2E Keep Me Down After Upholding';
 
+/**
+ * Nobody has voted for it, so the author can still rewrite it directly. Paired
+ * with SEED_SG_VISIBLE_ID (which has votes) this makes the whole edit rule
+ * assertable: same author, same action, two different outcomes.
+ */
+export const SEED_SG_UNVOTED_ID = 'e2e-sg-unvoted';
+export const SEED_SG_UNVOTED_TITLE = 'E2E Unvoted And Still Editable';
+
+/**
+ * Already has a pending edit request seeded against it, so the staff approval
+ * test stands on its own rather than depending on the member-side test having
+ * run first — same reason `seed-community-events.ts` seeds its own pending row.
+ */
+export const SEED_SG_EDIT_ID = 'e2e-sg-has-edit';
+export const SEED_SG_EDIT_TITLE = 'E2E Suggestion With A Pending Edit';
+export const SEED_SG_EDIT_PROPOSED_TITLE = 'E2E Proposed Replacement Title';
+export const SEED_SG_EDIT_REQUEST_ID = 'e2e-sg-edit-request';
+
 /** Plain and visible, so the board always has something to match on. */
 export const SEED_SG_VISIBLE_ID = 'e2e-sg-visible';
 export const SEED_SG_VISIBLE_TITLE = 'E2E Ordinary Visible Suggestion';
@@ -79,6 +98,8 @@ export const SEED_SG_MERGE_UNION_VOTES = 4;
 
 const MEMBER_IDS = [SEED_SG_AUTHOR_ID, SEED_SG_REPORTER_ID, SEED_SG_BYSTANDER_ID];
 const SUGGESTION_IDS = [
+	SEED_SG_EDIT_ID,
+	SEED_SG_UNVOTED_ID,
 	SEED_SG_DISMISS_ID,
 	SEED_SG_UPHOLD_ID,
 	SEED_SG_VISIBLE_ID,
@@ -129,6 +150,8 @@ export async function seedSuggestions(): Promise<void> {
 			[SEED_SG_DISMISS_ID, SEED_SG_DISMISS_TITLE],
 			[SEED_SG_UPHOLD_ID, SEED_SG_UPHOLD_TITLE],
 			[SEED_SG_VISIBLE_ID, SEED_SG_VISIBLE_TITLE],
+			[SEED_SG_UNVOTED_ID, SEED_SG_UNVOTED_TITLE],
+			[SEED_SG_EDIT_ID, SEED_SG_EDIT_TITLE],
 			[SEED_SG_MERGE_TARGET_ID, SEED_SG_MERGE_TARGET_TITLE],
 			[SEED_SG_MERGE_SOURCE_ID, SEED_SG_MERGE_SOURCE_TITLE]
 		] as const) {
@@ -152,8 +175,27 @@ export async function seedSuggestions(): Promise<void> {
 			[SEED_SG_MERGE_TARGET_ID, SEED_SG_REPORTER_ID],
 			[SEED_SG_MERGE_TARGET_ID, SEED_SG_BYSTANDER_ID],
 			[SEED_SG_MERGE_SOURCE_ID, SEED_SG_REPORTER_ID],
-			[SEED_SG_MERGE_SOURCE_ID, 'e2e-staff-user']
+			[SEED_SG_MERGE_SOURCE_ID, 'e2e-staff-user'],
+			// Not the author: this is what locks direct editing on SEED_SG_VISIBLE_ID.
+			[SEED_SG_VISIBLE_ID, SEED_SG_BYSTANDER_ID],
+			// Same, and it gives the approval test a vote count to prove is preserved.
+			[SEED_SG_EDIT_ID, SEED_SG_BYSTANDER_ID],
+			[SEED_SG_EDIT_ID, SEED_SG_REPORTER_ID]
 		];
+		await db.insert(suggestionEdit).values({
+			id: SEED_SG_EDIT_REQUEST_ID,
+			suggestionId: SEED_SG_EDIT_ID,
+			requestedByUserId: SEED_SG_AUTHOR_ID,
+			proposedTitle: SEED_SG_EDIT_PROPOSED_TITLE,
+			proposedBody: 'E2E proposed replacement body.',
+			proposedCategory: 'other',
+			originalTitle: SEED_SG_EDIT_TITLE,
+			originalBody: `Seeded for the e2e suite: ${SEED_SG_EDIT_TITLE}.`,
+			originalCategory: 'other',
+			status: 'pending',
+			createdAt: now
+		});
+
 		for (const [suggestionId, userId] of votes) {
 			await db
 				.insert(suggestionVote)
@@ -218,5 +260,21 @@ export async function readSuggestionStanding(userId: string): Promise<boolean> {
 			.where(eq(suggestionStanding.userId, userId))
 			.limit(1);
 		return row?.requiresReview ?? false;
+	});
+}
+
+/** The words currently on the board, and whether it is marked edited. */
+export async function readSuggestionText(suggestionId: string): Promise<{
+	title: string | null;
+	body: string | null;
+	edited: boolean;
+}> {
+	return withPlatformDb(async (db) => {
+		const [row] = await db
+			.select({ title: suggestion.title, body: suggestion.body, editedAt: suggestion.editedAt })
+			.from(suggestion)
+			.where(eq(suggestion.id, suggestionId))
+			.limit(1);
+		return { title: row?.title ?? null, body: row?.body ?? null, edited: !!row?.editedAt };
 	});
 }

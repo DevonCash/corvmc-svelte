@@ -22,7 +22,9 @@
 		respondToSuggestion,
 		reviewSuggestion,
 		setSuggestionVisibility,
-		mergeSuggestion
+		mergeSuggestion,
+		getSuggestionPendingEdit,
+		reviewSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
@@ -30,9 +32,11 @@
 
 	let isMerged = $derived(!!s.mergedIntoId);
 	let candidates = $derived(getMergeCandidates(id));
+	let pendingEdit = $derived(await getSuggestionPendingEdit(id));
 
 	function refresh() {
 		void getStaffSuggestionDetail(id).refresh();
+		void getSuggestionPendingEdit(id).refresh();
 	}
 </script>
 
@@ -127,6 +131,84 @@
 					</div>
 				{/snippet}
 			</Action>
+		</InfoCard>
+	{/if}
+
+	{#if pendingEdit}
+		<InfoCard title="Proposed edit" class="bg-base-200 shadow-none">
+			<p class="mb-3 text-sm opacity-70">
+				{pendingEdit.requestedByName ?? 'The author'} wants to change this after
+				{s.voteCount} member{s.voteCount === 1 ? '' : 's'} already voted for it. Approving replaces the
+				text below; the votes stay either way.
+			</p>
+
+			<!-- Before and after, side by side. Approving a change you can't see is
+			     the failure this whole flow exists to prevent. -->
+			<div class="grid gap-4 md:grid-cols-2">
+				<div>
+					<h3 class="mb-1 text-sm font-medium opacity-60">What members voted for</h3>
+					<div class="rounded border border-base-300 p-3">
+						<p class="font-medium">{pendingEdit.originalTitle}</p>
+						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.originalBody}</p>
+						<p class="mt-2 text-xs opacity-60">
+							{suggestionCategoryLabels[
+								pendingEdit.originalCategory as keyof typeof suggestionCategoryLabels
+							] ?? pendingEdit.originalCategory}
+						</p>
+					</div>
+				</div>
+				<div>
+					<h3 class="mb-1 text-sm font-medium opacity-60">Proposed</h3>
+					<div class="rounded border border-primary/40 p-3">
+						<p class="font-medium">{pendingEdit.proposedTitle}</p>
+						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.proposedBody}</p>
+						<p class="mt-2 text-xs opacity-60">
+							{suggestionCategoryLabels[
+								pendingEdit.proposedCategory as keyof typeof suggestionCategoryLabels
+							] ?? pendingEdit.proposedCategory}
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="mt-3">
+				<Action
+					action={reviewSuggestionEdit}
+					label="Approve or reject"
+					modalTitle="Review the proposed edit"
+					submitLabel="Save"
+					successToast="Edit reviewed"
+					class="btn-primary btn-sm"
+					onsuccess={refresh}
+				>
+					{#snippet form()}
+						<input {...reviewSuggestionEdit.fields.suggestionId.as('hidden', id)} />
+						<input {...reviewSuggestionEdit.fields.editId.as('hidden', pendingEdit?.id ?? '')} />
+						<div class="space-y-3">
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">Decision</span></div>
+								<Select
+									class="select-bordered w-full"
+									{...reviewSuggestionEdit.fields.decision.as('select')}
+								>
+									<option value="approve">Approve — replace the text</option>
+									<option value="reject">Reject — keep what members voted for</option>
+								</Select>
+							</label>
+							<label class="form-control w-full">
+								<div class="label">
+									<span class="label-text">Note to the member (optional)</span>
+								</div>
+								<textarea
+									class="textarea textarea-bordered w-full"
+									rows="3"
+									{...reviewSuggestionEdit.fields.notes.as('text')}
+								></textarea>
+							</label>
+						</div>
+					{/snippet}
+				</Action>
+			</div>
 		</InfoCard>
 	{/if}
 

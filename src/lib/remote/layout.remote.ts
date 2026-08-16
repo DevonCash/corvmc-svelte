@@ -11,7 +11,8 @@ import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunte
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
 import {
 	countAwaitingModeration,
-	countAwaitingResponse
+	countAwaitingResponse,
+	countPendingEdits
 } from '$lib/server/suggestion/suggestion-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
@@ -80,8 +81,8 @@ export const getStaffLayout = query(async () => {
 			countPendingSubmissions().catch(() => 0),
 			// Moderation leads the badge: everything in that bucket is invisible to
 			// members while it waits, which is the cost of hiding on a single report.
-			Promise.all([countAwaitingModeration(), countAwaitingResponse()])
-				.then(([m, r]) => m + r)
+			Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
+				.then(([m, r, e]) => m + r + e)
 				.catch(() => 0)
 		]);
 

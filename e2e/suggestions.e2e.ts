@@ -9,13 +9,18 @@ import {
 	SEED_SG_DISMISS_TITLE,
 	SEED_SG_UPHOLD_ID,
 	SEED_SG_UPHOLD_TITLE,
+	SEED_SG_VISIBLE_ID,
 	SEED_SG_VISIBLE_TITLE,
+	SEED_SG_UNVOTED_ID,
+	SEED_SG_EDIT_ID,
+	SEED_SG_EDIT_PROPOSED_TITLE,
 	SEED_SG_MERGE_TARGET_ID,
 	SEED_SG_MERGE_SOURCE_ID,
 	SEED_SG_MERGE_SOURCE_TITLE,
 	SEED_SG_MERGE_UNION_VOTES,
 	readSuggestionState,
-	readSuggestionStanding
+	readSuggestionStanding,
+	readSuggestionText
 } from './fixtures/seed-suggestions';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 
@@ -246,5 +251,93 @@ test.describe('access control', () => {
 		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto('/staff/suggestions');
 		await expect(page).not.toHaveURL(/\/staff\/suggestions/);
+	});
+});
+
+test.describe('editing a suggestion', () => {
+	/** Open the author's own edit form and submit new text. */
+	async function submitEdit(page: Page, suggestionId: string, title: string, body: string) {
+		await page.goto(`/member/suggestions/${suggestionId}`);
+		await page.getByRole('button', { name: /^(Edit|Request an edit)$/ }).click();
+		await page.locator('input[name="title"]').fill(title);
+		await page.locator('textarea[name="body"]').fill(body);
+		await page.getByRole('button', { name: /^(Save|Send to staff)$/ }).click();
+		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
+	}
+
+	test('the author can rewrite freely while nobody else has voted', async ({ page }) => {
+		await login(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
+		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
+
+		// The label is the promise: this one saves, it does not queue.
+		await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+
+		await submitEdit(page, SEED_SG_UNVOTED_ID, 'E2E Rewritten Directly', 'Rewritten body.');
+
+		await expect
+			.poll(async () => (await readSuggestionText(SEED_SG_UNVOTED_ID)).title, { timeout: 15000 })
+			.toBe('E2E Rewritten Directly');
+		expect((await readSuggestionText(SEED_SG_UNVOTED_ID)).edited).toBe(true);
+	});
+
+	test('once someone else has voted, an edit becomes a request and the text does not move', async ({
+		page
+	}) => {
+		// The bait-and-switch: collect votes on one thing, then swap in another.
+		const before = await readSuggestionText(SEED_SG_VISIBLE_ID);
+
+		await login(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
+		await page.goto(`/member/suggestions/${SEED_SG_VISIBLE_ID}`);
+
+		// Different label, because it is a different operation.
+		await expect(page.getByRole('button', { name: 'Request an edit' })).toBeVisible();
+
+		await submitEdit(page, SEED_SG_VISIBLE_ID, 'E2E Swapped Out Title', 'Completely different.');
+
+		// The words members voted for are still the words on the board.
+		const after = await readSuggestionText(SEED_SG_VISIBLE_ID);
+		expect(after.title).toBe(before.title);
+		expect(after.body).toBe(before.body);
+
+		// And the author is told it is pending rather than left guessing.
+		await page.reload();
+		await expect(page.getByText(/edit is with staff/i)).toBeVisible();
+
+		// Nobody else sees the proposed text anywhere.
+		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
+		await page.goto('/member/suggestions');
+		await expect(page.getByRole('link', { name: 'E2E Swapped Out Title' })).toHaveCount(0);
+	});
+
+	test('staff approving the edit applies it and keeps the votes', async ({ page }) => {
+		// Runs against its own seeded pending request, so it does not depend on the
+		// member-side test above having run first.
+		const votesBefore = (await readSuggestionState(SEED_SG_EDIT_ID)).voteCount;
+
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/suggestions/${SEED_SG_EDIT_ID}`);
+
+		// Staff see both versions before deciding — approving a change you cannot
+		// see is the failure this flow exists to prevent.
+		await expect(page.getByText('What members voted for')).toBeVisible();
+		await expect(page.getByText(SEED_SG_EDIT_PROPOSED_TITLE)).toBeVisible();
+
+		await page.getByRole('button', { name: 'Approve or reject' }).click();
+		await page.locator('select[name="decision"]').selectOption('approve');
+		await page.getByRole('button', { name: 'Save' }).click();
+		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
+
+		await expect
+			.poll(async () => (await readSuggestionText(SEED_SG_EDIT_ID)).title, { timeout: 15000 })
+			.toBe(SEED_SG_EDIT_PROPOSED_TITLE);
+		// Approving the words must not disturb the count.
+		expect((await readSuggestionState(SEED_SG_EDIT_ID)).voteCount).toBe(votesBefore);
+	});
+
+	test("a member cannot edit someone else's suggestion", async ({ page }) => {
+		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
+		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
+
+		await expect(page.getByRole('button', { name: /^(Edit|Request an edit)$/ })).toHaveCount(0);
 	});
 });
