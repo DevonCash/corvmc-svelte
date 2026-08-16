@@ -29,15 +29,27 @@
 
 	let activeTab = $state<'active' | 'all'>('active');
 
+	// These MUST stay above the two `await`s below. A declaration that follows a
+	// top-level await is compiled as "blocked", and Svelte attaches that blocker
+	// to every template node reading it — so `{#each await activeReservations}`
+	// became `$.async(node, [blocker], [expression], …)`. That is the one shape
+	// that reaches `flatten`'s deferred branch, where `restore()` may reactivate a
+	// null batch (it optional-chains, admitting as much) but `async_derived` then
+	// dereferences `current_batch.async_deriveds` unguarded — the crash in
+	// JAVASCRIPT-SVELTEKIT-25. Unfixed in every published Svelte (5.56.9 is
+	// byte-identical here) and on main. Declared first, the blocker list is empty
+	// and `flatten` takes its synchronous path. See the sibling notes on the same
+	// class of bug in ../profile/+page.svelte and ../profile/ProfileForm.svelte,
+	// and the guard in async-effect-shape.spec.ts that keeps this from regressing.
+	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
+	let allReservations = $state(getReservations({ includeTerminal: true }));
+
 	let creditData = $derived(await getMembershipStatus());
 	const isSustaining = $derived(creditData.isSustainingMember);
 
 	// Staff can't follow up on a booking they can't call about, so the wizard
 	// collects a number inline when the member has none on file.
 	let contact = $derived(await getBookingContact());
-
-	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
-	let allReservations = $state(getReservations({ includeTerminal: true }));
 
 	// Remote queries aren't refreshed by invalidateAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the

@@ -69,6 +69,12 @@ export async function deactivateUser(userId: string) {
 	// Purge the user's existing sessions so a deactivated account can't keep
 	// riding a live session. The per-request hook gate is the primary defense;
 	// this removes the now-inert rows instead of letting them expire naturally.
+	//
+	// Neither is immediate any more: with `session.cookieCache` enabled (auth.ts)
+	// better-auth serves the session from the signed cookie without reading these
+	// rows, so a user already holding one keeps access until it ages out — up to
+	// 60s. Acceptable for offboarding; if a hard cut ever matters, disable the
+	// cache rather than adding a second gate.
 	await db.delete(session).where(eq(session.userId, userId));
 
 	// Cancel all future personal reservations booked by this user. Scoped to
