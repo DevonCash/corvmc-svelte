@@ -280,7 +280,7 @@ describe('EventService', () => {
 
 			expect(uploadFile).toHaveBeenCalledWith(
 				posterBuffer,
-				`events/posters/${result.id}.jpg`,
+				expect.stringMatching(new RegExp(`^events/posters/${result.id}-[0-9a-f]{8}\\.jpg$`)),
 				'image/jpeg'
 			);
 		});

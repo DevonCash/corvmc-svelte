@@ -59,6 +59,7 @@
 	{#if member.avatarUrl && !hideAvatar}
 		<Avatar
 			class={variant === 'inline' ? 'size-6 shrink-0' : 'size-8'}
+			size="avatar-sm"
 			src={member.avatarUrl}
 			name={member.name}
 		/>

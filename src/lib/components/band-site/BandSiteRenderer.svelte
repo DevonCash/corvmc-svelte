@@ -4,6 +4,10 @@
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
+	// NOTE: `block.imageKey` / `item.imageKey` already hold *resolved URLs* by the
+	// time they reach this component — `band-site-blocks.ts` overwrites the field
+	// in place. The name is a leftover from the DB column.
+	import { imageSrc } from '$lib/utils/images';
 	import BandContactForm from './BandContactForm.svelte';
 	import { page } from '$app/state';
 
@@ -81,7 +85,14 @@
 			{#if block.type === 'hero'}
 				<div class="band-site-hero relative h-64 md:h-96 overflow-hidden">
 					{#if block.imageKey}
-						<img src={block.imageKey} alt="" class="absolute inset-0 w-full h-full object-cover" />
+						{@const heroImg = imageSrc(block.imageKey, 'hero')}
+						<img
+							src={heroImg.src}
+							srcset={heroImg.srcset}
+							sizes={heroImg.sizes}
+							alt=""
+							class="absolute inset-0 w-full h-full object-cover"
+						/>
 					{/if}
 					<div
 						class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4"
@@ -131,7 +142,13 @@
 								<div class="avatar placeholder mb-2">
 									<div class="bg-neutral text-neutral-content w-16 rounded-full">
 										{#if member.image}
-											<img src={member.image} alt={member.name} class="rounded-full" />
+											{@const memberImg = imageSrc(member.image, 'avatar-sm')}
+											<img
+												src={memberImg.src}
+												srcset={memberImg.srcset}
+												alt={member.name}
+												class="rounded-full"
+											/>
 										{:else}
 											<span class="text-xl">{member.name.charAt(0)}</span>
 										{/if}
@@ -207,8 +224,15 @@
 					<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
 						{#each galleryImages as img, i (img.url ?? i)}
 							{#if img.url}
+								{@const galleryImg = imageSrc(img.url, 'gallery')}
 								<div class="aspect-square overflow-hidden rounded-lg">
-									<img src={img.url} alt={img.caption ?? ''} class="w-full h-full object-cover" />
+									<img
+										src={galleryImg.src}
+										srcset={galleryImg.srcset}
+										sizes={galleryImg.sizes}
+										alt={img.caption ?? ''}
+										class="w-full h-full object-cover"
+									/>
 								</div>
 							{/if}
 						{/each}
@@ -366,9 +390,12 @@
 						{#each block.items as item (item.url)}
 							<a href={item.url} target="_blank" rel="external noopener" class="block group">
 								{#if item.imageKey}
+									{@const merchImg = imageSrc(item.imageKey, 'gallery')}
 									<div class="aspect-square overflow-hidden rounded-lg mb-2">
 										<img
-											src={item.imageKey}
+											src={merchImg.src}
+											srcset={merchImg.srcset}
+											sizes={merchImg.sizes}
 											alt={item.title}
 											class="w-full h-full object-cover group-hover:scale-105 transition-transform"
 										/>
@@ -392,8 +419,10 @@
 	<div class="max-w-3xl mx-auto px-6 py-12">
 		<div class="text-center mb-8">
 			{#if band.avatarUrl}
+				{@const bandImg = imageSrc(band.avatarUrl, 'avatar-lg')}
 				<img
-					src={band.avatarUrl}
+					src={bandImg.src}
+					srcset={bandImg.srcset}
 					alt={band.name}
 					class="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
 				/>

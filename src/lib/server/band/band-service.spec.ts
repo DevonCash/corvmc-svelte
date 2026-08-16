@@ -550,17 +550,14 @@ describe('BandService', () => {
 	});
 
 	describe('setBandAvatar', () => {
-		it('uploads the file and returns the extension-mapped key', async () => {
+		it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
 			selectResult = [{ avatarKey: null }];
 
 			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
 
-			expect(uploadFile).toHaveBeenCalledWith(
-				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.png',
-				'image/png'
-			);
-			expect(key).toBe('bands/avatars/band-1.png');
+			// The per-upload token is what stops a replaced avatar reusing its URL.
+			expect(key).toMatch(/^bands\/avatars\/band-1-[0-9a-f]{8}\.png$/);
+			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 		});
 
 		it('deletes the previous avatar before replacing it', async () => {
@@ -571,7 +568,7 @@ describe('BandService', () => {
 			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
 			expect(uploadFile).toHaveBeenCalledWith(
 				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.webp',
+				expect.stringMatching(/^bands\/avatars\/band-1-[0-9a-f]{8}\.webp$/),
 				'image/webp'
 			);
 		});
