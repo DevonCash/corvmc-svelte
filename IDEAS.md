@@ -36,6 +36,21 @@ see the decision and the objection together, and a second staffer can be the one
 Would also want an outcome that restores standing automatically when an appeal succeeds, since
 the manual "Restore posting trust" button is easy to forget after the conversation has moved on.
 
+**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt. A `moderation_appeal`
+row hangs off the upheld `content_flag` — the inbox was weighed as the alternative and rejected
+because a thread has no outcome state, so the restore would still be a button somebody has to
+remember. One appeal per decision (a unique index on the flag), reopenable by staff; two
+independent outcomes, so "the post did break the rules but a first offense doesn't warrant
+probation" is expressible, and a granted standing outcome _is_ the restore. Nothing pauses while
+an appeal is pending, and the second-staffer rule is enforced by identity rather than role, with
+an asymmetry that keeps a one-staffer collective from deadlocking: you may overturn yourself, you
+may not ratify yourself. Standing stays in its two tables behind a `standing.ts` facade shaped
+like the scoped `member_standing` they should eventually become — appeals is a consumer of
+standing, not the third domain the rule-of-three note in `docs/specs/member-suggestions-spec.md`
+was waiting for, so that merge is recommended as its own change before the next moderated domain
+lands. Known gap, recorded rather than papered over: a takedown with no report behind it (a direct
+staff hide, or a `rejected` community listing) has no flag to attach an appeal to.
+
 ### Merch Consignment
 
 Let bands list merch for sale at the venue. Track inventory, sales splits, and payouts. Ties into the existing band and payments systems.
