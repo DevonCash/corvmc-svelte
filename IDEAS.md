@@ -36,20 +36,31 @@ see the decision and the objection together, and a second staffer can be the one
 Would also want an outcome that restores standing automatically when an appeal succeeds, since
 the manual "Restore posting trust" button is easy to forget after the conversation has moved on.
 
-**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt. A `moderation_appeal`
-row hangs off the upheld `content_flag` — the inbox was weighed as the alternative and rejected
-because a thread has no outcome state, so the restore would still be a button somebody has to
-remember. One appeal per decision (a unique index on the flag), reopenable by staff; two
-independent outcomes, so "the post did break the rules but a first offense doesn't warrant
-probation" is expressible, and a granted standing outcome _is_ the restore. Nothing pauses while
-an appeal is pending, and the second-staffer rule is enforced by identity rather than role, with
-an asymmetry that keeps a one-staffer collective from deadlocking: you may overturn yourself, you
-may not ratify yourself. Standing stays in its two tables behind a `standing.ts` facade shaped
-like the scoped `member_standing` they should eventually become — appeals is a consumer of
-standing, not the third domain the rule-of-three note in `docs/specs/member-suggestions-spec.md`
-was waiting for, so that merge is recommended as its own change before the next moderated domain
-lands. Known gap, recorded rather than papered over: a takedown with no report behind it (a direct
-staff hide, or a `rejected` community listing) has no flag to attach an appeal to.
+**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt. The scope narrowed
+while writing it: **an appeal contests a judgment about the member, not a judgment about a post.**
+So an appeal is strictly about the posting-trust consequence — the part that has duration, attaches
+to the person, and has no self-service way out. A takedown is a call about a post, and the right
+instrument for that is a return state, not an appeal queue; treating it otherwise turns appeals
+into a place to negotiate over listings.
+
+A `moderation_appeal` row hangs off the upheld `content_flag` — the inbox was weighed as the
+alternative and rejected because a thread has no outcome state, so the restore would still be a
+button somebody has to remember. One appeal per decision (a unique index on the flag), reopenable
+by staff; one outcome, granted or denied, and granting _is_ the restore. Nothing pauses while an
+appeal is pending. The second-staffer rule is enforced by identity rather than role, with an
+asymmetry that keeps a one-staffer collective from deadlocking: you may overturn yourself, you may
+not ratify yourself. Standing stays in its two tables behind a `standing.ts` facade shaped like the
+scoped `member_standing` they should eventually become — appeals is a consumer of standing, not the
+third domain the rule-of-three note in `docs/specs/member-suggestions-spec.md` was waiting for, so
+that merge is recommended as its own change before the next moderated domain lands.
+
+Surfaced by that scoping, and the real remaining gap: **suggestions have no return state.**
+Community listings do — `rejected` and `draft` are both editable and republishable, so a turned-down
+listing is a conversation with a turn in it. A hidden suggestion is terminal, since editing is
+blocked for anything but `visible`/`pending_review`, so `hidden` is doing double duty as "this is
+bad, gone" and "not like this." The fix is a returnable suggestion state (staff hand it back with a
+note, the author edits, it re-enters `pending_review`), not an appeal route. Separate feature, not
+yet specced.
 
 ### Merch Consignment
 
