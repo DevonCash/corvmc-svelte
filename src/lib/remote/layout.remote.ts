@@ -33,6 +33,18 @@ export const getMe = query(async () => {
 	}
 });
 
+/**
+ * `listForUser` returns pending invitations alongside active memberships, and
+ * `getUserRole` only recognises 'active'. Mapping the raw list into the nav put
+ * not-yet-accepted bands in the sidebar and panel switcher as live links; a
+ * click then hit the 403 below and rendered a blank page
+ * (JAVASCRIPT-SVELTEKIT-3). Invitations belong on /member/bands, which buckets
+ * them separately — the nav lists bands you are actually in.
+ */
+function activeOnly<T extends { status: string }>(bands: T[]): T[] {
+	return bands.filter((b) => b.status === 'active');
+}
+
 export const getMemberLayout = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw redirect(302, '/login');
@@ -47,7 +59,7 @@ export const getMemberLayout = query(async () => {
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
-		userBands: userBands.map((b) => ({
+		userBands: activeOnly(userBands).map((b) => ({
 			id: b.id,
 			name: b.name,
 			slug: b.slug,
@@ -88,7 +100,7 @@ export const getStaffLayout = query(async () => {
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
-		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
+		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,
 		listingsPending,
@@ -147,7 +159,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		band: { ...band, avatarUrl: resolveImageUrl(band.avatarKey) },
 		userRole: role ?? 'staff',
 		isStaff,
-		userBands: userBands.map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
+		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
 		features
 	};

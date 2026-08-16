@@ -39,8 +39,8 @@ const mockCreatedBand = {
 const bandServiceMock = {
 	listForUser: vi.fn().mockResolvedValue([mockBandResult, mockPendingResult]),
 	create: vi.fn().mockResolvedValue(mockCreatedBand),
-	acceptInvitation: vi.fn().mockResolvedValue({ ...mockPendingResult, status: 'active' }),
-	declineInvitation: vi.fn().mockResolvedValue({ rowCount: 1 })
+	acceptInvitation: vi.fn().mockResolvedValue({ status: 'accepted', bandId: 'band-42' }),
+	declineInvitation: vi.fn().mockResolvedValue(true)
 };
 
 vi.mock('$lib/server/band/band-service', () => bandServiceMock);
@@ -110,11 +110,22 @@ describe('createBand', () => {
 // ---------------------------------------------------------------------------
 
 describe('acceptInvite', () => {
-	it('calls acceptInvitation with memberId and userId', async () => {
-		const result = await acceptInvite({ memberId: 'member-42' });
+	// JAVASCRIPT-SVELTEKIT-2A: the form carries the BAND id, which is the only
+	// id the invite list has. Passing a band_member id here is what broke accept
+	// for every user.
+	it('passes the band id through to acceptInvitation', async () => {
+		const result = await acceptInvite({ bandId: 'band-42' });
 
-		expect(bandServiceMock.acceptInvitation).toHaveBeenCalledWith('member-42', 'user-1');
+		expect(bandServiceMock.acceptInvitation).toHaveBeenCalledWith('band-42', 'user-1');
 		expect(result.success).toBe(true);
+	});
+
+	it('reports a vanished invite in-band instead of throwing', async () => {
+		bandServiceMock.acceptInvitation.mockResolvedValueOnce({ status: 'not_found' });
+
+		const result = await acceptInvite({ bandId: 'band-gone' });
+
+		expect(result).toEqual({ success: false, reason: 'not_found' });
 	});
 });
 
@@ -123,10 +134,18 @@ describe('acceptInvite', () => {
 // ---------------------------------------------------------------------------
 
 describe('declineInvite', () => {
-	it('calls declineInvitation with memberId and userId', async () => {
-		const result = await declineInvite({ memberId: 'member-42' });
+	it('passes the band id through to declineInvitation', async () => {
+		const result = await declineInvite({ bandId: 'band-42' });
 
-		expect(bandServiceMock.declineInvitation).toHaveBeenCalledWith('member-42', 'user-1');
+		expect(bandServiceMock.declineInvitation).toHaveBeenCalledWith('band-42', 'user-1');
 		expect(result.success).toBe(true);
+	});
+
+	it('reports a vanished invite in-band', async () => {
+		bandServiceMock.declineInvitation.mockResolvedValueOnce(false);
+
+		const result = await declineInvite({ bandId: 'band-gone' });
+
+		expect(result).toEqual({ success: false, reason: 'not_found' });
 	});
 });
