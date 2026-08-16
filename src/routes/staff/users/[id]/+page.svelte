@@ -43,6 +43,8 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
@@ -279,21 +281,17 @@
 		{/await}
 
 		<InfoCard title="Details" class="bg-base-200 shadow-none">
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">User ID</dt>
-				<dd class="font-mono text-xs">{member.id}</dd>
+			<DefinitionList>
+				<Fact label="User ID" mono>{member.id}</Fact>
 
-				<dt class="opacity-60">Stripe ID</dt>
-				<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
+				<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
-				<dt class="opacity-60">Joined</dt>
-				<dd>{new Date(member.createdAt).toLocaleString()}</dd>
+				<Fact label="Joined">{new Date(member.createdAt).toLocaleString()}</Fact>
 
 				{#if member.deletedAt}
-					<dt class="opacity-60">Deactivated</dt>
-					<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
+					<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
 				{/if}
-			</dl>
+			</DefinitionList>
 		</InfoCard>
 
 		<InfoCard title="Danger Zone" class="border border-error/30 bg-error/5 shadow-none mt-6">
