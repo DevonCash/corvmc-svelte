@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireUser } from '$lib/server/authorization';
+import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
@@ -9,7 +9,8 @@ import {
 	getPublicDirectory as getPublicDirectoryService,
 	getMemberProfile as getMemberProfileService,
 	suggestInstruments,
-	suggestGenres
+	suggestGenres,
+	isProfileComplete
 } from '$lib/server/directory/directory-service';
 import {
 	getMemberProfileForEdit,
@@ -490,4 +491,20 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	void getBandProfile().refresh();
 
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserDirectoryProfile = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [profile, complete] = await Promise.all([
+		getMemberProfileForEdit(userId),
+		isProfileComplete(userId)
+	]);
+	return { profile, complete };
 });

@@ -6,7 +6,7 @@ import { user } from './authentication';
 // Content flag domain types
 // ---------------------------------------------------------------------------
 
-export const flagEntityTypes = ['member_profile', 'band_profile', 'event'] as const;
+export const flagEntityTypes = ['member_profile', 'band_profile', 'event', 'suggestion'] as const;
 export type FlagEntityType = (typeof flagEntityTypes)[number];
 
 export const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;

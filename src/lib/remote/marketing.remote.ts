@@ -16,7 +16,8 @@ import {
 	removeSubscriber as removeSubscriberService,
 	unsubscribe,
 	bulkAddMembers as bulkAddMembersService,
-	listSubscribers
+	listSubscribers,
+	getSubscriptionsForUser
 } from '$lib/server/marketing/audience-service';
 import {
 	listCampaigns,
@@ -32,6 +33,7 @@ import {
 } from '$lib/server/marketing/campaign-service';
 import {
 	findOrCreateByEmail,
+	findByUserId as findSubscriberByUserId,
 	suppressSelfService,
 	clearSelfServiceSuppression
 } from '$lib/server/marketing/subscriber-service';
@@ -431,3 +433,27 @@ export const unscheduleCampaign = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserMarketing = query(z.string(), async (userId) => {
+	await requireStaff();
+	const subscriber = await findSubscriberByUserId(userId);
+	const audiences = subscriber ? await getSubscriptionsForUser(userId) : [];
+	return {
+		subscriber: subscriber
+			? {
+					id: subscriber.id,
+					email: subscriber.email,
+					suppressedAt: subscriber.suppressedAt,
+					suppressionReason: subscriber.suppressionReason
+				}
+			: null,
+		audiences
+	};
+});

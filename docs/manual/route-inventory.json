@@ -156,6 +156,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/events/[id]/manage",
+		"panel": "member"
+	},
+	{
+		"route": "/member/events/submit",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},
@@ -165,6 +173,14 @@
 	},
 	{
 		"route": "/member/membership",
+		"panel": "member"
+	},
+	{
+		"route": "/member/messages",
+		"panel": "member"
+	},
+	{
+		"route": "/member/messages/[id]",
 		"panel": "member"
 	},
 	{
@@ -181,6 +197,14 @@
 	},
 	{
 		"route": "/member/reservations/[id]/pay",
+		"panel": "member"
+	},
+	{
+		"route": "/member/suggestions",
+		"panel": "member"
+	},
+	{
+		"route": "/member/suggestions/[id]",
 		"panel": "member"
 	},
 	{
@@ -333,6 +357,14 @@
 	},
 	{
 		"route": "/staff/settings",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/suggestions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/suggestions/[id]",
 		"panel": "staff"
 	},
 	{

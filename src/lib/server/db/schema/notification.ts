@@ -231,6 +231,31 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'suggestion_responded',
+		label: 'Response to your suggestion',
+		// Email on: a member who posted an idea and heard nothing assumes it went
+		// nowhere, which is the exact failure this board exists to fix.
+		description: 'Notification when staff reply to or change the status of a suggestion you posted',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'suggestion_moderated',
+		label: 'Your suggestion was moved',
+		// Email on, and not optional in spirit: a suggestion can vanish from the
+		// board because somebody reported it. Silence there reads as a shadowban.
+		description:
+			'Notification when a suggestion you posted is held for review, restored, approved, or hidden',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'suggestion_edit_reviewed',
+		label: 'Your edit was reviewed',
+		// Email on: the member asked for something and is waiting on an answer.
+		description:
+			'Notification when staff approve or turn down an edit you proposed to your own suggestion',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'community_event_unpublished',
 		label: 'Your community listing was taken down',
 		// Email on: the listing is off the guide and they need to know why,

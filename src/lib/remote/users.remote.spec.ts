@@ -82,12 +82,13 @@ vi.mock('$lib/server/finance/payment-cache-service', () => ({
 }));
 
 const getAllBalances = vi.fn(async () => ({ free_hours: 240, equipment_credits: 3 }));
+const listTransactions = vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0 } }));
 vi.mock('$lib/server/finance/credit-service', () => ({
 	getAllBalances: (...a: unknown[]) => getAllBalances(...(a as [])),
 	getUsageSinceLastAllocation: vi.fn(async () => 0),
 	addCredits: vi.fn(async () => undefined),
 	deductCredits: vi.fn(async () => undefined),
-	listTransactions: vi.fn(async () => [])
+	listTransactions: (...a: unknown[]) => listTransactions(...(a as []))
 }));
 
 vi.mock('$lib/server/finance/subscription-service', () => ({
@@ -97,6 +98,8 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 }));
 
 vi.mock('$lib/server/user/user-service', () => ({
+	listActiveSessions: (...a: unknown[]) => listActiveSessions(...(a as [])),
+	getLastLoginAt: (...a: unknown[]) => getLastLoginAt(...(a as [])),
 	deactivateUser: vi.fn(async () => undefined),
 	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
 	reactivateUser: vi.fn(async () => undefined),
@@ -108,6 +111,21 @@ vi.mock('$lib/server/user/user-service', () => ({
 }));
 
 vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
+
+// The staff user record's own services. Spied rather than stubbed inline so the
+// "argument, not params.id, identifies the target" test can read the userId
+// each one actually received.
+const getUserOverviewService = vi.fn(async () => ({ counts: {} }));
+vi.mock('$lib/server/user/user-overview-service', () => ({
+	getUserOverview: (...a: unknown[]) => getUserOverviewService(...(a as []))
+}));
+
+const listForMember = vi.fn(async () => ({ upcoming: [], past: [], counts: {} }));
+const listActiveSessions = vi.fn(async () => []);
+const getLastLoginAt = vi.fn(async () => null);
+vi.mock('$lib/server/reservation/reservation-service', () => ({
+	listForMember: (...a: unknown[]) => listForMember(...(a as []))
+}));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn(() => null) }));
 vi.mock('$lib/server/db/paginate', () => ({
 	paginate: vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0, totalPages: 0 } }))
@@ -180,7 +198,30 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getAllRoles' },
 	{ name: 'getUserPayments', args: ['victim-user'] },
 	{ name: 'getUserCredits', args: ['victim-user'] },
-	{ name: 'updateUser', args: [VALID_UPDATE] }
+	{ name: 'updateUser', args: [VALID_UPDATE] },
+	// The staff user record. Each one reads a different slice of a member's life
+	// — bookings, membership, the credit ledger, live sessions — and each is a
+	// directly addressable endpoint, so each needs its own first-line guard.
+	{ name: 'getUserOverview', args: ['victim-user'] },
+	{ name: 'getUserReservations', args: ['victim-user'] },
+	{ name: 'getUserMembership', args: ['victim-user'] },
+	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
+	{ name: 'getUserSessions', args: ['victim-user'] }
+];
+
+// The target of every one of these is the argument, never `params.id`. Pinned
+// per-query rather than once, because each was written separately and a new one
+// reaching for `params` is exactly the mistake updateUser originally shipped.
+const TARGETED_BY_ARGUMENT: Array<{
+	name: string;
+	args: unknown[];
+	spy: () => ReturnType<typeof vi.fn>;
+}> = [
+	{ name: 'getUserOverview', args: ['victim-user'], spy: () => getUserOverviewService },
+	{ name: 'getUserReservations', args: ['victim-user'], spy: () => listForMember },
+	{ name: 'getUserSessions', args: ['victim-user'], spy: () => listActiveSessions },
+	{ name: 'getUserPayments', args: ['victim-user'], spy: () => listByUser },
+	{ name: 'getUserCredits', args: ['victim-user'], spy: () => getAllBalances }
 ];
 
 describe('users.remote staff guards', () => {
@@ -194,6 +235,27 @@ describe('users.remote staff guards', () => {
 			expect(dbBatch).not.toHaveBeenCalled();
 		});
 	}
+
+	for (const { name, args, spy } of TARGETED_BY_ARGUMENT) {
+		it(`${name} reads the user named in its argument, not params.id`, async () => {
+			requireStaff.mockResolvedValue({ id: 'acting-staff' });
+			currentParams = { id: 'someone-else' };
+			await users[name](...args);
+			expect(spy()).toHaveBeenCalledWith('victim-user', ...[]);
+		});
+	}
+
+	it('getUserCreditHistory scopes the ledger to the requested member', async () => {
+		// The ledger is global; without the userId filter this card would show
+		// every member's transactions on one member's page.
+		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		currentParams = { id: 'someone-else' };
+		await users.getUserCreditHistory({ userId: 'victim-user', page: 2 });
+		expect(listTransactions).toHaveBeenCalledWith(
+			{ userId: 'victim-user' },
+			{ page: 2, pageSize: 10 }
+		);
+	});
 
 	it('getUserPayments does not leak payment history to a non-staff caller', async () => {
 		await expect(users.getUserPayments('victim-user')).rejects.toThrow('Staff access required');
