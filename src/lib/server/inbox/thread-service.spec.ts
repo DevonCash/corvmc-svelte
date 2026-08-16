@@ -4,20 +4,24 @@ import { describe, it, expect, vi } from 'vitest';
 // so the module loads in isolation — we only exercise the pure truncatePreview().
 vi.mock('$lib/server/db', () => ({ db: {} }));
 vi.mock('$lib/server/db/schema/inbox', () => ({
-	inboxThread: {},
+	inboxThread: { channel: 'thread.channel', id: 'thread.id' },
 	inboxMessage: {},
-	inboxNote: {}
+	inboxNote: {},
+	inboxParticipant: {}
 }));
 vi.mock('$lib/server/db/schema/authentication', () => ({ user: {} }));
 vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
+	ne: vi.fn(),
 	and: vi.fn(),
 	desc: vi.fn(),
 	count: vi.fn(),
 	like: vi.fn(),
 	or: vi.fn(),
 	inArray: vi.fn(),
+	isNotNull: vi.fn(),
+	lte: vi.fn(),
 	sql: vi.fn()
 }));
 

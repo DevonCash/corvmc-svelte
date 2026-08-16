@@ -7,6 +7,7 @@ import { hasAnyRole } from '$lib/server/authorization';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
+import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
 import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunteer/hour-log-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
 import {
@@ -50,12 +51,21 @@ export const getMemberLayout = query(async () => {
 	if (!locals.user) throw redirect(302, '/login');
 	const user = locals.user;
 
-	const [userBands, isStaff, features, messagesUnread] = await Promise.all([
-		listForUser(user.id).catch(() => []),
-		hasAnyRole(user.id, ['admin', 'staff']),
-		getAllFeatureFlags(),
-		countPortalUnread(user.id).catch(() => 0)
-	]);
+	const [userBands, isStaff, features, portalUnread, directUnread, pendingRequests] =
+		await Promise.all([
+			listForUser(user.id).catch(() => []),
+			hasAnyRole(user.id, ['admin', 'staff']),
+			getAllFeatureFlags(),
+			countPortalUnread(user.id).catch(() => 0),
+			countDirectUnread(user.id).catch(() => 0),
+			countPendingRequests(user.id).catch(() => 0)
+		]);
+
+	// Requests are deliberately absent from the badge. They show up in the
+	// Messages list marked as requests, so a member finds them when they go
+	// looking — but an unconsented message should not follow anyone around the
+	// site. `pendingRequests` is surfaced separately for the label on the list.
+	const messagesUnread = portalUnread + directUnread;
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
@@ -68,7 +78,8 @@ export const getMemberLayout = query(async () => {
 		})),
 		isStaff,
 		features,
-		messagesUnread
+		messagesUnread,
+		pendingRequests
 	};
 });
 

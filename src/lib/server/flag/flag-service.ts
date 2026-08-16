@@ -4,8 +4,10 @@ import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import { user } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
+import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
+import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { eq, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
+import { eq, ne, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -42,14 +44,24 @@ export class FlagAlreadyResolvedError extends Error {
 	}
 }
 
+/**
+ * What a reported conversation is called everywhere staff can see it before
+ * opening the report. Never the subject, never the preview.
+ */
+export const DIRECT_CONVERSATION_LABEL = 'Direct conversation';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function entityHref(entityType: FlagEntityType, entityId: string): string {
+function entityHref(entityType: FlagEntityType, entityId: string, flagId?: string): string {
 	switch (entityType) {
 		case 'band_profile':
 			return `/staff/bands/${entityId}`;
+		// A private conversation has no staff page of its own — by design, see
+		// getThread(). The report *is* the only way in, so link to the report.
+		case 'inbox_thread':
+			return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
 		// Events have no staff record page for band events; the public listing is
 		// the canonical URL for both sources.
 		case 'event':
@@ -89,6 +101,19 @@ async function resolveEntityLabel(
 			.where(eq(suggestion.id, entityId))
 			.limit(1);
 		return row?.title ?? null;
+	}
+	if (entityType === 'inbox_thread') {
+		// A deliberately content-free constant — note this differs from every
+		// other arm here, which return the thing's own title or name. `listFlags`
+		// renders entityLabel straight into the staff queue, so returning the
+		// subject or preview would put a member's private words in front of staff
+		// before anyone has opened the report. Existence is all we confirm.
+		const [row] = await db
+			.select({ id: inboxThread.id })
+			.from(inboxThread)
+			.where(and(eq(inboxThread.id, entityId), eq(inboxThread.channel, 'direct')))
+			.limit(1);
+		return row ? DIRECT_CONVERSATION_LABEL : null;
 	}
 	const [row] = await db
 		.select({ name: user.name })
@@ -173,6 +198,28 @@ export async function createFlag(params: CreateFlagParams) {
 	return flag;
 }
 
+/**
+ * How many of this member's reports are still sitting unresolved in the queue.
+ *
+ * The exact, self-clearing half of the anti-spam pair — the same shape as
+ * MAX_PENDING_SENT_REQUESTS. Better than a daily quota here because reporting
+ * auto-blocks: someone having a genuinely bad week should be able to report
+ * again the moment staff work through the backlog, while someone filing junk to
+ * bury the queue stops at the cap until staff look.
+ *
+ * `createFlag` already collapses repeat reports about the *same* entity; this
+ * covers reports spread across many.
+ */
+export async function countUnresolvedReportsBy(reporterUserId: string): Promise<number> {
+	const [row] = await db
+		.select({ count: count() })
+		.from(contentFlag)
+		.where(
+			and(eq(contentFlag.reportedByUserId, reporterUserId), eq(contentFlag.status, 'pending'))
+		);
+	return row?.count ?? 0;
+}
+
 export interface ResolveFlagParams {
 	resolution: Extract<FlagStatus, 'resolved' | 'dismissed'>;
 	notes?: string;
@@ -206,6 +253,24 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		})
 		.where(eq(contentFlag.id, flagId))
 		.returning();
+
+	// Upholding a report about a conversation costs the reported party the
+	// ability to start new ones. Not the ability to reply — someone who was rude
+	// in one conversation should not be cut out of a different one they are in
+	// the middle of. Dismissing does nothing, for the same reason a dismissed
+	// event report does nothing.
+	if (params.resolution === 'resolved' && existing.entityType === 'inbox_thread') {
+		const reported = await reportedPartyOf(existing.entityId, row.reportedByUserId);
+		if (reported) {
+			const { restrictMessaging } = await import('$lib/server/moderation/moderation-service');
+			await restrictMessaging({
+				userId: reported,
+				flagId,
+				staffId: params.staffId,
+				reason: params.notes
+			});
+		}
+	}
 
 	if (params.resolution === 'resolved' && existing.entityType === 'event') {
 		const { getById } = await import('$lib/server/event/event-service');
@@ -352,14 +417,131 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	for (const b of bandNames) labelMap.set(`band_profile:${b.id}`, b.name);
 	for (const e of eventTitles) labelMap.set(`event:${e.id}`, e.title);
 	for (const sg of suggestionTitles) labelMap.set(`suggestion:${sg.id}`, sg.title);
+	// Conversations get the same content-free label, with no lookup: there is
+	// nothing about a private thread that belongs in a queue listing.
+	for (const r of rows) {
+		if (r.entityType === 'inbox_thread') {
+			labelMap.set(`inbox_thread:${r.entityId}`, DIRECT_CONVERSATION_LABEL);
+		}
+	}
 
 	return {
 		rows: rows.map((r) => ({
 			...r,
 			entityLabel: labelMap.get(`${r.entityType}:${r.entityId}`) ?? '(deleted)',
-			entityHref: entityHref(r.entityType, r.entityId)
+			entityHref: entityHref(r.entityType, r.entityId, r.id)
 		})),
 		pagination: pageInfo
+	};
+}
+
+/**
+ * The participant a conversation report is *about*: the one who is not the
+ * reporter.
+ *
+ * Returns null when the reporter is unknown (they deleted their account —
+ * `reported_by_user_id` is set-null) or when a party has been purged. Staff can
+ * still read the thread and act by hand; we just do not guess who to restrict.
+ */
+async function reportedPartyOf(
+	threadId: string,
+	reporterUserId: string | null
+): Promise<string | null> {
+	if (!reporterUserId) return null;
+	const [row] = await db
+		.select({ userId: inboxParticipant.userId })
+		.from(inboxParticipant)
+		.where(
+			and(eq(inboxParticipant.threadId, threadId), ne(inboxParticipant.userId, reporterUserId))
+		)
+		.limit(1);
+	return row?.userId ?? null;
+}
+
+export interface FlaggedThreadContext {
+	threadId: string;
+	status: string;
+	messageCount: number;
+	createdAt: Date;
+	participants: { userId: string; name: string; isReporter: boolean }[];
+	messages: {
+		id: string;
+		body: string;
+		authorName: string | null;
+		authorUserId: string | null;
+		/** Narrowed, not `string`: ThreadTimeline discriminates on it. */
+		direction: InboxMessageDirection;
+		createdAt: Date;
+	}[];
+}
+
+/**
+ * A reported conversation, in full, for the triage page.
+ *
+ * **Keyed on the flag, not on the thread.** That is the whole design: staff have
+ * no way to name a direct thread and ask for it — `getThread` refuses them, and
+ * `listThreads` hides them. The only handle is a report, and this function will
+ * not answer without one.
+ *
+ * The whole history comes back, not just a reported message. You cannot judge
+ * harassment from one line out of context.
+ *
+ * No condition on the flag's status: a resolved report stays re-readable, which
+ * staff need for appeals and repeat offenders. The flag row is still the key, so
+ * this does not widen who can reach a conversation.
+ */
+export async function getFlaggedDirectThread(flagId: string): Promise<FlaggedThreadContext | null> {
+	const [thread] = await db
+		.select({
+			threadId: inboxThread.id,
+			status: inboxThread.status,
+			messageCount: inboxThread.messageCount,
+			createdAt: inboxThread.createdAt,
+			reportedByUserId: contentFlag.reportedByUserId
+		})
+		.from(contentFlag)
+		.innerJoin(
+			inboxThread,
+			and(
+				eq(contentFlag.entityType, 'inbox_thread'),
+				eq(inboxThread.id, contentFlag.entityId),
+				eq(inboxThread.channel, 'direct')
+			)
+		)
+		.where(eq(contentFlag.id, flagId))
+		.limit(1);
+
+	if (!thread) return null;
+
+	const participants = await db
+		.select({ userId: inboxParticipant.userId, name: user.name })
+		.from(inboxParticipant)
+		.innerJoin(user, eq(user.id, inboxParticipant.userId))
+		.where(eq(inboxParticipant.threadId, thread.threadId));
+
+	const messages = await db
+		.select({
+			id: inboxMessage.id,
+			body: inboxMessage.body,
+			authorName: inboxMessage.authorName,
+			authorUserId: inboxMessage.authorUserId,
+			direction: inboxMessage.direction,
+			createdAt: inboxMessage.createdAt
+		})
+		.from(inboxMessage)
+		.where(eq(inboxMessage.threadId, thread.threadId))
+		.orderBy(inboxMessage.createdAt);
+
+	return {
+		threadId: thread.threadId,
+		status: thread.status,
+		messageCount: thread.messageCount,
+		createdAt: thread.createdAt,
+		participants: participants.map((p) => ({
+			...p,
+			isReporter: p.userId === thread.reportedByUserId
+		})),
+		messages
 	};
 }
 
@@ -389,14 +571,19 @@ export async function getFlag(flagId: string) {
 	const entityLabel = await resolveEntityLabel(row.flag.entityType, row.flag.entityId);
 	const eventContext =
 		row.flag.entityType === 'event' ? await resolveEventContext(row.flag.entityId) : null;
+	// The report being open is what makes reading appropriate, so the
+	// conversation loads with the page — there is nothing further to gate on.
+	const threadContext =
+		row.flag.entityType === 'inbox_thread' ? await getFlaggedDirectThread(flagId) : null;
 
 	return {
 		...row.flag,
 		reportedByName: row.reportedByName,
 		reportedByEmail: row.reportedByEmail,
 		entityLabel: entityLabel ?? '(deleted)',
-		entityHref: entityHref(row.flag.entityType, row.flag.entityId),
-		eventContext
+		entityHref: entityHref(row.flag.entityType, row.flag.entityId, flagId),
+		eventContext,
+		threadContext
 	};
 }
 

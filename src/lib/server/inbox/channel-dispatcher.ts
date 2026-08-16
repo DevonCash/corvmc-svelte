@@ -42,6 +42,15 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 		// listener notifies them.
 		case 'portal':
 			return null;
+		// Unreachable, and meant to stay that way. Staff never write into a
+		// member↔member conversation — there is no reply path from the inbox to
+		// a direct thread, because direct threads are not in the inbox. Throwing
+		// rather than returning null so that a future caller that gets here is
+		// loud about it instead of silently dropping a message.
+		case 'direct':
+			throw new Error(
+				'Direct threads have no reply path: staff do not write into member conversations.'
+			);
 		case 'sms':
 			return dispatchSmsReply(params);
 		case 'instagram':

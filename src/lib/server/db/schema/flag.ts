@@ -6,8 +6,36 @@ import { user } from './authentication';
 // Content flag domain types
 // ---------------------------------------------------------------------------
 
-export const flagEntityTypes = ['member_profile', 'band_profile', 'event', 'suggestion'] as const;
+export const flagEntityTypes = [
+	'member_profile',
+	'band_profile',
+	'event',
+	'suggestion',
+	'inbox_thread'
+] as const;
 export type FlagEntityType = (typeof flagEntityTypes)[number];
+
+/**
+ * What the shared member report form (`submitFlag`) is allowed to target.
+ *
+ * Deliberately narrower than `flagEntityTypes`. `submitFlag` takes its entity
+ * type and id straight from the browser and checks nothing about the reporter's
+ * relationship to the target — fine for a public profile or listing, wrong for
+ * anything where reporting has side effects or grants access.
+ *
+ * The two absentees each have their own remote for exactly that reason:
+ *
+ *  - `inbox_thread` — filing the report is what makes a private conversation
+ *    readable by staff, so any member could expose a stranger's DMs by guessing
+ *    a thread id. `reportDirectThread` verifies the reporter is in it.
+ *  - `suggestion` — reporting pulls the suggestion off the board as a side
+ *    effect. `flagSuggestion` rate-limits and maps its own errors.
+ *
+ * Add to this list only when a plain "anyone signed in may report this by id"
+ * is genuinely safe for the entity.
+ */
+export const memberReportableEntityTypes = ['member_profile', 'band_profile', 'event'] as const;
+export type MemberReportableEntityType = (typeof memberReportableEntityTypes)[number];
 
 export const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
 export type FlagStatus = (typeof flagStatuses)[number];

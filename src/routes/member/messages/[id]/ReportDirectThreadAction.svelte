@@ -1,53 +1,42 @@
 <script lang="ts">
-	import Action from '../Action.svelte';
+	import Action from '$lib/components/shared/Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
-	import { submitFlag } from '$lib/remote/flags.remote';
-	import type { MemberReportableEntityType } from '$lib/server/db/schema/flag';
+	import { reportDirectThread } from '$lib/remote/direct-messages.remote';
 
-	let {
-		entityType,
-		entityId,
-		entityLabel,
-		class: className = 'btn-ghost btn-sm',
-		...rest
-	}: {
-		// Narrowed: a conversation is reported through ReportDirectThreadAction,
-		// which goes via a remote that checks the reporter is in it.
-		entityType: MemberReportableEntityType;
-		entityId: string;
-		entityLabel?: string;
-		class?: string;
-		[key: string]: unknown;
-	} = $props();
+	// A sibling of ReportContentAction rather than a use of it. The shared one
+	// posts to submitFlag, which takes its entity type and id from the browser
+	// and checks nothing about the reporter — fine for a public profile, wrong
+	// for a private conversation, since filing the report is what makes the
+	// conversation readable by staff. This posts to a remote that verifies the
+	// reporter is in the conversation first.
+	let { threadId }: { threadId: string } = $props();
 
-	const { fields } = submitFlag;
+	const { fields } = reportDirectThread;
 
 	let reason = $state('');
 	let description = $state('');
 </script>
 
 <Action
-	action={submitFlag}
+	action={reportDirectThread}
 	label="Report"
-	modalTitle={entityLabel ? `Report ${entityLabel}` : 'Report content'}
+	modalTitle="Report this conversation"
 	submitLabel="Submit report"
 	successToast="Report submitted — thank you"
-	class={className}
+	class="btn-ghost btn-sm"
 	canSubmit={reason.trim().length > 0}
 	onsuccess={() => {
 		reason = '';
 		description = '';
 	}}
-	{...rest}
 >
 	{#snippet icon()}<IconFlag size={16} />{/snippet}
 	{#snippet form()}
-		<input {...fields.entityType.as('hidden', entityType)} />
-		<input {...fields.entityId.as('hidden', entityId)} />
+		<input {...fields.threadId.as('hidden', threadId)} />
 		<div class="space-y-3">
 			<p class="text-sm opacity-70">
-				Let staff know what's wrong with this content. Reports are private and reviewed by the CMC
-				team.
+				Staff will be able to read this conversation so they can review it. This person will also be
+				blocked, and the conversation will close.
 			</p>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Reason</span></div>
@@ -56,7 +45,7 @@
 					class="input input-bordered w-full"
 					bind:value={reason}
 					maxlength="100"
-					placeholder="e.g. Inappropriate content, impersonation, spam"
+					placeholder="e.g. Harassment, spam, impersonation"
 				/>
 			</label>
 			<label class="form-control w-full">

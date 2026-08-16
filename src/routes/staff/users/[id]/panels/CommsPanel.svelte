@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
 	import { getSuggestionStandingFor, restoreSuggestionTrust } from '$lib/remote/suggestions.remote';
+	import {
+		getMemberMessagingStanding,
+		setMemberMessaging
+	} from '$lib/remote/direct-messages.remote';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
 	import { getUserThreads } from '$lib/remote/inbox.remote';
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
@@ -22,6 +26,7 @@
 
 	const restoreFields = restoreListingTrust.fields;
 	const restoreSuggestionFields = restoreSuggestionTrust.fields;
+	const messagingFields = setMemberMessaging.fields;
 </script>
 
 <!--
@@ -100,6 +105,82 @@
 			</div>
 		</InfoCard>
 	{/if}
+{/await}
+
+<!--
+	Unlike the two standings above, this card always renders. Those two only
+	appear when something has gone wrong; this one is also the control staff use
+	to switch messaging off for an account, which they need to reach whether or
+	not there is anything wrong yet — it is how we handle the occasional under-18
+	member, since the site has no age of its own.
+-->
+{#await getMemberMessagingStanding(id) then messaging}
+	<InfoCard title="Direct messages">
+		<p class="text-sm">
+			{#if messaging.status === 'disabled'}
+				Direct messaging is switched off for this account.
+			{:else if messaging.status === 'restricted'}
+				This member can reply to conversations they are already in, but cannot start new ones.
+			{:else}
+				This member can send and receive direct messages.
+			{/if}
+		</p>
+		{#if messaging.reason}
+			<p class="mt-1 text-sm opacity-70">Note: "{messaging.reason}"</p>
+		{/if}
+		{#if messaging.status !== 'none' && messaging.source === 'member'}
+			<p class="mt-1 text-sm opacity-70">They switched this off themselves.</p>
+		{/if}
+
+		<div class="mt-3 flex flex-wrap gap-2">
+			{#if messaging.status !== 'disabled'}
+				<Action
+					action={setMemberMessaging}
+					label="Switch messaging off"
+					successToast="Messaging switched off"
+					class="btn-sm"
+					onsuccess={() => {
+						void getMemberMessagingStanding(id).refresh();
+					}}
+				>
+					{#snippet form()}
+						<input {...messagingFields.userId.as('hidden', id)} />
+						<input {...messagingFields.status.as('hidden', 'disabled')} />
+						<p class="py-2">
+							They will not be able to send or receive direct messages, and their existing
+							conversations will disappear from the other members' lists.
+						</p>
+						<label class="form-control w-full">
+							<div class="label"><span class="label-text">Reason (shown to them)</span></div>
+							<input
+								{...messagingFields.reason.as('text')}
+								class="input input-bordered w-full"
+								maxlength="500"
+								placeholder="e.g. Under 18"
+							/>
+						</label>
+					{/snippet}
+				</Action>
+			{/if}
+			{#if messaging.status !== 'none'}
+				<Action
+					action={setMemberMessaging}
+					label="Restore messaging"
+					successToast="Messaging restored"
+					class="btn-sm btn-outline"
+					onsuccess={() => {
+						void getMemberMessagingStanding(id).refresh();
+					}}
+				>
+					{#snippet form()}
+						<input {...messagingFields.userId.as('hidden', id)} />
+						<input {...messagingFields.status.as('hidden', 'none')} />
+						<p class="py-2">Let this member send and receive direct messages again?</p>
+					{/snippet}
+				</Action>
+			{/if}
+		</div>
+	</InfoCard>
 {/await}
 
 <AsyncCard title="Reports against this member" result={getFlagsAgainstUser(id)}>

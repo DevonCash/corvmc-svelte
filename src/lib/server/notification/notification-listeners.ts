@@ -4,6 +4,9 @@ import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema/authentication';
+import { eq } from 'drizzle-orm';
 import type {
 	NotificationEmailDetail,
 	NotificationEmailModel
@@ -76,6 +79,75 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+
+	// --- Direct messages (member↔member) ---
+	//
+	// Both of these say a message is waiting and link to the site. Neither ever
+	// carries the message text: email is the one channel where blocking and
+	// reporting cannot reach, so a member's words stay where the controls are.
+	// That is enforced in the email layer via `emailOmitsUserContent` on the
+	// notification type, not by remembering it here — but there is nothing to
+	// strip, because nothing below passes a quote.
+	domainEvents.on('inbox.direct_message', async ({ data: event }) => {
+		const [recipient] = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(eq(user.id, event.recipientId))
+			.limit(1);
+		if (!recipient) return;
+
+		const url = `${siteUrl}/member/messages/${event.threadId}`;
+
+		if (event.isRequest) {
+			// A request names nobody. Until the recipient accepts, we do not put a
+			// stranger's name in their inbox — the sender is shown on the site,
+			// where Decline and Report are one click away.
+			await dispatch({
+				type: 'direct_message_request',
+				userId: recipient.id,
+				userEmail: recipient.email,
+				title: 'New message request',
+				href: `/member/messages/${event.threadId}`,
+				emailTemplate: {
+					alias: 'notification',
+					model: {
+						subject: 'You have a new message request',
+						preview_text: 'Someone would like to start a conversation with you.',
+						heading: 'New message request',
+						greeting: `Hi ${recipient.name},`,
+						paragraphs: [
+							{
+								text: 'Another CorvMC member has asked to start a conversation with you. You can read it and decide whether to accept on the site.'
+							}
+						],
+						cta: { url, label: 'View request' }
+					}
+				}
+			});
+			return;
+		}
+
+		// An accepted conversation names the sender — you agreed to hear from
+		// them — but still never quotes what they wrote.
+		await dispatch({
+			type: 'direct_message_received',
+			userId: recipient.id,
+			userEmail: recipient.email,
+			title: `${event.senderName} sent you a message`,
+			href: `/member/messages/${event.threadId}`,
+			emailTemplate: {
+				alias: 'notification',
+				model: {
+					subject: `${event.senderName} sent you a message`,
+					preview_text: 'You have a new message waiting on the CorvMC site.',
+					heading: 'New message',
+					greeting: `Hi ${recipient.name},`,
+					paragraphs: [{ text: `${event.senderName} sent you a message.` }],
+					cta: { url, label: 'Read it' }
+				}
+			}
+		});
+	});
 
 	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
