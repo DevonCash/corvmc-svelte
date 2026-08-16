@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { uploadFile, deleteObject } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { allowRateLimited } from '$lib/server/rate-limit';
@@ -636,24 +637,11 @@ function assertValidTicketPrice(price: number | null | undefined): void {
 	}
 }
 
-function extensionFromType(contentType: string): string {
-	switch (contentType) {
-		case 'image/jpeg':
-			return 'jpg';
-		case 'image/png':
-			return 'png';
-		case 'image/webp':
-			return 'webp';
-		default:
-			return 'bin';
-	}
-}
-
 async function uploadPosterKey(
 	eventId: string,
 	file: { buffer: ArrayBuffer; contentType: string }
 ): Promise<string> {
-	const key = `events/posters/${eventId}.${extensionFromType(file.contentType)}`;
+	const key = mediaKey('events/posters', eventId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
 	return key;
 }

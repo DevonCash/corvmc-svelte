@@ -582,7 +582,7 @@ No new Postmark template is needed — the generic `notification` template is mo
 
 `media.corvmc.org` is an **R2 bucket custom domain**. There is no prefix scoping and no per-object ACL: attaching a custom domain makes the entire keyspace publicly readable, and existing keys are guessable (`bands/avatars/{bandId}.jpg`). A private document placed in the `corvmc` bucket would be one guessed URL away from public, and nothing in the app would report it.
 
-`resolveImageUrl()` and `getPublicUrl()` compound this — they will mint a `media.corvmc.org` URL for _any_ key handed to them, and route it through `R2_TRANSFORM_URL` with `width=1200,format=webp`, which is meaningless for a PDF.
+`resolveImageUrl()` and `getPublicUrl()` compound this — they will mint a `media.corvmc.org` URL for _any_ key handed to them. (The transform half of this is fixed: `getPublicUrl` now only wraps keys whose extension is an image format, so a PDF resolves to a plain R2 URL rather than a meaningless transformation. Keys also carry a random token now, so they are no longer guessable from an entity id. Neither changes the core problem below — the object is still public.)
 
 So:
 

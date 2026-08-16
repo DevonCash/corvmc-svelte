@@ -4,6 +4,7 @@
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
+	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const events = $derived(data.events);
@@ -37,8 +38,10 @@
 				>
 					<div>
 						{#if evt.posterUrl}
+							{@const poster = imageSrc(evt.posterUrl, 'thumb')}
 							<img
-								src={evt.posterUrl}
+								src={poster.src}
+								srcset={poster.srcset}
 								alt=""
 								class="w-16 h-16 rounded-lg object-cover float-left mr-4"
 							/>

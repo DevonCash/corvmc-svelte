@@ -36,6 +36,7 @@ import { cancel as cancelReservation } from '$lib/server/reservation/reservation
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import {
@@ -193,8 +194,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
-		const ext = extensionFromType(posterFile.contentType);
-		const key = `events/posters/${row.id}.${ext}`;
+		const key = mediaKey('events/posters', row.id, posterFile.contentType);
 		await uploadFile(posterFile.buffer, key, posterFile.contentType);
 		await db
 			.update(event)
@@ -414,8 +414,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		if (existing.posterKey) {
 			await deleteObject(existing.posterKey);
 		}
-		const ext = extensionFromType(params.posterFile.contentType);
-		const key = `events/posters/${eventId}.${ext}`;
+		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
 		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
 		updates.posterKey = key;
 	}
@@ -1305,8 +1304,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	}
 
 	if (posterFile) {
-		const ext = extensionFromType(posterFile.contentType);
-		const key = `events/posters/${row.id}.${ext}`;
+		const key = mediaKey('events/posters', row.id, posterFile.contentType);
 		await uploadFile(posterFile.buffer, key, posterFile.contentType);
 		await db
 			.update(event)
@@ -1364,8 +1362,7 @@ export async function updateBandEvent(
 		if (existing.posterKey) {
 			await deleteObject(existing.posterKey);
 		}
-		const ext = extensionFromType(params.posterFile.contentType);
-		const key = `events/posters/${eventId}.${ext}`;
+		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
 		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
 		updates.posterKey = key;
 	}
@@ -1750,16 +1747,3 @@ export async function listPublicUpcomingEvents(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function extensionFromType(contentType: string): string {
-	switch (contentType) {
-		case 'image/jpeg':
-			return 'jpg';
-		case 'image/png':
-			return 'png';
-		case 'image/webp':
-			return 'webp';
-		default:
-			return 'bin';
-	}
-}
