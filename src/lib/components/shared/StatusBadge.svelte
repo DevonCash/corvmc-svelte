@@ -35,9 +35,16 @@
 		IconMailCheck,
 		IconBan,
 		IconStar,
-		IconPointFilled
+		IconPointFilled,
+		IconCalendarEvent,
+		IconArrowMerge,
+		IconEyeOff
 	} from '@tabler/icons-svelte';
-	import { volunteerHourStatusLabels, volunteerProfileStatusLabels } from '$lib/config';
+	import {
+		volunteerHourStatusLabels,
+		volunteerProfileStatusLabels,
+		suggestionStatusLabels
+	} from '$lib/config';
 	import type { SvelteComponent } from 'svelte';
 
 	type IconComponent = typeof SvelteComponent<any>;
@@ -51,6 +58,8 @@
 	export const labels: Record<string, string> = {
 		...volunteerHourStatusLabels,
 		...volunteerProfileStatusLabels,
+		// `in_progress` is the only suggestion status the humaniser gets wrong.
+		...suggestionStatusLabels,
 		// "Pending review" reads as a state; the humanised enum ("Pending_review")
 		// does not.
 		pending_review: 'In review'
@@ -98,6 +107,11 @@
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Certifications a member holds. Expiring is a warning rather than an
+		// error: the clearance is still valid, it just needs booking in.
+		current: 'badge-success',
+		expiring: 'badge-warning',
+		expired: 'badge-error',
 		// Volunteer hour logs
 		approved: 'badge-success',
 		rejected: 'badge-error',
@@ -108,6 +122,18 @@
 		// same reason: an uncleared volunteer needs training booked, not refusing.
 		cleared: 'badge-success',
 		uncleared: 'badge-warning',
+		// Suggestions. `open` and `pending_review` are shared with the inbox and
+		// event vocabularies above and already carry the right weight.
+		planned: 'badge-info',
+		in_progress: 'badge-warning',
+		done: 'badge-success',
+		declined: 'badge-ghost',
+		// Derived, not stored — see displayStatus() in suggestion-service.
+		merged: 'badge-ghost',
+		// Warning, not error: a reported suggestion is waiting on staff, and most
+		// reports get dismissed.
+		under_review: 'badge-warning',
+		hidden: 'badge-ghost',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -169,6 +195,25 @@
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
 		revoked: { icon: IconBan, color: 'text-error' },
+
+		// Suggestion statuses. `open` (inbox) and `pending_review` (events) are
+		// already mapped above and mean the same thing here.
+		planned: { icon: IconCalendarEvent, color: 'text-info' },
+		in_progress: { icon: IconTool, color: 'text-warning' },
+		done: { icon: IconCircleCheckFilled, color: 'text-success' },
+		declined: { icon: IconCircleX, color: 'text-base-content' },
+
+		// Suggestion visibility. `visible` is deliberately unmapped — a suggestion
+		// on the board needs no glyph, and its absence is the signal.
+		merged: { icon: IconArrowMerge, color: 'text-base-content' },
+		under_review: { icon: IconAlertTriangle, color: 'text-warning' },
+		hidden: { icon: IconEyeOff, color: 'text-base-content' },
+
+		// Certification a member holds. `revoked` is shared with platform invites
+		// above; only the three lapse states are new here.
+		current: { icon: IconCircleCheck, color: 'text-success' },
+		expiring: { icon: IconAlertTriangle, color: 'text-warning' },
+		expired: { icon: IconCircleX, color: 'text-error' },
 
 		// Volunteer hour log statuses
 		approved: { icon: IconCircleCheckFilled, color: 'text-success' },

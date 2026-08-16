@@ -130,3 +130,59 @@ Everything else wraps a service function that already exists.
    account (upcoming reservations are all cancelled by definition). Do they
    collapse, or render with an explanatory note? The note is probably more
    useful — it explains the cancellations.
+
+---
+
+## Revision — tabbed cross-section (implemented)
+
+The layout above was superseded before it was built. The scope grew from "the
+operational record" to _every_ program a member takes part in — roughly fifteen
+domains rather than four — and a single column of fifteen cards is several
+screens of scroll that fetches everything on every view.
+
+### What changed
+
+- **Tabs, not one column.** A persistent identity header and scoreboard sit
+  above a `TabBar`: Overview · Space & Gear · Bands & Shows · Volunteering ·
+  Money · Comms · Account. Panels mount on first selection and stay mounted
+  (`SvelteSet` of visited keys + `class:hidden`), so a tab's queries run exactly
+  once and switching away does not discard a half-typed edit — `Form`'s `guard`
+  only fires on navigation, and a tab change is not one.
+- **Everything else in the original stands**: read-only apart from the actions
+  that already existed, summarise-and-link-out, every card its own `{#await}`
+  with a real empty state and a `{:catch}`.
+
+### Open questions, resolved
+
+1. **"View all reservations for this member"** — no. `/staff/reservations`
+   reads nothing from the URL, so the link had nowhere to point, and a dead link
+   is worse than none. The card pages in place instead. Adding URL seeding to
+   that list is a separate change; the link can follow it.
+2. **One `getUserContext` or N round trips** — both, split by need. Everything
+   that must be correct _before_ a click (identity badges, scoreboard, tab
+   badges, and therefore the whole Overview tab) comes from a single
+   `getUserOverview`. Everything else belongs to its tab and is fetched when
+   that tab is opened. First paint is two queries; no view fetches more than it
+   shows.
+3. **Deactivated members** — a note, not collapsed cards. It is the first item
+   in Needs attention and says why the upcoming bookings are all cancelled,
+   which is the question the state actually raises.
+
+Questions 3 (editable Bands card), 4 (convergence with `/member/profile`) and 5
+(History card privacy, pending the audit log) are untouched and still open.
+
+### Note on feature flags
+
+The tabs are **not** gated on feature flags. `src/lib/remote/layout.remote.ts`
+records the panel-wide rule — staff surfaces ignore flags so staff can
+administer a feature before and after it is switched on — and this page is not
+worth making the exception. A switched-off program shows its empty state.
+
+### Bug found and fixed in passing
+
+`AdjustCreditsAction`, the certification grant/revoke actions,
+`restoreListingTrust` and the whole Danger Zone were nested inside the
+page-level `<Form remote={updateUser}>`. `Action` renders a bare `<Button>` →
+`BitsButton.Root` with no `type`, so inside a form every one of those triggers
+was `type=submit` and posted the profile edit on click. Removing the page-level
+form — the edit form is now one card in the Account panel — fixes it.

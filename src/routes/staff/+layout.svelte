@@ -4,6 +4,7 @@
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import {
+		IconBulb,
 		IconUsers,
 		IconClipboardCheck,
 		IconCalendarEvent,
@@ -85,6 +86,9 @@
 			</Nav.Item>
 			<Nav.Item href="/staff/flags" label="Content Flags">
 				{#snippet icon()}<IconFlag />{/snippet}
+			</Nav.Item>
+			<Nav.Item href="/staff/suggestions" label="Suggestions" badge={layout.suggestionsAwaiting}>
+				{#snippet icon()}<IconBulb />{/snippet}
 			</Nav.Item>
 			<Nav.Collapsible
 				href="/staff/equipment/loans"

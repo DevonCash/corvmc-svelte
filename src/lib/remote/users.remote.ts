@@ -37,6 +37,9 @@ import {
 } from '$lib/server/finance/credit-service';
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
+import { getUserOverview as getUserOverviewService } from '$lib/server/user/user-overview-service';
+import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
+import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
 import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
@@ -214,9 +217,14 @@ export const getUser = query(z.string(), async (id) => {
 			id: user.id,
 			name: user.name,
 			email: user.email,
+			emailVerified: user.emailVerified,
 			pronouns: user.pronouns,
 			phone: user.phone,
+			image: user.image,
+			memberNumber: user.memberNumber,
+			directoryVisibility: user.directoryVisibility,
 			stripeId: user.stripeId,
+			subscription: user.subscription,
 			createdAt: user.createdAt,
 			deletedAt: user.deletedAt
 		})
@@ -228,7 +236,18 @@ export const getUser = query(z.string(), async (id) => {
 
 	const roles = await getUserRoles(id);
 
-	return { ...found, roles };
+	// `subscription` is a stored JSON blob that only staff-side code reads for
+	// its presence. It is reduced to a boolean here rather than shipped: the
+	// blob carries a Stripe subscription id, and the identity header only ever
+	// asks "are they sustaining?".
+	const { subscription, image, ...rest } = found;
+
+	return {
+		...rest,
+		avatarUrl: resolveImageUrl(image),
+		sustaining: subscription != null,
+		roles
+	};
 });
 
 export const getAllRoles = query(async () => {
@@ -555,4 +574,69 @@ export const getMemberDashboard = query(async () => {
 		pendingInviteCount,
 		profileComplete
 	};
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record — the cross-section behind /staff/users/[id]
+// ---------------------------------------------------------------------------
+//
+// The page is tabbed and each tab fetches its own data on first open, so these
+// are read one tab at a time rather than all at once. `getUserOverview` is the
+// exception: it backs the header, the scoreboard and every tab badge, all of
+// which have to be right before anyone clicks anything.
+//
+// Every query below takes the target as a validated argument. `params.id` is
+// derived from a caller-supplied header on a remote call and is not a
+// trustworthy identifier — the same rule updateUser/deactivateUser follow.
+// ---------------------------------------------------------------------------
+
+export const getUserOverview = query(z.string(), async (userId) => {
+	await requireStaff();
+	return getUserOverviewService(userId);
+});
+
+export const getUserReservations = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listReservationsForMember(userId);
+});
+
+export const getUserMembership = query(z.string(), async (userId) => {
+	await requireStaff();
+
+	const dbSubscription = await getMemberSubscription(userId);
+	const subscription = mapDbSubscription(dbSubscription);
+
+	// Usage comes from the ledger, falling back to the balance shortcut when no
+	// allocation has ever run — the same derivation getMemberDashboard uses, so
+	// the two pages cannot disagree about how many hours someone has spent.
+	const allocated = dbSubscription?.hoursPerReset ?? 0;
+	const balances = await getAllBalances(userId);
+	const ledgerUsage = await getUsageSinceLastAllocation(userId, 'free_hours');
+	const used = ledgerUsage ?? Math.max(0, allocated - (balances.free_hours ?? 0));
+
+	return {
+		sustaining: dbSubscription != null,
+		subscription,
+		coveringFees: dbSubscription?.coveringFees ?? false,
+		startedAt: dbSubscription?.startedAt ?? null,
+		allocated,
+		used
+	};
+});
+
+export const getUserCreditHistory = query(
+	z.object({ userId: z.string(), page: z.number().int().min(1).default(1) }),
+	async ({ userId, page }) => {
+		await requireStaff();
+		return listTransactions({ userId }, { page, pageSize: 10 });
+	}
+);
+
+export const getUserSessions = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [sessions, lastLoginAt] = await Promise.all([
+		listActiveSessions(userId),
+		getLastLoginAt(userId)
+	]);
+	return { sessions, lastLoginAt };
 });

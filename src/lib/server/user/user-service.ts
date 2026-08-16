@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { user, session } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, isNull, isNotNull, count } from 'drizzle-orm';
+import { eq, and, ne, gt, isNull, isNotNull, count, desc } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
@@ -234,4 +234,54 @@ export async function ensureContactPhone(userId: string, submitted?: string): Pr
 		.where(eq(user.id, userId));
 
 	return true;
+}
+
+// ---------------------------------------------------------------------------
+// Sessions (read-only)
+// ---------------------------------------------------------------------------
+
+export interface ActiveSession {
+	id: string;
+	createdAt: Date;
+	expiresAt: Date;
+	ipAddress: string | null;
+	userAgent: string | null;
+}
+
+/**
+ * Unexpired sessions for one account, newest first.
+ *
+ * Read-only on purpose: revoking a session is a mutation, and the one lever
+ * staff have for cutting off access — deactivation — already deletes them all.
+ */
+export async function listActiveSessions(userId: string): Promise<ActiveSession[]> {
+	return db
+		.select({
+			id: session.id,
+			createdAt: session.createdAt,
+			expiresAt: session.expiresAt,
+			ipAddress: session.ipAddress,
+			userAgent: session.userAgent
+		})
+		.from(session)
+		.where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
+		.orderBy(desc(session.createdAt));
+}
+
+/**
+ * When this account last signed in, or null if it never has.
+ *
+ * Approximated by the newest session row, which is the only login trace stored.
+ * Sessions are deleted on deactivation and on sign-out, so this reads as null
+ * for a deactivated account rather than as its true last login.
+ */
+export async function getLastLoginAt(userId: string): Promise<Date | null> {
+	const [row] = await db
+		.select({ createdAt: session.createdAt })
+		.from(session)
+		.where(eq(session.userId, userId))
+		.orderBy(desc(session.createdAt))
+		.limit(1);
+
+	return row?.createdAt ?? null;
 }

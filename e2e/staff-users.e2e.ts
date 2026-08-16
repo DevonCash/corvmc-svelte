@@ -51,7 +51,16 @@ test.describe('staff user management', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
 
+		// The heading is in the page header, which is shared by every tab.
 		await expect(page.getByRole('heading', { name: SEED_TARGET_NAME })).toBeVisible();
+
+		// The edit form lives behind the Account tab now that this page is a
+		// cross-section rather than a form. Panels mount on first selection, so
+		// nothing renders a roles input until this click.
+		//
+		// `radio`, not `button`: TabBar's client-state mode is a bits-ui
+		// ToggleGroup, whose items expose the radio role.
+		await page.getByRole('radio', { name: 'Account' }).click();
 
 		// TagInput serialises the selection into a hidden input — this is the exact
 		// value updateUser rewrites model_has_roles from.
@@ -72,11 +81,62 @@ test.describe('staff user management', () => {
 		await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible({ timeout: 15000 });
 
 		// Re-read from the server: the edit stuck AND the roles survived it.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		// `?tab=account` also pins the URL contract the TabBar writes.
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=account`);
 		await expect(page.locator('input[name="phone"]')).toHaveValue(phone);
 
 		const rolesAfter = await page.locator('input[name="roles"]').inputValue();
 		expect(JSON.parse(rolesAfter)).toEqual(JSON.parse(rolesBefore));
+	});
+
+	test('the member record opens on Overview and loads each tab only when opened', async ({
+		page
+	}) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+
+		// Default tab. Its content comes from the same overview query the header
+		// and the tab badges already needed, so it costs no extra request.
+		await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+
+		// Panels are lazy: nothing from Money has been mounted yet, so its cards
+		// are absent from the DOM rather than merely hidden.
+		await expect(page.getByRole('heading', { name: 'Credit history' })).toHaveCount(0);
+
+		await page.getByRole('radio', { name: 'Money' }).click();
+		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
+		await expect(page).toHaveURL(/[?&]tab=money/);
+	});
+
+	test('a tab is addressable by URL, and an unknown one falls back to Overview', async ({
+		page
+	}) => {
+		await loginAsStaff(page);
+
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=bands`);
+		// The user → bands direction did not exist anywhere in the app before this
+		// page; this is the pin that it does now.
+		await expect(page.getByRole('heading', { name: 'Bands', exact: true })).toBeVisible();
+
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=not-a-tab`);
+		await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+	});
+
+	test('switching tabs keeps an unsaved edit', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=account`);
+
+		// Panels are kept mounted once visited rather than re-created on every
+		// tab change. Form's `guard` only blocks navigation, and a tab switch is
+		// not one — so unmounting here would discard a half-typed edit silently.
+		const draft = `555${Date.now().toString().slice(-7)}`;
+		await page.locator('input[name="phone"]').fill(draft);
+
+		await page.getByRole('radio', { name: 'Money' }).click();
+		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
+
+		await page.getByRole('radio', { name: 'Account' }).click();
+		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
 	});
 
 	test('bulk selection does not survive paging to rows you cannot see', async ({ page }) => {
