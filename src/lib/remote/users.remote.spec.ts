@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DomainError } from '$lib/server/domain-error';
 
 // Regression: remote functions are directly addressable endpoints. There is no
 // +layout.server.ts under /staff, and SvelteKit dispatches remote calls before
@@ -98,18 +99,35 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 
 // Hoisted so the purge-mapping tests can drive rejections; the mock factory
 // below closes over these rather than creating its own.
+//
+// These extend the real DomainError rather than a bare Error on purpose:
+// mapDomainError resolves a status from `httpStatus`, so a stand-in that only
+// extends Error would be re-thrown as a 500 and the test would assert nothing
+// about the mapping it exists to cover.
 const purgeUserService = vi.fn<(id: string) => Promise<void>>(async () => undefined);
-class UserHasOwnedBandsError extends Error {}
-class UserHasLinkedRecordsError extends Error {}
-class UserHasPublishedListingsError extends Error {}
+class UserNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+}
+class UserNotDeactivatedError extends DomainError {
+	readonly httpStatus = 409;
+}
+class UserHasOwnedBandsError extends DomainError {
+	readonly httpStatus = 409;
+}
+class UserHasLinkedRecordsError extends DomainError {
+	readonly httpStatus = 409;
+}
+class UserHasPublishedListingsError extends DomainError {
+	readonly httpStatus = 409;
+}
 
 vi.mock('$lib/server/user/user-service', () => ({
 	deactivateUser: vi.fn(async () => undefined),
 	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
 	reactivateUser: vi.fn(async () => undefined),
 	purgeUser: purgeUserService,
-	UserNotFoundError: class UserNotFoundError extends Error {},
-	UserNotDeactivatedError: class UserNotDeactivatedError extends Error {},
+	UserNotFoundError,
+	UserNotDeactivatedError,
 	UserHasOwnedBandsError,
 	UserHasLinkedRecordsError,
 	UserHasPublishedListingsError

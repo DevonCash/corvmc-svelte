@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import { user } from '$lib/server/db/schema/authentication';
@@ -20,21 +21,27 @@ export const FLAG_DESCRIPTION_MAX = 1000;
 // Errors
 // ---------------------------------------------------------------------------
 
-export class FlagNotFoundError extends Error {
+export class FlagNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('Flag not found');
 		this.name = 'FlagNotFoundError';
 	}
 }
 
-export class FlagTargetNotFoundError extends Error {
+export class FlagTargetNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('The content being reported could not be found');
 		this.name = 'FlagTargetNotFoundError';
 	}
 }
 
-export class FlagAlreadyResolvedError extends Error {
+export class FlagAlreadyResolvedError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This flag has already been resolved');
 		this.name = 'FlagAlreadyResolvedError';

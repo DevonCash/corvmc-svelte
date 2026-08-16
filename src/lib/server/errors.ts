@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { DomainError } from './domain-error';
 
 // Domain error imports — grouped by service module
 import {
@@ -32,18 +33,10 @@ import { InsufficientCreditsError } from './finance/credit-service';
 // Base class for future domain errors
 // ---------------------------------------------------------------------------
 
-/**
- * Base class that new domain errors should extend. Existing error classes
- * predate this base and will be migrated in a follow-up.
- */
-export abstract class DomainError extends Error {
-	abstract readonly httpStatus: number;
-
-	constructor(message: string) {
-		super(message);
-		this.name = this.constructor.name;
-	}
-}
+// Re-exported so existing importers keep working. The definition lives in a
+// dependency-free leaf module because this file imports every service, and the
+// services now extend the base — see domain-error.ts.
+export { DomainError } from './domain-error';
 
 // ---------------------------------------------------------------------------
 // Mapper

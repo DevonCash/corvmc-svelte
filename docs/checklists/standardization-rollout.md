@@ -70,3 +70,28 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ blocked
   behaviour from structure instead of tracing call paths.** Trace before believing the next one.
 - Remaining in tranche 4: migrate the 22 remote files onto `mapDomainError` so a new error class
   no longer has to be remembered in a hand-written ladder. That is the mechanism that hid this bug.
+
+## Open decisions
+
+- **`InsufficientCreditsError`: 409 or 422?** `mapDomainError` says 422 (business-rule violation);
+  `users.remote.ts:367` has always answered 409. The last inline ladder in the remote layer is
+  parked on this. Collapsing it would silently change that endpoint's contract, so it is left
+  visible with a comment. Pick one, then delete both the comment and the ladder.
+- **Two dead helpers, adopt or delete:** `parsePagination()` (`db/paginate.ts:14`) and
+  `requireStaffOrOwner()` (`authorization.ts:146`), both zero call sites. `requireStaffOrOwner`
+  duplicates a check four places hand-roll, so adopting it is probably right.
+
+## Notes / decisions log (cont.)
+
+- (2026-08-16) Tranche 5: migrating 10 error classes onto `DomainError` created a **circular
+  import** — `errors.ts` imports every service to build its ladder, and the services now import
+  the base back. `extends` runs at module-init, so 16 test files died with
+  `Class extends value undefined`. **`svelte-check` passed throughout**: it is an evaluation-order
+  fault, not a type fault. Fixed by moving the base into the dependency-free leaf module
+  `src/lib/server/domain-error.ts`. **Keep that file importing nothing.**
+- (2026-08-16) `band-address.remote.ts` deliberately keeps its inline handling: `SlugUnavailableError`
+  resolves to `invalid(issue.newSlug(...))`, a form-field issue, not an HTTP error. `mapDomainError`
+  cannot express that, and a blanket migration would have broken that form's validation UX.
+- (2026-08-16) When a mock stands in for a class whose _behaviour_ depends on a base (here
+  `httpStatus`), the mock has to extend the real base. `users.remote.spec.ts` used bare
+  `extends Error` stand-ins, which silently stopped exercising the mapping once it went generic.

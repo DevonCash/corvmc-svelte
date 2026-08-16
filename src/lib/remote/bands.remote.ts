@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -27,9 +28,7 @@ import {
 	setTier,
 	setBandAvatar,
 	clearBandAvatar,
-	BandNotFoundError,
-	BandMemberExistsError,
-	BandTierManagedByStripeError
+	BandMemberExistsError
 } from '$lib/server/band/band-service';
 import { bandTiers } from '$lib/server/db/schema/band';
 import { getBandLayout } from '$lib/remote/layout.remote';
@@ -271,9 +270,7 @@ export const setBandTier = form(
 		try {
 			await setTier(data.id, data.tier);
 		} catch (err) {
-			if (err instanceof BandNotFoundError) error(404, err.message);
-			if (err instanceof BandTierManagedByStripeError) error(409, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getStaffBand(data.id).refresh();
 		return { success: true };

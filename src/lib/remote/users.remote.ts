@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mapDomainError } from '$lib/server/errors';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
@@ -41,12 +42,7 @@ import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
 	reactivateUser as reactivateUserService,
-	purgeUser as purgeUserService,
-	UserNotFoundError,
-	UserNotDeactivatedError,
-	UserHasOwnedBandsError,
-	UserHasLinkedRecordsError,
-	UserHasPublishedListingsError
+	purgeUser as purgeUserService
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { isProfileComplete } from '$lib/server/directory/directory-service';
@@ -368,6 +364,13 @@ export const adjustCredits = form(
 			} catch (e) {
 				// Deducting more than the member holds is an ordinary staff mistake,
 				// not a server fault — surface the balance instead of a 500.
+				//
+				// Deliberately NOT collapsed into mapDomainError: the mapper classes
+				// InsufficientCreditsError as 422 (a business-rule violation) while
+				// this call site has always answered 409. Both readings are
+				// defensible and the two are not reconcilable without changing one
+				// endpoint's contract, so the divergence is left visible here rather
+				// than silently resolved. Pick one and delete this comment.
 				if (e instanceof InsufficientCreditsError) throw error(409, e.message);
 				throw e;
 			}
@@ -387,8 +390,7 @@ export const deactivateUser = form(
 		try {
 			await deactivateUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getUser(data.id).refresh();
 		return { success: true };
@@ -417,8 +419,7 @@ export const reactivateUser = form(
 		try {
 			await reactivateUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getUser(data.id).refresh();
 		return { success: true };
@@ -434,15 +435,10 @@ export const purgeUser = form(
 		try {
 			await purgeUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			if (err instanceof UserNotDeactivatedError) error(409, err.message);
-			if (err instanceof UserHasOwnedBandsError) error(409, err.message);
-			if (err instanceof UserHasLinkedRecordsError) error(409, err.message);
-			// Purging cascades event.createdByUserId, so the service refuses while
-			// the member still has listings on the public calendar. Staff need the
-			// reason, not a 500 — see users.remote.spec.ts.
-			if (err instanceof UserHasPublishedListingsError) error(409, err.message);
-			throw err;
+			// Every refusal purgeUser can raise carries its own status now, including
+			// the published-listings guard that a hand-written ladder here once
+			// omitted (and so returned 500). See errors.spec.ts.
+			mapDomainError(err);
 		}
 		return { success: true };
 	}
