@@ -28,10 +28,16 @@
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
+	// Must stay above the awaits below: a declaration that follows a top-level
+	// await is compiled as "blocked", and `{#each await candidates}` then becomes
+	// `$.async(node, [blocker], [expression], …)` — the shape that crashes on a
+	// null batch (JAVASCRIPT-SVELTEKIT-25, see member/reservations/+page.svelte
+	// and the guard in src/async-effect-shape.spec.ts).
+	let candidates = $derived(getMergeCandidates(id));
+
 	let s = $derived(await getStaffSuggestionDetail(id));
 
 	let isMerged = $derived(!!s.mergedIntoId);
-	let candidates = $derived(getMergeCandidates(id));
 	let pendingEdit = $derived(await getSuggestionPendingEdit(id));
 
 	function refresh() {
