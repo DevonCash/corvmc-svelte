@@ -12,6 +12,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { SubscribeAction, UnsubscribeAction } from '$lib/components/shared/actions';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 	import {
 		updateProfile,
 		changePassword,
@@ -249,12 +250,10 @@
 						}}
 					>
 						{#snippet form()}
-							<div class="alert alert-error">
-								<p>
-									This action is permanent. Deleting your account will cancel all of your current
-									and future reservations and end your subscription. This cannot be undone.
-								</p>
-							</div>
+							<Alert type="error">
+								This action is permanent. Deleting your account will cancel all of your current and
+								future reservations and end your subscription. This cannot be undone.
+							</Alert>
 
 							<FormField
 								name="password"

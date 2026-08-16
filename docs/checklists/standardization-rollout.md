@@ -24,7 +24,7 @@ because it is the only genuinely user-visible defect of the four.
 | 7   | Enum/label single source — **withdrawn, finding was wrong**; rule documented     | ❌     | (next)  |
 | 8   | Dead helpers resolved; `requireStaffOrOwner` adopted at 3 sites                  | ✅     | (next)  |
 | 9   | `ShareButton`, `initials`→`format.ts`, `StatCard` size prop                      | ✅     | (next)  |
-| 10  | Pattern-drift sweep (page-editor, epk, staff/settings, staff/events/[id])        | ⬜     |         |
+| 10  | Pattern-drift sweep — alerts done; rest needs per-item judgement, see note       | 🔵     | (next)  |
 | 11  | `RecordHero` / `PersonChip` — need design calls                                  | ⬜     |         |
 
 Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ withdrawn (finding didn't hold)
@@ -116,3 +116,16 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
   the wrapper is an `<a>`, so it needs a design call rather than a mechanical extraction.
 - (2026-08-16) The shared `initials()` adds a `.filter(Boolean)` the two copies lacked: a trailing
   or doubled space made `p[0]` undefined and rendered "UNDEFINED". Covered by a test.
+- (2026-08-16) **Tranche 10 should not be run as a bulk sweep.** Its Tier-2 counts are structural
+  greps that cannot tell a deliberate choice from drift, and spot-checking kept finding the former:
+  - The three "redundant full-page spinners" are scoped `{#await}` blocks that keep the page header
+    and filters visible while one section loads. Deferring to the panel boundary would hide them —
+    the current code is _better_ than what the audit proposed.
+  - `Alert` wraps its children in a `<p>`, so it only fits single-paragraph messages. One
+    conversion had to be reverted (`staff/events/[id]`, a warning containing a checkbox and a
+    grid), and five needed their redundant inner `<p>` unwrapped to avoid `<p>` inside `<p>`.
+    Convert per file, look at the body first, and expect roughly one in six to be a legitimate
+    exception.
+- **Pre-existing bug, not introduced here:** four `<Alert>` usages nest block content inside its
+  `<p>` — `member/events/[id]/manage` (3) and `staff/settings:924` (which puts a `<ul>` inside).
+  The parser breaks those out, so they render outside the alert box. Worth a separate fix.

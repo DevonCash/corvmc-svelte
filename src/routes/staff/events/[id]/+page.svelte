@@ -484,7 +484,7 @@
 
 							<!-- Rebook warning -->
 							{#if rebookNeeded}
-								<div class="alert alert-warning">
+								<div class="alert alert-warning" role="alert">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
 										<p class="text-sm">
