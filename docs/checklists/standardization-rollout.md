@@ -19,15 +19,15 @@ because it is the only genuinely user-visible defect of the four.
 | 2   | `DefinitionList` — 11 byte-identical copies / 9 files                            | ✅     | (next)  |
 | 3   | `Money` + route 3 fee formulas through `$lib/finance/fees` (C3, drift risk)      | ⬜     |         |
 | 4   | **C2** `mapDomainError` in remaining 22 files; 11 fall-through classes           | ⬜     |         |
-| 5   | Filter schemas — converge `page`, and fix the real `status` validation gap (C1)  | ⬜     |         |
-| 6   | Centralize validation limits (~110 magic numbers)                                | ⬜     |         |
-| 7   | `StatusBadge` maps → plain `.ts`; one home for enum definitions                  | ⬜     |         |
-| 8   | Sweep raw `locals.user` guards; delete dead `requireStaffOrOwner`, dup helpers   | ⬜     |         |
+| 5   | Filter schemas — `page` converge dropped (not a bug); `status` gap still open    | ⏸️     |         |
+| 6   | Centralize validation limits — named kinds on unambiguous fields                 | ✅     | (next)  |
+| 7   | Enum/label single source — **withdrawn, finding was wrong**; rule documented     | ❌     | (next)  |
+| 8   | Dead helpers resolved; `requireStaffOrOwner` adopted at 3 sites                  | ✅     | (next)  |
 | 9   | `RowCard`, `ShareButton`, `initials`→`format.ts`, `StatCard` size prop           | ⬜     |         |
 | 10  | Pattern-drift sweep (page-editor, epk, staff/settings, staff/events/[id])        | ⬜     |         |
 | 11  | `RecordHero` / `PersonChip` — need design calls                                  | ⬜     |         |
 
-Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ blocked
+Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ withdrawn (finding didn't hold)
 
 ## Ground rules
 
@@ -95,3 +95,18 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ blocked
 - (2026-08-16) When a mock stands in for a class whose _behaviour_ depends on a base (here
   `httpStatus`), the mock has to extend the real base. `users.remote.spec.ts` used bare
   `extends Error` stand-ins, which silently stopped exercising the mapping once it went generic.
+- (2026-08-16) Tranche 7 **withdrawn**. Every sub-finding failed verification: the enum split has
+  a real rule (client-reachability — `$lib/server` can't be imported from the browser), the two
+  `entityLabels` maps differ in label density on purpose, `CustomDomainSection`'s "Waiting on DNS"
+  is domain vocabulary the generic registry can't express, and extracting `StatusBadge`'s maps has
+  no consumer but its own spec. The rule is written down in `conventions.md` instead.
+- (2026-08-16) Tranche 6 scoped deliberately: named constants applied only where the _field name_
+  makes the kind unambiguous. Numbers that merely coincide keep their literal — a shared constant
+  asserts two fields must change together, and that is false for e.g. a flag reason at 255.
+- (2026-08-16) `parsePagination()` deleted rather than adopted. Nothing used it, the app drives
+  pagination from `$state` not the URL, and it is the one helper that _would_ have made the C1
+  `?page=` divergence a real bug — leaving it in place kept that trap loaded.
+- (2026-08-16) Adopting `requireStaffOrOwner` changed a call _count_: the helper short-circuits on
+  ownership without consulting `isStaff`, so a spec's `mockResolvedValueOnce(false)` stopped being
+  consumed and leaked into the next test. Fixture hardened. Watch for this whenever a refactor
+  removes a call a one-shot mock was feeding.

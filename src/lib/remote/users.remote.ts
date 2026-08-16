@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -253,7 +254,7 @@ const updateUserSchema = z.object({
 	// `x-sveltekit-pathname` header, so params are request input, not a
 	// trustworthy identifier. Matches deactivateUser/reactivateUser/purgeUser.
 	id: z.string().min(1),
-	name: z.string().trim().min(1).max(255),
+	name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
 	// No `.catch([])` here: silently coercing a malformed roles field to an empty

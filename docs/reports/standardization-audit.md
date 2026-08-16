@@ -418,32 +418,36 @@ The gaps:
 - Three different ways to ask "is this user staff": `requireStaff()`, `isStaff()` (11),
   `hasAnyRole()` (11), plus a raw `locals.user.isStaff` flag at `reservations.remote.ts:1925`.
 
-### Enum / label single source — right pattern, wrong packaging
+### Enum / label single source — **withdrawn 2026-08-16, the finding was wrong**
 
-The desired pattern **already exists and is test-enforced** — `enum-labels.spec.ts` and
-`StatusBadge.spec.ts` assert that every status enum value has a label and a colour, and
-`StatusBadge.svelte` is a genuine single registry (`labels` `:51`, `badgeClass` `:59`, `variants`
-`:118`) covering ~40 values across 12 domains with a documented neutral fallback.
+This section originally claimed enum definitions were "split across two homes with no rule" and
+that two route files "re-declare maps the registry already owns". Checking each claim before acting
+on it dissolved all three:
 
-Two structural defects:
+**There is a rule, it is just undocumented.** Enums that real client code (routes, components)
+imports live in `config.ts`; enums only server code needs live in `db/schema/*`. The apparent
+counter-examples — `reservationStatuses`, `eventStatuses`, `flagStatuses`, `ticketStatuses`
+appearing to have "client" importers — are all `StatusBadge.spec.ts`, which runs in the _server_
+vitest project where `$lib/server` is reachable. Moving the `config.ts` enums into schema would
+break client bundling, because `$lib/server` cannot be imported from the browser. **The rule
+should be written down, not "fixed".**
 
-**(a) Enum definitions are split across two homes with no rule distinguishing them.**
-In `config.ts`: `equipmentStatuses` `:131`, `loanStatuses` `:133`, `inboxThreadStatuses` `:175`,
-`volunteerHourStatuses` `:204`, `volunteerProfileStatuses` `:240`, `volunteerSignupStatuses` `:290`.
-In `db/schema/*`: `reservationStatuses`, `eventStatuses`, `flagStatuses`, `ticketStatuses`,
-`inviteStatuses`, `bandMemberStatuses`, `customDomainStatuses`.
+**`CustomDomainSection.svelte` is not duplication.** Its labels are `active → "Live"`,
+`pending → "Waiting on DNS"`, `failed → "Failed"`. The generic registry owns the _colours_ for
+those words but would render "Active"/"Pending"/"Failed", losing the DNS context that is the whole
+point of the message. Domain-specific vocabulary, correctly local.
 
-**(b) The label/colour/icon maps live inside a `.svelte` file**, so server code cannot reach them
-without importing a component. This already bit — `src/lib/server/volunteer/hour-log-service.ts:43-44`
-imports a UI label map and `.toLowerCase()`s it. Conversely `StatusBadge.svelte:40` has to import
-two label maps back out of `config.ts`, so labels are split too.
+**The two `entityLabels` maps are not identical.** `staff/flags/+page.svelte` uses
+`'Member' | 'Band' | 'Event'` for a table column; `staff/flags/[id]/+page.svelte` uses
+`'Member profile' | 'Band profile' | 'Event listing'` for a definition list. The original claim
+came from matching them by _name_ without diffing their contents — a list and a detail page
+differing in label density is correct, not accidental.
 
-Two route files re-declare maps the registry owns: `CustomDomainSection.svelte:32,37`, and an
-identical `entityLabels` duplicated verbatim in `staff/flags/+page.svelte:15` and
-`staff/flags/[id]/+page.svelte:14`.
+**Extracting `labels`/`badgeClass`/`variants` out of `StatusBadge.svelte` has no consumer.** The
+only importer is its own spec. Doing it would be speculative generality.
 
-**Recommendation:** schema files as the single home (the DB constraint is the real source of
-truth), and pull `labels`/`badgeClass`/`variants` out of the component into a plain `.ts` module.
+Net: nothing to change here beyond documenting the enum-placement rule, which
+[conventions.md](../development/conventions.md) now carries.
 
 ### Misc duplicated utilities
 

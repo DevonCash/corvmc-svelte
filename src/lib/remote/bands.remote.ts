@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -189,8 +190,8 @@ export const getMemberBands = query(async () => {
 
 export const updateStaffBand = form(
 	z.object({
-		name: z.string().trim().min(1).max(255),
-		bio: z.string().trim().max(2000)
+		name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		await requireStaff();
@@ -370,7 +371,7 @@ export const revokePlatformInvite = form(
 export const createBand = form(
 	z.object({
 		name: z.string().min(1, 'Band name is required').max(255),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const currentUser = requireUser();
@@ -422,7 +423,7 @@ export const declineInvite = form(
 export const updateBand = form(
 	z.object({
 		name: z.string().min(1, 'Name is required').max(200),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();

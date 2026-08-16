@@ -34,7 +34,13 @@ import { band } from '$lib/server/db/schema/band';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
-import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
+import {
+	isStaff,
+	primaryRoleFor,
+	requireStaff,
+	requireStaffOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import {
 	getAvailableSlots,
@@ -1659,10 +1665,9 @@ export const confirmReservation = form(
 			.limit(1);
 		if (!row) throw error(404, 'Reservation not found');
 
-		// Allow if staff or the owner of the reservation
-		const isOwner = currentUser.id === row.createdByUserId;
-		const staff = await isStaff(currentUser.id);
-		if (!isOwner && !staff) throw error(403, 'Not authorized');
+		// Returns which of the two the caller is, which the confirmation-window and
+		// comp rules below both branch on.
+		const staff = (await requireStaffOrOwner(currentUser.id, row.createdByUserId)) === 'staff';
 
 		// Only live reservations can be confirmed. Without this, a cancelled
 		// reservation (credits already reversed, cashDueCents possibly 0) would be

@@ -61,7 +61,7 @@ import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, SHORT_TEXT_MAX } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -706,7 +706,7 @@ export const updateEvent = form(
 		doorsTime: z.string().optional(),
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
-		location: z.string().max(255).optional(),
+		location: z.string().max(SHORT_TEXT_MAX).optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),

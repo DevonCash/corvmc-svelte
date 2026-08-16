@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
@@ -209,9 +210,9 @@ export const getPreview = query(z.string(), async (markdown) => {
 
 export const createAudience = form(
 	z.object({
-		name: z.string().min(1).max(255),
+		name: z.string().min(1).max(SHORT_TEXT_MAX),
 		slug: z.string().max(100).optional(),
-		description: z.string().max(2000).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data, issue) => {
@@ -240,8 +241,8 @@ export const createAudience = form(
 export const updateAudience = form(
 	z.object({
 		id: z.string(),
-		name: z.string().max(255).optional(),
-		description: z.string().max(2000).optional(),
+		name: z.string().max(SHORT_TEXT_MAX).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data) => {
@@ -288,7 +289,7 @@ export const addSubscriber = form(
 	z.object({
 		audienceId: z.string(),
 		email: z.string().email(),
-		name: z.string().max(255).optional()
+		name: z.string().max(SHORT_TEXT_MAX).optional()
 	}),
 	async (data, issue) => {
 		await requireStaff();
