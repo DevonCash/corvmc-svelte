@@ -162,7 +162,14 @@ is why they landed first:
    `countThreadsByStatus` would have put live DMs in the staff badge, and
    `listThreads`' search `LIKE`s `preview`, which for a DM is private text.
 
-All three now use one exported predicate:
+A fourth appeared while this was in review: `listThreadsByContactEmail`, added
+by the staff-user-page rework, reads threads by a denormalised address and
+selects `preview`. It happens to be safe — a direct thread has no
+`contactEmail`, so the equality never matches — but that is an accident of what
+we store rather than a rule, and it would break silently the day anyone
+denormalises an address onto a direct thread. It carries the predicate too.
+
+All four now use one exported predicate:
 
 ```ts
 staffVisibleThread = or(channel != 'direct', EXISTS pending inbox_thread flag)

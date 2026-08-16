@@ -343,6 +343,12 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 export interface FlagFilters {
 	status?: FlagStatus;
 	search?: string;
+	/** `entityType` + `entityId` together address one flagged subject — a member
+	 *  profile is `('member_profile', user.id)`. Either alone is a wider net. */
+	entityType?: FlagEntityType;
+	entityId?: string;
+	/** Flags this user filed, as opposed to flags filed against them. */
+	reportedByUserId?: string;
 }
 
 export async function listFlags(filters: FlagFilters, pagination: PaginationInput) {
@@ -350,6 +356,11 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	if (filters.status) conditions.push(eq(contentFlag.status, filters.status));
 	if (filters.search?.trim()) {
 		conditions.push(like(contentFlag.reason, `%${filters.search.trim()}%`));
+	}
+	if (filters.entityType) conditions.push(eq(contentFlag.entityType, filters.entityType));
+	if (filters.entityId) conditions.push(eq(contentFlag.entityId, filters.entityId));
+	if (filters.reportedByUserId) {
+		conditions.push(eq(contentFlag.reportedByUserId, filters.reportedByUserId));
 	}
 	const where = conditions.length ? and(...conditions) : undefined;
 

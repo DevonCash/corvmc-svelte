@@ -7,6 +7,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
+import { resolveImageUrl } from '$lib/server/storage';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -571,4 +572,19 @@ export const removeBandAvatar = form(z.object({}), async () => {
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserBands = query(z.string(), async (userId) => {
+	await requireStaff();
+	// listForUser is unfiltered by status, so pending invitations come through
+	// too — a staff member needs to see an invite that was never accepted.
+	const bands = await listForUser(userId);
+	return bands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
 });

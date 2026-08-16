@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { eventRsvp, type EventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { and, eq, sql } from 'drizzle-orm';
+import { event } from '$lib/server/db/schema/event';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Lightweight RSVP for non-ticketed events. No codes, no check-in, no capacity —
@@ -67,4 +68,36 @@ export async function countRsvps(eventId: string): Promise<number> {
 		.where(eq(eventRsvp.eventId, eventId));
 
 	return result?.count ?? 0;
+}
+
+export interface MemberRsvp {
+	id: string;
+	eventId: string;
+	eventTitle: string;
+	startsAt: Date;
+	eventStatus: string;
+	createdAt: Date;
+}
+
+/**
+ * Every event this member said they'd attend, newest first.
+ *
+ * Joined to `event` rather than returning bare rows: an RSVP with no title or
+ * date is not a fact anyone can read. Cancelled events are kept — "you RSVP'd
+ * to the show we cancelled" is exactly the thing staff get asked about.
+ */
+export async function listRsvpsForUser(userId: string): Promise<MemberRsvp[]> {
+	return db
+		.select({
+			id: eventRsvp.id,
+			eventId: eventRsvp.eventId,
+			eventTitle: event.title,
+			startsAt: event.startsAt,
+			eventStatus: event.status,
+			createdAt: eventRsvp.createdAt
+		})
+		.from(eventRsvp)
+		.innerJoin(event, eq(event.id, eventRsvp.eventId))
+		.where(eq(eventRsvp.userId, userId))
+		.orderBy(desc(event.startsAt));
 }

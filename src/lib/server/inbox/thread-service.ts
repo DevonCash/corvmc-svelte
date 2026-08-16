@@ -368,3 +368,41 @@ export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woke
 
 	return { woken: rows.length };
 }
+
+/**
+ * Threads whose external contact is this email address.
+ *
+ * Distinct from `listPortalThreads`, which finds threads a member is a
+ * *participant* of. Someone who emailed the club or used the contact form
+ * before they ever signed in has no participant row, so their correspondence is
+ * invisible on their member record without this. Matching is on the
+ * denormalized `contactEmail`, which is the only link that exists.
+ */
+export async function listThreadsByContactEmail(email: string, pagination: PaginationInput) {
+	// staffVisibleThread even though a direct thread has no contactEmail to match
+	// on. Relying on that would make this safe by accident: the day anyone
+	// denormalises an address onto a direct thread — for search, for a digest —
+	// this would start showing a member's private preview on the staff user page,
+	// and nothing here would look wrong. Cheap to state, expensive to rediscover.
+	const where = and(eq(inboxThread.contactEmail, email), staffVisibleThread);
+
+	const dataQuery = db
+		.select({
+			id: inboxThread.id,
+			channel: inboxThread.channel,
+			status: inboxThread.status,
+			subject: inboxThread.subject,
+			preview: inboxThread.preview,
+			messageCount: inboxThread.messageCount,
+			lastMessageAt: inboxThread.lastMessageAt,
+			createdAt: inboxThread.createdAt
+		})
+		.from(inboxThread)
+		.where(where)
+		.orderBy(desc(inboxThread.lastMessageAt))
+		.$dynamic();
+
+	const countQuery = db.select({ count: count() }).from(inboxThread).where(where);
+
+	return paginate(dataQuery, countQuery, pagination);
+}

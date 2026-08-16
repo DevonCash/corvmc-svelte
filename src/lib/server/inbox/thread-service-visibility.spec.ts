@@ -108,8 +108,14 @@ vi.mock('drizzle-orm', () => ({
 	})
 }));
 
-const { listThreads, getThread, getUnresolvedCount, countThreadsByStatus, staffVisibleThread } =
-	await import('./thread-service');
+const {
+	listThreads,
+	getThread,
+	getUnresolvedCount,
+	countThreadsByStatus,
+	listThreadsByContactEmail,
+	staffVisibleThread
+} = await import('./thread-service');
 
 beforeEach(() => {
 	touched = [];
@@ -160,6 +166,18 @@ describe('listThreads', () => {
 
 	it('still applies it when filtering by channel', async () => {
 		await listThreads({ channel: 'email' }, { page: 1, pageSize: 20 });
+		expect(wheres.every(containsDirectExclusion)).toBe(true);
+	});
+});
+
+describe('listThreadsByContactEmail', () => {
+	it('applies the exclusion, rather than relying on a null contactEmail', async () => {
+		// This one reads threads by a denormalised address and selects `preview`.
+		// A direct thread has no contactEmail today, so it cannot match — but that
+		// is an accident of what we happen to store, not a rule. This test is what
+		// makes it a rule.
+		await listThreadsByContactEmail('someone@example.com', { page: 1, pageSize: 10 });
+		expect(wheres.length).toBeGreaterThan(0);
 		expect(wheres.every(containsDirectExclusion)).toBe(true);
 	});
 });

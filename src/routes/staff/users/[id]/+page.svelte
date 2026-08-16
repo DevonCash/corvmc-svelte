@@ -1,526 +1,170 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import {
-		getUser,
-		getAllRoles,
-		getUserPayments,
-		getUserCredits,
-		updateUser,
-		deactivateUser,
-		reactivateUser,
-		purgeUser
-	} from '$lib/remote/users.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
-	import { getSuggestionStandingFor, restoreSuggestionTrust } from '$lib/remote/suggestions.remote';
-
-	const restoreFields = restoreListingTrust.fields;
-	const messagingFields = setMemberMessaging.fields;
-	const restoreSuggestionFields = restoreSuggestionTrust.fields;
-	import { AdjustCreditsAction } from '$lib/components/shared/actions';
-	import { goto } from '$app/navigation';
+	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { creditsToHours } from '$lib/config';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import { clubToday } from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import {
-		getMemberCertifications,
-		getActiveCertifications,
-		grantCertification,
-		revokeCertification
-	} from '$lib/remote/volunteer.remote';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { getUser, getUserOverview } from '$lib/remote/users.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import Table from '$lib/components/shared/Table.svelte';
-	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import {
-		getMemberMessagingStanding,
-		setMemberMessaging
-	} from '$lib/remote/direct-messages.remote';
+	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { TAB_LABELS, parseTab, type TabKey } from './tabs';
+	import UserScoreboard from './panels/UserScoreboard.svelte';
+	import OverviewPanel from './panels/OverviewPanel.svelte';
+	import SpacePanel from './panels/SpacePanel.svelte';
+	import BandsPanel from './panels/BandsPanel.svelte';
+	import VolunteerPanel from './panels/VolunteerPanel.svelte';
+	import MoneyPanel from './panels/MoneyPanel.svelte';
+	import CommsPanel from './panels/CommsPanel.svelte';
+	import AccountPanel from './panels/AccountPanel.svelte';
 
 	let id = $derived(page.params.id!);
-	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
 
-	let roleOptions = $derived((allRoles ?? []).map((r) => ({ id: String(r.id), label: r.name })));
+	// The only two queries the page itself makes. `getUserOverview` is what pays
+	// for the tabs: it backs the identity badges, the scoreboard, every tab
+	// badge and the whole Overview tab, so the default view of a member costs
+	// two requests instead of the twenty an untabbed version of this page would.
+	let [member, overview] = $derived(await Promise.all([getUser(id), getUserOverview(id)]));
 
-	let initialRoles = $derived(
-		(allRoles ?? []).filter((r) => member.roles.includes(r.name)).map((r) => String(r.id))
+	// Seeded from the query string and mirrored back into it, so a staff member
+	// can hand someone a link to the tab they are talking about. Local state
+	// rather than reading `page.url` directly, so a click re-renders immediately
+	// instead of waiting on the navigation that records it.
+	const initialTab = parseTab(page.url.searchParams.get('tab'));
+	let tab = $state<TabKey>(initialTab);
+
+	// Keep-alive. A plain {#if} would unmount the Account panel on tab change and
+	// silently discard a half-typed edit — Form's `guard` only fires on
+	// navigation, and switching tabs is not one. Mounting on first visit and
+	// hiding thereafter also means each panel's queries run exactly once.
+	const visited = new SvelteSet<TabKey>([initialTab]);
+	$effect(() => {
+		visited.add(tab);
+	});
+
+	// Writes the URL, never state — `tab` above stays the source of truth.
+	//
+	// `replaceState` (shallow routing) rather than `goto(..., { replaceState })`,
+	// which is what the filter bars on the list pages use. A tab change is not a
+	// navigation, but `goto` is one, and `FormGuard` hooks `beforeNavigate`: with
+	// the Account form dirty, every tab click cancelled the navigation and popped
+	// "You have unsaved changes", whose <dialog> then swallowed pointer events for
+	// the whole page. Shallow routing rewrites the address bar without running
+	// beforeNavigate or any load, which is exactly what mirroring local state
+	// wants. The address bar is all this needs to reach: `tab` is read back out of
+	// `page.url` only on mount, so a reload or a copied link still lands right.
+	$effect(() => {
+		const href = `${resolve(`/staff/users/${id}`)}${tab === 'overview' ? '' : `?tab=${tab}`}`;
+		if (location.pathname + location.search !== href) {
+			replaceState(href, {});
+		}
+	});
+
+	// Badges state a size, and are omitted at zero — a "0" on every tab of a new
+	// member's record is noise that hides the one tab with something in it.
+	const badge = (n: number) => (n > 0 ? n : undefined);
+
+	const attentionCount = $derived(
+		[
+			!!member.deletedAt,
+			overview.standing.requiresReview,
+			overview.suggestionStanding.requiresReview,
+			overview.counts.openFlagsAgainst > 0,
+			overview.counts.overdueLoans > 0,
+			overview.counts.unpaidReservations > 0,
+			overview.counts.pendingHourLogs > 0,
+			overview.counts.certsNeedingAttention > 0,
+			overview.volunteer.stage === 'blocked',
+			overview.membership.cancelAtPeriodEnd,
+			overview.marketing.suppressed,
+			overview.counts.unreadThreads > 0,
+			overview.counts.pendingBandInvites > 0
+		].filter(Boolean).length
 	);
 
-	const { fields: updateFields } = updateUser;
-	const { fields: deactivateFields } = deactivateUser;
-	const { fields: reactivateFields } = reactivateUser;
-	const { fields: purgeFields } = purgeUser;
+	const tabs = $derived([
+		{ key: 'overview', label: TAB_LABELS.overview, badge: badge(attentionCount) },
+		{ key: 'space', label: TAB_LABELS.space, badge: badge(overview.counts.upcomingReservations) },
+		{ key: 'bands', label: TAB_LABELS.bands, badge: badge(overview.counts.bands) },
+		{
+			key: 'volunteer',
+			label: TAB_LABELS.volunteer,
+			badge: badge(overview.counts.pendingHourLogs)
+		},
+		{ key: 'money', label: TAB_LABELS.money },
+		{
+			key: 'comms',
+			label: TAB_LABELS.comms,
+			badge: badge(overview.counts.openThreads + overview.counts.openFlagsAgainst)
+		},
+		{ key: 'account', label: TAB_LABELS.account }
+	]);
 </script>
 
-<Form remote={updateUser} guard successToast="Changes saved">
-	<PageHeader subtitle="User" title={member.name} backHref="/staff/users">
-		{#if member.deletedAt}
-			<Badge variant="error" size="md">Deactivated</Badge>
-		{/if}
-		<SubmitButton shortcut="mod+s">
-			{#snippet icon()}
-				<IconDeviceFloppy size={20} />
-			{/snippet}
-		</SubmitButton>
-	</PageHeader>
-	<PageContent width="3xl">
-		<div class="mb-6">
-			<!-- Profile card. Single column: this is the only card in the row, and the
-			     field grid inside it already reflows on container width. -->
-			<InfoCard title="Account Info">
-				<!-- The mutation target travels as a validated field; `params.id` is
-				     caller-controlled for remote calls and must not identify the record. -->
-				<input {...updateFields.id.as('hidden', id)} />
-				<div class="@container grid grid-cols-4 gap-x-2">
-					<Field
-						name="name"
-						type="text"
-						value={member.name}
-						class="col-span-4 @md:col-span-2 @lg:col-span-3"
-					/>
-					<Field
-						name="pronouns"
-						type="text"
-						value={member.pronouns ?? ''}
-						class="col-span-4 @md:col-span-2 @lg:col-span-1"
-					/>
-					<Field
-						name="email"
-						readonly={true}
-						type="email"
-						value={member.email}
-						class="col-span-4 @md:col-span-2 @lg:col-span-2"
-					/>
-					<Field
-						name="phone"
-						type="tel"
-						value={member.phone ?? ''}
-						class="col-span-4 @md:col-span-2 @lg:col-span-2"
-					/>
-					<Field
-						class="col-span-4 "
-						name="roles"
-						type="tags"
-						options={roleOptions}
-						multiple={true}
-						value={initialRoles}
-					/>
-				</div>
-			</InfoCard>
+<PageHeader subtitle="Member" title={member.name} backHref="/staff/users">
+	{#if member.deletedAt}
+		<Badge variant="error" size="md">Deactivated</Badge>
+	{/if}
+	{#if overview.membership.sustaining}
+		<Badge variant="success" size="md">Sustaining</Badge>
+	{/if}
+	{#each member.roles as role (role)}
+		<Badge variant="info" size="md">{role}</Badge>
+	{/each}
+</PageHeader>
+
+<PageContent width="full">
+	<!-- Identity strip. Everything here is true regardless of which tab is open,
+	     which is exactly why it sits above the TabBar rather than inside a tab. -->
+	<div class="flex flex-wrap items-center gap-4">
+		<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-16" />
+		<div class="min-w-0">
+			<div class="flex flex-wrap items-baseline gap-2">
+				<span class="text-lg font-medium">{member.name}</span>
+				{#if member.pronouns}
+					<span class="text-sm opacity-60">{member.pronouns}</span>
+				{/if}
+				{#if member.memberNumber}
+					<span class="text-sm opacity-60">#{member.memberNumber}</span>
+				{/if}
+			</div>
+			<div class="text-sm opacity-60">
+				<a class="link" href="mailto:{member.email}">{member.email}</a>
+				{#if member.phone}
+					· <a class="link" href="tel:{member.phone}">{member.phone}</a>
+				{/if}
+			</div>
 		</div>
+	</div>
 
-		{#await getMemberStanding(id) then standing}
-			{#if standing.requiresReview}
-				<!-- Only rendered when it's true: a "standing: fine" card on every
-				     member would be noise, and the point of this one is that it
-				     appears when something happened. -->
-				<InfoCard title="Community listings">
-					<p class="text-sm">
-						This member's listings are reviewed by staff before they go on the public calendar,
-						after a report was upheld against one of them.
-					</p>
-					{#if standing.reason}
-						<p class="mt-1 text-sm opacity-70">Staff note: "{standing.reason}"</p>
-					{/if}
-					<div class="mt-3">
-						<Action
-							action={restoreListingTrust}
-							label="Restore direct publishing"
-							successToast="Trust restored"
-							class="btn-sm"
-							onsuccess={() => invalidateAll()}
-						>
-							{#snippet form()}
-								<input {...restoreFields.userId.as('hidden', id)} />
-								<p class="py-2">Let this member publish listings straight to the calendar again?</p>
-							{/snippet}
-						</Action>
-					</div>
-				</InfoCard>
-			{/if}
-		{/await}
+	<UserScoreboard {overview} />
 
-		<!-- Suggestion standing is tracked separately from listing standing: an
-		     upheld report about an event shouldn't quietly cost someone their
-		     suggestion-posting rights, or the reverse. -->
-		{#await getSuggestionStandingFor(id) then suggestionStanding}
-			{#if suggestionStanding.requiresReview}
-				<InfoCard title="Suggestions">
-					<p class="text-sm">
-						This member's suggestions are reviewed by staff before they go on the board, after a
-						report was upheld against one of them.
-					</p>
-					{#if suggestionStanding.reason}
-						<p class="mt-1 text-sm opacity-70">Staff note: "{suggestionStanding.reason}"</p>
-					{/if}
-					{#if suggestionStanding.triggeringFlagId}
-						<p class="mt-1 text-sm">
-							<a class="link" href={resolve(`/staff/flags/${suggestionStanding.triggeringFlagId}`)}>
-								See the report
-							</a>
-						</p>
-					{/if}
-					<div class="mt-3">
-						<Action
-							action={restoreSuggestionTrust}
-							label="Restore posting trust"
-							successToast="Trust restored"
-							class="btn-sm"
-							onsuccess={() => invalidateAll()}
-						>
-							{#snippet form()}
-								<input {...restoreSuggestionFields.userId.as('hidden', id)} />
-								<p class="py-2">Let this member post suggestions straight to the board again?</p>
-							{/snippet}
-						</Action>
-					</div>
-				</InfoCard>
-			{/if}
-		{/await}
+	<TabBar {tabs} active={tab} onchange={(key) => (tab = key as TabKey)} />
 
-		{#await getMemberMessagingStanding(id) then messaging}
-			<InfoCard title="Direct messages">
-				<p class="text-sm">
-					{#if messaging.status === 'disabled'}
-						Direct messaging is switched off for this account.
-					{:else if messaging.status === 'restricted'}
-						This member can reply to conversations they are already in, but cannot start new ones.
-					{:else}
-						This member can send and receive direct messages.
-					{/if}
-				</p>
-				{#if messaging.reason}
-					<p class="mt-1 text-sm opacity-70">Note: "{messaging.reason}"</p>
-				{/if}
-				{#if messaging.status !== 'none' && messaging.source === 'member'}
-					<p class="mt-1 text-sm opacity-70">They switched this off themselves.</p>
-				{/if}
-
-				<!-- Switching messaging off is how we handle the occasional under-18
-				     member: the site has no age of its own, so this is a lever staff
-				     throw rather than something that happens automatically. -->
-				<div class="mt-3 flex flex-wrap gap-2">
-					{#if messaging.status !== 'disabled'}
-						<Action
-							action={setMemberMessaging}
-							label="Switch messaging off"
-							successToast="Messaging switched off"
-							class="btn-sm"
-							onsuccess={() => invalidateAll()}
-						>
-							{#snippet form()}
-								<input {...messagingFields.userId.as('hidden', id)} />
-								<input {...messagingFields.status.as('hidden', 'disabled')} />
-								<p class="py-2">
-									They will not be able to send or receive direct messages, and their existing
-									conversations will disappear from the other members' lists.
-								</p>
-								<label class="form-control w-full">
-									<div class="label"><span class="label-text">Reason (shown to them)</span></div>
-									<input
-										{...messagingFields.reason.as('text')}
-										class="input input-bordered w-full"
-										maxlength="500"
-										placeholder="e.g. Under 18"
-									/>
-								</label>
-							{/snippet}
-						</Action>
-					{/if}
-					{#if messaging.status !== 'none'}
-						<Action
-							action={setMemberMessaging}
-							label="Restore messaging"
-							successToast="Messaging restored"
-							class="btn-sm btn-outline"
-							onsuccess={() => invalidateAll()}
-						>
-							{#snippet form()}
-								<input {...messagingFields.userId.as('hidden', id)} />
-								<input {...messagingFields.status.as('hidden', 'none')} />
-								<p class="py-2">Let this member send and receive direct messages again?</p>
-							{/snippet}
-						</Action>
-					{/if}
-				</div>
-			</InfoCard>
-		{/await}
-
-		{#await getUserCredits(id) then credits}
-			<InfoCard title="Credits">
-				<div class="flex gap-6 mb-3">
-					<div>
-						<p class="text-2xl font-medium">{creditsToHours(credits.free_hours ?? 0)}</p>
-						<p class="text-sm opacity-60">Free Hours</p>
-					</div>
-					<div>
-						<p class="text-2xl font-medium">{credits.equipment_credits ?? 0}</p>
-						<p class="text-sm opacity-60">Equipment Credits</p>
-					</div>
-				</div>
-				<AdjustCreditsAction userId={id} />
-			</InfoCard>
-		{/await}
-
-		<!--
-			Clearances. Revoke rather than delete is the normal way to end one: the
-			window it covered stays answerable, which is the entire reason the table
-			is append-only. A renewal is a second Grant, not an edit.
-		-->
-		{#await Promise.all( [getMemberCertifications(id), getActiveCertifications()] ) then [held, catalog]}
-			<InfoCard title="Certifications">
-				{#snippet header(title)}
-					<div class="flex items-center justify-between gap-2">
-						<h3 class="card-title">{title}</h3>
-						{#if catalog.length > 0}
-							<Action
-								action={grantCertification}
-								label="Grant"
-								class="btn-sm"
-								modalTitle="Grant a certification"
-								submitLabel="Grant"
-								successToast="Certification granted"
-							>
-								{#snippet form()}
-									<input type="hidden" name="userId" value={id} />
-									<FormField
-										name="certificationId"
-										label="Certification"
-										type="select"
-										options={catalog.map((c) => ({ value: c.id, label: c.name }))}
-									/>
-									<FormField
-										name="grantedOn"
-										label="Granted on"
-										type="date"
-										value={clubToday()}
-										max={clubToday()}
-										description="Expiry is worked out from this date and locked in now — later edits to the catalog won't move it."
-									/>
-									<FormField
-										name="reference"
-										label="Card or licence number"
-										type="text"
-										description="For an external card. Leave blank for a CMC clearance."
-									/>
-									<FormField name="notes" label="Notes" type="textarea" />
-								{/snippet}
-							</Action>
-						{/if}
-					</div>
-				{/snippet}
-
-				{#if held.length === 0}
-					<p class="text-sm opacity-60">Nothing on record.</p>
-				{:else}
-					<ul class="flex flex-col gap-3">
-						{#each held as record (record.id)}
-							<li class="flex items-start justify-between gap-3">
-								<div class="min-w-0">
-									<div class="flex flex-wrap items-center gap-2">
-										<span class="font-medium">{record.certificationName}</span>
-										<span
-											class="badge badge-sm {record.state === 'current'
-												? 'badge-success'
-												: record.state === 'expiring'
-													? 'badge-warning'
-													: record.state === 'expired'
-														? 'badge-error'
-														: 'badge-neutral'}">{record.state}</span
-										>
-									</div>
-									<div class="text-xs opacity-60">
-										Granted {formatDateShortYear(record.grantedAt)}{record.grantedByName
-											? ` by ${record.grantedByName}`
-											: ''}{record.expiresAt
-											? ` · expires ${formatDateShortYear(record.expiresAt)}`
-											: ' · no expiry'}
-									</div>
-									{#if record.reference}
-										<div class="text-xs opacity-60">#{record.reference}</div>
-									{/if}
-									{#if record.revokedReason}
-										<div class="text-xs text-error">Revoked: {record.revokedReason}</div>
-									{/if}
-								</div>
-
-								{#if !record.revokedAt}
-									<Action
-										action={revokeCertification.for(record.id)}
-										label="Revoke"
-										class="btn-ghost btn-xs text-error"
-										modalTitle="Revoke {record.certificationName}?"
-										submitLabel="Revoke"
-										submitClass="btn-error"
-										successToast="Certification revoked"
-									>
-										{#snippet form()}
-											<input type="hidden" name="id" value={record.id} />
-											<input type="hidden" name="userId" value={id} />
-											<p class="text-sm">
-												The record stays — the period it covered is history. They lose it from
-												today, so shifts they already worked still read as cleared.
-											</p>
-											<FormField
-												name="reason"
-												label="Why"
-												type="textarea"
-												description="Shown to staff on this page. Most reasons are blameless — a replaced desk, an expired card, a change of duties."
-											/>
-										{/snippet}
-									</Action>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</InfoCard>
-		{/await}
-
-		<InfoCard title="Details" class="bg-base-200 shadow-none">
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">User ID</dt>
-				<dd class="font-mono text-xs">{member.id}</dd>
-
-				<dt class="opacity-60">Stripe ID</dt>
-				<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
-
-				<dt class="opacity-60">Joined</dt>
-				<dd>{new Date(member.createdAt).toLocaleString()}</dd>
-
-				{#if member.deletedAt}
-					<dt class="opacity-60">Deactivated</dt>
-					<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
-				{/if}
-			</dl>
-		</InfoCard>
-
-		<InfoCard title="Danger Zone" class="border border-error/30 bg-error/5 shadow-none mt-6">
-			{#if member.deletedAt}
-				<p class="text-sm opacity-70 mb-3">
-					This account is deactivated. Reactivate it to restore access, or permanently delete it.
-				</p>
-				<div class="flex gap-2">
-					<Action
-						action={reactivateUser}
-						label="Reactivate"
-						successToast="Account reactivated"
-						class="btn-success btn-sm"
-						onsuccess={() => void getUser(id).refresh()}
-					>
-						{#snippet form()}
-							<input {...reactivateFields.id.as('hidden', id)} />
-							<p class="py-4">Reactivate this account?</p>
-						{/snippet}
-					</Action>
-					<Action
-						action={purgeUser}
-						label="Delete permanently"
-						successToast="Account deleted"
-						class="btn-error btn-sm"
-						onsuccess={() => goto(resolve('/staff/users'))}
-					>
-						{#snippet form()}
-							<input {...purgeFields.id.as('hidden', id)} />
-							<p class="py-4">
-								Permanently delete <strong>{member.name}</strong>? This cannot be undone. The
-								account must own no bands.
-							</p>
-						{/snippet}
-					</Action>
-				</div>
-			{:else}
-				<p class="text-sm opacity-70 mb-3">
-					Deactivating signs this member out, hides them from the directory, cancels all of their
-					future reservations, and cancels their membership subscription. Reactivating restores
-					their access, but <strong
-						>the cancelled reservations and subscription are not restored</strong
-					> — they would have to be rebooked and resubscribed.
-				</p>
-				<Action
-					action={deactivateUser}
-					label="Deactivate"
-					successToast="Account deactivated"
-					class="btn-error btn-sm"
-					onsuccess={() => void getUser(id).refresh()}
-				>
-					{#snippet form()}
-						<input {...deactivateFields.id.as('hidden', id)} />
-						<p class="py-4">
-							Deactivate this account? All future reservations and their membership subscription
-							will be cancelled, and reactivating will not bring them back.
-						</p>
-					{/snippet}
-				</Action>
-			{/if}
-		</InfoCard>
-	</PageContent>
-</Form>
-
-<PageContent width="3xl">
-	{#await getUserPayments(id)}
-		<div class="flex items-center justify-center p-6">
-			<span class="loading loading-spinner loading-sm"></span>
+	{#if visited.has('overview')}
+		<div class="space-y-6" class:hidden={tab !== 'overview'}>
+			<OverviewPanel {overview} {member} onjump={(next) => (tab = next)} />
 		</div>
-	{:then payments}
-		<InfoCard title="Payment Records" class="mt-6">
-			{#if payments.length === 0}
-				<!-- Rendered even when empty: without it, "no payments" and "the query
-				     failed" were indistinguishable — both showed nothing at all. -->
-				<EmptyState
-					title="No payments yet"
-					description="Payments appear here once this member pays for a reservation or membership."
-				/>
-			{:else}
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Paid</th>
-						<th class="cell-num">Amount</th>
-						<th class="col-extra">Record</th>
-					{/snippet}
-					{#each payments as p (p.id)}
-						<tr class="hover">
-							<td class="w-px"><StatusBadge status={p.status} /></td>
-							<!-- Method was its own column; it qualifies the payment, so it is
-							     the subline. -->
-							<td class="cell-primary">
-								<div class="font-medium whitespace-nowrap">
-									{formatDateTimeShort(new Date(p.paidAt))}
-								</div>
-								<div class="text-sm opacity-60">{p.paymentMethod}</div>
-							</td>
-							<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
-							<td class="col-extra">
-								<div class="flex items-center gap-2">
-									<CopyableId value={p.id} label="Stripe" />
-									{#if p.reservationId}
-										<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
-											View
-										</Button>
-									{/if}
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</Table>
-			{/if}
-		</InfoCard>
-	{:catch}
-		<Alert type="warning">Could not load payment records.</Alert>
-	{/await}
+	{/if}
+	{#if visited.has('space')}
+		<div class="space-y-6" class:hidden={tab !== 'space'}><SpacePanel {id} /></div>
+	{/if}
+	{#if visited.has('bands')}
+		<div class="space-y-6" class:hidden={tab !== 'bands'}><BandsPanel {id} /></div>
+	{/if}
+	{#if visited.has('volunteer')}
+		<div class="space-y-6" class:hidden={tab !== 'volunteer'}><VolunteerPanel {id} /></div>
+	{/if}
+	{#if visited.has('money')}
+		<div class="space-y-6" class:hidden={tab !== 'money'}><MoneyPanel {id} /></div>
+	{/if}
+	{#if visited.has('comms')}
+		<div class="space-y-6" class:hidden={tab !== 'comms'}>
+			<CommsPanel {id} email={member.email} />
+		</div>
+	{/if}
+	{#if visited.has('account')}
+		<div class="space-y-6" class:hidden={tab !== 'account'}><AccountPanel {id} {member} /></div>
+	{/if}
 </PageContent>

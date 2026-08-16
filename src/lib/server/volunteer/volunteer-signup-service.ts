@@ -6,7 +6,7 @@ import {
 	volunteerShiftFeedback
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
@@ -414,4 +414,43 @@ export async function listCompletionsAwaitingFeedback(
 				sql`${volunteerShift.endsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
 		);
+}
+
+export interface MemberSignup {
+	signupId: string;
+	shiftId: string;
+	roleName: string;
+	startsAt: Date;
+	endsAt: Date;
+	status: VolunteerSignupStatus;
+	shiftCancelledAt: Date | null;
+}
+
+/**
+ * One member's shift history, newest first.
+ *
+ * Cancelled signups and cancelled shifts are both included. The staff-facing
+ * question this answers is usually "did they turn up?", and a record that
+ * silently drops the no-shows and the withdrawals cannot answer it.
+ */
+export async function listSignupsForUser(
+	userId: string,
+	options: { limit?: number } = {}
+): Promise<MemberSignup[]> {
+	return db
+		.select({
+			signupId: volunteerSignup.id,
+			shiftId: volunteerShift.id,
+			roleName: volunteerRole.name,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
+			status: volunteerSignup.status,
+			shiftCancelledAt: volunteerShift.cancelledAt
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.where(eq(volunteerSignup.userId, userId))
+		.orderBy(desc(volunteerShift.startsAt))
+		.limit(options.limit ?? 20);
 }
