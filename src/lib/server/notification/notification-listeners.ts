@@ -984,4 +984,90 @@ export function registerAllNotificationListeners(): void {
 			}
 		});
 	});
+
+	// --- Staff replied to a suggestion (notify its author) ---
+	domainEvents.on('suggestion.responded', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+		await dispatch({
+			type: 'suggestion_responded',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: `Staff responded to "${event.title}"`,
+			body: event.responseBody ?? `Marked ${event.statusLabel.toLowerCase()}.`,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `About your suggestion: ${event.title}`,
+					heading: 'Staff replied to your suggestion',
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [
+						{
+							text: `"${event.title}" is now marked ${event.statusLabel.toLowerCase()}.`
+						}
+					],
+					// The reply is the whole point of the email — a status word alone
+					// tells a member what happened but never why.
+					...(event.responseBody ? { quote: event.responseBody } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- A suggestion moved on or off the board (notify its author) ---
+	//
+	// One listener for all four moves. To the author they are one question —
+	// where did my suggestion go? — so they get one answer, worded for the case.
+	domainEvents.on('suggestion.moderated', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+
+		const copy = {
+			under_review: {
+				title: `"${event.title}" was held for review`,
+				heading: 'Your suggestion is on hold',
+				text: `Someone reported "${event.title}", so it's off the board while staff take a look. Most reports are dismissed, and if this one is, your suggestion goes straight back up.`
+			},
+			visible: {
+				title: `"${event.title}" is back on the board`,
+				heading: 'Your suggestion is back',
+				text: `"${event.title}" is on the suggestion board again. Thanks for your patience.`
+			},
+			pending_review: {
+				title: `"${event.title}" is waiting for review`,
+				heading: 'Your suggestion is waiting for review',
+				text: `"${event.title}" will go on the board once staff have looked at it.`
+			},
+			hidden: {
+				title: `"${event.title}" was taken down`,
+				heading: 'Your suggestion was taken down',
+				text: `Staff removed "${event.title}" from the suggestion board.`
+			}
+		}[event.visibility] ?? {
+			title: `"${event.title}" was updated`,
+			heading: 'Your suggestion was updated',
+			text: `There's an update on "${event.title}".`
+		};
+
+		await dispatch({
+			type: 'suggestion_moderated',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: copy.title,
+			body: event.note ?? undefined,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: copy.title,
+					heading: copy.heading,
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [{ text: copy.text }],
+					// A takedown without a reason is the thing members write in about.
+					...(event.note ? { quote: event.note } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
 }

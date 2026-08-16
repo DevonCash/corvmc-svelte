@@ -262,6 +262,36 @@ export interface InboxMessageSentEvent {
 	sentByUserId: string;
 }
 
+/** Staff set a status and/or wrote a public reply on a member's suggestion. */
+export interface SuggestionRespondedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	status: string;
+	statusLabel: string;
+	responseBody: string | null;
+}
+
+/**
+ * A member's suggestion moved on or off the board. Covers all four reasons —
+ * withheld by a report, restored after a dismissal, approved out of review, and
+ * hidden by staff — because to the author they are one question: where did my
+ * suggestion go?
+ */
+export interface SuggestionModeratedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	visibility: string;
+	note: string | null;
+	/** Present when a report caused the move. */
+	flagId?: string;
+}
+
 export interface ContentFlaggedEvent {
 	flagId: string;
 	entityType: string;
@@ -396,6 +426,8 @@ export type DomainEvents = {
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
 	'content.flagged': ContentFlaggedEvent;
+	'suggestion.responded': SuggestionRespondedEvent;
+	'suggestion.moderated': SuggestionModeratedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;

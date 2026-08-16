@@ -11,7 +11,8 @@
 		IconUser,
 		IconSettings,
 		IconUsersGroup,
-		IconHeartHandshake
+		IconHeartHandshake,
+		IconBulb
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -68,6 +69,11 @@
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
 			</Nav.Item>
 		{/if}
+		<!-- Not flag-gated: a suggestion board with no audience collects
+		     single-vote posts, so there is nothing useful to dark-launch. -->
+		<Nav.Item href="/member/suggestions" label="Suggestions">
+			{#snippet icon()}<IconBulb />{/snippet}
+		</Nav.Item>
 
 		<Nav.Group title="Bands">
 			{#snippet action()}

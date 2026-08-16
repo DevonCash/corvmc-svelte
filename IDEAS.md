@@ -20,6 +20,8 @@ Manage volunteer sign-ups, shift scheduling, and hour tracking for events and ve
 
 Formal voting system for a member-driven non-profit. Staff or board create proposals (board elections, budget priorities, policy changes, event programming) with a defined voting window. Members cast ballots, results publish automatically. Could also power a lightweight feature-request board where members upvote ideas to help prioritize development.
 
+**Progress:** The lightweight half is built. `/member/suggestions` is a categorized board where members post ideas about anything — gear, programming, the space, policy, the website — upvote what they agree with, and read a public staff response with a status. Staff get the board sorted by votes, plus duplicate merging (votes transfer, deduped) and moderation: a member's report pulls a suggestion off the board pending review, and an upheld report puts the author's future suggestions through review first, reusing the standing rule community listings established. Not flag-gated, deliberately — a board with no audience collects single-vote posts. Specced in `docs/specs/member-suggestions-spec.md`. Formal balloting is still unbuilt and is a different feature: ballot secrecy, eligibility rules, and a close date have no counterpart in an upvote counter.
+
 ### Merch Consignment
 
 Let bands list merch for sale at the venue. Track inventory, sales splits, and payouts. Ties into the existing band and payments systems.
