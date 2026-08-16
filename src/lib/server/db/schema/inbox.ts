@@ -150,13 +150,22 @@ export const inboxParticipant = sqliteTable(
 		role: text('role', { enum: inboxParticipantRoles }).notNull().default('member'),
 		/** Read cursor for this participant. Unread ⇔ thread.lastMessageAt > lastReadAt. */
 		lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+		/**
+		 * When this participant agreed to the conversation. Only meaningful on
+		 * `direct` threads, where null means the thread is still a *request*: the
+		 * person who started it is stamped at creation, the recipient stays null
+		 * until they accept. Portal rows leave it null and never consult it —
+		 * every query that reads this also constrains channel = 'direct'.
+		 */
+		acceptedAt: integer('accepted_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		uniqueIndex('idx_inbox_participant_thread_user').on(t.threadId, t.userId),
-		index('idx_inbox_participant_user').on(t.userId)
+		index('idx_inbox_participant_user').on(t.userId),
+		index('idx_inbox_participant_user_accepted').on(t.userId, t.acceptedAt)
 	]
 );
 

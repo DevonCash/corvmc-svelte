@@ -120,6 +120,27 @@ export async function getInterestsForUser(userId: string): Promise<string[]> {
 }
 
 /**
+ * The same set with role names attached, for reading rather than editing.
+ *
+ * `getInterestsForUser` returns bare ids because the member's form ticks
+ * checkboxes by id; a staff member looking at someone's record needs the names.
+ */
+export async function listInterestsForUser(
+	userId: string
+): Promise<{ roleId: string; roleName: string; group: VolunteerRoleGroup }[]> {
+	return db
+		.select({
+			roleId: volunteerRole.id,
+			roleName: volunteerRole.name,
+			group: volunteerRole.group
+		})
+		.from(volunteerRoleInterest)
+		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerRoleInterest.volunteerRoleId))
+		.where(eq(volunteerRoleInterest.userId, userId))
+		.orderBy(asc(volunteerRole.name));
+}
+
+/**
  * How many people are interested in each role — the count column on the staff
  * roles table.
  *

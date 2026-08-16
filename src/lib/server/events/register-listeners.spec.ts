@@ -40,12 +40,14 @@ vi.mock('$lib/server/notification/notification-listeners', () => ({
 // registration. Mock them so registration settles without loading the real
 // (heavy, db-backed) implementations, which otherwise causes
 // vi.dynamicImportSettled() to time out.
+const mockDispatch = vi.fn();
 vi.mock('$lib/server/notification/dispatcher', () => ({
-	dispatch: vi.fn()
+	dispatch: (...args: unknown[]) => mockDispatch(...args)
 }));
 
+const mockListStaffUsers = vi.fn().mockResolvedValue([]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: vi.fn().mockResolvedValue([])
+	listStaffUsers: (...args: unknown[]) => mockListStaffUsers(...args)
 }));
 
 vi.mock('$lib/server/reservation/waitlist-service', () => ({
@@ -130,5 +132,53 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		expect(mockRegisterAllNotificationListeners).toHaveBeenCalled();
+	});
+});
+
+describe('inbox.message_received — staff fan-out', () => {
+	// This listener notifies *every* staff member and puts `event.preview` — the
+	// first 200 characters of the message — in the notification body. Every
+	// channel it fires for is the org's own correspondence, except one.
+	//
+	// Without the channel check, the opening words of every private member↔member
+	// message would land in every staff member's notification bell. That is the
+	// single worst way this feature could leak, and it is a one-line guard, which
+	// is exactly why it needs a test sitting on it.
+	async function fire(event: Record<string, unknown>) {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+		await registeredHandlers['inbox.message_received'][0]({
+			name: 'inbox.message_received',
+			data: event
+		});
+	}
+
+	const message = (channel: string) => ({
+		threadId: 'thread-1',
+		messageId: 'msg-1',
+		channel,
+		contactName: 'Robin',
+		preview: 'the private words of a member'
+	});
+
+	beforeEach(() => {
+		mockListStaffUsers.mockResolvedValue([{ id: 'staff-1', email: 'sam@corvmc.org' }]);
+	});
+
+	it('tells staff about a contact-form message', async () => {
+		await fire(message('web'));
+		expect(mockDispatch).toHaveBeenCalled();
+	});
+
+	it('tells nobody about a direct message', async () => {
+		await fire(message('direct'));
+		expect(mockDispatch).not.toHaveBeenCalled();
+	});
+
+	it('does not even look up the staff list for a direct message', async () => {
+		// Returning early *before* listStaffUsers, not filtering afterwards.
+		await fire(message('direct'));
+		expect(mockListStaffUsers).not.toHaveBeenCalled();
 	});
 });

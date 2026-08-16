@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import {
 	create,
 	update,
@@ -15,7 +16,10 @@ import {
 	listAll as listAllEvents,
 	listUpcoming,
 	listPast,
-	getEventLineup
+	getEventLineup,
+	listMemberUpcomingShows,
+	listMemberPastShows,
+	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
 	getConflictDetails,
@@ -1118,3 +1122,26 @@ export const purchaseTickets = form(
 		return { redirectUrl: result.checkoutUrl! };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserShows = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [upcoming, past, pastCount] = await Promise.all([
+		listMemberUpcomingShows(userId),
+		listMemberPastShows(userId, { limit: 5, offset: 0 }),
+		countMemberPastShows(userId)
+	]);
+	return { upcoming, past, pastCount };
+});
+
+export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
+	return { tickets, rsvps };
+});

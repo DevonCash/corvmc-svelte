@@ -107,6 +107,11 @@
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Certifications a member holds. Expiring is a warning rather than an
+		// error: the clearance is still valid, it just needs booking in.
+		current: 'badge-success',
+		expiring: 'badge-warning',
+		expired: 'badge-error',
 		// Volunteer hour logs
 		approved: 'badge-success',
 		rejected: 'badge-error',
@@ -203,6 +208,12 @@
 		merged: { icon: IconArrowMerge, color: 'text-base-content' },
 		under_review: { icon: IconAlertTriangle, color: 'text-warning' },
 		hidden: { icon: IconEyeOff, color: 'text-base-content' },
+
+		// Certification a member holds. `revoked` is shared with platform invites
+		// above; only the three lapse states are new here.
+		current: { icon: IconCircleCheck, color: 'text-success' },
+		expiring: { icon: IconAlertTriangle, color: 'text-warning' },
+		expired: { icon: IconCircleX, color: 'text-error' },
 
 		// Volunteer hour log statuses
 		approved: { icon: IconCircleCheckFilled, color: 'text-success' },

@@ -2,7 +2,7 @@
 	import Action from '../Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { submitFlag } from '$lib/remote/flags.remote';
-	import type { FlagEntityType } from '$lib/server/db/schema/flag';
+	import type { MemberReportableEntityType } from '$lib/server/db/schema/flag';
 
 	let {
 		entityType,
@@ -11,7 +11,9 @@
 		class: className = 'btn-ghost btn-sm',
 		...rest
 	}: {
-		entityType: FlagEntityType;
+		// Narrowed: a conversation is reported through ReportDirectThreadAction,
+		// which goes via a remote that checks the reporter is in it.
+		entityType: MemberReportableEntityType;
 		entityId: string;
 		entityLabel?: string;
 		class?: string;

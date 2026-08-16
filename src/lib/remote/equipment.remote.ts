@@ -448,3 +448,15 @@ export const returnLoan = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserLoans = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listUserLoans(userId);
+});

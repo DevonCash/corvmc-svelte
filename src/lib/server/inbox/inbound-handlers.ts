@@ -153,6 +153,16 @@ export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 	// mail from the same address start merging into it.
 	if (hashedThreadId) {
 		const thread = await findThreadById(hashedThreadId);
+
+		// Never into a member↔member conversation. Routing below is deliberately
+		// channel-agnostic — see the comment above — and that is right for every
+		// channel the org actually corresponds on. A direct thread is not one of
+		// them: nothing we send carries a reply address for it, so anything
+		// arriving here with one is either misrouted or forged. Filing it would
+		// write a message into a private conversation with a null authorUserId,
+		// which renders as "not yours" to *both* participants.
+		if (thread?.channel === 'direct') return { thread: null, message: null };
+
 		if (thread) {
 			if (thread.status === 'resolved') {
 				await reopenThread(thread.id);

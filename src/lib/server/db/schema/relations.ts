@@ -82,6 +82,37 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.contentFlag.id
 		})
 	},
+	// Two FKs to user (blocker and blocked), so both need an alias.
+	userBlock: {
+		blocker: t.one.user({
+			from: t.userBlock.blockerUserId,
+			to: t.user.id,
+			alias: 'userBlock_blocker'
+		}),
+		blocked: t.one.user({
+			from: t.userBlock.blockedUserId,
+			to: t.user.id,
+			alias: 'userBlock_blocked'
+		})
+	},
+	// Same shape as communityEventStanding: the member, plus whoever last
+	// changed it.
+	messagingStanding: {
+		user: t.one.user({
+			from: t.messagingStanding.userId,
+			to: t.user.id,
+			alias: 'messagingStanding_user'
+		}),
+		updatedBy: t.one.user({
+			from: t.messagingStanding.updatedByUserId,
+			to: t.user.id,
+			alias: 'messagingStanding_updatedBy'
+		}),
+		triggeringFlag: t.one.contentFlag({
+			from: t.messagingStanding.triggeringFlagId,
+			to: t.contentFlag.id
+		})
+	},
 	equipmentCategory: {
 		equipment: t.many.equipment()
 	},
