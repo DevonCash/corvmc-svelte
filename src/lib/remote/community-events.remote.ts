@@ -8,6 +8,7 @@ import {
 	restoreCommunityTrust,
 	listCommunityEventsForUser,
 	listRejectedForUser,
+	countPublishedListingsBy,
 	listPendingSubmissions,
 	countPendingSubmissions,
 	checkForDuplicate,
@@ -385,4 +386,21 @@ export const restoreListingTrust = form(z.object({ userId: z.string().min(1) }),
 	await restoreCommunityTrust({ userId: data.userId, staffId: staff.id });
 	void getMemberStanding(data.userId).refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserListings = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [listings, rejected, publishedCount] = await Promise.all([
+		listCommunityEventsForUser(userId),
+		listRejectedForUser(userId),
+		countPublishedListingsBy(userId)
+	]);
+	return { listings, rejected, publishedCount };
 });

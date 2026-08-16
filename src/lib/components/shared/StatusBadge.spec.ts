@@ -38,6 +38,10 @@ const derivedStatuses = {
 	clearance: ['cleared', 'uncleared'],
 	// suggestion-service.ts `displayStatus` — derived from mergedIntoId, never stored
 	suggestionDerived: ['merged'],
+
+	// member-certification-service.ts `certificationState` — the state of one
+	// held clearance, shown on the staff user record and the clearances list
+	certificationState: ['current', 'expiring', 'expired', 'revoked'],
 	// generic
 	generic: ['pending', 'error']
 } as const;
