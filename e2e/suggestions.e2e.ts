@@ -109,17 +109,26 @@ test.describe('suggestion board', () => {
 		await page.goto(`/member/suggestions/${SEED_SG_DISMISS_ID}`);
 
 		const before = (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount;
+		const voteButton = page.getByRole('button', { name: /^\d+$/ }).first();
 
-		await page.getByRole('button', { name: /^\d+$/ }).first().click();
+		await voteButton.click();
 		await expect
 			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before + 1);
 
+		// Wait for the button itself to catch up before clicking it again. The poll
+		// above settles on the *database*, which the write reaches before the
+		// component has finished re-rendering — so clicking straight after it can
+		// land on an element that is mid-swap, and Playwright reports an
+		// unactionable element rather than anything to do with voting.
+		await expect(voteButton).toHaveAccessibleName(String(before + 1));
+
 		// Clicking again removes it rather than adding a second.
-		await page.getByRole('button', { name: /^\d+$/ }).first().click();
+		await voteButton.click();
 		await expect
 			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before);
+		await expect(voteButton).toHaveAccessibleName(String(before));
 	});
 
 	test('a merged suggestion carries the union of both voter sets, not the sum', async ({

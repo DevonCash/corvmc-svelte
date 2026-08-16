@@ -3,6 +3,27 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
 	// Seed the local D1 (member + payable reservation) before any test runs.
 	globalSetup: './e2e/global-setup.ts',
+	/**
+	 * One worker, because every test shares one database.
+	 *
+	 * Playwright defaults to half the CPU count — two on a GitHub runner — and
+	 * both workers drive the *same* preview server over the *same* local D1.
+	 * Concurrent writes to one SQLite file give `SQLITE_BUSY_SNAPSHOT`, which is
+	 * exactly what it says: a transaction tried to upgrade to a write after
+	 * another connection had already written since its read snapshot began.
+	 *
+	 * workerd reports that as `SENTRY_DO SQLite failed; NOSENTRY database is
+	 * locked`, D1 then answers `Failed to parse body as JSON, got: Error:
+	 * internal error`, and unrelated requests 500 for a few seconds. The test
+	 * Playwright blames is whichever one happened to be mid-flight, never the one
+	 * that caused it — three runs on one commit blamed three different specs.
+	 *
+	 * There is no busy-timeout knob to turn: D1 under miniflare is workerd's own
+	 * SQLite, so the only lever is to stop writing to it from two places at once.
+	 * Costs roughly double the wall clock, which is the right trade for a suite
+	 * that was failing about half the time.
+	 */
+	workers: 1,
 	webServer: {
 		command: 'npm run build && npm run preview',
 		port: 4173,
