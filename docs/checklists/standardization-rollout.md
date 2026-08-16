@@ -23,7 +23,7 @@ because it is the only genuinely user-visible defect of the four.
 | 6   | Centralize validation limits — named kinds on unambiguous fields                 | ✅     | (next)  |
 | 7   | Enum/label single source — **withdrawn, finding was wrong**; rule documented     | ❌     | (next)  |
 | 8   | Dead helpers resolved; `requireStaffOrOwner` adopted at 3 sites                  | ✅     | (next)  |
-| 9   | `RowCard`, `ShareButton`, `initials`→`format.ts`, `StatCard` size prop           | ⬜     |         |
+| 9   | `ShareButton`, `initials`→`format.ts`, `StatCard` size prop                      | ✅     | (next)  |
 | 10  | Pattern-drift sweep (page-editor, epk, staff/settings, staff/events/[id])        | ⬜     |         |
 | 11  | `RecordHero` / `PersonChip` — need design calls                                  | ⬜     |         |
 
@@ -110,3 +110,9 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
   ownership without consulting `isStaff`, so a spec's `mockResolvedValueOnce(false)` stopped being
   consumed and leaked into the next test. Fixture hardened. Watch for this whenever a refactor
   removes a call a one-shot mock was feeding.
+- (2026-08-16) Tranche 9 landed. All three items were verified as real duplication first (the
+  share handlers and `initials` bodies are byte-identical; `StatCard` genuinely lacked the prop
+  its bypassers needed). `RowCard` deferred — its ~10 sites differ in padding, shadow, and whether
+  the wrapper is an `<a>`, so it needs a design call rather than a mechanical extraction.
+- (2026-08-16) The shared `initials()` adds a `.filter(Boolean)` the two copies lacked: a trailing
+  or doubled space made `p[0]` undefined and rendered "UNDEFINED". Covered by a test.

@@ -2,6 +2,7 @@
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
+	import { initials } from '$lib/utils/format';
 
 	interface Props {
 		href: string;
@@ -50,15 +51,6 @@
 			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }
 		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
 	);
-
-	function initials(n: string): string {
-		return n
-			.split(' ')
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
 </script>
 
 <a {href} class="id-card">

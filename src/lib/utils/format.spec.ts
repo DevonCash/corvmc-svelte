@@ -21,6 +21,7 @@ import {
 	formatTime,
 	formatTimeRange,
 	fullDate,
+	initials,
 	toLocalDate,
 	toLocalTime
 } from './format';
@@ -117,5 +118,29 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			const end = new Date('2026-07-04T05:00:00Z'); // 22:00 PDT, same venue day
 			expect(formatTimeRange(CROSSES_MIDNIGHT, end)).toBe('7:30 PM – 10:00 PM');
 		});
+	});
+});
+
+describe('initials', () => {
+	it('takes the first letter of the first two words', () => {
+		expect(initials('Jordan Martinez')).toBe('JM');
+	});
+
+	it('caps at two even for longer names', () => {
+		expect(initials('Mary Anne Von Trapp')).toBe('MA');
+	});
+
+	it('handles a single word', () => {
+		expect(initials('Prince')).toBe('P');
+	});
+
+	// The two copies this replaced used a bare split(' '), so a trailing or
+	// doubled space produced an undefined segment and rendered "UNDEFINED".
+	it('ignores empty segments from stray whitespace', () => {
+		expect(initials('Jordan  Martinez ')).toBe('JM');
+	});
+
+	it('upper-cases a lowercase name', () => {
+		expect(initials('ada lovelace')).toBe('AL');
 	});
 });

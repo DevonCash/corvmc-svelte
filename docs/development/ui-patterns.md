@@ -706,7 +706,31 @@ Single stat display for dashboards.
 
 ```svelte
 <StatCard title="Total Users" value={stats.userCount} />
+<StatCard title="Members" value={band.memberCount} size="sm" />
+<StatCard title="Your Role" value={role} size="sm" valueClass="capitalize" />
 ```
+
+Props: `title`, `value`, `size` (`'sm'` renders the value at `text-2xl`, `'md'`
+keeps daisyUI's default), `class` (outer card), `valueClass` (value line).
+
+Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
+value size overflows a narrow panel column once three sit in a row, and that is
+exactly why two pages rebuilt the card by hand before the prop existed.
+
+## ShareButton
+
+Copies the current page URL and flashes a checkmark.
+
+```svelte
+<ShareButton title="Copy link to this event" />
+```
+
+Props: `title` (tooltip — name the thing being shared), `class` (defaults to
+`btn btn-ghost btn-sm btn-square`).
+
+The clipboard write can reject on permissions or a non-secure context; the
+failure is deliberately silent, because a convenience affordance failing loudly
+is worse than the checkmark not appearing.
 
 ## Pagination
 

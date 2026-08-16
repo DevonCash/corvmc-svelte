@@ -197,6 +197,22 @@ export function titleCase(value: string): string {
 }
 
 /**
+ * Up to two initials from a name: "Jordan Martinez" → "JM".
+ *
+ * Guards against empty segments — a trailing space or a double space would
+ * otherwise make `p[0]` undefined and render the literal "UNDEFINED".
+ */
+export function initials(name: string): string {
+	return name
+		.split(' ')
+		.filter(Boolean)
+		.map((p) => p[0])
+		.slice(0, 2)
+		.join('')
+		.toUpperCase();
+}
+
+/**
  * List-cell date with year: "May 13, 2026".
  *
  * For durable facts — a join date, a created-at — where a bare "Dec 22" is

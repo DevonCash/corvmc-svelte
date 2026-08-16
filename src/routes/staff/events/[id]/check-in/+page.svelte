@@ -8,6 +8,7 @@
 	import { CancelTicketAction } from '$lib/components/shared/actions';
 	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
 	import { page } from '$app/state';
+	import StatCard from '$lib/components/shared/StatCard.svelte';
 	const { fields } = checkInTicket;
 
 	let data = $derived(await getStaffCheckIn(page.params.id!));
@@ -31,14 +32,8 @@
 <PageContent width="3xl">
 	<!-- Stats -->
 	<div class="flex gap-6">
-		<div class="stat bg-base-100 shadow rounded-box p-4">
-			<div class="stat-title">Checked In</div>
-			<div class="stat-value text-2xl">{data.stats.checkedIn}</div>
-		</div>
-		<div class="stat bg-base-100 shadow rounded-box p-4">
-			<div class="stat-title">Tickets Sold</div>
-			<div class="stat-value text-2xl">{data.stats.sold}</div>
-		</div>
+		<StatCard title="Checked In" value={data.stats.checkedIn} size="sm" class="p-4" />
+		<StatCard title="Tickets Sold" value={data.stats.sold} size="sm" class="p-4" />
 	</div>
 
 	<!-- Search -->
