@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+	import { creditsToHours } from '$lib/config';
+	import { formatDateLong, formatTime } from '$lib/utils/format';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -37,23 +38,6 @@
 		committed ? (data.cashDueCents ?? 0) : totalCents - creditDiscountCents
 	);
 
-	function formatDate(d: Date): string {
-		return d.toLocaleDateString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric'
-		});
-	}
-
-	function formatTime(d: Date): string {
-		return d.toLocaleTimeString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: 'numeric',
-			minute: '2-digit'
-		});
-	}
-
 	function cents(amount: number): string {
 		return (amount / 100).toFixed(2);
 	}
@@ -71,7 +55,7 @@
 <PageContent width="md">
 	<div class="card bg-base-100 shadow-sm">
 		<div class="card-body">
-			<p class="font-medium">{formatDate(res.startsAt)}</p>
+			<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 			<p>
 				{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours ===
 				1

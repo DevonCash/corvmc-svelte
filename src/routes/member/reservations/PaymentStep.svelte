@@ -3,7 +3,8 @@
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
-	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+	import { toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -35,14 +36,7 @@
 	} | null>(null);
 
 	function extractTimeFields(d: Date) {
-		// Format in Pacific time to match the create flow
-		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
-		const time = d.toLocaleTimeString('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-		return { date, time };
+		return { date: toLocalDate(d), time: toLocalTime(d) };
 	}
 
 	$effect(() => {
