@@ -71,6 +71,7 @@ import {
 	inboxParticipant
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
+import { userBlock, messagingStanding } from '../src/lib/server/db/schema/moderation';
 import {
 	volunteerRole,
 	volunteerProfile,
@@ -457,8 +458,10 @@ async function deleteAll() {
 		'volunteer_hour_log',
 		'volunteer_profile',
 		'volunteer_role',
-		// Before content_flag and user: it references both.
+		// Before content_flag and user: they reference both.
 		'community_event_standing',
+		'messaging_standing',
+		'user_block',
 		'content_flag',
 		'inbox_note',
 		'inbox_message',
@@ -2760,6 +2763,316 @@ async function seedHelp() {
 // Inbox threads
 // ---------------------------------------------------------------------------
 
+/**
+ * Member↔member conversations, covering every state the UI has to render:
+ * an accepted conversation, a request waiting on a decision, a request the
+ * sender is still waiting on, a block, a member on probation, a member who
+ * switched their own messaging off, and a reported conversation in triage.
+ */
+async function seedDirectMessages(users: SeedUser[], adminUser: SeedUser) {
+	const now = new Date();
+	const hour = 3600_000;
+	const day = 24 * hour;
+
+	// Six distinct members so no two scenarios interfere.
+	const [alice, bob, carol, dave, erin, frank] = users.slice(0, 6);
+	if (!frank) return { threads: 0, blocks: 0, standings: 0 };
+
+	const accepted = randomUUID();
+	const pendingForBob = randomUUID();
+	const pendingFromCarol = randomUUID();
+	const reported = randomUUID();
+
+	const threads = await batchInsert(
+		inboxThread,
+		[
+			{
+				id: accepted,
+				channel: 'direct' as const,
+				status: 'open' as const,
+				preview: 'Sounds good — Thursday works for me. I can bring an amp.',
+				messageCount: 3,
+				lastMessageAt: new Date(now.getTime() - 2 * hour),
+				createdAt: new Date(now.getTime() - 3 * day),
+				updatedAt: new Date(now.getTime() - 2 * hour)
+			},
+			{
+				id: pendingForBob,
+				channel: 'direct' as const,
+				status: 'open' as const,
+				preview: 'Hi! Saw you play bass at the open mic — I am putting a soul band together.',
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - 6 * hour),
+				createdAt: new Date(now.getTime() - 6 * hour),
+				updatedAt: new Date(now.getTime() - 6 * hour)
+			},
+			{
+				id: pendingFromCarol,
+				channel: 'direct' as const,
+				status: 'open' as const,
+				preview: 'Are you still looking for a drummer?',
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - day),
+				createdAt: new Date(now.getTime() - day),
+				updatedAt: new Date(now.getTime() - day)
+			},
+			{
+				id: reported,
+				channel: 'direct' as const,
+				// Reporting closes the conversation, same as declining.
+				status: 'resolved' as const,
+				preview: 'I said I am not interested. Please stop messaging me.',
+				messageCount: 3,
+				lastMessageAt: new Date(now.getTime() - 2 * day),
+				createdAt: new Date(now.getTime() - 4 * day),
+				updatedAt: new Date(now.getTime() - 2 * day)
+			}
+		],
+		2
+	);
+
+	// acceptedAt is the request mechanism: stamped on the person who started the
+	// conversation, null on the recipient until they accept.
+	await batchInsert(
+		inboxParticipant,
+		[
+			{
+				id: randomUUID(),
+				threadId: accepted,
+				userId: alice.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - 3 * day),
+				lastReadAt: new Date(now.getTime() - 2 * hour),
+				createdAt: new Date(now.getTime() - 3 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: accepted,
+				userId: bob.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - 3 * day),
+				lastReadAt: new Date(now.getTime() - 3 * hour),
+				createdAt: new Date(now.getTime() - 3 * day)
+			},
+
+			// Waiting on Bob: he sees this in Messages tagged "Request".
+			{
+				id: randomUUID(),
+				threadId: pendingForBob,
+				userId: carol.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - 6 * hour),
+				lastReadAt: new Date(now.getTime() - 6 * hour),
+				createdAt: new Date(now.getTime() - 6 * hour)
+			},
+			{
+				id: randomUUID(),
+				threadId: pendingForBob,
+				userId: bob.id,
+				role: 'member' as const,
+				acceptedAt: null,
+				lastReadAt: null,
+				createdAt: new Date(now.getTime() - 6 * hour)
+			},
+
+			// Waiting on Dave: counts against Carol's outstanding-request cap.
+			{
+				id: randomUUID(),
+				threadId: pendingFromCarol,
+				userId: carol.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - day),
+				lastReadAt: new Date(now.getTime() - day),
+				createdAt: new Date(now.getTime() - day)
+			},
+			{
+				id: randomUUID(),
+				threadId: pendingFromCarol,
+				userId: dave.id,
+				role: 'member' as const,
+				acceptedAt: null,
+				lastReadAt: null,
+				createdAt: new Date(now.getTime() - day)
+			},
+
+			{
+				id: randomUUID(),
+				threadId: reported,
+				userId: erin.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - 4 * day),
+				lastReadAt: new Date(now.getTime() - 2 * day),
+				createdAt: new Date(now.getTime() - 4 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: reported,
+				userId: frank.id,
+				role: 'member' as const,
+				acceptedAt: new Date(now.getTime() - 4 * day),
+				lastReadAt: null,
+				createdAt: new Date(now.getTime() - 4 * day)
+			}
+		],
+		2
+	);
+
+	// Every DM is 'peer': nobody wrote to CorvMC and CorvMC sent nothing.
+	await batchInsert(
+		inboxMessage,
+		[
+			{
+				id: randomUUID(),
+				threadId: accepted,
+				direction: 'peer' as const,
+				body: 'Hey — are you free to jam this week?',
+				authorName: alice.name,
+				authorUserId: alice.id,
+				createdAt: new Date(now.getTime() - 3 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: accepted,
+				direction: 'peer' as const,
+				body: 'Yeah! Thursday or Saturday both work.',
+				authorName: bob.name,
+				authorUserId: bob.id,
+				createdAt: new Date(now.getTime() - 2 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: accepted,
+				direction: 'peer' as const,
+				body: 'Sounds good — Thursday works for me. I can bring an amp.',
+				authorName: alice.name,
+				authorUserId: alice.id,
+				createdAt: new Date(now.getTime() - 2 * hour)
+			},
+
+			{
+				id: randomUUID(),
+				threadId: pendingForBob,
+				direction: 'peer' as const,
+				body: 'Hi! Saw you play bass at the open mic — I am putting a soul band together and wondered if you were looking for something.',
+				authorName: carol.name,
+				authorUserId: carol.id,
+				createdAt: new Date(now.getTime() - 6 * hour)
+			},
+
+			{
+				id: randomUUID(),
+				threadId: pendingFromCarol,
+				direction: 'peer' as const,
+				body: 'Are you still looking for a drummer?',
+				authorName: carol.name,
+				authorUserId: carol.id,
+				createdAt: new Date(now.getTime() - day)
+			},
+
+			{
+				id: randomUUID(),
+				threadId: reported,
+				direction: 'peer' as const,
+				body: 'Hi, want to get a drink sometime?',
+				authorName: frank.name,
+				authorUserId: frank.id,
+				createdAt: new Date(now.getTime() - 4 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: reported,
+				direction: 'peer' as const,
+				body: 'No thanks, I am just here for the music.',
+				authorName: erin.name,
+				authorUserId: erin.id,
+				createdAt: new Date(now.getTime() - 3 * day)
+			},
+			{
+				id: randomUUID(),
+				threadId: reported,
+				direction: 'peer' as const,
+				body: 'I said I am not interested. Please stop messaging me.',
+				authorName: erin.name,
+				authorUserId: erin.id,
+				createdAt: new Date(now.getTime() - 2 * day)
+			}
+		],
+		3
+	);
+
+	// Reporting blocks the other person straight away — the reporter should not
+	// have to wait on the staff queue to stop hearing from them.
+	const blocks = await batchInsert(
+		userBlock,
+		[
+			{
+				id: randomUUID(),
+				blockerUserId: erin.id,
+				blockedUserId: frank.id,
+				source: 'reported' as const,
+				createdAt: new Date(now.getTime() - 2 * day)
+			},
+			{
+				id: randomUUID(),
+				blockerUserId: dave.id,
+				blockedUserId: alice.id,
+				source: 'declined_request' as const,
+				createdAt: new Date(now.getTime() - 5 * day)
+			}
+		],
+		2
+	);
+
+	const reportFlag = randomUUID();
+	await batchInsert(
+		contentFlag,
+		[
+			{
+				id: reportFlag,
+				entityType: 'inbox_thread' as const,
+				entityId: reported,
+				reportedByUserId: erin.id,
+				reason: 'Harassment',
+				description: 'They kept messaging after I said no.',
+				status: 'pending' as const,
+				createdAt: new Date(now.getTime() - 2 * day),
+				updatedAt: new Date(now.getTime() - 2 * day)
+			}
+		],
+		1
+	);
+
+	const standings = await batchInsert(
+		messagingStanding,
+		[
+			// Probation from an upheld report: Frank can reply where he already is,
+			// but cannot start anything new.
+			{
+				userId: frank.id,
+				status: 'restricted' as const,
+				source: 'report' as const,
+				reason: 'Continued messaging after being asked to stop.',
+				triggeringFlagId: reportFlag,
+				updatedByUserId: adminUser.id,
+				updatedAt: new Date(now.getTime() - day)
+			},
+			// Switched off by the member themselves — they can switch it back on.
+			{
+				userId: dave.id,
+				status: 'disabled' as const,
+				source: 'member' as const,
+				reason: null,
+				triggeringFlagId: null,
+				updatedByUserId: null,
+				updatedAt: new Date(now.getTime() - 10 * day)
+			}
+		],
+		2
+	);
+
+	return { threads: threads.length, blocks: blocks.length, standings: standings.length };
+}
+
 async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 	const now = new Date();
 	const hour = 3600_000;
@@ -3109,6 +3422,7 @@ async function main() {
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
 	const inbox = await seedInbox(adminUser, users[0]);
+	const directMessages = await seedDirectMessages(users, adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who
@@ -3148,6 +3462,9 @@ async function main() {
 	);
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
+	console.log(
+		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings`
+	);
 	console.log(`  ${flags.length} content flags`);
 	console.log(
 		`  ${volunteerRoles.length} volunteer roles, ${volunteerProfiles.rows.length} volunteer profiles (${volunteerProfiles.blocked} awaiting review), ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`

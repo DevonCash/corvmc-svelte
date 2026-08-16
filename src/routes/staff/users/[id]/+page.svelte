@@ -18,6 +18,7 @@
 	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
 
 	const restoreFields = restoreListingTrust.fields;
+	const messagingFields = setMemberMessaging.fields;
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -43,6 +44,10 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import {
+		getMemberMessagingStanding,
+		setMemberMessaging
+	} from '$lib/remote/direct-messages.remote';
 
 	let id = $derived(page.params.id!);
 	let [member, allRoles] = $derived(await Promise.all([getUser(id), getAllRoles()]));
@@ -145,6 +150,74 @@
 					</div>
 				</InfoCard>
 			{/if}
+		{/await}
+
+		{#await getMemberMessagingStanding(id) then messaging}
+			<InfoCard title="Direct messages">
+				<p class="text-sm">
+					{#if messaging.status === 'disabled'}
+						Direct messaging is switched off for this account.
+					{:else if messaging.status === 'restricted'}
+						This member can reply to conversations they are already in, but cannot start new ones.
+					{:else}
+						This member can send and receive direct messages.
+					{/if}
+				</p>
+				{#if messaging.reason}
+					<p class="mt-1 text-sm opacity-70">Note: "{messaging.reason}"</p>
+				{/if}
+				{#if messaging.status !== 'none' && messaging.source === 'member'}
+					<p class="mt-1 text-sm opacity-70">They switched this off themselves.</p>
+				{/if}
+
+				<!-- Switching messaging off is how we handle the occasional under-18
+				     member: the site has no age of its own, so this is a lever staff
+				     throw rather than something that happens automatically. -->
+				<div class="mt-3 flex flex-wrap gap-2">
+					{#if messaging.status !== 'disabled'}
+						<Action
+							action={setMemberMessaging}
+							label="Switch messaging off"
+							successToast="Messaging switched off"
+							class="btn-sm"
+							onsuccess={() => invalidateAll()}
+						>
+							{#snippet form()}
+								<input {...messagingFields.userId.as('hidden', id)} />
+								<input {...messagingFields.status.as('hidden', 'disabled')} />
+								<p class="py-2">
+									They will not be able to send or receive direct messages, and their existing
+									conversations will disappear from the other members' lists.
+								</p>
+								<label class="form-control w-full">
+									<div class="label"><span class="label-text">Reason (shown to them)</span></div>
+									<input
+										{...messagingFields.reason.as('text')}
+										class="input input-bordered w-full"
+										maxlength="500"
+										placeholder="e.g. Under 18"
+									/>
+								</label>
+							{/snippet}
+						</Action>
+					{/if}
+					{#if messaging.status !== 'none'}
+						<Action
+							action={setMemberMessaging}
+							label="Restore messaging"
+							successToast="Messaging restored"
+							class="btn-sm btn-outline"
+							onsuccess={() => invalidateAll()}
+						>
+							{#snippet form()}
+								<input {...messagingFields.userId.as('hidden', id)} />
+								<input {...messagingFields.status.as('hidden', 'none')} />
+								<p class="py-2">Let this member send and receive direct messages again?</p>
+							{/snippet}
+						</Action>
+					{/if}
+				</div>
+			</InfoCard>
 		{/await}
 
 		{#await getUserCredits(id) then credits}

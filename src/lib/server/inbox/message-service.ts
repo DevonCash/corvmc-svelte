@@ -16,6 +16,77 @@ export interface AddInboundMessageParams {
 	authorUserId?: string | null;
 }
 
+/**
+ * Thread bookkeeping every new message performs: refresh the preview, bump the
+ * count, move the clock. Shared so a second kind of message cannot drift from
+ * the first — a thread whose lastMessageAt does not move is a thread whose
+ * unread cursor silently stops working.
+ */
+async function touchThread(threadId: string, body: string): Promise<void> {
+	await db
+		.update(inboxThread)
+		.set({
+			preview: truncatePreview(body),
+			messageCount: sql`${inboxThread.messageCount} + 1`,
+			lastMessageAt: new Date(),
+			updatedAt: new Date()
+		})
+		.where(eq(inboxThread.id, threadId));
+}
+
+export interface AddPeerMessageParams {
+	threadId: string;
+	body: string;
+	authorUserId: string;
+	authorName: string;
+	recipientUserId: string;
+	/** True while the recipient has not accepted yet. */
+	isRequest: boolean;
+}
+
+/**
+ * A message from one member to another.
+ *
+ * Separate from `addInboundMessage` for two reasons that both matter:
+ *
+ *  - It writes `direction: 'peer'`. A DM is not inbound — nobody wrote to
+ *    CorvMC — and `addOutboundMessage` below builds its email References chain
+ *    by querying `direction = 'inbound'`. Filing DMs as inbound would quietly
+ *    put private messages in that chain.
+ *  - It emits `inbox.direct_message`, never `inbox.message_received`. That
+ *    event notifies every staff member and carries the preview text, which for
+ *    a DM is a member's private words.
+ *
+ * The event names the recipient outright rather than leaving a listener to fan
+ * out over participants and remember to skip the author — with two people on a
+ * thread, that mistake means notifying someone about their own message.
+ */
+export async function addPeerMessage(params: AddPeerMessageParams) {
+	const [message] = await db
+		.insert(inboxMessage)
+		.values({
+			threadId: params.threadId,
+			direction: 'peer',
+			body: params.body,
+			authorName: params.authorName,
+			authorUserId: params.authorUserId
+		})
+		.returning();
+
+	await touchThread(params.threadId, params.body);
+
+	domainEvents.emit('inbox.direct_message', {
+		threadId: params.threadId,
+		messageId: message.id,
+		senderId: params.authorUserId,
+		senderName: params.authorName,
+		recipientId: params.recipientUserId,
+		isRequest: params.isRequest
+	});
+
+	return message;
+}
+
 export async function addInboundMessage(params: AddInboundMessageParams) {
 	const [message] = await db
 		.insert(inboxMessage)
@@ -31,15 +102,7 @@ export async function addInboundMessage(params: AddInboundMessageParams) {
 		})
 		.returning();
 
-	await db
-		.update(inboxThread)
-		.set({
-			preview: truncatePreview(params.body),
-			messageCount: sql`${inboxThread.messageCount} + 1`,
-			lastMessageAt: new Date(),
-			updatedAt: new Date()
-		})
-		.where(eq(inboxThread.id, params.threadId));
+	await touchThread(params.threadId, params.body);
 
 	const [thread] = await db
 		.select({ channel: inboxThread.channel, contactName: inboxThread.contactName })

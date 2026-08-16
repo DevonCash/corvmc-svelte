@@ -16,6 +16,21 @@ export interface NotificationTypeDef {
 		sms: boolean;
 	};
 	mandatory?: boolean;
+	/**
+	 * This type's email must never carry text a member wrote.
+	 *
+	 * Enforced in the email layer rather than at the call site: there are ~23
+	 * hand-built email models across the listeners, and "remember not to pass the
+	 * message text" is a habit, not a rule. `normalizeNotificationModel` strips
+	 * `quote`/`quote_text` for these types, in the same place it already escapes
+	 * them precisely so callers cannot forget.
+	 *
+	 * Set on the direct-message types. Email is the one channel that blocking and
+	 * reporting cannot reach — once a member's words are in someone's mailbox,
+	 * they are there permanently — so DM emails say a message is waiting and
+	 * link to the site, and never quote it.
+	 */
+	emailOmitsUserContent?: boolean;
 }
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
@@ -146,6 +161,33 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description: 'Notification when staff reply to a conversation you started from your portal',
 		// Email defaults on: they asked a question and may not come back to the
 		// site on their own to find the answer.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'direct_message_request',
+		label: 'New message request',
+		description: 'When another member asks to start a conversation with you',
+		// Emails, but names neither the sender nor what they wrote — "you have a
+		// new message request". Until you accept, we do not put a stranger's name
+		// in your inbox. The message itself is in the Requests entry on the site,
+		// which you open deliberately.
+		defaults: { email: true, inApp: true, sms: false },
+		emailOmitsUserContent: true
+	},
+	{
+		key: 'direct_message_received',
+		label: 'New direct message',
+		description: 'When a member you are talking with sends a message',
+		// Names the sender — you accepted them — but still never the message.
+		defaults: { email: true, inApp: true, sms: false },
+		emailOmitsUserContent: true
+	},
+	{
+		key: 'messaging_restricted',
+		label: 'Messaging restricted',
+		description: 'When staff limit your ability to start new conversations',
+		// This one emails freely: it is CorvMC telling a member about a decision
+		// we made, not one member reaching another through us.
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{

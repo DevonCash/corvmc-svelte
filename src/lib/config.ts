@@ -162,7 +162,15 @@ export const creditSourceLabels: Record<string, string> = {
 // Inbox enum values
 // ---------------------------------------------------------------------------
 
-export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'] as const;
+export const inboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'direct',
+	'instagram',
+	'messenger'
+] as const;
 
 /**
  * The contact-form subject that reveals the event-tip fields.
@@ -173,7 +181,16 @@ export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'mes
  */
 export const EVENT_TIP_SUBJECT = 'Event Tip';
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
-export const inboxMessageDirections = ['inbound', 'outbound'] as const;
+/**
+ * Which way a message went, relative to CorvMC. `inbound` is someone writing to
+ * us; `outbound` is us writing back, and is what we are responsible for
+ * delivering. `peer` is neither: a member↔member message that we only hold.
+ *
+ * Keeping `peer` out of `inbound` matters — `addOutboundMessage` builds its
+ * email References chain from `direction = 'inbound'`, and anything measuring
+ * staff response times counts the same rows. Neither should see a DM.
+ */
+export const inboxMessageDirections = ['inbound', 'outbound', 'peer'] as const;
 
 /**
  * How a participant relates to a thread. Only threads with signed-in parties
@@ -192,6 +209,15 @@ export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number]
 	'web',
 	'portal'
 ];
+
+/** How many people may be sitting on an unanswered request from you at once. */
+export const MAX_PENDING_SENT_REQUESTS = 5;
+
+/** How many of your reports may be waiting in the staff queue at once. */
+export const MAX_UNRESOLVED_REPORTS = 5;
+
+/** Longest a single direct message may be. */
+export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
