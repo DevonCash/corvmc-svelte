@@ -9,6 +9,11 @@ import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
 import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunteer/hour-log-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
+import {
+	countAwaitingModeration,
+	countAwaitingResponse,
+	countPendingEdits
+} from '$lib/server/suggestion/suggestion-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 
@@ -78,21 +83,28 @@ export const getStaffLayout = query(async () => {
 	// member/band/public surfaces only, so staff can administer a feature
 	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
-	const [userBands, inboxUnread, volunteerPending, listingsPending] = await Promise.all([
-		listForUser(user.id).catch(() => []),
-		getUnresolvedCount().catch(() => 0),
-		getVolunteerStatusCounts()
-			.then((c) => c.pending)
-			.catch(() => 0),
-		countPendingSubmissions().catch(() => 0)
-	]);
+	const [userBands, inboxUnread, volunteerPending, listingsPending, suggestionsAwaiting] =
+		await Promise.all([
+			listForUser(user.id).catch(() => []),
+			getUnresolvedCount().catch(() => 0),
+			getVolunteerStatusCounts()
+				.then((c) => c.pending)
+				.catch(() => 0),
+			countPendingSubmissions().catch(() => 0),
+			// Moderation leads the badge: everything in that bucket is invisible to
+			// members while it waits, which is the cost of hiding on a single report.
+			Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
+				.then(([m, r, e]) => m + r + e)
+				.catch(() => 0)
+		]);
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,
-		listingsPending
+		listingsPending,
+		suggestionsAwaiting
 	};
 });
 

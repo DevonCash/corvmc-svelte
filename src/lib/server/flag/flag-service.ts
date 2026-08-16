@@ -4,6 +4,7 @@ import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import { user } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
+import { suggestion } from '$lib/server/db/schema/suggestion';
 import { eq, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -53,6 +54,8 @@ function entityHref(entityType: FlagEntityType, entityId: string): string {
 		// the canonical URL for both sources.
 		case 'event':
 			return `/events/${entityId}`;
+		case 'suggestion':
+			return `/staff/suggestions/${entityId}`;
 		default:
 			return `/staff/users/${entityId}`;
 	}
@@ -76,6 +79,14 @@ async function resolveEntityLabel(
 			.select({ title: event.title })
 			.from(event)
 			.where(eq(event.id, entityId))
+			.limit(1);
+		return row?.title ?? null;
+	}
+	if (entityType === 'suggestion') {
+		const [row] = await db
+			.select({ title: suggestion.title })
+			.from(suggestion)
+			.where(eq(suggestion.id, entityId))
 			.limit(1);
 		return row?.title ?? null;
 	}
@@ -129,6 +140,16 @@ export async function createFlag(params: CreateFlagParams) {
 			description: params.description?.slice(0, FLAG_DESCRIPTION_MAX) || null
 		})
 		.returning();
+
+	// A report is enough to pull a suggestion off the board — unlike an event
+	// listing, which a report deliberately does not move (those can be filed
+	// anonymously by any visitor). Dynamic import for the same reason resolveFlag
+	// uses one below: it keeps the two domains from importing each other.
+	// withholdForReview only moves `visible` rows, so repeat reports are no-ops.
+	if (params.entityType === 'suggestion') {
+		const { withholdForReview } = await import('$lib/server/suggestion/suggestion-service');
+		await withholdForReview(params.entityId, { flagId: flag.id });
+	}
 
 	// Fire-and-forget: notify staff without blocking the reporter's request.
 	if (!duplicate) {
@@ -210,6 +231,43 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		}
 	}
 
+	if (existing.entityType === 'suggestion') {
+		const svc = await import('$lib/server/suggestion/suggestion-service');
+
+		if (params.resolution === 'resolved') {
+			// Upheld: off the board for good, and the author posts under review from
+			// now on. Same rule as community listings — one upheld report costs trust.
+			await svc.setVisibility(existing.entityId, {
+				visibility: 'hidden',
+				note: params.notes,
+				staffId: params.staffId
+			});
+			const target = await svc.getSuggestionForModeration(existing.entityId);
+			if (target?.authorUserId) {
+				await svc.revokeSuggestionTrust({
+					userId: target.authorUserId,
+					flagId,
+					staffId: params.staffId,
+					reason: params.notes
+				});
+			}
+		} else {
+			// Dismissed: straight back on the board, author untouched.
+			//
+			// Note the asymmetry with events above, which do NOTHING on dismissal.
+			// An event report can be filed anonymously by any visitor, so a bare
+			// accusation must not move anything. A suggestion report is
+			// authenticated and member-only, AND it has already hidden the post — so
+			// leaving it hidden on dismissal would hand every member a permanent
+			// takedown button. Dismissal MUST restore.
+			await svc.setVisibility(existing.entityId, {
+				visibility: 'visible',
+				note: null,
+				staffId: params.staffId
+			});
+		}
+	}
+
 	return row;
 }
 
@@ -254,6 +312,7 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	const memberIds = rows.filter((r) => r.entityType === 'member_profile').map((r) => r.entityId);
 	const bandIds = rows.filter((r) => r.entityType === 'band_profile').map((r) => r.entityId);
 	const eventIds = rows.filter((r) => r.entityType === 'event').map((r) => r.entityId);
+	const suggestionIds = rows.filter((r) => r.entityType === 'suggestion').map((r) => r.entityId);
 
 	const memberNames = memberIds.length
 		? await db
@@ -270,11 +329,18 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 				.from(event)
 				.where(inArray(event.id, eventIds))
 		: [];
+	const suggestionTitles = suggestionIds.length
+		? await db
+				.select({ id: suggestion.id, title: suggestion.title })
+				.from(suggestion)
+				.where(inArray(suggestion.id, suggestionIds))
+		: [];
 
 	const labelMap = new Map<string, string>();
 	for (const m of memberNames) labelMap.set(`member_profile:${m.id}`, m.name);
 	for (const b of bandNames) labelMap.set(`band_profile:${b.id}`, b.name);
 	for (const e of eventTitles) labelMap.set(`event:${e.id}`, e.title);
+	for (const sg of suggestionTitles) labelMap.set(`suggestion:${sg.id}`, sg.title);
 
 	return {
 		rows: rows.map((r) => ({
