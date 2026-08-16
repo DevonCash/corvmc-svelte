@@ -43,13 +43,26 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  *      through the real board query rather than a mocked select.
  */
 
+/**
+ * Poll options for reading state back out of D1.
+ *
+ * Every call opens a fresh `getPlatformProxy()` over the same `.wrangler/state`
+ * the preview server is holding, and Playwright's default intervals
+ * (100/250/500/1000ms) mean a 15s poll can open a dozen of them. That
+ * contention is what `platform-db.ts` retries around, and with ten read-backs
+ * in this file it was enough to push the *next* suite's server into
+ * `SQLITE_BUSY` on CI. Check quickly once, then back off hard — the writes
+ * being waited on land in well under a second, so this costs no wall clock.
+ */
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
+
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
 	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(email);
 	await page.locator('input[name="password"]').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await page.waitForURL(/\/member(\/|$|\?)/, DB_POLL);
 }
 
 /**
@@ -99,13 +112,13 @@ test.describe('suggestion board', () => {
 
 		await page.getByRole('button', { name: /^\d+$/ }).first().click();
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount)
+			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before + 1);
 
 		// Clicking again removes it rather than adding a second.
 		await page.getByRole('button', { name: /^\d+$/ }).first().click();
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount)
+			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before);
 	});
 
@@ -122,9 +135,7 @@ test.describe('suggestion board', () => {
 		// 3 voters on the target + 2 on the source, one of whom voted for both.
 		// A correct merge lands on 4; double-counting lands on 5.
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_TARGET_ID)).voteCount, {
-				timeout: 15000
-			})
+			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_TARGET_ID)).voteCount, DB_POLL)
 			.toBe(SEED_SG_MERGE_UNION_VOTES);
 
 		const source = await readSuggestionState(SEED_SG_MERGE_SOURCE_ID);
@@ -143,9 +154,7 @@ test.describe('reporting a suggestion', () => {
 		await reportSuggestion(page, SEED_SG_DISMISS_ID, 'E2E: reads like spam');
 
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).visibility, {
-				timeout: 15000
-			})
+			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).visibility, DB_POLL)
 			.toBe('under_review');
 
 		// Gone for the reporter...
@@ -174,9 +183,7 @@ test.describe('reporting a suggestion', () => {
 		await decideReport(page, SEED_SG_DISMISS_TITLE, 'dismissed');
 
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).visibility, {
-				timeout: 15000
-			})
+			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).visibility, DB_POLL)
 			.toBe('visible');
 
 		// And the author's standing is untouched — a dismissed report costs nothing.
@@ -191,20 +198,16 @@ test.describe('reporting a suggestion', () => {
 		await login(page, SEED_SG_REPORTER_EMAIL, SEED_SG_PASSWORD);
 		await reportSuggestion(page, SEED_SG_UPHOLD_ID, 'E2E: self-dealing');
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_UPHOLD_ID)).visibility, {
-				timeout: 15000
-			})
+			.poll(async () => (await readSuggestionState(SEED_SG_UPHOLD_ID)).visibility, DB_POLL)
 			.toBe('under_review');
 
 		await switchUser(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await decideReport(page, SEED_SG_UPHOLD_TITLE, 'resolved');
 
 		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_UPHOLD_ID)).visibility, {
-				timeout: 15000
-			})
+			.poll(async () => (await readSuggestionState(SEED_SG_UPHOLD_ID)).visibility, DB_POLL)
 			.toBe('hidden');
-		await expect.poll(async () => readSuggestionStanding(SEED_SG_AUTHOR_ID)).toBe(true);
+		await expect.poll(async () => readSuggestionStanding(SEED_SG_AUTHOR_ID), DB_POLL).toBe(true);
 
 		// The consequence reaches forward: the author's NEXT post is withheld.
 		await switchUser(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
@@ -215,7 +218,7 @@ test.describe('reporting a suggestion', () => {
 		await page.locator('input[name="title"]').fill('E2E Post While On Review');
 		await page.locator('textarea[name="body"]').fill('Should wait for staff before appearing.');
 		await page.getByRole('button', { name: 'Post it' }).click();
-		await page.waitForURL(/\/member\/suggestions\/[^/]+$/, { timeout: 15000 });
+		await page.waitForURL(/\/member\/suggestions\/[^/]+$/, DB_POLL);
 		await expect(page.getByText(/waiting for staff to look at it/i)).toBeVisible();
 
 		// Nobody else can see it yet.
@@ -275,7 +278,7 @@ test.describe('editing a suggestion', () => {
 		await submitEdit(page, SEED_SG_UNVOTED_ID, 'E2E Rewritten Directly', 'Rewritten body.');
 
 		await expect
-			.poll(async () => (await readSuggestionText(SEED_SG_UNVOTED_ID)).title, { timeout: 15000 })
+			.poll(async () => (await readSuggestionText(SEED_SG_UNVOTED_ID)).title, DB_POLL)
 			.toBe('E2E Rewritten Directly');
 		expect((await readSuggestionText(SEED_SG_UNVOTED_ID)).edited).toBe(true);
 	});
@@ -328,7 +331,7 @@ test.describe('editing a suggestion', () => {
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 
 		await expect
-			.poll(async () => (await readSuggestionText(SEED_SG_EDIT_ID)).title, { timeout: 15000 })
+			.poll(async () => (await readSuggestionText(SEED_SG_EDIT_ID)).title, DB_POLL)
 			.toBe(SEED_SG_EDIT_PROPOSED_TITLE);
 		// Approving the words must not disturb the count.
 		expect((await readSuggestionState(SEED_SG_EDIT_ID)).voteCount).toBe(votesBefore);
