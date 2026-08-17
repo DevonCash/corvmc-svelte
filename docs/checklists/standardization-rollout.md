@@ -136,3 +136,11 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
   `aria-invalid` and rendered **no message at all**. Converted to `FormField` in custom-input mode
   — inputs keep their own `.as()` spreads so the submission is unchanged, the wrapper supplies the
   error slot. **Check the markup renders the issue before assuming an `invalid()` fix is done.**
+- (2026-08-17) Ticket checkout's lost-credit race no longer escapes as an unhandled throw. Note
+  the general rule this and `adjustCredits` both turned on: **`Form` routes a thrown error into
+  `onfailure(issues)` with no message**, so `throw error(4xx, 'helpful text')` from a `form()`
+  reaches the user as a generic toast. If a message needs to be read, it has to be an issue.
+- (2026-08-17) Test-authoring caution: a `expectRejects(..., 'field')` assertion passes for _any_
+  validation rejection, including ones firing long before the code under test. The ticket-race test
+  bailed at a "Tickets not available" guard and looked green until probed. It now asserts
+  `checkout` was actually reached, and was mutation-checked against the fix being removed.
