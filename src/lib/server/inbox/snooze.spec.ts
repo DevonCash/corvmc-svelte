@@ -19,9 +19,17 @@ vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => ({
 			from: () => ({
+				// `where` stays chainable: countThreadsByStatus now filters *and*
+				// groups, so a where that resolves straight to rows would break it.
 				where: (w: SQL) => {
 					calls.selectWhere.push(w);
-					return Promise.resolve(selectRows);
+					return {
+						groupBy: () => {
+							calls.groupBySelects++;
+							return Promise.resolve(groupedRows);
+						},
+						then: (resolve: (v: unknown) => unknown) => resolve(selectRows)
+					};
 				},
 				groupBy: () => {
 					calls.groupBySelects++;
@@ -111,5 +119,33 @@ describe('countThreadsByStatus', () => {
 		const counts = await countThreadsByStatus();
 
 		expect(counts).toEqual({ open: 0, resolved: 0, snoozed: 0, all: 0 });
+	});
+});
+
+describe('staffVisibleThread (rendered SQL)', () => {
+	// The other visibility tests assert on the predicate's *shape* with drizzle
+	// mocked out. This file keeps drizzle and the schema real, so it can render
+	// the thing and check it is valid SQL that says what we meant — the raw
+	// EXISTS subquery names `content_flag` by hand, and a typo there would only
+	// surface at runtime against a real database.
+	it('compiles to a not-direct-or-reported check', async () => {
+		const { staffVisibleThread } = await import('./thread-service');
+		const rendered = renderWhere(staffVisibleThread);
+
+		expect(rendered).toContain('channel');
+		expect(rendered).toContain('content_flag');
+		expect(rendered).toContain('entity_type');
+		expect(rendered).toContain('entity_id');
+		// The two halves are an OR: excluded by default, back in when reported.
+		expect(rendered.toLowerCase()).toContain(' or ');
+		expect(rendered.toLowerCase()).toContain('exists');
+	});
+
+	it('is applied by countThreadsByStatus', async () => {
+		calls.selectWhere = [];
+		groupedRows = [];
+		await countThreadsByStatus();
+		expect(calls.selectWhere.length).toBe(1);
+		expect(renderWhere(calls.selectWhere[0])).toContain('content_flag');
 	});
 });

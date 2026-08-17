@@ -24,6 +24,7 @@
 		deleteListing
 	} from '$lib/remote/community-events.remote';
 	import { formatDateShort, formatDollars } from '$lib/utils/format';
+	import { imageSrc } from '$lib/utils/images';
 
 	// Declared before the awaited query below — see the note on the create page.
 	const fields = updateListing.fields;
@@ -289,8 +290,10 @@
 
 			<FormField name="posterFile" label="Replace poster">
 				{#if listing.posterUrl}
+					{@const current = imageSrc(listing.posterUrl, 'thumb')}
 					<img
-						src={listing.posterUrl}
+						src={current.src}
+						srcset={current.srcset}
 						alt=""
 						class="mb-2 h-32 w-auto rounded border"
 						style="border-color: var(--surface-border)"

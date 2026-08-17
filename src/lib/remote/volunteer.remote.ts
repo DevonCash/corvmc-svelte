@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
+import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
+import { listSignupsForUser } from '$lib/server/volunteer/volunteer-signup-service';
 import { requireFeature } from '$lib/server/feature-flags';
 import { mapDomainError } from '$lib/server/errors';
 import { renderMarkdown } from '$lib/utils/markdown';
@@ -1357,4 +1360,31 @@ export const getShiftFeedback = query(z.string(), async (shiftId) => {
 export const getFeedbackByRole = query(async () => {
 	await requireStaff();
 	return summarizeFeedbackByRole();
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserVolunteerProfile = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [profile, summary, interests] = await Promise.all([
+		getVolunteerProfile(userId),
+		getUserHourSummary(userId),
+		listInterestsForUser(userId)
+	]);
+	return { profile, summary, interests };
+});
+
+export const getUserShifts = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listSignupsForUser(userId, { limit: 20 });
+});
+
+export const getUserHourLogs = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listUserHourLogs(userId);
 });

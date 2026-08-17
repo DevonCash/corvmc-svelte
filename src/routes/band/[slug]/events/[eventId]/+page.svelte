@@ -27,6 +27,7 @@
 	} from '$lib/remote/band-events.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
+	import { imageSrc } from '$lib/utils/images';
 
 	// Declared before the awaited queries below: a declaration that follows a
 	// top-level await is async-gated, which would compile every `fields.X.as()`
@@ -290,8 +291,10 @@
 
 						<FormField name="posterFile" label="Poster">
 							{#if evt.posterUrl}
+								{@const current = imageSrc(evt.posterUrl, 'thumb')}
 								<img
-									src={evt.posterUrl}
+									src={current.src}
+									srcset={current.srcset}
 									alt="Current poster"
 									class="mb-2 h-32 w-32 rounded object-cover"
 								/>

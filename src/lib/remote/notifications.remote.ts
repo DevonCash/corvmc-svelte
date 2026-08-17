@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, command, getRequestEvent } from '$app/server';
+import { requireStaff } from '$lib/server/authorization';
 import {
 	getForUser,
 	getUnreadCount,
@@ -70,3 +71,20 @@ export const setNotificationPreference = command(
 		void getNotificationPreferences().refresh();
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserNotifications = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [items, unread, preferences] = await Promise.all([
+		getForUser(userId, { limit: 10 }),
+		getUnreadCount(userId),
+		getAllPreferences(userId)
+	]);
+	return { items, unread, preferences };
+});

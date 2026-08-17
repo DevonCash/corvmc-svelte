@@ -5,6 +5,8 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
+	import { getMyMessagingStanding, setMyMessaging } from '$lib/remote/direct-messages.remote';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -12,7 +14,6 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { SubscribeAction, UnsubscribeAction } from '$lib/components/shared/actions';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
 	import {
 		updateProfile,
 		changePassword,
@@ -139,6 +140,51 @@
 			</table>
 		{/if}
 	</InfoCard>
+
+	<!-- Direct messaging -->
+	<svelte:boundary>
+		{@const standing = await getMyMessagingStanding()}
+		<InfoCard title="Direct Messages">
+			{#if standing.status !== 'none' && standing.source !== 'member'}
+				<!-- Applied by staff or by an upheld report. The member can see it and
+				     read why, but cannot switch it off — that check lives in
+				     setMessagingStanding, not here. -->
+				<Alert type="warning">
+					{standing.status === 'disabled'
+						? 'Direct messaging is switched off for your account.'
+						: 'You cannot start new conversations at the moment. You can still reply to conversations you are already in.'}
+					{#if standing.reason}
+						<span class="mt-1 block opacity-80">{standing.reason}</span>
+					{/if}
+					<span class="mt-1 block text-sm opacity-70">
+						Contact staff if you think this is a mistake.
+					</span>
+				</Alert>
+			{:else}
+				<p class="mb-3 text-sm opacity-70">
+					When this is on, other members can send you a message request from the directory. You
+					decide whether to accept each one, and you can block anyone at any time.
+				</p>
+				<Form
+					remote={setMyMessaging}
+					successToast="Saved"
+					class="flex items-center justify-between gap-4"
+				>
+					<span class="font-medium">Allow direct messages</span>
+					<input
+						{...setMyMessaging.fields.enabled.as(
+							'hidden',
+							standing.status === 'disabled' ? 'on' : 'off'
+						)}
+					/>
+					<SubmitButton
+						label={standing.status === 'disabled' ? 'Turn on' : 'Turn off'}
+						class={standing.status === 'disabled' ? 'btn-primary btn-sm' : 'btn-outline btn-sm'}
+					/>
+				</Form>
+			{/if}
+		</InfoCard>
+	</svelte:boundary>
 
 	<!-- Email Subscriptions -->
 	<svelte:boundary>

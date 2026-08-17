@@ -148,9 +148,9 @@ Every script in `package.json`:
 | Script                          | What it does                                                                                                                                                          |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dev`                           | Vite dev server on :5173                                                                                                                                              |
-| `build`                         | Compile MJML email layout, then `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                      |
+| `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                                                      |
 | `preview`                       | Serve the production build on :4173                                                                                                                                   |
-| `prepare`                       | (auto on install) svelte-kit sync + email-layout compile + lefthook install                                                                                           |
+| `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                                                                                                  |
 | `check` / `check:watch`         | svelte-check type checking                                                                                                                                            |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                                                                                             |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                                                                                                 |
@@ -166,6 +166,7 @@ Every script in `package.json`:
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                                                                                                |
 | `db:migrate:local`              | Replay all migration files into the local D1                                                                                                                          |
 | `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                                                                                            |
+| `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                                                                                                 |
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                                                                                        |
 | `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                                    |
 | `db:sync`                       | Pre-cutover: reload remote D1 data from Postgres (destructive — see [operations manual](../architecture/operations-manual.md#6-the-postgres-bridge-pre-cutover-only)) |
@@ -176,6 +177,8 @@ Every script in `package.json`:
 | `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                                                                                                      |
 | `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                                                                                          |
 | `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                                                                                                 |
+| `email:preview`                 | Render the templates to `.email-preview/` for eyeballing                                                                                                              |
+| `email:validate`                | Check template syntax and required variables                                                                                                                          |
 
 ## Docs workflow (when you change routes or help content)
 
@@ -192,6 +195,13 @@ A nightly GitHub Action may also open docs-update PRs automatically (it uses the
 deterministic detector, then drafts changes with an LLM). Review those PRs like any
 other — the full picture is in the
 [operations manual §7](../architecture/operations-manual.md#7-keeping-the-docs-healthy).
+
+## Working with Claude Code
+
+Agent-facing instructions are split by cost: `CLAUDE.md` (always loaded), `.claude/rules/`
+(path-scoped), `.claude/skills/` (on demand), and two `PreToolUse` hooks in `scripts/claude/` that
+block `npm`/`npx` and edits to committed migrations. The reasoning, and where a new rule belongs,
+is in [working-with-claude.md](working-with-claude.md).
 
 ## Dependency posture
 

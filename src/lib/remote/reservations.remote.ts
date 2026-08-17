@@ -83,7 +83,10 @@ import {
 } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
 import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
-import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
+import {
+	create as createSeries,
+	listActive as listActiveSeries
+} from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
@@ -2012,3 +2015,15 @@ export const getRecurringReservations = query(
 		}));
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserRecurringSeries = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listActiveSeries({ forUser: userId });
+});

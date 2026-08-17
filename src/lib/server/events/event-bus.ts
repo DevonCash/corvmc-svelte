@@ -247,6 +247,25 @@ export interface WaitlistExpiredEvent {
 	endTime: string;
 }
 
+/**
+ * A member wrote to another member. Carries the recipient explicitly rather
+ * than leaving a listener to fan out over participants and remember to drop the
+ * author — a two-party thread makes that mistake easy, and the mistake is
+ * notifying someone about their own message.
+ *
+ * Deliberately carries no message text. The notification for a DM says who
+ * wrote (or, for a request, not even that) and never what they said.
+ */
+export interface InboxDirectMessageEvent {
+	threadId: string;
+	messageId: string;
+	senderId: string;
+	senderName: string;
+	recipientId: string;
+	/** True when this is a first message awaiting acceptance. */
+	isRequest: boolean;
+}
+
 export interface InboxMessageReceivedEvent {
 	threadId: string;
 	messageId: string;
@@ -260,6 +279,47 @@ export interface InboxMessageSentEvent {
 	messageId: string;
 	channel: string;
 	sentByUserId: string;
+}
+
+/** Staff set a status and/or wrote a public reply on a member's suggestion. */
+export interface SuggestionRespondedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	status: string;
+	statusLabel: string;
+	responseBody: string | null;
+}
+
+/**
+ * A member's suggestion moved on or off the board. Covers all four reasons —
+ * withheld by a report, restored after a dismissal, approved out of review, and
+ * hidden by staff — because to the author they are one question: where did my
+ * suggestion go?
+ */
+export interface SuggestionModeratedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	visibility: string;
+	note: string | null;
+	/** Present when a report caused the move. */
+	flagId?: string;
+}
+
+/** Staff approved or turned down a proposed edit to a member's suggestion. */
+export interface SuggestionEditReviewedEvent {
+	suggestionId: string;
+	title: string;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+	approved: boolean;
+	notes: string | null;
 }
 
 export interface ContentFlaggedEvent {
@@ -395,7 +455,11 @@ export type DomainEvents = {
 	'platform_invite.created': PlatformInviteCreatedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
+	'inbox.direct_message': InboxDirectMessageEvent;
 	'content.flagged': ContentFlaggedEvent;
+	'suggestion.responded': SuggestionRespondedEvent;
+	'suggestion.moderated': SuggestionModeratedEvent;
+	'suggestion.edit_reviewed': SuggestionEditReviewedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;

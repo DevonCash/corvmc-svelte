@@ -2,6 +2,7 @@
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { initials } from '$lib/utils/format';
+	import { imageSrc } from '$lib/utils/images';
 
 	interface Props {
 		href: string;
@@ -26,6 +27,7 @@
 	}: Props = $props();
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
+	const sleeve = $derived(imageSrc(avatarUrl, 'gallery'));
 </script>
 
 <a {href} class="vinyl-card" style="--vinyl-label: {color}">
@@ -52,7 +54,13 @@
 		<div class="vinyl-card__sleeve">
 			<div class="vinyl-card__sleeve-art">
 				{#if avatarUrl}
-					<img src={avatarUrl} alt={name} class="h-full w-full object-cover" />
+					<img
+						src={sleeve.src}
+						srcset={sleeve.srcset}
+						sizes={sleeve.sizes}
+						alt={name}
+						class="h-full w-full object-cover"
+					/>
 				{:else}
 					<div class="poster-gen {patternClass} vinyl-card__pattern">
 						<span class="vinyl-card__initials">{initials(name)}</span>

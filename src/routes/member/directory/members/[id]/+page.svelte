@@ -8,6 +8,7 @@
 	} from '$lib/remote/directory.remote';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { ReportContentAction } from '$lib/components/shared/actions';
+	import MessageMemberAction from './MessageMemberAction.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
 	import Alert from '$lib/components/shared/Alert.svelte';
@@ -36,6 +37,11 @@
 	let viewer = $derived(await getMemberLayout());
 
 	let canReport = $derived(viewer.features.contentFlags && viewer.user.id !== id);
+	// No "message yourself" button. Whether they will actually receive it depends
+	// on blocks and their own messaging switch — which is checked server-side and
+	// deliberately not reflected here: showing or hiding this button based on
+	// those would tell the sender things the silent-drop design keeps from them.
+	let canMessage = $derived(viewer.features.directMessages && viewer.user.id !== id);
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact ?? {}) as NonNullable<DirectoryContact>);
@@ -91,9 +97,18 @@
 			<a href={resolve('/member/directory')} class="link text-sm opacity-60"
 				>&larr; Back to Directory</a
 			>
-			{#if canReport}
-				<ReportContentAction entityType="member_profile" entityId={id} entityLabel={member.name} />
-			{/if}
+			<div class="flex items-center gap-2">
+				{#if canMessage}
+					<MessageMemberAction recipientId={id} recipientName={member.name} />
+				{/if}
+				{#if canReport}
+					<ReportContentAction
+						entityType="member_profile"
+						entityId={id}
+						entityLabel={member.name}
+					/>
+				{/if}
+			</div>
 		</div>
 
 		<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />

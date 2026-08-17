@@ -38,6 +38,7 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { rejectListing } from '$lib/remote/community-events.remote';
+	import { imageSrc } from '$lib/utils/images';
 
 	const rejectFields = rejectListing.fields;
 
@@ -718,7 +719,14 @@
 	<!-- Poster -->
 	<InfoCard title="Poster">
 		{#if data.posterUrl}
-			<img src={data.posterUrl} alt="Event poster" class="rounded max-h-64 object-contain" />
+			{@const poster = imageSrc(data.posterUrl, 'poster')}
+			<img
+				src={poster.src}
+				srcset={poster.srcset}
+				sizes={poster.sizes}
+				alt="Event poster"
+				class="rounded max-h-64 object-contain"
+			/>
 		{:else}
 			<p class="text-sm opacity-50">No poster uploaded</p>
 		{/if}

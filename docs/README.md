@@ -19,6 +19,7 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 [architecture overview](architecture/overview.md) →
 [business-workflows](development/business-workflows.md) →
 [conventions](development/conventions.md) →
+[working-with-claude](development/working-with-claude.md) →
 [operations-manual](architecture/operations-manual.md) →
 [deployment-checklist](architecture/deployment-checklist.md) (first deploy only).
 
@@ -75,15 +76,16 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## development
 
-| Doc                                                                          | Status | Notes                                                                  |
-| ---------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
-| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode       |
-| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes       |
-| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference |
-| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition    |
-| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                         |
-| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                         |
-| [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug            |
+| Doc                                                                          | Status | Notes                                                                               |
+| ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode                    |
+| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes                    |
+| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
+| [working-with-claude.md](development/working-with-claude.md)                 | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
+| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition                 |
+| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                                      |
+| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                                      |
+| [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug                         |
 
 ## reports
 

@@ -12,11 +12,14 @@
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateTime } from '$lib/utils/format';
+	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 
 	const entityLabels: Record<string, string> = {
 		member_profile: 'Member profile',
 		band_profile: 'Band profile',
-		event: 'Event listing'
+		event: 'Event listing',
+		suggestion: 'Suggestion',
+		inbox_thread: 'Direct conversation'
 	};
 
 	let id = $derived(page.params.id!);
@@ -27,8 +30,20 @@
 			? resolve(`/staff/bands/${flag.entityId}`)
 			: flag.entityType === 'event'
 				? resolve(`/events/${flag.entityId}`)
-				: resolve(`/staff/users/${flag.entityId}`)
+				: flag.entityType === 'suggestion'
+					? resolve(`/staff/suggestions/${flag.entityId}`)
+					: // A conversation has no staff page of its own — this report is the
+						// only way to see it, which is deliberate.
+						flag.entityType === 'inbox_thread'
+						? resolve(`/staff/flags/${flag.id}`)
+						: resolve(`/staff/users/${flag.entityId}`)
 	);
+
+	// The timeline is drawn from the reporter's point of view: their messages sit
+	// on the right. Without this it falls back to inbound/outbound — the org's
+	// point of view — and neither member is the org, so every bubble would land
+	// on the same side.
+	let reporterId = $derived(flag.reportedByUserId);
 
 	// Staff can pull a still-published flagged event off the public guide while
 	// resolving; the band's admins are notified with the resolution note.
@@ -71,6 +86,35 @@
 				<Fact label="Reported">{formatDateTime(flag.createdAt)}</Fact>
 			</DefinitionList>
 		</InfoCard>
+
+		{#if flag.threadContext}
+			<InfoCard title="Conversation">
+				<p class="mb-3 text-sm opacity-70">
+					A private conversation between two members. It is not in the inbox and has no page of its
+					own — this report is what makes it readable.
+				</p>
+				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
+					<dt class="opacity-60">Between</dt>
+					<dd class="flex flex-wrap gap-2">
+						{#each flag.threadContext.participants as p (p.userId)}
+							<a class="link" href={resolve(`/staff/users/${p.userId}`)}>
+								{p.name}{#if p.isReporter}<span class="ml-1 opacity-60">(reported it)</span>{/if}
+							</a>
+						{/each}
+					</dd>
+
+					<dt class="opacity-60">Messages</dt>
+					<dd>{flag.threadContext.messageCount}</dd>
+
+					<dt class="opacity-60">Started</dt>
+					<dd>{formatDateTime(flag.threadContext.createdAt)}</dd>
+				</dl>
+
+				<div class="mt-4">
+					<ThreadTimeline messages={flag.threadContext.messages} viewerUserId={reporterId} />
+				</div>
+			</InfoCard>
+		{/if}
 
 		{#if flag.eventContext}
 			<InfoCard title="Event details">
@@ -149,6 +193,20 @@
 									<p class="text-sm text-wrap opacity-70">
 										Resolving this also means the member who posted it has their future listings
 										checked by staff before they publish. Dismissing changes nothing.
+									</p>
+								{/if}
+								{#if flag.entityType === 'suggestion'}
+									<!-- Same reason as the community-listing note above: this is the
+									     other place resolving a report changes a member's standing,
+									     and it also decides whether their post ever comes back. -->
+									<p class="text-sm text-wrap opacity-70">
+										{#if resolution === 'resolved'}
+											Resolving keeps this suggestion off the board and means the member who posted
+											it has their future suggestions checked by staff first.
+										{:else}
+											Dismissing puts the suggestion straight back on the board. The member's
+											standing is unchanged.
+										{/if}
 									</p>
 								{/if}
 								{#if canUnpublish && resolution === 'resolved'}

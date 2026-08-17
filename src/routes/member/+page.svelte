@@ -12,6 +12,7 @@
 	import { getMemberDashboard } from '$lib/remote/users.remote';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
+	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getMemberDashboard());
 
@@ -145,8 +146,15 @@
 						class="card bg-base-200 transition-shadow hover:shadow-md"
 					>
 						{#if evt.posterUrl}
+							{@const poster = imageSrc(evt.posterUrl, 'poster')}
 							<figure>
-								<img src={evt.posterUrl} alt={evt.title} class="h-32 w-full object-cover" />
+								<img
+									src={poster.src}
+									srcset={poster.srcset}
+									sizes={poster.sizes}
+									alt={evt.title}
+									class="h-32 w-full object-cover"
+								/>
 							</figure>
 						{/if}
 						<div class="card-body p-3">

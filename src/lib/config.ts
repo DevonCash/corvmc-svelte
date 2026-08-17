@@ -190,7 +190,15 @@ export const creditSourceLabels: Record<string, string> = {
 // Inbox enum values
 // ---------------------------------------------------------------------------
 
-export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'] as const;
+export const inboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'direct',
+	'instagram',
+	'messenger'
+] as const;
 
 /**
  * The contact-form subject that reveals the event-tip fields.
@@ -201,7 +209,16 @@ export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'mes
  */
 export const EVENT_TIP_SUBJECT = 'Event Tip';
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
-export const inboxMessageDirections = ['inbound', 'outbound'] as const;
+/**
+ * Which way a message went, relative to CorvMC. `inbound` is someone writing to
+ * us; `outbound` is us writing back, and is what we are responsible for
+ * delivering. `peer` is neither: a member↔member message that we only hold.
+ *
+ * Keeping `peer` out of `inbound` matters — `addOutboundMessage` builds its
+ * email References chain from `direction = 'inbound'`, and anything measuring
+ * staff response times counts the same rows. Neither should see a DM.
+ */
+export const inboxMessageDirections = ['inbound', 'outbound', 'peer'] as const;
 
 /**
  * How a participant relates to a thread. Only threads with signed-in parties
@@ -220,6 +237,15 @@ export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number]
 	'web',
 	'portal'
 ];
+
+/** How many people may be sitting on an unanswered request from you at once. */
+export const MAX_PENDING_SENT_REQUESTS = 5;
+
+/** How many of your reports may be waiting in the staff queue at once. */
+export const MAX_UNRESOLVED_REPORTS = 5;
+
+/** Longest a single direct message may be. */
+export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
@@ -372,3 +398,80 @@ export function formatVolunteerHours(minutes: number): string {
 	const rendered = Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/0+$/, '');
 	return `${rendered} ${hours === 1 ? 'hr' : 'hrs'}`;
 }
+
+// ---------------------------------------------------------------------------
+// Suggestions
+// ---------------------------------------------------------------------------
+
+export const suggestionCategories = [
+	'website_tools',
+	'gear_equipment',
+	'events_programming',
+	'the_space',
+	'policy',
+	'other'
+] as const;
+
+/** Editorial lifecycle — what staff have decided about the idea. */
+export const suggestionStatuses = ['open', 'planned', 'in_progress', 'done', 'declined'] as const;
+
+/**
+ * Whether the suggestion is on the board at all — a separate axis from status,
+ * so a public "Declined, here's why" can't be confused with a silent takedown.
+ */
+export const suggestionVisibilities = [
+	'visible',
+	'pending_review',
+	'under_review',
+	'hidden'
+] as const;
+
+export const SUGGESTION_TITLE_MAX = 120;
+export const SUGGESTION_BODY_MAX = 2000;
+export const SUGGESTION_RESPONSE_MAX = 2000;
+export const SUGGESTION_NOTE_MAX = 500;
+
+/**
+ * How many distinct pending reporters it takes to pull a suggestion off the
+ * board. One is a deliberate choice for a collective this size — reports here
+ * are authenticated, attributable, and member-only — but it does mean any
+ * member can hide any post until staff look at it. Raising this is the fix if
+ * the board is ever abused, which is why it's a constant and not an `if`.
+ */
+export const SUGGESTION_FLAGS_TO_WITHHOLD = 1;
+
+export const suggestionCategoryLabels: Record<(typeof suggestionCategories)[number], string> = {
+	website_tools: 'Website & Tools',
+	gear_equipment: 'Gear & Equipment',
+	events_programming: 'Events & Programming',
+	the_space: 'The Space',
+	policy: 'Policy',
+	other: 'Other'
+};
+
+/** Only `in_progress` needs help; the rest humanise fine on their own. */
+export const suggestionStatusLabels: Record<(typeof suggestionStatuses)[number], string> = {
+	open: 'Open',
+	planned: 'Planned',
+	in_progress: 'In progress',
+	done: 'Done',
+	declined: 'Declined'
+};
+
+export const suggestionVisibilityLabels: Record<(typeof suggestionVisibilities)[number], string> = {
+	visible: 'On the board',
+	pending_review: 'Waiting for review',
+	under_review: 'Pulled for review',
+	hidden: 'Hidden'
+};
+
+/** Select options, in declaration order. */
+export const suggestionCategoryOptions = suggestionCategories.map((value) => ({
+	value,
+	label: suggestionCategoryLabels[value]
+}));
+
+export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
+	value,
+	label: suggestionStatusLabels[value]
+}));

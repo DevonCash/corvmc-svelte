@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import {
 	create,
 	update,
@@ -15,7 +16,10 @@ import {
 	listAll as listAllEvents,
 	listUpcoming,
 	listPast,
-	getEventLineup
+	getEventLineup,
+	listMemberUpcomingShows,
+	listMemberPastShows,
+	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
 	getConflictDetails,
@@ -788,13 +792,26 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 	return { success: true };
 });
 
-export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
-	// Band-sourced events notify the band's admins — pulling a gig silently is
-	// the one unpublish that needs a word back to whoever posted it.
-	await unpublishWithNotice(data.id);
-	return { success: true };
-});
+export const unpublishEvent = form(
+	z.object({
+		id: z.string().min(1),
+		// Optional, because unpublishing a CMC event notifies nobody and requiring
+		// a reason there is pure friction. It is passed through whenever it is
+		// given: community listings and band gigs both email whoever posted them,
+		// and this endpoint had no way to say why at all — the member got "your
+		// listing was taken down" and a blank space where the reason goes.
+		// 1000 matches `rejectCommunityEvent`, which writes the same
+		// `event.reviewNotes` column.
+		notes: z.string().trim().max(1000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		// Band-sourced events notify the band's admins — pulling a gig silently is
+		// the one unpublish that needs a word back to whoever posted it.
+		await unpublishWithNotice(data.id, { notes: data.notes });
+		return { success: true };
+	}
+);
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireStaff();
@@ -1129,3 +1146,26 @@ export const purchaseTickets = form(
 		return { redirectUrl: result.checkoutUrl! };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserShows = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [upcoming, past, pastCount] = await Promise.all([
+		listMemberUpcomingShows(userId),
+		listMemberPastShows(userId, { limit: 5, offset: 0 }),
+		countMemberPastShows(userId)
+	]);
+	return { upcoming, past, pastCount };
+});
+
+export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
+	return { tickets, rsvps };
+});
