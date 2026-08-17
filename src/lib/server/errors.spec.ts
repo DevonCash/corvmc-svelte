@@ -61,6 +61,16 @@ describe('mapDomainError', () => {
 		expect(thrown?.body?.message).toContain('community listings');
 	});
 
+	// Regression: this used to map to 422. Every credit-spending service clamps to
+	// the balance before deducting, so the error only signals a lost race, and the
+	// one human-triggerable path (staff credit adjustment) now answers with a field
+	// issue. Re-adding it here would resurrect a status nobody can act on.
+	it('does not classify InsufficientCreditsError — it is a race signal, not a 4xx', async () => {
+		const { InsufficientCreditsError } = await import('./finance/credit-service');
+		const err = new InsufficientCreditsError('free_hours', 300, 200);
+		expect(() => mapDomainError(err)).toThrow(err);
+	});
+
 	it('re-throws an error it does not recognise, so it surfaces as a 500', () => {
 		const stranger = new Error('not a domain error');
 		expect(() => mapDomainError(stranger)).toThrow(stranger);

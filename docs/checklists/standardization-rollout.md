@@ -73,10 +73,12 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
 
 ## Open decisions
 
-- **`InsufficientCreditsError`: 409 or 422?** `mapDomainError` says 422 (business-rule violation);
-  `users.remote.ts:367` has always answered 409. The last inline ladder in the remote layer is
-  parked on this. Collapsing it would silently change that endpoint's contract, so it is left
-  visible with a comment. Pick one, then delete both the comment and the ladder.
+- ~~**`InsufficientCreditsError`: 409 or 422?**~~ **Resolved 2026-08-17: neither.** The class was
+  doing two unrelated jobs. Every credit-spending service clamps to the balance before deducting,
+  so for them it only ever means "someone spent between my read and my write" — a race to retry,
+  which `loan-service.ts:70` already treats that way. The one path a human can trigger is the staff
+  adjustment form, where it is a field mistake, not a status. `adjustCredits` now answers with an
+  issue on `amount` (the `SlugUnavailableError` precedent), and the class is out of the mapper.
 - **Two dead helpers, adopt or delete:** `parsePagination()` (`db/paginate.ts:14`) and
   `requireStaffOrOwner()` (`authorization.ts:146`), both zero call sites. `requireStaffOrOwner`
   duplicates a check four places hand-roll, so adopting it is probably right.
@@ -129,3 +131,8 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
 - **Pre-existing bug, not introduced here:** four `<Alert>` usages nest block content inside its
   `<p>` — `member/events/[id]/manage` (3) and `staff/settings:924` (which puts a `<ul>` inside).
   The parser breaks those out, so they render outside the alert box. Worth a separate fix.
+- (2026-08-17) Fixing the server half alone would have been invisible: the Adjust Credits modal
+  used raw `<input {...fields.amount.as('text')}>` inside a hand-rolled label, so a field issue set
+  `aria-invalid` and rendered **no message at all**. Converted to `FormField` in custom-input mode
+  — inputs keep their own `.as()` spreads so the submission is unchanged, the wrapper supplies the
+  error slot. **Check the markup renders the issue before assuming an `invalid()` fix is done.**

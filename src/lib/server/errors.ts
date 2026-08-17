@@ -27,7 +27,6 @@ import {
 	InvalidLoanTransitionError,
 	InsufficientQuantityError
 } from './equipment/loan-service';
-import { InsufficientCreditsError } from './finance/credit-service';
 
 // ---------------------------------------------------------------------------
 // Base class for future domain errors
@@ -97,13 +96,19 @@ export function mapDomainError(err: unknown): never {
 	}
 
 	// --- 422 Business rule violations ---
+	//
+	// InsufficientCreditsError is deliberately absent. Every service that spends
+	// credits clamps to the balance first, so the error only ever means "someone
+	// spent between my read and my write" — a race to retry, not a request the
+	// caller can fix, and no 4xx describes that. The one place a human can cause
+	// it is the staff credit adjustment form, which answers with a field issue on
+	// the amount instead. See adjustCredits in users.remote.ts.
 	if (
 		err instanceof CannotRemoveOwnerError ||
 		err instanceof OwnerCannotLeaveError ||
 		err instanceof CategoryHasEquipmentError ||
 		err instanceof InvalidLoanTransitionError ||
 		err instanceof InsufficientQuantityError ||
-		err instanceof InsufficientCreditsError ||
 		err instanceof RecurringSeriesError
 	) {
 		error(422, (err as Error).message);

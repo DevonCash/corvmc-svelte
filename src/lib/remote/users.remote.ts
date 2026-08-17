@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { titleCase } from '$lib/utils/format';
 import { SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
@@ -31,6 +32,7 @@ import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
+	getBalance,
 	getUsageSinceLastAllocation,
 	addCredits,
 	deductCredits,
@@ -332,6 +334,18 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	return { success: true };
 });
 
+/**
+ * The one message for "you asked to deduct more than they have", used both by
+ * the pre-check and by the race that slips past it.
+ *
+ * Deliberately not `InsufficientCreditsError.message`, which reads
+ * "Insufficient free_hours: requested 300, available 200" — that leaks the raw
+ * enum into something a staff member reads.
+ */
+function overdrawn(type: CreditType, available: number, requested: number): string {
+	return `${titleCase(type)} balance is ${available} — cannot deduct ${requested}.`;
+}
+
 export const adjustCredits = form(
 	z.object({
 		userId: z.string(),
@@ -339,7 +353,7 @@ export const adjustCredits = form(
 		amount: z.string(),
 		description: z.string().min(1)
 	}),
-	async (data) => {
+	async (data, issue) => {
 		await requireStaff();
 
 		const userId = data.userId as string;
@@ -347,32 +361,32 @@ export const adjustCredits = form(
 		const amount = Number(data.amount);
 		const description = data.description as string;
 
-		if (!Number.isFinite(amount)) throw error(400, 'Amount must be a number');
-		if (amount === 0) throw error(400, 'Amount cannot be zero');
+		// Everything a staffer can get wrong here is a field they can see and fix,
+		// so all of it resolves to an issue on `amount` rather than a thrown
+		// status. A thrown error tears the modal down through the error boundary
+		// and takes the description they already typed with it.
+		if (!Number.isFinite(amount)) invalid(issue.amount('Enter a number.'));
+		if (amount === 0) invalid(issue.amount('Enter an amount above or below zero.'));
 
 		if (amount > 0) {
 			await addCredits(userId, type, amount, 'admin_adjustment', undefined, description);
 		} else {
+			const units = Math.abs(amount);
+
+			// Checked before deducting so the staffer gets the balance under the
+			// field. deductCredits still guards the write — this read only exists to
+			// produce a better message than "the request failed".
+			const available = await getBalance(userId, type);
+			if (units > available) invalid(issue.amount(overdrawn(type, available, units)));
+
 			try {
-				await deductCredits(
-					userId,
-					type,
-					Math.abs(amount),
-					'admin_adjustment',
-					undefined,
-					description
-				);
+				await deductCredits(userId, type, units, 'admin_adjustment', undefined, description);
 			} catch (e) {
-				// Deducting more than the member holds is an ordinary staff mistake,
-				// not a server fault — surface the balance instead of a 500.
-				//
-				// Deliberately NOT collapsed into mapDomainError: the mapper classes
-				// InsufficientCreditsError as 422 (a business-rule violation) while
-				// this call site has always answered 409. Both readings are
-				// defensible and the two are not reconcilable without changing one
-				// endpoint's contract, so the divergence is left visible here rather
-				// than silently resolved. Pick one and delete this comment.
-				if (e instanceof InsufficientCreditsError) throw error(409, e.message);
+				// Someone spent between the read above and this write. Same message,
+				// re-read so the number in it is the one that actually applies.
+				if (e instanceof InsufficientCreditsError) {
+					invalid(issue.amount(overdrawn(type, await getBalance(userId, type), units)));
+				}
 				throw e;
 			}
 		}
