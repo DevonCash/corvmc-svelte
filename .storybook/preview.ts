@@ -35,7 +35,14 @@ const preview: Preview = {
 			// 'todo' - show a11y violations in the test UI only
 			// 'error' - fail CI on a11y violations
 			// 'off' - skip a11y checks entirely
-			test: 'todo'
+			//
+			// Was 'todo', which ran a full axe scan on every story during `vitest
+			// --project=storybook` while never being able to fail: the addon's
+			// afterEach scans whenever test !== 'off', but its
+			// expect(...).toHaveNoViolations() only asserts when the mode is
+			// 'error'. That cost 4.5s of the project's 6s of test time for a
+			// result nothing consumed. Flip to 'error' to actually gate on it.
+			test: 'off'
 		}
 	},
 	decorators: [
