@@ -1,6 +1,7 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
+import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
 
@@ -23,6 +24,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 const customPlugin = {
 	rules: {
 		'no-raw-form-elements': noRawFormElements,
+		'no-utility-soup': noUtilitySoup,
 		'no-duplicate-field-names': noDuplicateFieldNames,
 		'no-db-transaction': noDbTransaction
 	}
@@ -82,7 +84,7 @@ export default defineConfig(
 	},
 	{
 		files: ['**/+page.svelte'],
-		rules: { 'custom/no-raw-form-elements': 'warn' }
+		rules: { 'custom/no-raw-form-elements': 'warn', 'custom/no-utility-soup': 'warn' }
 	},
 	{
 		files: ['**/*.svelte'],

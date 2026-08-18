@@ -186,6 +186,25 @@ what `Hero` renders, and `.eyebrow` (1 use) overlaps the
 against the hero's 3rem, and `.eyebrow` is `--color-primary` against the eyebrows' `--fg-3` — so
 adopting either is a visual decision rather than a refactor, and was left alone.
 
+### Phase 6 notes
+
+`eslint-rules/no-utility-soup.js`, warn-level on `**/+page.svelte` only — a component library is
+allowed to write the classes it exists to encapsulate. It flags five things:
+
+- more than five utility classes on one element (97% of the tree's class attributes are five or
+  fewer, so this catches a component being built inline rather than ordinary styling);
+- a raw `btn` / `card` / `badge` / `alert` / `stat` / `table` class where a component owns it,
+  excepting the shapes a component cannot render (`btn` on a `<label>` or `<summary>`, `card` on an
+  `<a>` or `<li>`);
+- the dead `*-bordered` classes;
+- `text-sm|text-xs` beside `opacity-50|60|70`, which `text-muted` / `text-subtle` replace;
+- an inline `style` reaching a `var(--…)` token.
+
+147 warnings remain, and they are the backlog rather than noise: the `opacity-50` tier deferred in
+Phase 1, the clickable and tinted cards deliberately left in Phase 3, and the pages that were never
+in a phase — `(public)/+page.svelte` (13) and `band-site/[slug]/epk` (13), the latter being a
+separate theme context.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
@@ -196,4 +215,4 @@ adopting either is a visual decision rather than a refactor, and was left alone.
 | 3 — `Card`                       | 6,543        | 81              | −311 tokens; daisyUI share 970 → 827   |
 | 4 — filter controls              | 6,324        | 81              | −219 tokens, plus 185 dead ones        |
 | 5 — marketing section vocabulary | 6,193        | 52              | −131 tokens, −29 inline styles         |
-| 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                        |
+| 6 — `no-utility-soup` lint rule  | 6,193        | 52              | 147 warnings left as the backlog       |
