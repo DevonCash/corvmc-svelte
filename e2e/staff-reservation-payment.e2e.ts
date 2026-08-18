@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
+	COMPED_CASE_INDEX,
 	PAYMENT_CASES,
 	SEED_PAYMENTS_NAME,
 	expectedCashCents
@@ -60,6 +61,23 @@ test.describe('staff reservations payment column', () => {
 		// ...and one fully covered by credits shows no dollar figure. This is the
 		// regression that motivated the change: it used to read "$30.00".
 		await expect(rows.nth(3)).not.toContainText('$');
+	});
+
+	test('strikes the amount on a comped reservation', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/reservations');
+		await page.getByPlaceholder('Search member or band...').fill(SEED_PAYMENTS_NAME);
+
+		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
+		await expect(rows).toHaveCount(PAYMENT_CASES.length);
+
+		// Comping waives the charge without hiding what the room time was worth.
+		const comped = rows.nth(COMPED_CASE_INDEX);
+		await expect(comped.locator('.line-through')).toHaveText('$30.00');
+
+		// Every other row keeps its amount unstruck.
+		await expect(rows.nth(0).locator('.line-through')).toHaveCount(0);
+		await expect(rows.nth(3).locator('.line-through')).toHaveCount(0);
 	});
 });
 

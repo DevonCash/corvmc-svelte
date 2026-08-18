@@ -741,7 +741,8 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			// Without this every seeded reservation settled in cash, so the staff
 			// Payment column rendered nothing but plain dollar amounts and the
 			// credit-covered and mixed shapes went unexercised locally.
-			const coverage = status === 'completed' ? pick(['none', 'none', 'partial', 'full']) : 'none';
+			const coverage =
+				status === 'completed' ? pick(['none', 'none', 'partial', 'full', 'comped']) : 'none';
 			// Measured off the stored timestamps, not `duration`: `ptDate` floors a
 			// fractional hour (setUTCHours truncates), and the `hour` accumulator
 			// goes fractional, so the booking on disk is regularly longer than the
@@ -754,8 +755,15 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					: coverage === 'partial'
 						? Math.min(0.5, bookedHours)
 						: null;
+			// Comped waives the charge outright: nothing owed and no credits spent.
+			// That tuple — cashDueCents 0 with creditsUsed null — is the only thing
+			// separating a comped booking from a credit-settled one.
 			const cashDueCents =
-				creditsUsed === null ? null : Math.round((bookedHours - creditsUsed) * HOURLY_RATE_CENTS);
+				coverage === 'comped'
+					? 0
+					: creditsUsed === null
+						? null
+						: Math.round((bookedHours - creditsUsed) * HOURLY_RATE_CENTS);
 
 			const [r] = await db
 				.insert(reservation)
@@ -773,6 +781,8 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					// A fully covered booking is settled by the credits themselves —
 					// leaving `paidAt` null is what marks it "Paid with credits"
 					// rather than "Paid".
+					// A booking settled by credits or comped away was never *paid* —
+					// leaving `paidAt` null is what distinguishes those states.
 					paidAt: status === 'completed' && cashDueCents !== 0 ? startsAt : null
 				})
 				.returning();

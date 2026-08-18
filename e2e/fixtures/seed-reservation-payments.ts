@@ -67,8 +67,20 @@ export const PAYMENT_CASES = [
 		creditsUsed: 2,
 		cashDueCents: 0,
 		expected: '2cr'
+	},
+	// Comped: `cashDueCents` 0 with no credits recorded. Staff still want the
+	// room time's cash value on screen, struck through rather than dropped.
+	{
+		id: 'e2e-payment-comped',
+		hours: 2,
+		creditsUsed: null,
+		cashDueCents: 0,
+		expected: '$30.00'
 	}
 ] as const;
+
+/** The case whose amount renders struck through. */
+export const COMPED_CASE_INDEX = 4;
 
 const ALL_IDS = PAYMENT_CASES.map((c) => c.id);
 
