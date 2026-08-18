@@ -15,6 +15,7 @@
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
@@ -66,13 +67,11 @@
 				</dl>
 
 				{#if info.subscription.cancelAtPeriodEnd}
-					<div class="alert alert-warning mt-4">
-						<p>
-							Your subscription will end on {formatDate(
-								new Date(info.subscription.currentPeriodEnd)
-							)}.
-						</p>
-					</div>
+					<Alert type="warning" class="mt-4">
+						Your subscription will end on {formatDate(
+							new Date(info.subscription.currentPeriodEnd)
+						)}.
+					</Alert>
 					{#if isOwner}
 						<form
 							{...resumePremium.enhance(async (form) => {

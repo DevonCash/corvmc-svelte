@@ -18,6 +18,8 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { clubToday, formatVolunteerHours } from '$lib/config';
@@ -48,18 +50,14 @@
 					approval.
 				</Alert>
 			{/if}
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Name on file</dt>
-				<dd>{data.profile.firstName} {data.profile.lastName}</dd>
+			<DefinitionList>
+				<Fact label="Name on file">{data.profile.firstName} {data.profile.lastName}</Fact>
 
-				<dt class="opacity-60">Status</dt>
-				<dd><StatusBadge status={data.profile.status} label /></dd>
+				<Fact label="Status"><StatusBadge status={data.profile.status} label /></Fact>
 
-				<dt class="opacity-60">Age</dt>
-				<dd>{data.profile.isAdult ? 'Adult' : 'Under 18'}</dd>
+				<Fact label="Age">{data.profile.isAdult ? 'Adult' : 'Under 18'}</Fact>
 
-				<dt class="opacity-60">Hours</dt>
-				<dd>
+				<Fact label="Hours">
 					{formatVolunteerHours(data.summary.approvedMinutes)} approved ·
 					{formatVolunteerHours(data.summary.approvedMinutesThisYear)} this year
 					{#if data.summary.pendingMinutes > 0}
@@ -67,10 +65,9 @@
 							>{formatVolunteerHours(data.summary.pendingMinutes)} pending</span
 						>
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Interested in</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Interested in" class="flex flex-wrap gap-1">
 					{#each data.interests as i (i.roleId)}
 						<a href={resolve(`/staff/volunteer/roles/${i.roleId}`)}>
 							<Badge size="sm">{i.roleName}</Badge>
@@ -78,8 +75,8 @@
 					{:else}
 						<span class="opacity-60">No roles picked</span>
 					{/each}
-				</dd>
-			</dl>
+				</Fact>
+			</DefinitionList>
 		{/if}
 	{/snippet}
 </AsyncCard>

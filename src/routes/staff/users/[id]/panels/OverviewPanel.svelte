@@ -3,6 +3,8 @@
 	import type { TabKey } from '../tabs';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
 
@@ -202,33 +204,28 @@
 {/if}
 
 <InfoCard title="At a glance">
-	<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-		<dt class="opacity-60">Joined</dt>
-		<dd>{formatDateShortYear(member.createdAt)}</dd>
+	<DefinitionList>
+		<Fact label="Joined">{formatDateShortYear(member.createdAt)}</Fact>
 
-		<dt class="opacity-60">Last sign-in</dt>
-		<dd>
+		<Fact label="Last sign-in">
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
 				<span class="opacity-60">Never, or signed out everywhere</span>
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Member no.</dt>
-		<dd>{member.memberNumber ?? '—'}</dd>
+		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<dt class="opacity-60">Roles</dt>
-		<dd class="flex flex-wrap gap-1">
+		<Fact label="Roles" class="flex flex-wrap gap-1">
 			{#each member.roles as role (role)}
 				<Badge size="sm">{role}</Badge>
 			{:else}
 				<span class="opacity-60">Member</span>
 			{/each}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Membership</dt>
-		<dd>
+		<Fact label="Membership">
 			{#if overview.membership.sustaining}
 				Sustaining{overview.membership.hoursPerReset
 					? ` · ${overview.membership.hoursPerReset / 2} hrs a month`
@@ -236,16 +233,15 @@
 			{:else}
 				Free tier
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Directory</dt>
-		<dd>
+		<Fact label="Directory">
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
 				<span class="opacity-60"> · profile incomplete</span>
 			{/if}
-		</dd>
-	</dl>
+		</Fact>
+	</DefinitionList>
 </InfoCard>
 
 <InfoCard title="Programs">

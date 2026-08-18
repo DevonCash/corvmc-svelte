@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { IconShare3, IconCheck, IconCalendarPlus } from '@tabler/icons-svelte';
+	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -24,6 +24,7 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
@@ -91,7 +92,6 @@
 	let coverFees = $state(false);
 	let qrOpen = $state(false);
 	let qrIndex = $state(0);
-	let copied = $state(false);
 
 	// What this member is actually charged per ticket — the member rate when it
 	// applies, the list price otherwise.
@@ -108,16 +108,6 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
-
-	async function share() {
-		try {
-			await navigator.clipboard.writeText(window.location.href);
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable — no-op
-		}
-	}
 
 	function refreshDetail() {
 		void getMemberEventDetail(page.params.id!).refresh();
@@ -154,18 +144,7 @@
 				</li>
 			</ul>
 		</details>
-		<button
-			type="button"
-			class="btn btn-ghost btn-sm btn-square"
-			title="Copy link to this event"
-			onclick={share}
-		>
-			{#if copied}
-				<IconCheck size={18} />
-			{:else}
-				<IconShare3 size={18} />
-			{/if}
-		</button>
+		<ShareButton title="Copy link to this event" />
 	</div>
 </PageHeader>
 <PageContent>

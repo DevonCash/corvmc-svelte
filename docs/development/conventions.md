@@ -209,3 +209,24 @@ Prefer existing libraries and managed services over new bespoke code — the goa
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
 dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+
+## Where a status enum lives
+
+Two homes, and the split is deliberate:
+
+- **`src/lib/config.ts`** — enums that client code (routes, components) imports.
+- **`src/lib/server/db/schema/*.ts`** — enums only server code needs.
+
+The constraint is bundling, not taste: `$lib/server` cannot be imported from the browser, so an
+enum a `.svelte` file needs _cannot_ live in a schema file. Schema files import the client-side
+enums from `config.ts` when they need to build a column constraint, which is why the dependency
+runs config → schema and never the other way.
+
+If you see a schema-defined enum with what looks like a client importer, check the file: spec files
+run in the **server** vitest project, where `$lib/server` is reachable. `StatusBadge.spec.ts` is the
+example that makes the split look inconsistent when it isn't.
+
+Label and colour maps for these values live in `StatusBadge.svelte` (`labels`, `badgeClass`,
+`variants`), and `StatusBadge.spec.ts` asserts every enum value is covered. Domain-specific wording
+— "Waiting on DNS" rather than a generic "Pending" — belongs at the call site, not in the shared
+registry.

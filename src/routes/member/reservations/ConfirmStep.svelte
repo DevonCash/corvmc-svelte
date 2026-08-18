@@ -6,8 +6,16 @@
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { fullDate, formatTimeRange, formatScheduleLabel } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+	import {
+		formatDate,
+		formatDollars,
+		formatScheduleLabel,
+		formatTimeRange,
+		fullDate,
+		toLocalDate,
+		toLocalTime
+	} from '$lib/utils/format';
+	import { creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -29,13 +37,7 @@
 	let el: HTMLDivElement;
 
 	function extractTimeFields(d: Date) {
-		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
-		const time = d.toLocaleTimeString('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-		return { date, time };
+		return { date: toLocalDate(d), time: toLocalTime(d) };
 	}
 
 	let pricing = $state<{
@@ -58,18 +60,8 @@
 	// (which skips payment) is the single action — no redundant payment screen.
 	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
 
-	function cents(amount: number): string {
-		return (amount / 100).toFixed(2);
-	}
-
 	function formatPreviewDate(iso: string): string {
-		const d = new Date(iso);
-		return d.toLocaleDateString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(new Date(iso));
 	}
 
 	$effect(() => {
@@ -163,14 +155,16 @@
 		{:else}
 			<div class="py-2 text-sm">
 				<div class="flex justify-between">
-					<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
+					<span>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</span>
 					{#if pricing.creditsApplicable > 0}
 						<span>
-							<span class="line-through opacity-60">${cents(pricing.totalCents)}</span>
-							<span class="ml-1 font-medium text-success">${cents(pricing.remainingCents)}</span>
+							<span class="line-through opacity-60">${formatDollars(pricing.totalCents)}</span>
+							<span class="ml-1 font-medium text-success"
+								>${formatDollars(pricing.remainingCents)}</span
+							>
 						</span>
 					{:else}
-						<span>${cents(pricing.totalCents)}</span>
+						<span>${formatDollars(pricing.totalCents)}</span>
 					{/if}
 				</div>
 				{#if pricing.creditsApplicable > 0}

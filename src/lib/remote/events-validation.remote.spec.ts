@@ -36,6 +36,10 @@ vi.mock('$lib/server/event/rsvp-service', () => ({
 }));
 
 const checkout = vi.fn(async () => ({ url: 'https://stripe.test/session' }));
+// Must be the same class the handler's `instanceof` compares against, so the
+// module is mocked rather than the real error imported alongside it.
+class InsufficientCreditsError extends Error {}
+vi.mock('$lib/server/finance/credit-service', () => ({ InsufficientCreditsError }));
 vi.mock('$lib/server/finance/payment-service', () => ({
 	checkout: (...a: unknown[]) => checkout(...(a as []))
 }));
@@ -276,6 +280,45 @@ describe('purchaseTickets validation', () => {
 			'attendeeName'
 		);
 		expect(checkout).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * checkout() spends credits before charging, and payment-service reverses
+	 * every completed deduction if a later one fails — so this can only be a lost
+	 * race, with nothing charged. It used to propagate as an unhandled throw: a
+	 * 500 in Sentry for a routine race, and a generic "Something went wrong" for
+	 * the buyer, since Form drops the message off a thrown error.
+	 */
+	it('turns a lost credit race into a quantity issue rather than an unhandled throw', async () => {
+		// The shared getById default omits `source`, which trips the "not ours to
+		// sell" guard long before checkout — override it so this test reaches the
+		// code it is actually about.
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Open Mic Night',
+			status: 'published',
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			source: 'cmc'
+		} as never);
+		checkout.mockRejectedValueOnce(new InsufficientCreditsError('raced'));
+
+		await expectRejects(
+			() =>
+				events.purchaseTickets(
+					{
+						eventId: 'evt-1',
+						quantity: 2,
+						attendeeName: 'Ada',
+						attendeeEmail: 'ada@example.com'
+					},
+					makeIssue()
+				),
+			'quantity'
+		);
+		// Guards the test itself: the assertion above passes for any validation
+		// rejection, including ones that fire long before the code under test.
+		expect(checkout).toHaveBeenCalled();
 	});
 });
 

@@ -296,12 +296,10 @@
 						}}
 					>
 						{#snippet form()}
-							<div class="alert alert-error">
-								<p>
-									This action is permanent. Deleting your account will cancel all of your current
-									and future reservations and end your subscription. This cannot be undone.
-								</p>
-							</div>
+							<Alert type="error">
+								This action is permanent. Deleting your account will cancel all of your current and
+								future reservations and end your subscription. This cannot be undone.
+							</Alert>
 
 							<FormField
 								name="password"

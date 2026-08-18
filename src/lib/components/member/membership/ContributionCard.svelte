@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
@@ -27,7 +28,7 @@
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
 	const feeAmount = $derived(
-		(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents / 100).toFixed(2)
+		formatDollars(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents)
 	);
 	const nextBilling = $derived(
 		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
