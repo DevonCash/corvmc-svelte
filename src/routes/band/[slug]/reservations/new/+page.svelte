@@ -257,7 +257,7 @@
 					</Select>
 				{/if}
 				{#if recurring}
-					<p class="text-sm mt-1 opacity-60">Future instances will be generated automatically.</p>
+					<p class="text-muted mt-1">Future instances will be generated automatically.</p>
 				{/if}
 			</div>
 		{/if}

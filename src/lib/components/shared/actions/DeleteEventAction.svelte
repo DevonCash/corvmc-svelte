@@ -68,7 +68,7 @@
 				</Alert>
 			{/if}
 
-			<p class="pt-2 text-sm opacity-70">This cannot be undone.</p>
+			<p class="pt-2 text-muted">This cannot be undone.</p>
 		{/snippet}
 	</Action>
 {:else}

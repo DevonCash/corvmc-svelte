@@ -83,7 +83,7 @@
 				</p>
 			{/if}
 
-			<p class="text-sm opacity-60">
+			<p class="text-muted">
 				{suggestion.authorName ?? 'A former member'} · {relativeDay(suggestion.createdAt)}
 			</p>
 		</div>
@@ -102,7 +102,7 @@
 				{#snippet icon()}<IconFlag size={16} />{/snippet}
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
-					<p class="mb-3 text-sm opacity-70">
+					<p class="mb-3 text-muted">
 						This takes the suggestion off the board straight away while staff look at it. If they
 						don't agree with the report, it goes back up.
 					</p>

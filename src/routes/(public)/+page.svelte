@@ -47,7 +47,7 @@
 		>
 			Building and Connecting Music Communities in Corvallis
 		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-lg leading-relaxed text-fg-2">
 			We provide shared music resources, affordable practice space, and a supportive community for
 			local musicians to grow, collaborate, and thrive together.
 		</p>
@@ -104,7 +104,7 @@
 			<h2 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-teal)">
 				What We Do
 			</h2>
-			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
 				Supporting musicians and building community through various programs
 			</p>
 		</div>
@@ -118,7 +118,7 @@
 						<item.icon size={40} />
 					</div>
 					<h3 class="text-lg font-bold">{item.title}</h3>
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{item.desc}</p>
+					<p class="text-muted leading-relaxed">{item.desc}</p>
 				</div>
 			{/each}
 		</div>
@@ -135,7 +135,7 @@
 			<h2 class="text-4xl font-bold tracking-tight mb-3" style="color: var(--cmc-teal)">
 				Get Involved
 			</h2>
-			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
 				Join our mission to support the local music community
 			</p>
 		</div>

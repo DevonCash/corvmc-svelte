@@ -41,7 +41,7 @@
 				</p>
 			</div>
 
-			<p class="mt-6 text-center text-sm opacity-60">
+			<p class="mt-6 text-center text-muted">
 				Change or cancel anytime. No commitments, no awkward conversations.
 			</p>
 		</div>

@@ -87,7 +87,7 @@
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<div class="flex flex-wrap items-center gap-2">
-				<label class="text-sm opacity-70" for="report-from">From</label>
+				<label class="text-muted" for="report-from">From</label>
 				<input
 					id="report-from"
 					type="date"
@@ -98,7 +98,7 @@
 						pageNumber = 1;
 					}}
 				/>
-				<label class="text-sm opacity-70" for="report-to">To</label>
+				<label class="text-muted" for="report-to">To</label>
 				<input
 					id="report-to"
 					type="date"
@@ -233,7 +233,7 @@
 							<td class="cell-primary">
 								<div class="truncate font-medium">{role.roleName}</div>
 								{#if role.latestComments.length > 0}
-									<div class="truncate text-xs opacity-60" title={role.latestComments[0].comment}>
+									<div class="truncate text-subtle" title={role.latestComments[0].comment}>
 										"{role.latestComments[0].comment}"
 									</div>
 								{/if}

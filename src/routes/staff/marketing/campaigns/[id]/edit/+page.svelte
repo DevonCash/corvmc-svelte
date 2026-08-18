@@ -183,12 +183,12 @@
 							{#if a.systemKey}
 								<span class="badge badge-info badge-xs">Built-in</span>
 							{/if}
-							<span class="text-xs opacity-60">({a.subscriberCount})</span>
+							<span class="text-subtle">({a.subscriberCount})</span>
 						</label>
 					{/each}
 				</div>
 				{#if selectedAudienceIds.length > 0}
-					<p class="text-xs opacity-60 mt-1">
+					<p class="text-subtle mt-1">
 						~{totalSubscribers} recipients (before deduplication)
 					</p>
 				{/if}
@@ -203,7 +203,7 @@
 					class="textarea-bordered textarea w-full font-mono text-sm"
 					rows="20"
 				></textarea>
-				<p class="text-xs opacity-60 mt-1">
+				<p class="text-subtle mt-1">
 					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
 				</p>
 			</div>
@@ -248,7 +248,7 @@
 			</div>
 
 			{#if submitting}
-				<div class="flex items-center gap-2 text-sm opacity-60">
+				<div class="flex items-center gap-2 text-muted">
 					<span class="loading loading-sm loading-spinner"></span>
 					Working...
 				</div>

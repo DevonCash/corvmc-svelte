@@ -116,7 +116,7 @@
 					</dl>
 
 					{#if loan.memberNotes}
-						<p class="mt-2 rounded bg-base-200 p-2 text-xs opacity-60">{loan.memberNotes}</p>
+						<p class="mt-2 rounded bg-base-200 p-2 text-subtle">{loan.memberNotes}</p>
 					{/if}
 				</div>
 			</div>
@@ -142,7 +142,7 @@
 							<dd>
 								{formatCents(loan.totalChargeCents)}
 								{#if loan.creditsCents && loan.creditsCents > 0}
-									<span class="text-xs opacity-60">({formatCents(loan.creditsCents)} credits)</span>
+									<span class="text-subtle">({formatCents(loan.creditsCents)} credits)</span>
 								{/if}
 							</dd>
 						{/if}

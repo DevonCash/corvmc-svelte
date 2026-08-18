@@ -58,7 +58,7 @@
 		<span class="reservation-status">{reservation.status.replace('_', ' ')}</span>
 		{#if !isPast && reservation.status === 'scheduled' && !canConfirm}
 			<!-- Hint lives above the action row so it never wraps behind the buttons. -->
-			<p class="px-3 text-right text-xs opacity-60">
+			<p class="px-3 text-right text-subtle">
 				Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
 			</p>
 		{/if}

@@ -85,14 +85,14 @@
 			checkboxLabel="Cover processing fees so the Collective receives 100% of your contribution"
 		/>
 		{#if coverFees}
-			<p class="ml-12 text-sm opacity-60">
+			<p class="ml-12 text-muted">
 				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)
 			</p>
 		{/if}
 	</div>
 
 	<div class="rounded-lg bg-base-200/50 p-4">
-		<p class="text-sm opacity-60">New monthly total</p>
+		<p class="text-muted">New monthly total</p>
 		<p class="mt-1 font-semibold text-primary">
 			${amount}.00 membership{#if coverFees}
 				+ ${feeDisplay} processing fees{/if} = ${totalDisplay} total per month

@@ -54,7 +54,7 @@
 							<div class="flex-1 min-w-0">
 								<h3 class="font-semibold text-sm">{category.name}</h3>
 								{#if category.description}
-									<p class="text-xs opacity-60 mt-0.5">{category.description}</p>
+									<p class="text-subtle mt-0.5">{category.description}</p>
 								{/if}
 							</div>
 						</div>

@@ -90,7 +90,7 @@
 		{#snippet icon()}<IconPlus size={16} />{/snippet}
 		{#snippet form()}
 			{#if standing.requiresReview}
-				<p class="mb-3 text-sm opacity-70">Staff will look at this before it goes on the board.</p>
+				<p class="mb-3 text-muted">Staff will look at this before it goes on the board.</p>
 			{/if}
 			<FormField name="title" type="text" label="What should we do?" />
 			<FormField name="body" type="textarea" label="Tell us a bit more" />

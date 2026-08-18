@@ -110,7 +110,7 @@
 								<span class="shrink-0"><StatusBadge status={f.status} label /></span>
 							</div>
 							<p class="text-sm">{f.reason}</p>
-							<p class="text-sm opacity-60">
+							<p class="text-muted">
 								Reported by {f.reportedByName ?? 'Anonymous visitor'} · {relativeDay(f.createdAt)}
 							</p>
 						</div>

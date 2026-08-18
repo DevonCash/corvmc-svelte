@@ -164,7 +164,7 @@
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<!-- Links -->
 		<InfoCard title="Links">
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				Add links to your music, social media, or personal site. SoundCloud, YouTube, and Spotify
 				links will show as embedded players on your profile.
 			</p>
@@ -173,7 +173,7 @@
 
 		<!-- Contact -->
 		<InfoCard title="Directory Contact Info">
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				Optional contact details shown on your directory profile. Leave blank to keep private.
 			</p>
 			<div class="space-y-3">

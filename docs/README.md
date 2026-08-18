@@ -86,6 +86,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                                      |
 | [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                                      |
 | [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug                         |
+| [template-audit.md](development/template-audit.md)                           | 🔧     | Class-soup census + phased migration to a component-based design system             |
 
 ## reports
 

@@ -65,7 +65,7 @@
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="font-medium">{invite.name}</p>
-									<p class="text-sm opacity-60">
+									<p class="text-muted">
 										Invited as {invite.role}
 									</p>
 								</div>
@@ -133,7 +133,7 @@
 						<div class="card-body py-4 flex-row items-center justify-between">
 							<div>
 								<p class="font-medium">{b.name}</p>
-								<p class="text-sm opacity-60">
+								<p class="text-muted">
 									{b.memberCount}
 									{b.memberCount === 1 ? 'member' : 'members'}
 								</p>

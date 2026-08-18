@@ -204,7 +204,7 @@
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
 					<legend class="px-2 text-sm font-medium">Shift defaults</legend>
-					<p class="mb-2 text-xs opacity-60">
+					<p class="mb-2 text-subtle">
 						What the New Shift form starts with. Not a limit — either can be changed on the shift
 						itself, and leaving them blank just means the form starts on its own defaults.
 					</p>
@@ -265,7 +265,7 @@
 							>
 								{#snippet form()}
 									<input type="hidden" name="roleId" value={role.id} />
-									<p class="text-sm opacity-70">
+									<p class="text-muted">
 										Someone must hold all of these before they can claim a shift for this role.
 										Logging hours is never blocked — the review queue just flags it.
 									</p>
@@ -289,9 +289,7 @@
 
 			{#await requirements then held}
 				{#if held.length === 0}
-					<p class="text-sm opacity-60">
-						Anyone can claim a shift for this role — no clearance needed.
-					</p>
+					<p class="text-muted">Anyone can claim a shift for this role — no clearance needed.</p>
 				{:else}
 					<ul class="space-y-2 text-sm">
 						{#each held as cert (cert.id)}
@@ -362,7 +360,7 @@
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="cell-primary whitespace-nowrap">
 								<a {href} class="font-medium">{formatDateShort(shift.startsAt)}</a>
-								<div class="text-xs opacity-60">
+								<div class="text-subtle">
 									{timeRange(shift.startsAt, shift.endsAt)}
 								</div>
 							</td>
@@ -393,7 +391,7 @@
 						<!-- The count that matters when the role is gated is how many could
 						     actually take a shift, not how many said yes. -->
 						{#if r.gated && r.rows.length > 0}
-							<span class="text-sm font-normal opacity-60">
+							<span class="text-muted font-normal">
 								· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} ready
 							</span>
 						{/if}

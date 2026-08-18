@@ -300,13 +300,9 @@
 
 				<div class="edet__ctas">
 					{#if isCancelled}
-						<span class="text-base font-medium" style="color: var(--fg-2)"
-							>Tickets and RSVPs are closed.</span
-						>
+						<span class="text-base font-medium text-fg-2">Tickets and RSVPs are closed.</span>
 					{:else if data.isPast}
-						<span class="text-base font-medium" style="color: var(--fg-2)"
-							>This event has ended.</span
-						>
+						<span class="text-base font-medium text-fg-2">This event has ended.</span>
 					{:else if mode === 'platform'}
 						{#if soldOut}
 							<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
@@ -315,7 +311,7 @@
 								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
 							</a>
 							{#if data.remaining !== null}
-								<span class="text-sm" style="color: var(--fg-2)"
+								<span class="text-muted"
 									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 								>
 							{/if}
@@ -349,7 +345,7 @@
 							{mode === 'external' ? "Sign in to say you're going" : 'Sign in to RSVP'}
 						</a>
 						{#if data.rsvpCount > 0}
-							<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+							<span class="text-muted">{data.rsvpCount} going</span>
 						{/if}
 					{/if}
 				</div>

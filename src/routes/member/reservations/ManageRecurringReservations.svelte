@@ -30,7 +30,7 @@
 				<p class="font-medium">
 					{formatScheduleLabel(series.frequencyLabel, series.startsAt, series.monthlyMode)}
 				</p>
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					{format(series.startsAt, 'p')} – {format(series.endsAt, 'p')} · {formatDistanceStrict(
 						series.endsAt,
 						series.startsAt,
@@ -48,6 +48,6 @@
 			/>
 		</div>
 	{:else}
-		<p class="text-sm opacity-60">No active recurring reservations.</p>
+		<p class="text-muted">No active recurring reservations.</p>
 	{/each}
 {/if}

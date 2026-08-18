@@ -309,7 +309,7 @@
 		<svelte:boundary>
 			<div class="card bg-base-100 shadow">
 				<div class="card-body space-y-4">
-					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
+					<h3 class="text-muted font-medium">Edit Event</h3>
 
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
@@ -451,7 +451,7 @@
 							     do: `update()` throws on it, so offering the toggle here would
 							     only produce a failed save. The band's own link takes the money. -->
 							{#if !cmcCanSell}
-								<p class="text-sm opacity-60">
+								<p class="text-muted">
 									CMC doesn't sell tickets for shows it isn't producing — the price above is what
 									attendees pay at the door or through the {isBandEvent ? "band's" : 'listed'} ticket
 									link.
@@ -479,7 +479,7 @@
 											class="input input-bordered w-full"
 										/>
 									</FormField>
-									<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
+									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
 								</div>
 							{/if}
 
@@ -646,28 +646,28 @@
 		<InfoCard title="Ticketing">
 			<div class="flex gap-6">
 				<div>
-					<p class="text-sm opacity-60">Price</p>
+					<p class="text-muted">Price</p>
 					<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
 				</div>
 				<div>
-					<p class="text-sm opacity-60">Sold by</p>
+					<p class="text-muted">Sold by</p>
 					<p class="text-lg font-medium">
 						{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
 					</p>
 				</div>
 				{#if evt.ticketingEnabled}
 					<div>
-						<p class="text-sm opacity-60">Capacity</p>
+						<p class="text-muted">Capacity</p>
 						<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
 					</div>
 				{/if}
 				{#if data.ticketStats}
 					<div>
-						<p class="text-sm opacity-60">Sold</p>
+						<p class="text-muted">Sold</p>
 						<p class="text-lg font-medium">{data.ticketStats.sold}</p>
 					</div>
 					<div>
-						<p class="text-sm opacity-60">Remaining</p>
+						<p class="text-muted">Remaining</p>
 						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
 					</div>
 				{/if}
@@ -706,7 +706,7 @@
 							<td class="w-px"><StatusBadge status={t.status} /></td>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{t.attendeeName}</div>
-								<div class="truncate text-sm opacity-60">{t.attendeeEmail}</div>
+								<div class="truncate text-muted">{t.attendeeEmail}</div>
 							</td>
 							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
 						</tr>

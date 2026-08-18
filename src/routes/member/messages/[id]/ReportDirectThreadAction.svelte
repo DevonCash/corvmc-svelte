@@ -34,7 +34,7 @@
 	{#snippet form()}
 		<input {...fields.threadId.as('hidden', threadId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Staff will be able to read this conversation so they can review it. This person will also be
 				blocked, and the conversation will close.
 			</p>

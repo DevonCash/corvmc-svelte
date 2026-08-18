@@ -196,7 +196,7 @@
 					<span class="text-2xl font-medium">{amountFormatted}</span>
 					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
 				</div>
-				<p class="text-sm opacity-60">{durationLabel} × {rateFormatted}/hr</p>
+				<p class="text-muted">{durationLabel} × {rateFormatted}/hr</p>
 				{#if (r.creditsUsed ?? 0) > 0}
 					<p class="text-sm text-success">
 						Free hours applied: {r.creditsUsed}
@@ -235,9 +235,9 @@
 		<InfoCard title="Door Access">
 			{#if r.lockCode}
 				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
-				<p class="text-sm opacity-60">Keypad code for this reservation.</p>
+				<p class="text-muted">Keypad code for this reservation.</p>
 			{:else}
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					Not provisioned yet — codes are issued the morning of the reservation.
 				</p>
 			{/if}
@@ -253,7 +253,7 @@
 
 	<!-- Audit -->
 	{#if data.reservation.createdByStaffName}
-		<p class="text-sm opacity-60">
+		<p class="text-muted">
 			Booked by staff: {data.reservation.createdByStaffName}
 		</p>
 	{/if}

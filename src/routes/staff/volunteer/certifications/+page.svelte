@@ -83,7 +83,7 @@
 
 						<td class="cell-primary">
 							<div class="truncate font-medium">{cert.name}</div>
-							<div class="truncate text-xs opacity-60">
+							<div class="truncate text-subtle">
 								{cert.issuedBy ?? 'Granted by CMC'}
 							</div>
 						</td>

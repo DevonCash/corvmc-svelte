@@ -94,9 +94,7 @@
 {#if member}
 	<PageContent width="3xl">
 		<div class="flex items-center justify-between">
-			<a href={resolve('/member/directory')} class="link text-sm opacity-60"
-				>&larr; Back to Directory</a
-			>
+			<a href={resolve('/member/directory')} class="link text-muted">&larr; Back to Directory</a>
 			<div class="flex items-center gap-2">
 				{#if canMessage}
 					<MessageMemberAction recipientId={id} recipientName={member.name} />

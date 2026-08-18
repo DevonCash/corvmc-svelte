@@ -69,7 +69,7 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-10">
 			<h1 class="text-4xl font-bold tracking-tight mb-2" style="color: var(--cmc-navy)">Events</h1>
-			<p class="text-base" style="color: var(--fg-2)">
+			<p class="text-base text-fg-2">
 				Shows at the Collective and gigs from our member bands around the region
 			</p>
 		</div>

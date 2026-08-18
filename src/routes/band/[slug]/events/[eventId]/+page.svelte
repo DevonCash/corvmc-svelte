@@ -69,33 +69,33 @@
 			<div class="card-body">
 				<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Date</dt>
+						<dt class="text-subtle font-medium uppercase">Date</dt>
 						<dd>{formatDate(evt.startsAt)}</dd>
 					</div>
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Time</dt>
+						<dt class="text-subtle font-medium uppercase">Time</dt>
 						<dd>{formatEventTimeRange(evt.startsAt, evt.endsAt)}</dd>
 					</div>
 					{#if evt.doorsAt}
 						<div>
-							<dt class="text-xs font-medium uppercase opacity-60">Doors</dt>
+							<dt class="text-subtle font-medium uppercase">Doors</dt>
 							<dd>{formatTime(evt.doorsAt)}</dd>
 						</div>
 					{/if}
 					{#if evt.location}
 						<div>
-							<dt class="text-xs font-medium uppercase opacity-60">Location</dt>
+							<dt class="text-subtle font-medium uppercase">Location</dt>
 							<dd>{evt.location}</dd>
 						</div>
 					{/if}
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Price</dt>
+						<dt class="text-subtle font-medium uppercase">Price</dt>
 						<!-- Band gigs never sell through our checkout. -->
 						<dd>{priceDisplay({ ...evt, ticketingEnabled: false }).label}</dd>
 					</div>
 					{#if evt.externalTicketUrl}
 						<div class="sm:col-span-2">
-							<dt class="text-xs font-medium uppercase opacity-60">Ticket Link</dt>
+							<dt class="text-subtle font-medium uppercase">Ticket Link</dt>
 							<dd>
 								<a
 									href={evt.externalTicketUrl}
@@ -112,7 +112,7 @@
 
 				{#if evt.lineup.length > 1}
 					<div class="mt-4 border-t pt-4">
-						<p class="text-xs font-medium uppercase opacity-60">Bill</p>
+						<p class="text-subtle font-medium uppercase">Bill</p>
 						<ul class="mt-1 space-y-1">
 							{#each evt.lineup as act (act.id)}
 								<li class="flex items-center gap-2 text-sm">

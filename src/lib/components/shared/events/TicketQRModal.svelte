@@ -47,7 +47,7 @@
 		{#if ticket.event}
 			<div class="text-center">
 				<p class="text-lg font-bold">{ticket.event.title}</p>
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					{formatDate(ticket.event.startsAt)} &middot; {formatTime(ticket.event.startsAt)}
 				</p>
 			</div>
@@ -60,7 +60,7 @@
 
 		<div class="text-center">
 			<p class="font-mono text-lg tracking-widest">{ticket.code}</p>
-			<p class="text-sm opacity-60">{ticket.attendeeName}</p>
+			<p class="text-muted">{ticket.attendeeName}</p>
 		</div>
 
 		{#if hasMultiple}
@@ -82,7 +82,7 @@
 						style="width:16px;height:16px"><path d="M15 6l-6 6 6 6" /></svg
 					>
 				</button>
-				<span class="text-sm opacity-70">{index + 1} of {total}</span>
+				<span class="text-muted">{index + 1} of {total}</span>
 				<button
 					type="button"
 					class="btn btn-sm btn-circle btn-outline"

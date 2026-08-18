@@ -229,7 +229,7 @@
 
 	<div class="mt-6 space-y-4">
 		{#if activeTab === 'pricing'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Configure the products and pricing used for checkout. Changes to names and descriptions sync
 				to Stripe automatically. Price changes take effect on the next checkout.
 			</p>
@@ -334,7 +334,7 @@
 				</Form>
 			{/each}
 		{:else if activeTab === 'reservations'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Configure operating hours, booking rules, and scheduling limits for practice room
 				reservations.
 			</p>
@@ -479,7 +479,7 @@
 				</div>
 			</Form>
 		{:else if activeTab === 'organization'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Organization identity used in emails, branding, and member-facing content.
 			</p>
 
@@ -537,7 +537,7 @@
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<h3 class="card-title text-base">Location</h3>
-						<p class="text-xs opacity-60">Shown in the site footer and on the contact page.</p>
+						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -575,7 +575,7 @@
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<h3 class="card-title text-base">Social Links</h3>
-						<p class="text-xs opacity-60">Shown in the site footer. Leave blank to hide.</p>
+						<p class="text-subtle">Shown in the site footer. Leave blank to hide.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -597,7 +597,7 @@
 				</div>
 			</Form>
 		{:else if activeTab === 'integrations'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Manage credentials for third-party integrations. Changes take effect immediately.
 			</p>
 
@@ -655,7 +655,7 @@
 						</div>
 
 						{#if !utecConnected && !utecCanConnect}
-							<p class="text-xs opacity-60">
+							<p class="text-subtle">
 								Enter and save your Client ID and Secret, then connect to authorize the lock.
 							</p>
 						{/if}
@@ -679,7 +679,7 @@
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											Issues a 15-minute test code and exercises the lock commands. Try the code on
 											the door, then revoke it.
 										</p>
@@ -714,7 +714,7 @@
 									<div class="mt-3 rounded-lg border border-base-300 p-3">
 										{#if selfTestResult.code}
 											<div class="mb-2 flex items-baseline gap-2">
-												<span class="text-xs opacity-60">Test code</span>
+												<span class="text-subtle">Test code</span>
 												<span class="font-mono text-2xl font-bold tracking-[0.2em]">
 													{selfTestResult.code}
 												</span>
@@ -765,7 +765,7 @@
 						</div>
 
 						<div class="mt-2">
-							<p class="text-xs opacity-70">
+							<p class="text-subtle">
 								Redirect URI — register this exact value in the U-tec developer console:
 							</p>
 							<div class="mt-1 flex items-center gap-2">
@@ -795,7 +795,7 @@
 				</div>
 			</Form>
 		{:else if activeTab === 'features'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Enable or disable feature modules for members, bands and the public site. Disabled features
 				are hidden from member navigation and return 404 if accessed directly. The staff panel
 				always shows every feature, so you can set one up here before switching it on for everyone.
@@ -815,7 +815,7 @@
 								{/if}
 								<div>
 									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-xs opacity-60">{meta.description}</p>
+									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
 							<form
@@ -839,7 +839,7 @@
 				</div>
 			{/each}
 		{:else if activeTab === 'inbox'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Enable or disable communication channels for the staff inbox. Disabled channels won't
 				receive or send messages. Environment variables must be configured for each channel to
 				function.
@@ -857,7 +857,7 @@
 								<ChannelIcon size={20} class="opacity-60" />
 								<div>
 									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-xs opacity-60">{meta.description}</p>
+									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
 							{#if isAlwaysOn}
@@ -892,7 +892,7 @@
 				</div>
 			{/each}
 		{:else if activeTab === 'subscriptions'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Reconciles every member and band subscription status from Stripe into the local database.
 				Use this as a one-time backfill after migration, or any time to re-sync if a webhook was
 				missed. For active members it also tops up any missing monthly credits by replaying their
@@ -937,7 +937,7 @@
 
 			<div class="divider"></div>
 
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Community impact stats (sustaining members, free hours funded, participation) are cached for
 				24 hours. Refresh to recompute them now from current subscriptions — useful right after a
 				sync.

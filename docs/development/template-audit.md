@@ -1,0 +1,129 @@
+# Template audit — toward a component-based design system
+
+The goal: **minimise raw Tailwind/daisyUI classes in route templates.** A page should read as a
+composition of named components, not as a pile of utility strings that happen to look right.
+
+Run the scoreboard any time:
+
+```bash
+node scripts/class-census.mjs
+```
+
+It counts literal `class="…"` attributes across `src/routes` and `src/lib/components`, ranks the
+most-repeated class strings, and names the worst-offending files. Every phase below records its
+delta against it. A dynamic `class={expr}` is deliberately invisible to the census — the point is
+to remove hand-written class soup, and an expression is usually a component already doing its job.
+
+## Baseline
+
+Measured at `e58a707` (post-#221), excluding `*.stories.svelte` and test harnesses:
+
+| Scope                   | files | lines  | `class="…"` | tokens    | tok/line | inline `style=` |
+| ----------------------- | ----- | ------ | ----------- | --------- | -------- | --------------- |
+| `src/routes/**`         | 145   | 26,783 | 3,260       | **7,705** | 0.29     | 148             |
+| `src/lib/components/**` | 151   | 12,640 | 1,034       | **2,771** | 0.22     | 45              |
+
+- **74% of all class tokens live in route templates**, not components.
+- **80% of route class tokens are raw utilities**, not daisyUI component classes.
+- 185 distinct multi-class strings repeat 3+ times in routes, covering 1,390 occurrences.
+
+[#221](https://github.com/DevonCash/corvmc-svelte/pull/221) is the proof the approach works:
+extracting `DefinitionList`/`Fact` erased 15 of the 19 hand-rolled
+`<dl style="grid-template-columns: auto 1fr">` blocks in a single pass. It is also the **idiom this
+audit follows** — a namespaced folder with an `index.ts`, semantic boolean/enum props (`mono`,
+`wrap`, `size`) rather than class strings, a `class` escape hatch, a `.spec.ts` plus harness, and a
+doc comment that says _why the component exists_.
+
+## Findings
+
+The problem is not that pages are sloppy. It is five structural gaps, each of which forces the
+class soup that sits on top of it.
+
+### 1. No variant/size prop system on `Button`
+
+`Badge` is the only primitive with a typed variant enum. `Button` (67 importers) takes its variant
+as a raw class string — `class="btn-ghost btn-sm"`, defaulting to `'btn-primary'`. All 44
+`shared/actions/*Action.svelte` hardcode strings like `'btn-error btn-sm'` as their `class` default,
+and `ShareButton` defaults to `'btn btn-ghost btn-sm btn-square'`.
+
+Result: `btn-sm` ×196, `btn-ghost` ×119, `btn-primary` ×89, `btn-outline` ×37, `btn-xs` ×36,
+`btn-square` ×26 — with one concept spelled four ways (`btn-primary btn-sm` ×22, `btn btn-primary
+btn-sm` ×5, `btn btn-sm btn-primary` ×5, `btn-sm btn-primary` ×5). **72 raw `<button class="btn …">`
+/ `<a class="btn …">` in routes bypass `Button` entirely**, plus 41 in components.
+
+### 2. Design tokens exist and are bypassed
+
+`src/routes/layout.css` defines `.eyebrow` — **used in 1 file** — while pages hand-roll `text-sm
+font-bold uppercase tracking-wider mb-2`. It defines `.display` — **used in 0 files** — while five
+pages hand-roll `text-5xl font-bold leading-tight tracking-tight text-balance`.
+
+`--fg-2` and `--fg-3` have no Tailwind utility, so **59 inline `style="color: var(--fg-…)"`** reach
+past the class system entirely, alongside `--surface`/`--surface-border` (×11).
+
+The muted-text idiom is spelled at least six ways: `text-sm opacity-60` (63), `text-xs opacity-60`
+(39), `text-sm opacity-70` (35), `truncate text-sm opacity-60` (16), `mb-3 text-sm opacity-70` (12),
+`mb-3 text-sm opacity-60` (10) — plus `opacity-50` variants and 9 uses of `text-gray-400` in an
+otherwise semantic-token codebase.
+
+### 3. `FilterBar` owns layout but not controls
+
+Every list page hand-writes its own inputs: `input input-bordered input-sm w-full` (32),
+`select-bordered select-sm` (25), `input input-bordered w-full` (20), `input input-bordered
+input-sm` (15), `checkbox checkbox-sm` (18), `form-control w-full` (14), `textarea
+textarea-bordered w-full` (13). The documented `searchText`-not-`search` snippet-shadowing footgun
+exists only because pages write the `<input>` themselves.
+
+### 4. No general `Card`
+
+`InfoCard` (39 importers) is hardcoded to one shape. Everything else hand-rolls: `card bg-base-100
+shadow` (26) **and** `card bg-base-100 shadow-sm` (17) — the second contradicting the documented
+"use `shadow` not `shadow-sm`" convention — plus `card-body` (65 raw), `card-title text-lg` (9),
+`card-title text-base` (8), and six different `card-body` padding/direction spellings.
+
+### 5. Public marketing routes have no component layer at all
+
+`(public)/` + `band-site/` = 22 files with a _highly consistent but unnamed_ section vocabulary:
+`<section class="section-tint-* py-16 px-6">` + `<div class="max-w-5xl mx-auto">` (14), `text-4xl
+font-bold tracking-tight mb-3` (8), `text-center mb-12` (8), `text-5xl font-bold leading-tight
+tracking-tight text-balance` (5), `max-w-2xl mx-auto flex flex-col items-center gap-4` (5). This is
+a `Section`/`Hero`/`SectionHeading` set that was never written down.
+
+## Two mechanisms, chosen per pattern
+
+- **Semantic CSS utilities** in `layout.css` for _atomic_ swaps (muted text, brand foregrounds).
+  One token replaces two or three, with no new DOM node and no import. This is what `col-support` /
+  `cell-num` already are.
+- **Svelte components** for anything with _structure_ (Card, Section, filter controls) and for
+  anything with a _variant vocabulary_ (Button).
+
+Deliberately **not** done: reviving a column-owning `DataTable` (deleted in `525bfff`; the rationale
+in `DataList.svelte` is explicit), and wrapper components for bare flex rows — `flex items-center
+gap-2` is trivial layout, and a `<Row>` component buys a DOM node and an import to delete two
+tokens.
+
+### Phase 1 notes
+
+`text-muted` / `text-subtle` / `text-fg-2` / `text-fg-3` / `surface` live in `src/routes/layout.css`
+beside the table-tier utilities. 337 `text-sm|text-xs` + `opacity-60|70` pairs collapsed to a single
+token, and all 67 inline `style="color: var(--fg-…)"` / `surface` declarations became classes.
+
+Two things were deliberately left alone:
+
+- **31 `text-sm|text-xs opacity-50` pairs.** `opacity-50` is a third, dimmer tier that no utility
+  covers yet; folding it into `text-muted` would brighten 31 places in one unreviewed pass. It wants
+  its own decision about whether the muted scale has two rungs or three.
+- **`text-gray-400` on the band-site EPK page.** `band-site/` is a separate theme context with its
+  own token set (`src/lib/themes/band-site/index.css`) and deliberately neutral print-style greys —
+  not the app palette these utilities target.
+
+## Progress
+
+| Phase                            | route tokens | inline `style=` | Δ                              |
+| -------------------------------- | ------------ | --------------- | ------------------------------ |
+| Baseline (`e58a707`)             | 7,705        | 148             | —                              |
+| 1 — semantic text utilities      | 7,477        | 81              | −228 tokens, −67 inline styles |
+| 2 — `Button` variant API         | _pending_    |                 |                                |
+| 3 — `Card`                       | _pending_    |                 |                                |
+| 4 — filter controls              | _pending_    |                 |                                |
+| 5 — marketing section vocabulary | _pending_    |                 |                                |
+| 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                |

@@ -16,10 +16,7 @@
 </svelte:head>
 
 <div class="max-w-3xl mx-auto px-6 py-12">
-	<a
-		href={bandSiteHref(page.params.slug!, '', page.url)}
-		class="link text-sm opacity-60 mb-6 block"
-	>
+	<a href={bandSiteHref(page.params.slug!, '', page.url)} class="link text-muted mb-6 block">
 		&larr; Back to {data.band.name}
 	</a>
 
@@ -47,14 +44,14 @@
 							/>
 						{/if}
 						<h2 class="text-lg font-semibold">{evt.title}</h2>
-						<p class="text-sm opacity-70 mt-1">
+						<p class="text-muted mt-1">
 							{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}
 						</p>
 						{#if evt.location}
-							<p class="text-sm opacity-60">{evt.location}</p>
+							<p class="text-muted">{evt.location}</p>
 						{/if}
 						{#if evt.ticketPrice}
-							<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
+							<p class="text-muted">{formatCents(evt.ticketPrice)}</p>
 						{/if}
 						{#if evt.description}
 							<p class="text-sm mt-2 opacity-80">{evt.description}</p>

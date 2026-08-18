@@ -423,7 +423,7 @@
 					{/if}
 
 					{#if data.remaining !== null && !soldOut}
-						<span class="text-sm" style="color: var(--fg-2)"
+						<span class="text-muted"
 							>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 						>
 					{/if}
@@ -498,7 +498,7 @@
 					{/if}
 
 					{#if data.rsvpCount > 0}
-						<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+						<span class="text-muted">{data.rsvpCount} going</span>
 					{/if}
 				</div>
 			{/if}

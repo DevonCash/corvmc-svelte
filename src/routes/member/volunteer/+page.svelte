@@ -182,7 +182,7 @@
 						<li class="flex flex-wrap items-center justify-between gap-3">
 							<div class="min-w-0">
 								<span class="font-medium">{done.roleName}</span>
-								<span class="text-sm opacity-70"> — {formatDateShort(done.startsAt)}</span>
+								<span class="text-muted"> — {formatDateShort(done.startsAt)}</span>
 							</div>
 							<Action
 								action={submitVolunteerHours.for(done.signupId)}
@@ -252,7 +252,7 @@
 							<td class="w-px"><StatusBadge status={log.status} /></td>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{log.roleName}</div>
-								<div class="truncate text-xs opacity-60" title={log.description}>
+								<div class="truncate text-subtle" title={log.description}>
 									{log.description}
 								</div>
 								{#if log.status === 'rejected' && log.reviewNotes}

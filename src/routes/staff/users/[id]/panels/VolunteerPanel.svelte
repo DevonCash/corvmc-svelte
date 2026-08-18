@@ -144,7 +144,7 @@
 								<span class="font-medium">{record.certificationName}</span>
 								<StatusBadge status={record.state} label />
 							</div>
-							<div class="text-xs opacity-60">
+							<div class="text-subtle">
 								Granted {formatDateShortYear(record.grantedAt)}{record.grantedByName
 									? ` by ${record.grantedByName}`
 									: ''}{record.expiresAt
@@ -152,7 +152,7 @@
 									: ' · no expiry'}
 							</div>
 							{#if record.reference}
-								<div class="text-xs opacity-60">#{record.reference}</div>
+								<div class="text-subtle">#{record.reference}</div>
 							{/if}
 							{#if record.revokedReason}
 								<div class="text-xs text-error">Revoked: {record.revokedReason}</div>
@@ -215,7 +215,7 @@
 								{s.roleName}
 							</a>
 							{#if s.shiftCancelledAt}
-								<div class="text-sm opacity-60">Shift was cancelled</div>
+								<div class="text-muted">Shift was cancelled</div>
 							{/if}
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
@@ -232,7 +232,7 @@
 			<EmptyState title="No hours logged" description="This member has never submitted hours." />
 		{:else}
 			{#if logs.length > 10}
-				<p class="mb-3 text-sm opacity-60">Showing the 10 most recent of {logs.length}.</p>
+				<p class="mb-3 text-muted">Showing the 10 most recent of {logs.length}.</p>
 			{/if}
 			<Table>
 				{#snippet head()}
@@ -246,7 +246,7 @@
 						<td class="w-px"><StatusBadge status={log.status} /></td>
 						<td class="cell-primary">
 							<div class="font-medium">{log.roleName}</div>
-							<div class="text-sm opacity-60">{log.description}</div>
+							<div class="text-muted">{log.description}</div>
 						</td>
 						<td class="cell-num">{formatVolunteerHours(log.minutes)}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(log.workedOn)}</td>

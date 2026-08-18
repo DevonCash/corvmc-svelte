@@ -166,7 +166,7 @@
 						<!-- Category was its own column; as the subline it costs no width. -->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{e.name}</a>
-							<div class="truncate text-sm opacity-60">{e.category.name}</div>
+							<div class="truncate text-muted">{e.category.name}</div>
 						</td>
 						<td class="col-support">
 							<Badge

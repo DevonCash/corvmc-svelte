@@ -156,7 +156,7 @@
 								</div>
 								<p class="font-medium">{member.name}</p>
 								{#if block.showPositions && member.position}
-									<p class="text-sm opacity-60">{member.position}</p>
+									<p class="text-muted">{member.position}</p>
 								{/if}
 							</div>
 						{/each}
@@ -171,14 +171,14 @@
 								<div class="flex items-start justify-between p-4 rounded-lg bg-base-200">
 									<div>
 										<p class="font-medium">{evt.title}</p>
-										<p class="text-sm opacity-70">
+										<p class="text-muted">
 											{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}
 										</p>
 										{#if evt.location}
-											<p class="text-sm opacity-60">{evt.location}</p>
+											<p class="text-muted">{evt.location}</p>
 										{/if}
 										{#if evt.ticketPrice}
-											<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
+											<p class="text-muted">{formatCents(evt.ticketPrice)}</p>
 										{/if}
 									</div>
 									{#if evt.externalTicketUrl}
@@ -263,7 +263,7 @@
 							{#each epk.pressQuotes as quote (quote.quote)}
 								<blockquote class="border-l-4 border-primary pl-4">
 									<p class="italic">"{quote.quote}"</p>
-									<footer class="mt-1 text-sm opacity-70">
+									<footer class="mt-1 text-muted">
 										&mdash; {quote.publication}
 										{#if quote.date}
 											<span class="opacity-60">({quote.date})</span>
@@ -297,19 +297,19 @@
 							<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 								{#if epk.bookingContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Booking</h3>
+										<h3 class="font-semibold text-muted uppercase">Booking</h3>
 										<p class="font-medium">{epk.bookingContact.name}</p>
 										<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
 											>{epk.bookingContact.email}</a
 										>
 										{#if epk.bookingContact.phone}
-											<p class="text-sm opacity-70">{epk.bookingContact.phone}</p>
+											<p class="text-muted">{epk.bookingContact.phone}</p>
 										{/if}
 									</div>
 								{/if}
 								{#if epk.managementContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Management</h3>
+										<h3 class="font-semibold text-muted uppercase">Management</h3>
 										<p class="font-medium">{epk.managementContact.name}</p>
 										<a href="mailto:{epk.managementContact.email}" class="link text-sm"
 											>{epk.managementContact.email}</a
@@ -318,7 +318,7 @@
 								{/if}
 								{#if epk.prContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Press</h3>
+										<h3 class="font-semibold text-muted uppercase">Press</h3>
 										<p class="font-medium">{epk.prContact.name}</p>
 										<a href="mailto:{epk.prContact.email}" class="link text-sm"
 											>{epk.prContact.email}</a
@@ -403,7 +403,7 @@
 								{/if}
 								<p class="font-medium group-hover:text-primary transition-colors">{item.title}</p>
 								{#if item.price}
-									<p class="text-sm opacity-60">{item.price}</p>
+									<p class="text-muted">{item.price}</p>
 								{/if}
 							</a>
 						{/each}
@@ -477,7 +477,7 @@
 {/if}
 
 <!-- Navigation footer -->
-<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
+<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-muted">
 	{#if events.length > 0}
 		<a
 			href={bandSiteHref(page.params.slug!, '/events', page.url)}

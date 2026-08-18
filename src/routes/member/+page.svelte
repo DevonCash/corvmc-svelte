@@ -87,7 +87,7 @@
 												<span class="opacity-60">· {res.bandName}</span>
 											{/if}
 										</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(
 												res.startsAt,
 												res.endsAt
@@ -115,13 +115,13 @@
 						value={data.usedThisMonth}
 						max={data.allocatedThisMonth || 1}
 					></progress>
-					<p class="text-xs opacity-60">
+					<p class="text-subtle">
 						{usedHours} of {allocatedHours} hours used this month
 					</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
-					<p class="text-sm opacity-70">
+					<p class="text-muted">
 						Become a sustaining member to get free practice hours each month.
 					</p>
 					<Button href="/member/membership" class="btn-sm">Learn More</Button>
@@ -159,7 +159,7 @@
 						{/if}
 						<div class="card-body p-3">
 							<p class="text-sm font-medium">{evt.title}</p>
-							<p class="text-xs opacity-60">{formatDate(evt.startsAt)}</p>
+							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
 						</div>
 					</a>
 				{/each}

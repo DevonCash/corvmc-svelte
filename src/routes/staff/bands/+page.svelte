@@ -115,7 +115,7 @@
 						-->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{b.name}</a>
-							<div class="truncate text-sm opacity-60">{b.ownerName}</div>
+							<div class="truncate text-muted">{b.ownerName}</div>
 						</td>
 						<td class="col-support"><StatusBadge status={b.tier} label /></td>
 						<td class="col-support cell-num">{b.memberCount}</td>

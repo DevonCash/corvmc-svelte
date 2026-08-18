@@ -26,7 +26,7 @@
 	{#snippet form()}
 		<input {...fields.recipientId.as('hidden', recipientId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				This goes to {recipientName} as a message request. They'll see it in their Messages and can accept
 				or decline — you'll be able to write again once they accept.
 			</p>

@@ -134,7 +134,7 @@
 						<tr>
 							<td
 								colspan="5"
-								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
 							</td>
@@ -149,7 +149,7 @@
 						     and just the time range. -->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{e.title}</a>
-							<div class="text-sm whitespace-nowrap opacity-60">
+							<div class="text-muted whitespace-nowrap">
 								{formatEventTimeRange(e.startsAt, e.endsAt)}
 							</div>
 						</td>
@@ -163,7 +163,7 @@
 									{e.bandName ?? 'Band'}
 								</a>
 							{:else}
-								<span class="text-sm opacity-60">CMC</span>
+								<span class="text-muted">CMC</span>
 							{/if}
 						</td>
 						<td class="col-support">

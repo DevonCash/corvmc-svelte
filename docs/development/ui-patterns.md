@@ -4,6 +4,9 @@ When building or modifying pages in this app, use the shared components and patt
 
 > Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
 
+> Reducing the raw utility classes still left in page templates? See
+> [template-audit.md](./template-audit.md) for the census, the findings, and the migration phases.
+
 ## Page structure
 
 Every page under a panel layout (staff, member, or band) follows this shape:

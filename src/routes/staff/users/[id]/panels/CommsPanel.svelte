@@ -42,7 +42,7 @@
 				report was upheld against one of them.
 			</p>
 			{#if standing.reason}
-				<p class="mt-1 text-sm opacity-70">Staff note: "{standing.reason}"</p>
+				<p class="mt-1 text-muted">Staff note: "{standing.reason}"</p>
 			{/if}
 			<div class="mt-3">
 				<Action
@@ -78,7 +78,7 @@
 				was upheld against one of them.
 			</p>
 			{#if suggestionStanding.reason}
-				<p class="mt-1 text-sm opacity-70">Staff note: "{suggestionStanding.reason}"</p>
+				<p class="mt-1 text-muted">Staff note: "{suggestionStanding.reason}"</p>
 			{/if}
 			{#if suggestionStanding.triggeringFlagId}
 				<p class="mt-1 text-sm">
@@ -126,10 +126,10 @@
 			{/if}
 		</p>
 		{#if messaging.reason}
-			<p class="mt-1 text-sm opacity-70">Note: "{messaging.reason}"</p>
+			<p class="mt-1 text-muted">Note: "{messaging.reason}"</p>
 		{/if}
 		{#if messaging.status !== 'none' && messaging.source === 'member'}
-			<p class="mt-1 text-sm opacity-70">They switched this off themselves.</p>
+			<p class="mt-1 text-muted">They switched this off themselves.</p>
 		{/if}
 
 		<div class="mt-3 flex flex-wrap gap-2">
@@ -199,7 +199,7 @@
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.reason}</a>
-							<div class="text-sm opacity-60">by {f.reportedByName ?? 'Anonymous'}</div>
+							<div class="text-muted">by {f.reportedByName ?? 'Anonymous'}</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>
 					</tr>
@@ -225,7 +225,7 @@
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.entityLabel}</a>
-							<div class="text-sm opacity-60">{f.reason}</div>
+							<div class="text-muted">{f.reason}</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>
 					</tr>
@@ -247,12 +247,12 @@
 				description="Nothing in the inbox from this member, by portal or by email."
 			/>
 		{:else}
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				{data.open} open · {data.unread} unread by them
 			</p>
 			{#each groups as group (group.label)}
 				{#if group.rows.length > 0}
-					<h4 class="mt-3 mb-1 text-xs font-semibold uppercase opacity-60">{group.label}</h4>
+					<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">{group.label}</h4>
 					<Table>
 						{#snippet head()}
 							<th class="w-px"><span class="sr-only">Status</span></th>
@@ -266,7 +266,7 @@
 									<a class="font-medium" href={resolve(`/staff/inbox/${t.id}`)}>
 										{t.subject ?? '(no subject)'}
 									</a>
-									<div class="text-sm opacity-60">{t.preview ?? ''}</div>
+									<div class="text-muted">{t.preview ?? ''}</div>
 								</td>
 								<td class="col-extra whitespace-nowrap">
 									{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
@@ -286,12 +286,10 @@
 -->
 <AsyncCard title="Notifications" result={getUserNotifications(id)}>
 	{#snippet children(data)}
-		<h4 class="mb-1 text-xs font-semibold uppercase opacity-60">Channels</h4>
+		<h4 class="mb-1 text-subtle font-semibold uppercase">Channels</h4>
 		{@const overrides = Object.entries(data.preferences)}
 		{#if overrides.length === 0}
-			<p class="mb-4 text-sm opacity-60">
-				All defaults — nothing has been turned off for this member.
-			</p>
+			<p class="mb-4 text-muted">All defaults — nothing has been turned off for this member.</p>
 		{:else}
 			<!-- Only types they have changed are stored, so this list is the set of
 			     deliberate overrides rather than the whole catalogue. Everything
@@ -308,11 +306,11 @@
 			</div>
 		{/if}
 
-		<h4 class="mt-3 mb-1 text-xs font-semibold uppercase opacity-60">
+		<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">
 			Recent ({data.unread} unread)
 		</h4>
 		{#if data.items.length === 0}
-			<p class="text-sm opacity-60">Nothing sent yet.</p>
+			<p class="text-muted">Nothing sent yet.</p>
 		{:else}
 			<ul class="flex flex-col gap-2">
 				{#each data.items as n (n.id)}
@@ -350,7 +348,7 @@
 						<Badge size="sm">{a.audienceName}</Badge>
 					</a>
 				{:else}
-					<span class="text-sm opacity-60">Not on any list.</span>
+					<span class="text-muted">Not on any list.</span>
 				{/each}
 			</div>
 		{/if}

@@ -71,7 +71,7 @@
 				>
 					<p class="font-medium text-sm">{result.title}</p>
 					{#if result.summary}
-						<p class="text-xs opacity-60 truncate">{result.summary}</p>
+						<p class="text-subtle truncate">{result.summary}</p>
 					{/if}
 				</button>
 			{/each}

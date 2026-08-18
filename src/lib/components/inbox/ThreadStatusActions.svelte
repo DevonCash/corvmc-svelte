@@ -99,9 +99,7 @@
 			{#snippet form()}
 				<input {...snoozeForm.fields.threadId.as('hidden', threadId)} />
 				<input {...snoozeForm.fields.status.as('hidden', 'snoozed')} />
-				<p class="text-sm opacity-70">
-					It leaves the open queue and returns on the morning you pick.
-				</p>
+				<p class="text-muted">It leaves the open queue and returns on the morning you pick.</p>
 				<FormField
 					name="snoozedUntil"
 					label="Bring it back"
@@ -116,7 +114,7 @@
 </div>
 
 {#if status === 'snoozed' && snoozedUntil}
-	<p class="flex items-center gap-1.5 text-sm opacity-70">
+	<p class="flex items-center gap-1.5 text-muted">
 		<IconAlarmSnooze size={14} />
 		Returns {formatDate(new Date(snoozedUntil))}
 	</p>

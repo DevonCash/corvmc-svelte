@@ -234,7 +234,7 @@
 						<tr>
 							<td
 								colspan="4"
-								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
 							</td>

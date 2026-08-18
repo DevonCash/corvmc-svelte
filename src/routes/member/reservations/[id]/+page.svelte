@@ -21,7 +21,7 @@
 			<header class="flex items-start justify-between gap-2">
 				<hgroup>
 					<p class="font-medium">{formatDateLong(res.startsAt)}</p>
-					<p class="text-sm opacity-70">
+					<p class="text-muted">
 						{formatTime(res.startsAt)}–{formatTime(res.endsAt)} · {durationHours} hour{durationHours ===
 						1
 							? ''
@@ -31,7 +31,7 @@
 				<StatusBadge status={res.status} label />
 			</header>
 			{#if res.notes}
-				<p class="mt-2 text-sm opacity-60">{res.notes}</p>
+				<p class="mt-2 text-muted">{res.notes}</p>
 			{/if}
 		</div>
 	</div>
@@ -40,13 +40,11 @@
 		<InfoCard title="Door Code">
 			{#if res.lockCode}
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					Enter this code on the door keypad to get in. It works for the length of your reservation.
 				</p>
 			{:else}
-				<p class="text-sm opacity-70">
-					Your door code will appear here on the day of your reservation.
-				</p>
+				<p class="text-muted">Your door code will appear here on the day of your reservation.</p>
 			{/if}
 		</InfoCard>
 	{/if}

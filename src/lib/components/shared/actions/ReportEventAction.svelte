@@ -45,7 +45,7 @@
 	{#snippet form()}
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Let staff know what's wrong with this listing. Reports are private and reviewed by the CMC
 				team.
 			</p>

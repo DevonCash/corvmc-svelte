@@ -106,7 +106,7 @@
 		{:else if uploadStatus === 'success' && !isImage}
 			<p class="text-sm text-success">Uploaded</p>
 		{:else if selectedFile && !isImage}
-			<p class="text-sm opacity-60">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
+			<p class="text-muted">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
 		{/if}
 	</div>
 </div>

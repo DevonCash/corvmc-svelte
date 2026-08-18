@@ -46,7 +46,7 @@
 		>
 			Local Resources
 		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-lg leading-relaxed text-fg-2">
 			CMC keeps a list of local music resources — shops, artists, record stores, venues, and more.
 			We're actively building it out, and we want your input.
 		</p>
@@ -58,10 +58,7 @@
 	<div class="max-w-4xl mx-auto">
 		<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 			{#each categories as cat (cat.label)}
-				<div
-					class="flex flex-col items-center text-center gap-2 rounded-lg p-5"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
+				<div class="flex flex-col items-center text-center gap-2 rounded-lg p-5 surface">
 					<div style="color: var(--cmc-teal)"><cat.icon size={32} /></div>
 					<span class="text-sm font-medium">{cat.label}</span>
 				</div>
@@ -75,7 +72,7 @@
 	<div class="max-w-xl mx-auto">
 		<div class="text-center mb-8">
 			<h2 class="text-3xl font-bold tracking-tight mb-2">Suggest a Resource</h2>
-			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base leading-relaxed text-fg-2">
 				Know a resource the Corvallis music community should have on their radar? Send it our way.
 			</p>
 		</div>

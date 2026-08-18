@@ -31,7 +31,7 @@
 		>
 			Programs
 		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-lg leading-relaxed text-fg-2">
 			Practice spaces, performances, meetups & clubs for the music community
 		</p>
 	</div>
@@ -48,11 +48,11 @@
 				<h2 class="text-3xl font-bold leading-tight mt-3 mb-4">
 					Affordable Practice Space for Musicians
 				</h2>
-				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-4 text-fg-2">
 					Our practice rooms are equipped with professional gear and designed for musicians who need
 					a reliable space to rehearse, record demos, and develop their craft.
 				</p>
-				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-4 text-fg-2">
 					Members can book hourly sessions in our sound-treated practice room, complete with a PA
 					system, microphones, a drum kit, backline, and our full gear library — included. Book
 					online, show up, and play.
@@ -62,7 +62,7 @@
 					style="background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent)"
 				>
 					<IconInfoCircle size={20} class="shrink-0 mt-0.5" style="color: var(--cmc-teal)" />
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">
+					<p class="text-muted leading-relaxed">
 						Practice space access requires a free CMC membership.
 					</p>
 				</div>
@@ -72,26 +72,21 @@
 			</div>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-10">
-			<div
-				class="rounded-lg p-6 text-center"
-				style="background: var(--surface); border: 1px solid var(--surface-border)"
-			>
-				<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
-					Standard Rate
-				</div>
+			<div class="rounded-lg p-6 text-center surface">
+				<div class="text-sm font-bold uppercase tracking-wider mb-2 text-fg-3">Standard Rate</div>
 				<div class="text-4xl font-bold" style="color: var(--cmc-navy)">$15/hour</div>
-				<div class="text-sm mt-1" style="color: var(--fg-2)">All equipment included</div>
+				<div class="text-muted mt-1">All equipment included</div>
 			</div>
 			<a
 				href={resolve('/login?register&redirect=/member')}
 				class="program-block__cta rounded-lg p-6 text-center"
 				style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
 			>
-				<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
+				<div class="text-sm font-bold uppercase tracking-wider mb-2 text-fg-3">
 					Sustaining Members
 				</div>
 				<div class="text-4xl font-bold" style="color: var(--cmc-orange)">up to 12 Free Hours</div>
-				<div class="text-sm mt-1" style="color: var(--fg-2)">every month, then $15/hour</div>
+				<div class="text-muted mt-1">every month, then $15/hour</div>
 			</a>
 		</div>
 	</div>
@@ -106,12 +101,12 @@
 					>Gear Library</span
 				>
 				<h2 class="text-3xl font-bold leading-tight mt-3 mb-4">Borrow the Gear You Need</h2>
-				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-4 text-fg-2">
 					CMC maintains a gear library available to every member — a drum kit, backline, and our
 					full gear library are included in the practice space, and members can also rent equipment
 					to take out.
 				</p>
-				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-4 text-fg-2">
 					Need an amp for a gig, an instrument for a session, or a speaker for an event? We don't
 					have a full catalogue online yet — <a href={resolve('/contact')} class="link">reach out</a
 					> and we'll tell you what we've got, or come by and take a look.
@@ -121,32 +116,29 @@
 					style="background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent)"
 				>
 					<IconGuitarPick size={20} class="shrink-0 mt-0.5" style="color: var(--cmc-teal)" />
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">
+					<p class="text-muted leading-relaxed">
 						Got gear collecting dust? We accept instrument and equipment donations in any condition
 						— email <a href="mailto:contact@corvmc.org" class="link">contact@corvmc.org</a>.
 					</p>
 				</div>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-6 self-center">
-				<div
-					class="rounded-lg p-6 text-center"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
-					<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
+				<div class="rounded-lg p-6 text-center surface">
+					<div class="text-sm font-bold uppercase tracking-wider mb-2 text-fg-3">
 						Instruments & Amps
 					</div>
 					<div class="text-4xl font-bold" style="color: var(--cmc-navy)">$5/day</div>
-					<div class="text-sm mt-1" style="color: var(--fg-2)">per item</div>
+					<div class="text-muted mt-1">per item</div>
 				</div>
 				<div
 					class="rounded-lg p-6 text-center"
 					style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
 				>
-					<div class="text-sm font-bold uppercase tracking-wider mb-2" style="color: var(--fg-3)">
+					<div class="text-sm font-bold uppercase tracking-wider mb-2 text-fg-3">
 						Cables & Accessories
 					</div>
 					<div class="text-4xl font-bold" style="color: var(--cmc-orange)">$1/day</div>
-					<div class="text-sm mt-1" style="color: var(--fg-2)">free for sustaining members</div>
+					<div class="text-muted mt-1">free for sustaining members</div>
 				</div>
 			</div>
 		</div>
@@ -159,7 +151,7 @@
 		<div class="text-center mb-12">
 			<span class="sticker-badge sticker-badge--orange" style="margin-bottom: 12px">Shows</span>
 			<h2 class="text-4xl font-bold tracking-tight mb-3 mt-3">Shows & Performances</h2>
-			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
 				Showcase your talent and connect with the community through our regular performance
 				opportunities.
 			</p>
@@ -167,11 +159,11 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 			<div>
 				<h3 class="text-2xl font-bold mb-3">Perform & Connect</h3>
-				<p class="text-base leading-relaxed mb-4" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-4 text-fg-2">
 					Whether you're a seasoned performer or just starting out, our performance programs provide
 					supportive environments to share your music with appreciative audiences.
 				</p>
-				<p class="text-base leading-relaxed mb-6" style="color: var(--fg-2)">
+				<p class="text-base leading-relaxed mb-6 text-fg-2">
 					From intimate acoustic sets to full band productions, we create spaces where musicians can
 					grow, collaborate, and celebrate the power of live music.
 				</p>
@@ -198,7 +190,7 @@
 		<div class="text-center mb-12">
 			<span class="sticker-badge" style="margin-bottom: 12px">Clubs</span>
 			<h2 class="text-4xl font-bold tracking-tight mb-3 mt-3">Meetups & Clubs</h2>
-			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
 				Connect with like-minded musicians through our regular meetups, learning sessions, and
 				specialty clubs.
 			</p>
@@ -216,7 +208,7 @@
 						<IconMusic size={24} style="color: var(--cmc-navy)" />
 						<h3 class="text-xl font-bold">Real Book Club</h3>
 					</div>
-					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
+					<p class="text-muted leading-relaxed mb-3">
 						Our flagship jazz jam club where musicians of all levels come together to explore the
 						Great American Songbook and beyond.
 					</p>
@@ -225,20 +217,17 @@
 						style="background: color-mix(in oklch, var(--cmc-teal) 10%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 15%, transparent)"
 					>
 						<IconBulb size={18} class="shrink-0 mt-0.5" style="color: var(--cmc-teal)" />
-						<p class="text-xs leading-relaxed" style="color: var(--fg-2)">
+						<p class="text-subtle leading-relaxed">
 							Bring your instrument and a Real Book (or we'll share!)
 						</p>
 					</div>
 				</div>
-				<div
-					class="rounded-lg p-6"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
+				<div class="rounded-lg p-6 surface">
 					<div class="flex items-center gap-3 mb-2">
 						<IconUsers size={22} style="color: var(--cmc-navy)" />
 						<h3 class="text-lg font-bold">Songwriter Circle</h3>
 					</div>
-					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
+					<p class="text-muted leading-relaxed mb-3">
 						Monthly gathering for sharing original songs, getting feedback, and collaborating on new
 						material.
 					</p>
@@ -246,15 +235,12 @@
 						>2nd Saturday &middot; 2:00 PM</span
 					>
 				</div>
-				<div
-					class="rounded-lg p-6"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
+				<div class="rounded-lg p-6 surface">
 					<div class="flex items-center gap-3 mb-2">
 						<IconMicrophone size={22} style="color: var(--cmc-navy)" />
 						<h3 class="text-lg font-bold">Monthly Meetup</h3>
 					</div>
-					<p class="text-sm leading-relaxed mb-3" style="color: var(--fg-2)">
+					<p class="text-muted leading-relaxed mb-3">
 						Come chat with — or just listen to — other local musicians about gear, gigs, and
 						everything music-related.
 					</p>
@@ -274,7 +260,7 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-12">
 			<h2 class="text-4xl font-bold tracking-tight mb-3">Ready to Get Involved?</h2>
-			<p class="text-base max-w-xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
 				Join the Corvallis Music Collective to access all our programs and connect with a vibrant
 				community of musicians.
 			</p>
@@ -293,7 +279,7 @@
 						{step.num}
 					</span>
 					<h3 class="text-lg font-bold">{step.title}</h3>
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{step.desc}</p>
+					<p class="text-muted leading-relaxed">{step.desc}</p>
 				</div>
 			{/each}
 		</div>

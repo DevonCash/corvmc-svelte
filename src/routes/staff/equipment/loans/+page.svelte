@@ -106,7 +106,7 @@
 							<a {href} class="block truncate font-medium hover:underline">
 								{l.equipmentName ?? '(free-form request)'}
 							</a>
-							<div class="truncate text-sm opacity-60">{l.userName}</div>
+							<div class="truncate text-muted">{l.userName}</div>
 						</td>
 						<td class="col-support whitespace-nowrap">
 							{l.dueDate ? formatDateShort(l.dueDate) : '—'}

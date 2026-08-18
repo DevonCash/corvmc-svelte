@@ -220,11 +220,11 @@
 									{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
 								</a>
 								{#if t.subject}
-									<span class="truncate text-sm opacity-70">{t.subject}</span>
+									<span class="truncate text-muted">{t.subject}</span>
 								{/if}
 							</div>
 							{#if t.preview}
-								<div class="truncate text-sm opacity-60">{t.preview}</div>
+								<div class="truncate text-muted">{t.preview}</div>
 							{/if}
 						</td>
 

@@ -76,7 +76,7 @@
 				<div class="card bg-base-100 shadow-sm">
 					<div class="card-body">
 						<h2 class="card-title text-lg">Contacts</h2>
-						<p class="text-sm opacity-60">Industry contacts shown on your EPK page.</p>
+						<p class="text-muted">Industry contacts shown on your EPK page.</p>
 
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 							<!-- Booking -->
@@ -192,7 +192,7 @@
 						</div>
 
 						{#if !epk.pressQuotes || epk.pressQuotes.length === 0}
-							<p class="text-sm opacity-60 mt-2">No press quotes yet.</p>
+							<p class="text-muted mt-2">No press quotes yet.</p>
 						{:else}
 							<div class="space-y-3 mt-4">
 								{#each epk.pressQuotes as quote, i (i)}
@@ -252,12 +252,12 @@
 								>Add</button
 							>
 						</div>
-						<p class="text-sm opacity-60">
+						<p class="text-muted">
 							Awards, notable supports, festival appearances, streaming milestones.
 						</p>
 
 						{#if !epk.achievements || epk.achievements.length === 0}
-							<p class="text-sm opacity-60 mt-2">No achievements yet.</p>
+							<p class="text-muted mt-2">No achievements yet.</p>
 						{:else}
 							<div class="space-y-2 mt-4">
 								{#each epk.achievements as achievement, i (i)}
@@ -292,10 +292,10 @@
 								>Add Item</button
 							>
 						</div>
-						<p class="text-sm opacity-60">Equipment you need from the venue vs. what you bring.</p>
+						<p class="text-muted">Equipment you need from the venue vs. what you bring.</p>
 
 						{#if !epk.backline || epk.backline.length === 0}
-							<p class="text-sm opacity-60 mt-2">No backline items yet.</p>
+							<p class="text-muted mt-2">No backline items yet.</p>
 						{:else}
 							<div class="overflow-x-auto mt-4">
 								<table class="table table-sm">

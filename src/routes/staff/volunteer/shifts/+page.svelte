@@ -208,13 +208,13 @@
 							<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium">
 								{formatDateShort(shift.startsAt)}
 							</a>
-							<div class="text-xs opacity-60">{timeRange(shift.startsAt, shift.endsAt)}</div>
+							<div class="text-subtle">{timeRange(shift.startsAt, shift.endsAt)}</div>
 						</td>
 
 						<td class="cell-primary">
 							<div class="truncate font-medium">{shift.roleName}</div>
 							{#if shift.eventTitle}
-								<div class="truncate text-xs opacity-60">{shift.eventTitle}</div>
+								<div class="truncate text-subtle">{shift.eventTitle}</div>
 							{/if}
 							{#if shift.cancelledAt}
 								<div class="text-xs text-error">Cancelled</div>
@@ -228,7 +228,7 @@
 						</td>
 
 						<td class="col-extra">
-							<div class="truncate text-xs opacity-60" title={shift.notes ?? ''}>
+							<div class="truncate text-subtle" title={shift.notes ?? ''}>
 								{shift.notes ?? ''}
 							</div>
 						</td>

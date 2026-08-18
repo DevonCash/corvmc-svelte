@@ -94,7 +94,7 @@
 
 	{#if s.visibility === 'pending_review'}
 		<InfoCard title="Review" class="bg-base-200 shadow-none">
-			<p class="mb-3 text-sm opacity-70">
+			<p class="mb-3 text-muted">
 				This member posts under review, so nobody can see this yet. Approving puts it on the board;
 				rejecting hides it. Either way they're told.
 			</p>
@@ -136,7 +136,7 @@
 
 	{#if pendingEdit}
 		<InfoCard title="Proposed edit" class="bg-base-200 shadow-none">
-			<p class="mb-3 text-sm opacity-70">
+			<p class="mb-3 text-muted">
 				{pendingEdit.requestedByName ?? 'The author'} wants to change this after
 				{s.voteCount} member{s.voteCount === 1 ? '' : 's'} already voted for it. Approving replaces the
 				text below; the votes stay either way.
@@ -146,11 +146,11 @@
 			     the failure this whole flow exists to prevent. -->
 			<div class="grid gap-4 md:grid-cols-2">
 				<div>
-					<h3 class="mb-1 text-sm font-medium opacity-60">What members voted for</h3>
+					<h3 class="mb-1 text-muted font-medium">What members voted for</h3>
 					<div class="rounded border border-base-300 p-3">
 						<p class="font-medium">{pendingEdit.originalTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.originalBody}</p>
-						<p class="mt-2 text-xs opacity-60">
+						<p class="mt-2 text-subtle">
 							{suggestionCategoryLabels[
 								pendingEdit.originalCategory as keyof typeof suggestionCategoryLabels
 							] ?? pendingEdit.originalCategory}
@@ -158,11 +158,11 @@
 					</div>
 				</div>
 				<div>
-					<h3 class="mb-1 text-sm font-medium opacity-60">Proposed</h3>
+					<h3 class="mb-1 text-muted font-medium">Proposed</h3>
 					<div class="rounded border border-primary/40 p-3">
 						<p class="font-medium">{pendingEdit.proposedTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.proposedBody}</p>
-						<p class="mt-2 text-xs opacity-60">
+						<p class="mt-2 text-subtle">
 							{suggestionCategoryLabels[
 								pendingEdit.proposedCategory as keyof typeof suggestionCategoryLabels
 							] ?? pendingEdit.proposedCategory}
@@ -215,11 +215,11 @@
 	<InfoCard title="Response">
 		{#if s.responseBody}
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
-			<p class="mt-2 text-sm opacity-60">
+			<p class="mt-2 text-muted">
 				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
 			</p>
 		{:else}
-			<p class="text-sm opacity-70">Nobody has written back yet.</p>
+			<p class="text-muted">Nobody has written back yet.</p>
 		{/if}
 
 		<div class="mt-3">
@@ -256,7 +256,7 @@
 						</label>
 						<!-- Status and reply are one form on purpose: split, the normal
 						     workflow would send the member two notifications for one act. -->
-						<p class="text-sm opacity-70">
+						<p class="text-muted">
 							This is shown on the suggestion for everyone to read, and the member who posted it
 							gets one notification.
 						</p>
@@ -269,7 +269,7 @@
 	{#if !isMerged}
 		<div class="grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Moderation" class="bg-base-200 shadow-none">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					{#if s.visibility === 'hidden'}
 						Put this back on the board if it was taken down by mistake.
 					{:else}
@@ -308,7 +308,7 @@
 			</InfoCard>
 
 			<InfoCard title="Merge" class="bg-base-200 shadow-none">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					Fold this into the suggestion it duplicates. Its votes move across, and anyone who voted
 					for both is only counted once.
 				</p>
@@ -338,7 +338,7 @@
 								{/each}
 							</Select>
 						</label>
-						<p class="mt-3 text-sm opacity-70">
+						<p class="mt-3 text-muted">
 							This suggestion comes off the board and points at the one you pick. There's no undo.
 						</p>
 					{/snippet}

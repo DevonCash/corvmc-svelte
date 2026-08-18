@@ -97,7 +97,7 @@
 
 					<Fact label="Tier" class="flex items-center gap-2">
 						<StatusBadge status={band.tier} label />
-						<span class="text-xs opacity-60">
+						<span class="text-subtle">
 							{isStripeBacked ? 'billed through Stripe' : 'set by staff'}
 						</span>
 					</Fact>
@@ -122,7 +122,7 @@
 
 				<div class="mt-4 flex flex-wrap gap-2">
 					{#if isStripeBacked}
-						<span class="text-xs opacity-60">
+						<span class="text-subtle">
 							Premium is billed through Stripe — cancel there to move this band back to free.
 						</span>
 					{:else if band.tier === 'premium'}

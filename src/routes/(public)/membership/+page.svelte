@@ -73,7 +73,7 @@
 		>
 			Become a Member
 		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-lg leading-relaxed text-fg-2">
 			A free account gets you in the door. Sustaining membership keeps the doors open — and unlocks
 			free practice hours, recurring reservations, and member perks.
 		</p>
@@ -85,26 +85,23 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-10">
 			<h2 class="text-4xl font-bold tracking-tight mb-3">Two Ways to Belong</h2>
-			<p class="text-base max-w-2xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-2xl mx-auto leading-relaxed text-fg-2">
 				Everyone starts with a free account. Sustaining members chip in monthly to keep the
 				collective running — and get more out of the space in return.
 			</p>
 		</div>
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<!-- Free -->
-			<div
-				class="rounded-lg p-8 flex flex-col gap-4"
-				style="background: var(--surface); border: 1px solid var(--surface-border)"
-			>
+			<div class="rounded-lg p-8 flex flex-col gap-4 surface">
 				<div>
 					<div class="text-3xl font-bold">Free Account</div>
-					<div class="text-sm" style="color: var(--fg-3)">Always free</div>
+					<div class="text-sm text-fg-3">Always free</div>
 				</div>
-				<p class="text-sm leading-relaxed" style="color: var(--fg-2)">
+				<p class="text-muted leading-relaxed">
 					Create an account to use the basics — book practice space at the standard hourly rate,
 					browse the member directory, and RSVP to events.
 				</p>
-				<ul class="text-sm space-y-2" style="color: var(--fg-2)">
+				<ul class="text-muted space-y-2">
 					<li>• Reserve practice space hourly</li>
 					<li>• Member directory access</li>
 					<li>• RSVP to events</li>
@@ -161,7 +158,7 @@
 						<item.icon size={40} />
 					</div>
 					<h3 class="text-lg font-bold">{item.title}</h3>
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{item.desc}</p>
+					<p class="text-muted leading-relaxed">{item.desc}</p>
 				</div>
 			{/each}
 		</div>
@@ -173,7 +170,7 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center mb-10">
 			<h2 class="text-4xl font-bold tracking-tight mb-3">Pick Your Contribution</h2>
-			<p class="text-base max-w-2xl mx-auto leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base max-w-2xl mx-auto leading-relaxed text-fg-2">
 				It's a sliding scale: every <strong>$5/month</strong> earns you another free hour of practice
 				time — up to 12. Every tier gets the same member benefits, you just walk away with more practice
 				hours. Change or cancel anytime.
@@ -215,7 +212,7 @@
 				</div>
 			{/each}
 		</div>
-		<p class="text-center text-sm mt-8" style="color: var(--fg-3)">
+		<p class="text-center text-sm mt-8 text-fg-3">
 			Not looking to join monthly? There are <a
 				href={resolve('/contribute')}
 				class="underline"

@@ -38,7 +38,7 @@
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<div>
-			<label for="sub-email" class="text-xs opacity-60">Email</label>
+			<label for="sub-email" class="text-subtle">Email</label>
 			<input
 				id="sub-email"
 				type="email"
@@ -50,7 +50,7 @@
 			/>
 		</div>
 		<div>
-			<label for="sub-name" class="text-xs opacity-60">Name (optional)</label>
+			<label for="sub-name" class="text-subtle">Name (optional)</label>
 			<input
 				id="sub-name"
 				type="text"

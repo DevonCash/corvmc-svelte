@@ -41,7 +41,7 @@
 		     people leave one list, keep getting mail from another, and hit "mark as
 		     spam" instead of coming back here. This is the escape hatch. -->
 		<div class="border-t pt-4 space-y-2">
-			<p class="text-sm opacity-70">Still receiving emails you don't want?</p>
+			<p class="text-muted">Still receiving emails you don't want?</p>
 			<!-- SubmitButton wraps its button in a plain flex row, which would sit
 			     left of centre inside this centred column. -->
 			<div class="flex justify-center">

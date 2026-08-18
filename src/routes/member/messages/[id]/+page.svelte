@@ -77,7 +77,7 @@
 		     what you are reporting. -->
 		<div class="card border-base-300 bg-base-100 border">
 			<div class="card-body gap-3 p-4">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					{t.counterpartName ?? 'This member'} would like to start a conversation with you. They cannot
 					send anything else unless you accept.
 				</p>

@@ -63,7 +63,7 @@
 				class="input-bordered input w-full font-mono text-sm"
 				oninput={() => (slugManuallyEdited = true)}
 			/>
-			<p class="text-xs opacity-60 mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
+			<p class="text-subtle mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
 		</fieldset>
 		<Field name="description" type="textarea" label="Description" bind:value={description} />
 		<Field

@@ -144,14 +144,14 @@
 			}, {})}
 			{#each Object.entries(groups) as [groupName, items] (groupName)}
 				<div class="mb-6">
-					<h3 class="text-sm font-semibold opacity-60 mb-2">{groupName}</h3>
+					<h3 class="text-muted font-semibold mb-2">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
 							<div class="card bg-base-100 border shadow-sm">
 								<div class="card-body p-4">
 									<h3 class="card-title text-sm">{eq.name}</h3>
 									{#if eq.description}
-										<p class="text-xs opacity-70 line-clamp-2">{eq.description}</p>
+										<p class="text-subtle line-clamp-2">{eq.description}</p>
 									{/if}
 									<div class="flex flex-wrap items-center gap-1 mt-1">
 										<span class="tooltip" data-tip={eq.condition}>
@@ -187,7 +187,7 @@
 	{/await}
 
 	<div class="border-t pt-4">
-		<p class="text-sm opacity-70 mb-2">Can't find what you need?</p>
+		<p class="text-muted mb-2">Can't find what you need?</p>
 		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>Describe Your Request</Button>
 	</div>
 </PageContent>
@@ -234,7 +234,7 @@
 				{/if}
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}
-			<div class="rounded-lg bg-base-200 px-4 py-3 text-sm opacity-70">
+			<div class="rounded-lg bg-base-200 px-4 py-3 text-muted">
 				Cost will be determined when equipment is assigned
 			</div>
 		{/if}

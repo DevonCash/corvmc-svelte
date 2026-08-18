@@ -58,7 +58,7 @@
 			<Button type="button" class="btn-circle btn-ghost btn-xs" onclick={clear}>✕</Button>
 		</div>
 		{#if value[descriptionKey]}
-			<span class="text-sm opacity-60">{value[descriptionKey]}</span>
+			<span class="text-muted">{value[descriptionKey]}</span>
 		{/if}
 	</div>
 {:else}
@@ -84,7 +84,7 @@
 						>
 							<span class="font-medium">{item[labelKey]}</span>
 							{#if item[descriptionKey]}
-								<span class="ml-2 text-sm opacity-60">{item[descriptionKey]}</span>
+								<span class="ml-2 text-muted">{item[descriptionKey]}</span>
 							{/if}
 						</Combobox.Item>
 					{:else}
@@ -101,7 +101,7 @@
 		{#snippet pending()}
 			<div class="flex items-center gap-2 p-2">
 				<span class="loading loading-spinner loading-sm"></span>
-				<span class="text-sm opacity-60">Searching...</span>
+				<span class="text-muted">Searching...</span>
 			</div>
 		{/snippet}
 	</svelte:boundary>

@@ -133,7 +133,7 @@
 									</div>
 									<div>
 										<p class="font-medium">{member.userName}</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											{member.userEmail}
 											{#if member.position}
 												&middot; {member.position}
@@ -194,7 +194,7 @@
 							<div class="card-body flex-row items-center justify-between py-3">
 								<div>
 									<p class="font-medium">{invite.userName}</p>
-									<p class="text-xs opacity-60">
+									<p class="text-subtle">
 										{invite.userEmail} &middot; Invited as {invite.role}
 										{#if invite.position}
 											&middot; {invite.position}
@@ -234,7 +234,7 @@
 								<div class="card-body flex-row items-center justify-between py-3">
 									<div>
 										<p class="font-medium">{invite.email}</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											Invited as {invite.role}
 											{#if invite.position}
 												&middot; {invite.position}
@@ -329,17 +329,17 @@
 								<li>
 									<button type="button" onclick={() => selectUser(result)}>
 										<span class="font-medium">{result.name}</span>
-										<span class="text-xs opacity-60">{result.email}</span>
+										<span class="text-subtle">{result.email}</span>
 									</button>
 								</li>
 							{/each}
 						</ul>
 					{/if}
 					{#if searching}
-						<p class="mt-1 text-xs opacity-60">Searching...</p>
+						<p class="mt-1 text-subtle">Searching...</p>
 					{/if}
 					{#if searchQuery.length >= 2 && searchResults.length === 0 && !searching && !selectedUser && looksLikeEmail}
-						<p class="mt-1 text-xs opacity-60">
+						<p class="mt-1 text-subtle">
 							No existing members found.
 							<button type="button" class="link" onclick={() => (inviteMode = 'email')}>
 								Invite {searchQuery} by email?
@@ -376,7 +376,7 @@
 			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
 					signup link and be automatically added to your band.
 				</p>

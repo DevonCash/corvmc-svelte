@@ -184,11 +184,11 @@
 
 					<div class="border-t border-base-200 pt-4">
 						{#if coverFees}
-							<div class="flex justify-between text-sm opacity-70">
+							<div class="flex justify-between text-muted">
 								<span>Subtotal</span>
 								<span>{formatCents(subtotal)}</span>
 							</div>
-							<div class="flex justify-between text-sm opacity-70">
+							<div class="flex justify-between text-muted">
 								<span>Processing fees</span>
 								<span>{formatCents(feeCents)}</span>
 							</div>

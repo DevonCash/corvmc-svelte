@@ -132,10 +132,7 @@
 <ErrorToastBoundary>
 	<div class="flex items-center justify-center py-16 px-4">
 		<div class="w-full max-w-sm">
-			<div
-				class="card shadow-xl"
-				style="background: var(--surface); border: 1px solid var(--surface-border)"
-			>
+			<div class="card shadow-xl surface">
 				<div class="card-body gap-4">
 					{#if inviteMeta}
 						<Alert type="info" class="text-sm">

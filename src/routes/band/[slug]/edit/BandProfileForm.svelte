@@ -152,16 +152,14 @@
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Links">
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				SoundCloud, YouTube, and Spotify links show as embedded players on your profile.
 			</p>
 			<LinkListEditor bind:value={links} field={profileFields.links} />
 		</InfoCard>
 
 		<InfoCard title="Directory Contact Info">
-			<p class="mb-3 text-sm opacity-60">
-				Optional contact details shown on your directory listing.
-			</p>
+			<p class="mb-3 text-muted">Optional contact details shown on your directory listing.</p>
 			<div class="space-y-3">
 				<FormField
 					field={profileFields.contactEmail}

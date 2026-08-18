@@ -19,7 +19,7 @@
 		<p class="text-xs opacity-50">{label}</p>
 	{/if}
 	<div class="mt-1 flex items-center gap-2">
-		<code class="text-xs opacity-70">{display}</code>
+		<code class="text-subtle">{display}</code>
 		<button
 			class="btn btn-ghost btn-xs"
 			onclick={() => navigator.clipboard.writeText(value)}

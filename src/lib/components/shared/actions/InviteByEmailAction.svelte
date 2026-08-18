@@ -31,7 +31,7 @@
 	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Invite someone who doesn't have a CorvMC account. They'll get a signup link and be
 				auto-added to this band.
 			</p>

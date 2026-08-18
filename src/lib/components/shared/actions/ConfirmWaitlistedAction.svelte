@@ -39,7 +39,7 @@
 			A slot has opened up for this time. Would you like to confirm this reservation?
 		</p>
 		{#if reservation.waitlistExpiresAt}
-			<p class="text-xs opacity-60">
+			<p class="text-subtle">
 				You have until {formatDate(reservation.waitlistExpiresAt)} to confirm before the slot is offered
 				to someone else.
 			</p>

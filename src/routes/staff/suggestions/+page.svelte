@@ -141,7 +141,7 @@
 	</FilterBar>
 
 	{#if tab === 'review'}
-		<p class="text-sm opacity-70">
+		<p class="text-muted">
 			Nothing here is visible to members. Reported suggestions are resolved in
 			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>, not here.
 		</p>
@@ -169,7 +169,7 @@
 						</td>
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-							<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
+							<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
 						</td>
 						<td class="col-support w-px">
 							<Badge size="xs" variant="ghost">
@@ -186,7 +186,7 @@
 	</DataList>
 
 	{#if tab === 'review' && pendingEdits.length > 0}
-		<h2 class="text-sm font-medium opacity-70">Edits waiting on approval</h2>
+		<h2 class="text-muted font-medium">Edits waiting on approval</h2>
 		<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
@@ -202,7 +202,7 @@
 					<td class="w-px"><StatusBadge status="pending_review" /></td>
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{e.proposedTitle}</a>
-						<div class="truncate text-sm opacity-60">
+						<div class="truncate text-muted">
 							was "{e.originalTitle}" · {e.requestedByName ?? 'A former member'}
 						</div>
 					</td>
@@ -213,7 +213,7 @@
 	{/if}
 
 	{#if tab === 'review'}
-		<h2 class="text-sm font-medium opacity-70">Reported and pulled from the board</h2>
+		<h2 class="text-muted font-medium">Reported and pulled from the board</h2>
 		<DataList result={underReview} empty="No reported suggestions">
 			{#snippet children(rows)}
 				<Table>
@@ -229,7 +229,7 @@
 							<td class="w-px"><StatusBadge status="under_review" /></td>
 							<td class="cell-primary">
 								<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-								<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
+								<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
 							</td>
 							<td class="col-support w-px cell-num">{s.voteCount}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(s.createdAt)}</td>

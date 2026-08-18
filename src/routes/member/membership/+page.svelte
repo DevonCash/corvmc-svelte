@@ -52,7 +52,7 @@
 		<Button class="btn-lg btn-primary" onclick={() => (subscribeModalOpen = true)}>
 			Become a Sustaining Member
 		</Button>
-		<p class="mt-4 text-sm opacity-60">Cancel anytime. Seriously.</p>
+		<p class="mt-4 text-muted">Cancel anytime. Seriously.</p>
 	</div>
 {/snippet}
 

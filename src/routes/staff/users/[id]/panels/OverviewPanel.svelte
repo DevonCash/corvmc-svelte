@@ -252,7 +252,7 @@
 				class="rounded-box border border-base-300 px-3 py-2 text-left hover:bg-base-200"
 				onclick={() => onjump(p.tab)}
 			>
-				<div class="text-xs opacity-60">{p.label}</div>
+				<div class="text-subtle">{p.label}</div>
 				<div class="text-sm font-medium">{p.value}</div>
 			</button>
 		{/each}

@@ -141,7 +141,7 @@
 	{#await blocked then rows}
 		{#if rows.length > 0}
 			<InfoCard title="Pending review" class="mb-4 border-l-4 border-warning">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					These members told us they're under 18, so they can't pick up shifts or log hours yet.
 					Approving lets them do both.
 				</p>
@@ -330,11 +330,11 @@
 									userId: log.userId
 								}}
 							/>
-							<div class="truncate text-xs opacity-60" title={log.description}>
+							<div class="truncate text-subtle" title={log.description}>
 								{log.description}
 							</div>
 							{#if log.reviewNotes}
-								<div class="truncate text-xs opacity-60">
+								<div class="truncate text-subtle">
 									{log.reviewedByName ?? 'Staff'}: {log.reviewNotes}
 								</div>
 							{/if}
@@ -370,7 +370,7 @@
 												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Note (optional)"
@@ -398,7 +398,7 @@
 												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Reason"

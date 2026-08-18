@@ -62,7 +62,7 @@
 							<div class="flex-1">
 								<p class="font-medium text-sm">{a.name}</p>
 								{#if a.description}
-									<p class="text-xs opacity-60">{a.description}</p>
+									<p class="text-subtle">{a.description}</p>
 								{/if}
 							</div>
 						</label>

@@ -85,8 +85,8 @@
 							</div>
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
-								<p class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</p>
-								<p class="text-sm opacity-60">{dueLabel(r)}</p>
+								<p class="text-muted">{formatTimeRange(r.startsAt, r.endsAt)}</p>
+								<p class="text-muted">{dueLabel(r)}</p>
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">

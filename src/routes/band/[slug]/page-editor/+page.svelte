@@ -231,7 +231,7 @@
 								>
 									<div>
 										<p class="font-medium text-sm">{bt.label}</p>
-										<p class="text-xs opacity-60">{bt.description}</p>
+										<p class="text-subtle">{bt.description}</p>
 									</div>
 								</button>
 							{/each}
@@ -239,7 +239,7 @@
 					{/if}
 
 					{#if blocks.length === 0}
-						<p class="text-sm opacity-60 mt-4">
+						<p class="text-muted mt-4">
 							No blocks configured yet. Add blocks to build your custom page. Your page will show a
 							default layout until you add blocks.
 						</p>
@@ -251,7 +251,7 @@
 									<div class="flex items-center gap-2 p-3">
 										<span class="text-sm font-mono opacity-40">{i + 1}</span>
 										<span class="badge badge-sm capitalize">{block.type}</span>
-										<span class="flex-1 text-sm opacity-60 truncate">{blockLabel(block)}</span>
+										<span class="flex-1 text-muted truncate">{blockLabel(block)}</span>
 										<div class="flex items-center gap-1">
 											<button
 												type="button"
@@ -387,7 +387,7 @@
 													/>
 													<span class="text-sm">Allow downloads (press-quality)</span>
 												</label>
-												<p class="text-xs opacity-60">
+												<p class="text-subtle">
 													Gallery images are pulled from your uploaded media. Use the media section
 													below to upload images.
 												</p>
@@ -460,21 +460,21 @@
 														>Show contact form (messages are emailed to your booking contact)</span
 													>
 												</label>
-												<p class="text-sm opacity-60">
+												<p class="text-muted">
 													Contact people render from your EPK.
 													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
 											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
-												<p class="text-sm opacity-60">
+												<p class="text-muted">
 													This block renders data from your EPK.
 													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
 											{:else if block.type === 'merch'}
-												<p class="text-xs opacity-60 mb-2">
+												<p class="text-subtle mb-2">
 													Add merchandise items with links to your store.
 												</p>
 												{#each block.items as item, mi (mi)}
@@ -550,7 +550,7 @@
 			<div class="card bg-base-100 shadow-sm">
 				<div class="card-body">
 					<h2 class="card-title text-lg">Custom CSS</h2>
-					<p class="text-sm opacity-60">
+					<p class="text-muted">
 						Add custom styles to your page. CSS is scoped to your band site container.
 					</p>
 					<textarea
@@ -582,7 +582,7 @@
 		<div class="card bg-base-100 shadow-sm mt-6">
 			<div class="card-body">
 				<h2 class="card-title text-lg">Media</h2>
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					Upload images for your gallery, hero sections, and tech rider. Supported formats: JPEG,
 					PNG, WebP, GIF. Max 10MB per file.
 				</p>
@@ -714,7 +714,7 @@
 				<div class="flex items-center justify-between">
 					<div>
 						<h2 class="card-title text-lg">Electronic Press Kit</h2>
-						<p class="text-sm opacity-60">
+						<p class="text-muted">
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>

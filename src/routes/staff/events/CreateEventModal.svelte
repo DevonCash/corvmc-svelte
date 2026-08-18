@@ -203,7 +203,7 @@
 					class="file-input file-input-bordered w-full"
 				/>
 				{#if posterFile}
-					<p class="text-sm opacity-60 mt-1">
+					<p class="text-muted mt-1">
 						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
 					</p>
 				{/if}
@@ -229,7 +229,7 @@
 			{#if ticketingEnabled}
 				<div class="card bg-base-200 p-4 space-y-4">
 					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
-					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
+					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
 				</div>
 			{/if}
 
@@ -242,7 +242,7 @@
 
 			{#if reserveSpace}
 				<div class="card bg-base-200 p-4 space-y-4">
-					<p class="text-sm opacity-60">
+					<p class="text-muted">
 						Reservation times can differ from event times to allow for setup and teardown.
 					</p>
 
@@ -312,7 +312,7 @@
 						bind:value={recurringEndsAt}
 					/>
 
-					<p class="text-sm opacity-60">
+					<p class="text-muted">
 						Occurrences are created as drafts ahead of time; publish each one when ready. Each
 						occurrence starts with a copy of this event's poster, editable per occurrence.
 					</p>
@@ -328,7 +328,7 @@
 								</ul>
 							</div>
 						{:else}
-							<p class="text-sm opacity-60">No upcoming occurrences in the next 60 days.</p>
+							<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
 						{/if}
 					{/if}
 				</div>

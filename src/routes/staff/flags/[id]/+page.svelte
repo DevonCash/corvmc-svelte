@@ -89,7 +89,7 @@
 
 		{#if flag.threadContext}
 			<InfoCard title="Conversation">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					A private conversation between two members. It is not in the inbox and has no page of its
 					own — this report is what makes it readable.
 				</p>
@@ -147,7 +147,7 @@
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
-				<p class="text-sm opacity-70 mb-3">
+				<p class="text-muted mb-3">
 					Review the reported content, then mark this flag resolved (action taken) or dismissed (no
 					action needed).
 				</p>
@@ -190,7 +190,7 @@
 									     the only thing in the app that changes a member's
 									     standing, and a staffer shouldn't discover that
 									     afterwards. -->
-									<p class="text-sm text-wrap opacity-70">
+									<p class="text-muted text-wrap">
 										Resolving this also means the member who posted it has their future listings
 										checked by staff before they publish. Dismissing changes nothing.
 									</p>
@@ -199,7 +199,7 @@
 									<!-- Same reason as the community-listing note above: this is the
 									     other place resolving a report changes a member's standing,
 									     and it also decides whether their post ever comes back. -->
-									<p class="text-sm text-wrap opacity-70">
+									<p class="text-muted text-wrap">
 										{#if resolution === 'resolved'}
 											Resolving keeps this suggestion off the board and means the member who posted
 											it has their future suggestions checked by staff first.

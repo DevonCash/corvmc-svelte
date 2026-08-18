@@ -65,7 +65,7 @@
 				}}
 			/>
 			{#if isNote}
-				<span class="flex items-center gap-1 text-xs opacity-60">
+				<span class="flex items-center gap-1 text-subtle">
 					<IconNote size={14} /> Staff only — the contact never sees this
 				</span>
 			{/if}

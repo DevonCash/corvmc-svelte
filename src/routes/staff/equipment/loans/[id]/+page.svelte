@@ -118,14 +118,14 @@
 
 			{#if loan.memberNotes}
 				<div class="mt-4">
-					<h4 class="text-sm font-semibold opacity-60 mb-1">Member Notes</h4>
+					<h4 class="text-muted font-semibold mb-1">Member Notes</h4>
 					<p class="text-sm bg-base-200 rounded p-2">{loan.memberNotes}</p>
 				</div>
 			{/if}
 
 			{#if loan.staffNotes}
 				<div class="mt-4">
-					<h4 class="text-sm font-semibold opacity-60 mb-1">Staff Notes</h4>
+					<h4 class="text-muted font-semibold mb-1">Staff Notes</h4>
 					<p class="text-sm bg-base-200 rounded p-2">{loan.staffNotes}</p>
 				</div>
 			{/if}
@@ -192,7 +192,7 @@
 						: undefined}
 				/>
 			{:else}
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					This loan is <strong>{loan.status}</strong>. No actions available.
 				</p>
 			{/if}

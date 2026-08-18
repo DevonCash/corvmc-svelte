@@ -96,7 +96,7 @@
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="font-medium">{c.reason}</p>
-									<p class="text-sm opacity-60">
+									<p class="text-muted">
 										{formatDateTime(c.startsAt)} — {formatDateTime(c.endsAt)}
 									</p>
 								</div>

@@ -56,7 +56,7 @@
 		{/if}
 
 		{#if range}
-			<p class="text-sm opacity-60 tnums">
+			<p class="text-muted tnums">
 				Showing {range.from}–{range.to} of {total}
 			</p>
 		{/if}

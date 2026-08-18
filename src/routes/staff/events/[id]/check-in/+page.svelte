@@ -51,7 +51,7 @@
 				<div class="card-body p-4 flex-row items-center justify-between">
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
-						<p class="text-sm opacity-60">{ticket.attendeeEmail}</p>
+						<p class="text-muted">{ticket.attendeeEmail}</p>
 						<p class="font-mono text-xs opacity-50 mt-1">{ticket.code}</p>
 					</div>
 

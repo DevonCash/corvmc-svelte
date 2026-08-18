@@ -121,7 +121,7 @@
 		>
 			Help Us Keep the Music Going
 		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-lg leading-relaxed text-fg-2">
 			CMC is a 501(c)(3) nonprofit. Every membership, donation, and volunteer hour goes directly
 			toward affordable practice space and programs for local musicians.
 		</p>
@@ -142,7 +142,7 @@
 	<div class="max-w-5xl mx-auto">
 		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
 			<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
-			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base leading-relaxed text-fg-2">
 				Volunteers are the beating heart of our organization! Every show, every piece of gear, and
 				every program is made possible by the time and energy of our members. No experience is
 				necessary — just a willingness to help. Create a free account to get started.
@@ -151,22 +151,19 @@
 
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
 			{#each volunteerGroups as group (group.title)}
-				<div
-					class="flex flex-col gap-3 rounded-lg p-6"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
+				<div class="flex flex-col gap-3 rounded-lg p-6 surface">
 					<div class="flex items-center gap-2" style="color: var(--cmc-navy)">
 						<group.icon size={24} />
 						<h3 class="text-lg font-bold">{group.title}</h3>
 					</div>
 					{#if group.desc}
-						<p class="text-sm leading-relaxed" style="color: var(--fg-3)">{group.desc}</p>
+						<p class="text-sm leading-relaxed text-fg-3">{group.desc}</p>
 					{/if}
 					<ul class="flex flex-col gap-2">
 						{#each group.roles as role (role.name)}
 							<li class="text-sm leading-relaxed">
 								<span class="font-bold">{role.name}</span>
-								<span style="color: var(--fg-2)"> — {role.desc}</span>
+								<span class="text-fg-2"> — {role.desc}</span>
 							</li>
 						{/each}
 					</ul>
@@ -184,7 +181,7 @@
 <section class="section-tint-secondary py-16 px-6">
 	<div class="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
-		<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-base leading-relaxed text-fg-2">
 			The most direct way to support the space is a monthly contribution on a sliding scale —
 			starting at $10/month. Sustaining members earn free practice hours every month, can lock in a
 			recurring weekly practice slot, and get discounts on show tickets and gear. Your contribution
@@ -210,7 +207,7 @@
 						<item.icon size={40} />
 					</div>
 					<h3 class="text-lg font-bold">{item.title}</h3>
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{item.desc}</p>
+					<p class="text-muted leading-relaxed">{item.desc}</p>
 					<Button
 						href={item.href}
 						class="btn-sm mt-auto"

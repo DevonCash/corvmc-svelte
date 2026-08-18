@@ -81,7 +81,7 @@
 							{/if}
 						</div>
 
-						<div class="text-sm opacity-70">
+						<div class="text-muted">
 							{formatDateShort(shift.startsAt)} · {timeRange(shift.startsAt, shift.endsAt)}
 							{#if shift.eventTitle}
 								· {shift.eventTitle}
@@ -89,17 +89,17 @@
 						</div>
 
 						{#if shift.notes}
-							<div class="text-xs opacity-60">{shift.notes}</div>
+							<div class="text-subtle">{shift.notes}</div>
 						{/if}
 
-						<div class="text-xs opacity-60">
+						<div class="text-subtle">
 							{shift.claimed} of {shift.capacity} filled
 						</div>
 					</div>
 
 					<div class="flex shrink-0 items-center gap-2">
 						{#if blocked}
-							<span class="text-xs opacity-70">{blocked}</span>
+							<span class="text-subtle">{blocked}</span>
 						{:else if shift.myStatus && shift.mySignupId}
 							<Action
 								action={cancelMySignup.for(shift.id)}
@@ -133,9 +133,9 @@
 										{timeRange(shift.startsAt, shift.endsAt)}.
 									</p>
 									{#if shift.notes}
-										<p class="text-sm opacity-70">{shift.notes}</p>
+										<p class="text-muted">{shift.notes}</p>
 									{/if}
-									<p class="text-sm opacity-70">
+									<p class="text-muted">
 										Staff confirm claims. You'll get a reminder the day before, and you can drop out
 										from this page if something comes up.
 									</p>

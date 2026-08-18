@@ -47,7 +47,7 @@
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">Your Contribution</h3>
-				<p class="text-sm opacity-60">Manage your monthly support</p>
+				<p class="text-muted">Manage your monthly support</p>
 			</div>
 		</div>
 
@@ -59,7 +59,7 @@
 						<Badge variant="secondary">+ ${feeAmount} fees covered</Badge>
 					{/if}
 				</div>
-				<p class="mt-1 text-sm opacity-60">Next bill {nextBilling}</p>
+				<p class="mt-1 text-muted">Next bill {nextBilling}</p>
 			</div>
 		</div>
 

@@ -61,7 +61,7 @@
 										res.endsAt
 									)}
 								</p>
-								<p class="text-xs opacity-60">
+								<p class="text-subtle">
 									{formatDuration(res.startsAt, res.endsAt)}
 									{#if res.bookedByName}
 										&middot; Booked by {res.bookedByName}
@@ -108,7 +108,7 @@
 										res.endsAt
 									)}
 								</p>
-								<p class="text-xs opacity-60">
+								<p class="text-subtle">
 									{formatDuration(res.startsAt, res.endsAt)}
 									{#if res.bookedByName}
 										&middot; Booked by {res.bookedByName}

@@ -55,7 +55,7 @@
 											res.endsAt
 										)}
 									</p>
-									<p class="text-sm opacity-60">
+									<p class="text-muted">
 										{formatDuration(res.startsAt, res.endsAt)}
 										{#if res.bookedByName}
 											&middot; Booked by {res.bookedByName}

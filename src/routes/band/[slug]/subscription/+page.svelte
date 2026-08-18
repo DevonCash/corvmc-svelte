@@ -128,7 +128,7 @@
 					<div class="card-body items-center text-center">
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
-							$15<span class="text-sm font-normal opacity-60">/mo</span>
+							$15<span class="text-muted font-normal">/mo</span>
 						</p>
 						{#if isOwner}
 							<form
@@ -158,7 +158,7 @@
 						<Badge variant="primary">2 months free</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>
 						<p class="text-3xl font-bold">
-							$120<span class="text-sm font-normal opacity-60">/yr</span>
+							$120<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
 							<form

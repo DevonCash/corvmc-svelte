@@ -88,7 +88,7 @@
 									{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
 								</span>
 							</a>
-							<div class="flex min-w-0 items-center gap-1 text-sm opacity-60">
+							<div class="flex min-w-0 items-center gap-1 text-muted">
 								<MemberLink
 									variant="inline"
 									member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}

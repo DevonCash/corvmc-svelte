@@ -41,7 +41,7 @@
 		>
 			<div class="border-b border-base-300 px-4 py-3">
 				<p class="text-sm font-medium truncate">{me?.name}</p>
-				<p class="text-xs opacity-60 truncate">{me?.email}</p>
+				<p class="text-subtle truncate">{me?.email}</p>
 			</div>
 
 			<ul class="menu menu-sm p-2">

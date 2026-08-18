@@ -234,7 +234,7 @@
 			~60 round trips through the editor.
 		-->
 		<div class="mb-3 flex flex-wrap items-center gap-2">
-			<span class="text-sm opacity-60">
+			<span class="text-muted">
 				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
 			</span>
 			{#if drafts.length > 0}
@@ -317,7 +317,7 @@
 					     subline. -->
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{a.title}</a>
-						<div class="truncate text-sm opacity-60">{categoryMap[a.categoryId] ?? '—'}</div>
+						<div class="truncate text-muted">{categoryMap[a.categoryId] ?? '—'}</div>
 					</td>
 					<td class="col-support w-px">
 						<Badge size="xs" variant={a.source === 'static' ? 'info' : 'ghost'}>{a.source}</Badge>

@@ -45,7 +45,7 @@
 		<input {...fields.entityType.as('hidden', entityType)} />
 		<input {...fields.entityId.as('hidden', entityId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Let staff know what's wrong with this content. Reports are private and reviewed by the CMC
 				team.
 			</p>

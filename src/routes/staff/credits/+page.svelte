@@ -148,7 +148,7 @@
 								variant="inline"
 								member={{ name: t.userName ?? '', email: undefined, userId: t.userId }}
 							/>
-							<span class="block truncate text-sm opacity-60">
+							<span class="block truncate text-muted">
 								{t.description || sourceLabel(t.source)}
 							</span>
 						</td>

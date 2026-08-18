@@ -49,7 +49,7 @@
 					     the subline. -->
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{c.subject}</a>
-						<div class="truncate text-sm opacity-60">
+						<div class="truncate text-muted">
 							{c.audienceNames.length > 0 ? c.audienceNames.join(', ') : '—'}
 						</div>
 					</td>

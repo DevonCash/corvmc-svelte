@@ -55,7 +55,7 @@
 					: 's'})
 			</p>
 			{#if res.notes}
-				<p class="text-sm opacity-60">{res.notes}</p>
+				<p class="text-muted">{res.notes}</p>
 			{/if}
 		</div>
 	</div>
@@ -83,7 +83,7 @@
 			{/if}
 
 			{#if remainingCents > 0 && coverFees}
-				<div class="flex justify-between text-sm opacity-60">
+				<div class="flex justify-between text-muted">
 					<span>Processing fee coverage</span>
 					<span>+${formatDollars(feeCents)}</span>
 				</div>
