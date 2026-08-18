@@ -23,7 +23,7 @@
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
 	{#each stats as stat (stat.label)}
 		<div class="rounded-box bg-base-100 px-4 py-3 shadow">
-			<div class="text-xs opacity-60">{stat.label}</div>
+			<div class="text-subtle">{stat.label}</div>
 			<div class="text-xl font-medium">{stat.value}</div>
 		</div>
 	{/each}

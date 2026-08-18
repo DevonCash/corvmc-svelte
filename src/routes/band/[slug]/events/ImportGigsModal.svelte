@@ -35,13 +35,13 @@
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}
-				class="textarea textarea-bordered w-full font-mono text-xs"
+				class="textarea w-full font-mono text-xs"
 				rows="10"
 				placeholder="2024-03-14 | Bombs Away Cafe | w/ Paper Wolves&#10;2023-11-02 | The Majestic Theatre"
 			></textarea>
 		</FormField>
 
-		<p class="text-xs opacity-60">
+		<p class="text-subtle">
 			<code>date | venue | title | ticket link</code> — only the date is required. Start a title
 			with
 			<code>w/</code> to list the other acts. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
@@ -82,7 +82,7 @@
 		<div class="flex justify-end gap-2">
 			<SubmitButton
 				label={preview.rows.length > 0 ? `Import ${preview.rows.length} gigs` : 'Import'}
-				class="btn-primary"
+				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>
 		</div>

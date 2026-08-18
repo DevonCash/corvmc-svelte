@@ -39,7 +39,7 @@
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{a.name}</a>
 						{#if a.description}
-							<div class="truncate text-sm opacity-60">{a.description}</div>
+							<div class="truncate text-muted">{a.description}</div>
 						{/if}
 					</td>
 					<td class="col-support w-px">

@@ -4,6 +4,9 @@ When building or modifying pages in this app, use the shared components and patt
 
 > Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
 
+> Reducing the raw utility classes still left in page templates? See
+> [template-audit.md](./template-audit.md) for the census, the findings, and the migration phases.
+
 ## Page structure
 
 Every page under a panel layout (staff, member, or band) follows this shape:
@@ -195,6 +198,36 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 - `class` — extra classes on the wrapper fieldset
 - `issues` — only needed when using FormField **outside** a `<Form>`. Inside a Form, issues are pulled from the form context automatically using `name`.
 
+## Button
+
+Variant, size and shape are **props**, never class strings. `class` is reserved for genuine
+one-offs — positioning, a `join-item`, a bespoke skin.
+
+```svelte
+<Button variant="ghost" size="sm">Cancel</Button>
+<Button variant="error" outline size="sm">Delete</Button>
+<Button variant="ghost" size="sm" shape="square" title="Edit"><IconPencil size={16} /></Button>
+<Button href="/staff/users">All users</Button>
+```
+
+Props:
+
+- `variant` — `primary` (default), `secondary`, `accent`, `neutral`, `info`, `success`, `warning`,
+  `error`, `ghost`, `link`, or `default` for the plain uncoloured `btn` surface.
+- `size` — `xs`, `sm`, `md` (default), `lg`
+- `shape` — `square`, `circle`, `wide`, `block`
+- `outline` — boolean; stacks on top of `variant`, so `variant="error" outline` is an outlined
+  destructive button. It is not a variant of its own.
+- `href` — renders an `<a>` instead of a `<button>`
+- `title` — tooltip text, merged onto the button itself rather than a wrapper (nesting a button
+  inside the tooltip trigger drops the control out of the accessibility tree — pinned by
+  `Button.svelte.spec.ts`)
+- `class` — escape hatch. A daisyUI colour passed here still wins over the `primary` default, so an
+  escape hatch can never collide with it, but reach for `variant` instead.
+
+`Action`, `SubmitButton` and every `shared/actions/*Action.svelte` wrapper take the same
+`variant`/`size`/`shape`/`outline` props and forward them here.
+
 ## SubmitButton
 
 Status-aware submit button that reads from `FormContext`. Shows spinner while pending, checkmark on success, X on error.
@@ -204,26 +237,17 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 	label="Save"
 	successLabel="Saved"
 	errorLabel="Error"
-	class="btn-primary"
+	variant="primary"
 	disabled={!isValid}
 	shortcut="mod+s"
 />
 ```
 
-Place inside a `<Form>`. For standalone async actions (not inside a form), use `AsyncButton` instead.
+Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
+it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
 
-## AsyncButton
-
-Same status feedback as SubmitButton but for standalone async actions that aren't part of a form. For actions that need a confirmation step or a form modal, use `Action` instead.
-
-```svelte
-<AsyncButton
-	action={() => deleteItem(item.id)}
-	label="Delete"
-	successToast="Deleted"
-	class="btn-error btn-sm"
-/>
-```
+For standalone async actions outside a form — and for anything needing a confirmation step or a
+form modal — use `Action`.
 
 ## Action
 
@@ -234,7 +258,7 @@ A single component that handles four patterns depending on its props: direct asy
 Runs an async callback on click. Same behavior as `AsyncButton`.
 
 ```svelte
-<Action action={() => archive(item.id)} label="Archive" successToast="Archived" class="btn-sm" />
+<Action action={() => archive(item.id)} label="Archive" successToast="Archived" size="sm" />
 ```
 
 ### With confirmation
@@ -245,7 +269,8 @@ When `confirm` is set (and no `body`), an alert dialog is shown before firing th
 <Action
 	action={() => deleteItem(item.id)}
 	label="Delete"
-	class="btn-error btn-sm"
+	variant="error"
+	size="sm"
 	confirm="This will permanently delete the item. Are you sure?"
 	successToast="Deleted"
 />
@@ -283,13 +308,7 @@ When `action` is a `RemoteForm` (from a `form()` remote), clicking the button op
 > for the callback-modal mode only.
 
 ```svelte
-<Action
-	action={updateItem}
-	label="Edit"
-	class="btn-primary btn-sm"
-	modalTitle="Edit Item"
-	successToast="Updated"
->
+<Action action={updateItem} label="Edit" size="sm" modalTitle="Edit Item" successToast="Updated">
 	{#snippet form()}
 		<FormField name="name" type="text" value={item.name} />
 		<FormField name="description" type="textarea" value={item.description} />
@@ -330,11 +349,13 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
 - `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
+- `submitVariant` — colour of the modal's submit button (defaults to the trigger's `variant`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
 - `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
-- `class` — button classes (default `btn-primary`)
+- `variant` / `size` / `shape` / `outline` — forwarded to `Button`; `variant` defaults to `primary`
+- `class` — escape hatch, forwarded to `Button`
 - `disabled` — disables the trigger button
 
 ## StatusBadge
@@ -449,9 +470,42 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Card
+
+The panel surface. `Card` + `CardBody` + `CardTitle`, from
+`$lib/components/shared/Card/`. Most sections want `InfoCard` (below) instead — reach for these
+directly only when the section has no title, or when the body needs a non-default layout.
+
+```svelte
+<Card>
+	<CardBody>
+		<CardTitle>Schedule</CardTitle>
+		…
+	</CardBody>
+</Card>
+
+<Card bordered>
+	<!-- border instead of shadow, for a nested card -->
+	<CardBody row>…</CardBody>
+	<!-- label left, control right -->
+</Card>
+```
+
+- `Card` — `tone` (`base-100` default, `base-200`, `base-300`), `bordered`. The shadow is not
+  optional and not configurable: `shadow` and `shadow-sm` were both in circulation, and this is
+  where that got settled.
+- `CardBody` — `padding` (`md` default, `sm`), `row` (label/control row instead of a column),
+  `center`.
+- `CardTitle` — `size` (`sm`, `base`, `lg`; omit for daisyUI's own), `level` (`2`/`3`/`4`, default
+  `3`). **`level` is the page outline, `size` is how loud it looks** — pick `level` from where the
+  card sits under `PageHeader`'s `<h1>`, never from how big you want the text.
+
+Not everything with a `card` class should become one: a clickable card is an `<a>`, a list card is
+an `<li>`, and tinted one-offs (`bg-warning/10 border-warning/40`) stay hand-written.
+
 ## InfoCard
 
-Card with a small label header and content body. Use for detail page sections (member info, payment, notes, etc.).
+Titled card — the default section on a detail page. Thin composition over `Card`/`CardBody`/`CardTitle`.
 
 ```svelte
 <InfoCard title="Payment">
@@ -615,13 +669,29 @@ below the `@lg` container breakpoint.
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-	{#snippet search()}<input ... />{/snippet}
-	{#snippet children()}<select ...>...</select>{/snippet}
+	{#snippet search()}
+		<SearchInput
+			bind:value={searchText}
+			placeholder="Search members..."
+			onsearch={(q) => {
+				searchQuery = q;
+				page = 1;
+			}}
+		/>
+	{/snippet}
+	<Select size="sm" aria-label="Role" bind:value={roleFilter}>…</Select>
 </FilterBar>
 ```
 
+`SearchInput` (`$lib/components/shared/Form/`) owns the 300ms debounce, so a page keeps only the
+value it queries on. `bind:value` is the immediate text, for Clear; setting it from outside also
+cancels any search still in flight.
+
 Name the page's search state `searchText`, not `search` — the `search` snippet
 shadows a same-named script binding.
+
+**Do not write `input-bordered`, `select-bordered`, `textarea-bordered` or `file-input-bordered`.** They are daisyUI 4
+spellings that emit no CSS in daisyUI 5, where the border is the default.
 
 ### Column slots
 
@@ -769,6 +839,30 @@ Page title with optional back button, subtitle, and right-side action slot.
 </PageHeader>
 ```
 
+## Public site sections
+
+The marketing pages (`(public)/`) compose from `$lib/components/shared/marketing/`:
+
+```svelte
+<Hero title="Programs">Practice spaces, performances, meetups & clubs for the music community</Hero>
+
+<Section tint="success" class="program-block">…</Section>
+<Section tint="primary">
+	<SectionHeading title="Two Ways to Belong">Everyone starts with a free account.</SectionHeading>
+	…
+</Section>
+```
+
+- `Section` — `tint` (`none`, `primary`, `secondary`, `success`, `warning`, `info`), `pad`
+  (`sm`/`md`/`lg`), `width` (the inner measure: `2xl`, `3xl`, `5xl`, `full`), `center`, `sunburst`.
+  Alternating the brand tints down a page is what gives the marketing site its rhythm.
+- `Hero` — the page masthead. Takes `title`; children are the subtitle line.
+- `SectionHeading` — centred title block, with an optional `eyebrow` snippet (usually a
+  `sticker-badge`) and a lede as children.
+
+Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an inline
+`style="color: var(--cmc-navy)"`.
+
 ## Create forms live in modals
 
 "Create" flows (new reservation, new event, etc.) should open in a modal on the list page, not navigate to a separate `/new` route. This keeps the user in context and avoids a full page transition for what's usually a short form. The modal is a sibling component to the list page (e.g. `CreateModal.svelte`) and is toggled by a button in the `PageHeader`.
@@ -777,7 +871,9 @@ Edit/detail views remain full pages at `[id]/`.
 
 ## CSS conventions
 
-- Use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
+- Buttons are `<Button variant size>` — never a raw `<button class="btn …">` or a `class="btn-ghost btn-sm"` string. The same goes for `Action`, `SubmitButton` and the `*Action` wrappers.
+- Supporting text is `text-muted` (the `text-sm` tier) or `text-subtle` (the `text-xs` tier), not `text-sm opacity-60`. `text-fg-2` / `text-fg-3` / `surface` reach the tokens directly when the size is already set.
+- Otherwise use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
 - Cards: `card bg-base-100 shadow` (use `shadow` not `shadow-sm`).
 - Form inputs: `input input-bordered` (standard size). Use `input-sm` only on dense settings-style forms, and be consistent within a page.
 - Page content width: constrain with `max-w-md` (forms), `max-w-2xl` (settings), or let it fill (tables/dashboards).

@@ -54,7 +54,7 @@
 		<FormField name="description" label="Description">
 			<textarea
 				{...fields.description.as('text')}
-				class="textarea textarea-bordered w-full"
+				class="textarea w-full"
 				rows="4"
 				maxlength="5000"
 				placeholder="Tell people what to expect..."
@@ -101,7 +101,7 @@
 			<input
 				{...fields.posterFile.as('file')}
 				accept="image/jpeg,image/png,image/webp"
-				class="file-input file-input-bordered w-full"
+				class="file-input w-full"
 			/>
 		</FormField>
 
@@ -127,7 +127,7 @@
 		</div>
 
 		<div class="flex justify-end pt-4">
-			<SubmitButton label="Create Event" class="btn-primary" />
+			<SubmitButton label="Create Event" variant="primary" />
 		</div>
 	</Form>
 </PageContent>

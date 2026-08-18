@@ -38,7 +38,9 @@
 		modalTitle="Confirm"
 		successToast="Article deleted"
 		onsuccess={() => goto(resolve('/staff/help'))}
-		class="btn-error btn-sm btn-outline"
+		variant="error"
+		size="sm"
+		outline
 	>
 		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
@@ -107,7 +109,7 @@
 				{/if}
 
 				<div class="flex justify-end gap-2">
-					<Button href="/staff/help" class="btn-ghost">Cancel</Button>
+					<Button href="/staff/help" variant="ghost">Cancel</Button>
 					<SubmitButton label="Save Changes" />
 				</div>
 			</div>

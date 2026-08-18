@@ -89,7 +89,7 @@
 
 		{#if flag.threadContext}
 			<InfoCard title="Conversation">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					A private conversation between two members. It is not in the inbox and has no page of its
 					own — this report is what makes it readable.
 				</p>
@@ -140,26 +140,27 @@
 					<Fact label="Status"><StatusBadge status={flag.eventContext.status} label /></Fact>
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} class="btn-outline btn-sm">View public listing</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View public listing</Button>
 				</div>
 			</InfoCard>
 		{/if}
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
-				<p class="text-sm opacity-70 mb-3">
+				<p class="text-muted mb-3">
 					Review the reported content, then mark this flag resolved (action taken) or dismissed (no
 					action needed).
 				</p>
 				<div class="flex gap-2">
-					<Button href={entityHref} class="btn-outline btn-sm">View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
 					<Action
 						action={resolveFlag}
 						label="Resolve / Dismiss"
 						modalTitle="Resolve flag"
 						submitLabel="Save"
 						successToast="Flag updated"
-						class="btn-primary btn-sm"
+						variant="primary"
+						size="sm"
 						onsuccess={() => void getFlagDetail(id).refresh()}
 					>
 						{#snippet form()}
@@ -168,7 +169,7 @@
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Resolution</span></div>
 									<Select
-										class="select-bordered w-full"
+										class="w-full"
 										{...fields.resolution.as('select')}
 										bind:value={resolution}
 									>
@@ -179,7 +180,7 @@
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Notes (optional)</span></div>
 									<textarea
-										class="textarea textarea-bordered w-full"
+										class="textarea w-full"
 										rows="3"
 										{...fields.notes.as('text')}
 										bind:value={notes}
@@ -190,7 +191,7 @@
 									     the only thing in the app that changes a member's
 									     standing, and a staffer shouldn't discover that
 									     afterwards. -->
-									<p class="text-sm text-wrap opacity-70">
+									<p class="text-muted text-wrap">
 										Resolving this also means the member who posted it has their future listings
 										checked by staff before they publish. Dismissing changes nothing.
 									</p>
@@ -199,7 +200,7 @@
 									<!-- Same reason as the community-listing note above: this is the
 									     other place resolving a report changes a member's standing,
 									     and it also decides whether their post ever comes back. -->
-									<p class="text-sm text-wrap opacity-70">
+									<p class="text-muted text-wrap">
 										{#if resolution === 'resolved'}
 											Resolving keeps this suggestion off the board and means the member who posted
 											it has their future suggestions checked by staff first.
@@ -240,7 +241,7 @@
 					{/if}
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} class="btn-outline btn-sm">View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
 				</div>
 			{/if}
 		</InfoCard>

@@ -82,7 +82,7 @@
 								}}
 							/>
 							{#if m.position}
-								<span class="block truncate text-sm opacity-60">{m.position}</span>
+								<span class="block truncate text-muted">{m.position}</span>
 							{/if}
 						</td>
 						<td class="w-px">
@@ -96,7 +96,7 @@
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
-										class="select-bordered select-xs"
+										class="select-xs"
 										name="role"
 										aria-label="Role for {m.userName}"
 										value={m.role}
@@ -146,7 +146,7 @@
 						<td class="cell-primary">
 							<div class="truncate font-medium">{inv.email}</div>
 							{#if inv.position}
-								<div class="truncate text-sm opacity-60">{inv.position}</div>
+								<div class="truncate text-muted">{inv.position}</div>
 							{/if}
 						</td>
 						<td class="w-px"><Badge size="sm" variant="outline">{inv.role}</Badge></td>
@@ -179,7 +179,7 @@
 							<a {href} class="block font-medium whitespace-nowrap hover:underline">
 								{formatDateShort(r.startsAt)}
 							</a>
-							<div class="truncate text-sm opacity-60">
+							<div class="truncate text-muted">
 								{formatTimeRange(r.startsAt, r.endsAt)}
 							</div>
 						</td>

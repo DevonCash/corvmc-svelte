@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -21,16 +22,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status: statusFilter || undefined,
@@ -55,16 +46,17 @@
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search by member..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={statusFilter}
 			onchange={(e: Event) => {
@@ -106,7 +98,7 @@
 							<a {href} class="block truncate font-medium hover:underline">
 								{l.equipmentName ?? '(free-form request)'}
 							</a>
-							<div class="truncate text-sm opacity-60">{l.userName}</div>
+							<div class="truncate text-muted">{l.userName}</div>
 						</td>
 						<td class="col-support whitespace-nowrap">
 							{l.dueDate ? formatDateShort(l.dueDate) : '—'}

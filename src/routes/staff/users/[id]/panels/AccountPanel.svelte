@@ -99,7 +99,7 @@
 				</Fact>
 			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} class="btn-ghost btn-sm">
+				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
 					View public profile
 				</Button>
 			</div>
@@ -113,7 +113,7 @@
 -->
 <AsyncCard title="Sign-in activity" result={getUserSessions(id)}>
 	{#snippet children(data)}
-		<p class="mb-3 text-sm opacity-60">
+		<p class="mb-3 text-muted">
 			Last sign-in: {data.lastLoginAt ? formatDateTimeShort(data.lastLoginAt) : 'never on record'}
 		</p>
 		{#if data.sessions.length === 0}
@@ -132,7 +132,7 @@
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="font-medium whitespace-nowrap">{formatDateTimeShort(s.createdAt)}</div>
-							<div class="truncate text-sm opacity-60">{s.userAgent ?? 'Unknown device'}</div>
+							<div class="truncate text-muted">{s.userAgent ?? 'Unknown device'}</div>
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.expiresAt)}</td>
@@ -163,7 +163,7 @@
 
 <InfoCard title="Danger Zone" class="mt-6 border border-error/30 bg-error/5 shadow-none">
 	{#if member.deletedAt}
-		<p class="mb-3 text-sm opacity-70">
+		<p class="mb-3 text-muted">
 			This account is deactivated. Reactivate it to restore access, or permanently delete it.
 		</p>
 		<div class="flex gap-2">
@@ -171,7 +171,8 @@
 				action={reactivateUser}
 				label="Reactivate"
 				successToast="Account reactivated"
-				class="btn-success btn-sm"
+				variant="success"
+				size="sm"
 				onsuccess={refreshAccount}
 			>
 				{#snippet form()}
@@ -183,7 +184,8 @@
 				action={purgeUser}
 				label="Delete permanently"
 				successToast="Account deleted"
-				class="btn-error btn-sm"
+				variant="error"
+				size="sm"
 				onsuccess={() => goto(resolve('/staff/users'))}
 			>
 				{#snippet form()}
@@ -196,7 +198,7 @@
 			</Action>
 		</div>
 	{:else}
-		<p class="mb-3 text-sm opacity-70">
+		<p class="mb-3 text-muted">
 			Deactivating signs this member out, hides them from the directory, cancels all of their future
 			reservations, and cancels their membership subscription. Reactivating restores their access,
 			but <strong>the cancelled reservations and subscription are not restored</strong> — they would have
@@ -206,7 +208,8 @@
 			action={deactivateUser}
 			label="Deactivate"
 			successToast="Account deactivated"
-			class="btn-error btn-sm"
+			variant="error"
+			size="sm"
 			onsuccess={refreshAccount}
 		>
 			{#snippet form()}

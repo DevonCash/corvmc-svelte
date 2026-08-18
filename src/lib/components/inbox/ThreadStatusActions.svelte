@@ -65,7 +65,7 @@
 		<Form remote={resolveForm} successToast="Marked resolved" class="contents">
 			<input {...resolveForm.fields.threadId.as('hidden', threadId)} />
 			<input {...resolveForm.fields.status.as('hidden', 'resolved')} />
-			<SubmitButton label="Resolve" successLabel="Resolved" class="btn-primary btn-sm">
+			<SubmitButton label="Resolve" successLabel="Resolved" variant="primary" size="sm">
 				{#snippet icon()}<IconCheck size={16} />{/snippet}
 			</SubmitButton>
 		</Form>
@@ -78,7 +78,8 @@
 			<SubmitButton
 				label={status === 'snoozed' ? 'Unsnooze' : 'Reopen'}
 				successLabel="Reopened"
-				class="btn-sm"
+				variant="default"
+				size="sm"
 			>
 				{#snippet icon()}<IconRotate size={16} />{/snippet}
 			</SubmitButton>
@@ -92,16 +93,15 @@
 			modalTitle="Snooze conversation"
 			submitLabel="Snooze"
 			successToast="Snoozed"
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			maxWidth="max-w-sm"
 		>
 			{#snippet icon()}<IconAlarmSnooze size={16} />{/snippet}
 			{#snippet form()}
 				<input {...snoozeForm.fields.threadId.as('hidden', threadId)} />
 				<input {...snoozeForm.fields.status.as('hidden', 'snoozed')} />
-				<p class="text-sm opacity-70">
-					It leaves the open queue and returns on the morning you pick.
-				</p>
+				<p class="text-muted">It leaves the open queue and returns on the morning you pick.</p>
 				<FormField
 					name="snoozedUntil"
 					label="Bring it back"
@@ -116,7 +116,7 @@
 </div>
 
 {#if status === 'snoozed' && snoozedUntil}
-	<p class="flex items-center gap-1.5 text-sm opacity-70">
+	<p class="flex items-center gap-1.5 text-muted">
 		<IconAlarmSnooze size={14} />
 		Returns {formatDate(new Date(snoozedUntil))}
 	</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -31,16 +32,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	// `pending_review` and `under_review` are two different reasons for the same
 	// member-visible fact, so the review tab runs them as two queries and shows
 	// them together rather than pretending they're one state.
@@ -102,16 +93,17 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search suggestions..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Category"
 			value={categoryFilter}
 			onchange={(e: Event) => {
@@ -125,7 +117,7 @@
 			{/each}
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={statusFilter}
 			onchange={(e: Event) => {
@@ -141,7 +133,7 @@
 	</FilterBar>
 
 	{#if tab === 'review'}
-		<p class="text-sm opacity-70">
+		<p class="text-muted">
 			Nothing here is visible to members. Reported suggestions are resolved in
 			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>, not here.
 		</p>
@@ -169,7 +161,7 @@
 						</td>
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-							<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
+							<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
 						</td>
 						<td class="col-support w-px">
 							<Badge size="xs" variant="ghost">
@@ -186,7 +178,7 @@
 	</DataList>
 
 	{#if tab === 'review' && pendingEdits.length > 0}
-		<h2 class="text-sm font-medium opacity-70">Edits waiting on approval</h2>
+		<h2 class="text-muted font-medium">Edits waiting on approval</h2>
 		<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
@@ -202,7 +194,7 @@
 					<td class="w-px"><StatusBadge status="pending_review" /></td>
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{e.proposedTitle}</a>
-						<div class="truncate text-sm opacity-60">
+						<div class="truncate text-muted">
 							was "{e.originalTitle}" · {e.requestedByName ?? 'A former member'}
 						</div>
 					</td>
@@ -213,7 +205,7 @@
 	{/if}
 
 	{#if tab === 'review'}
-		<h2 class="text-sm font-medium opacity-70">Reported and pulled from the board</h2>
+		<h2 class="text-muted font-medium">Reported and pulled from the board</h2>
 		<DataList result={underReview} empty="No reported suggestions">
 			{#snippet children(rows)}
 				<Table>
@@ -229,7 +221,7 @@
 							<td class="w-px"><StatusBadge status="under_review" /></td>
 							<td class="cell-primary">
 								<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-								<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
+								<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
 							</td>
 							<td class="col-support w-px cell-num">{s.voteCount}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(s.createdAt)}</td>

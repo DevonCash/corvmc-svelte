@@ -55,10 +55,10 @@
 	<div class="flex items-center gap-2">
 		<div class="badge gap-2 badge-lg">
 			{value[labelKey]}
-			<Button type="button" class="btn-circle btn-ghost btn-xs" onclick={clear}>✕</Button>
+			<Button type="button" variant="ghost" size="xs" shape="circle" onclick={clear}>✕</Button>
 		</div>
 		{#if value[descriptionKey]}
-			<span class="text-sm opacity-60">{value[descriptionKey]}</span>
+			<span class="text-muted">{value[descriptionKey]}</span>
 		{/if}
 	</div>
 {:else}
@@ -67,7 +67,7 @@
 			<div class="relative">
 				<Combobox.Input
 					{placeholder}
-					class="input-bordered input w-full"
+					class="input w-full"
 					oninput={(e: Event) => {
 						query = (e.target as HTMLInputElement).value;
 					}}
@@ -84,7 +84,7 @@
 						>
 							<span class="font-medium">{item[labelKey]}</span>
 							{#if item[descriptionKey]}
-								<span class="ml-2 text-sm opacity-60">{item[descriptionKey]}</span>
+								<span class="ml-2 text-muted">{item[descriptionKey]}</span>
 							{/if}
 						</Combobox.Item>
 					{:else}
@@ -101,7 +101,7 @@
 		{#snippet pending()}
 			<div class="flex items-center gap-2 p-2">
 				<span class="loading loading-spinner loading-sm"></span>
-				<span class="text-sm opacity-60">Searching...</span>
+				<span class="text-muted">Searching...</span>
 			</div>
 		{/snippet}
 	</svelte:boundary>

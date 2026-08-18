@@ -83,7 +83,7 @@
 </script>
 
 <PageHeader title="Help Articles">
-	<Button href="/staff/help/create" class="btn-sm">
+	<Button href="/staff/help/create" variant="default" size="sm">
 		<IconPlus size={16} /> New Article
 	</Button>
 </PageHeader>
@@ -112,7 +112,8 @@
 								modalTitle="Edit category"
 								successToast="Category updated"
 								onsuccess={refreshData}
-								class="btn-ghost btn-xs"
+								variant="ghost"
+								size="xs"
 								iconOnly
 								label="Edit"
 							>
@@ -122,31 +123,32 @@
 										<FormField name="name" label="Name">
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="slug" label="Slug">
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="description" label="Description">
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="icon" label="Icon">
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 												placeholder="tabler-book"
 											/>
 										</FormField>
 										<FormField name="minRole" label="Minimum role">
 											<Select
-												class="select-bordered select-sm w-full"
+												size="sm"
+												class="w-full"
 												{...editCat.fields.minRole.as('select', cat.minRole)}
 											>
 												{#each HELP_ROLES as role (role)}
@@ -157,7 +159,7 @@
 										<FormField name="sortOrder" label="Sort order">
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 									</div>
@@ -169,7 +171,8 @@
 								modalTitle="Confirm"
 								successToast="Category deleted"
 								onsuccess={refreshData}
-								class="btn-ghost btn-xs"
+								variant="ghost"
+								size="xs"
 								iconOnly
 								label="Delete"
 							>
@@ -189,7 +192,7 @@
 						<input
 							name="name"
 							type="text"
-							class="input input-bordered input-sm w-40"
+							class="input input-sm w-40"
 							placeholder="Category name"
 							bind:value={catNameValue}
 						/>
@@ -198,27 +201,22 @@
 						<input
 							name="slug"
 							type="text"
-							class="input input-bordered input-sm w-40"
+							class="input input-sm w-40"
 							placeholder={slugFromName(catNameValue) || 'auto'}
 						/>
 					</FormField>
 					<FormField name="icon" label="Icon">
-						<input
-							name="icon"
-							type="text"
-							class="input input-bordered input-sm w-32"
-							placeholder="tabler-book"
-						/>
+						<input name="icon" type="text" class="input input-sm w-32" placeholder="tabler-book" />
 					</FormField>
 					<FormField name="minRole" label="Role">
-						<Select class="select-bordered select-sm w-32" name="minRole">
+						<Select size="sm" class="w-32" name="minRole">
 							{#each HELP_ROLES as role (role)}
 								<option value={role}>{role}</option>
 							{/each}
 						</Select>
 					</FormField>
 					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
-					<SubmitButton label="Add" class="btn-primary btn-sm" />
+					<SubmitButton label="Add" variant="primary" size="sm" />
 				</div>
 			</Form>
 		</div>
@@ -234,11 +232,11 @@
 			~60 round trips through the editor.
 		-->
 		<div class="mb-3 flex flex-wrap items-center gap-2">
-			<span class="text-sm opacity-60">
+			<span class="text-muted">
 				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
 			</span>
 			{#if drafts.length > 0}
-				<Button class="btn-ghost btn-xs" onclick={selectDrafts}>Select all drafts</Button>
+				<Button variant="ghost" size="xs" onclick={selectDrafts}>Select all drafts</Button>
 			{/if}
 			{#if selectedIds.length > 0}
 				<Action
@@ -247,7 +245,8 @@
 					modalTitle="Publish articles"
 					successToast="Articles published"
 					onsuccess={afterBulk}
-					class="btn-primary btn-xs"
+					variant="primary"
+					size="xs"
 				>
 					{#snippet form()}
 						{#each selectedIds as id, i (id)}
@@ -266,7 +265,8 @@
 					modalTitle="Unpublish articles"
 					successToast="Articles unpublished"
 					onsuccess={afterBulk}
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 				>
 					{#snippet form()}
 						{#each selectedIds as id, i (id)}
@@ -317,7 +317,7 @@
 					     subline. -->
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{a.title}</a>
-						<div class="truncate text-sm opacity-60">{categoryMap[a.categoryId] ?? '—'}</div>
+						<div class="truncate text-muted">{categoryMap[a.categoryId] ?? '—'}</div>
 					</td>
 					<td class="col-support w-px">
 						<Badge size="xs" variant={a.source === 'static' ? 'info' : 'ghost'}>{a.source}</Badge>

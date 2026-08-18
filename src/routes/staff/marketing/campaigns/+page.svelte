@@ -16,11 +16,11 @@
 </script>
 
 <PageHeader title="Campaigns" subtitle="Marketing">
-	<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
+	<Button href="/staff/marketing/campaigns/new" variant="default" size="sm">New Campaign</Button>
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">
-		<Select class="select-bordered select-sm" aria-label="Status" bind:value={statusFilter}>
+		<Select size="sm" aria-label="Status" bind:value={statusFilter}>
 			<option value="">All statuses</option>
 			<option value="draft">Draft</option>
 			<option value="scheduled">Scheduled</option>
@@ -49,7 +49,7 @@
 					     the subline. -->
 					<td class="cell-primary">
 						<a {href} class="block truncate font-medium hover:underline">{c.subject}</a>
-						<div class="truncate text-sm opacity-60">
+						<div class="truncate text-muted">
 							{c.audienceNames.length > 0 ? c.audienceNames.join(', ') : '—'}
 						</div>
 					</td>

@@ -27,7 +27,9 @@
 			label="Cancel Series"
 			modalTitle="Confirm"
 			successToast="Series cancelled"
-			class="btn-error btn-outline btn-sm"
+			variant="error"
+			size="sm"
+			outline
 			onsuccess={() => invalidateAll()}
 		>
 			{#snippet form()}

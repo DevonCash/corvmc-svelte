@@ -84,7 +84,7 @@
 </script>
 
 <PageHeader title="Events">
-	<Button class="btn-sm" onclick={() => (showCreateModal = true)}>New Event</Button>
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
 </PageHeader>
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
@@ -102,12 +102,7 @@
 	/>
 
 	<FilterBar activeCount={source ? 1 : 0} onclear={clearFilters}>
-		<Select
-			class="select-bordered select-sm"
-			aria-label="Source"
-			bind:value={source}
-			onchange={() => (page = 1)}
-		>
+		<Select size="sm" aria-label="Source" bind:value={source} onchange={() => (page = 1)}>
 			<option value="">All events</option>
 			<option value="cmc">CMC events</option>
 			<option value="band">Band events</option>
@@ -134,7 +129,7 @@
 						<tr>
 							<td
 								colspan="5"
-								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
 							</td>
@@ -149,7 +144,7 @@
 						     and just the time range. -->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">{e.title}</a>
-							<div class="text-sm whitespace-nowrap opacity-60">
+							<div class="text-muted whitespace-nowrap">
 								{formatEventTimeRange(e.startsAt, e.endsAt)}
 							</div>
 						</td>
@@ -163,7 +158,7 @@
 									{e.bandName ?? 'Band'}
 								</a>
 							{:else}
-								<span class="text-sm opacity-60">CMC</span>
+								<span class="text-muted">CMC</span>
 							{/if}
 						</td>
 						<td class="col-support">

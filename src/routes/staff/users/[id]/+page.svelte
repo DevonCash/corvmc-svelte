@@ -123,13 +123,13 @@
 			<div class="flex flex-wrap items-baseline gap-2">
 				<span class="text-lg font-medium">{member.name}</span>
 				{#if member.pronouns}
-					<span class="text-sm opacity-60">{member.pronouns}</span>
+					<span class="text-muted">{member.pronouns}</span>
 				{/if}
 				{#if member.memberNumber}
-					<span class="text-sm opacity-60">#{member.memberNumber}</span>
+					<span class="text-muted">#{member.memberNumber}</span>
 				{/if}
 			</div>
-			<div class="text-sm opacity-60">
+			<div class="text-muted">
 				<a class="link" href="mailto:{member.email}">{member.email}</a>
 				{#if member.phone}
 					· <a class="link" href="tel:{member.phone}">{member.phone}</a>
