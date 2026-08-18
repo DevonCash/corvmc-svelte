@@ -55,13 +55,21 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 	)
 }));
 
-vi.mock('$lib/server/event/community-event-service', () => ({
-	getCommunityStanding: vi.fn(async () => ({ requiresReview: true, reason: 'Upheld report' }))
-}));
-
-let suggestionStanding = { requiresReview: false, reason: null as string | null };
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
-	getSuggestionStanding: vi.fn(async () => suggestionStanding)
+// One call now covers every scope, which is the point of the merge: the
+// overview used to make one round trip per domain.
+const standing = (status: string, reason: string | null = null) => ({
+	status,
+	reason,
+	triggeringFlagId: null,
+	updatedAt: null
+});
+let standings = {
+	community_event: standing('restricted', 'Upheld report'),
+	suggestion: standing('none'),
+	messaging: standing('none')
+};
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStandings: vi.fn(async () => standings)
 }));
 
 vi.mock('$lib/server/volunteer/hour-log-service', () => ({
@@ -118,7 +126,11 @@ beforeEach(() => {
 	certifications = [];
 	volunteerProfile = null;
 	subscriber = null;
-	suggestionStanding = { requiresReview: false, reason: null };
+	standings = {
+		community_event: standing('restricted', 'Upheld report'),
+		suggestion: standing('none'),
+		messaging: standing('none')
+	};
 });
 
 describe('getUserOverview', () => {
@@ -198,13 +210,13 @@ describe('getUserOverview', () => {
 		// An upheld report about an event must not cost someone their
 		// suggestion-posting rights, or the reverse — so the two are read and
 		// reported independently rather than folded into one flag.
-		suggestionStanding = { requiresReview: true, reason: 'Off-topic posts' };
+		standings = { ...standings, suggestion: standing('restricted', 'Off-topic posts') };
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.standing.requiresReview).toBe(true);
-		expect(overview.suggestionStanding).toEqual({
-			requiresReview: true,
+		expect(overview.standings.community_event.status).toBe('restricted');
+		expect(overview.standings.suggestion).toMatchObject({
+			status: 'restricted',
 			reason: 'Off-topic posts'
 		});
 	});
@@ -230,7 +242,10 @@ describe('getUserOverview', () => {
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.standing).toEqual({ requiresReview: true, reason: 'Upheld report' });
+		expect(overview.standings.community_event).toMatchObject({
+			status: 'restricted',
+			reason: 'Upheld report'
+		});
 		expect(overview.directory).toEqual({ visibility: 'hidden', profileComplete: false });
 		expect(overview.lastLoginAt).toEqual(new Date('2026-08-01T10:00:00Z'));
 		expect(overview.counts.approvedMinutesThisYear).toBe(300);

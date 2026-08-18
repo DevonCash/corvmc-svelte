@@ -23,14 +23,14 @@
  *
  * Idempotent: deletes and recreates its own rows on every run.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { withPlatformDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { contentFlag } from '../../src/lib/server/db/schema/flag';
+import { memberStanding } from '../../src/lib/server/db/schema/standing';
 import {
 	suggestion,
 	suggestionVote,
-	suggestionStanding,
 	suggestionEdit
 } from '../../src/lib/server/db/schema/suggestion';
 import { scryptHash } from './seed-pay-reservation';
@@ -111,7 +111,7 @@ export async function seedSuggestions(): Promise<void> {
 	await resetReportRateLimit();
 	await withPlatformDb(async (db) => {
 		// Standing before user, votes before suggestion: each points at the next.
-		await db.delete(suggestionStanding).where(inArray(suggestionStanding.userId, MEMBER_IDS));
+		await db.delete(memberStanding).where(inArray(memberStanding.userId, MEMBER_IDS));
 		await db.delete(suggestionVote).where(inArray(suggestionVote.suggestionId, SUGGESTION_IDS));
 		await db.delete(contentFlag).where(inArray(contentFlag.entityId, SUGGESTION_IDS));
 		await db.delete(suggestion).where(inArray(suggestion.id, SUGGESTION_IDS));
@@ -255,11 +255,11 @@ export async function readSuggestionState(suggestionId: string): Promise<{
 export async function readSuggestionStanding(userId: string): Promise<boolean> {
 	return withPlatformDb(async (db) => {
 		const [row] = await db
-			.select({ requiresReview: suggestionStanding.requiresReview })
-			.from(suggestionStanding)
-			.where(eq(suggestionStanding.userId, userId))
+			.select({ status: memberStanding.status })
+			.from(memberStanding)
+			.where(and(eq(memberStanding.userId, userId), eq(memberStanding.scope, 'suggestion')))
 			.limit(1);
-		return row?.requiresReview ?? false;
+		return (row?.status ?? 'none') !== 'none';
 	});
 }
 

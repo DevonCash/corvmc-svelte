@@ -41,7 +41,7 @@
 		listing?.status === 'draft' ? await findDuplicateListing(eventId) : null
 	);
 
-	const requiresReview = $derived(listing?.standing.requiresReview ?? false);
+	const requiresReview = $derived(listing?.standing.status !== 'none');
 
 	// A button that silently does something other than what it says is worse
 	// than the delay itself.

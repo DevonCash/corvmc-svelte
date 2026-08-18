@@ -224,6 +224,58 @@ export function isAlwaysEnabledChannel(channel: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Member standing
+// ---------------------------------------------------------------------------
+
+/**
+ * The privileges a member can be put on probation for, one per domain that
+ * reads standing. Exactly three, and each one has a code path that consults it
+ * — a scope nothing reads is a column that lies. `member_profile` and
+ * `band_profile` reports cost nobody anything on uphold today, so they get no
+ * scope; `scopeForFlag` maps them to null.
+ */
+export const standingScopes = ['community_event', 'suggestion', 'messaging'] as const;
+export type StandingScope = (typeof standingScopes)[number];
+
+/**
+ * One ladder for every scope.
+ *
+ * `none`       — no restriction. Also what a lifted one becomes, so "we looked
+ *                at this and cleared it" still reads differently from "this
+ *                never came up".
+ * `restricted` — you may still act, but with a gate. For the two posting
+ *                scopes that gate is staff review; for messaging it is
+ *                reply-only.
+ * `disabled`   — you may not act at all.
+ */
+export const standingStatuses = ['none', 'restricted', 'disabled'] as const;
+export type StandingStatus = (typeof standingStatuses)[number];
+
+/**
+ * Which rungs each scope may actually hold, and what to call it on screen.
+ *
+ * Only messaging has a use for `disabled` — staff switching it off wholesale,
+ * which is how the occasional under-18 member is handled. "You may not post
+ * community listings at all" is not a thing anyone can do, so `setStanding`
+ * rejects it rather than leaving an unreachable value lying in the column.
+ */
+export const standingScopeConfig: Record<
+	StandingScope,
+	{ statuses: readonly StandingStatus[]; label: string }
+> = {
+	community_event: { statuses: ['none', 'restricted'], label: 'Community listings' },
+	suggestion: { statuses: ['none', 'restricted'], label: 'Suggestions' },
+	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' }
+};
+
+/**
+ * Longest staff note stored on a standing. 500 was already the cap on both the
+ * staff messaging form and `revokeSuggestionTrust`; community listings trimmed
+ * nowhere, which was the outlier.
+ */
+export const STANDING_REASON_MAX = 500;
+
+// ---------------------------------------------------------------------------
 // Volunteering
 // ---------------------------------------------------------------------------
 

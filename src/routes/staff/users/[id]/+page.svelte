@@ -68,8 +68,8 @@
 	const attentionCount = $derived(
 		[
 			!!member.deletedAt,
-			overview.standing.requiresReview,
-			overview.suggestionStanding.requiresReview,
+			overview.standings.community_event.status !== 'none',
+			overview.standings.suggestion.status !== 'none',
 			overview.counts.openFlagsAgainst > 0,
 			overview.counts.overdueLoans > 0,
 			overview.counts.unpaidReservations > 0,
