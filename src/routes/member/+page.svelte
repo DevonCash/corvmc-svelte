@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
@@ -44,22 +45,22 @@
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 		<Button href="/member/reservations" variant="default" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
-			</div>
+			</CardBody>
 		</Button>
 		<Button href="/member/events" variant="default" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
-			</div>
+			</CardBody>
 		</Button>
 		<Button href="/member/membership" variant="default" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>
-			</div>
+			</CardBody>
 		</Button>
 	</div>
 
@@ -157,10 +158,10 @@
 								/>
 							</figure>
 						{/if}
-						<div class="card-body p-3">
+						<CardBody class="p-3">
 							<p class="text-sm font-medium">{evt.title}</p>
 							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
-						</div>
+						</CardBody>
 					</a>
 				{/each}
 			</div>

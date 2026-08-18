@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -55,7 +56,7 @@
 				{@const confirm = confirmLineupSlotForm.for(invite.eventId)}
 				{@const decline = declineLineupSlotForm.for(invite.eventId)}
 				<div class="card bg-warning/10 border border-warning/40">
-					<div class="card-body flex-row items-center justify-between gap-4 py-4">
+					<CardBody row class="gap-4 py-4">
 						<div>
 							<p class="font-medium">{invite.eventTitle}</p>
 							<p class="text-muted">
@@ -89,7 +90,7 @@
 								</Form>
 							</div>
 						{/if}
-					</div>
+					</CardBody>
 				</div>
 			{/each}
 		</div>
@@ -114,7 +115,7 @@
 					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
 					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
 				>
-					<div class="card-body flex-row items-center justify-between py-4">
+					<CardBody row class="py-4">
 						<div>
 							<p class="font-medium">{evt.title}</p>
 							<p class="text-muted">
@@ -133,7 +134,7 @@
 							{/if}
 							<StatusBadge status={evt.status} />
 						</div>
-					</div>
+					</CardBody>
 				</a>
 			{/each}
 		</div>

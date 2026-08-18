@@ -470,9 +470,42 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Card
+
+The panel surface. `Card` + `CardBody` + `CardTitle`, from
+`$lib/components/shared/Card/`. Most sections want `InfoCard` (below) instead — reach for these
+directly only when the section has no title, or when the body needs a non-default layout.
+
+```svelte
+<Card>
+	<CardBody>
+		<CardTitle>Schedule</CardTitle>
+		…
+	</CardBody>
+</Card>
+
+<Card bordered>
+	<!-- border instead of shadow, for a nested card -->
+	<CardBody row>…</CardBody>
+	<!-- label left, control right -->
+</Card>
+```
+
+- `Card` — `tone` (`base-100` default, `base-200`, `base-300`), `bordered`. The shadow is not
+  optional and not configurable: `shadow` and `shadow-sm` were both in circulation, and this is
+  where that got settled.
+- `CardBody` — `padding` (`md` default, `sm`), `row` (label/control row instead of a column),
+  `center`.
+- `CardTitle` — `size` (`sm`, `base`, `lg`; omit for daisyUI's own), `level` (`2`/`3`/`4`, default
+  `3`). **`level` is the page outline, `size` is how loud it looks** — pick `level` from where the
+  card sits under `PageHeader`'s `<h1>`, never from how big you want the text.
+
+Not everything with a `card` class should become one: a clickable card is an `<a>`, a list card is
+an `<li>`, and tinted one-offs (`bg-warning/10 border-warning/40`) stay hand-written.
+
 ## InfoCard
 
-Card with a small label header and content body. Use for detail page sections (member info, payment, notes, etc.).
+Titled card — the default section on a detail page. Thin composition over `Card`/`CardBody`/`CardTitle`.
 
 ```svelte
 <InfoCard title="Payment">

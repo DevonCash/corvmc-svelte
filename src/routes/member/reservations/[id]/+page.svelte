@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { formatDateLong, formatTime } from '$lib/utils/format';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -16,8 +18,8 @@
 
 <PageHeader title="Your Reservation" backHref="/member/reservations" />
 <PageContent width="md">
-	<div class="card bg-base-100 shadow-sm">
-		<div class="card-body">
+	<Card>
+		<CardBody>
 			<header class="flex items-start justify-between gap-2">
 				<hgroup>
 					<p class="font-medium">{formatDateLong(res.startsAt)}</p>
@@ -33,8 +35,8 @@
 			{#if res.notes}
 				<p class="mt-2 text-muted">{res.notes}</p>
 			{/if}
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
 	{#if res.status === 'confirmed'}
 		<InfoCard title="Door Code">

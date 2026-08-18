@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { IconSend, IconCheck, IconX, IconFlag } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -75,8 +77,8 @@
 		<!-- Accept, Decline, Report. Showing the message above is what makes the
 		     decision possible — and Report only means something if you can see
 		     what you are reporting. -->
-		<div class="card border-base-300 bg-base-100 border">
-			<div class="card-body gap-3 p-4">
+		<Card bordered>
+			<CardBody padding="sm" class="gap-3">
 				<p class="text-muted">
 					{t.counterpartName ?? 'This member'} would like to start a conversation with you. They cannot
 					send anything else unless you accept.
@@ -101,8 +103,8 @@
 
 					<ReportDirectThreadAction threadId={t.id} />
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{:else if blocked}
 		<Alert type="info" href="/member/messages">
 			This conversation is closed. You can still read it, but neither of you can write here.
@@ -113,8 +115,8 @@
 			{#if t.kind === 'staff'}Start a new message if you need anything else.{/if}
 		</Alert>
 	{:else}
-		<div class="card border-base-300 bg-base-100 border">
-			<div class="card-body gap-3 p-4">
+		<Card bordered>
+			<CardBody padding="sm" class="gap-3">
 				<Form
 					remote={t.kind === 'direct' ? directReplyForm : staffReplyForm}
 					successToast="Message sent"
@@ -141,8 +143,8 @@
 						</SubmitButton>
 					</div>
 				</Form>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{/if}
 
 	{#if t.kind === 'direct' && !isRequest && !blocked}

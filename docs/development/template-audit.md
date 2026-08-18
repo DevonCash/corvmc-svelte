@@ -132,6 +132,24 @@ radio labels), two `<summary class="btn">` inside `<details>`, three
 caller-supplied `class` replaced it and produced an uncoloured button. The migration preserves that
 rather than silently promoting those buttons to primary.
 
+### Phase 3 notes
+
+`Card` / `CardBody` / `CardTitle` under `shared/Card/`, with `InfoCard` (39 importers) rebuilt on
+top of them rather than replaced. 57 card surfaces, 74 bodies and 31 titles migrated.
+
+The `shadow` vs `shadow-sm` split — 26 against 24, with `ui-patterns.md` having always said
+`shadow` — is settled inside the component, so ~24 cards gained a slightly deeper shadow. That is
+the intended normalisation, not a side effect.
+
+`CardTitle` carries `level` separately from `size` because the two were conflated: `card-title
+text-lg` and `card-title text-base` were size choices, but the underlying elements were a mix of
+`<h2>` and `<h3>`, which is the page outline. `level` preserves each call site's original element.
+
+Left hand-written on purpose: clickable cards (`<a class="card">`), list cards (`<li>`), tinted
+one-offs like `bg-warning/10 border-warning/40`, and `ProfileSection` — its scoped `<style>` targets
+`.profile-section` on the card element, and Svelte's scoped CSS cannot reach a class passed into a
+child component. svelte-check's unused-selector warning is what caught that.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
@@ -139,7 +157,7 @@ rather than silently promoting those buttons to primary.
 | Baseline (`e58a707`)             | 7,705        | 148             | —                                      |
 | 1 — semantic text utilities      | 7,477        | 81              | −228 tokens, −67 inline styles         |
 | 2 — `Button` variant API         | 6,854        | 81              | −623 tokens; daisyUI share 1,569 → 970 |
-| 3 — `Card`                       | _pending_    |                 |                                        |
+| 3 — `Card`                       | 6,543        | 81              | −311 tokens; daisyUI share 970 → 827   |
 | 4 — filter controls              | _pending_    |                 |                                        |
 | 5 — marketing section vocabulary | _pending_    |                 |                                        |
 | 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                        |

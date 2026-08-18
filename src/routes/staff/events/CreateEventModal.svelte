@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -227,10 +228,10 @@
 			/>
 
 			{#if ticketingEnabled}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
-				</div>
+				</Card>
 			{/if}
 
 			<Field
@@ -241,7 +242,7 @@
 			/>
 
 			{#if reserveSpace}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<p class="text-muted">
 						Reservation times can differ from event times to allow for setup and teardown.
 					</p>
@@ -268,7 +269,7 @@
 						{checkConflicts}
 						bind:hasConflicts
 					/>
-				</div>
+				</Card>
 			{/if}
 
 			<Field
@@ -279,7 +280,7 @@
 			/>
 
 			{#if recurring}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field
 						name="recurringFrequency"
 						type="select"
@@ -331,7 +332,7 @@
 							<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
 						{/if}
 					{/if}
-				</div>
+				</Card>
 			{/if}
 
 			{#if hasConflicts}

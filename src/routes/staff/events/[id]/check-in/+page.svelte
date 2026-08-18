@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -47,8 +49,8 @@
 	<!-- Ticket list -->
 	<div class="space-y-2">
 		{#each filteredTickets as ticket (ticket.id)}
-			<div class="card bg-base-100 shadow">
-				<div class="card-body p-4 flex-row items-center justify-between">
+			<Card>
+				<CardBody row padding="sm">
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
 						<p class="text-muted">{ticket.attendeeEmail}</p>
@@ -77,8 +79,8 @@
 							/>
 						{/if}
 					</div>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		{/each}
 
 		{#if filteredTickets.length === 0}

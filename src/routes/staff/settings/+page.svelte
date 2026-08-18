@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		getProducts,
@@ -239,10 +242,10 @@
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
 				<Form remote={instance} successToast="{product.name} updated">
-					<div class="card bg-base-100 shadow">
-						<div class="card-body">
+					<Card>
+						<CardBody>
 							<div class="flex items-center justify-between">
-								<h3 class="card-title text-base">{product.name}</h3>
+								<CardTitle size="base">{product.name}</CardTitle>
 								<SubmitButton
 									label="Save"
 									successLabel="Saved"
@@ -331,8 +334,8 @@
 									rows="2"
 								></textarea>
 							</div>
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				</Form>
 			{/each}
 		{:else if activeTab === 'reservations'}
@@ -342,10 +345,10 @@
 			</p>
 
 			<Form remote={updateReservationSettings} guard successToast="Reservation settings updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Pricing</h3>
+							<CardTitle size="base">Pricing</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
@@ -388,13 +391,13 @@
 								/>
 							</div>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Operating Hours</h3>
+							<CardTitle size="base">Operating Hours</CardTitle>
 						</div>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -411,12 +414,12 @@
 								value={String(reservationSettings.operatingHoursEnd ?? '22:00')}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Booking Rules</h3>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Booking Rules</CardTitle>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -478,8 +481,8 @@
 								step="0.5"
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'organization'}
 			<p class="text-muted">
@@ -487,10 +490,10 @@
 			</p>
 
 			<Form remote={updateOrgSettings} guard successToast="Organization settings updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Organization Info</h3>
+							<CardTitle size="base">Organization Info</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
@@ -535,12 +538,12 @@
 								]}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Location</h3>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Location</CardTitle>
 						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -573,12 +576,12 @@
 								placeholder="97333"
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Social Links</h3>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Social Links</CardTitle>
 						<p class="text-subtle">Shown in the site footer. Leave blank to hide.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -597,8 +600,8 @@
 								placeholder="https://instagram.com/..."
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'integrations'}
 			<p class="text-muted">
@@ -606,11 +609,11 @@
 			</p>
 
 			<Form remote={updateIntegrationSettings} guard successToast="U-tec credentials updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<h3 class="card-title text-base">U-tec Smart Lock</h3>
+								<CardTitle size="base">U-tec Smart Lock</CardTitle>
 								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
 									{utecConnected ? 'Connected' : 'Not connected'}
 								</span>
@@ -803,8 +806,8 @@
 							credentials via environment variables (ULTRALOC_CLIENT_ID, etc.). Values saved here
 							take precedence over environment variables.
 						</p>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'features'}
 			<p class="text-muted">
@@ -816,8 +819,8 @@
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								{#if enabled}
@@ -849,8 +852,8 @@
 								</Button>
 							</form>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		{:else if activeTab === 'inbox'}
 			<p class="text-muted">
@@ -864,8 +867,8 @@
 				{@const isAlwaysOn = isAlwaysEnabledChannel(cfg.channel)}
 				{@const ChannelIcon = meta.icon}
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<ChannelIcon size={20} class="opacity-60" />
@@ -904,8 +907,8 @@
 								Env: {meta.envHint}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		{:else if activeTab === 'subscriptions'}
 			<p class="text-muted">

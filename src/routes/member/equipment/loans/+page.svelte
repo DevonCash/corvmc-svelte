@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -48,7 +49,7 @@
 	{#if activeTab === 'active'}
 		{#each data.active as loan (loan.id)}
 			<div class="card border bg-base-100 shadow-sm">
-				<div class="card-body p-4">
+				<CardBody padding="sm">
 					<div class="flex items-start justify-between">
 						<div>
 							<h3 class="font-semibold">
@@ -118,7 +119,7 @@
 					{#if loan.memberNotes}
 						<p class="mt-2 rounded bg-base-200 p-2 text-subtle">{loan.memberNotes}</p>
 					{/if}
-				</div>
+				</CardBody>
 			</div>
 		{:else}
 			<p class="text-center opacity-60 py-8">No active loans.</p>
@@ -126,7 +127,7 @@
 	{:else}
 		{#each data.past as loan (loan.id)}
 			<div class="card border bg-base-100 opacity-80 shadow-sm">
-				<div class="card-body p-4">
+				<CardBody padding="sm">
 					<div class="flex items-start justify-between">
 						<h3 class="font-semibold">{loan.equipmentName ?? 'Free-form Request'}</h3>
 						<StatusBadge status={loan.status} />
@@ -147,7 +148,7 @@
 							</dd>
 						{/if}
 					</dl>
-				</div>
+				</CardBody>
 			</div>
 		{:else}
 			<p class="text-center opacity-60 py-8">No past loans.</p>

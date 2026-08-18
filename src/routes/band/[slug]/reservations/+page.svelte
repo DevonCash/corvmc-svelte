@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -53,8 +55,8 @@
 			<div class="space-y-3">
 				{#each upcoming as res (res.id)}
 					{@const cancel = cancelBandReservation.for(res.id)}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
+					<Card>
+						<CardBody row class="py-4">
 							<div>
 								<p class="font-medium">
 									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
@@ -87,8 +89,8 @@
 									</Form>
 								{/if}
 							</div>
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				{/each}
 			</div>
 		{/if}
@@ -100,8 +102,8 @@
 		{:else}
 			<div class="space-y-3">
 				{#each past as res (res.id)}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
+					<Card>
+						<CardBody row class="py-4">
 							<div>
 								<p class="font-medium">
 									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
@@ -116,8 +118,8 @@
 								</p>
 							</div>
 							<StatusBadge status={res.status} />
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				{/each}
 			</div>
 		{/if}

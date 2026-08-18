@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/shared/actions';
@@ -70,8 +72,8 @@
 	{:else}
 		<div class="space-y-3 max-h-96 overflow-y-auto">
 			{#each visible as r (r.id)}
-				<div class="card bg-base-100 border border-base-300">
-					<div class="card-body p-4">
+				<Card bordered>
+					<CardBody padding="sm">
 						<div class="flex justify-between mb-2">
 							<div>
 								<MemberLink
@@ -99,8 +101,8 @@
 								onsuccess={() => markResolved(r.id)}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

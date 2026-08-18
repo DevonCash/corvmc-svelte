@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -60,8 +62,8 @@
 				{#each pending as invite (invite.id)}
 					{@const accept = acceptInvite.for(invite.id)}
 					{@const decline = declineInvite.for(invite.id)}
-					<div class="card bg-base-100 shadow">
-						<div class="card-body py-4">
+					<Card>
+						<CardBody class="py-4">
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="font-medium">{invite.name}</p>
@@ -112,8 +114,8 @@
 									</Form>
 								</div>
 							</div>
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				{/each}
 			</div>
 		</section>
@@ -132,7 +134,7 @@
 						href={resolve(`/band/${b.slug}`)}
 						class="card bg-base-100 shadow hover:shadow-md transition-shadow"
 					>
-						<div class="card-body py-4 flex-row items-center justify-between">
+						<CardBody row class="py-4">
 							<div>
 								<p class="font-medium">{b.name}</p>
 								<p class="text-muted">
@@ -141,7 +143,7 @@
 								</p>
 							</div>
 							<StatusBadge status={b.role} />
-						</div>
+						</CardBody>
 					</a>
 				{/each}
 			</div>

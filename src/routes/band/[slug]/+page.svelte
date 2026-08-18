@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -47,8 +49,8 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-3">
 					{#each sessions as res (res.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body py-4 flex-row items-center justify-between">
+						<Card>
+							<CardBody row class="py-4">
 								<div>
 									<p class="font-medium">
 										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
@@ -66,8 +68,8 @@
 									</p>
 								</div>
 								<StatusBadge status={res.status} />
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			{/if}

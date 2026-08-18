@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -39,8 +41,8 @@
 	);
 </script>
 
-<div class="card bg-base-100 shadow-sm">
-	<div class="card-body">
+<Card>
+	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconCreditCard size={24} class="text-primary" />
@@ -71,8 +73,8 @@
 				<Button href={billingPortalUrl} variant="default" size="sm" outline>Manage Billing</Button>
 			{/if}
 		</div>
-	</div>
-</div>
+	</CardBody>
+</Card>
 
 <Modal bind:open={modalOpen} title="Update Contribution">
 	<SubscriptionForm

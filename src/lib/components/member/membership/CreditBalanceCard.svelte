@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
 	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
 	import { creditsToHours } from '$lib/config';
@@ -27,8 +29,8 @@
 	);
 </script>
 
-<div class="card bg-base-100 shadow-sm">
-	<div class="card-body">
+<Card>
+	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconMusic size={24} class="text-primary" />
@@ -74,5 +76,5 @@
 				<span><strong>Priority booking</strong> when last-minute openings pop up</span>
 			</div>
 		</div>
-	</div>
-</div>
+	</CardBody>
+</Card>

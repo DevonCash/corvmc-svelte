@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -94,7 +95,7 @@
 			<ul class="space-y-2">
 				{#each flags as f (f.id)}
 					<li class="card bg-base-100 shadow">
-						<div class="card-body gap-2 p-4">
+						<CardBody padding="sm" class="gap-2">
 							<!-- No `flex-wrap`, and the title truncates: wrapping this row pushed
 							     the status badge and the timestamp onto ragged extra lines. -->
 							<div class="flex min-w-0 items-center gap-2">
@@ -113,7 +114,7 @@
 							<p class="text-muted">
 								Reported by {f.reportedByName ?? 'Anonymous visitor'} · {relativeDay(f.createdAt)}
 							</p>
-						</div>
+						</CardBody>
 					</li>
 				{/each}
 			</ul>

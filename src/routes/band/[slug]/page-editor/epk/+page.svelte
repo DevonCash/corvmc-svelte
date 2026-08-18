@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -74,9 +77,9 @@
 
 			<div class="space-y-6">
 				<!-- Contacts -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
-						<h2 class="card-title text-lg">Contacts</h2>
+				<Card>
+					<CardBody>
+						<CardTitle size="lg" level={2}>Contacts</CardTitle>
 						<p class="text-muted">Industry contacts shown on your EPK page.</p>
 
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -179,14 +182,14 @@
 								/>
 							</div>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Press Quotes -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Press Quotes</h2>
+							<CardTitle size="lg" level={2}>Press Quotes</CardTitle>
 							<Button type="button" variant="primary" size="sm" onclick={addPressQuote}
 								>Add Quote</Button
 							>
@@ -243,14 +246,14 @@
 								{/each}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Achievements -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Achievements</h2>
+							<CardTitle size="lg" level={2}>Achievements</CardTitle>
 							<Button type="button" variant="primary" size="sm" onclick={addAchievement}>Add</Button
 							>
 						</div>
@@ -284,14 +287,14 @@
 								{/each}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Backline Requirements -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Backline Requirements</h2>
+							<CardTitle size="lg" level={2}>Backline Requirements</CardTitle>
 							<Button type="button" variant="primary" size="sm" onclick={addBacklineItem}
 								>Add Item</Button
 							>
@@ -366,8 +369,8 @@
 								</table>
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Save -->
 				<div class="flex justify-end gap-3">

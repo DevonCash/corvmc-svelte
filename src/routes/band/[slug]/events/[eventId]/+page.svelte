@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -65,8 +67,8 @@
 <PageContent width="2xl">
 	<div class="space-y-6">
 		<!-- Event details -->
-		<div class="card bg-base-100 shadow-sm">
-			<div class="card-body">
+		<Card>
+			<CardBody>
 				<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div>
 						<dt class="text-subtle font-medium uppercase">Date</dt>
@@ -133,8 +135,8 @@
 						<p class="whitespace-pre-wrap text-sm">{evt.description}</p>
 					</div>
 				{/if}
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 
 		<!-- Actions -->
 		{#if isAdmin && evt.status !== 'cancelled'}
@@ -192,8 +194,8 @@
 
 		<!-- Edit form (toggle) -->
 		{#if editing && isAdmin}
-			<div class="card bg-base-200 shadow-sm">
-				<div class="card-body">
+			<Card tone="base-200">
+				<CardBody>
 					<Form
 						remote={updateBandEventForm}
 						guard
@@ -310,8 +312,8 @@
 							<SubmitButton label="Save Changes" variant="primary" />
 						</div>
 					</Form>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		{/if}
 	</div>
 </PageContent>

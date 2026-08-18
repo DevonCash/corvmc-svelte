@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
@@ -52,9 +55,9 @@
 <div class="max-w-lg mx-auto space-y-6">
 	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<h2 class="card-title">{evt.title}</h2>
+	<Card>
+		<CardBody>
+			<CardTitle level={2}>{evt.title}</CardTitle>
 			<p class="opacity-70">
 				{fullDate(evt.startsAt)}
 				{#if evt.doorsAt}
@@ -87,8 +90,8 @@
 					{/if}
 				</p>
 			{/if}
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
 	{#if soldOut}
 		<Alert type="warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</Alert>
@@ -99,8 +102,8 @@
 			onfailure={() => toast.error('Something went wrong')}
 		>
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
-			<div class="card bg-base-100 shadow">
-				<div class="card-body space-y-4">
+			<Card>
+				<CardBody class="space-y-4">
 					<Field label="Number of spots" name="quantity">
 						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
@@ -120,13 +123,13 @@
 						variant="primary"
 						class="w-full"
 					/>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		</Form>
 	{:else}
 		{#if !data.isSustainingMember}
 			<div class="card border border-primary/30 bg-primary/5">
-				<div class="card-body gap-3 p-4">
+				<CardBody padding="sm" class="gap-3">
 					<div class="flex items-center gap-2">
 						<IconHeartHandshake size={20} class="text-primary" />
 						<h3 class="font-semibold">Save 50% as a sustaining member</h3>
@@ -156,7 +159,7 @@
 							Sign in &amp; save 50%
 						</Button>
 					{/if}
-				</div>
+				</CardBody>
 			</div>
 		{/if}
 		<Form
@@ -165,8 +168,8 @@
 			onfailure={() => toast.error('Something went wrong')}
 		>
 			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
-			<div class="card bg-base-100 shadow">
-				<div class="card-body space-y-4">
+			<Card>
+				<CardBody class="space-y-4">
 					<Field label="Number of tickets" name="quantity">
 						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
@@ -215,8 +218,8 @@
 						variant="primary"
 						class="w-full"
 					/>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		</Form>
 	{/if}
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { resolve } from '$app/paths';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -42,7 +43,7 @@
 </script>
 
 <li class="card bg-base-100 shadow">
-	<div class="card-body flex-row items-start gap-4 p-4">
+	<CardBody padding="sm" class="flex-row items-start gap-4">
 		<!-- The vote control is a Form whose only field is hidden. SubmitButton has
 		     no dirty gate, so a fields-free form still submits. -->
 		<Form remote={vote} class="shrink-0" onsuccess={onchanged}>
@@ -113,5 +114,5 @@
 				{/snippet}
 			</Action>
 		{/if}
-	</div>
+	</CardBody>
 </li>

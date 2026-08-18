@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -57,8 +59,8 @@
 	{:else}
 		<div class="space-y-3">
 			{#each closures as c (c.id)}
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body py-4">
+				<Card>
+					<CardBody class="py-4">
 						{#if editId === c.id}
 							<div class="space-y-3">
 								<input
@@ -108,8 +110,8 @@
 								{/if}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -183,9 +186,9 @@
 			<input {...saveBandPageConfig.fields.blocks.as('hidden', JSON.stringify(blocks))} />
 
 			<!-- Theme selector -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
-					<h2 class="card-title text-lg">Theme</h2>
+			<Card>
+				<CardBody>
+					<CardTitle size="lg" level={2}>Theme</CardTitle>
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
 						{#each BAND_THEMES as theme (theme)}
 							<Button
@@ -202,14 +205,14 @@
 							</Button>
 						{/each}
 					</div>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Blocks editor -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<div class="flex items-center justify-between">
-						<h2 class="card-title text-lg">Blocks</h2>
+						<CardTitle size="lg" level={2}>Blocks</CardTitle>
 						<Button
 							type="button"
 							variant="primary"
@@ -556,13 +559,13 @@
 							{/each}
 						</div>
 					{/if}
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Custom CSS -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
-					<h2 class="card-title text-lg">Custom CSS</h2>
+			<Card>
+				<CardBody>
+					<CardTitle size="lg" level={2}>Custom CSS</CardTitle>
 					<p class="text-muted">
 						Add custom styles to your page. CSS is scoped to your band site container.
 					</p>
@@ -578,8 +581,8 @@
 					<p class="text-xs opacity-40 mt-1">
 						Max 50KB. External imports and scripts are stripped.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Save -->
 			<div class="flex justify-between items-center">
@@ -592,9 +595,9 @@
 		</form>
 
 		<!-- Media upload section -->
-		<div class="card bg-base-100 shadow-sm mt-6">
-			<div class="card-body">
-				<h2 class="card-title text-lg">Media</h2>
+		<Card class="mt-6">
+			<CardBody>
+				<CardTitle size="lg" level={2}>Media</CardTitle>
 				<p class="text-muted">
 					Upload images for your gallery, hero sections, and tech rider. Supported formats: JPEG,
 					PNG, WebP, GIF. Max 10MB per file.
@@ -718,15 +721,15 @@
 						</label>
 					</div>
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 
 		<!-- EPK Editor link -->
-		<div class="card bg-base-100 shadow-sm mt-6">
-			<div class="card-body">
+		<Card class="mt-6">
+			<CardBody>
 				<div class="flex items-center justify-between">
 					<div>
-						<h2 class="card-title text-lg">Electronic Press Kit</h2>
+						<CardTitle size="lg" level={2}>Electronic Press Kit</CardTitle>
 						<p class="text-muted">
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
@@ -738,7 +741,7 @@
 						outline>Edit EPK</Button
 					>
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{/if}
 </PageContent>

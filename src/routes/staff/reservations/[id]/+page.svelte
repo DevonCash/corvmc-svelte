@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -83,8 +85,8 @@
 <PageHeader title="Reservation" backHref="/staff/reservations" />
 <PageContent width="3xl">
 	<!-- Hero card -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
+	<Card>
+		<CardBody>
 			<header class="flex items-start justify-between">
 				<hgroup>
 					<p class="flex items-center gap-2 text-xl font-medium">
@@ -132,7 +134,7 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
+		</CardBody>
 
 		<DayTimeline
 			current={{ id: r.id, startsAt: r.startsAt, endsAt: r.endsAt, bookerType: r.bookerType }}
@@ -145,7 +147,7 @@
 				href: `/staff/reservations/${o.id}`
 			}))}
 		/>
-	</div>
+	</Card>
 
 	<!-- Member + Payment grid -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -148,8 +150,8 @@
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
 							<div class="card bg-base-100 border shadow-sm">
-								<div class="card-body p-4">
-									<h3 class="card-title text-sm">{eq.name}</h3>
+								<CardBody padding="sm">
+									<CardTitle size="sm">{eq.name}</CardTitle>
 									{#if eq.description}
 										<p class="text-subtle line-clamp-2">{eq.description}</p>
 									{/if}
@@ -178,7 +180,7 @@
 											Request
 										</Button>
 									</div>
-								</div>
+								</CardBody>
 							</div>
 						{/each}
 					</div>

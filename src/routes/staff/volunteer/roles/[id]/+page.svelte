@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -257,7 +258,7 @@
 		<InfoCard title="Requirements">
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
-					<h3 class="card-title">{title}</h3>
+					<CardTitle>{title}</CardTitle>
 					{#await certifications then certOptions}
 						{#if certOptions.length > 0}
 							<Action
@@ -312,7 +313,7 @@
 	<InfoCard title="Upcoming Shifts">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
-				<h3 class="card-title">{title}</h3>
+				<CardTitle>{title}</CardTitle>
 				{#if role.isActive}
 					<Action
 						action={createShift}
@@ -392,7 +393,7 @@
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				{#await interested then r}
-					<h3 class="card-title">
+					<CardTitle>
 						{title}
 						<!-- The count that matters when the role is gated is how many could
 						     actually take a shift, not how many said yes. -->
@@ -401,7 +402,7 @@
 								· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} ready
 							</span>
 						{/if}
-					</h3>
+					</CardTitle>
 				{/await}
 				{#await interested then r}
 					{#if r.rows.length > 0}

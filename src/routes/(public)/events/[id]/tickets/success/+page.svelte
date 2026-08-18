@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { fullDate } from '$lib/utils/format';
@@ -18,8 +20,8 @@
 <div class="max-w-lg mx-auto space-y-6">
 	<PageHeader title="Tickets Confirmed" backHref="/events" />
 
-	<div class="card bg-base-100 shadow">
-		<div class="card-body text-center space-y-4">
+	<Card>
+		<CardBody class="text-center space-y-4">
 			<div class="flex justify-center">
 				<IconCircleCheck size={64} class="text-success" />
 			</div>
@@ -42,12 +44,12 @@
 						'your email'}.
 				{/if}
 			</p>
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
 	<!-- Ticket codes -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
+	<Card>
+		<CardBody>
 			<h3 class="font-medium mb-3">Your Tickets</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
@@ -63,8 +65,8 @@
 					</div>
 				{/each}
 			</div>
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
 	<div class="text-center">
 		<Button href="/events" variant="ghost">Back to Events</Button>

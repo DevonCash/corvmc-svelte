@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -308,8 +310,8 @@
 	<!-- Edit form -->
 	{#if editing}
 		<svelte:boundary>
-			<div class="card bg-base-100 shadow">
-				<div class="card-body space-y-4">
+			<Card>
+				<CardBody class="space-y-4">
 					<h3 class="text-muted font-medium">Edit Event</h3>
 
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
@@ -467,7 +469,7 @@
 							{/if}
 
 							{#if editTicketingEnabled}
-								<div class="card bg-base-200 p-4">
+								<Card tone="base-200" class="p-4">
 									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
 										<input
 											id="editTicketQuantity"
@@ -481,7 +483,7 @@
 										/>
 									</FormField>
 									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
-								</div>
+								</Card>
 							{/if}
 
 							<!-- Rebook warning -->
@@ -556,15 +558,15 @@
 							</div>
 						</div>
 					</Form>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			{#snippet pending()}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body flex items-center justify-center p-8">
+				<Card>
+					<CardBody class="flex items-center justify-center p-8">
 						<span class="loading loading-spinner loading-md"></span>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/snippet}
 		</svelte:boundary>
 	{/if}

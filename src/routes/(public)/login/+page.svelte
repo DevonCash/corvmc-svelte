@@ -1,4 +1,6 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -134,7 +136,7 @@
 	<div class="flex items-center justify-center py-16 px-4">
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
-				<div class="card-body gap-4">
+				<CardBody class="gap-4">
 					{#if inviteMeta}
 						<Alert type="info" class="text-sm">
 							<span
@@ -144,9 +146,9 @@
 						</Alert>
 					{/if}
 
-					<h2 class="card-title justify-center text-lg">
+					<CardTitle size="lg" level={2} class="justify-center">
 						{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
-					</h2>
+					</CardTitle>
 
 					{#if error}
 						<Alert type="error" class="text-sm">
@@ -215,7 +217,7 @@
 							? "Don't have an account? Sign up"
 							: 'Already have an account? Sign in'}
 					</Button>
-				</div>
+				</CardBody>
 			</div>
 		</div>
 	</div>

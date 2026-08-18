@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import {
 		getUserVolunteerProfile,
 		getUserShifts,
@@ -93,7 +94,7 @@
 	<InfoCard title="Certifications">
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
-				<h3 class="card-title">{title}</h3>
+				<CardTitle>{title}</CardTitle>
 				{#if catalog.length > 0}
 					<Action
 						action={grantCertification}

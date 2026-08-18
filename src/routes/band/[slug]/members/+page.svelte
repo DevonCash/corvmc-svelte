@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
@@ -125,8 +127,8 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-2">
 					{#each active as member (member.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body flex-row items-center justify-between py-3">
+						<Card>
+							<CardBody row class="py-3">
 								<div class="flex items-center gap-3">
 									<div class="placeholder avatar">
 										<div class="w-8 rounded-full bg-neutral text-neutral-content">
@@ -180,8 +182,8 @@
 										</Button>
 									{/if}
 								</div>
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			{/if}
@@ -193,8 +195,8 @@
 				<h2 class="mb-3 text-lg font-semibold">Pending Invitations ({pending.length})</h2>
 				<div class="grid grid-cols-1 gap-2">
 					{#each pending as invite (invite.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body flex-row items-center justify-between py-3">
+						<Card>
+							<CardBody row class="py-3">
 								<div>
 									<p class="font-medium">{invite.userName}</p>
 									<p class="text-subtle">
@@ -218,8 +220,8 @@
 										<SubmitButton label="Revoke" variant="ghost" size="xs" />
 									</Form>
 								{/if}
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			</section>
@@ -233,8 +235,8 @@
 					<h2 class="mb-3 text-lg font-semibold">Awaiting Signup ({pendingPlatform.length})</h2>
 					<div class="grid grid-cols-1 gap-2">
 						{#each pendingPlatform as invite (invite.id)}
-							<div class="card bg-base-100 shadow">
-								<div class="card-body flex-row items-center justify-between py-3">
+							<Card>
+								<CardBody row class="py-3">
 									<div>
 										<p class="font-medium">{invite.email}</p>
 										<p class="text-subtle">
@@ -259,8 +261,8 @@
 											<SubmitButton label="Revoke" variant="ghost" size="xs" />
 										</Form>
 									</div>
-								</div>
-							</div>
+								</CardBody>
+							</Card>
 						{/each}
 					</div>
 				</section>
