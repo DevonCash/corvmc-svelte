@@ -39,6 +39,14 @@ export const SEED_CONFLICT_DATE = '2030-06-16';
 export const SEED_CONFLICT_START = '19:00';
 export const SEED_CONFLICT_END = '22:00';
 
+/**
+ * Two more days for the edit tests. Each books a hold of its own, so they get a
+ * day each — sharing one would make the second test collide with the first
+ * test's booking rather than with the thing it means to assert.
+ */
+export const SEED_EDIT_EVENT_DATE = '2030-06-17';
+export const SEED_SELF_CONFLICT_DATE = '2030-06-18';
+
 /** The club's wall clock — the times above are entered in it, as staff would. */
 const CLUB_TZ = 'America/Los_Angeles';
 

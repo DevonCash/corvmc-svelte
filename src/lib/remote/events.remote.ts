@@ -554,9 +554,14 @@ export const checkConflicts = query(
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
 
-		// Filter out the event's own reservation from conflicts
+		// Drop the event's own hold — re-timing an event must not report it as
+		// conflicting with itself. The old test was `!('id' in c)`, and
+		// getConflictDetails never returned an id, so it was always true and
+		// nothing was ever filtered: every event with a hold showed a phantom
+		// conflict, which armed "Override conflicts" and made the save skip the
+		// real double-booking check.
 		const filtered = excludeReservationId
-			? conflicts.filter((c) => c.type !== 'reservation' || !('id' in c))
+			? conflicts.filter((c) => c.type !== 'reservation' || c.id !== excludeReservationId)
 			: conflicts;
 
 		return { conflicts: filtered, validationWarnings };
@@ -760,19 +765,27 @@ export const updateEvent = form(
 				data.doorsTime && data.eventDate ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
-		// Handle reservation rebooking
-		if (
-			rebookReservation &&
-			data.eventDate &&
-			data.reservationStartTime &&
-			data.reservationEndTime
-		) {
-			const reservationRange = buildTimeRangeInTz(
-				data.eventDate,
-				data.reservationStartTime,
-				data.reservationEndTime,
-				tz
-			);
+		// Hold the space, or move the existing hold. Same rules as createEvent: the
+		// reservation times are an optional override for setup and teardown, not a
+		// precondition, and they are all-or-nothing because buildTimeRangeInTz reads
+		// an end before the start as an overnight range — a supplied 23:00 start
+		// against a defaulted 22:00 end would roll over and hold the room 23 hours.
+		//
+		// Gating on the times is what made this a silent no-op: the box was ticked,
+		// the event saved, and no space was ever held. Same defect the create path
+		// carried until #206.
+		if (rebookReservation) {
+			const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
+			const startTime = customWindow ? data.reservationStartTime! : data.eventStartTime;
+			const endTime = customWindow ? data.reservationEndTime! : data.eventEndTime;
+
+			// The edit form always submits the event's date and times, so this only
+			// trips on a malformed payload. Failing loudly beats booking nothing.
+			if (!data.eventDate || !startTime || !endTime) {
+				error(400, 'A date and time range are required to hold the space');
+			}
+
+			const reservationRange = buildTimeRangeInTz(data.eventDate, startTime, endTime, tz);
 			updateParams.rebook = {
 				userId: staff.id,
 				reservationStartsAt: reservationRange.startsAt,

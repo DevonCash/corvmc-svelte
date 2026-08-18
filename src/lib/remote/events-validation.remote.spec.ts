@@ -134,6 +134,11 @@ const events = (await import('./events.remote')) as unknown as Record<
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
 
+const conflictService = (await import('$lib/server/reservation/conflict-service')) as unknown as {
+	getConflictDetails: ReturnType<typeof vi.fn>;
+	getValidationWarnings: ReturnType<typeof vi.fn>;
+};
+
 // Mirrors SvelteKit's `issue` helper: `issue.field(msg)` builds an issue object
 // carrying the field path. It does not throw on its own — that is the whole point.
 function makeIssue() {
@@ -366,5 +371,74 @@ describe('rsvpToEvent with external ticketing', () => {
 			events.rsvpToEvent({ eventId: 'evt-1', ...attendee }, makeIssue())
 		).rejects.toThrow();
 		expect(createRsvp).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression: `checkConflicts` filtered the event's own hold with
+// `!('id' in c)`, but getConflictDetails never selected an id, so the predicate
+// was always true and nothing was ever dropped. Re-timing an event reported its
+// own reservation as a conflict, which armed "Override conflicts" on the form —
+// and saving with that set made the server skip the real double-booking check.
+// ---------------------------------------------------------------------------
+
+describe('checkConflicts — excludeReservationId', () => {
+	const window = { date: '2026-08-15', startTime: '19:00', endTime: '22:00' };
+
+	function detail(id: string, label: string) {
+		return {
+			type: 'reservation' as const,
+			id,
+			startsAt: new Date('2026-08-15T02:00:00Z'),
+			endsAt: new Date('2026-08-16T05:00:00Z'),
+			label
+		};
+	}
+
+	beforeEach(() => {
+		conflictService.getValidationWarnings.mockResolvedValue([]);
+	});
+
+	it("drops the event's own hold and keeps everyone else's", async () => {
+		conflictService.getConflictDetails.mockResolvedValue([
+			detail('own-hold', 'Front Desk'),
+			detail('someone-else', 'A Member')
+		]);
+
+		const result = (await events.checkConflicts(
+			{ ...window, excludeReservationId: 'own-hold' },
+			undefined
+		)) as { conflicts: Array<{ id?: string }> };
+
+		expect(result.conflicts.map((c) => c.id)).toEqual(['someone-else']);
+	});
+
+	it('keeps closures, which carry no id to match on', async () => {
+		conflictService.getConflictDetails.mockResolvedValue([
+			detail('own-hold', 'Front Desk'),
+			{
+				type: 'closure' as const,
+				startsAt: new Date('2026-08-15T02:00:00Z'),
+				endsAt: new Date('2026-08-16T05:00:00Z'),
+				label: 'HVAC replacement'
+			}
+		]);
+
+		const result = (await events.checkConflicts(
+			{ ...window, excludeReservationId: 'own-hold' },
+			undefined
+		)) as { conflicts: Array<{ type: string }> };
+
+		expect(result.conflicts.map((c) => c.type)).toEqual(['closure']);
+	});
+
+	it('keeps every conflict when nothing is excluded', async () => {
+		conflictService.getConflictDetails.mockResolvedValue([detail('a', 'One'), detail('b', 'Two')]);
+
+		const result = (await events.checkConflicts(window, undefined)) as {
+			conflicts: Array<{ id?: string }>;
+		};
+
+		expect(result.conflicts.map((c) => c.id)).toEqual(['a', 'b']);
 	});
 });
