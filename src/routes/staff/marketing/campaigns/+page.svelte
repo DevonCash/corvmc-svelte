@@ -16,7 +16,7 @@
 </script>
 
 <PageHeader title="Campaigns" subtitle="Marketing">
-	<Button href="/staff/marketing/campaigns/new" class="btn-sm">New Campaign</Button>
+	<Button href="/staff/marketing/campaigns/new" variant="default" size="sm">New Campaign</Button>
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">

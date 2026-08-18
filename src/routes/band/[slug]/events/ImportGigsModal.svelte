@@ -82,7 +82,7 @@
 		<div class="flex justify-end gap-2">
 			<SubmitButton
 				label={preview.rows.length > 0 ? `Import ${preview.rows.length} gigs` : 'Import'}
-				class="btn-primary"
+				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>
 		</div>

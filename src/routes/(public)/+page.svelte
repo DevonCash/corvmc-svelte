@@ -52,10 +52,10 @@
 			local musicians to grow, collaborate, and thrive together.
 		</p>
 		<div class="flex flex-col items-center gap-3 mt-4">
-			<Button href="/login?register&redirect=/member" class="btn-primary btn-wide"
+			<Button href="/login?register&redirect=/member" variant="primary" shape="wide"
 				>Join Our Community!</Button
 			>
-			<Button href="/about" class="btn-ghost btn-wide">Learn More About Us</Button>
+			<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
 		</div>
 		<div class="flex flex-wrap justify-center gap-2 mt-5">
 			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
@@ -92,7 +92,7 @@
 			<p class="text-center opacity-60">No upcoming events right now. Check back soon!</p>
 		{/if}
 		<div class="text-center mt-8">
-			<Button href="/events" class="btn-ghost">View All Events &rarr;</Button>
+			<Button href="/events" variant="ghost">View All Events &rarr;</Button>
 		</div>
 	</div>
 </section>
@@ -123,7 +123,7 @@
 			{/each}
 		</div>
 		<div class="text-center mt-10">
-			<Button href="/programs" class="btn-ghost">View All Programs &rarr;</Button>
+			<Button href="/programs" variant="ghost">View All Programs &rarr;</Button>
 		</div>
 	</div>
 </section>
@@ -151,7 +151,9 @@
 				</p>
 				<Button
 					href="/login?register&redirect=/member"
-					class="btn-sm mt-2"
+					variant="default"
+					size="sm"
+					class="mt-2"
 					style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)"
 					>Join Now</Button
 				>
@@ -167,7 +169,9 @@
 				</p>
 				<Button
 					href="/contribute"
-					class="btn-sm mt-2"
+					variant="default"
+					size="sm"
+					class="mt-2"
 					style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)"
 					>Learn More</Button
 				>
@@ -183,7 +187,9 @@
 				</p>
 				<Button
 					href="/contribute"
-					class="btn-sm mt-2"
+					variant="default"
+					size="sm"
+					class="mt-2"
 					style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)"
 					>Contribute</Button
 				>

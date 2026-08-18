@@ -145,7 +145,7 @@
 </script>
 
 <PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
-	<Button class="btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</Button>
+	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
 </PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

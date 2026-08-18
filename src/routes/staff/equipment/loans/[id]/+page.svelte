@@ -153,7 +153,7 @@
 					{/if}
 					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
-						<SubmitButton label="Schedule" class="btn-primary btn-sm" />
+						<SubmitButton label="Schedule" variant="primary" size="sm" />
 						<CancelLoanAction
 							loanId={id}
 							label="Cancel Request"
@@ -167,7 +167,7 @@
 					<input {...checkoutFields.loanId.as('hidden', id)} />
 					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
-						<SubmitButton label="Check Out" class="btn-primary btn-sm" />
+						<SubmitButton label="Check Out" variant="primary" size="sm" />
 						<CancelLoanAction loanId={id} />
 					</div>
 				</Form>

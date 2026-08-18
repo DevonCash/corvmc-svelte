@@ -217,7 +217,7 @@
 	</div>
 
 	<div class="flex justify-end">
-		<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s">
+		<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s">
 			{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
 		</SubmitButton>
 	</div>

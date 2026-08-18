@@ -49,7 +49,8 @@
 					action={restoreListingTrust}
 					label="Restore direct publishing"
 					successToast="Trust restored"
-					class="btn-sm"
+					variant="default"
+					size="sm"
 					onsuccess={() => {
 						void getMemberStanding(id).refresh();
 						void getUserOverview(id).refresh();
@@ -92,7 +93,8 @@
 					action={restoreSuggestionTrust}
 					label="Restore posting trust"
 					successToast="Trust restored"
-					class="btn-sm"
+					variant="default"
+					size="sm"
 					onsuccess={() => {
 						void getSuggestionStandingFor(id).refresh();
 					}}
@@ -138,7 +140,8 @@
 					action={setMemberMessaging}
 					label="Switch messaging off"
 					successToast="Messaging switched off"
-					class="btn-sm"
+					variant="default"
+					size="sm"
 					onsuccess={() => {
 						void getMemberMessagingStanding(id).refresh();
 					}}
@@ -167,7 +170,9 @@
 					action={setMemberMessaging}
 					label="Restore messaging"
 					successToast="Messaging restored"
-					class="btn-sm btn-outline"
+					variant="default"
+					size="sm"
+					outline
 					onsuccess={() => {
 						void getMemberMessagingStanding(id).refresh();
 					}}

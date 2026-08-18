@@ -104,7 +104,8 @@
 				modalTitle="Review suggestion"
 				submitLabel="Save"
 				successToast="Reviewed"
-				class="btn-primary btn-sm"
+				variant="primary"
+				size="sm"
 				onsuccess={refresh}
 			>
 				{#snippet form()}
@@ -178,7 +179,8 @@
 					modalTitle="Review the proposed edit"
 					submitLabel="Save"
 					successToast="Edit reviewed"
-					class="btn-primary btn-sm"
+					variant="primary"
+					size="sm"
 					onsuccess={refresh}
 				>
 					{#snippet form()}
@@ -229,7 +231,8 @@
 				modalTitle="Respond to suggestion"
 				submitLabel="Save"
 				successToast="Response saved"
-				class="btn-primary btn-sm"
+				variant="primary"
+				size="sm"
 				onsuccess={refresh}
 			>
 				{#snippet form()}
@@ -318,7 +321,9 @@
 					modalTitle="Merge suggestion"
 					submitLabel="Merge"
 					successToast="Merged"
-					class="btn-outline btn-sm"
+					variant="default"
+					size="sm"
+					outline
 					onsuccess={(r) => {
 						if (r && typeof r === 'object' && 'targetId' in r) {
 							void goto(resolve(`/staff/suggestions/${r.targetId as string}`));

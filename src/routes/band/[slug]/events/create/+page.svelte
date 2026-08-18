@@ -127,7 +127,7 @@
 		</div>
 
 		<div class="flex justify-end pt-4">
-			<SubmitButton label="Create Event" class="btn-primary" />
+			<SubmitButton label="Create Event" variant="primary" />
 		</div>
 	</Form>
 </PageContent>

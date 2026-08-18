@@ -168,10 +168,13 @@
 					grow, collaborate, and celebrate the power of live music.
 				</p>
 				<div class="flex flex-wrap gap-3">
-					<Button href="/events" class="program-block__cta">View Upcoming Shows</Button>
+					<Button href="/events" variant="default" class="program-block__cta"
+						>View Upcoming Shows</Button
+					>
 					<Button
 						href="/contact"
-						class="btn-outline"
+						variant="default"
+						outline
 						style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)"
 						>Apply to Perform</Button
 					>
@@ -284,10 +287,13 @@
 			{/each}
 		</div>
 		<div class="flex justify-center gap-4 mt-10">
-			<Button href="/login?register&redirect=/member" class="btn-lg">Become a Member</Button>
+			<Button href="/login?register&redirect=/member" variant="default" size="lg"
+				>Become a Member</Button
+			>
 			<Button
 				href="/contact"
-				class="btn-outline"
+				variant="default"
+				outline
 				style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)"
 				>Ask Questions</Button
 			>

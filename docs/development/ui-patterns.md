@@ -198,6 +198,36 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 - `class` — extra classes on the wrapper fieldset
 - `issues` — only needed when using FormField **outside** a `<Form>`. Inside a Form, issues are pulled from the form context automatically using `name`.
 
+## Button
+
+Variant, size and shape are **props**, never class strings. `class` is reserved for genuine
+one-offs — positioning, a `join-item`, a bespoke skin.
+
+```svelte
+<Button variant="ghost" size="sm">Cancel</Button>
+<Button variant="error" outline size="sm">Delete</Button>
+<Button variant="ghost" size="sm" shape="square" title="Edit"><IconPencil size={16} /></Button>
+<Button href="/staff/users">All users</Button>
+```
+
+Props:
+
+- `variant` — `primary` (default), `secondary`, `accent`, `neutral`, `info`, `success`, `warning`,
+  `error`, `ghost`, `link`, or `default` for the plain uncoloured `btn` surface.
+- `size` — `xs`, `sm`, `md` (default), `lg`
+- `shape` — `square`, `circle`, `wide`, `block`
+- `outline` — boolean; stacks on top of `variant`, so `variant="error" outline` is an outlined
+  destructive button. It is not a variant of its own.
+- `href` — renders an `<a>` instead of a `<button>`
+- `title` — tooltip text, merged onto the button itself rather than a wrapper (nesting a button
+  inside the tooltip trigger drops the control out of the accessibility tree — pinned by
+  `Button.svelte.spec.ts`)
+- `class` — escape hatch. A daisyUI colour passed here still wins over the `primary` default, so an
+  escape hatch can never collide with it, but reach for `variant` instead.
+
+`Action`, `SubmitButton` and every `shared/actions/*Action.svelte` wrapper take the same
+`variant`/`size`/`shape`/`outline` props and forward them here.
+
 ## SubmitButton
 
 Status-aware submit button that reads from `FormContext`. Shows spinner while pending, checkmark on success, X on error.
@@ -207,26 +237,17 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 	label="Save"
 	successLabel="Saved"
 	errorLabel="Error"
-	class="btn-primary"
+	variant="primary"
 	disabled={!isValid}
 	shortcut="mod+s"
 />
 ```
 
-Place inside a `<Form>`. For standalone async actions (not inside a form), use `AsyncButton` instead.
+Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
+it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
 
-## AsyncButton
-
-Same status feedback as SubmitButton but for standalone async actions that aren't part of a form. For actions that need a confirmation step or a form modal, use `Action` instead.
-
-```svelte
-<AsyncButton
-	action={() => deleteItem(item.id)}
-	label="Delete"
-	successToast="Deleted"
-	class="btn-error btn-sm"
-/>
-```
+For standalone async actions outside a form — and for anything needing a confirmation step or a
+form modal — use `Action`.
 
 ## Action
 
@@ -237,7 +258,7 @@ A single component that handles four patterns depending on its props: direct asy
 Runs an async callback on click. Same behavior as `AsyncButton`.
 
 ```svelte
-<Action action={() => archive(item.id)} label="Archive" successToast="Archived" class="btn-sm" />
+<Action action={() => archive(item.id)} label="Archive" successToast="Archived" size="sm" />
 ```
 
 ### With confirmation
@@ -248,7 +269,8 @@ When `confirm` is set (and no `body`), an alert dialog is shown before firing th
 <Action
 	action={() => deleteItem(item.id)}
 	label="Delete"
-	class="btn-error btn-sm"
+	variant="error"
+	size="sm"
 	confirm="This will permanently delete the item. Are you sure?"
 	successToast="Deleted"
 />
@@ -286,13 +308,7 @@ When `action` is a `RemoteForm` (from a `form()` remote), clicking the button op
 > for the callback-modal mode only.
 
 ```svelte
-<Action
-	action={updateItem}
-	label="Edit"
-	class="btn-primary btn-sm"
-	modalTitle="Edit Item"
-	successToast="Updated"
->
+<Action action={updateItem} label="Edit" size="sm" modalTitle="Edit Item" successToast="Updated">
 	{#snippet form()}
 		<FormField name="name" type="text" value={item.name} />
 		<FormField name="description" type="textarea" value={item.description} />
@@ -333,11 +349,13 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
 - `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
+- `submitVariant` — colour of the modal's submit button (defaults to the trigger's `variant`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
 - `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
-- `class` — button classes (default `btn-primary`)
+- `variant` / `size` / `shape` / `outline` — forwarded to `Button`; `variant` defaults to `primary`
+- `class` — escape hatch, forwarded to `Button`
 - `disabled` — disables the trigger button
 
 ## StatusBadge
@@ -780,7 +798,9 @@ Edit/detail views remain full pages at `[id]/`.
 
 ## CSS conventions
 
-- Use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
+- Buttons are `<Button variant size>` — never a raw `<button class="btn …">` or a `class="btn-ghost btn-sm"` string. The same goes for `Action`, `SubmitButton` and the `*Action` wrappers.
+- Supporting text is `text-muted` (the `text-sm` tier) or `text-subtle` (the `text-xs` tier), not `text-sm opacity-60`. `text-fg-2` / `text-fg-3` / `surface` reach the tokens directly when the size is already set.
+- Otherwise use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
 - Cards: `card bg-base-100 shadow` (use `shadow` not `shadow-sm`).
 - Form inputs: `input input-bordered` (standard size). Use `input-sm` only on dense settings-style forms, and be consistent within a page.
 - Page content width: constrain with `max-w-md` (forms), `max-w-2xl` (settings), or let it fill (tables/dashboards).

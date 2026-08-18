@@ -199,7 +199,8 @@
 						{/if}
 						<SubmitButton
 							label={mode === 'login' ? 'Sign in' : 'Create account'}
-							class="btn-primary w-full mt-1"
+							variant="primary"
+							class="w-full mt-1"
 						/>
 					</Form>
 

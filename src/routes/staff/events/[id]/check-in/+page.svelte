@@ -68,7 +68,7 @@
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<SubmitButton label="Check In" class="btn-primary btn-sm" />
+								<SubmitButton label="Check In" variant="primary" size="sm" />
 							</Form>
 							<CancelTicketAction
 								eventId={data.event.id}

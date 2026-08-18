@@ -52,7 +52,7 @@
 
 					<div class="flex items-center justify-between gap-3">
 						<a href={resolve('/member/volunteer')} class="btn btn-ghost btn-sm">Skip for now</a>
-						<SubmitButton label="Finish" class="btn-primary" />
+						<SubmitButton label="Finish" variant="primary" />
 					</div>
 				</Form>
 			{/if}

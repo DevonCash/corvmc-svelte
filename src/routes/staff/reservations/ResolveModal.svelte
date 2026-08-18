@@ -93,7 +93,9 @@
 							<CashReceivedAction reservation={r} onsuccess={() => markResolved(r.id)} />
 							<NoShowReservationAction
 								reservation={r}
-								class="btn-error btn-outline btn-sm"
+								variant="error"
+								size="sm"
+								outline
 								onsuccess={() => markResolved(r.id)}
 							/>
 						</div>

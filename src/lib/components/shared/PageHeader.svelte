@@ -43,7 +43,7 @@
 >
 	<div class="flex items-center gap-4">
 		{#if backHref}
-			<Button href={backHref} class="btn-square btn-ghost btn-lg">←</Button>
+			<Button href={backHref} variant="ghost" size="lg" shape="square">←</Button>
 		{/if}
 		<hgroup class="flex flex-col">
 			<h1 class="text-2xl font-bold">{title}</h1>

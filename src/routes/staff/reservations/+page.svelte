@@ -326,7 +326,10 @@
 										reservation={r}
 										staff
 										iconOnly
-										class="btn-ghost btn-sm btn-square latched"
+										variant="ghost"
+										size="sm"
+										shape="square"
+										class="latched"
 									>
 										{#snippet icon()}<IconCheck size={16} />{/snippet}
 									</ConfirmReservationAction>
@@ -335,7 +338,9 @@
 									<CompleteReservationAction
 										reservation={r}
 										iconOnly
-										class="btn-ghost btn-sm btn-square"
+										variant="ghost"
+										size="sm"
+										shape="square"
 									>
 										{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 									</CompleteReservationAction>

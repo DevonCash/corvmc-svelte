@@ -156,10 +156,10 @@
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
-					<Button type="button" class="btn-outline btn-sm" onclick={closeConfirmModal}
+					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
 						>Dismiss</Button
 					>
-					<SubmitButton label="Confirm Reservation" class="btn-sm btn-success" />
+					<SubmitButton label="Confirm Reservation" variant="success" size="sm" />
 				</div>
 			</div>
 		</Form>

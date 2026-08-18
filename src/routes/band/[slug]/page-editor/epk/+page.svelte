@@ -53,7 +53,8 @@
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
 			<p class="mt-2 opacity-70">The EPK editor is available with a premium band subscription.</p>
-			<Button href="../../../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
+			<Button href="../../../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button
+			>
 		</EmptyState>
 	{:else}
 		<form

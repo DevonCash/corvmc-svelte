@@ -23,7 +23,8 @@
 	modalTitle="Report this conversation"
 	submitLabel="Submit report"
 	successToast="Report submitted — thank you"
-	class="btn-ghost btn-sm"
+	variant="ghost"
+	size="sm"
 	canSubmit={reason.trim().length > 0}
 	onsuccess={() => {
 		reason = '';

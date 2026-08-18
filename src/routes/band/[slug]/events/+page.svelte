@@ -39,8 +39,8 @@
 
 <PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
-		<Button class="btn-ghost btn-sm" onclick={() => (importing = true)}>Import past gigs</Button>
-		<Button href="events/create" class="btn-sm">Create Event</Button>
+		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
+		<Button href="events/create" variant="default" size="sm">Create Event</Button>
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
@@ -75,7 +75,7 @@
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Confirm" class="btn-primary btn-sm" />
+									<SubmitButton label="Confirm" variant="primary" size="sm" />
 								</Form>
 								<Form
 									remote={decline}
@@ -85,7 +85,7 @@
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Decline" class="btn-ghost btn-sm" />
+									<SubmitButton label="Decline" variant="ghost" size="sm" />
 								</Form>
 							</div>
 						{/if}

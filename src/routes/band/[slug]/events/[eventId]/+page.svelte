@@ -147,7 +147,7 @@
 					>
 						<input {...publishFields.slug.as('hidden', band.slug)} />
 						<input {...publishFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Publish" class="btn-primary btn-sm" />
+						<SubmitButton label="Publish" variant="primary" size="sm" />
 					</Form>
 				{:else if evt.status === 'published'}
 					<Form
@@ -157,7 +157,7 @@
 					>
 						<input {...unpublishFields.slug.as('hidden', band.slug)} />
 						<input {...unpublishFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Unpublish" class="btn-ghost btn-sm" />
+						<SubmitButton label="Unpublish" variant="ghost" size="sm" />
 					</Form>
 				{/if}
 
@@ -168,10 +168,10 @@
 				>
 					<input {...cancelFields.slug.as('hidden', band.slug)} />
 					<input {...cancelFields.eventId.as('hidden', evt.id)} />
-					<SubmitButton label="Cancel Event" class="btn-error btn-outline btn-sm" />
+					<SubmitButton label="Cancel Event" variant="error" size="sm" outline />
 				</Form>
 
-				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
+				<Button variant="ghost" size="sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
 				</Button>
 
@@ -184,7 +184,7 @@
 					>
 						<input {...posterFields.slug.as('hidden', band.slug)} />
 						<input {...posterFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Remove Poster" class="btn-ghost btn-sm" />
+						<SubmitButton label="Remove Poster" variant="ghost" size="sm" />
 					</Form>
 				{/if}
 			</div>
@@ -307,7 +307,7 @@
 						</FormField>
 
 						<div class="flex justify-end pt-2">
-							<SubmitButton label="Save Changes" class="btn-primary" />
+							<SubmitButton label="Save Changes" variant="primary" />
 						</div>
 					</Form>
 				</div>

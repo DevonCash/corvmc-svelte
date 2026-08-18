@@ -56,7 +56,11 @@
 				<span class="block flex h-[48px] items-center justify-between px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
 					<Button
-						class="latched btn-square btn-outline btn-sm"
+						variant="default"
+						size="sm"
+						shape="square"
+						outline
+						class="latched"
 						title="To Public Site"
 						aria-label="To Public Site"
 						href="/"

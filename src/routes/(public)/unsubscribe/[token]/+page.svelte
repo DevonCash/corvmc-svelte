@@ -49,7 +49,9 @@
 					<input {...allFields.token.as('hidden', token)} />
 					<SubmitButton
 						label="Unsubscribe from all CorvMC emails"
-						class="btn-outline btn-primary btn-sm"
+						variant="primary"
+						size="sm"
+						outline
 					/>
 				</Form>
 			</div>
@@ -61,9 +63,9 @@
 		</p>
 		<Form remote={confirmUnsubscribe} onsuccess={() => (done = true)}>
 			<input {...fields.token.as('hidden', token)} />
-			<SubmitButton label="Unsubscribe" class="btn-primary" />
+			<SubmitButton label="Unsubscribe" variant="primary" />
 		</Form>
 	{/if}
 
-	<Button href="/" class="btn-ghost btn-sm">Back to CorvMC</Button>
+	<Button href="/" variant="ghost" size="sm">Back to CorvMC</Button>
 </div>

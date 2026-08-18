@@ -147,10 +147,11 @@
 			<Action
 				action={bulkDeactivateUsers}
 				label="Deactivate"
-				class="btn-error btn-sm"
+				variant="error"
+				size="sm"
 				modalTitle="Deactivate users"
 				submitLabel="Deactivate"
-				submitClass="btn-error"
+				submitVariant="error"
 				onsuccess={(result) => {
 					const r = result as { deactivated: string[]; skipped: string[] };
 					selected.clear();
@@ -171,7 +172,7 @@
 					</p>
 				{/snippet}
 			</Action>
-			<Button class="btn-ghost btn-sm" onclick={() => selected.clear()}>Clear</Button>
+			<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Clear</Button>
 		</div>
 	{/if}
 
@@ -220,7 +221,13 @@
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 						<td class="w-px">
 							<div class="dropdown dropdown-end">
-								<Button class="btn-ghost btn-xs btn-square" tabindex="0" aria-label="Row actions">
+								<Button
+									variant="ghost"
+									size="xs"
+									shape="square"
+									tabindex="0"
+									aria-label="Row actions"
+								>
 									<IconDots size={16} />
 								</Button>
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->

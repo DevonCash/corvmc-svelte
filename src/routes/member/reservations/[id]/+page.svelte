@@ -50,10 +50,10 @@
 	{/if}
 
 	{#if res.status === 'scheduled'}
-		<Button href="/member/reservations/{res.id}/pay" class="btn-primary w-full">
+		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
 			Pay for this session
 		</Button>
 	{/if}
 
-	<Button href="/member/reservations" class="btn-ghost w-full">Back to Reservations</Button>
+	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
 </PageContent>

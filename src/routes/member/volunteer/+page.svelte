@@ -80,7 +80,8 @@
 				action={saveVolunteerInterests}
 				label="Interests"
 				icon={heartIcon}
-				class="btn-ghost btn-sm"
+				variant="ghost"
+				size="sm"
 				modalTitle="What you can help with"
 				submitLabel="Save"
 				successToast="Saved — we'll be in touch"
@@ -100,7 +101,8 @@
 			action={updateVolunteerProfile}
 			label="Profile"
 			icon={profileIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Your volunteer profile"
 			submitLabel="Save"
 			successToast="Profile updated"
@@ -187,7 +189,8 @@
 							<Action
 								action={submitVolunteerHours.for(done.signupId)}
 								label="Log these hours"
-								class="btn-primary btn-sm"
+								variant="primary"
+								size="sm"
 								modalTitle="Log hours for {done.roleName}"
 								submitLabel="Submit for review"
 								successToast="Hours submitted for review"
@@ -271,7 +274,8 @@
 												label="Edit"
 												iconOnly
 												icon={pencilIcon}
-												class="btn-ghost btn-sm"
+												variant="ghost"
+												size="sm"
 												modalTitle="Edit hours"
 												successToast="Hours updated"
 											>
@@ -313,7 +317,9 @@
 												label="Withdraw"
 												iconOnly
 												icon={trashIcon}
-												class="btn-ghost btn-sm text-error"
+												variant="ghost"
+												size="sm"
+												class="text-error"
 												modalTitle="Withdraw these hours?"
 												submitLabel="Withdraw"
 												successToast="Hours withdrawn"

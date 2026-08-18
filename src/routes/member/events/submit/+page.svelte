@@ -126,7 +126,7 @@
 		</div>
 
 		<div class="flex justify-end pt-4">
-			<SubmitButton label="Save draft" class="btn-primary" />
+			<SubmitButton label="Save draft" variant="primary" />
 		</div>
 	</Form>
 </PageContent>

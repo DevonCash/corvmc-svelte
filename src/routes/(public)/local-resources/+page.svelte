@@ -111,7 +111,7 @@
 					theme="auto"
 					bind:reset={resetTurnstile}
 				/>
-				<SubmitButton label="Submit Resource" class="btn-primary mt-2" />
+				<SubmitButton label="Submit Resource" variant="primary" class="mt-2" />
 			</Form>
 		{/if}
 	</div>

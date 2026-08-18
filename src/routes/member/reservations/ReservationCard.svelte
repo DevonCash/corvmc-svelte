@@ -67,16 +67,19 @@
 				<CancelReservationAction
 					{reservation}
 					onsuccess={onchange}
-					class="btn-outline btn-xs btn-error"
+					variant="error"
+					size="xs"
+					outline
 				/>
 				{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
-					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} class="btn-xs btn-success" />
+					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
 				{:else if reservation.status === 'scheduled'}
 					{#if canConfirm}
 						<ConfirmReservationAction
 							{reservation}
 							onsuccess={onchange}
-							class="btn-xs btn-primary"
+							variant="primary"
+							size="xs"
 						/>
 					{:else}
 						<a

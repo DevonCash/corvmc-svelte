@@ -26,7 +26,7 @@
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-	<Button href="reservations/new" class="btn-sm">Book a Session</Button>
+	<Button href="reservations/new" variant="default" size="sm">Book a Session</Button>
 </PageHeader>
 <PageContent width="2xl">
 	<TabBar
@@ -83,7 +83,7 @@
 										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />
-										<SubmitButton label="Cancel" class="btn-ghost btn-xs" />
+										<SubmitButton label="Cancel" variant="ghost" size="xs" />
 									</Form>
 								{/if}
 							</div>

@@ -65,7 +65,7 @@
 		<Form remote={resolveForm} successToast="Marked resolved" class="contents">
 			<input {...resolveForm.fields.threadId.as('hidden', threadId)} />
 			<input {...resolveForm.fields.status.as('hidden', 'resolved')} />
-			<SubmitButton label="Resolve" successLabel="Resolved" class="btn-primary btn-sm">
+			<SubmitButton label="Resolve" successLabel="Resolved" variant="primary" size="sm">
 				{#snippet icon()}<IconCheck size={16} />{/snippet}
 			</SubmitButton>
 		</Form>
@@ -78,7 +78,8 @@
 			<SubmitButton
 				label={status === 'snoozed' ? 'Unsnooze' : 'Reopen'}
 				successLabel="Reopened"
-				class="btn-sm"
+				variant="default"
+				size="sm"
 			>
 				{#snippet icon()}<IconRotate size={16} />{/snippet}
 			</SubmitButton>
@@ -92,7 +93,8 @@
 			modalTitle="Snooze conversation"
 			submitLabel="Snooze"
 			successToast="Snoozed"
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			maxWidth="max-w-sm"
 		>
 			{#snippet icon()}<IconAlarmSnooze size={16} />{/snippet}

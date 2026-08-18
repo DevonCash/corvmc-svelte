@@ -122,7 +122,8 @@
 			action={archiveVolunteerRole}
 			label="Archive"
 			icon={archiveIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Archive {role.name}?"
 			submitLabel="Archive"
 			successToast="Role archived"
@@ -140,7 +141,8 @@
 			action={restoreVolunteerRole}
 			label="Restore"
 			icon={unarchiveIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Restore {role.name}?"
 			submitLabel="Restore"
 			successToast="Role restored"
@@ -157,10 +159,12 @@
 			action={deleteVolunteerRole}
 			label="Delete"
 			icon={trashIcon}
-			class="btn-ghost btn-sm text-error"
+			variant="ghost"
+			size="sm"
+			class="text-error"
 			modalTitle="Delete {role.name}?"
 			submitLabel="Delete"
-			submitClass="btn-error"
+			submitVariant="error"
 			successToast="Role deleted"
 			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
 		>
@@ -259,7 +263,8 @@
 							<Action
 								action={setRoleCertifications}
 								label="Edit"
-								class="btn-ghost btn-sm"
+								variant="ghost"
+								size="sm"
 								modalTitle="What {role.name} requires"
 								successToast="Requirements saved"
 							>
@@ -312,7 +317,8 @@
 					<Action
 						action={createShift}
 						label="New shift"
-						class="btn-ghost btn-sm"
+						variant="ghost"
+						size="sm"
 						modalTitle="Schedule a {role.name} shift"
 						submitLabel="Create"
 						successToast="Shift scheduled"
@@ -399,7 +405,11 @@
 				{/await}
 				{#await interested then r}
 					{#if r.rows.length > 0}
-						<Button class="btn-ghost btn-sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => copyEmails(r.rows.map((m) => m.email))}
+						>
 							Copy emails on this page
 						</Button>
 					{/if}

@@ -16,7 +16,8 @@
 	modalTitle={`Message ${recipientName}`}
 	submitLabel="Send request"
 	successToast="Request sent"
-	class="btn-primary btn-sm"
+	variant="primary"
+	size="sm"
 	canSubmit={body.trim().length > 0}
 	onsuccess={() => {
 		body = '';

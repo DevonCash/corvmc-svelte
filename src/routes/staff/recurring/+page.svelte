@@ -111,7 +111,10 @@
 									onsuccess={() => {
 										void getStaffRecurring(filters).refresh();
 									}}
-									class="btn-ghost btn-sm btn-square text-error"
+									variant="ghost"
+									size="sm"
+									shape="square"
+									class="text-error"
 								>
 									{#snippet icon()}<IconX size={16} />{/snippet}
 									{#snippet form()}

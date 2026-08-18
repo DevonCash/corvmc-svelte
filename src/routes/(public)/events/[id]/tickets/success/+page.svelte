@@ -67,6 +67,6 @@
 	</div>
 
 	<div class="text-center">
-		<Button href="/events" class="btn-ghost">Back to Events</Button>
+		<Button href="/events" variant="ghost">Back to Events</Button>
 	</div>
 </div>

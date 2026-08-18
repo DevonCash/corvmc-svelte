@@ -117,7 +117,8 @@
 
 					<SubmitButton
 						label="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
-						class="btn-primary w-full"
+						variant="primary"
+						class="w-full"
 					/>
 				</div>
 			</div>
@@ -137,13 +138,20 @@
 						every show.
 					</p>
 					{#if data.isAuthenticated}
-						<Button href={resolve('/member/membership')} class="btn-primary btn-sm self-start">
+						<Button
+							href={resolve('/member/membership')}
+							variant="primary"
+							size="sm"
+							class="self-start"
+						>
 							Become a Sustaining Member
 						</Button>
 					{:else}
 						<Button
 							href="{resolve('/login')}?redirect={encodeURIComponent(page.url.pathname)}"
-							class="btn-primary btn-sm self-start"
+							variant="primary"
+							size="sm"
+							class="self-start"
 						>
 							Sign in &amp; save 50%
 						</Button>
@@ -204,7 +212,8 @@
 
 					<SubmitButton
 						label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
-						class="btn-primary w-full"
+						variant="primary"
+						class="w-full"
 					/>
 				</div>
 			</div>

@@ -222,11 +222,11 @@
 <PageHeader title={evt.title} backHref="/staff/events">
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}
-			<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
+			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
 		{/if}
 
 		{#if evt.status !== 'cancelled' && !editing}
-			<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
+			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
 		{/if}
 
 		{#if evt.status === 'draft'}
@@ -243,7 +243,8 @@
 				action={rejectListing}
 				label="Turn down"
 				successToast="Sent back to the member"
-				class="btn-warning btn-sm"
+				variant="warning"
+				size="sm"
 				onsuccess={() => invalidateAll()}
 			>
 				{#snippet form()}
@@ -298,7 +299,7 @@
 					onsuccess={() => void getEventRecurringSeries(id).refresh()}
 				>
 					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
-					<SubmitButton label="Cancel series" class="btn-xs btn-ghost text-error" />
+					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
 				</Form>
 			{/if}
 		</div>
@@ -548,10 +549,10 @@
 							{/if}
 
 							<div class="flex justify-end gap-2 pt-2">
-								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}
+								<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
 									>Cancel</Button
 								>
-								<SubmitButton label="Save" class="btn-primary btn-sm" />
+								<SubmitButton label="Save" variant="primary" size="sm" />
 							</div>
 						</div>
 					</Form>

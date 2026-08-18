@@ -72,7 +72,7 @@
 				/>
 
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s" />
+					<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s" />
 				</div>
 			</div>
 		</Form>
@@ -248,7 +248,9 @@
 					modalTitle="Change Password"
 					onsuccess={() => toast.success('Password changed')}
 					onfailure={() => toast.error('Password change failed')}
-					class="btn-outline btn-sm"
+					variant="default"
+					size="sm"
+					outline
 				>
 					{#snippet form()}
 						<FormField
@@ -287,7 +289,8 @@
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
 						onfailure={() => toast.error('Deletion failed')}
-						class="btn-error btn-sm"
+						variant="error"
+						size="sm"
 						onsuccess={() => {
 							toast.success('Account deleted');
 							goto(resolve('/login'));

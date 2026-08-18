@@ -139,7 +139,7 @@
 	<Alert type="warning">
 		Member not found or profile is hidden.
 		{#snippet action()}
-			<Button href="/member/directory" class="btn-sm">Back to Directory</Button>
+			<Button href="/member/directory" variant="default" size="sm">Back to Directory</Button>
 		{/snippet}
 	</Alert>
 {/if}

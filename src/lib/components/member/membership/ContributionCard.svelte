@@ -64,9 +64,11 @@
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
-			<Button class="btn-sm btn-outline" onclick={() => (modalOpen = true)}>Modify Amount</Button>
+			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
+				>Modify Amount</Button
+			>
 			{#if billingPortalUrl}
-				<Button href={billingPortalUrl} class="btn-sm btn-outline">Manage Billing</Button>
+				<Button href={billingPortalUrl} variant="default" size="sm" outline>Manage Billing</Button>
 			{/if}
 		</div>
 	</div>

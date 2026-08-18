@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { addSubscriber } from '$lib/remote/marketing.remote';
 
@@ -7,11 +8,15 @@
 
 	let {
 		audienceId,
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		audienceId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -27,6 +32,8 @@
 	modalTitle="Add Subscriber"
 	canSubmit={!!email.trim()}
 	successToast="Subscriber added"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={() => {
 		email = '';

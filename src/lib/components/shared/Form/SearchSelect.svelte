@@ -55,7 +55,7 @@
 	<div class="flex items-center gap-2">
 		<div class="badge gap-2 badge-lg">
 			{value[labelKey]}
-			<Button type="button" class="btn-circle btn-ghost btn-xs" onclick={clear}>✕</Button>
+			<Button type="button" variant="ghost" size="xs" shape="circle" onclick={clear}>✕</Button>
 		</div>
 		{#if value[descriptionKey]}
 			<span class="text-muted">{value[descriptionKey]}</span>

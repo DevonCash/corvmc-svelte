@@ -83,7 +83,7 @@
 </script>
 
 <PageHeader title="Help Articles">
-	<Button href="/staff/help/create" class="btn-sm">
+	<Button href="/staff/help/create" variant="default" size="sm">
 		<IconPlus size={16} /> New Article
 	</Button>
 </PageHeader>
@@ -112,7 +112,8 @@
 								modalTitle="Edit category"
 								successToast="Category updated"
 								onsuccess={refreshData}
-								class="btn-ghost btn-xs"
+								variant="ghost"
+								size="xs"
 								iconOnly
 								label="Edit"
 							>
@@ -169,7 +170,8 @@
 								modalTitle="Confirm"
 								successToast="Category deleted"
 								onsuccess={refreshData}
-								class="btn-ghost btn-xs"
+								variant="ghost"
+								size="xs"
 								iconOnly
 								label="Delete"
 							>
@@ -218,7 +220,7 @@
 						</Select>
 					</FormField>
 					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
-					<SubmitButton label="Add" class="btn-primary btn-sm" />
+					<SubmitButton label="Add" variant="primary" size="sm" />
 				</div>
 			</Form>
 		</div>
@@ -238,7 +240,7 @@
 				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
 			</span>
 			{#if drafts.length > 0}
-				<Button class="btn-ghost btn-xs" onclick={selectDrafts}>Select all drafts</Button>
+				<Button variant="ghost" size="xs" onclick={selectDrafts}>Select all drafts</Button>
 			{/if}
 			{#if selectedIds.length > 0}
 				<Action
@@ -247,7 +249,8 @@
 					modalTitle="Publish articles"
 					successToast="Articles published"
 					onsuccess={afterBulk}
-					class="btn-primary btn-xs"
+					variant="primary"
+					size="xs"
 				>
 					{#snippet form()}
 						{#each selectedIds as id, i (id)}
@@ -266,7 +269,8 @@
 					modalTitle="Unpublish articles"
 					successToast="Articles unpublished"
 					onsuccess={afterBulk}
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 				>
 					{#snippet form()}
 						{#each selectedIds as id, i (id)}

@@ -84,7 +84,8 @@
 					submitLabel="Withdraw edit"
 					modalTitle="Withdraw your edit?"
 					successToast="Edit withdrawn"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					onsuccess={refresh}
 				>
 					{#snippet form()}
@@ -134,7 +135,9 @@
 					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
 					submitLabel={editState.direct ? 'Save' : 'Send to staff'}
 					successToast={editState.direct ? 'Updated' : 'Sent to staff'}
-					class="btn-ghost btn-sm shrink-0"
+					variant="ghost"
+					size="sm"
+					class="shrink-0"
 					onsuccess={refresh}
 				>
 					{#snippet icon()}<IconPencil size={16} />{/snippet}
@@ -173,7 +176,9 @@
 					modalTitle="Flag for review"
 					submitLabel="Send report"
 					successToast="Reported — staff will take a look"
-					class="btn-ghost btn-sm shrink-0"
+					variant="ghost"
+					size="sm"
+					class="shrink-0"
 					onsuccess={refresh}
 				>
 					{#snippet icon()}<IconFlag size={16} />{/snippet}

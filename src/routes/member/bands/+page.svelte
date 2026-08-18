@@ -49,7 +49,7 @@
 </script>
 
 <PageHeader title="My Bands" subtitle="Member">
-	<Button class="btn-sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
 </PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
@@ -86,7 +86,8 @@
 										<SubmitButton
 											label="Accept"
 											successLabel="Accepted"
-											class="btn-primary btn-sm"
+											variant="primary"
+											size="sm"
 										/>
 									</Form>
 									<Form
@@ -105,7 +106,8 @@
 										<SubmitButton
 											label="Decline"
 											successLabel="Declined"
-											class="btn-ghost btn-sm"
+											variant="ghost"
+											size="sm"
 										/>
 									</Form>
 								</div>
@@ -182,7 +184,7 @@
 			/>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Create Band" successLabel="Created" class="btn-primary" />
+				<SubmitButton label="Create Band" successLabel="Created" variant="primary" />
 			</div>
 		</div>
 	</Form>

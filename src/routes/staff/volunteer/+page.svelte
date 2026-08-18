@@ -125,9 +125,9 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Staff">
-	<Button href="/staff/volunteer/shifts" class="btn-ghost btn-sm">Shifts</Button>
-	<Button href="/staff/volunteer/roles" class="btn-ghost btn-sm">Roles</Button>
-	<Button href="/staff/volunteer/report" class="btn-ghost btn-sm">Report</Button>
+	<Button href="/staff/volunteer/shifts" variant="ghost" size="sm">Shifts</Button>
+	<Button href="/staff/volunteer/roles" variant="ghost" size="sm">Roles</Button>
+	<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
 </PageHeader>
 
 <PageContent>
@@ -176,7 +176,8 @@
 									<Action
 										action={approveVolunteerSignup.for(row.userId)}
 										label="Approve"
-										class="btn-primary btn-sm"
+										variant="primary"
+										size="sm"
 										modalTitle="Approve {row.firstName} {row.lastName}?"
 										submitLabel="Approve"
 										successToast="Volunteer approved"
@@ -358,7 +359,9 @@
 										label="Approve"
 										iconOnly
 										icon={checkIcon}
-										class="btn-ghost btn-sm text-success"
+										variant="ghost"
+										size="sm"
+										class="text-success"
 										modalTitle="Approve these hours?"
 										submitLabel="Approve"
 										successToast="Hours approved"
@@ -385,10 +388,12 @@
 										label="Return"
 										iconOnly
 										icon={returnIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Return these hours?"
 										submitLabel="Return"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Hours returned"
 										onsuccess={refreshQueue}
 									>

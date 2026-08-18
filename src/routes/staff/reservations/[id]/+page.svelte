@@ -155,9 +155,11 @@
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.bookerType === 'band' && r.bandId}
-						<Button href="/staff/bands/{r.bandId}" class="btn-sm">View Band</Button>
+						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
 					{:else if r.createdByUserId}
-						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm">View Profile</Button>
+						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
+							>View Profile</Button
+						>
 					{/if}
 				</header>
 			{/snippet}
@@ -175,12 +177,12 @@
 					<p class="text-xs text-muted">{r.memberPronouns}</p>
 				{/if}
 				<div class="join join-vertical mt-4">
-					<Button href="mailto:{r.memberEmail}" class="join-item btn-outline">
+					<Button href="mailto:{r.memberEmail}" variant="default" outline class="join-item">
 						<IconMail class="size-5" />
 						{r.memberEmail}
 					</Button>
 					{#if r.memberPhone}
-						<Button href="tel:{r.memberPhone}" class="join-item btn-outline">
+						<Button href="tel:{r.memberPhone}" variant="default" outline class="join-item">
 							<IconPhone class="size-5" />
 							{r.memberPhone}
 						</Button>
@@ -213,15 +215,30 @@
 				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
 					<div class="mt-3 flex flex-wrap gap-2 border-t border-base-200 pt-3">
 						{#if actions.has('cashReceived')}
-							<CashReceivedAction reservation={r} class="btn-outline btn-sm btn-success flex-1" />
+							<CashReceivedAction
+								reservation={r}
+								variant="success"
+								size="sm"
+								outline
+								class="flex-1"
+							/>
 						{/if}
 						{#if actions.has('comp')}
-							<CompReservationAction reservation={r} class="btn-outline btn-sm btn-info flex-1" />
+							<CompReservationAction
+								reservation={r}
+								variant="info"
+								size="sm"
+								outline
+								class="flex-1"
+							/>
 						{/if}
 						{#if actions.has('refund')}
 							<RefundReservationAction
 								reservation={r}
-								class="btn-outline btn-sm btn-error flex-1"
+								variant="error"
+								size="sm"
+								outline
+								class="flex-1"
 							/>
 						{/if}
 					</div>

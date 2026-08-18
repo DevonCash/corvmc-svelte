@@ -49,7 +49,7 @@
 			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the
 			amount — keeps the spaces open, the gear available, and the music going.
 		</p>
-		<Button class="btn-lg btn-primary" onclick={() => (subscribeModalOpen = true)}>
+		<Button variant="primary" size="lg" onclick={() => (subscribeModalOpen = true)}>
 			Become a Sustaining Member
 		</Button>
 		<p class="mt-4 text-muted">Cancel anytime. Seriously.</p>
@@ -95,7 +95,7 @@
 	{#if isNonMember}
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
-				<Button class="btn-lg" onclick={() => (subscribeModalOpen = true)}>
+				<Button variant="default" size="lg" onclick={() => (subscribeModalOpen = true)}>
 					Become a Sustaining Member
 				</Button>
 			{/snippet}

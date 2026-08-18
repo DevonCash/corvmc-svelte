@@ -100,7 +100,8 @@
 	</div>
 
 	<SubmitButton
-		class="btn-primary w-full"
+		variant="primary"
+		class="w-full"
 		label={mode === 'create' ? 'Become a Sustaining Member' : 'Update Contribution'}
 	/>
 </Form>

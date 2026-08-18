@@ -101,7 +101,8 @@
 	label="New Reservation"
 	modalTitle="New Reservation"
 	submitLabel="Create Reservation"
-	class="btn-primary btn-sm"
+	variant="primary"
+	size="sm"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
 		resetForm();

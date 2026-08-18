@@ -21,7 +21,7 @@
 	<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
 		<StatusBadge status={campaign.status} />
 		{#if campaign.status === 'draft'}
-			<Button href="/staff/marketing/campaigns/{id}/edit" class="btn-sm">Edit</Button>
+			<Button href="/staff/marketing/campaigns/{id}/edit" variant="default" size="sm">Edit</Button>
 		{/if}
 		{#if campaign.status === 'scheduled'}
 			<UnscheduleCampaignAction

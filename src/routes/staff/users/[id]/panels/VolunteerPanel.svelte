@@ -98,7 +98,8 @@
 					<Action
 						action={grantCertification}
 						label="Grant"
-						class="btn-sm"
+						variant="default"
+						size="sm"
 						modalTitle="Grant a certification"
 						submitLabel="Grant"
 						successToast="Certification granted"
@@ -163,10 +164,12 @@
 							<Action
 								action={revokeCertification.for(record.id)}
 								label="Revoke"
-								class="btn-ghost btn-xs text-error"
+								variant="ghost"
+								size="xs"
+								class="text-error"
 								modalTitle="Revoke {record.certificationName}?"
 								submitLabel="Revoke"
-								submitClass="btn-error"
+								submitVariant="error"
 								successToast="Certification revoked"
 								onsuccess={refreshCertifications}
 							>

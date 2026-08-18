@@ -130,7 +130,8 @@
 							action={setBandTier}
 							label="Revoke premium"
 							successToast="Premium revoked"
-							class="btn-warning btn-sm"
+							variant="warning"
+							size="sm"
 						>
 							{#snippet form()}
 								<input {...tierFields.id.as('hidden', id)} />
@@ -146,7 +147,8 @@
 							action={setBandTier}
 							label="Comp premium"
 							successToast="Premium comped"
-							class="btn-secondary btn-sm"
+							variant="secondary"
+							size="sm"
 						>
 							{#snippet form()}
 								<input {...tierFields.id.as('hidden', id)} />
@@ -163,7 +165,8 @@
 							action={reactivateBand}
 							label="Reactivate"
 							successToast="Band reactivated"
-							class="btn-success btn-sm"
+							variant="success"
+							size="sm"
 							onsuccess={() => {
 								void getBand(id).refresh();
 							}}
@@ -178,7 +181,8 @@
 							action={deactivateBand}
 							label="Deactivate"
 							successToast="Band deactivated"
-							class="btn-error btn-sm"
+							variant="error"
+							size="sm"
 							onsuccess={() => {
 								void getBand(id).refresh();
 							}}

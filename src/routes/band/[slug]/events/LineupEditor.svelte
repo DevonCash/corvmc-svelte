@@ -98,21 +98,25 @@
 			<div class="flex gap-1">
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === 0}
 					onclick={() => move(i, -1)}
 					aria-label="Move {chip.name} up">↑</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === value.length - 1}
 					onclick={() => move(i, 1)}
 					aria-label="Move {chip.name} down">↓</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs text-error"
+					variant="ghost"
+					size="xs"
+					class="text-error"
 					disabled={!!ownerBandId && chip.bandId === ownerBandId}
 					onclick={() => remove(i)}
 					aria-label="Remove {chip.name}">✕</Button

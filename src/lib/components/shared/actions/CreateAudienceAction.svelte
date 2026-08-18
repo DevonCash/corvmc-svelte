@@ -1,13 +1,18 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { createAudience } from '$lib/remote/marketing.remote';
 	import { Field } from '../Form';
 
 	let {
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: (result: unknown) => void;
 		[key: string]: unknown;
@@ -39,6 +44,8 @@
 	submitLabel="Create Audience"
 	canSubmit={!!name.trim()}
 	successToast="Audience created"
+	{variant}
+	{size}
 	class={className}
 	maxWidth="max-w-md"
 	onsuccess={(result) => {

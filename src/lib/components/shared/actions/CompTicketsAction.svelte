@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { compTickets } from '$lib/remote/events.remote';
 
@@ -7,11 +8,17 @@
 
 	let {
 		eventId,
-		class: className = 'btn-sm btn-primary btn-outline',
+		variant = 'primary',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		eventId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -24,6 +31,9 @@
 	modalTitle="Comp Tickets"
 	submitLabel="Issue Comp Tickets"
 	successToast="Comp tickets issued"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

@@ -243,7 +243,8 @@
 								label="Duplicate"
 								iconOnly
 								icon={copyIcon}
-								class="btn-ghost btn-sm"
+								variant="ghost"
+								size="sm"
 								modalTitle="Copy this shift forward"
 								submitLabel="Copy"
 								successToast="Shift copied"

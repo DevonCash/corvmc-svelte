@@ -96,7 +96,9 @@
 				modalTitle="Flag for review"
 				submitLabel="Send report"
 				successToast="Reported — staff will take a look"
-				class="btn-ghost btn-xs shrink-0"
+				variant="ghost"
+				size="xs"
+				class="shrink-0"
 				onsuccess={onchanged}
 			>
 				{#snippet icon()}<IconFlag size={16} />{/snippet}

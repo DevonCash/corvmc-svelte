@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { submitEventReport } from '$lib/remote/flags.remote';
@@ -8,11 +9,15 @@
 	let {
 		eventId,
 		eventTitle,
-		class: className = 'btn-ghost btn-sm',
+		variant = 'ghost',
+		size = 'sm',
+		class: className = '',
 		...rest
 	}: {
 		eventId: string;
 		eventTitle?: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
@@ -30,6 +35,8 @@
 	modalTitle={eventTitle ? `Report ${eventTitle}` : 'Report this listing'}
 	submitLabel="Submit report"
 	successToast="Report submitted — thank you"
+	{variant}
+	{size}
 	class={className}
 	canSubmit={reason.trim().length > 0}
 	onsuccess={() => {

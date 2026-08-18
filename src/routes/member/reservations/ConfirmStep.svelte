@@ -224,13 +224,13 @@
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
-				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
+				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
 			{/if}
 			{#if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" class="btn-info btn-outline">Comp</Button>
-				<Button type="submit" class="btn-primary">
+				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>
+				<Button type="submit" variant="primary">
 					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
 				</Button>
 			{:else}
@@ -239,7 +239,7 @@
 					type="submit"
 					name="skipPayment"
 					value="on"
-					class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+					variant={showPayAhead ? 'ghost' : 'primary'}>Confirm</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>

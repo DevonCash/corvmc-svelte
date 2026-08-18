@@ -99,7 +99,7 @@
 				</Fact>
 			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} class="btn-ghost btn-sm">
+				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
 					View public profile
 				</Button>
 			</div>
@@ -171,7 +171,8 @@
 				action={reactivateUser}
 				label="Reactivate"
 				successToast="Account reactivated"
-				class="btn-success btn-sm"
+				variant="success"
+				size="sm"
 				onsuccess={refreshAccount}
 			>
 				{#snippet form()}
@@ -183,7 +184,8 @@
 				action={purgeUser}
 				label="Delete permanently"
 				successToast="Account deleted"
-				class="btn-error btn-sm"
+				variant="error"
+				size="sm"
 				onsuccess={() => goto(resolve('/staff/users'))}
 			>
 				{#snippet form()}
@@ -206,7 +208,8 @@
 			action={deactivateUser}
 			label="Deactivate"
 			successToast="Account deactivated"
-			class="btn-error btn-sm"
+			variant="error"
+			size="sm"
 			onsuccess={refreshAccount}
 		>
 			{#snippet form()}

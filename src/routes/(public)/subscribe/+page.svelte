@@ -79,7 +79,7 @@
 				theme="auto"
 			/>
 
-			<SubmitButton label="Subscribe" class="btn-primary w-full" />
+			<SubmitButton label="Subscribe" variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

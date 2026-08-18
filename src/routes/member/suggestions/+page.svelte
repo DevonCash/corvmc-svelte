@@ -80,7 +80,8 @@
 		modalTitle="Suggest something"
 		submitLabel="Post it"
 		successToast={standing.requiresReview ? 'Sent to staff for review' : 'Posted to the board'}
-		class="btn-primary btn-sm"
+		variant="primary"
+		size="sm"
 		onsuccess={(r) => {
 			if (r && typeof r === 'object' && 'id' in r) {
 				void goto(resolve(`/member/suggestions/${r.id as string}`));

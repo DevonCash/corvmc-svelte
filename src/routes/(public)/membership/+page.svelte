@@ -106,7 +106,7 @@
 					<li>• Member directory access</li>
 					<li>• RSVP to events</li>
 				</ul>
-				<Button href="/login?register&redirect=/member" class="btn-outline mt-auto"
+				<Button href="/login?register&redirect=/member" variant="default" outline class="mt-auto"
 					>Create an Account</Button
 				>
 			</div>

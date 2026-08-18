@@ -283,7 +283,8 @@
 				successLabel="Booked!"
 				errorLabel="Booking failed"
 				disabled={!selectedStart || !selectedEnd || !phoneOk}
-				class="w-full btn-primary"
+				variant="primary"
+				class="w-full"
 			/>
 		</div>
 	</Form>

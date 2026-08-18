@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
@@ -8,11 +9,15 @@
 
 	let {
 		reservation,
-		class: className = 'btn-success btn-sm',
+		variant = 'success',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		reservation: Reservation;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -26,8 +31,10 @@
 	label="Confirm Slot"
 	modalTitle="Confirm Waitlisted Reservation"
 	submitLabel="Confirm Reservation"
-	submitClass="btn-success"
+	submitVariant="success"
 	successToast="Reservation confirmed"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

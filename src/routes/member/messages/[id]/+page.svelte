@@ -84,7 +84,7 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Form remote={acceptDirectRequest} successToast="Request accepted">
 						<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Accept" class="btn-primary btn-sm">
+						<SubmitButton label="Accept" variant="primary" size="sm">
 							{#snippet icon()}<IconCheck size={16} />{/snippet}
 						</SubmitButton>
 					</Form>
@@ -94,7 +94,7 @@
 					     request, which is what makes saying no cost nothing. -->
 					<Form remote={declineDirectRequest} successToast="Request declined">
 						<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Decline" class="btn-ghost btn-sm">
+						<SubmitButton label="Decline" variant="ghost" size="sm">
 							{#snippet icon()}<IconX size={16} />{/snippet}
 						</SubmitButton>
 					</Form>
@@ -135,7 +135,7 @@
 							successLabel="Sent"
 							shortcut="mod+enter"
 							disabled={!draft.trim()}
-							class="btn-primary"
+							variant="primary"
 						>
 							{#snippet icon()}<IconSend size={16} />{/snippet}
 						</SubmitButton>
@@ -153,7 +153,7 @@
 			<ReportDirectThreadAction threadId={t.id} />
 			<Form remote={blockFromThread} successToast="Blocked">
 				<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
-				<SubmitButton label="Block" class="btn-ghost btn-sm btn-error">
+				<SubmitButton label="Block" variant="error" size="sm">
 					{#snippet icon()}<IconFlag size={16} />{/snippet}
 				</SubmitButton>
 			</Form>

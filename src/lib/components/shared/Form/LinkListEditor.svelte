@@ -50,7 +50,10 @@
 			</div>
 			<Button
 				type="button"
-				class="btn-ghost btn-sm btn-square text-error mt-1"
+				variant="ghost"
+				size="sm"
+				shape="square"
+				class="text-error mt-1"
 				aria-label="Remove link"
 				onclick={() => removeLink(i)}
 			>
@@ -58,7 +61,7 @@
 			</Button>
 		</div>
 	{/each}
-	<Button type="button" class="btn-outline btn-sm gap-1" onclick={addLink}>
+	<Button type="button" variant="default" size="sm" outline class="gap-1" onclick={addLink}>
 		<IconPlus size={16} /> Add link
 	</Button>
 </div>

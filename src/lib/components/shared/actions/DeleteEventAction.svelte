@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import Alert from '../Alert.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -9,11 +10,15 @@
 
 	let {
 		eventId,
-		class: className = 'btn-error btn-sm',
+		variant = 'error',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		eventId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -31,8 +36,10 @@
 		label="Delete"
 		modalTitle="Delete this event?"
 		submitLabel="Delete permanently"
-		submitClass="btn-error"
+		submitVariant="error"
 		successToast="Event deleted"
+		{variant}
+		{size}
 		class={className}
 		onsuccess={onsuccess ?? (() => goto(resolve('/staff/events')))}
 		{...rest}

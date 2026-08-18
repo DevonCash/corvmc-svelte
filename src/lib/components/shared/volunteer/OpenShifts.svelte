@@ -104,7 +104,8 @@
 							<Action
 								action={cancelMySignup.for(shift.id)}
 								label="Drop out"
-								class="btn-ghost btn-xs"
+								variant="ghost"
+								size="xs"
 								modalTitle="Drop this shift?"
 								submitLabel="Drop out"
 								successToast="You're off the shift"
@@ -121,7 +122,8 @@
 							<Action
 								action={claimShift.for(shift.id)}
 								label="I'll do it"
-								class="btn-primary btn-sm"
+								variant="primary"
+								size="sm"
 								modalTitle="Claim this shift?"
 								submitLabel="Claim it"
 								successToast="Claimed — staff will confirm"

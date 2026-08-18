@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { inviteByEmailApi } from '$lib/remote/bands.remote';
@@ -8,11 +9,17 @@
 
 	let {
 		bandId,
-		class: className = 'btn-sm btn-outline btn-primary',
+		variant = 'primary',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		bandId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -24,6 +31,9 @@
 	label="Invite by Email"
 	modalTitle="Invite by Email"
 	successToast="Email invitation sent"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

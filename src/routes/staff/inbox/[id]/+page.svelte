@@ -157,7 +157,7 @@
 						options={staffOptions}
 						value={t.assignedToUserId ?? ''}
 					/>
-					<SubmitButton label="Update" class="btn-sm" />
+					<SubmitButton label="Update" variant="default" size="sm" />
 				</Form>
 			</InfoCard>
 		</div>

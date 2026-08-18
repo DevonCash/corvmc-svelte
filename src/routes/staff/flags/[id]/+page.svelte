@@ -140,7 +140,7 @@
 					<Fact label="Status"><StatusBadge status={flag.eventContext.status} label /></Fact>
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} class="btn-outline btn-sm">View public listing</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View public listing</Button>
 				</div>
 			</InfoCard>
 		{/if}
@@ -152,14 +152,15 @@
 					action needed).
 				</p>
 				<div class="flex gap-2">
-					<Button href={entityHref} class="btn-outline btn-sm">View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
 					<Action
 						action={resolveFlag}
 						label="Resolve / Dismiss"
 						modalTitle="Resolve flag"
 						submitLabel="Save"
 						successToast="Flag updated"
-						class="btn-primary btn-sm"
+						variant="primary"
+						size="sm"
 						onsuccess={() => void getFlagDetail(id).refresh()}
 					>
 						{#snippet form()}
@@ -240,7 +241,7 @@
 					{/if}
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} class="btn-outline btn-sm">View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
 				</div>
 			{/if}
 		</InfoCard>

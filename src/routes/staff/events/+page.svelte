@@ -84,7 +84,7 @@
 </script>
 
 <PageHeader title="Events">
-	<Button class="btn-sm" onclick={() => (showCreateModal = true)}>New Event</Button>
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
 </PageHeader>
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />

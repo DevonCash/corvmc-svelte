@@ -325,7 +325,8 @@
 								modalTitle="Get free ticket"
 								submitLabel="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-								class="btn-primary btn-lg"
+								variant="primary"
+								size="lg"
 								onsuccess={handlePurchaseSuccess}
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
@@ -357,7 +358,8 @@
 								modalTitle="Get Tickets"
 								submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-								class="btn-primary btn-lg"
+								variant="primary"
+								size="lg"
 								onsuccess={handlePurchaseSuccess}
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
@@ -469,8 +471,9 @@
 							confirm="Cancel your RSVP for this event?"
 							modalTitle="Cancel RSVP"
 							submitLabel="Yes, cancel my RSVP"
-							submitClass="btn-error"
-							class="btn-ghost btn-sm"
+							submitVariant="error"
+							variant="ghost"
+							size="sm"
 							onsuccess={refreshDetail}
 						>
 							{#snippet form()}

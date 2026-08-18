@@ -246,7 +246,8 @@
 									label="Save"
 									successLabel="Saved"
 									errorLabel="Error"
-									class="btn-sm btn-primary"
+									variant="primary"
+									size="sm"
 								/>
 							</div>
 
@@ -348,7 +349,8 @@
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
-								class="btn-sm btn-primary"
+								variant="primary"
+								size="sm"
 							/>
 						</div>
 
@@ -492,7 +494,8 @@
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
-								class="btn-sm btn-primary"
+								variant="primary"
+								size="sm"
 							/>
 						</div>
 
@@ -649,7 +652,8 @@
 									label="Save"
 									successLabel="Saved"
 									errorLabel="Error"
-									class="btn-sm btn-primary"
+									variant="primary"
+									size="sm"
 								/>
 							</div>
 						</div>

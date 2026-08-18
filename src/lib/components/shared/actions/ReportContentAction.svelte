@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { submitFlag } from '$lib/remote/flags.remote';
 	import type { MemberReportableEntityType } from '$lib/server/db/schema/flag';
@@ -8,7 +9,9 @@
 		entityType,
 		entityId,
 		entityLabel,
-		class: className = 'btn-ghost btn-sm',
+		variant = 'ghost',
+		size = 'sm',
+		class: className = '',
 		...rest
 	}: {
 		// Narrowed: a conversation is reported through ReportDirectThreadAction,
@@ -16,6 +19,8 @@
 		entityType: MemberReportableEntityType;
 		entityId: string;
 		entityLabel?: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
@@ -32,6 +37,8 @@
 	modalTitle={entityLabel ? `Report ${entityLabel}` : 'Report content'}
 	submitLabel="Submit report"
 	successToast="Report submitted — thank you"
+	{variant}
+	{size}
 	class={className}
 	canSubmit={reason.trim().length > 0}
 	onsuccess={() => {

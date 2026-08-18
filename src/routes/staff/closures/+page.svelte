@@ -47,7 +47,7 @@
 					<Field name="startsAt" type="datetime-local" label="Start" />
 					<Field name="endsAt" type="datetime-local" label="End" />
 				</div>
-				<SubmitButton label="Add Closure" class="btn-primary" />
+				<SubmitButton label="Add Closure" variant="primary" />
 			</div>
 		</Form>
 	</InfoCard>
@@ -79,7 +79,7 @@
 									/>
 								</div>
 								<div class="flex justify-end gap-2">
-									<Button class="btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</Button>
+									<Button variant="ghost" size="sm" onclick={() => (editId = null)}>Cancel</Button>
 									<UpdateClosureAction
 										closureId={c.id}
 										reason={editReason}
@@ -102,7 +102,7 @@
 								</div>
 								{#if isFuture(c.startsAt)}
 									<div class="flex gap-1">
-										<Button class="btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</Button>
+										<Button variant="ghost" size="sm" onclick={() => startEdit(c)}>Edit</Button>
 										<DeleteClosureAction closureId={c.id} />
 									</div>
 								{/if}

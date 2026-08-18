@@ -75,9 +75,13 @@
 
 		<!-- Quick links -->
 		<div class="flex gap-3">
-			<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">Manage Members</Button>
+			<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
+				>Manage Members</Button
+			>
 			{#if isOwnerOrAdmin}
-				<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">Edit Band Profile</Button>
+				<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
+					>Edit Band Profile</Button
+				>
 			{/if}
 		</div>
 	{/await}

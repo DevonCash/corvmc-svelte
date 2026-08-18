@@ -100,7 +100,7 @@
 		{#if meta.creditBalance > 0}
 			<Badge variant="info" size="md">{meta.creditBalance} credits</Badge>
 		{/if}
-		<Button href="/member/equipment/loans" class="btn-sm btn-ghost">My Loans</Button>
+		<Button href="/member/equipment/loans" variant="ghost" size="sm">My Loans</Button>
 	</div>
 </PageHeader>
 <PageContent>
@@ -170,7 +170,8 @@
 									</div>
 									<div class="card-actions mt-2">
 										<Button
-											class="btn-xs"
+											variant="default"
+											size="xs"
 											disabled={eq.availableQuantity <= 0}
 											onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
 										>
@@ -188,7 +189,9 @@
 
 	<div class="border-t pt-4">
 		<p class="text-muted mb-2">Can't find what you need?</p>
-		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>Describe Your Request</Button>
+		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
+			>Describe Your Request</Button
+		>
 	</div>
 </PageContent>
 
@@ -245,7 +248,7 @@
 			required={isFreeForm}
 		/>
 		<div class="modal-action">
-			<Button type="button" class="btn-ghost" onclick={() => (showRequestModal = false)}
+			<Button type="button" variant="ghost" onclick={() => (showRequestModal = false)}
 				>Cancel</Button
 			>
 			<SubmitButton label="Submit Request" />

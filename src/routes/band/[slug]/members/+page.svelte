@@ -106,7 +106,9 @@
 
 <PageHeader title="Members" subtitle={layout.band.name}>
 	{#if isOwner || isAdmin}
-		<Button class="btn-sm" onclick={() => (showInviteModal = true)}>Invite Member</Button>
+		<Button variant="default" size="sm" onclick={() => (showInviteModal = true)}
+			>Invite Member</Button
+		>
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
@@ -162,12 +164,13 @@
 											onfailure={() => toast.error('Failed to remove')}
 										>
 											<input {...removeFields.memberId.as('hidden', member.id)} />
-											<SubmitButton label="Remove" class="btn-ghost btn-xs" />
+											<SubmitButton label="Remove" variant="ghost" size="xs" />
 										</Form>
 									{/if}
 									{#if isOwner && member.role !== 'owner'}
 										<Button
-											class="btn-ghost btn-xs"
+											variant="ghost"
+											size="xs"
 											onclick={() => {
 												transferTarget = { userId: member.userId, name: member.userName ?? '' };
 												showTransferModal = true;
@@ -212,7 +215,7 @@
 										onfailure={() => toast.error('Failed to revoke')}
 									>
 										<input {...revokeFields.memberId.as('hidden', invite.id)} />
-										<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+										<SubmitButton label="Revoke" variant="ghost" size="xs" />
 									</Form>
 								{/if}
 							</div>
@@ -253,7 +256,7 @@
 											onfailure={() => toast.error('Failed to revoke')}
 										>
 											<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
-											<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+											<SubmitButton label="Revoke" variant="ghost" size="xs" />
 										</Form>
 									</div>
 								</div>
@@ -267,7 +270,7 @@
 		<!-- Leave band (non-owners) -->
 		{#if !isOwner && layout.userRole !== 'staff'}
 			<div class="pt-4">
-				<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
+				<Button variant="error" size="sm" outline onclick={() => (showLeaveModal = true)}>
 					Leave Band
 				</Button>
 			</div>
@@ -357,7 +360,7 @@
 					<SubmitButton
 						label="Send Invitation"
 						successLabel="Sent"
-						class="btn-primary"
+						variant="primary"
 						disabled={!selectedUser}
 					/>
 				</div>
@@ -391,7 +394,7 @@
 					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
 				</div>
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Send Email Invite" successLabel="Sent" class="btn-primary" />
+					<SubmitButton label="Send Email Invite" successLabel="Sent" variant="primary" />
 				</div>
 			</div>
 		</Form>
@@ -418,7 +421,7 @@
 				</Alert>
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Transfer Ownership" successLabel="Transferred" class="btn-warning" />
+					<SubmitButton label="Transfer Ownership" successLabel="Transferred" variant="warning" />
 				</div>
 			</div>
 		</Form>
@@ -441,7 +444,7 @@
 				re-invited to rejoin.
 			</p>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Leave Band" successLabel="Left" class="btn-error" />
+				<SubmitButton label="Leave Band" successLabel="Left" variant="error" />
 			</div>
 		</div>
 	</Form>

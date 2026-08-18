@@ -21,7 +21,7 @@
 </script>
 
 <PageHeader title="My Equipment Loans">
-	<Button href="/member/equipment" class="btn-ghost btn-sm">Browse Catalog</Button>
+	<Button href="/member/equipment" variant="ghost" size="sm">Browse Catalog</Button>
 </PageHeader>
 <PageContent>
 	<!-- Tabs -->

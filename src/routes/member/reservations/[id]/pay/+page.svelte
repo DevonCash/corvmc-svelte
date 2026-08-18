@@ -117,10 +117,11 @@
 
 		<!-- SubmitButton renders its `label` prop, not children. -->
 		<SubmitButton
-			class="btn-primary w-full mt-4"
+			variant="primary"
+			class="w-full mt-4"
 			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${formatDollars(chargeTotal)}`}
 		/>
 	</Form>
 
-	<Button href="/member/reservations" class="btn-ghost w-full">Back to Reservations</Button>
+	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
 </PageContent>

@@ -157,7 +157,7 @@
 							<div class="flex items-center gap-2">
 								<CopyableId value={p.id} label="Stripe" />
 								{#if p.reservationId}
-									<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
 										View reservation
 									</Button>
 								{/if}

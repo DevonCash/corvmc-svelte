@@ -161,7 +161,7 @@
 				The page editor is available with a premium band subscription. Build a custom band page with
 				drag-and-drop blocks, genre themes, and custom CSS.
 			</p>
-			<Button href="../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
+			<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
 		</EmptyState>
 	{:else}
 		<form

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -7,11 +8,17 @@
 
 	let {
 		userId,
-		class: className = 'btn-outline btn-sm',
+		variant = 'default',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		userId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -29,6 +36,9 @@
 	label="Adjust"
 	modalTitle="Adjust Credits"
 	successToast="Credits adjusted"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	canSubmit={amount !== 0 && description.trim().length > 0}
 	onsuccess={onsuccess ?? (() => invalidateAll())}

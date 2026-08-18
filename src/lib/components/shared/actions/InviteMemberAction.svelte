@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { addBandMember } from '$lib/remote/bands.remote';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -9,11 +10,15 @@
 
 	let {
 		bandId,
-		class: className = 'btn-sm btn-primary',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		bandId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -47,6 +52,8 @@
 	modalTitle="Invite Member"
 	canSubmit={!!userId}
 	successToast="Invitation sent"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
@@ -60,7 +67,8 @@
 					<span class="font-medium">{userName}</span>
 					<Button
 						type="button"
-						class="btn-ghost btn-xs"
+						variant="ghost"
+						size="xs"
 						onclick={() => {
 							userId = '';
 							userName = '';

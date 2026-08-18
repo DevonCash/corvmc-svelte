@@ -52,7 +52,7 @@
 					cannot be undone.
 				</p>
 				<div class="card-actions justify-end mt-2">
-					<Button class="btn-error btn-sm btn-outline" onclick={() => (showDeleteModal = true)}>
+					<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
 						Delete Band
 					</Button>
 				</div>
@@ -76,7 +76,7 @@
 				reservations will be cancelled and all members will be removed.
 			</Alert>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Delete Band" successLabel="Deleted" class="btn-error" />
+				<SubmitButton label="Delete Band" successLabel="Deleted" variant="error" />
 			</div>
 		</div>
 	</Form>

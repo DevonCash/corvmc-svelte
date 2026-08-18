@@ -43,19 +43,19 @@
 
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<Button href="/member/reservations" class="card bg-base-100 h-auto">
+		<Button href="/member/reservations" variant="default" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
 			</div>
 		</Button>
-		<Button href="/member/events" class="card bg-base-100 h-auto">
+		<Button href="/member/events" variant="default" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
 			</div>
 		</Button>
-		<Button href="/member/membership" class="card bg-base-100 h-auto">
+		<Button href="/member/membership" variant="default" class="card bg-base-100 h-auto">
 			<div class="card-body flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>
@@ -124,7 +124,7 @@
 					<p class="text-muted">
 						Become a sustaining member to get free practice hours each month.
 					</p>
-					<Button href="/member/membership" class="btn-sm">Learn More</Button>
+					<Button href="/member/membership" variant="default" size="sm">Learn More</Button>
 				</div>
 			{/if}
 		</InfoCard>

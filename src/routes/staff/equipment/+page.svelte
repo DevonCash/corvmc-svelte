@@ -90,7 +90,7 @@
 
 <PageHeader title="Equipment">
 	<div class="flex gap-2">
-		<Button class="btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
+		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
 		<AddEquipmentAction {categories} />
 	</div>
 </PageHeader>
@@ -289,7 +289,7 @@
 						class="btn btn-ghost btn-sm"
 						onclick={() => (editingCategory = null)}>Cancel</button
 					>
-					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} class="btn-sm btn-primary" />
+					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} variant="primary" size="sm" />
 				</div>
 			</Form>
 		{/if}

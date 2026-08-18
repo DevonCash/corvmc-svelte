@@ -172,7 +172,9 @@
 		</div>
 
 		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
-			<Button href={VOLUNTEER_SIGNUP_URL} class="btn-lg">Create a Free Account to Volunteer</Button>
+			<Button href={VOLUNTEER_SIGNUP_URL} variant="default" size="lg"
+				>Create a Free Account to Volunteer</Button
+			>
 		</div>
 	</div>
 </section>
@@ -187,7 +189,7 @@
 			recurring weekly practice slot, and get discounts on show tickets and gear. Your contribution
 			keeps the doors open.
 		</p>
-		<Button href="/membership" class="btn-lg">Explore Membership</Button>
+		<Button href="/membership" variant="default" size="lg">Explore Membership</Button>
 	</div>
 </section>
 
@@ -210,7 +212,9 @@
 					<p class="text-muted leading-relaxed">{item.desc}</p>
 					<Button
 						href={item.href}
-						class="btn-sm mt-auto"
+						variant="default"
+						size="sm"
+						class="mt-auto"
 						target={item.external ? '_blank' : undefined}
 						rel={item.external ? 'noopener noreferrer' : undefined}>{item.cta}</Button
 					>

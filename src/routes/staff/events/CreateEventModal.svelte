@@ -339,7 +339,7 @@
 			{/if}
 
 			<div class="modal-action">
-				<Button type="button" class="btn-ghost" onclick={() => (open = false)}>Cancel</Button>
+				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
 				<SubmitButton
 					label={hasConflicts ? 'Create with Override' : 'Create Event'}
 					class={hasConflicts ? 'btn-warning' : 'btn-primary'}

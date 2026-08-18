@@ -14,7 +14,9 @@
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
 			<span>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span
 			>
-			<Button href="/member/membership" class="self-end btn-sm sm:self-auto">Learn More</Button>
+			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
+				>Learn More</Button
+			>
 		</div>
 	</div>
 {:else}
@@ -43,7 +45,9 @@
 			</div>
 			<CancelSeriesAction
 				seriesId={series.id}
-				class="btn-ghost btn-sm btn-square"
+				variant="ghost"
+				size="sm"
+				shape="square"
 				onsuccess={() => getRecurringReservations().refresh()}
 			/>
 		</div>
