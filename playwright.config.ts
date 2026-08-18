@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { E2E_PERSIST_PATH } from './e2e/state-dir';
 
 export default defineConfig({
 	// Seed the local D1 (member + payable reservation) before any test runs.
@@ -13,6 +14,12 @@ export default defineConfig({
 		// Reuse a preview already running locally to avoid a full rebuild each run.
 		reuseExistingServer: !process.env.CI,
 		env: {
+			// The run's own miniflare state, seeded by e2e/prepare.ts. Read by
+			// svelte.config.js, which hands it to the adapter's platform emulation —
+			// without it the preview server would open `.wrangler/state`, which
+			// `pnpm dev` and every wrangler command also use, and a second process
+			// on those SQLite files is what cost the suite a random test per run.
+			MINIFLARE_PERSIST_PATH: E2E_PERSIST_PATH,
 			SENTRY_ENVIRONMENT: 'ci',
 			PUBLIC_SENTRY_ENVIRONMENT: 'ci',
 			// $env/dynamic/private reads process.env under `vite preview`, so the
