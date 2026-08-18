@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '$lib/server/errors';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -7,6 +9,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
+import { resolveImageUrl } from '$lib/server/storage';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -27,8 +30,7 @@ import {
 	setTier,
 	setBandAvatar,
 	clearBandAvatar,
-	BandNotFoundError,
-	BandTierManagedByStripeError
+	BandMemberExistsError
 } from '$lib/server/band/band-service';
 import { bandTiers } from '$lib/server/db/schema/band';
 import { getBandLayout } from '$lib/remote/layout.remote';
@@ -189,8 +191,8 @@ export const getMemberBands = query(async () => {
 
 export const updateStaffBand = form(
 	z.object({
-		name: z.string().trim().min(1).max(255),
-		bio: z.string().trim().max(2000)
+		name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		await requireStaff();
@@ -270,9 +272,7 @@ export const setBandTier = form(
 		try {
 			await setTier(data.id, data.tier);
 		} catch (err) {
-			if (err instanceof BandNotFoundError) error(404, err.message);
-			if (err instanceof BandTierManagedByStripeError) error(409, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getStaffBand(data.id).refresh();
 		return { success: true };
@@ -336,16 +336,21 @@ export const inviteByEmailApi = form(
 		role: z.enum(['admin', 'member']),
 		position: z.string().optional()
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const staff = await requireStaff();
-		const result = await createPlatformInvite(
-			data.email,
-			data.bandId,
-			data.role,
-			data.position ?? null,
-			staff.id
-		);
-		return { success: true, ...result };
+		try {
+			const result = await createPlatformInvite(
+				data.email,
+				data.bandId,
+				data.role,
+				data.position ?? null,
+				staff.id
+			);
+			return { success: true, ...result };
+		} catch (err) {
+			if (err instanceof BandMemberExistsError) invalid(issue.email(err.message));
+			throw err;
+		}
 	}
 );
 
@@ -367,7 +372,7 @@ export const revokePlatformInvite = form(
 export const createBand = form(
 	z.object({
 		name: z.string().min(1, 'Band name is required').max(255),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const currentUser = requireUser();
@@ -379,25 +384,36 @@ export const createBand = form(
 	}
 );
 
+// `bandId`, not a band_member row id: the invite list only ever knows the band.
+// Both outcomes are returned in-band rather than thrown — a stale or
+// already-taken invite is an ordinary user state, and a thrown error would
+// reach Sentry as a 500 while showing the member only a generic toast.
 export const acceptInvite = form(
 	z.object({
-		memberId: z.string().min(1)
+		bandId: z.string().min(1)
 	}),
 	async (data) => {
 		const currentUser = requireUser();
-		await acceptInvitation(data.memberId, currentUser.id);
-		return { success: true };
+		const result = await acceptInvitation(data.bandId, currentUser.id);
+
+		if (result.status === 'not_found') {
+			return { success: false as const, reason: 'not_found' as const };
+		}
+		return { success: true as const };
 	}
 );
 
 export const declineInvite = form(
 	z.object({
-		memberId: z.string().min(1)
+		bandId: z.string().min(1)
 	}),
 	async (data) => {
 		const currentUser = requireUser();
-		await declineInvitation(data.memberId, currentUser.id);
-		return { success: true };
+		const declined = await declineInvitation(data.bandId, currentUser.id);
+
+		return declined
+			? { success: true as const }
+			: { success: false as const, reason: 'not_found' as const };
 	}
 );
 
@@ -408,7 +424,7 @@ export const declineInvite = form(
 export const updateBand = form(
 	z.object({
 		name: z.string().min(1, 'Name is required').max(200),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
@@ -506,16 +522,24 @@ export const inviteByEmail = form(
 		role: z.enum(['admin', 'member']),
 		position: z.string().max(100).optional().default('')
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const { user, band } = await requireBandAdmin();
-		const result = await createPlatformInvite(
-			data.email,
-			band.id,
-			data.role,
-			data.position || null,
-			user.id
-		);
-		return { success: true, ...result };
+		try {
+			const result = await createPlatformInvite(
+				data.email,
+				band.id,
+				data.role,
+				data.position || null,
+				user.id
+			);
+			return { success: true, ...result };
+		} catch (err) {
+			// Already a member / already invited is an ordinary state, not a fault.
+			// Thrown, it reached Sentry as a 500 and showed the admin only a
+			// generic toast (JAVASCRIPT-SVELTEKIT-2D).
+			if (err instanceof BandMemberExistsError) invalid(issue.email(err.message));
+			throw err;
+		}
 	}
 );
 
@@ -546,4 +570,19 @@ export const removeBandAvatar = form(z.object({}), async () => {
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserBands = query(z.string(), async (userId) => {
+	await requireStaff();
+	// listForUser is unfiltered by status, so pending invitations come through
+	// too — a staff member needs to see an invite that was never accepted.
+	const bands = await listForUser(userId);
+	return bands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
 });

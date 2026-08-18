@@ -1,21 +1,19 @@
 import { z } from 'zod';
+import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { getById as getEventById } from '$lib/server/event/event-service';
-import { flagEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
+import { memberReportableEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
 import {
 	listFlags,
 	getFlag,
 	createFlag,
 	resolveFlag as resolveFlagSvc,
 	FLAG_REASON_MAX,
-	FLAG_DESCRIPTION_MAX,
-	FlagNotFoundError,
-	FlagTargetNotFoundError,
-	FlagAlreadyResolvedError
+	FLAG_DESCRIPTION_MAX
 } from '$lib/server/flag/flag-service';
 
 // ---------------------------------------------------------------------------
@@ -41,8 +39,7 @@ export const getFlagDetail = query(z.string(), async (flagId) => {
 	try {
 		return await getFlag(flagId);
 	} catch (err) {
-		if (err instanceof FlagNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 });
 
@@ -67,9 +64,7 @@ export const resolveFlag = form(resolveSchema, async (data) => {
 			unpublishEvent: data.unpublishEvent
 		});
 	} catch (err) {
-		if (err instanceof FlagNotFoundError) error(404, err.message);
-		if (err instanceof FlagAlreadyResolvedError) error(409, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	// Only the detail query is refreshed here. The queue is keyed by its filter
 	// args — `getFlagsQueue({})` is not the entry the list page holds, so that
@@ -79,8 +74,18 @@ export const resolveFlag = form(resolveSchema, async (data) => {
 	return { success: true };
 });
 
+// Narrowed to memberReportableEntityTypes, NOT the full flagEntityTypes list.
+//
+// This form takes its entityType and entityId straight from the browser and
+// checks nothing about the reporter's relationship to the target — which is
+// fine for profiles and public listings, and catastrophic for a private
+// conversation: filing a report is what makes a conversation readable by staff,
+// so any member could expose a stranger's DMs by guessing a thread id.
+//
+// Reporting a conversation goes through `reportDirectThread`, which verifies
+// participation first.
 const submitSchema = z.object({
-	entityType: z.enum(flagEntityTypes),
+	entityType: z.enum(memberReportableEntityTypes),
 	entityId: z.string().min(1),
 	reason: z.string().trim().min(1).max(FLAG_REASON_MAX),
 	description: z.string().trim().max(FLAG_DESCRIPTION_MAX).optional()
@@ -99,8 +104,7 @@ export const submitFlag = form(submitSchema, async (data) => {
 			description: data.description
 		});
 	} catch (err) {
-		if (err instanceof FlagTargetNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	return { success: true };
 });
@@ -143,8 +147,29 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 			description: data.description
 		});
 	} catch (err) {
-		if (err instanceof FlagTargetNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getFlagsAgainstUser = query(z.string(), async (userId) => {
+	await requireStaff();
+	const { rows } = await listFlags(
+		{ entityType: 'member_profile', entityId: userId },
+		{ page: 1, pageSize: 10 }
+	);
+	return rows;
+});
+
+export const getFlagsByUser = query(z.string(), async (userId) => {
+	await requireStaff();
+	const { rows } = await listFlags({ reportedByUserId: userId }, { page: 1, pageSize: 10 });
+	return rows;
 });

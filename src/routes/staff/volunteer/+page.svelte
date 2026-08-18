@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -48,19 +49,6 @@
 	let searchText = $state(initial.get('q') ?? '');
 	let searchQuery = $state(initial.get('q') ?? '');
 	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
-
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchQuery = searchText;
-			pageNumber = 1;
-		}, 300);
-	}
-
-	$effect(() => () => clearTimeout(searchTimer));
 
 	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
@@ -114,7 +102,6 @@
 	}
 
 	function clearFilters() {
-		clearTimeout(searchTimer);
 		searchText = '';
 		searchQuery = '';
 		roleFilter = '';
@@ -125,9 +112,9 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Staff">
-	<Button href="/staff/volunteer/shifts" class="btn-ghost btn-sm">Shifts</Button>
-	<Button href="/staff/volunteer/roles" class="btn-ghost btn-sm">Roles</Button>
-	<Button href="/staff/volunteer/report" class="btn-ghost btn-sm">Report</Button>
+	<Button href="/staff/volunteer/shifts" variant="ghost" size="sm">Shifts</Button>
+	<Button href="/staff/volunteer/roles" variant="ghost" size="sm">Roles</Button>
+	<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
 </PageHeader>
 
 <PageContent>
@@ -141,7 +128,7 @@
 	{#await blocked then rows}
 		{#if rows.length > 0}
 			<InfoCard title="Pending review" class="mb-4 border-l-4 border-warning">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					These members told us they're under 18, so they can't pick up shifts or log hours yet.
 					Approving lets them do both.
 				</p>
@@ -176,7 +163,8 @@
 									<Action
 										action={approveVolunteerSignup.for(row.userId)}
 										label="Approve"
-										class="btn-primary btn-sm"
+										variant="primary"
+										size="sm"
 										modalTitle="Approve {row.firstName} {row.lastName}?"
 										submitLabel="Approve"
 										successToast="Volunteer approved"
@@ -221,18 +209,19 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search members..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchQuery = q;
+					pageNumber = 1;
+				}}
 			/>
 		{/snippet}
 
 		{#await roles then roleOptions}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Role"
 				value={roleFilter}
 				onchange={(e: Event) => {
@@ -250,7 +239,7 @@
 
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or after"
 			value={fromDate}
 			onchange={(e) => {
@@ -260,7 +249,7 @@
 		/>
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or before"
 			value={toDate}
 			onchange={(e) => {
@@ -330,11 +319,11 @@
 									userId: log.userId
 								}}
 							/>
-							<div class="truncate text-xs opacity-60" title={log.description}>
+							<div class="truncate text-subtle" title={log.description}>
 								{log.description}
 							</div>
 							{#if log.reviewNotes}
-								<div class="truncate text-xs opacity-60">
+								<div class="truncate text-subtle">
 									{log.reviewedByName ?? 'Staff'}: {log.reviewNotes}
 								</div>
 							{/if}
@@ -358,7 +347,9 @@
 										label="Approve"
 										iconOnly
 										icon={checkIcon}
-										class="btn-ghost btn-sm text-success"
+										variant="ghost"
+										size="sm"
+										class="text-success"
 										modalTitle="Approve these hours?"
 										submitLabel="Approve"
 										successToast="Hours approved"
@@ -370,7 +361,7 @@
 												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Note (optional)"
@@ -385,10 +376,12 @@
 										label="Return"
 										iconOnly
 										icon={returnIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Return these hours?"
 										submitLabel="Return"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Hours returned"
 										onsuccess={refreshQueue}
 									>
@@ -398,7 +391,7 @@
 												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Reason"

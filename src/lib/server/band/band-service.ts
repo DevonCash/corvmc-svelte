@@ -1,4 +1,6 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
+import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -9,6 +11,7 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -45,8 +48,8 @@ export class BandNotFoundError extends Error {
 }
 
 export class BandMemberExistsError extends Error {
-	constructor() {
-		super('User is already a member or has a pending invitation');
+	constructor(message = 'User is already a member or has a pending invitation') {
+		super(message);
 		this.name = 'BandMemberExistsError';
 	}
 }
@@ -65,7 +68,9 @@ export class OwnerCannotLeaveError extends Error {
 	}
 }
 
-export class BandTierManagedByStripeError extends Error {
+export class BandTierManagedByStripeError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This band has an active Stripe subscription — change the tier in Stripe instead');
 		this.name = 'BandTierManagedByStripeError';
@@ -342,28 +347,54 @@ export async function invite(
 
 		return row;
 	} catch (err: unknown) {
-		// Unique constraint violation = user already in band
-		if (err instanceof Error && err.message.includes('unique')) {
+		// Unique constraint violation = user already in band.
+		if (isUniqueConstraintError(err)) {
 			throw new BandMemberExistsError();
 		}
 		throw err;
 	}
 }
 
-export async function acceptInvitation(memberId: string, userId: string) {
+/**
+ * Invitations are keyed by `(bandId, userId)` — the pair the unique constraint
+ * already enforces — not by `band_member.id`. The UI only ever knows the band
+ * (`listForUser` selects `id: band.id`), so keying on the row id meant the
+ * predicate matched nothing and every accept threw: JAVASCRIPT-SVELTEKIT-2A.
+ *
+ * Accepting is idempotent. A member who double-submits, or returns to a stale
+ * page and clicks Accept on an invite they already took, is in the state they
+ * asked for — that is a success, not an error.
+ */
+export type AcceptInvitationResult =
+	| { status: 'accepted'; bandId: string }
+	| { status: 'already_active' }
+	| { status: 'not_found' };
+
+export async function acceptInvitation(
+	bandId: string,
+	userId: string
+): Promise<AcceptInvitationResult> {
 	const [row] = await db
 		.update(bandMember)
 		.set({ status: 'active' })
 		.where(
 			and(
-				eq(bandMember.id, memberId),
+				eq(bandMember.bandId, bandId),
 				eq(bandMember.userId, userId),
 				eq(bandMember.status, 'pending')
 			)
 		)
 		.returning();
 
-	if (!row) throw new Error('Invitation not found or already accepted');
+	if (!row) {
+		const [existing] = await db
+			.select({ status: bandMember.status })
+			.from(bandMember)
+			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, userId)))
+			.limit(1);
+
+		return existing?.status === 'active' ? { status: 'already_active' } : { status: 'not_found' };
+	}
 
 	// Emit domain event (fire-and-forget)
 	Promise.resolve().then(async () => {
@@ -411,21 +442,27 @@ export async function acceptInvitation(memberId: string, userId: string) {
 		}
 	});
 
-	return row;
+	return { status: 'accepted', bandId: row.bandId };
 }
 
-export async function declineInvitation(memberId: string, userId: string) {
-	const result = await db
+/**
+ * Returns whether a pending invitation was actually removed. The previous
+ * version discarded the delete result, so the UI toasted "Invitation declined"
+ * even when nothing matched and the invite reappeared on the next load.
+ */
+export async function declineInvitation(bandId: string, userId: string): Promise<boolean> {
+	const rows = await db
 		.delete(bandMember)
 		.where(
 			and(
-				eq(bandMember.id, memberId),
+				eq(bandMember.bandId, bandId),
 				eq(bandMember.userId, userId),
 				eq(bandMember.status, 'pending')
 			)
-		);
+		)
+		.returning({ id: bandMember.id });
 
-	return result;
+	return rows.length > 0;
 }
 
 // When `bandId` is provided (band-context callers), the row must belong to
@@ -690,12 +727,6 @@ export async function getUserRole(bandId: string, userId: string): Promise<BandR
 // Avatar
 // ---------------------------------------------------------------------------
 
-const AVATAR_EXTENSIONS: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
-
 /** Upload a band avatar to storage and persist its key. */
 export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
 	const [row] = await db
@@ -713,8 +744,7 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 		}
 	}
 
-	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
-	const key = `bands/avatars/${bandId}.${ext}`;
+	const key = mediaKey('bands/avatars', bandId, contentType);
 	await uploadFile(buffer, key, contentType);
 
 	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));

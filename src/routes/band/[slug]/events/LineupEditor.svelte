@@ -11,18 +11,27 @@
 
 	let {
 		value = $bindable<LineupChip[]>([]),
-		ownerBandId
+		ownerBandId,
+		search = searchBandsForLineup
 	}: {
 		value?: LineupChip[];
-		/** The band doing the editing; its own slot can't be removed. */
-		ownerBandId: string;
+		/**
+		 * The band doing the editing; its own slot can't be removed. Absent on a
+		 * community listing, where nobody on the bill is the author — every act is
+		 * a credit and every credit is removable.
+		 */
+		ownerBandId?: string;
+		/**
+		 * Band lookup. Defaults to the band-panel query, which is guarded by
+		 * band membership; a community listing passes its own `requireUser`
+		 * version, since its author may not be in a band at all.
+		 */
+		search?: (q: string) => Promise<Array<{ id: string; name: string }>>;
 	} = $props();
 
 	let query = $state('');
 
-	const matches = $derived(
-		query.trim().length >= 2 ? await searchBandsForLineup(query.trim()) : []
-	);
+	const matches = $derived(query.trim().length >= 2 ? await search(query.trim()) : []);
 
 	/** Suggestions minus anyone already on the bill. */
 	const suggestions = $derived(matches.filter((m) => !value.some((v) => v.bandId === m.id)));
@@ -89,22 +98,26 @@
 			<div class="flex gap-1">
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === 0}
 					onclick={() => move(i, -1)}
 					aria-label="Move {chip.name} up">↑</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === value.length - 1}
 					onclick={() => move(i, 1)}
 					aria-label="Move {chip.name} down">↓</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs text-error"
-					disabled={chip.bandId === ownerBandId}
+					variant="ghost"
+					size="xs"
+					class="text-error"
+					disabled={!!ownerBandId && chip.bandId === ownerBandId}
 					onclick={() => remove(i)}
 					aria-label="Remove {chip.name}">✕</Button
 				>
@@ -115,7 +128,7 @@
 	<div>
 		<input
 			type="text"
-			class="input input-bordered w-full"
+			class="input w-full"
 			placeholder="Add a band — type any name and press Enter"
 			bind:value={query}
 			{onkeydown}
@@ -134,7 +147,7 @@
 			</ul>
 		{/if}
 
-		<p class="mt-1 text-xs opacity-60">
+		<p class="mt-1 text-subtle">
 			Anyone can go on the bill. Bands with a CMC account are asked to confirm before the show
 			appears on their own profile — everyone else is listed as plain text.
 		</p>

@@ -87,8 +87,17 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 const mockInvite = vi.fn().mockResolvedValue({ id: 'member-1' });
+// `isUniqueConstraintError` deliberately is NOT mocked — it lives in
+// $lib/server/db/constraint-errors (no schema imports) so these tests run the
+// real predicate rather than a stub that would prove nothing.
 vi.mock('./band-service', () => ({
-	invite: (...args: unknown[]) => mockInvite(...args)
+	invite: (...args: unknown[]) => mockInvite(...args),
+	BandMemberExistsError: class BandMemberExistsError extends Error {
+		constructor(message = 'exists') {
+			super(message);
+			this.name = 'BandMemberExistsError';
+		}
+	}
 }));
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);

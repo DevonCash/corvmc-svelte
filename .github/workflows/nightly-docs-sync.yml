@@ -106,7 +106,7 @@ jobs:
             Read both first. They tell you WHERE to look; you still decide whether the user-facing behavior actually changed.
 
             ## Environment
-            GitHub Actions on `main`, full checkout, deps installed. SvelteKit / TypeScript / pnpm. Use `gh` for the PR.
+            GitHub Actions on `main`, full checkout, deps installed. `CLAUDE.md` is loaded and carries the stack, the command list, and the project conventions — this prompt only covers what is specific to a docs sync. Use `gh` for the PR.
 
             ## What the docs are
             - `docs/manual/README.md` — the user-manual MANIFEST (~76 articles across public/member/band/staff, tagged `[P]` page-level or `[H]` how-to). Source of truth for coverage.
@@ -125,7 +125,7 @@ jobs:
             ## Before opening the PR
             1. Regenerate the route snapshot: `pnpm docs:routes` (commit the updated `docs/manual/route-inventory.json`).
             2. Run `pnpm docs:check` and confirm it exits clean (no integrity errors, no remaining drift).
-            3. Run `pnpm check` (svelte-check) and confirm no NEW type errors in files you touched.
+            3. Run `pnpm check` and confirm no NEW type errors in files you touched.
             4. Do NOT run `pnpm help:sync` — it needs a D1 database not available on the runner; `pnpm docs:check` is the gate.
 
             ## Open the PR
@@ -134,7 +134,7 @@ jobs:
             ## Constraints
             - Branch off `main`; never commit docs changes directly to `main`.
             - Documentation-only PR — do not modify application code (other than help categories in `scripts/seed-dev.ts` when a new category is genuinely required, plus the route snapshot).
-            - No interface gradients; no co-author lines (project conventions).
+            - Follow the conventions in `CLAUDE.md`.
 
       # --- Advance the baseline so the next run diffs from here ----------------
       - name: Advance sync marker

@@ -41,6 +41,11 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 }));
 
 const subCancelMock = vi.fn().mockResolvedValue(undefined);
+const countPublishedListingsBy = vi.fn(async () => 0);
+vi.mock('$lib/server/event/community-event-service', () => ({
+	countPublishedListingsBy: (...a: unknown[]) => countPublishedListingsBy(...(a as []))
+}));
+
 vi.mock('$lib/server/finance/subscription-service', () => ({
 	cancel: (...args: unknown[]) => subCancelMock(...args)
 }));
@@ -53,7 +58,8 @@ import {
 	ensureContactPhone,
 	UserNotFoundError,
 	UserNotDeactivatedError,
-	UserHasOwnedBandsError
+	UserHasOwnedBandsError,
+	UserHasPublishedListingsError
 } from './user-service';
 
 beforeEach(() => {
@@ -167,8 +173,22 @@ describe('purgeUser', () => {
 
 	it('deletes a deactivated user with no owned bands', async () => {
 		selectResultQueue = [[{ id: 'u1', deletedAt: new Date() }], [{ value: 0 }]];
+		countPublishedListingsBy.mockResolvedValueOnce(0);
 		await purgeUser('u1');
 		expect(deleteWhere).toHaveBeenCalledTimes(1);
+	});
+
+	// event.createdByUserId cascades, so purging would take this member's
+	// listings off the public calendar with them. The shows still happen after
+	// someone leaves, and other people's plans are attached to them — so a
+	// staffer has to deal with the listings on purpose rather than discovering
+	// later that the calendar lost a week of gigs.
+	it('refuses to purge a member who has listings on the public calendar', async () => {
+		selectResultQueue = [[{ id: 'u1', deletedAt: new Date() }], [{ value: 0 }]];
+		countPublishedListingsBy.mockResolvedValueOnce(3);
+
+		await expect(purgeUser('u1')).rejects.toBeInstanceOf(UserHasPublishedListingsError);
+		expect(deleteWhere).not.toHaveBeenCalled();
 	});
 
 	it('throws UserNotFoundError when the user does not exist', async () => {

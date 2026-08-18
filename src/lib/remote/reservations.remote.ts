@@ -34,7 +34,13 @@ import { band } from '$lib/server/db/schema/band';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
-import { requireStaff, requireUser, isStaff, primaryRoleFor } from '$lib/server/authorization';
+import {
+	isStaff,
+	primaryRoleFor,
+	requireStaff,
+	requireStaffOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import {
 	getAvailableSlots,
@@ -77,7 +83,10 @@ import {
 } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
 import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
-import { create as createSeries } from '$lib/server/reservation/recurring-series-service';
+import {
+	create as createSeries,
+	listActive as listActiveSeries
+} from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
 import { requireBandMember } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
@@ -1659,10 +1668,9 @@ export const confirmReservation = form(
 			.limit(1);
 		if (!row) throw error(404, 'Reservation not found');
 
-		// Allow if staff or the owner of the reservation
-		const isOwner = currentUser.id === row.createdByUserId;
-		const staff = await isStaff(currentUser.id);
-		if (!isOwner && !staff) throw error(403, 'Not authorized');
+		// Returns which of the two the caller is, which the confirmation-window and
+		// comp rules below both branch on.
+		const staff = (await requireStaffOrOwner(currentUser.id, row.createdByUserId)) === 'staff';
 
 		// Only live reservations can be confirmed. Without this, a cancelled
 		// reservation (credits already reversed, cashDueCents possibly 0) would be
@@ -2007,3 +2015,15 @@ export const getRecurringReservations = query(
 		}));
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserRecurringSeries = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listActiveSeries({ forUser: userId });
+});

@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getById } from '$lib/server/event/event-service';
+import { publicEventStatuses } from '$lib/server/db/schema/event';
 import { getTicketsRemaining } from '$lib/server/ticket/ticket-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { getSubscription } from '$lib/server/finance/subscription-service';
@@ -8,7 +9,11 @@ import { getSubscription } from '$lib/server/finance/subscription-service';
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const evt = await getById(params.id);
 	if (!evt) throw error(404, 'Event not found');
-	if (evt.status !== 'published') throw error(404, 'Event not found');
+	// Matches getPublicEventDetail: cancelled events stay readable so this
+	// endpoint doesn't disagree with the page it backs.
+	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
+		throw error(404, 'Event not found');
+	}
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
 
@@ -28,6 +33,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			id: evt.id,
 			title: evt.title,
 			description: evt.description,
+			status: evt.status,
+			source: evt.source,
 			startsAt: evt.startsAt.toISOString(),
 			endsAt: evt.endsAt?.toISOString() ?? null,
 			doorsAt: evt.doorsAt?.toISOString() ?? null,

@@ -144,22 +144,22 @@
 				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
 				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
-					<p class="text-sm opacity-70">
+					<p class="text-muted">
 						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}
 					</p>
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
-					<p class="text-xs opacity-60">
+					<p class="text-subtle">
 						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be offered
 						to someone else.
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
-					<Button type="button" class="btn-outline btn-sm" onclick={closeConfirmModal}
+					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
 						>Dismiss</Button
 					>
-					<SubmitButton label="Confirm Reservation" class="btn-sm btn-success" />
+					<SubmitButton label="Confirm Reservation" variant="success" size="sm" />
 				</div>
 			</div>
 		</Form>

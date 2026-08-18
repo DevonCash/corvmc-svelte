@@ -10,8 +10,8 @@
 		IconMessages,
 		IconUser,
 		IconSettings,
-		IconUsersGroup,
-		IconHeartHandshake
+		IconHeartHandshake,
+		IconBulb
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -54,9 +54,12 @@
 		<Nav.Item href="/member/reservations" label="Reservations">
 			{#snippet icon()}<IconMetronome />{/snippet}
 		</Nav.Item>
-		<Nav.Item href="/member/events" label="Events">
+		<Nav.Collapsible href="/member/events" label="Events" childHrefs={['/member/events']}>
 			{#snippet icon()}<IconCalendarEvent />{/snippet}
-		</Nav.Item>
+			<Nav.Item href="/member/events/submit" label="Add a Show">
+				{#snippet icon()}<IconPlus />{/snippet}
+			</Nav.Item>
+		</Nav.Collapsible>
 		<Nav.Item href="/member/directory" label="Directory">
 			{#snippet icon()}<IconAddressBook />{/snippet}
 		</Nav.Item>
@@ -65,32 +68,25 @@
 				{#snippet icon()}<IconHeartHandshake />{/snippet}
 			</Nav.Item>
 		{/if}
+		<!-- Not flag-gated: a suggestion board with no audience collects
+		     single-vote posts, so there is nothing useful to dark-launch. -->
+		<Nav.Item href="/member/suggestions" label="Suggestions">
+			{#snippet icon()}<IconBulb />{/snippet}
+		</Nav.Item>
 
-		<Nav.Group title="Bands">
+		<Nav.Group title="My Bands">
 			{#snippet action()}
-				<!-- data-sveltekit-reload: a client-side navigation that lands on the
-				     bands page while this layout's async queries are still settling can
-				     leave the ?create=1 modal permanently unmounted (svelte
-				     experimental-async scheduling gap, still present in 5.56.8 — see
-				     the band-onboarding e2e test). A full-document load initializes the
-				     dialog deterministically. -->
-				<Button
-					href="/member/bands?create=1"
-					data-sveltekit-reload
-					class="btn-ghost btn-xs btn-square"
-					title="Create Band"
-					aria-label="Create Band"
-				>
-					<IconPlus size={14} />
-				</Button>
+				<Button href="/member/bands" variant="ghost" size="xs">All</Button>
 			{/snippet}
-			<Nav.Item href="/member/bands" label="My Bands">
-				{#snippet icon()}<IconUsersGroup />{/snippet}
-			</Nav.Item>
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
-						<Avatar class="size-8" src={band.avatarUrl ?? undefined} name={band.name} />
+						<Avatar
+							class="size-8"
+							size="avatar-sm"
+							src={band.avatarUrl ?? undefined}
+							name={band.name}
+						/>
 					{/snippet}
 				</Nav.Item>
 			{/each}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -68,13 +70,52 @@
 		ticketPriceDollars ? String(Math.round(parseFloat(ticketPriceDollars) * 100)) : ''
 	);
 
+	const toMinutes = (t: string) => {
+		const [h, m] = t.split(':').map(Number);
+		return h * 60 + m;
+	};
+
+	/** Move an "HH:MM" time by a signed number of minutes, wrapping at midnight. */
+	function shiftTime(time: string, minutes: number): string {
+		const total = (((toMinutes(time) + minutes) % 1440) + 1440) % 1440;
+		return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+	}
+
+	// The reservation window is really setup and teardown padding around the show,
+	// so it rides along when the event is re-timed. Seeding it only while empty
+	// left a window still pointing at the times the event used to have — visible
+	// but easy to miss, and it books the wrong slot.
+	let lastEventStartTime = '';
+	let lastEventEndTime = '';
+
 	$effect(() => {
-		if (reserveSpace && !reservationStartTime && eventStartTime) {
-			reservationStartTime = eventStartTime;
-		}
-		if (reserveSpace && !reservationEndTime && eventEndTime) {
-			reservationEndTime = eventEndTime;
-		}
+		const start = eventStartTime;
+		const end = eventEndTime;
+		if (!reserveSpace) return;
+
+		untrack(() => {
+			if (start) {
+				reservationStartTime =
+					reservationStartTime && lastEventStartTime
+						? shiftTime(reservationStartTime, toMinutes(start) - toMinutes(lastEventStartTime))
+						: start;
+				lastEventStartTime = start;
+			}
+			if (end) {
+				reservationEndTime =
+					reservationEndTime && lastEventEndTime
+						? shiftTime(reservationEndTime, toMinutes(end) - toMinutes(lastEventEndTime))
+						: end;
+				lastEventEndTime = end;
+			}
+		});
+	});
+
+	// ConflictWarnings owns this flag but unmounts with the toggle, so a stale
+	// `true` would keep the hidden overrideConflicts input in the form and make
+	// the next submission skip the server's double-booking check.
+	$effect(() => {
+		if (!reserveSpace) hasConflicts = false;
 	});
 
 	function handleFileSelect(e: Event) {
@@ -120,6 +161,12 @@
 		reserveSpace = false;
 		reservationStartTime = '';
 		reservationEndTime = '';
+		lastEventStartTime = '';
+		lastEventEndTime = '';
+		// This one outlives the form unless cleared here: ConflictWarnings writes it
+		// only while mounted, so a conflict seen before Cancel would arm the
+		// override for the next event entered in this modal.
+		hasConflicts = false;
 		posterFile = null;
 		recurring = false;
 		recurringFrequency = 'weekly';
@@ -154,10 +201,10 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handleFileSelect}
-					class="file-input file-input-bordered w-full"
+					class="file-input w-full"
 				/>
 				{#if posterFile}
-					<p class="text-sm opacity-60 mt-1">
+					<p class="text-muted mt-1">
 						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
 					</p>
 				{/if}
@@ -176,27 +223,27 @@
 			<Field
 				name="ticketingEnabled"
 				type="toggle"
-				value={ticketingEnabled}
+				bind:value={ticketingEnabled}
 				checkboxLabel="Sell tickets through the site"
 			/>
 
 			{#if ticketingEnabled}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
-					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
-				</div>
+					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
+				</Card>
 			{/if}
 
 			<Field
 				name="reserveSpace"
 				type="toggle"
-				value={reserveSpace}
+				bind:value={reserveSpace}
 				checkboxLabel="Reserve practice space"
 			/>
 
 			{#if reserveSpace}
-				<div class="card bg-base-200 p-4 space-y-4">
-					<p class="text-sm opacity-60">
+				<Card tone="base-200" class="p-4 space-y-4">
+					<p class="text-muted">
 						Reservation times can differ from event times to allow for setup and teardown.
 					</p>
 
@@ -215,16 +262,14 @@
 						/>
 					</div>
 
-					{#if reserveSpace}
-						<ConflictWarnings
-							date={eventDate}
-							startTime={reservationStartTime}
-							endTime={reservationEndTime}
-							{checkConflicts}
-							bind:hasConflicts
-						/>
-					{/if}
-				</div>
+					<ConflictWarnings
+						date={eventDate}
+						startTime={reservationStartTime}
+						endTime={reservationEndTime}
+						{checkConflicts}
+						bind:hasConflicts
+					/>
+				</Card>
 			{/if}
 
 			<Field
@@ -235,7 +280,7 @@
 			/>
 
 			{#if recurring}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field
 						name="recurringFrequency"
 						type="select"
@@ -268,7 +313,7 @@
 						bind:value={recurringEndsAt}
 					/>
 
-					<p class="text-sm opacity-60">
+					<p class="text-muted">
 						Occurrences are created as drafts ahead of time; publish each one when ready. Each
 						occurrence starts with a copy of this event's poster, editable per occurrence.
 					</p>
@@ -284,10 +329,10 @@
 								</ul>
 							</div>
 						{:else}
-							<p class="text-sm opacity-60">No upcoming occurrences in the next 60 days.</p>
+							<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
 						{/if}
 					{/if}
-				</div>
+				</Card>
 			{/if}
 
 			{#if hasConflicts}
@@ -295,7 +340,7 @@
 			{/if}
 
 			<div class="modal-action">
-				<Button type="button" class="btn-ghost" onclick={() => (open = false)}>Cancel</Button>
+				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
 				<SubmitButton
 					label={hasConflicts ? 'Create with Override' : 'Create Event'}
 					class={hasConflicts ? 'btn-warning' : 'btn-primary'}

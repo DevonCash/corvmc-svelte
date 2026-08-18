@@ -11,6 +11,33 @@ export interface ContactFormParams {
 	email: string;
 	subject: string;
 	message: string;
+	/** Event-tip fields. All optional — a tip is a lead, not a record. */
+	tipEventName?: string;
+	tipEventDate?: string;
+	tipVenue?: string;
+	tipLink?: string;
+}
+
+/**
+ * Fold the event-tip fields into the message body.
+ *
+ * A tip stays an ordinary web thread rather than growing its own table and its
+ * own queue: the inbox exists so staff have one place to look, and a second
+ * triage surface is a second thing to forget. Prepended rather than appended so
+ * the details are the first thing a staffer reads.
+ */
+function withTipDetails(params: ContactFormParams): string {
+	const details = [
+		['Event', params.tipEventName],
+		['Date', params.tipEventDate],
+		['Venue', params.tipVenue],
+		['Link', params.tipLink]
+	].filter(([, value]) => value && value.trim());
+
+	if (details.length === 0) return params.message;
+
+	const block = details.map(([label, value]) => `${label}: ${value!.trim()}`).join('\n');
+	return `${block}\n\n---\n\n${params.message}`;
 }
 
 export async function handleContactForm(params: ContactFormParams) {
@@ -21,9 +48,11 @@ export async function handleContactForm(params: ContactFormParams) {
 		subject: params.subject
 	});
 
+	const body = withTipDetails(params);
+
 	const message = await addInboundMessage({
 		threadId: thread.id,
-		body: params.message,
+		body,
 		authorName: params.name
 	});
 
@@ -32,7 +61,7 @@ export async function handleContactForm(params: ContactFormParams) {
 		name: params.name,
 		email: params.email,
 		subject: params.subject,
-		message: params.message
+		message: body
 	});
 
 	return { thread, message };
@@ -124,6 +153,16 @@ export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 	// mail from the same address start merging into it.
 	if (hashedThreadId) {
 		const thread = await findThreadById(hashedThreadId);
+
+		// Never into a member↔member conversation. Routing below is deliberately
+		// channel-agnostic — see the comment above — and that is right for every
+		// channel the org actually corresponds on. A direct thread is not one of
+		// them: nothing we send carries a reply address for it, so anything
+		// arriving here with one is either misrouted or forged. Filing it would
+		// write a message into a private conversation with a null authorUserId,
+		// which renders as "not yours" to *both* participants.
+		if (thread?.channel === 'direct') return { thread: null, message: null };
+
 		if (thread) {
 			if (thread.status === 'resolved') {
 				await reopenThread(thread.id);

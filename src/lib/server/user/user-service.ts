@@ -1,8 +1,9 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, isNull, isNotNull, count } from 'drizzle-orm';
+import { eq, and, ne, gt, isNull, isNotNull, count, desc } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
@@ -11,28 +12,45 @@ import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 // Errors
 // ---------------------------------------------------------------------------
 
-export class UserNotFoundError extends Error {
+export class UserNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('User not found');
 		this.name = 'UserNotFoundError';
 	}
 }
 
-export class UserHasOwnedBandsError extends Error {
+export class UserHasOwnedBandsError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User still owns one or more bands; transfer or remove them before purging');
 		this.name = 'UserHasOwnedBandsError';
 	}
 }
 
-export class UserNotDeactivatedError extends Error {
+export class UserHasPublishedListingsError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('This member has community listings on the public calendar');
+		this.name = 'UserHasPublishedListingsError';
+	}
+}
+
+export class UserNotDeactivatedError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User must be deactivated before it can be purged');
 		this.name = 'UserNotDeactivatedError';
 	}
 }
 
-export class UserHasLinkedRecordsError extends Error {
+export class UserHasLinkedRecordsError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User has linked records that prevent permanent deletion');
 		this.name = 'UserHasLinkedRecordsError';
@@ -167,6 +185,16 @@ export async function purgeUser(userId: string) {
 
 	if (ownedBands > 0) throw new UserHasOwnedBandsError();
 
+	// event.createdByUserId cascades, so purging would silently take this
+	// member's listings off the public calendar with them. The shows still
+	// happen after someone leaves the Collective, and other people's plans are
+	// attached to them — so a staffer has to deal with the listings on purpose
+	// rather than discovering later that the calendar lost a week of gigs.
+	const { countPublishedListingsBy } = await import('$lib/server/event/community-event-service');
+	if ((await countPublishedListingsBy(userId)) > 0) {
+		throw new UserHasPublishedListingsError();
+	}
+
 	try {
 		await db.delete(user).where(eq(user.id, userId));
 	} catch (err) {
@@ -211,4 +239,54 @@ export async function ensureContactPhone(userId: string, submitted?: string): Pr
 		.where(eq(user.id, userId));
 
 	return true;
+}
+
+// ---------------------------------------------------------------------------
+// Sessions (read-only)
+// ---------------------------------------------------------------------------
+
+export interface ActiveSession {
+	id: string;
+	createdAt: Date;
+	expiresAt: Date;
+	ipAddress: string | null;
+	userAgent: string | null;
+}
+
+/**
+ * Unexpired sessions for one account, newest first.
+ *
+ * Read-only on purpose: revoking a session is a mutation, and the one lever
+ * staff have for cutting off access — deactivation — already deletes them all.
+ */
+export async function listActiveSessions(userId: string): Promise<ActiveSession[]> {
+	return db
+		.select({
+			id: session.id,
+			createdAt: session.createdAt,
+			expiresAt: session.expiresAt,
+			ipAddress: session.ipAddress,
+			userAgent: session.userAgent
+		})
+		.from(session)
+		.where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
+		.orderBy(desc(session.createdAt));
+}
+
+/**
+ * When this account last signed in, or null if it never has.
+ *
+ * Approximated by the newest session row, which is the only login trace stored.
+ * Sessions are deleted on deactivation and on sign-out, so this reads as null
+ * for a deactivated account rather than as its true last login.
+ */
+export async function getLastLoginAt(userId: string): Promise<Date | null> {
+	const [row] = await db
+		.select({ createdAt: session.createdAt })
+		.from(session)
+		.where(eq(session.userId, userId))
+		.orderBy(desc(session.createdAt))
+		.limit(1);
+
+	return row?.createdAt ?? null;
 }

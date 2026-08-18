@@ -56,7 +56,11 @@
 				<span class="block flex h-[48px] items-center justify-between px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
 					<Button
-						class="latched btn-square btn-outline btn-sm"
+						variant="default"
+						size="sm"
+						shape="square"
+						outline
+						class="latched"
 						title="To Public Site"
 						aria-label="To Public Site"
 						href="/"
@@ -68,7 +72,8 @@
 				<!-- Mobile panel nav -->
 				<div class="border-b border-base-300 px-4 py-2 lg:hidden">
 					<Select
-						class="select-bordered w-full select-sm"
+						size="sm"
+						class="w-full"
 						value={activePanel}
 						onchange={(e: Event) => {
 							const key = (e.currentTarget as HTMLSelectElement).value;

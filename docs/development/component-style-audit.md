@@ -18,7 +18,12 @@ art. 16 components storied, 146 screenshots captured (`/tmp/story-shots/`).
 
 ---
 
-## 🔴 Critical — magenta text on solid surfaces (theme bug)
+## ✅ Resolved — magenta text on solid surfaces (theme bug)
+
+> **Fixed.** The four light-theme and two dark-theme tokens now read `oklch(100% 0 0)`
+> ([layout.css:20](../../src/routes/layout.css#L20) and following). The description below is kept
+> because the failure mode — relative-colour syntax silently clamping to an out-of-gamut hue — is
+> easy to reintroduce.
 
 `src/routes/layout.css` defines several `--color-*-content` tokens as:
 

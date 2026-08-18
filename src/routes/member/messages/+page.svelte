@@ -8,21 +8,21 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
-	import { getMyConversations } from '$lib/remote/inbox.remote';
+	import { getMyMessages } from '$lib/remote/direct-messages.remote';
 
 	let pageNumber = $state(1);
 
-	const result = $derived(getMyConversations({ page: pageNumber }));
+	const result = $derived(getMyMessages({ page: pageNumber }));
 </script>
 
-<PageHeader title="Messages" subtitle="Questions, requests, and anything else for CorvMC staff">
+<PageHeader title="Messages" subtitle="Conversations with CorvMC staff and other members">
 	<CreateModal />
 </PageHeader>
 <PageContent>
 	<DataList
 		{result}
 		emptyTitle="No messages yet"
-		empty="Start a conversation and staff will get back to you here."
+		empty="Start a conversation and it will appear here."
 		onpage={(p) => (pageNumber = p)}
 	>
 		{#snippet children(conversations)}
@@ -39,16 +39,25 @@
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							{#if c.unread}
-								<span class="bg-primary block size-2 rounded-full" title="Unread reply"></span>
+								<span class="bg-primary block size-2 rounded-full" title="Unread"></span>
 							{/if}
 						</td>
 
 						<td class="cell-primary">
-							<a {href} class="font-medium hover:underline" class:font-bold={c.unread}>
-								{c.subject ?? 'Conversation'}
-							</a>
+							<div class="flex items-center gap-2">
+								<a {href} class="font-medium hover:underline" class:font-bold={c.unread}>
+									{c.channel === 'direct'
+										? (c.counterpartName ?? 'Member')
+										: (c.subject ?? 'Conversation')}
+								</a>
+								<!-- A request is in the list so it is found, but is never in the
+								     unread count — see countDirectUnread. -->
+								{#if c.pending}
+									<span class="badge badge-sm badge-warning">Request</span>
+								{/if}
+							</div>
 							{#if c.preview}
-								<div class="truncate text-sm opacity-60">{c.preview}</div>
+								<div class="truncate text-muted">{c.preview}</div>
 							{/if}
 						</td>
 

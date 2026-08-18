@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -26,7 +28,7 @@
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-	<Button href="reservations/new" class="btn-sm">Book a Session</Button>
+	<Button href="reservations/new" variant="default" size="sm">Book a Session</Button>
 </PageHeader>
 <PageContent width="2xl">
 	<TabBar
@@ -53,15 +55,15 @@
 			<div class="space-y-3">
 				{#each upcoming as res (res.id)}
 					{@const cancel = cancelBandReservation.for(res.id)}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
+					<Card>
+						<CardBody row class="py-4">
 							<div>
 								<p class="font-medium">
 									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
 										res.endsAt
 									)}
 								</p>
-								<p class="text-xs opacity-60">
+								<p class="text-subtle">
 									{formatDuration(res.startsAt, res.endsAt)}
 									{#if res.bookedByName}
 										&middot; Booked by {res.bookedByName}
@@ -83,12 +85,12 @@
 										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />
-										<SubmitButton label="Cancel" class="btn-ghost btn-xs" />
+										<SubmitButton label="Cancel" variant="ghost" size="xs" />
 									</Form>
 								{/if}
 							</div>
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				{/each}
 			</div>
 		{/if}
@@ -100,15 +102,15 @@
 		{:else}
 			<div class="space-y-3">
 				{#each past as res (res.id)}
-					<div class="card bg-base-100 shadow-sm">
-						<div class="card-body flex-row items-center justify-between py-4">
+					<Card>
+						<CardBody row class="py-4">
 							<div>
 								<p class="font-medium">
 									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
 										res.endsAt
 									)}
 								</p>
-								<p class="text-xs opacity-60">
+								<p class="text-subtle">
 									{formatDuration(res.startsAt, res.endsAt)}
 									{#if res.bookedByName}
 										&middot; Booked by {res.bookedByName}
@@ -116,8 +118,8 @@
 								</p>
 							</div>
 							<StatusBadge status={res.status} />
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				{/each}
 			</div>
 		{/if}

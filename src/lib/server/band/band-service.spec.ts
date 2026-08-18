@@ -29,6 +29,7 @@ const mockMember = {
 let selectResult: unknown[] = [];
 let selectResultQueue: unknown[][] = [];
 let deleteResult = { rowCount: 1 };
+let deleteReturning: unknown[] = [{ id: 'member-1' }];
 let insertError: Error | null = null;
 
 function chainable(result?: unknown[]) {
@@ -66,7 +67,12 @@ vi.mock('$lib/server/db', () => ({
 			}))
 		})),
 		delete: vi.fn(() => ({
-			where: vi.fn(() => Promise.resolve(deleteResult))
+			// Awaitable directly (revokeInvitation) or via .returning()
+			// (declineInvitation, which needs the deleted-row count).
+			where: vi.fn(() => ({
+				returning: vi.fn(() => Promise.resolve(deleteReturning)),
+				then: (resolve: (v: unknown) => void) => resolve(deleteResult)
+			}))
 		})),
 		batch: vi.fn(() => Promise.resolve([]))
 	}
@@ -264,8 +270,25 @@ describe('BandService', () => {
 			expect(result.status).toBe('pending');
 		});
 
-		it('throws BandMemberExistsError on unique constraint violation', async () => {
-			insertError = new Error('unique constraint violated');
+		// The real D1 message. The old test fabricated a lowercase one, which is
+		// why the case-sensitive `.includes('unique')` guard looked covered while
+		// letting the raw D1_ERROR escape in production (JAVASCRIPT-SVELTEKIT-2D).
+		it('throws BandMemberExistsError on the real D1 unique-violation message', async () => {
+			insertError = new Error(
+				'D1_ERROR: UNIQUE constraint failed: band_member.band_id, band_member.user_id: SQLITE_CONSTRAINT'
+			);
+
+			await expect(invite('band-1', 'user-2', 'member', null, 'user-owner')).rejects.toThrow(
+				BandMemberExistsError
+			);
+		});
+
+		it('unwraps a DrizzleQueryError that carries the driver message in cause', async () => {
+			const wrapped = new Error('Failed query: insert into "band_member" ...');
+			(wrapped as { cause?: unknown }).cause = new Error(
+				'UNIQUE constraint failed: band_member.band_id, band_member.user_id'
+			);
+			insertError = wrapped;
 
 			await expect(invite('band-1', 'user-2', 'member', null, 'user-owner')).rejects.toThrow(
 				BandMemberExistsError
@@ -278,33 +301,49 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('acceptInvitation', () => {
-		it('updates status to active', async () => {
-			const { db } = await import('$lib/server/db');
-			vi.mocked(db.update).mockReturnValueOnce({
+		/**
+		 * JAVASCRIPT-SVELTEKIT-2A. The old signature took a `band_member.id`, but
+		 * the invite list only ever knows the band id, so the predicate matched
+		 * nothing and every accept threw. These tests drive the id the UI really
+		 * sends — a band id.
+		 */
+		function mockUpdateReturning(rows: unknown[]) {
+			return {
 				set: vi.fn(() => ({
-					where: vi.fn(() => ({
-						returning: vi.fn(() => Promise.resolve([{ ...mockMember, status: 'active' }]))
-					}))
+					where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve(rows)) }))
 				}))
-			} as any);
+			} as any;
+		}
 
-			const result = await acceptInvitation('member-1', 'user-2');
-			expect(result.status).toBe('active');
+		it('activates the pending row for a band id', async () => {
+			const { db } = await import('$lib/server/db');
+			vi.mocked(db.update).mockReturnValueOnce(
+				mockUpdateReturning([{ ...mockMember, status: 'active', bandId: 'band-1' }])
+			);
+
+			const result = await acceptInvitation('band-1', 'user-2');
+
+			expect(result).toEqual({ status: 'accepted', bandId: 'band-1' });
 		});
 
-		it('throws when invitation not found', async () => {
+		it('is idempotent when the invite was already accepted', async () => {
 			const { db } = await import('$lib/server/db');
-			vi.mocked(db.update).mockReturnValueOnce({
-				set: vi.fn(() => ({
-					where: vi.fn(() => ({
-						returning: vi.fn(() => Promise.resolve([]))
-					}))
-				}))
-			} as any);
+			vi.mocked(db.update).mockReturnValueOnce(mockUpdateReturning([]));
+			selectResultQueue = [[{ status: 'active' }]];
 
-			await expect(acceptInvitation('member-999', 'user-2')).rejects.toThrow(
-				'Invitation not found'
-			);
+			const result = await acceptInvitation('band-1', 'user-2');
+
+			expect(result).toEqual({ status: 'already_active' });
+		});
+
+		it('reports not_found when there is no membership row at all', async () => {
+			const { db } = await import('$lib/server/db');
+			vi.mocked(db.update).mockReturnValueOnce(mockUpdateReturning([]));
+			selectResultQueue = [[]];
+
+			const result = await acceptInvitation('band-999', 'user-2');
+
+			expect(result).toEqual({ status: 'not_found' });
 		});
 	});
 
@@ -313,10 +352,20 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('declineInvitation', () => {
-		it('deletes the pending member row', async () => {
+		it('reports true when a pending row was removed', async () => {
 			const { db } = await import('$lib/server/db');
-			await declineInvitation('member-1', 'user-2');
+			deleteReturning = [{ id: 'member-1' }];
+
+			await expect(declineInvitation('band-1', 'user-2')).resolves.toBe(true);
 			expect(db.delete).toHaveBeenCalled();
+		});
+
+		// Previously the delete result was discarded, so the UI toasted
+		// "Invitation declined" even when nothing matched.
+		it('reports false when nothing matched', async () => {
+			deleteReturning = [];
+
+			await expect(declineInvitation('band-1', 'user-2')).resolves.toBe(false);
 		});
 	});
 
@@ -501,17 +550,14 @@ describe('BandService', () => {
 	});
 
 	describe('setBandAvatar', () => {
-		it('uploads the file and returns the extension-mapped key', async () => {
+		it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
 			selectResult = [{ avatarKey: null }];
 
 			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
 
-			expect(uploadFile).toHaveBeenCalledWith(
-				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.png',
-				'image/png'
-			);
-			expect(key).toBe('bands/avatars/band-1.png');
+			// The per-upload token is what stops a replaced avatar reusing its URL.
+			expect(key).toMatch(/^bands\/avatars\/band-1-[0-9a-f]{8}\.png$/);
+			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 		});
 
 		it('deletes the previous avatar before replacing it', async () => {
@@ -522,7 +568,7 @@ describe('BandService', () => {
 			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
 			expect(uploadFile).toHaveBeenCalledWith(
 				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.webp',
+				expect.stringMatching(/^bands\/avatars\/band-1-[0-9a-f]{8}\.webp$/),
 				'image/webp'
 			);
 		});

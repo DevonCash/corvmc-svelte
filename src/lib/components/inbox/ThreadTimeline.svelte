@@ -12,7 +12,7 @@
 
 	type Message = {
 		id: string;
-		direction: 'inbound' | 'outbound';
+		direction: 'inbound' | 'outbound' | 'peer';
 		body: string;
 		authorName: string | null;
 		authorUserId?: string | null;
@@ -37,11 +37,15 @@
 		notes?: Note[];
 		contactName?: string | null;
 		/**
-		 * Who is reading. Given, a bubble is "mine" when the viewer wrote it —
-		 * which is the only rule that works when both parties are members.
+		 * Whose point of view the timeline is drawn from — whose messages sit on
+		 * the right. Usually the person reading, which is the only rule that
+		 * works when both parties are members. Staff triaging a reported DM pass
+		 * the *reporter* instead, so the conversation reads from the point of
+		 * view of whoever raised it.
+		 *
 		 * Omitted, sides fall back to inbound/outbound, i.e. the org's point of
 		 * view: that is the staff inbox, where a colleague's reply must still
-		 * read as ours.
+		 * read as ours. A 'peer' message has no org side, so it lands left.
 		 */
 		viewerUserId?: string | null;
 	} = $props();
@@ -102,10 +106,10 @@
 					<IconNote size={13} />
 					{note.authorName ?? 'Staff'} · {formatDateTime(note.createdAt)}
 				</div>
-				<div class="text-sm whitespace-pre-wrap opacity-70">{note.body}</div>
+				<div class="text-muted whitespace-pre-wrap">{note.body}</div>
 			</div>
 		{/if}
 	{:else}
-		<p class="py-8 text-center text-sm opacity-60">No messages in this conversation yet.</p>
+		<p class="py-8 text-center text-muted">No messages in this conversation yet.</p>
 	{/each}
 </div>

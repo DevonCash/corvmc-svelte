@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -13,6 +15,7 @@
 		PublishEventAction,
 		UnpublishEventAction,
 		CancelEventAction,
+		DeleteEventAction,
 		CompTicketsAction
 	} from '$lib/components/shared/actions';
 	import {
@@ -27,18 +30,28 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { formatDollars, formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconMusic } from '@tabler/icons-svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import Action from '$lib/components/shared/Action.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { rejectListing } from '$lib/remote/community-events.remote';
+	import { imageSrc } from '$lib/utils/images';
+
+	const rejectFields = rejectListing.fields;
 
 	let id = $derived(page.params.id!);
 	let data = $derived(await getStaffEventDetail(id));
 
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
+	const isCommunityEvent = $derived(evt.source === 'community');
+	// CMC only sells shows CMC produces — see the rule in event-service.update().
+	const cmcCanSell = $derived(evt.source === 'cmc');
 	const recurringSeries = $derived(await getEventRecurringSeries(id));
 
 	// ── Edit state ────────────────────────────────────────────────────────
@@ -91,8 +104,8 @@
 		// stale flag — `update()` rejects enabling ticketing on a band event but
 		// allows disabling it. The price is untouched: a band gig legitimately has
 		// one for the door or an outside seller.
-		editTicketingEnabled = isBandEvent ? false : evt.ticketingEnabled;
-		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
+		editTicketingEnabled = cmcCanSell ? evt.ticketingEnabled : false;
+		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
@@ -211,15 +224,41 @@
 <PageHeader title={evt.title} backHref="/staff/events">
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}
-			<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
+			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
 		{/if}
 
 		{#if evt.status !== 'cancelled' && !editing}
-			<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
+			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
 		{/if}
 
 		{#if evt.status === 'draft'}
 			<PublishEventAction eventId={evt.id} />
+		{/if}
+
+		{#if evt.status === 'pending_review'}
+			<!-- Approving is the same transition as publishing a draft, so it goes
+			     through the same action. Turning it down is its own thing: it needs
+			     a reason, because `rejected` exists so the member can fix and
+			     resubmit. -->
+			<PublishEventAction eventId={evt.id} label="Approve" />
+			<Action
+				action={rejectListing}
+				label="Turn down"
+				successToast="Sent back to the member"
+				variant="warning"
+				size="sm"
+				onsuccess={() => invalidateAll()}
+			>
+				{#snippet form()}
+					<input {...rejectFields.eventId.as('hidden', evt.id)} />
+					<FormField
+						field={rejectFields.notes}
+						type="textarea"
+						label="What needs to change?"
+						description="The member sees this. Without it they can't fix the listing."
+					/>
+				{/snippet}
+			</Action>
 		{/if}
 
 		{#if evt.status === 'published'}
@@ -229,6 +268,8 @@
 		{#if evt.status !== 'cancelled'}
 			<CancelEventAction eventId={evt.id} />
 		{/if}
+
+		<DeleteEventAction eventId={evt.id} />
 	</div>
 </PageHeader>
 <PageContent width="3xl">
@@ -260,7 +301,7 @@
 					onsuccess={() => void getEventRecurringSeries(id).refresh()}
 				>
 					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
-					<SubmitButton label="Cancel series" class="btn-xs btn-ghost text-error" />
+					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
 				</Form>
 			{/if}
 		</div>
@@ -269,9 +310,9 @@
 	<!-- Edit form -->
 	{#if editing}
 		<svelte:boundary>
-			<div class="card bg-base-100 shadow">
-				<div class="card-body space-y-4">
-					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
+			<Card>
+				<CardBody class="space-y-4">
+					<h3 class="text-muted font-medium">Edit Event</h3>
 
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
@@ -293,7 +334,7 @@
 									name="title"
 									type="text"
 									bind:value={editTitle}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 								/>
 							</FormField>
@@ -303,7 +344,7 @@
 									id="editDesc"
 									name="description"
 									bind:value={editDescription}
-									class="textarea textarea-bordered w-full"
+									class="textarea w-full"
 									rows="4"
 								></textarea>
 							</FormField>
@@ -314,7 +355,7 @@
 									name="eventDate"
 									type="date"
 									bind:value={editDate}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 									onchange={checkForRebook}
 								/>
@@ -327,7 +368,7 @@
 										name="eventStartTime"
 										type="time"
 										bind:value={editStartTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -339,7 +380,7 @@
 										name="eventEndTime"
 										type="time"
 										bind:value={editEndTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -352,7 +393,7 @@
 									name="doorsTime"
 									type="time"
 									bind:value={editDoorsTime}
-									class="input input-bordered w-full"
+									class="input w-full"
 								/>
 							</FormField>
 
@@ -362,7 +403,7 @@
 									name="tags"
 									type="text"
 									bind:value={editTags}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="e.g. open mic, workshop"
 								/>
 							</FormField>
@@ -375,7 +416,7 @@
 									name="location"
 									type="text"
 									bind:value={editLocation}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="Venue name and address"
 								/>
 							</FormField>
@@ -386,7 +427,7 @@
 									name="externalTicketUrl"
 									type="url"
 									bind:value={editExternalTicketUrl}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="https://..."
 								/>
 							</FormField>
@@ -403,7 +444,7 @@
 									min="0.01"
 									step="0.01"
 									placeholder="15.00"
-									class="input input-bordered w-full"
+									class="input w-full"
 									required={editTicketingEnabled}
 								/>
 								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
@@ -412,10 +453,11 @@
 							<!-- Selling through our checkout is the one thing a band gig cannot
 							     do: `update()` throws on it, so offering the toggle here would
 							     only produce a failed save. The band's own link takes the money. -->
-							{#if isBandEvent}
-								<p class="text-sm opacity-60">
-									Band gigs aren't sold through CMC — the price above is what attendees pay at the
-									door or through the band's ticket link.
+							{#if !cmcCanSell}
+								<p class="text-muted">
+									CMC doesn't sell tickets for shows it isn't producing — the price above is what
+									attendees pay at the door or through the {isBandEvent ? "band's" : 'listed'} ticket
+									link.
 								</p>
 							{:else}
 								<div class="form-control">
@@ -427,7 +469,7 @@
 							{/if}
 
 							{#if editTicketingEnabled}
-								<div class="card bg-base-200 p-4">
+								<Card tone="base-200" class="p-4">
 									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
 										<input
 											id="editTicketQuantity"
@@ -437,16 +479,16 @@
 											min="1"
 											step="1"
 											placeholder="Unlimited"
-											class="input input-bordered w-full"
+											class="input w-full"
 										/>
 									</FormField>
-									<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
-								</div>
+									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
+								</Card>
 							{/if}
 
 							<!-- Rebook warning -->
 							{#if rebookNeeded}
-								<div class="alert alert-warning">
+								<div class="alert alert-warning" role="alert">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
 										<p class="text-sm">
@@ -471,7 +513,7 @@
 														name="reservationStartTime"
 														type="time"
 														bind:value={editReservationStartTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 												<FormField label="Reservation end" id="editResEnd" issues={[]}>
@@ -480,7 +522,7 @@
 														name="reservationEndTime"
 														type="time"
 														bind:value={editReservationEndTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 											</div>
@@ -509,24 +551,48 @@
 							{/if}
 
 							<div class="flex justify-end gap-2 pt-2">
-								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}
+								<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
 									>Cancel</Button
 								>
-								<SubmitButton label="Save" class="btn-primary btn-sm" />
+								<SubmitButton label="Save" variant="primary" size="sm" />
 							</div>
 						</div>
 					</Form>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			{#snippet pending()}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body flex items-center justify-center p-8">
+				<Card>
+					<CardBody class="flex items-center justify-center p-8">
 						<span class="loading loading-spinner loading-md"></span>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/snippet}
 		</svelte:boundary>
+	{/if}
+
+	{#if isCommunityEvent}
+		<!-- Enough to judge the listing without leaving the page: who posted it,
+		     and whether they're here because of a past problem. -->
+		<InfoCard title="Submitted by">
+			<p class="flex flex-wrap items-center gap-2 text-sm">
+				<a href={resolve(`/staff/users/${data.submitterId}`)} class="link font-medium">
+					{data.creator?.name ?? 'Unknown member'}
+				</a>
+				{#if data.creator?.email}
+					<span class="opacity-60">{data.creator.email}</span>
+				{/if}
+			</p>
+			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
+				<Alert type="warning" class="mt-2">
+					This member's listings are checked before they publish, after a report was upheld against
+					one of them.
+					{#if data.submitterStanding.reason}
+						Staff note: "{data.submitterStanding.reason}"
+					{/if}
+				</Alert>
+			{/if}
+		</InfoCard>
 	{/if}
 
 	<!-- Event info card -->
@@ -583,28 +649,28 @@
 		<InfoCard title="Ticketing">
 			<div class="flex gap-6">
 				<div>
-					<p class="text-sm opacity-60">Price</p>
+					<p class="text-muted">Price</p>
 					<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
 				</div>
 				<div>
-					<p class="text-sm opacity-60">Sold by</p>
+					<p class="text-muted">Sold by</p>
 					<p class="text-lg font-medium">
 						{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
 					</p>
 				</div>
 				{#if evt.ticketingEnabled}
 					<div>
-						<p class="text-sm opacity-60">Capacity</p>
+						<p class="text-muted">Capacity</p>
 						<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
 					</div>
 				{/if}
 				{#if data.ticketStats}
 					<div>
-						<p class="text-sm opacity-60">Sold</p>
+						<p class="text-muted">Sold</p>
 						<p class="text-lg font-medium">{data.ticketStats.sold}</p>
 					</div>
 					<div>
-						<p class="text-sm opacity-60">Remaining</p>
+						<p class="text-muted">Remaining</p>
 						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
 					</div>
 				{/if}
@@ -643,7 +709,7 @@
 							<td class="w-px"><StatusBadge status={t.status} /></td>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{t.attendeeName}</div>
-								<div class="truncate text-sm opacity-60">{t.attendeeEmail}</div>
+								<div class="truncate text-muted">{t.attendeeEmail}</div>
 							</td>
 							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
 						</tr>
@@ -656,7 +722,14 @@
 	<!-- Poster -->
 	<InfoCard title="Poster">
 		{#if data.posterUrl}
-			<img src={data.posterUrl} alt="Event poster" class="rounded max-h-64 object-contain" />
+			{@const poster = imageSrc(data.posterUrl, 'poster')}
+			<img
+				src={poster.src}
+				srcset={poster.srcset}
+				sizes={poster.sizes}
+				alt="Event poster"
+				class="rounded max-h-64 object-contain"
+			/>
 		{:else}
 			<p class="text-sm opacity-50">No poster uploaded</p>
 		{/if}
@@ -667,7 +740,7 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handlePosterUpload}
-					class="file-input file-input-bordered file-input-sm"
+					class="file-input file-input-sm"
 				/>
 			</div>
 		{/if}

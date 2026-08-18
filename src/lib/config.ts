@@ -23,6 +23,34 @@ export const SEARCH_LIMIT = 20;
 export const LIST_LIMIT = 100;
 
 // ---------------------------------------------------------------------------
+// Text field limits
+// ---------------------------------------------------------------------------
+//
+// These are *application* conventions, not database constraints — every text
+// column in the schema is a bare SQLite `text()` with no length at all. The 255
+// is inherited from the Laravel/MySQL app this replaced, where it meant
+// varchar(255). Kept because it is a sane cap and changing it would be churn,
+// but do not read it as something the database enforces.
+//
+// Named per *kind of field*, deliberately, rather than one constant reused
+// everywhere the number happens to be the same. A shared constant asserts that
+// two fields must change together; that is true of "every single-line name in
+// the app" and false of, say, a flag reason, which has its own limit next to
+// the rest of the flag rules.
+
+/** Single-line text: names, titles, slugs, locations. */
+export const SHORT_TEXT_MAX = 255;
+
+/** A one-or-two-sentence field: summaries, short bios, availability notes. */
+export const BLURB_MAX = 500;
+
+/** Multi-paragraph prose: descriptions, longer bios. */
+export const LONG_TEXT_MAX = 2000;
+
+/** Free-text staff/member notes attached to a record. */
+export const NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
 // Finance
 // ---------------------------------------------------------------------------
 
@@ -162,9 +190,35 @@ export const creditSourceLabels: Record<string, string> = {
 // Inbox enum values
 // ---------------------------------------------------------------------------
 
-export const inboxChannels = ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'] as const;
+export const inboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'direct',
+	'instagram',
+	'messenger'
+] as const;
+
+/**
+ * The contact-form subject that reveals the event-tip fields.
+ *
+ * Here rather than beside the schema it validates: the public contact page has
+ * to branch on it, and anything under `$lib/server/**` is barred from the
+ * browser bundle.
+ */
+export const EVENT_TIP_SUBJECT = 'Event Tip';
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
-export const inboxMessageDirections = ['inbound', 'outbound'] as const;
+/**
+ * Which way a message went, relative to CorvMC. `inbound` is someone writing to
+ * us; `outbound` is us writing back, and is what we are responsible for
+ * delivering. `peer` is neither: a member↔member message that we only hold.
+ *
+ * Keeping `peer` out of `inbound` matters — `addOutboundMessage` builds its
+ * email References chain from `direction = 'inbound'`, and anything measuring
+ * staff response times counts the same rows. Neither should see a DM.
+ */
+export const inboxMessageDirections = ['inbound', 'outbound', 'peer'] as const;
 
 /**
  * How a participant relates to a thread. Only threads with signed-in parties
@@ -184,9 +238,70 @@ export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number]
 	'portal'
 ];
 
+/** How many people may be sitting on an unanswered request from you at once. */
+export const MAX_PENDING_SENT_REQUESTS = 5;
+
+/** How many of your reports may be waiting in the staff queue at once. */
+export const MAX_UNRESOLVED_REPORTS = 5;
+
+/** Longest a single direct message may be. */
+export const DIRECT_MESSAGE_BODY_MAX = 5000;
+
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
 }
+
+// ---------------------------------------------------------------------------
+// Member standing
+// ---------------------------------------------------------------------------
+
+/**
+ * The privileges a member can be put on probation for, one per domain that
+ * reads standing. Exactly three, and each one has a code path that consults it
+ * — a scope nothing reads is a column that lies. `member_profile` and
+ * `band_profile` reports cost nobody anything on uphold today, so they get no
+ * scope; `scopeForFlag` maps them to null.
+ */
+export const standingScopes = ['community_event', 'suggestion', 'messaging'] as const;
+export type StandingScope = (typeof standingScopes)[number];
+
+/**
+ * One ladder for every scope.
+ *
+ * `none`       — no restriction. Also what a lifted one becomes, so "we looked
+ *                at this and cleared it" still reads differently from "this
+ *                never came up".
+ * `restricted` — you may still act, but with a gate. For the two posting
+ *                scopes that gate is staff review; for messaging it is
+ *                reply-only.
+ * `disabled`   — you may not act at all.
+ */
+export const standingStatuses = ['none', 'restricted', 'disabled'] as const;
+export type StandingStatus = (typeof standingStatuses)[number];
+
+/**
+ * Which rungs each scope may actually hold, and what to call it on screen.
+ *
+ * Only messaging has a use for `disabled` — staff switching it off wholesale,
+ * which is how the occasional under-18 member is handled. "You may not post
+ * community listings at all" is not a thing anyone can do, so `setStanding`
+ * rejects it rather than leaving an unreachable value lying in the column.
+ */
+export const standingScopeConfig: Record<
+	StandingScope,
+	{ statuses: readonly StandingStatus[]; label: string }
+> = {
+	community_event: { statuses: ['none', 'restricted'], label: 'Community listings' },
+	suggestion: { statuses: ['none', 'restricted'], label: 'Suggestions' },
+	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' }
+};
+
+/**
+ * Longest staff note stored on a standing. 500 was already the cap on both the
+ * staff messaging form and `revokeSuggestionTrust`; community listings trimmed
+ * nowhere, which was the outlier.
+ */
+export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
 // Volunteering
@@ -335,3 +450,80 @@ export function formatVolunteerHours(minutes: number): string {
 	const rendered = Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/0+$/, '');
 	return `${rendered} ${hours === 1 ? 'hr' : 'hrs'}`;
 }
+
+// ---------------------------------------------------------------------------
+// Suggestions
+// ---------------------------------------------------------------------------
+
+export const suggestionCategories = [
+	'website_tools',
+	'gear_equipment',
+	'events_programming',
+	'the_space',
+	'policy',
+	'other'
+] as const;
+
+/** Editorial lifecycle — what staff have decided about the idea. */
+export const suggestionStatuses = ['open', 'planned', 'in_progress', 'done', 'declined'] as const;
+
+/**
+ * Whether the suggestion is on the board at all — a separate axis from status,
+ * so a public "Declined, here's why" can't be confused with a silent takedown.
+ */
+export const suggestionVisibilities = [
+	'visible',
+	'pending_review',
+	'under_review',
+	'hidden'
+] as const;
+
+export const SUGGESTION_TITLE_MAX = 120;
+export const SUGGESTION_BODY_MAX = 2000;
+export const SUGGESTION_RESPONSE_MAX = 2000;
+export const SUGGESTION_NOTE_MAX = 500;
+
+/**
+ * How many distinct pending reporters it takes to pull a suggestion off the
+ * board. One is a deliberate choice for a collective this size — reports here
+ * are authenticated, attributable, and member-only — but it does mean any
+ * member can hide any post until staff look at it. Raising this is the fix if
+ * the board is ever abused, which is why it's a constant and not an `if`.
+ */
+export const SUGGESTION_FLAGS_TO_WITHHOLD = 1;
+
+export const suggestionCategoryLabels: Record<(typeof suggestionCategories)[number], string> = {
+	website_tools: 'Website & Tools',
+	gear_equipment: 'Gear & Equipment',
+	events_programming: 'Events & Programming',
+	the_space: 'The Space',
+	policy: 'Policy',
+	other: 'Other'
+};
+
+/** Only `in_progress` needs help; the rest humanise fine on their own. */
+export const suggestionStatusLabels: Record<(typeof suggestionStatuses)[number], string> = {
+	open: 'Open',
+	planned: 'Planned',
+	in_progress: 'In progress',
+	done: 'Done',
+	declined: 'Declined'
+};
+
+export const suggestionVisibilityLabels: Record<(typeof suggestionVisibilities)[number], string> = {
+	visible: 'On the board',
+	pending_review: 'Waiting for review',
+	under_review: 'Pulled for review',
+	hidden: 'Hidden'
+};
+
+/** Select options, in declaration order. */
+export const suggestionCategoryOptions = suggestionCategories.map((value) => ({
+	value,
+	label: suggestionCategoryLabels[value]
+}));
+
+export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
+	value,
+	label: suggestionStatusLabels[value]
+}));

@@ -31,7 +31,7 @@
 	label="Reserve Space"
 	modalTitle="Book a Session"
 	noFooter
-	class="btn-primary"
+	variant="primary"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
 		const r = result as {

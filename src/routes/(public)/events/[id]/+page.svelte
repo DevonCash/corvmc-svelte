@@ -1,7 +1,8 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { IconShare3, IconCheck, IconCalendarPlus } from '@tabler/icons-svelte';
+	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
@@ -19,6 +20,7 @@
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -55,8 +57,6 @@
 		endsAt: evt.endsAt
 	});
 
-	let copied = $state(false);
-
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
 		return tags
@@ -68,6 +68,10 @@
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 
+	// A cancelled show stays on the guide so the people who already had the date
+	// find out. Everything transactional comes off; the facts stay.
+	const isCancelled = $derived(evt.status === 'cancelled');
+
 	const isBandEvent = $derived(evt.source === 'band');
 	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
 
@@ -78,16 +82,6 @@
 			? resolve(`/events/${evt.id}/tickets`)
 			: (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
 	);
-
-	async function share() {
-		try {
-			await navigator.clipboard.writeText(window.location.href);
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable — no-op
-		}
-	}
 </script>
 
 <svelte:head>
@@ -122,18 +116,7 @@
 						</li>
 					</ul>
 				</details>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm btn-square"
-					title="Copy link to this event"
-					onclick={share}
-				>
-					{#if copied}
-						<IconCheck size={18} />
-					{:else}
-						<IconShare3 size={18} />
-					{/if}
-				</button>
+				<ShareButton title="Copy link to this event" />
 				{#if data.canReport}
 					<ReportEventAction eventId={evt.id} eventTitle={evt.title} />
 				{/if}
@@ -167,7 +150,14 @@
 					</div>
 				{/if}
 
-				<h1 class="edet__title">{evt.title}</h1>
+				<h1 class="edet__title" class:edet__title--cancelled={isCancelled}>{evt.title}</h1>
+
+				{#if isCancelled}
+					<div class="edet__cancelled" role="status">
+						<IconAlertTriangle size={18} />
+						<span>This event has been cancelled.</span>
+					</div>
+				{/if}
 
 				<!-- The whole bill, in billing order. An act only links out once it has
 				     confirmed — a credit the named band hasn't agreed to is plain text. -->
@@ -310,19 +300,21 @@
 				{/if}
 
 				<div class="edet__ctas">
-					{#if data.isPast}
-						<span class="text-base font-medium" style="color: var(--fg-2)"
-							>This event has ended.</span
-						>
+					{#if isCancelled}
+						<span class="text-base font-medium text-fg-2">Tickets and RSVPs are closed.</span>
+					{:else if data.isPast}
+						<span class="text-base font-medium text-fg-2">This event has ended.</span>
 					{:else if mode === 'platform'}
 						{#if soldOut}
-							<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
+							<Button variant="default" size="lg" disabled
+								>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+							>
 						{:else}
-							<a href={ticketsHref} class="btn btn-primary btn-lg">
+							<Button href={ticketsHref} variant="primary" size="lg">
 								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
-							</a>
+							</Button>
 							{#if data.remaining !== null}
-								<span class="text-sm" style="color: var(--fg-2)"
+								<span class="text-muted"
 									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 								>
 							{/if}
@@ -342,21 +334,23 @@
 						<!-- Sold off-site, at the door, or not at all. Tickets (when there's a
 						     seller) are the primary action; the RSVP is just headcount. -->
 						{#if mode === 'external'}
-							<a
+							<Button
 								href={evt.externalTicketUrl!}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="btn btn-primary btn-lg">Get Tickets ↗</a
+								variant="primary"
+								size="lg">Get Tickets ↗</Button
 							>
 						{/if}
-						<a
+						<Button
 							href={resolve('/login')}
-							class="btn btn-lg {mode === 'external' ? 'btn-ghost' : 'btn-primary'}"
+							variant={mode === 'external' ? 'ghost' : 'primary'}
+							size="lg"
 						>
 							{mode === 'external' ? "Sign in to say you're going" : 'Sign in to RSVP'}
-						</a>
+						</Button>
 						{#if data.rsvpCount > 0}
-							<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+							<span class="text-muted">{data.rsvpCount} going</span>
 						{/if}
 					{/if}
 				</div>
@@ -392,6 +386,25 @@
 	/* Layout (.edet, .edet__poster/main/tags/title/facts/fact/desc/ctas) is
 	   shared with the member event detail page and lives in routes/layout.css.
 	   Only the rules unique to this page are defined locally below. */
+	/* A cancelled show is still worth reading — struck and flagged, not faded
+	   into something people skim past. */
+	.edet__cancelled {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.75rem 0 0.25rem;
+		padding: 0.6rem 0.85rem;
+		border: 2px solid var(--cmc-red-orange);
+		border-radius: 6px;
+		color: var(--cmc-red-orange);
+		font-weight: 500;
+	}
+
+	:global(.edet__title--cancelled) {
+		text-decoration: line-through;
+		text-decoration-thickness: 2px;
+	}
+
 	.edet__byline {
 		font-size: 0.95rem;
 		color: var(--fg-2);

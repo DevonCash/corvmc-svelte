@@ -2,18 +2,24 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import {
 	create,
 	update,
 	checkRebookNeeded,
 	publish,
-	unpublishWithBandNotice,
+	unpublishWithNotice,
+	remove as removeEvent,
+	getDeletionImpact,
 	cancel,
 	getById,
 	listAll as listAllEvents,
 	listUpcoming,
 	listPast,
-	getEventLineup
+	getEventLineup,
+	listMemberUpcomingShows,
+	listMemberPastShows,
+	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
 	getConflictDetails,
@@ -44,8 +50,11 @@ import {
 	getUserRsvp,
 	countRsvps
 } from '$lib/server/event/rsvp-service';
+import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
+import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
@@ -57,7 +66,7 @@ import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, SHORT_TEXT_MAX } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -212,7 +221,13 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
-	if (evt.status !== 'published') throw error(404, 'Event not found');
+	// Cancelled events still render, with a banner and no buy affordances. A
+	// shared link to a cancelled show must say "cancelled" rather than behave as
+	// though the show never existed — the people following that link are exactly
+	// the ones who need to know. Draft, pending_review and rejected stay 404.
+	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
+		throw error(404, 'Event not found');
+	}
 
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.bandId) {
@@ -270,6 +285,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			ticketPrice: evt.ticketPrice,
 			ticketQuantity: evt.ticketQuantity,
 			source: evt.source,
+			status: evt.status,
 			externalTicketUrl: evt.externalTicketUrl,
 			bandName: bandInfo?.name ?? null,
 			bandSlug: bandInfo?.slug ?? null,
@@ -288,7 +304,10 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		isSustainingMember,
 		isPast,
 		isAuthenticated: !!locals.user,
-		canReport: await isFeatureEnabled('contentFlags'),
+		// Cancelled listings aren't reportable: they're already on their way
+		// off the guide, so opening them up only widens the id-probing surface
+		// the moderation spec closed.
+		canReport: evt.status === 'published' && (await isFeatureEnabled('contentFlags')),
 		upcoming
 	};
 });
@@ -299,10 +318,12 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
-	// Band gigs are never sold through CMC (see `update()` in event-service).
-	// Checked on source rather than the bandEvents flag so a row that predates
-	// that rule — or one written around it — still cannot reach checkout.
-	if (evt.source === 'band') throw error(404, 'Tickets not available for this event');
+	// CMC only sells shows CMC produces (see `update()` in event-service): a
+	// band's gig or a member's community listing would put money in CMC's Stripe
+	// account with no payout path back to whoever is actually putting it on.
+	// Checked on source so a row written before the rule still cannot reach
+	// checkout.
+	if (evt.source !== 'cmc') throw error(404, 'Tickets not available for this event');
 
 	const remaining = await getTicketsRemaining(id);
 
@@ -395,10 +416,17 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 });
 
 export const getStaffEvents = query(
-	z.object({ source: z.enum(eventSources).optional(), page: z.number().optional() }),
+	z.object({
+		source: z.enum(eventSources).optional(),
+		status: z.enum(eventStatuses).optional(),
+		page: z.number().optional()
+	}),
 	async (filters) => {
 		await requireStaff();
-		return listAllEvents({ source: filters.source }, { page: filters.page ?? 1, pageSize: 50 });
+		return listAllEvents(
+			{ source: filters.source, status: filters.status },
+			{ page: filters.page ?? 1, pageSize: 50 }
+		);
 	}
 );
 
@@ -500,6 +528,12 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		band: bookingBand,
 		posterUrl,
 		creator,
+		// Standing only matters for a community listing, and only staff see it.
+		// It's what tells a reviewer whether this member is here because of a
+		// past problem or because they're new.
+		submitterStanding:
+			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
+		submitterId: evt.createdByUserId,
 		linkedReservation,
 		ticketStats,
 		tickets
@@ -580,18 +614,26 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	);
 	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
-	const reservation =
-		reserveSpace && data.reservationStartTime && data.reservationEndTime
-			? {
-					...buildTimeRangeInTz(
-						data.eventDate,
-						data.reservationStartTime,
-						data.reservationEndTime,
-						tz
-					),
-					overrideConflicts
-				}
-			: undefined;
+	// The reservation times are an optional override for setup and teardown, not a
+	// precondition: without them the space is held for the event's own window.
+	// Gating on them meant a submission that checked the box but sent no times
+	// created the event with no reservation and no error.
+	//
+	// All-or-nothing, because buildTimeRangeInTz reads an end before the start as
+	// an overnight range: pairing a supplied 23:00 start with a defaulted 22:00
+	// end would roll the end onto the next day and hold the room for 23 hours.
+	const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
+	const reservation = reserveSpace
+		? {
+				...buildTimeRangeInTz(
+					data.eventDate,
+					customWindow ? data.reservationStartTime! : data.eventStartTime,
+					customWindow ? data.reservationEndTime! : data.eventEndTime,
+					tz
+				),
+				overrideConflicts
+			}
+		: undefined;
 
 	const event = await create({
 		title: data.title,
@@ -669,7 +711,7 @@ export const updateEvent = form(
 		doorsTime: z.string().optional(),
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
-		location: z.string().max(255).optional(),
+		location: z.string().max(SHORT_TEXT_MAX).optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
@@ -750,17 +792,54 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 	return { success: true };
 });
 
-export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
-	// Band-sourced events notify the band's admins — pulling a gig silently is
-	// the one unpublish that needs a word back to whoever posted it.
-	await unpublishWithBandNotice(data.id);
-	return { success: true };
-});
+export const unpublishEvent = form(
+	z.object({
+		id: z.string().min(1),
+		// Optional, because unpublishing a CMC event notifies nobody and requiring
+		// a reason there is pure friction. It is passed through whenever it is
+		// given: community listings and band gigs both email whoever posted them,
+		// and this endpoint had no way to say why at all — the member got "your
+		// listing was taken down" and a blank space where the reason goes.
+		// 1000 matches `rejectCommunityEvent`, which writes the same
+		// `event.reviewNotes` column.
+		notes: z.string().trim().max(1000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		// Band-sourced events notify the band's admins — pulling a gig silently is
+		// the one unpublish that needs a word back to whoever posted it.
+		await unpublishWithNotice(data.id, { notes: data.notes });
+		return { success: true };
+	}
+);
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireStaff();
 	await cancel(data.id, staff.id);
+	return { success: true };
+});
+
+/**
+ * What a delete would destroy. Drives the confirmation copy, so a staffer can
+ * tell a mistake from a real event before it is gone.
+ */
+export const getEventDeletionImpact = query(z.string(), async (id) => {
+	await requireStaff();
+	return getDeletionImpact(id);
+});
+
+export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const staff = await requireStaff();
+	try {
+		await removeEvent(data.id, staff.id);
+	} catch (err) {
+		// The ticket refusal is a business rule with a written explanation, not an
+		// internal fault — surfacing it as a 500 would hide the sentence that
+		// tells the staffer to cancel instead.
+		const message = err instanceof Error ? err.message : 'Could not delete this event';
+		throw error(message.includes('tickets') ? 409 : 500, message);
+	}
+	void getStaffEvents({}).refresh();
 	return { success: true };
 });
 
@@ -882,11 +961,12 @@ export const claimFreeTicket = form(
 		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
 		// Mints a real ticket row with a code and capacity, so it falls under the
-		// same rule as a paid purchase: CMC does not issue tickets for a band's
-		// gig at any price. Unreachable while `update()` holds — a band event
-		// cannot have `ticketingEnabled` — but this is the ticket-minting call, so
-		// it does not lean on that. (The headcount RSVP below is allowed.)
-		if (evt.source === 'band') throw error(400, 'Tickets not available');
+		// same rule as a paid purchase: CMC does not issue tickets for a show it
+		// doesn't produce, at any price. Unreachable while `update()` holds — a
+		// band or community row cannot have `ticketingEnabled` — but this is the
+		// ticket-minting call, so it does not lean on that. (The headcount RSVP
+		// below is allowed, deliberately: it takes no money and issues no code.)
+		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -978,7 +1058,7 @@ export const purchaseTickets = form(
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
 		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
 		// money, so it repeats the check rather than trusting the page guard.
-		if (evt.source === 'band') throw error(400, 'Tickets not available');
+		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
 
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
@@ -1011,25 +1091,48 @@ export const purchaseTickets = form(
 
 		const lineItem = await buildLineItem('ticket', unitPrice, data.quantity);
 
-		const result = await checkout({
-			stripeCustomerId: locals.user?.stripeId ?? undefined,
-			customerEmail: locals.user?.email ?? attendee.email,
-			userId: locals.user?.id ?? undefined,
-			mode: 'payment',
-			lineItems: [lineItem],
-			coverFees,
-			metadata: {
-				type: 'ticket',
-				purchase_id: purchaseId,
-				event_id: evt.id,
-				ticket_quantity: String(data.quantity),
-				// The webhook needs this to break the charge into tickets vs. covered
-				// fees on the receipt — the session alone can't tell them apart.
-				ticket_unit_price_cents: String(unitPrice)
-			},
-			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
-		});
+		// checkout() spends any credits the buyer has before charging the card, and
+		// payment-service reverses every completed deduction if a later one fails.
+		// The only way that surfaces here is a lost race — the balance moved between
+		// this request pricing the cart and the deduction landing. Nothing is
+		// broken and nothing is charged; the buyer just needs to resubmit against
+		// the new balance.
+		//
+		// Reported as a field issue rather than a thrown status because Form routes
+		// a thrown error into onfailure(issues), which carries no message — this
+		// page's onfailure shows a generic "Something went wrong". It also keeps a
+		// routine race out of Sentry, where an unhandled throw lands as a 500.
+		let result;
+		try {
+			result = await checkout({
+				stripeCustomerId: locals.user?.stripeId ?? undefined,
+				customerEmail: locals.user?.email ?? attendee.email,
+				userId: locals.user?.id ?? undefined,
+				mode: 'payment',
+				lineItems: [lineItem],
+				coverFees,
+				metadata: {
+					type: 'ticket',
+					purchase_id: purchaseId,
+					event_id: evt.id,
+					ticket_quantity: String(data.quantity),
+					// The webhook needs this to break the charge into tickets vs. covered
+					// fees on the receipt — the session alone can't tell them apart.
+					ticket_unit_price_cents: String(unitPrice)
+				},
+				successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
+				cancelUrl: `${url.origin}/events/${evt.id}/tickets`
+			});
+		} catch (err) {
+			if (err instanceof InsufficientCreditsError) {
+				invalid(
+					issue.quantity(
+						'Your credit balance changed while this was being processed. Nothing was charged — check the total and try again.'
+					)
+				);
+			}
+			throw err;
+		}
 
 		if (result.paid) {
 			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');
@@ -1043,3 +1146,26 @@ export const purchaseTickets = form(
 		return { redirectUrl: result.checkoutUrl! };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserShows = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [upcoming, past, pastCount] = await Promise.all([
+		listMemberUpcomingShows(userId),
+		listMemberPastShows(userId, { limit: 5, offset: 0 }),
+		countMemberPastShows(userId)
+	]);
+	return { upcoming, past, pastCount };
+});
+
+export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
+	await requireStaff();
+	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
+	return { tickets, rsvps };
+});

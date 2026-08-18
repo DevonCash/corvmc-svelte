@@ -1,13 +1,13 @@
 /**
- * Prepare the local D1 for the e2e suite — migrate (CI) and seed — *before*
- * Playwright starts the preview server.
+ * Prepare the run's local D1 — migrate and seed — *before* Playwright starts
+ * the preview server.
  *
  * This has to happen before the server boots, not from `globalSetup`. Playwright
  * orders its startup tasks as [remove output dirs, plugin setup, global setup],
  * and `webServer` is a plugin, so `globalSetup` only runs once the preview server
  * is already up and serving. Migrating and seeding from there meant a second
  * miniflare (every `wrangler d1 execute` in the migrate loop, then each fixture's
- * `getPlatformProxy()`) opening `.wrangler/state` while the server held it.
+ * `getPlatformProxy()`) opening the state directory while the server held it.
  *
  * SQLite tolerates that right up until the file needs recovery, at which point
  * the exclusive lock can't be taken and workerd dies outright:
@@ -18,24 +18,68 @@
  *
  * — which fails the whole suite, not one test. Running here means every one of
  * those processes has exited before the server opens the file.
+ *
+ * The database itself lives in the run's own state directory (`e2e/state-dir.ts`),
+ * not the `.wrangler/state` that `pnpm dev` and every other wrangler command use,
+ * so nothing outside this suite is ever holding it.
  */
 import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { E2E_STATE_ROOT, REPO_ROOT } from './state-dir';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
+import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
+import { seedCommunityEvents } from './fixtures/seed-community-events';
+import { seedSuggestions } from './fixtures/seed-suggestions';
 
-// CI starts from a fresh checkout with no local D1, so create + migrate it before
-// seeding. Locally we skip this: the dev D1 is already migrated and the migration
-// SQL uses plain CREATE TABLE (re-running it against an existing database would
-// error). `pnpm db:reset` is the local equivalent.
-if (process.env.CI) {
-	execSync('pnpm db:migrate:local', { stdio: 'inherit' });
+const MIGRATIONS_DIR = join(REPO_ROOT, 'migrations');
+const STAMP = join(E2E_STATE_ROOT, 'applied-migrations');
+
+/** The migrations `pnpm db:migrate:local` would apply, in the order it applies them. */
+function migrationNames(): string {
+	return readdirSync(MIGRATIONS_DIR)
+		.filter((name) => existsSync(join(MIGRATIONS_DIR, name, 'migration.sql')))
+		.sort()
+		.join('\n');
 }
+
+/**
+ * Build the run's database from the migrations whenever it doesn't match them.
+ *
+ * The migration SQL is plain `CREATE TABLE`, so it can only be applied to an
+ * empty database — a new migration means starting over rather than topping up.
+ * Cheap: CI always starts from nothing, and locally this only runs the first
+ * time and after `pnpm db:generate`. Rebuilding drops KV and R2 along with D1,
+ * which is what we want — the seeds are idempotent, but KV counters (the
+ * report rate limit) are not.
+ */
+function migrateIfStale(): void {
+	const wanted = migrationNames();
+	const applied = existsSync(STAMP) ? readFileSync(STAMP, 'utf8') : null;
+	if (applied === wanted) return;
+
+	rmSync(E2E_STATE_ROOT, { recursive: true, force: true });
+	execSync('pnpm db:migrate:local', {
+		stdio: 'inherit',
+		cwd: REPO_ROOT,
+		env: { ...process.env, WRANGLER_PERSIST_TO: E2E_STATE_ROOT }
+	});
+	mkdirSync(E2E_STATE_ROOT, { recursive: true });
+	writeFileSync(STAMP, wanted);
+}
+
+migrateIfStale();
 
 await seedPayReservation();
 await seedBandOnboarding();
 await seedStaffUser();
+await seedStaffEvent();
 await seedVolunteering();
+await seedCommunityEvents();
+// After the staff fixture: one seeded vote belongs to the staff user.
+await seedSuggestions();
 await seedFeatureFlags();

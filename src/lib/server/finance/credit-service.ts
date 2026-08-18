@@ -322,6 +322,9 @@ export interface CreditTransactionRow {
 }
 
 export interface CreditTransactionFilters {
+	/** Scopes the ledger to one member. `search` matches name/email and cannot
+	 *  stand in for it — two members can share a name, and an id is not a name. */
+	userId?: string;
 	search?: string;
 	creditType?: CreditType;
 	source?: TransactionSource;
@@ -335,6 +338,10 @@ function escapeLike(input: string): string {
 
 function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 	const conditions: SQL[] = [];
+
+	if (filters.userId) {
+		conditions.push(eq(creditTransaction.userId, filters.userId));
+	}
 
 	if (filters.search) {
 		const escaped = escapeLike(filters.search);

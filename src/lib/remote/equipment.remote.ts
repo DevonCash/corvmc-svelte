@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireUser, isStaff } from '$lib/server/authorization';
+import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	createEquipment as createEquipmentService,
@@ -27,7 +27,7 @@ import {
 	listUserLoans
 } from '$lib/server/equipment/loan-service';
 import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/equipment';
-import { equipmentConditions, equipmentStatuses } from '$lib/config';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX, equipmentConditions, equipmentStatuses } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -176,8 +176,8 @@ export const getMemberEquipmentLoans = query(async () => {
 // ---------------------------------------------------------------------------
 
 const editEquipmentSchema = z.object({
-	name: z.string().min(1).max(255).optional(),
-	description: z.string().max(2000).optional(),
+	name: z.string().min(1).max(SHORT_TEXT_MAX).optional(),
+	description: z.string().max(LONG_TEXT_MAX).optional(),
 	categoryId: z.string().uuid().optional(),
 	// `<Field type="number">` submits through `field.as('number')`, so SvelteKit
 	// hands the handler a number (or `undefined` for an empty input) — never a string.
@@ -201,8 +201,8 @@ export const editEquipment = form(editEquipmentSchema.extend({ id: z.string() })
 
 export const createEquipment = form(
 	z.object({
-		name: z.string().min(1).max(255),
-		description: z.string().max(2000).optional(),
+		name: z.string().min(1).max(SHORT_TEXT_MAX),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		categoryId: z.string(),
 		totalQuantity: z.number().int().min(0).optional(),
 		outOfOrderQuantity: z.number().int().min(0).optional(),
@@ -423,9 +423,9 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 	const loan = await getLoanById(loanId);
 	if (!loan) throw error(404, 'Loan not found');
 
-	const staff = await isStaff(locals.user.id);
-	if (!staff) {
-		if (loan.userId !== locals.user.id) throw error(403, 'Not authorized');
+	// Staff may cancel at any point; the borrower only before pickup.
+	const role = await requireStaffOrOwner(locals.user.id, loan.userId);
+	if (role === 'owner') {
 		if (loan.status !== 'requested' && loan.status !== 'scheduled') {
 			throw error(400, 'Cannot cancel a loan that has been checked out');
 		}
@@ -448,3 +448,15 @@ export const returnLoan = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserLoans = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listUserLoans(userId);
+});

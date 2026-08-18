@@ -16,6 +16,21 @@ export interface NotificationTypeDef {
 		sms: boolean;
 	};
 	mandatory?: boolean;
+	/**
+	 * This type's email must never carry text a member wrote.
+	 *
+	 * Enforced in the email layer rather than at the call site: there are ~23
+	 * hand-built email models across the listeners, and "remember not to pass the
+	 * message text" is a habit, not a rule. `normalizeNotificationModel` strips
+	 * `quote`/`quote_text` for these types, in the same place it already escapes
+	 * them precisely so callers cannot forget.
+	 *
+	 * Set on the direct-message types. Email is the one channel that blocking and
+	 * reporting cannot reach — once a member's words are in someone's mailbox,
+	 * they are there permanently — so DM emails say a message is waiting and
+	 * link to the site, and never quote it.
+	 */
+	emailOmitsUserContent?: boolean;
 }
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
@@ -149,6 +164,33 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'direct_message_request',
+		label: 'New message request',
+		description: 'When another member asks to start a conversation with you',
+		// Emails, but names neither the sender nor what they wrote — "you have a
+		// new message request". Until you accept, we do not put a stranger's name
+		// in your inbox. The message itself is in the Requests entry on the site,
+		// which you open deliberately.
+		defaults: { email: true, inApp: true, sms: false },
+		emailOmitsUserContent: true
+	},
+	{
+		key: 'direct_message_received',
+		label: 'New direct message',
+		description: 'When a member you are talking with sends a message',
+		// Names the sender — you accepted them — but still never the message.
+		defaults: { email: true, inApp: true, sms: false },
+		emailOmitsUserContent: true
+	},
+	{
+		key: 'messaging_restricted',
+		label: 'Messaging restricted',
+		description: 'When staff limit your ability to start new conversations',
+		// This one emails freely: it is CorvMC telling a member about a decision
+		// we made, not one member reaching another through us.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'inbox_assigned',
 		label: 'Inbox conversation assigned (staff)',
 		description: 'Notification when a staff inbox conversation is assigned to you',
@@ -213,6 +255,54 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'volunteer_shift_feedback',
 		label: 'How did your shift go?',
 		description: 'A short survey the day after a shift you worked',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_submitted',
+		label: 'Community listing needs review (staff)',
+		// In-app only, for the same reason as the volunteer queue above. Fires
+		// only when a listing actually enters pending_review — a member saving a
+		// draft is nobody's business but theirs.
+		description: 'Notification when a member submits a community listing for review',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_reviewed',
+		label: 'Your community listing was reviewed',
+		description: 'Notification when staff approve or turn down a listing you submitted',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'suggestion_responded',
+		label: 'Response to your suggestion',
+		// Email on: a member who posted an idea and heard nothing assumes it went
+		// nowhere, which is the exact failure this board exists to fix.
+		description: 'Notification when staff reply to or change the status of a suggestion you posted',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'suggestion_moderated',
+		label: 'Your suggestion was moved',
+		// Email on, and not optional in spirit: a suggestion can vanish from the
+		// board because somebody reported it. Silence there reads as a shadowban.
+		description:
+			'Notification when a suggestion you posted is held for review, restored, approved, or hidden',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'suggestion_edit_reviewed',
+		label: 'Your edit was reviewed',
+		// Email on: the member asked for something and is waiting on an answer.
+		description:
+			'Notification when staff approve or turn down an edit you proposed to your own suggestion',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'community_event_unpublished',
+		label: 'Your community listing was taken down',
+		// Email on: the listing is off the guide and they need to know why,
+		// which is not something to leave sitting in a bell icon.
+		description: 'Notification when staff remove a listing you published',
 		defaults: { email: true, inApp: true, sms: false }
 	}
 ];

@@ -1,11 +1,27 @@
 import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, ne, and, or, lt, gt, isNotNull, inArray, notInArray } from 'drizzle-orm';
+import {
+	eq,
+	ne,
+	and,
+	or,
+	lt,
+	gt,
+	gte,
+	desc,
+	asc,
+	count,
+	isNull,
+	isNotNull,
+	inArray,
+	notInArray
+} from 'drizzle-orm';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
+import { band, bandMember } from '$lib/server/db/schema/band';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
@@ -281,18 +297,28 @@ export async function cancel(
 	// reservation live in the ledger (not the payment record breakdown), so reverse
 	// them separately — this also covers cash-owed confirms that have credits
 	// committed but no payment record yet. Both paths are idempotent / no-ops when
-	// nothing applies.
+	// nothing applies (`refund()` returns early on an already-refunded payment).
+	let refundError: unknown;
 	if (row.stripePaymentRecordId) {
-		await refund({
-			// Owner, not the canceller: any checkout credits_breakdown reversal must
-			// credit the member who paid (the canceller may be staff or the cron).
-			userId: row.createdByUserId,
-			stripePaymentRecordId: row.stripePaymentRecordId
-		});
-		await db
-			.update(reservation)
-			.set({ refundedAt: new Date() })
-			.where(eq(reservation.id, reservationId));
+		try {
+			await refund({
+				// Owner, not the canceller: any checkout credits_breakdown reversal must
+				// credit the member who paid (the canceller may be staff or the cron).
+				userId: row.createdByUserId,
+				stripePaymentRecordId: row.stripePaymentRecordId
+			});
+			await db
+				.update(reservation)
+				.set({ refundedAt: new Date() })
+				.where(eq(reservation.id, reservationId));
+		} catch (err) {
+			// The row is already `cancelled` at this point and the status guard
+			// above rejects a retry, so throwing here left it stranded: credits
+			// never reversed, no `reservation.cancelled` event, so no waitlist
+			// promotion and no cancellation email (JAVASCRIPT-SVELTEKIT-29).
+			// Finish the cancellation, then surface the refund failure.
+			refundError = err;
+		}
 	}
 	await reverseReservationCredits(row.createdByUserId, reservationId);
 
@@ -314,6 +340,10 @@ export async function cancel(
 		endTime: formatTimeInTz(row.endsAt, TZ),
 		cancelledBy: options?.staffOverride ? 'staff' : 'member'
 	});
+
+	// Cancellation is complete and consistent; the refund is not. Surface it so
+	// staff can follow up rather than silently keeping the member's money.
+	if (refundError) throw refundError;
 }
 
 // ---------------------------------------------------------------------------
@@ -458,4 +488,149 @@ async function updateStatus(
 		if (!row) throw new Error('Reservation not found');
 		throw new Error(`Cannot transition from "${row.status}" to "${newStatus}"`);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// listForMember — one member's bookings, for the staff user record
+// ---------------------------------------------------------------------------
+
+export interface MemberReservation {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	status: ReservationStatus;
+	bookerType: BookerType;
+	bookerId: string;
+	bandName: string | null;
+	cashDueCents: number | null;
+	paidAt: Date | null;
+	/** The staff-entered reason, which is the whole point of keeping cancelled
+	 *  rows in this list — a status of "cancelled" on its own answers nothing. */
+	cancellationReason: string | null;
+	/** True when the member booked it themselves; false when it came via a band. */
+	own: boolean;
+}
+
+export interface MemberReservations {
+	upcoming: MemberReservation[];
+	past: MemberReservation[];
+	counts: { upcoming: number; past: number; unpaid: number; cancelledUpcoming: number };
+}
+
+/**
+ * A member's bookings split around now, plus counts of the whole set.
+ *
+ * Two things make this wider than `eq(createdByUserId, …)`:
+ *
+ * - **Band bookings count.** A member whose band books the room has no
+ *   `createdByUserId` row of their own, and "can you add me to my band's
+ *   booking?" is one of the questions this page exists to answer. Resolved
+ *   through active `bandMember` rows, the same way `getMemberDashboard` does.
+ * - **Cancellations are kept.** Filtering them out would defeat the card —
+ *   "why was my booking cancelled?" is unanswerable from a list that hides it.
+ *
+ * Event bookings are excluded: space a staff member took for a venue event is
+ * the venue's, not the member's, and it has no member-facing flow at all.
+ */
+export async function listForMember(
+	userId: string,
+	options: { upcomingLimit?: number; pastLimit?: number } = {}
+): Promise<MemberReservations> {
+	const upcomingLimit = options.upcomingLimit ?? 5;
+	const pastLimit = options.pastLimit ?? 5;
+	const now = new Date();
+
+	const bands = await db
+		.select({ bandId: bandMember.bandId, bandName: band.name })
+		.from(bandMember)
+		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.where(and(eq(bandMember.userId, userId), eq(bandMember.status, 'active')));
+
+	const bandNameById = new Map(bands.map((b) => [b.bandId, b.bandName]));
+	const bandIds = bands.map((b) => b.bandId);
+
+	// "Theirs" = booked by them, or booked by a band they are actively in.
+	const mine = eq(reservation.createdByUserId, userId);
+	const theirs =
+		bandIds.length > 0
+			? or(mine, and(eq(reservation.bookerType, 'band'), inArray(reservation.bookerId, bandIds)))!
+			: mine;
+	const scope = and(theirs, ne(reservation.bookerType, 'event'))!;
+
+	const columns = {
+		id: reservation.id,
+		startsAt: reservation.startsAt,
+		endsAt: reservation.endsAt,
+		status: reservation.status,
+		bookerType: reservation.bookerType,
+		bookerId: reservation.bookerId,
+		cashDueCents: reservation.cashDueCents,
+		paidAt: reservation.paidAt,
+		cancellationReason: reservation.cancellationReason,
+		createdByUserId: reservation.createdByUserId
+	};
+
+	const [upcomingRows, pastRows, upcomingCount, pastCount, unpaidCount, cancelledUpcomingCount] =
+		await Promise.all([
+			db
+				.select(columns)
+				.from(reservation)
+				.where(and(scope, gte(reservation.endsAt, now)))
+				.orderBy(asc(reservation.startsAt))
+				.limit(upcomingLimit),
+			db
+				.select(columns)
+				.from(reservation)
+				.where(and(scope, lt(reservation.endsAt, now)))
+				.orderBy(desc(reservation.startsAt))
+				.limit(pastLimit),
+			db
+				.select({ count: count() })
+				.from(reservation)
+				.where(and(scope, gte(reservation.endsAt, now))),
+			db
+				.select({ count: count() })
+				.from(reservation)
+				.where(and(scope, lt(reservation.endsAt, now))),
+			db
+				.select({ count: count() })
+				.from(reservation)
+				.where(
+					and(
+						scope,
+						ne(reservation.status, 'cancelled'),
+						gt(reservation.cashDueCents, 0),
+						isNull(reservation.paidAt)
+					)
+				),
+			db
+				.select({ count: count() })
+				.from(reservation)
+				.where(and(scope, gte(reservation.endsAt, now), eq(reservation.status, 'cancelled')))
+		]);
+
+	const shape = (r: (typeof upcomingRows)[number]): MemberReservation => ({
+		id: r.id,
+		startsAt: r.startsAt,
+		endsAt: r.endsAt,
+		status: r.status,
+		bookerType: r.bookerType,
+		bookerId: r.bookerId,
+		bandName: r.bookerType === 'band' ? (bandNameById.get(r.bookerId) ?? null) : null,
+		cashDueCents: r.cashDueCents,
+		paidAt: r.paidAt,
+		cancellationReason: r.cancellationReason,
+		own: r.createdByUserId === userId
+	});
+
+	return {
+		upcoming: upcomingRows.map(shape),
+		past: pastRows.map(shape),
+		counts: {
+			upcoming: upcomingCount[0]?.count ?? 0,
+			past: pastCount[0]?.count ?? 0,
+			unpaid: unpaidCount[0]?.count ?? 0,
+			cancelledUpcoming: cancelledUpcomingCount[0]?.count ?? 0
+		}
+	};
 }

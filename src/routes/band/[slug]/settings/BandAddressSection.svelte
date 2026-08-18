@@ -12,6 +12,7 @@
 	import { changeBandAddress } from '$lib/remote/band-address.remote';
 	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { isReservedSlug } from '$lib/reserved-slugs';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).
@@ -46,7 +47,9 @@
 			and your dashboard at <code class="text-xs">/band/{slug}</code>.
 		</p>
 		<div class="card-actions mt-2 justify-end">
-			<Button class="btn-sm btn-outline" onclick={() => (showChange = true)}>Change address</Button>
+			<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
+				>Change address</Button
+			>
 		</div>
 	</InfoCard>
 </section>
@@ -94,16 +97,14 @@
 				<p class="text-error text-sm">That address is reserved — pick another.</p>
 			{/if}
 
-			<div class="alert alert-warning">
-				<p class="text-sm">
-					Links to <strong>{slug}.{baseDomain}</strong> will forward to the new address — but only until
-					another band claims it, and then they stop. Update anywhere you've printed or posted the old
-					one. You can only change this a few times a year.
-				</p>
-			</div>
+			<Alert type="warning" class="text-sm">
+				Links to <strong>{slug}.{baseDomain}</strong> will forward to the new address — but only until
+				another band claims it, and then they stop. Update anywhere you've printed or posted the old one.
+				You can only change this a few times a year.
+			</Alert>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Change address" successLabel="Changed" class="btn-warning" />
+				<SubmitButton label="Change address" successLabel="Changed" variant="warning" />
 			</div>
 		</div>
 	</Form>

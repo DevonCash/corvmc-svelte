@@ -64,6 +64,39 @@ export const relations = defineRelations(schema, (t) => ({
 			alias: 'eventBand_addedBy'
 		})
 	},
+	// Two FKs to user (the member, and the staffer who last changed it), so both
+	// need an alias to say which one they follow. One entry covers every scope —
+	// this replaced communityEventStanding, suggestionStanding and
+	// messagingStanding, which had this same shape three times.
+	memberStanding: {
+		user: t.one.user({
+			from: t.memberStanding.userId,
+			to: t.user.id,
+			alias: 'memberStanding_user'
+		}),
+		updatedBy: t.one.user({
+			from: t.memberStanding.updatedByUserId,
+			to: t.user.id,
+			alias: 'memberStanding_updatedBy'
+		}),
+		triggeringFlag: t.one.contentFlag({
+			from: t.memberStanding.triggeringFlagId,
+			to: t.contentFlag.id
+		})
+	},
+	// Two FKs to user (blocker and blocked), so both need an alias.
+	userBlock: {
+		blocker: t.one.user({
+			from: t.userBlock.blockerUserId,
+			to: t.user.id,
+			alias: 'userBlock_blocker'
+		}),
+		blocked: t.one.user({
+			from: t.userBlock.blockedUserId,
+			to: t.user.id,
+			alias: 'userBlock_blocked'
+		})
+	},
 	equipmentCategory: {
 		equipment: t.many.equipment()
 	},
@@ -140,6 +173,24 @@ export const relations = defineRelations(schema, (t) => ({
 	contentFlag: {
 		reportedBy: t.one.user({ from: t.contentFlag.reportedByUserId, to: t.user.id }),
 		resolvedBy: t.one.user({ from: t.contentFlag.resolvedByUserId, to: t.user.id })
+	},
+	// Forward-only, like contentFlag above: `suggestion` points at `user` five
+	// times, and a reverse t.many.suggestion() on the user block would need a
+	// matching alias on both sides to say which FK it follows. No self-relation
+	// for mergedIntoId either — the service aliases the table explicitly.
+	suggestion: {
+		author: t.one.user({ from: t.suggestion.authorUserId, to: t.user.id }),
+		respondedBy: t.one.user({ from: t.suggestion.responseByUserId, to: t.user.id }),
+		votes: t.many.suggestionVote(),
+		edits: t.many.suggestionEdit()
+	},
+	suggestionVote: {
+		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),
+		user: t.one.user({ from: t.suggestionVote.userId, to: t.user.id })
+	},
+	suggestionEdit: {
+		suggestion: t.one.suggestion({ from: t.suggestionEdit.suggestionId, to: t.suggestion.id }),
+		requestedBy: t.one.user({ from: t.suggestionEdit.requestedByUserId, to: t.user.id })
 	},
 	helpCategory: {
 		articles: t.many.helpArticle()

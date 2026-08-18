@@ -3,6 +3,7 @@ import type { Preview } from '@storybook/sveltekit';
 // tokens, and the @plugin/utility layers apply inside Storybook. Without this,
 // components render unstyled.
 import '../src/routes/layout.css';
+import TooltipProvider from './TooltipProvider.svelte';
 
 // Toolbar control to flip between the two daisyUI themes defined in layout.css.
 export const globalTypes = {
@@ -45,6 +46,9 @@ const preview: Preview = {
 		}
 	},
 	decorators: [
+		// The app mounts one `Tooltip.Provider` at the root layout; stories render
+		// outside it, and bits-ui's `Tooltip.Root` throws without one.
+		() => ({ Component: TooltipProvider, props: {} }),
 		// Apply the selected theme to the document and paint the canvas with the
 		// theme's base surface so dark mode is actually visible.
 		(story, context) => {

@@ -63,8 +63,13 @@ export function reservationPaymentState(r: {
 	cashDueCents?: number | null;
 	creditsUsed?: number | null;
 	stripePaymentRecordId?: string | null;
+	refundedAt?: Date | null;
 }): ReservationPaymentState {
 	if (r.status === 'no_show') return 'no_show';
+	// NOTE: infers "refunded" from "cancelled and once had a payment", so a cancel
+	// whose refund failed still displays as refunded. Keying this on `refundedAt`
+	// is the correct fix but needs a data check first — rows cancelled before that
+	// column was populated would flip to "cancelled". See docs/reports/sentry-triage.md.
 	if (r.status === 'cancelled') return r.stripePaymentRecordId ? 'refunded' : 'cancelled';
 	if (r.paidAt) return 'paid';
 	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
@@ -79,7 +84,7 @@ export function visibleActions(
 	endsAt: Date,
 	stripePaymentRecordId?: string | null,
 	now: Date = new Date(),
-	opts?: { cashDueCents?: number | null; paidAt?: Date | null }
+	opts?: { cashDueCents?: number | null; paidAt?: Date | null; refundedAt?: Date | null }
 ): Set<ReservationActionKey> {
 	const actions = new Set<ReservationActionKey>();
 	const start = startsAt;
@@ -105,7 +110,14 @@ export function visibleActions(
 		if (cashOwed) actions.add('cashReceived');
 	}
 
-	if (stripePaymentRecordId && (status === 'confirmed' || status === 'completed')) {
+	// Refund does NOT cancel, so both buttons used to sit enabled side by side and
+	// refund-then-cancel refunded twice (JAVASCRIPT-SVELTEKIT-29). Once the money
+	// is back, there is nothing left to refund.
+	if (
+		stripePaymentRecordId &&
+		!opts?.refundedAt &&
+		(status === 'confirmed' || status === 'completed')
+	) {
 		actions.add('refund');
 	}
 

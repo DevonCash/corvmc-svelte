@@ -81,6 +81,12 @@ async function registerInboxListeners(): Promise<void> {
 	const { listStaffUsers } = await import('$lib/server/authorization');
 
 	domainEvents.on('inbox.message_received', async ({ data: event }) => {
+		// Member↔member conversations are not staff's business, and this event
+		// carries `preview` — the first 200 characters of the message. Without
+		// this line, every private message would put its opening words in every
+		// staff member's notification bell.
+		if (event.channel === 'direct') return;
+
 		const staffUsers = await listStaffUsers();
 		const contactLabel = event.contactName ?? 'Someone';
 

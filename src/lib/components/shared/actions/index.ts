@@ -32,6 +32,7 @@ export { default as MarkReturnedAction } from './MarkReturnedAction.svelte';
 export { default as PublishEventAction } from './PublishEventAction.svelte';
 export { default as UnpublishEventAction } from './UnpublishEventAction.svelte';
 export { default as CancelEventAction } from './CancelEventAction.svelte';
+export { default as DeleteEventAction } from './DeleteEventAction.svelte';
 export { default as CompTicketsAction } from './CompTicketsAction.svelte';
 export { default as CancelTicketAction } from './CancelTicketAction.svelte';
 

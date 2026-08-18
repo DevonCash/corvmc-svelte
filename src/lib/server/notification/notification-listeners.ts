@@ -1,9 +1,13 @@
 import { domainEvents } from '$lib/server/events/event-bus';
+import { formatCents } from '$lib/utils/format';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema/authentication';
+import { eq } from 'drizzle-orm';
 import type {
 	NotificationEmailDetail,
 	NotificationEmailModel
@@ -37,10 +41,6 @@ function formatPickupDate(value: string): string {
 		month: 'long',
 		day: 'numeric'
 	});
-}
-
-function formatMoney(cents: number): string {
-	return `$${(cents / 100).toFixed(2)}`;
 }
 
 /** Display hours for email copy. 3 → "3 hours", 1.5 → "1.5 hours", 1 → "1 hour". */
@@ -77,6 +77,75 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 export function registerAllNotificationListeners(): void {
 	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
+	// --- Direct messages (member↔member) ---
+	//
+	// Both of these say a message is waiting and link to the site. Neither ever
+	// carries the message text: email is the one channel where blocking and
+	// reporting cannot reach, so a member's words stay where the controls are.
+	// That is enforced in the email layer via `emailOmitsUserContent` on the
+	// notification type, not by remembering it here — but there is nothing to
+	// strip, because nothing below passes a quote.
+	domainEvents.on('inbox.direct_message', async ({ data: event }) => {
+		const [recipient] = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(eq(user.id, event.recipientId))
+			.limit(1);
+		if (!recipient) return;
+
+		const url = `${siteUrl}/member/messages/${event.threadId}`;
+
+		if (event.isRequest) {
+			// A request names nobody. Until the recipient accepts, we do not put a
+			// stranger's name in their inbox — the sender is shown on the site,
+			// where Decline and Report are one click away.
+			await dispatch({
+				type: 'direct_message_request',
+				userId: recipient.id,
+				userEmail: recipient.email,
+				title: 'New message request',
+				href: `/member/messages/${event.threadId}`,
+				emailTemplate: {
+					alias: 'notification',
+					model: {
+						subject: 'You have a new message request',
+						preview_text: 'Someone would like to start a conversation with you.',
+						heading: 'New message request',
+						greeting: `Hi ${recipient.name},`,
+						paragraphs: [
+							{
+								text: 'Another CorvMC member has asked to start a conversation with you. You can read it and decide whether to accept on the site.'
+							}
+						],
+						cta: { url, label: 'View request' }
+					}
+				}
+			});
+			return;
+		}
+
+		// An accepted conversation names the sender — you agreed to hear from
+		// them — but still never quotes what they wrote.
+		await dispatch({
+			type: 'direct_message_received',
+			userId: recipient.id,
+			userEmail: recipient.email,
+			title: `${event.senderName} sent you a message`,
+			href: `/member/messages/${event.threadId}`,
+			emailTemplate: {
+				alias: 'notification',
+				model: {
+					subject: `${event.senderName} sent you a message`,
+					preview_text: 'You have a new message waiting on the CorvMC site.',
+					heading: 'New message',
+					greeting: `Hi ${recipient.name},`,
+					paragraphs: [{ text: `${event.senderName} sent you a message.` }],
+					cta: { url, label: 'Read it' }
+				}
+			}
+		});
+	});
+
 	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		// Ticket buyers may not have accounts — use email-only dispatch
@@ -100,11 +169,11 @@ export function registerAllNotificationListeners(): void {
 				// how they get their codes back if they lose it. That page keys off
 				// the purchase id alone (no session), which is what makes it work.
 				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
-				unitPrice: formatMoney(event.unitPriceCents),
-				subtotal: formatMoney(event.subtotalCents),
+				unitPrice: formatCents(event.unitPriceCents),
+				subtotal: formatCents(event.subtotalCents),
 				feesCovered: event.feesCents > 0,
-				fees: formatMoney(event.feesCents),
-				total: formatMoney(event.totalCents),
+				fees: formatCents(event.feesCents),
+				total: formatCents(event.totalCents),
 				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
 			}
 		});
@@ -440,11 +509,11 @@ export function registerAllNotificationListeners(): void {
 		if (event.totalChargeCents > 0) {
 			const breakdown =
 				event.creditsCents > 0
-					? ` (credits ${formatMoney(event.creditsCents)}, cash ${formatMoney(event.cashCents)})`
+					? ` (credits ${formatCents(event.creditsCents)}, cash ${formatCents(event.cashCents)})`
 					: '';
 			details.push({
 				label: 'Total charge',
-				value: `${formatMoney(event.totalChargeCents)}${breakdown}`
+				value: `${formatCents(event.totalChargeCents)}${breakdown}`
 			});
 		}
 
@@ -881,6 +950,226 @@ export function registerAllNotificationListeners(): void {
 						url: `${siteUrl}/member/volunteer/feedback/${event.signupId}`,
 						label: 'Answer two questions'
 					}
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+	// --- Community listing submitted for review (notify staff) ---
+	domainEvents.on('community_event.submitted', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'community_event_submitted',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.submitterName} submitted "${event.eventTitle}"`,
+					body: 'A community listing is waiting for review',
+					href: '/staff/events?status=pending_review'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.community_event_submitted',
+					to: member.email
+				});
+			}
+		}
+	});
+
+	// --- Community listing approved or turned down (notify the member) ---
+	domainEvents.on('community_event.reviewed', async ({ data: event }) => {
+		const approved = event.approved;
+		await dispatch({
+			type: 'community_event_reviewed',
+			userId: event.submitterUserId,
+			userEmail: event.submitterEmail,
+			title: approved
+				? `"${event.eventTitle}" is on the calendar`
+				: `"${event.eventTitle}" wasn't published`,
+			body: event.notes ?? undefined,
+			href: approved ? `/events/${event.eventId}` : `/member/events/${event.eventId}/manage`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: approved
+						? `Your listing is live: ${event.eventTitle}`
+						: `About your listing: ${event.eventTitle}`,
+					heading: approved ? 'Your listing is live' : 'Your listing needs a change',
+					greeting: `Hi ${event.submitterName},`,
+					paragraphs: approved
+						? [
+								{
+									text: `"${event.eventTitle}" is now on the community calendar. Thanks for adding it.`
+								}
+							]
+						: [
+								{
+									text: `We didn't publish "${event.eventTitle}". You can fix it and submit it again — the listing is still there with everything you entered.`
+								}
+							],
+					// The reason is the entire point of a rejection email; a member
+					// who can't see what was wrong can't fix it.
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: approved
+						? { url: `${siteUrl}/events/${event.eventId}`, label: 'View listing' }
+						: {
+								url: `${siteUrl}/member/events/${event.eventId}/manage`,
+								label: 'Edit and resubmit'
+							}
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Community listing pulled by staff (notify the member) ---
+	domainEvents.on('community_event.unpublished', async ({ data: event }) => {
+		await dispatch({
+			type: 'community_event_unpublished',
+			userId: event.submitterUserId,
+			userEmail: event.submitterEmail,
+			title: `"${event.eventTitle}" was removed from the calendar`,
+			body: event.notes ?? undefined,
+			href: `/member/events/${event.eventId}/manage`,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your listing was removed: ${event.eventTitle}`,
+					heading: 'Your listing was removed',
+					greeting: `Hi ${event.submitterName},`,
+					paragraphs: [
+						{
+							text: `Staff took "${event.eventTitle}" off the community calendar. It's back in your drafts, so you can correct it and publish again.`
+						},
+						{
+							text: 'Listings you publish from now on will be checked by staff first.'
+						}
+					],
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: {
+						url: `${siteUrl}/member/events/${event.eventId}/manage`,
+						label: 'View listing'
+					}
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Staff replied to a suggestion (notify its author) ---
+	domainEvents.on('suggestion.responded', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+		await dispatch({
+			type: 'suggestion_responded',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: `Staff responded to "${event.title}"`,
+			body: event.responseBody ?? `Marked ${event.statusLabel.toLowerCase()}.`,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `About your suggestion: ${event.title}`,
+					heading: 'Staff replied to your suggestion',
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [
+						{
+							text: `"${event.title}" is now marked ${event.statusLabel.toLowerCase()}.`
+						}
+					],
+					// The reply is the whole point of the email — a status word alone
+					// tells a member what happened but never why.
+					...(event.responseBody ? { quote: event.responseBody } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- A suggestion moved on or off the board (notify its author) ---
+	//
+	// One listener for all four moves. To the author they are one question —
+	// where did my suggestion go? — so they get one answer, worded for the case.
+	domainEvents.on('suggestion.moderated', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+
+		const copy = {
+			under_review: {
+				title: `"${event.title}" was held for review`,
+				heading: 'Your suggestion is on hold',
+				text: `Someone reported "${event.title}", so it's off the board while staff take a look. Most reports are dismissed, and if this one is, your suggestion goes straight back up.`
+			},
+			visible: {
+				title: `"${event.title}" is back on the board`,
+				heading: 'Your suggestion is back',
+				text: `"${event.title}" is on the suggestion board again. Thanks for your patience.`
+			},
+			pending_review: {
+				title: `"${event.title}" is waiting for review`,
+				heading: 'Your suggestion is waiting for review',
+				text: `"${event.title}" will go on the board once staff have looked at it.`
+			},
+			hidden: {
+				title: `"${event.title}" was taken down`,
+				heading: 'Your suggestion was taken down',
+				text: `Staff removed "${event.title}" from the suggestion board.`
+			}
+		}[event.visibility] ?? {
+			title: `"${event.title}" was updated`,
+			heading: 'Your suggestion was updated',
+			text: `There's an update on "${event.title}".`
+		};
+
+		await dispatch({
+			type: 'suggestion_moderated',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: copy.title,
+			body: event.note ?? undefined,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: copy.title,
+					heading: copy.heading,
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [{ text: copy.text }],
+					// A takedown without a reason is the thing members write in about.
+					...(event.note ? { quote: event.note } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Staff decided on a proposed edit (notify its author) ---
+	domainEvents.on('suggestion.edit_reviewed', async ({ data: event }) => {
+		const href = `/member/suggestions/${event.suggestionId}`;
+		await dispatch({
+			type: 'suggestion_edit_reviewed',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title: event.approved
+				? `Your edit to "${event.title}" is live`
+				: `Your edit to "${event.title}" wasn't applied`,
+			body: event.notes ?? undefined,
+			href,
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: event.approved
+						? `Your edit is live: ${event.title}`
+						: `About your edit: ${event.title}`,
+					heading: event.approved ? 'Your edit is live' : 'Your edit was not applied',
+					greeting: `Hi ${event.authorName},`,
+					paragraphs: [
+						{
+							text: event.approved
+								? `The changes you asked for on "${event.title}" are on the board now. The votes it had already carried over.`
+								: `Staff kept the original wording of "${event.title}" — the version other members voted for. Your suggestion is still on the board, unchanged.`
+						}
+					],
+					// A rejection without a reason is the thing members write in about.
+					...(event.notes ? { quote: event.notes } : {}),
+					cta: { url: `${siteUrl}${href}`, label: 'View suggestion' }
 				} satisfies NotificationEmailModel
 			}
 		});

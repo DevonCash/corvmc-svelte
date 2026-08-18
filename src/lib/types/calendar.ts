@@ -26,6 +26,12 @@ export interface CalendarEntry {
 	/** Null when the gig has no recorded end — common on backfilled band shows. */
 	endsAt: Date | null;
 	source: string;
+	/**
+	 * 'published' or 'cancelled'. A cancelled show stays on the guide, marked,
+	 * until its date passes — the cancellation IS the announcement, and the
+	 * people who need it are the ones who already had the date.
+	 */
+	status: string;
 	location: string | null;
 	bandName: string | null;
 	bandSlug: string | null;

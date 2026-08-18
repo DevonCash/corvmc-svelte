@@ -27,6 +27,14 @@ export const submitContactFormSchema = z.object({
 	email: z.string().trim().email().max(320),
 	subject: z.string().trim().min(1).max(200),
 	message: z.string().trim().min(1).max(5000),
+	// Event tips, from anyone with no account. Optional and free-text on
+	// purpose: a tip is a lead for a staffer to chase, not a record. They get
+	// formatted into the message body in handleContactForm, so a tip is an
+	// ordinary web thread in the inbox rather than a second queue to remember.
+	tipEventName: z.string().trim().max(200).optional(),
+	tipEventDate: z.string().trim().max(100).optional(),
+	tipVenue: z.string().trim().max(200).optional(),
+	tipLink: z.string().trim().max(500).optional(),
 	turnstileToken: z.string().min(1)
 });
 
@@ -142,13 +150,22 @@ export const inboxParticipant = sqliteTable(
 		role: text('role', { enum: inboxParticipantRoles }).notNull().default('member'),
 		/** Read cursor for this participant. Unread ⇔ thread.lastMessageAt > lastReadAt. */
 		lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+		/**
+		 * When this participant agreed to the conversation. Only meaningful on
+		 * `direct` threads, where null means the thread is still a *request*: the
+		 * person who started it is stamped at creation, the recipient stays null
+		 * until they accept. Portal rows leave it null and never consult it —
+		 * every query that reads this also constrains channel = 'direct'.
+		 */
+		acceptedAt: integer('accepted_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
 		uniqueIndex('idx_inbox_participant_thread_user').on(t.threadId, t.userId),
-		index('idx_inbox_participant_user').on(t.userId)
+		index('idx_inbox_participant_user').on(t.userId),
+		index('idx_inbox_participant_user_accepted').on(t.userId, t.acceptedAt)
 	]
 );
 

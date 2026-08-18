@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
@@ -16,7 +17,8 @@ import {
 	removeSubscriber as removeSubscriberService,
 	unsubscribe,
 	bulkAddMembers as bulkAddMembersService,
-	listSubscribers
+	listSubscribers,
+	getSubscriptionsForUser
 } from '$lib/server/marketing/audience-service';
 import {
 	listCampaigns,
@@ -32,6 +34,7 @@ import {
 } from '$lib/server/marketing/campaign-service';
 import {
 	findOrCreateByEmail,
+	findByUserId as findSubscriberByUserId,
 	suppressSelfService,
 	clearSelfServiceSuppression
 } from '$lib/server/marketing/subscriber-service';
@@ -209,9 +212,9 @@ export const getPreview = query(z.string(), async (markdown) => {
 
 export const createAudience = form(
 	z.object({
-		name: z.string().min(1).max(255),
+		name: z.string().min(1).max(SHORT_TEXT_MAX),
 		slug: z.string().max(100).optional(),
-		description: z.string().max(2000).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data, issue) => {
@@ -240,8 +243,8 @@ export const createAudience = form(
 export const updateAudience = form(
 	z.object({
 		id: z.string(),
-		name: z.string().max(255).optional(),
-		description: z.string().max(2000).optional(),
+		name: z.string().max(SHORT_TEXT_MAX).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data) => {
@@ -288,7 +291,7 @@ export const addSubscriber = form(
 	z.object({
 		audienceId: z.string(),
 		email: z.string().email(),
-		name: z.string().max(255).optional()
+		name: z.string().max(SHORT_TEXT_MAX).optional()
 	}),
 	async (data, issue) => {
 		await requireStaff();
@@ -431,3 +434,27 @@ export const unscheduleCampaign = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserMarketing = query(z.string(), async (userId) => {
+	await requireStaff();
+	const subscriber = await findSubscriberByUserId(userId);
+	const audiences = subscriber ? await getSubscriptionsForUser(userId) : [];
+	return {
+		subscriber: subscriber
+			? {
+					id: subscriber.id,
+					email: subscriber.email,
+					suppressedAt: subscriber.suppressedAt,
+					suppressionReason: subscriber.suppressionReason
+				}
+			: null,
+		audiences
+	};
+});

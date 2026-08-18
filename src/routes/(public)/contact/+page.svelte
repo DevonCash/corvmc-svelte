@@ -1,13 +1,20 @@
 <script lang="ts">
-	import { pageTitle } from '$lib/config';
+	import { pageTitle, EVENT_TIP_SUBJECT } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import { toast } from 'svelte-sonner';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+
+	import Form from '$lib/components/shared/Form/Form.svelte';
+	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
+
+	// Declared before the awaited query below — a declaration that follows a
+	// top-level await is async-gated.
+	const fields = submitContactForm.fields;
 
 	const address = $derived(await getOrgAddress());
 	const cityStateZip = $derived(
@@ -24,11 +31,18 @@
 		'Membership Questions',
 		'Practice Space',
 		'Performance Inquiry',
+		EVENT_TIP_SUBJECT,
 		'Volunteer Opportunities',
 		'Donations'
 	];
+	const subjectOptions = subjects.map((s) => ({ value: s, label: s }));
 
-	const rf = submitContactForm.for('contact');
+	// Anyone can tip us off about a show without an account. The extra fields are
+	// optional and free-text: a tip is a lead for a staffer to chase, not a
+	// record, so it lands as an ordinary thread in the inbox rather than growing
+	// its own queue to remember to check.
+	let subject = $state('General Inquiry');
+	const isEventTip = $derived(subject === EVENT_TIP_SUBJECT);
 </script>
 
 <svelte:head>
@@ -44,53 +58,76 @@
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<div class="alert alert-success">Thanks for reaching out! We'll get back to you soon.</div>
+				<Alert type="success">Thanks for reaching out! We'll get back to you soon.</Alert>
 			{:else}
-				<form
-					{...rf.enhance(async ({ submit }) => {
-						if (await submit()) submitted = true;
-						else {
-							resetTurnstile?.();
-							toast.error('Something went wrong. Please try again.');
-						}
-					})}
+				<Form
+					remote={submitContactForm}
+					onsuccess={() => (submitted = true)}
+					onfailure={() => resetTurnstile?.()}
 					class="flex flex-col gap-4"
 				>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Name</span></div>
-							<input {...rf.fields.name.as('text')} class="input input-bordered w-full" required />
-						</label>
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Email</span></div>
-							<input
-								{...rf.fields.email.as('email')}
-								class="input input-bordered w-full"
-								required
-							/>
-						</label>
+						<FormField field={fields.name} type="text" label="Name" required />
+						<FormField field={fields.email} type="email" label="Email" required />
 					</div>
-					<label class="form-control w-full">
-						<div class="label"><span class="label-text">Subject</span></div>
-						<Select {...rf.fields.subject.as('select')} class="select-bordered w-full">
-							{#each subjects as s (s)}
-								<option value={s}>{s}</option>
-							{/each}
-						</Select>
-					</label>
-					<label class="form-control w-full">
-						<div class="label"><span class="label-text">Message</span></div>
-						<textarea name="message" class="textarea textarea-bordered w-full" rows="5" required
+
+					<FormField
+						field={fields.subject}
+						label="Subject"
+						type="select"
+						options={subjectOptions}
+						bind:value={subject}
+					/>
+
+					{#if isEventTip}
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<FormField
+								field={fields.tipEventName}
+								type="text"
+								label="What's the show?"
+								maxlength="200"
+							/>
+							<FormField
+								field={fields.tipEventDate}
+								type="text"
+								label="When is it?"
+								placeholder="e.g. Fri 12 June, or just 'sometime in June'"
+								maxlength="100"
+							/>
+							<FormField field={fields.tipVenue} type="text" label="Where?" maxlength="200" />
+							<FormField
+								field={fields.tipLink}
+								type="text"
+								label="Link"
+								placeholder="Event page, poster, anything"
+								maxlength="500"
+							/>
+						</div>
+					{/if}
+
+					<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows
+					     and placeholder would be lost. Issues still resolve by name. -->
+					<FormField name="message" label="Message">
+						<textarea
+							{...fields.message.as('text')}
+							class="textarea w-full"
+							rows="5"
+							maxlength="5000"
+							required
+							placeholder={isEventTip
+								? 'Anything else worth knowing — who else is on the bill, cover charge, all-ages...'
+								: ''}
 						></textarea>
-					</label>
+					</FormField>
+
 					<Turnstile
 						siteKey={TURNSTILE_SITE_KEY}
 						responseFieldName={TURNSTILE_RESPONSE_FIELD}
 						theme="auto"
 						bind:reset={resetTurnstile}
 					/>
-					<button type="submit" class="btn btn-primary">Send Message</button>
-				</form>
+					<SubmitButton label="Send Message" />
+				</Form>
 			{/if}
 		</div>
 
@@ -98,18 +135,18 @@
 		<div class="space-y-6">
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMapPin size={18} /></span> Visit Us
+					<span class="text-cmc-teal"><IconMapPin size={18} /></span> Visit Us
 				</h3>
-				<p class="text-sm" style="color: var(--fg-2)">
+				<p class="text-muted">
 					{address.street}<br />
 					{cityStateZip}
 				</p>
-				<p class="text-xs mt-1" style="color: var(--fg-3)">Office available by appointment only.</p>
+				<p class="text-xs mt-1 text-fg-3">Office available by appointment only.</p>
 			</div>
 
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMail size={18} /></span> Email
+					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
 				</h3>
 				<a href="mailto:info@corvmc.org" class="link text-sm">info@corvmc.org</a>
 			</div>
@@ -121,7 +158,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>How do I become a member?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							<a href={resolve('/login?register&redirect=/member')} class="link"
 								>Create an account</a
 							> to get started. Free memberships are available.
@@ -131,7 +168,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>Can I use the practice space?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							The practice space is available to all members. Sign up for a free membership to book
 							your first session.
 						</div>
@@ -140,7 +177,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>How do I submit music for a show?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							All-ages, all genres — if you make music, we want to hear from you. Use the contact
 							form with "Performance Inquiry" as the subject, or email a link to your music and any
 							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"
