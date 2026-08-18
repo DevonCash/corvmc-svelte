@@ -600,8 +600,8 @@
 									</label>
 
 									{#if reserveSpace}
-										<div class="card bg-base-200 p-4 space-y-4 mt-2">
-											<p class="text-sm opacity-60">
+										<Card tone="base-200" class="p-4 space-y-4 mt-2">
+											<p class="text-muted">
 												Reservation times can differ from event times to allow for setup and
 												teardown.
 											</p>
@@ -613,7 +613,7 @@
 														name="reservationStartTime"
 														type="time"
 														bind:value={editReservationStartTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 												<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
@@ -622,7 +622,7 @@
 														name="reservationEndTime"
 														type="time"
 														bind:value={editReservationEndTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 											</div>
@@ -644,7 +644,7 @@
 													<span class="label-text">Override conflicts</span>
 												</label>
 											{/if}
-										</div>
+										</Card>
 									{/if}
 								</div>
 							{/if}
@@ -869,7 +869,7 @@
 				</a>
 			</div>
 		{:else}
-			<p class="text-sm opacity-60">
+			<p class="text-muted">
 				No space held for this event. Use Edit to reserve the practice space.
 			</p>
 		{/if}
