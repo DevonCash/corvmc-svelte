@@ -297,6 +297,61 @@ export function formatDurationAndAmount(
 	return `${label} · ${formatDurationAmount(startsAt, endsAt, hourlyRateCents)}`;
 }
 
+/**
+ * Split a reservation's list price into the cash half and the credit half.
+ *
+ * `reservation.creditsUsed` is stored in hours, and one credit buys one hour in
+ * every member-facing surface, so that column is simultaneously the credit
+ * count and the hours those credits cover. Fractional values are expected — the
+ * venue books in 30-minute blocks, so half credits are normal, not a rounding
+ * artifact. Do not convert through `hoursToCredits()`: the 30-minute block is a
+ * data-layer denomination that the UI never shows.
+ *
+ * The cash half is derived by subtraction rather than read from `cashDueCents`
+ * because that column is a settlement marker, not an amount — it drops to 0
+ * once a booking is paid, which would render every settled reservation as free.
+ */
+export function reservationPaymentBreakdown(
+	startsAt: Date,
+	endsAt: Date,
+	hourlyRateCents: number,
+	creditsUsed: number | null
+): { cashCents: number; credits: number } {
+	const totalCents = Math.round(durationHours(startsAt, endsAt) * hourlyRateCents);
+	const credits = Math.max(0, creditsUsed ?? 0);
+	const creditCents = Math.min(Math.round(credits * hourlyRateCents), totalCents);
+	return { cashCents: totalCents - creditCents, credits };
+}
+
+/** Trim a credit count for display: 1.5 → "1.5", 2 → "2" */
+function creditLabel(credits: number): string {
+	return String(Number(credits.toFixed(2)));
+}
+
+/**
+ * A reservation's payment as "$15.00, 1.5cr", dropping whichever half is zero.
+ * A booking with no credits reads "$37.50"; one covered entirely by credits
+ * reads "2.5cr".
+ */
+export function formatPaymentBreakdown(
+	startsAt: Date,
+	endsAt: Date,
+	hourlyRateCents: number,
+	creditsUsed: number | null
+): string {
+	const { cashCents, credits } = reservationPaymentBreakdown(
+		startsAt,
+		endsAt,
+		hourlyRateCents,
+		creditsUsed
+	);
+	const parts: string[] = [];
+	// Keep $0.00 when there are no credits either, so the cell is never empty.
+	if (cashCents > 0 || credits === 0) parts.push(formatCents(cashCents));
+	if (credits > 0) parts.push(`${creditLabel(credits)}cr`);
+	return parts.join(', ');
+}
+
 /** "May 3, 2026" — month, day, year without weekday */
 export function formatMonthDayYear(d: Date): string {
 	return venue(d, { month: 'long', day: 'numeric', year: 'numeric' });

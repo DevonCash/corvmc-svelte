@@ -28,7 +28,7 @@
 		IconCircleX,
 		IconRepeat
 	} from '@tabler/icons-svelte';
-	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -310,7 +310,7 @@
 								{:else}
 									{@const ps = paymentStatus(r)}
 									<span class="inline-flex items-center justify-end gap-1">
-										{formatDurationAmount(r.startsAt, r.endsAt, rate)}
+										{formatPaymentBreakdown(r.startsAt, r.endsAt, rate, r.creditsUsed)}
 										<span class="tooltip" data-tip={ps.label}>
 											<ps.icon size={16} class={ps.color} />
 										</span>
