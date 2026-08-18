@@ -224,27 +224,31 @@
 			</div>
 
 			<div class="flex flex-wrap gap-2">
-				<button
-					class="btn btn-outline btn-sm"
+				<Button
+					variant="default"
+					size="sm"
+					outline
 					disabled={!isValid() || submitting}
 					onclick={handleSave}
 				>
 					Save Draft
-				</button>
-				<button
-					class="btn btn-secondary btn-sm"
+				</Button>
+				<Button
+					variant="secondary"
+					size="sm"
 					disabled={!isValid() || !isFutureSchedule() || submitting}
 					onclick={handleSchedule}
 				>
 					Schedule
-				</button>
-				<button
-					class="btn btn-primary btn-sm"
+				</Button>
+				<Button
+					variant="primary"
+					size="sm"
 					disabled={!isValid() || submitting}
 					onclick={handleSendNow}
 				>
 					Send Now
-				</button>
+				</Button>
 			</div>
 
 			{#if submitting}

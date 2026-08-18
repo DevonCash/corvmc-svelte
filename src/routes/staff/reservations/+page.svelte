@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -130,17 +131,18 @@
 <PageHeader title="Reservations">
 	<div class="flex gap-2">
 		{#await Promise.all([unresolved, counts])}
-			<button class="btn btn-sm btn-ghost" onclick={() => (resolveOpen = true)}>Resolve</button>
+			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}>Resolve</Button>
 		{:then [unresolvedData]}
-			<button
-				class="btn btn-sm {unresolvedData.length > 0 ? 'btn-warning' : 'btn-ghost'}"
+			<Button
+				variant={unresolvedData.length > 0 ? 'warning' : 'ghost'}
+				size="sm"
 				onclick={() => (resolveOpen = true)}
 			>
 				Resolve
 				{#if unresolvedData.length > 0}
 					<Badge>{unresolvedData.length}</Badge>
 				{/if}
-			</button>
+			</Button>
 		{/await}
 		<CreateReservation />
 	</div>

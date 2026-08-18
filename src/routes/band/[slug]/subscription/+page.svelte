@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -86,7 +87,7 @@
 							})}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
-							<button class="btn btn-primary btn-sm mt-2">Resume Subscription</button>
+							<Button variant="primary" size="sm" class="mt-2">Resume Subscription</Button>
 						</form>
 					{/if}
 				{:else if isOwner}
@@ -103,7 +104,7 @@
 						})}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
-						<button class="btn btn-ghost btn-sm mt-4 text-error">Cancel Subscription</button>
+						<Button variant="ghost" size="sm" class="mt-4 text-error">Cancel Subscription</Button>
 					</form>
 				{/if}
 			</div>
@@ -146,7 +147,7 @@
 							>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
-								<button class="btn btn-primary mt-4">Subscribe Monthly</button>
+								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
 							</form>
 						{/if}
 					</div>
@@ -176,7 +177,7 @@
 							>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
-								<button class="btn btn-primary mt-4">Subscribe Yearly</button>
+								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>
 							</form>
 						{/if}
 					</div>

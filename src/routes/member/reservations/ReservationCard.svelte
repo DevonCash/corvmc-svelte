@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
@@ -82,12 +83,14 @@
 							size="xs"
 						/>
 					{:else}
-						<a
+						<Button
 							href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-							class="btn btn-outline btn-xs btn-primary"
+							variant="primary"
+							size="xs"
+							outline
 						>
 							Pay to reserve
-						</a>
+						</Button>
 					{/if}
 				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
 					{#if (reservation.cashDueCents ?? 0) > 0}
@@ -95,12 +98,14 @@
 							>${formatDollars(reservation.cashDueCents ?? 0)} due at door</span
 						>
 					{/if}
-					<a
+					<Button
 						href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-						class="btn btn-outline btn-xs btn-primary"
+						variant="primary"
+						size="xs"
+						outline
 					>
 						Pay online
-					</a>
+					</Button>
 				{/if}
 			{/if}
 		</div>

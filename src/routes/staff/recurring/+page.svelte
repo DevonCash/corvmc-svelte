@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -28,39 +29,36 @@
 <PageHeader title="Recurring Reservations" />
 <PageContent>
 	<div class="flex items-center gap-2 mb-4">
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filter === 'active'}
-			class:btn-ghost={filter !== 'active'}
+		<Button
+			variant={filter === 'active' ? 'primary' : 'ghost'}
+			size="sm"
 			onclick={() => {
 				filter = 'active';
 				page = 1;
 			}}
 		>
 			Active
-		</button>
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filter === 'cancelled'}
-			class:btn-ghost={filter !== 'cancelled'}
+		</Button>
+		<Button
+			variant={filter === 'cancelled' ? 'primary' : 'ghost'}
+			size="sm"
 			onclick={() => {
 				filter = 'cancelled';
 				page = 1;
 			}}
 		>
 			Cancelled
-		</button>
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filter === 'all'}
-			class:btn-ghost={filter !== 'all'}
+		</Button>
+		<Button
+			variant={filter === 'all' ? 'primary' : 'ghost'}
+			size="sm"
 			onclick={() => {
 				filter = 'all';
 				page = 1;
 			}}
 		>
 			All
-		</button>
+		</Button>
 	</div>
 
 	<DataList {result} empty="No recurring series found" onpage={(p) => (page = p)}>

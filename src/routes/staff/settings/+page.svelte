@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		getProducts,
 		updateProduct,
@@ -617,9 +618,10 @@
 							<div class="flex gap-2">
 								{#if utecConnected}
 									<!-- Test Connection only matters once a refresh token exists. -->
-									<button
+									<Button
 										type="button"
-										class="btn btn-sm btn-ghost"
+										variant="ghost"
+										size="sm"
 										onclick={handleTestConnection}
 										disabled={connectionTesting}
 									>
@@ -629,24 +631,26 @@
 											<IconPlugConnected class="size-4" />
 										{/if}
 										Test Connection
-									</button>
-									<a
+									</Button>
+									<Button
 										href={resolve('/api/integrations/utec/authorize')}
-										class="btn btn-sm btn-ghost"
+										variant="ghost"
+										size="sm"
 										data-sveltekit-reload
 									>
 										Reconnect
-									</a>
+									</Button>
 								{:else}
-									<a
+									<Button
 										href={resolve('/api/integrations/utec/authorize')}
-										class="btn btn-sm btn-primary"
-										class:btn-disabled={!utecCanConnect}
+										variant="primary"
+										size="sm"
+										class={utecCanConnect ? '' : 'btn-disabled'}
 										data-sveltekit-reload
 									>
 										<IconPlugConnected class="size-4" />
 										Connect to U-tec
-									</a>
+									</Button>
 								{/if}
 								<SubmitButton
 									label="Save"
@@ -689,9 +693,11 @@
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
-										<button
+										<Button
 											type="button"
-											class="btn btn-outline btn-sm"
+											variant="default"
+											size="sm"
+											outline
 											onclick={handleSelfTest}
 											disabled={selfTesting}
 										>
@@ -699,10 +705,11 @@
 												<span class="loading loading-spinner loading-xs"></span>
 											{/if}
 											Run lock self-test
-										</button>
-										<button
+										</Button>
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm"
+											variant="ghost"
+											size="sm"
 											onclick={handleRevokeTest}
 											disabled={revokingTest}
 										>
@@ -710,7 +717,7 @@
 												<span class="loading loading-spinner loading-xs"></span>
 											{/if}
 											Revoke test codes
-										</button>
+										</Button>
 									</div>
 								</div>
 
@@ -776,9 +783,10 @@
 								<code class="flex-1 truncate rounded bg-base-200 px-2 py-1 font-mono text-xs">
 									{utecRedirectUri}
 								</code>
-								<button
+								<Button
 									type="button"
-									class="btn btn-ghost btn-xs"
+									variant="ghost"
+									size="xs"
 									title="Copy redirect URI"
 									onclick={() => {
 										navigator.clipboard.writeText(utecRedirectUri);
@@ -786,7 +794,7 @@
 									}}
 								>
 									<IconCopy class="size-3.5" />
-								</button>
+								</Button>
 							</div>
 						</div>
 
@@ -831,12 +839,14 @@
 							>
 								<input {...toggleForm.fields.flag.as('hidden', flag)} />
 								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
-								<button
+								<Button
 									type="submit"
-									class="btn btn-sm {enabled ? 'btn-error btn-outline' : 'btn-success'}"
+									variant={enabled ? 'error' : 'success'}
+									outline={enabled}
+									size="sm"
 								>
 									{enabled ? 'Disable' : 'Enable'}
-								</button>
+								</Button>
 							</form>
 						</div>
 					</div>
@@ -878,12 +888,14 @@
 									<input
 										{...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')}
 									/>
-									<button
+									<Button
 										type="submit"
-										class="btn btn-sm {cfg.enabled ? 'btn-error btn-outline' : 'btn-success'}"
+										variant={cfg.enabled ? 'error' : 'success'}
+										outline={cfg.enabled}
+										size="sm"
 									>
 										{cfg.enabled ? 'Disable' : 'Enable'}
-									</button>
+									</Button>
 								</form>
 							{/if}
 						</div>

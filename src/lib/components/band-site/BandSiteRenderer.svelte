@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
@@ -118,17 +119,19 @@
 						<div class="flex flex-col gap-3">
 							{#each band.links as link (link.url)}
 								{@const platform = detectPlatform(link.url)}
-								<a
+								<Button
 									href={link.url}
 									target="_blank"
 									rel="external noopener"
-									class="btn btn-outline w-full justify-start gap-3"
+									variant="default"
+									outline
+									class="w-full justify-start gap-3"
 								>
 									{#if platform}
 										<span class="opacity-70">{platform.name}</span>
 									{/if}
 									<span>{link.label || platform?.name || 'Link'}</span>
-								</a>
+								</Button>
 							{/each}
 						</div>
 					</div>
@@ -182,14 +185,15 @@
 										{/if}
 									</div>
 									{#if evt.externalTicketUrl}
-										<a
+										<Button
 											href={evt.externalTicketUrl}
 											target="_blank"
 											rel="external noopener"
-											class="btn btn-primary btn-sm"
+											variant="primary"
+											size="sm"
 										>
 											Tickets
-										</a>
+										</Button>
 									{/if}
 								</div>
 							{/each}
@@ -367,14 +371,17 @@
 					{#if epk?.technicalRiderKey}
 						{@const riderMedia = media.find((m) => m.type === 'rider')}
 						{#if riderMedia?.url}
-							<a
+							<Button
 								href={riderMedia.url}
 								target="_blank"
 								rel="external noopener"
-								class="btn btn-outline btn-sm mt-4"
+								variant="default"
+								size="sm"
+								outline
+								class="mt-4"
 							>
 								Download Full Tech Rider (PDF)
-							</a>
+							</Button>
 						{/if}
 					{/if}
 				</div>
@@ -461,14 +468,16 @@
 						></iframe>
 					{:else}
 						{@const platform = detectPlatform(link.url)}
-						<a
+						<Button
 							href={link.url}
 							target="_blank"
 							rel="external noopener"
-							class="btn btn-outline w-full"
+							variant="default"
+							outline
+							class="w-full"
 						>
 							{link.label || platform?.name || 'Link'}
-						</a>
+						</Button>
 					{/if}
 				{/each}
 			</div>

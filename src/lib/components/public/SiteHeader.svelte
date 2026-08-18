@@ -85,13 +85,16 @@
 						{link.label}
 					</a>
 				{/each}
-				<a
+				<Button
 					href={resolve('/contribute')}
-					class="btn btn-sm btn-outline ml-3"
+					variant="default"
+					size="sm"
+					outline
+					class="ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
 					Contribute
-				</a>
+				</Button>
 			</nav>
 		</div>
 	</nav>

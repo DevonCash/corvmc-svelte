@@ -187,8 +187,8 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Press Quotes</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addPressQuote}
-								>Add Quote</button
+							<Button type="button" variant="primary" size="sm" onclick={addPressQuote}
+								>Add Quote</Button
 							>
 						</div>
 
@@ -232,10 +232,12 @@
 												/>
 											</div>
 										</div>
-										<button
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm btn-square"
-											onclick={() => removePressQuote(i)}>✕</button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											onclick={() => removePressQuote(i)}>✕</Button
 										>
 									</div>
 								{/each}
@@ -249,8 +251,7 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Achievements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addAchievement}
-								>Add</button
+							<Button type="button" variant="primary" size="sm" onclick={addAchievement}>Add</Button
 							>
 						</div>
 						<p class="text-muted">
@@ -272,10 +273,12 @@
 												epk.achievements![i] = e.currentTarget.value;
 											}}
 										/>
-										<button
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm btn-square"
-											onclick={() => removeAchievement(i)}>✕</button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											onclick={() => removeAchievement(i)}>✕</Button
 										>
 									</div>
 								{/each}
@@ -289,8 +292,8 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between">
 							<h2 class="card-title text-lg">Backline Requirements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addBacklineItem}
-								>Add Item</button
+							<Button type="button" variant="primary" size="sm" onclick={addBacklineItem}
+								>Add Item</Button
 							>
 						</div>
 						<p class="text-muted">Equipment you need from the venue vs. what you bring.</p>
@@ -349,10 +352,12 @@
 													</Select>
 												</td>
 												<td>
-													<button
+													<Button
 														type="button"
-														class="btn btn-ghost btn-sm btn-square"
-														onclick={() => removeBacklineItem(i)}>✕</button
+														variant="ghost"
+														size="sm"
+														shape="square"
+														onclick={() => removeBacklineItem(i)}>✕</Button
 													>
 												</td>
 											</tr>
@@ -366,10 +371,10 @@
 
 				<!-- Save -->
 				<div class="flex justify-end gap-3">
-					<a href={resolve(`/band/${band.slug}/page-editor`)} class="btn btn-ghost"
-						>Back to Page Editor</a
+					<Button href={resolve(`/band/${band.slug}/page-editor`)} variant="ghost"
+						>Back to Page Editor</Button
 					>
-					<button class="btn btn-primary">Save EPK</button>
+					<Button variant="primary">Save EPK</Button>
 				</div>
 			</div>
 		</form>

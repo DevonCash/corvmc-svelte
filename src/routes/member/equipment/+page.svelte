@@ -125,7 +125,7 @@
 			{/each}
 		</Select>
 		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
+			<Button variant="ghost" size="sm" onclick={clearFilters}>Clear</Button>
 		{/if}
 	</div>
 

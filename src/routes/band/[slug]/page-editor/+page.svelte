@@ -188,17 +188,18 @@
 					<h2 class="card-title text-lg">Theme</h2>
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
 						{#each BAND_THEMES as theme (theme)}
-							<button
+							<Button
 								type="button"
-								class="btn btn-sm capitalize {selectedTheme === theme
-									? 'btn-primary'
-									: 'btn-outline'}"
+								variant={selectedTheme === theme ? 'primary' : 'default'}
+								outline={selectedTheme !== theme}
+								size="sm"
+								class="capitalize"
 								onclick={() => {
 									selectedTheme = theme;
 								}}
 							>
 								{theme}
-							</button>
+							</Button>
 						{/each}
 					</div>
 				</div>
@@ -209,31 +210,34 @@
 				<div class="card-body">
 					<div class="flex items-center justify-between">
 						<h2 class="card-title text-lg">Blocks</h2>
-						<button
+						<Button
 							type="button"
-							class="btn btn-sm btn-primary"
+							variant="primary"
+							size="sm"
 							onclick={() => {
 								showBlockPicker = !showBlockPicker;
 							}}
 						>
 							{showBlockPicker ? 'Cancel' : 'Add Block'}
-						</button>
+						</Button>
 					</div>
 
 					<!-- Block type picker -->
 					{#if showBlockPicker}
 						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 p-4 bg-base-200 rounded-lg">
 							{#each BLOCK_TYPES as bt (bt.type)}
-								<button
+								<Button
 									type="button"
-									class="btn btn-sm btn-ghost justify-start text-left h-auto py-2"
+									variant="ghost"
+									size="sm"
+									class="justify-start text-left h-auto py-2"
 									onclick={() => addBlock(bt.type)}
 								>
 									<div>
 										<p class="font-medium text-sm">{bt.label}</p>
 										<p class="text-subtle">{bt.description}</p>
 									</div>
-								</button>
+								</Button>
 							{/each}
 						</div>
 					{/if}
@@ -253,31 +257,36 @@
 										<span class="badge badge-sm capitalize">{block.type}</span>
 										<span class="flex-1 text-muted truncate">{blockLabel(block)}</span>
 										<div class="flex items-center gap-1">
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => moveBlock(i, 'up')}
-												disabled={i === 0}>&uarr;</button
+												disabled={i === 0}>&uarr;</Button
 											>
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => moveBlock(i, 'down')}
-												disabled={i === blocks.length - 1}>&darr;</button
+												disabled={i === blocks.length - 1}>&darr;</Button
 											>
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => {
 													editingBlockId = editingBlockId === block.id ? null : block.id;
 												}}
 											>
 												{editingBlockId === block.id ? 'Close' : 'Edit'}
-											</button>
-											<button
+											</Button>
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost text-error"
-												onclick={() => removeBlock(i)}>&times;</button
+												variant="ghost"
+												size="xs"
+												class="text-error"
+												onclick={() => removeBlock(i)}>&times;</Button
 											>
 										</div>
 									</div>
@@ -506,21 +515,25 @@
 																item.price = e.currentTarget.value || undefined;
 															}}
 														/>
-														<button
+														<Button
 															type="button"
-															class="btn btn-xs btn-ghost text-error"
+															variant="ghost"
+															size="xs"
+															class="text-error"
 															onclick={() => {
 																block.items = block.items.filter((_, j) => j !== mi);
-															}}>&times;</button
+															}}>&times;</Button
 														>
 													</div>
 												{/each}
-												<button
+												<Button
 													type="button"
-													class="btn btn-xs btn-ghost mt-1"
+													variant="ghost"
+													size="xs"
+													class="mt-1"
 													onclick={() => {
 														block.items = [...block.items, { title: '', url: '' }];
-													}}>+ Add item</button
+													}}>+ Add item</Button
 												>
 											{/if}
 
@@ -574,7 +587,7 @@
 				<a href={siteUrl} target="_blank" rel="noopener" class="link text-sm">
 					View your page at {siteUrl.replace(/^https?:\/\//, '')} &rarr;
 				</a>
-				<button class="btn btn-primary">Save Changes</button>
+				<Button variant="primary">Save Changes</Button>
 			</div>
 		</form>
 
@@ -718,8 +731,11 @@
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="btn btn-sm btn-outline"
-						>Edit EPK</a
+					<Button
+						href={resolve(`/band/${band.slug}/page-editor/epk`)}
+						variant="default"
+						size="sm"
+						outline>Edit EPK</Button
 					>
 				</div>
 			</div>

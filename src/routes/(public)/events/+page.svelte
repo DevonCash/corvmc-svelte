@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
@@ -114,7 +115,7 @@
 			<aside class="guide__side">
 				<MiniCalendar anchor={from} />
 				{#if from !== today}
-					<a href="/events" class="btn btn-ghost btn-sm mt-3">← Back to today</a>
+					<Button href="/events" variant="ghost" size="sm" class="mt-3">← Back to today</Button>
 				{/if}
 			</aside>
 			<div class="guide__main">
@@ -126,9 +127,9 @@
 					<GigList events={allEvents} />
 					{#if hasMore}
 						<div class="text-center mt-8">
-							<button type="button" class="btn btn-ghost" disabled={loadingMore} onclick={showMore}>
+							<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
 								{loadingMore ? 'Loading…' : 'Show more'}
-							</button>
+							</Button>
 						</div>
 					{/if}
 				{/if}

@@ -48,6 +48,20 @@ describe('Button variants', () => {
 	});
 
 	/**
+	 * `SubmitButton` renders `<Button type="submit">`, so a lost `type` would
+	 * turn every save button in the app into a no-op. bits-ui's Button.Root
+	 * supplies its own default, and `mergeProps` has to let the caller's win.
+	 */
+	it('forwards type through to the underlying button', async () => {
+		render(ButtonHarness, { label: 'Save', type: 'submit' });
+
+		await expect.element(page.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+		expect((page.getByRole('button', { name: 'Save' }).element() as HTMLButtonElement).type).toBe(
+			'submit'
+		);
+	});
+
+	/**
 	 * `class` is an escape hatch for one-offs, but people reach for it with
 	 * daisyUI colours out of habit. Two colour classes on one button is a
 	 * coin-flip decided by stylesheet order, so an explicit one wins outright

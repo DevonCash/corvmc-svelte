@@ -116,14 +116,30 @@ Two things were deliberately left alone:
   own token set (`src/lib/themes/band-site/index.css`) and deliberately neutral print-style greys —
   not the app palette these utilities target.
 
+### Phase 2 notes
+
+`Button` gained `variant` / `size` / `shape` / `outline`; `Action`, `SubmitButton` and all 44
+`shared/actions/*Action.svelte` wrappers forward the same props. 268 call sites and 97 raw
+`<button class="btn …">` / `<a class="btn …">` elements moved onto the component.
+
+Twelve raw `btn` elements remain, and all of them should: five `<label class="btn">` (the `for`
+attribute is the whole point — the drawer toggle, `FilterBar`'s disclosure, the file picker, two
+radio labels), two `<summary class="btn">` inside `<details>`, three
+`<span class="btn btn-disabled">` placeholders that are deliberately not interactive, and one
+`pointer-events-none` filler. `Button` renders a `<button>` or an `<a>`; none of these is either.
+
+`variant="default"` exists because the old component defaulted `class` to `'btn-primary'`, so any
+caller-supplied `class` replaced it and produced an uncoloured button. The migration preserves that
+rather than silently promoting those buttons to primary.
+
 ## Progress
 
-| Phase                            | route tokens | inline `style=` | Δ                              |
-| -------------------------------- | ------------ | --------------- | ------------------------------ |
-| Baseline (`e58a707`)             | 7,705        | 148             | —                              |
-| 1 — semantic text utilities      | 7,477        | 81              | −228 tokens, −67 inline styles |
-| 2 — `Button` variant API         | _pending_    |                 |                                |
-| 3 — `Card`                       | _pending_    |                 |                                |
-| 4 — filter controls              | _pending_    |                 |                                |
-| 5 — marketing section vocabulary | _pending_    |                 |                                |
-| 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                |
+| Phase                            | route tokens | inline `style=` | Δ                                      |
+| -------------------------------- | ------------ | --------------- | -------------------------------------- |
+| Baseline (`e58a707`)             | 7,705        | 148             | —                                      |
+| 1 — semantic text utilities      | 7,477        | 81              | −228 tokens, −67 inline styles         |
+| 2 — `Button` variant API         | 6,854        | 81              | −623 tokens; daisyUI share 1,569 → 970 |
+| 3 — `Card`                       | _pending_    |                 |                                        |
+| 4 — filter controls              | _pending_    |                 |                                        |
+| 5 — marketing section vocabulary | _pending_    |                 |                                        |
+| 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                        |

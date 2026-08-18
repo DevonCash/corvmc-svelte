@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
@@ -23,15 +24,16 @@
 
 	{#if success}
 		<Alert type="success">You've been subscribed! Check your inbox for future updates.</Alert>
-		<button
-			class="btn btn-ghost btn-sm"
+		<Button
+			variant="ghost"
+			size="sm"
 			onclick={() => {
 				success = false;
 				selectedAudienceId = '';
 			}}
 		>
 			Subscribe to another list
-		</button>
+		</Button>
 	{:else if audiences.length === 0}
 		<p class="text-center opacity-60">No mailing lists are currently accepting signups.</p>
 	{:else}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -173,9 +174,12 @@
 										class="input-bordered input w-full pr-10"
 										minlength={mode === 'register' ? 8 : undefined}
 									/>
-									<button
+									<Button
 										type="button"
-										class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
+										variant="ghost"
+										size="xs"
+										shape="square"
+										class="absolute right-2 top-1/2 -translate-y-1/2"
 										onclick={() => (showPassword = !showPassword)}
 										tabindex={-1}
 									>
@@ -184,7 +188,7 @@
 										{:else}
 											<IconEye size={16} />
 										{/if}
-									</button>
+									</Button>
 								</div>
 							{/snippet}
 						</Field>
@@ -206,11 +210,11 @@
 
 					<div class="divider my-0 text-xs">OR</div>
 
-					<button class="btn btn-ghost btn-sm" onclick={toggleMode}>
+					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'
 							? "Don't have an account? Sign up"
 							: 'Already have an account? Sign in'}
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>

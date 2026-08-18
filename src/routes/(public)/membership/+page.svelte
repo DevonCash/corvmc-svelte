@@ -130,13 +130,15 @@
 					<li>• Recurring reservations</li>
 					<li>• Ticket discounts &amp; gear perks</li>
 				</ul>
-				<a
+				<Button
 					href={resolve('/login?register&redirect=/member/membership')}
-					class="btn btn-sm mt-auto"
+					variant="default"
+					size="sm"
+					class="mt-auto"
 					style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)"
 				>
 					Become a Sustaining Member
-				</a>
+				</Button>
 			</div>
 		</div>
 	</div>
@@ -200,15 +202,18 @@
 					>
 						{tier.body}
 					</p>
-					<a
+					<Button
 						href={resolve('/login?register&redirect=/member/membership')}
-						class="btn btn-sm btn-wide mt-auto"
+						variant="default"
+						size="sm"
+						shape="wide"
+						class="mt-auto"
 						style={tier.featured
 							? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'
 							: ''}
 					>
 						Become a Member
-					</a>
+					</Button>
 				</div>
 			{/each}
 		</div>

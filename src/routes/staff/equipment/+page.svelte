@@ -214,15 +214,16 @@
 						>
 						<td class="col-support cell-num">{cat.displayOrder}</td>
 						<td class="w-px text-right">
-							<button
-								class="btn btn-ghost btn-xs"
+							<Button
+								variant="ghost"
+								size="xs"
 								onclick={() =>
 									(editingCategory = {
 										id: cat.id,
 										name: cat.name,
 										displayOrder: cat.displayOrder,
 										pricingTier: cat.pricingTier as PricingTier
-									})}>Edit</button
+									})}>Edit</Button
 							>
 							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 						</td>
@@ -235,9 +236,11 @@
 	<div class="space-y-3 border-t pt-4">
 		<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
 		{#if !editingCategory}
-			<button
+			<Button
 				type="button"
-				class="btn btn-outline btn-sm"
+				variant="default"
+				size="sm"
+				outline
 				onclick={() =>
 					(editingCategory = {
 						id: '',
@@ -247,7 +250,7 @@
 					})}
 			>
 				+ New Category
-			</button>
+			</Button>
 		{:else}
 			<Form
 				remote={editingCategory.id ? (editCategory as any) : addCategory}
@@ -284,10 +287,8 @@
 					}))}
 				/>
 				<div class="flex gap-2">
-					<button
-						type="button"
-						class="btn btn-ghost btn-sm"
-						onclick={() => (editingCategory = null)}>Cancel</button
+					<Button type="button" variant="ghost" size="sm" onclick={() => (editingCategory = null)}
+						>Cancel</Button
 					>
 					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} variant="primary" size="sm" />
 				</div>

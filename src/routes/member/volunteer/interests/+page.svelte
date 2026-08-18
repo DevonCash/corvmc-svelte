@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -51,7 +52,9 @@
 					/>
 
 					<div class="flex items-center justify-between gap-3">
-						<a href={resolve('/member/volunteer')} class="btn btn-ghost btn-sm">Skip for now</a>
+						<Button href={resolve('/member/volunteer')} variant="ghost" size="sm"
+							>Skip for now</Button
+						>
 						<SubmitButton label="Finish" variant="primary" />
 					</div>
 				</Form>

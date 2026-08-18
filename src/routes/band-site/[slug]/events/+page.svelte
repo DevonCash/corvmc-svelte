@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
@@ -58,14 +59,16 @@
 						{/if}
 					</div>
 					{#if evt.externalTicketUrl}
-						<a
+						<Button
 							href={evt.externalTicketUrl}
 							target="_blank"
 							rel="noopener external"
-							class="btn btn-primary btn-sm shrink-0 ml-4"
+							variant="primary"
+							size="sm"
+							class="shrink-0 ml-4"
 						>
 							Tickets
-						</a>
+						</Button>
 					{/if}
 				</div>
 			{/each}

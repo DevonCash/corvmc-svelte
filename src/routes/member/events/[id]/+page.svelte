@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -316,7 +317,8 @@
 
 				<div class="edet__ctas">
 					{#if soldOut}
-						<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
+						<Button variant="default" size="lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+						>
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
 							<Action
@@ -435,11 +437,12 @@
 				     the RSVP is the lightweight join row — no QR, no check-in. -->
 				<div class="edet__ctas">
 					{#if mode === 'external'}
-						<a
+						<Button
 							href={evt.externalTicketUrl!}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="btn btn-primary btn-lg">Get Tickets ↗</a
+							variant="primary"
+							size="lg">Get Tickets ↗</Button
 						>
 					{/if}
 					{#if data.myRsvp}
