@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
@@ -96,9 +97,9 @@ export const getStaffArticle = query(z.string(), async (id) => {
 
 const createArticleSchema = z.object({
 	categoryId: z.string().min(1),
-	title: z.string().trim().min(1).max(255),
-	slug: z.string().trim().max(255).optional().default(''),
-	summary: z.string().trim().max(500).optional(),
+	title: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	slug: z.string().trim().max(SHORT_TEXT_MAX).optional().default(''),
+	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
 	published: z.boolean().default(false)
@@ -117,9 +118,9 @@ export const createArticle = form(createArticleSchema, async (data) => {
 const updateArticleSchema = z.object({
 	id: z.string().min(1),
 	categoryId: z.string().min(1),
-	title: z.string().trim().min(1).max(255),
-	slug: z.string().trim().min(1).max(255),
-	summary: z.string().trim().max(500).optional(),
+	title: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	slug: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
 	published: z.boolean().default(false)

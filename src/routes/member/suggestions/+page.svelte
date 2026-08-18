@@ -79,7 +79,7 @@
 		label="Suggest something"
 		modalTitle="Suggest something"
 		submitLabel="Post it"
-		successToast={standing.requiresReview ? 'Sent to staff for review' : 'Posted to the board'}
+		successToast={standing.status !== 'none' ? 'Sent to staff for review' : 'Posted to the board'}
 		class="btn-primary btn-sm"
 		onsuccess={(r) => {
 			if (r && typeof r === 'object' && 'id' in r) {
@@ -89,7 +89,7 @@
 	>
 		{#snippet icon()}<IconPlus size={16} />{/snippet}
 		{#snippet form()}
-			{#if standing.requiresReview}
+			{#if standing.status !== 'none'}
 				<p class="mb-3 text-sm opacity-70">Staff will look at this before it goes on the board.</p>
 			{/if}
 			<FormField name="title" type="text" label="What should we do?" />
@@ -108,7 +108,7 @@
 </PageHeader>
 
 <PageContent>
-	{#if standing.requiresReview}
+	{#if standing.status !== 'none'}
 		<!-- Say this plainly. A member whose posts silently stopped appearing would
 		     reasonably conclude the site was broken, or that they'd been shadowbanned. -->
 		<Alert type="warning">

@@ -9,6 +9,7 @@
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import StatCard from '$lib/components/shared/StatCard.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
@@ -27,18 +28,9 @@
 	{:then sessions}
 		<!-- Band overview -->
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Members</div>
-				<div class="stat-value text-2xl">{band.memberCount}</div>
-			</div>
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Upcoming Sessions</div>
-				<div class="stat-value text-2xl">{sessions.length}</div>
-			</div>
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Your Role</div>
-				<div class="stat-value text-2xl capitalize">{layout.userRole}</div>
-			</div>
+			<StatCard title="Members" value={band.memberCount} size="sm" />
+			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
+			<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
 		</div>
 
 		<!-- Upcoming reservations -->

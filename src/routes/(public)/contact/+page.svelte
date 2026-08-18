@@ -10,6 +10,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	// Declared before the awaited query below — a declaration that follows a
 	// top-level await is async-gated.
@@ -57,7 +58,7 @@
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<div class="alert alert-success">Thanks for reaching out! We'll get back to you soon.</div>
+				<Alert type="success">Thanks for reaching out! We'll get back to you soon.</Alert>
 			{:else}
 				<Form
 					remote={submitContactForm}

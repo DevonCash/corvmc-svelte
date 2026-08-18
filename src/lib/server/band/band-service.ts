@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -67,7 +68,9 @@ export class OwnerCannotLeaveError extends Error {
 	}
 }
 
-export class BandTierManagedByStripeError extends Error {
+export class BandTierManagedByStripeError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This band has an active Stripe subscription — change the tier in Stripe instead');
 		this.name = 'BandTierManagedByStripeError';

@@ -28,11 +28,20 @@ test that asserts nothing fails.
   machine fans out and the suite goes red on contention where CI's narrower runner passes.
   Re-running without `--workers=1` will not fix it.
 - D1 setup happens in `e2e/prepare.ts`, before Playwright starts — `pnpm test:e2e` runs it first.
+  It builds the suite's own state directory (`.wrangler/e2e-state`, see `e2e/state-dir.ts`), which
+  the preview server then holds alone. Seeds go through `withPlatformDb`/`withPlatformEnv`
+  (miniflare, prepare only); a read-back from inside a test goes through `readLocalDb`, which
+  reads the same SQLite file without starting a second workerd over it.
 - Fixtures must reset KV rate-limit counters; they survive between runs, and the failure surfaces
   as unrelated state that nothing in the test ever touched.
+- A spec that mutates a seeded row owns that row. The fixture seeds a disposable band per mutating
+  spec (`SEED_RENAME_BAND_*` for the address change, `SEED_RETITLE_BAND_*` for the rename) rather
+  than borrowing one another spec asserts on. Restoring at the end of the test is not a substitute:
+  a success toast is often the _previous_ save's, so the assertion passes instantly and the restore
+  can still be in flight when Playwright closes the page.
 - Kill an orphaned `:4173` preview before debugging failures — `reuseExistingServer` will happily
   serve a stale build.
-- A whole-suite red run can be workerd dying on `SQLITE_BUSY_RECOVERY`. Run e2e twice before
-  concluding anything.
+- A whole-suite red run can still be workerd dying on `SQLITE_BUSY_RECOVERY` — but since the state
+  directory is the suite's own, that means a second `pnpm test:e2e` is running, not a dev server.
 - `playwright.config.ts` spawns `npm run build && npm run preview` for its web server. That is
   fine — it only delegates to `package.json`. Leave it alone.

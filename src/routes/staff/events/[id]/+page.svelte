@@ -28,7 +28,7 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { formatDollars, formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -103,7 +103,7 @@
 		// allows disabling it. The price is untouched: a band gig legitimately has
 		// one for the door or an outside seller.
 		editTicketingEnabled = cmcCanSell ? evt.ticketingEnabled : false;
-		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
+		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
@@ -485,7 +485,7 @@
 
 							<!-- Rebook warning -->
 							{#if rebookNeeded}
-								<div class="alert alert-warning">
+								<div class="alert alert-warning" role="alert">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
 										<p class="text-sm">
@@ -580,7 +580,7 @@
 					<span class="opacity-60">{data.creator.email}</span>
 				{/if}
 			</p>
-			{#if data.submitterStanding?.requiresReview}
+			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
 				<Alert type="warning" class="mt-2">
 					This member's listings are checked before they publish, after a report was upheld against
 					one of them.

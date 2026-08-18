@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
@@ -388,7 +389,7 @@ export const getMemberProfile = query(z.void(), async () => {
 
 const memberProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
-	bio: z.string().max(2000).optional().default(''),
+	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	instruments: tagsField('Invalid instruments'),
 	genres: tagsField('Invalid genres'),
@@ -449,7 +450,7 @@ export const getBandProfile = query(z.void(), async () => {
 
 const bandProfileSchema = z.object({
 	name: z.string().min(1, 'Name is required').max(200),
-	bio: z.string().max(2000).optional().default(''),
+	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	tagline: z.string().max(150).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	foundedYear: z.string().max(16).optional().default(''),

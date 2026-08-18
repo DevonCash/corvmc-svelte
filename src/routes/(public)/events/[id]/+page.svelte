@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { IconShare3, IconCheck, IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
+	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
@@ -19,6 +19,7 @@
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -55,8 +56,6 @@
 		endsAt: evt.endsAt
 	});
 
-	let copied = $state(false);
-
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
 		return tags
@@ -82,16 +81,6 @@
 			? resolve(`/events/${evt.id}/tickets`)
 			: (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
 	);
-
-	async function share() {
-		try {
-			await navigator.clipboard.writeText(window.location.href);
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable — no-op
-		}
-	}
 </script>
 
 <svelte:head>
@@ -126,18 +115,7 @@
 						</li>
 					</ul>
 				</details>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm btn-square"
-					title="Copy link to this event"
-					onclick={share}
-				>
-					{#if copied}
-						<IconCheck size={18} />
-					{:else}
-						<IconShare3 size={18} />
-					{/if}
-				</button>
+				<ShareButton title="Copy link to this event" />
 				{#if data.canReport}
 					<ReportEventAction eventId={evt.id} eventTitle={evt.title} />
 				{/if}

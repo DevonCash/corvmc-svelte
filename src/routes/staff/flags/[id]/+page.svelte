@@ -9,6 +9,8 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 
@@ -60,35 +62,29 @@
 <PageContent width="3xl">
 	<div class="grid gap-6 lg:grid-cols-2 mb-6">
 		<InfoCard title="Report">
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Type</dt>
-				<dd>{entityLabels[flag.entityType] ?? flag.entityType}</dd>
+			<DefinitionList>
+				<Fact label="Type">{entityLabels[flag.entityType] ?? flag.entityType}</Fact>
 
-				<dt class="opacity-60">Content</dt>
-				<dd>
+				<Fact label="Content">
 					<a class="link" href={entityHref}>{flag.entityLabel}</a>
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Reason</dt>
-				<dd>{flag.reason}</dd>
+				<Fact label="Reason">{flag.reason}</Fact>
 
 				{#if flag.description}
-					<dt class="opacity-60">Details</dt>
-					<dd class="whitespace-pre-wrap">{flag.description}</dd>
+					<Fact label="Details" wrap>{flag.description}</Fact>
 				{/if}
 
-				<dt class="opacity-60">Reported by</dt>
-				<dd>
+				<Fact label="Reported by">
 					{#if flag.reportedByName}
 						{flag.reportedByName} <span class="opacity-60">({flag.reportedByEmail})</span>
 					{:else}
 						Anonymous visitor
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Reported</dt>
-				<dd>{formatDateTime(flag.createdAt)}</dd>
-			</dl>
+				<Fact label="Reported">{formatDateTime(flag.createdAt)}</Fact>
+			</DefinitionList>
 		</InfoCard>
 
 		{#if flag.threadContext}
@@ -122,20 +118,16 @@
 
 		{#if flag.eventContext}
 			<InfoCard title="Event details">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Title</dt>
-					<dd class="font-medium">{flag.eventContext.title}</dd>
+				<DefinitionList>
+					<Fact label="Title" class="font-medium">{flag.eventContext.title}</Fact>
 
-					<dt class="opacity-60">Date</dt>
-					<dd>{formatDateTime(flag.eventContext.startsAt)}</dd>
+					<Fact label="Date">{formatDateTime(flag.eventContext.startsAt)}</Fact>
 
 					{#if flag.eventContext.location}
-						<dt class="opacity-60">Venue</dt>
-						<dd>{flag.eventContext.location}</dd>
+						<Fact label="Venue">{flag.eventContext.location}</Fact>
 					{/if}
 
-					<dt class="opacity-60">By</dt>
-					<dd>
+					<Fact label="By">
 						{#if flag.eventContext.band}
 							<a class="link" href={resolve(`/directory/bands/${flag.eventContext.band.slug}`)}>
 								{flag.eventContext.band.name}
@@ -143,11 +135,10 @@
 						{:else}
 							CMC
 						{/if}
-					</dd>
+					</Fact>
 
-					<dt class="opacity-60">Status</dt>
-					<dd><StatusBadge status={flag.eventContext.status} label /></dd>
-				</dl>
+					<Fact label="Status"><StatusBadge status={flag.eventContext.status} label /></Fact>
+				</DefinitionList>
 				<div class="mt-3">
 					<Button href={entityHref} class="btn-outline btn-sm">View public listing</Button>
 				</div>
@@ -237,20 +228,17 @@
 					</Action>
 				</div>
 			{:else}
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Outcome</dt>
-					<dd><StatusBadge status={flag.status} label /></dd>
+				<DefinitionList>
+					<Fact label="Outcome"><StatusBadge status={flag.status} label /></Fact>
 
 					{#if flag.resolutionNotes}
-						<dt class="opacity-60">Notes</dt>
-						<dd class="whitespace-pre-wrap">{flag.resolutionNotes}</dd>
+						<Fact label="Notes" wrap>{flag.resolutionNotes}</Fact>
 					{/if}
 
 					{#if flag.resolvedAt}
-						<dt class="opacity-60">Resolved</dt>
-						<dd>{formatDateTime(flag.resolvedAt)}</dd>
+						<Fact label="Resolved">{formatDateTime(flag.resolvedAt)}</Fact>
 					{/if}
-				</dl>
+				</DefinitionList>
 				<div class="mt-3">
 					<Button href={entityHref} class="btn-outline btn-sm">View content</Button>
 				</div>

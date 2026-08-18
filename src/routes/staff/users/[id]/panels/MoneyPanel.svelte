@@ -17,6 +17,8 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { AdjustCreditsAction } from '$lib/components/shared/actions';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { creditsToHours } from '$lib/config';
 	import { formatCents, formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
 
@@ -48,25 +50,19 @@
 					allocating after that.
 				</Alert>
 			{/if}
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Status</dt>
-				<dd><Badge variant="success" size="sm">Sustaining</Badge></dd>
+			<DefinitionList>
+				<Fact label="Status"><Badge variant="success" size="sm">Sustaining</Badge></Fact>
 
-				<dt class="opacity-60">Allocation</dt>
-				<dd>{creditsToHours(m.allocated)} hrs a month</dd>
+				<Fact label="Allocation">{creditsToHours(m.allocated)} hrs a month</Fact>
 
-				<dt class="opacity-60">Used this period</dt>
-				<dd>{creditsToHours(m.used)} hrs</dd>
+				<Fact label="Used this period">{creditsToHours(m.used)} hrs</Fact>
 
-				<dt class="opacity-60">Renews</dt>
-				<dd>{formatDateShortYear(m.subscription.currentPeriodEnd)}</dd>
+				<Fact label="Renews">{formatDateShortYear(m.subscription.currentPeriodEnd)}</Fact>
 
-				<dt class="opacity-60">Covering fees</dt>
-				<dd>{m.coveringFees ? 'Yes' : 'No'}</dd>
+				<Fact label="Covering fees">{m.coveringFees ? 'Yes' : 'No'}</Fact>
 
-				<dt class="opacity-60">Subscription</dt>
-				<dd><CopyableId value={m.subscription.id} /></dd>
-			</dl>
+				<Fact label="Subscription"><CopyableId value={m.subscription.id} /></Fact>
+			</DefinitionList>
 		{/if}
 	{/snippet}
 </AsyncCard>

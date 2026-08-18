@@ -23,7 +23,7 @@
 		withdrawListing,
 		deleteListing
 	} from '$lib/remote/community-events.remote';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort, formatDollars } from '$lib/utils/format';
 	import { imageSrc } from '$lib/utils/images';
 
 	// Declared before the awaited query below — see the note on the create page.
@@ -41,7 +41,7 @@
 		listing?.status === 'draft' ? await findDuplicateListing(eventId) : null
 	);
 
-	const requiresReview = $derived(listing?.standing.requiresReview ?? false);
+	const requiresReview = $derived(listing?.standing.status !== 'none');
 
 	// A button that silently does something other than what it says is worse
 	// than the delay itself.
@@ -68,7 +68,7 @@
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 	}
 	function toDollars(cents: number | null): string {
-		return cents == null ? '' : (cents / 100).toFixed(2);
+		return cents == null ? '' : formatDollars(cents);
 	}
 </script>
 

@@ -11,8 +11,10 @@ import { updateStatus } from './thread-service';
 import {
 	isBlockedEitherWay,
 	blockUser,
-	getMessagingStanding
+	messagingIsDisabled,
+	acceptsDirectMessages
 } from '$lib/server/moderation/moderation-service';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import { MAX_PENDING_SENT_REQUESTS, DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
 
@@ -130,7 +132,7 @@ export async function startDirectThread(
 	// directory, are not reachable. Hidden is a statement about being found, and
 	// we read it as covering being messaged too.
 	const [recipient] = await db
-		.select({ id: user.id })
+		.select({ id: user.id, acceptsDirectMessages: user.acceptsDirectMessages })
 		.from(user)
 		.where(
 			and(
@@ -144,16 +146,26 @@ export async function startDirectThread(
 
 	if (await isBlockedEitherWay(params.senderId, params.recipientId)) return SILENTLY_DROPPED;
 
-	// A member with messaging switched off cannot be reached. Same silent drop:
-	// whether someone has switched off messaging is their business.
-	const recipientStanding = await getMessagingStanding(params.recipientId);
-	if (recipientStanding.status === 'disabled') return SILENTLY_DROPPED;
+	// A member with messaging switched off cannot be reached — whether they
+	// switched it off or staff did. Same silent drop, and deliberately the same
+	// one for both: which of the two it was is nobody else's business. The
+	// preference rode along on the row above, so only the standing costs a query.
+	if (!recipient.acceptsDirectMessages) return SILENTLY_DROPPED;
+	if ((await getStanding(params.recipientId, 'messaging')).status === 'disabled') {
+		return SILENTLY_DROPPED;
+	}
 
-	// The sender's own standing is not silent — they are entitled to know why
-	// they cannot write, and to be told what staff said about it.
-	const senderStanding = await getMessagingStanding(params.senderId);
+	// The sender's own restriction is not silent — they are entitled to know why
+	// they cannot write, and to be told what staff said about it. Their own switch
+	// being off stops them too, with no reason to give: they already know.
+	const senderStanding = await getStanding(params.senderId, 'messaging');
 	if (senderStanding.status !== 'none') {
 		return { status: 'restricted', reason: senderStanding.reason };
+	}
+	// The preference only — `messagingIsDisabled` would re-read the standing we
+	// are already holding.
+	if (!(await acceptsDirectMessages(params.senderId))) {
+		return { status: 'restricted', reason: null };
 	}
 
 	// Counted in the database, so it is exactly true: you may not have more than
@@ -257,8 +269,7 @@ export async function replyToDirectThread(params: {
 
 /** Accept a pending request. Returns false when there is nothing to accept. */
 export async function acceptDirectThread(threadId: string, userId: string): Promise<boolean> {
-	const standing = await getMessagingStanding(userId);
-	if (standing.status === 'disabled') return false;
+	if (await messagingIsDisabled(userId)) return false;
 
 	const other = await counterpartOf(threadId, userId);
 	if (!other) return false;

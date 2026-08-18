@@ -143,46 +143,46 @@
 
 	<!-- Direct messaging -->
 	<svelte:boundary>
-		{@const standing = await getMyMessagingStanding()}
+		{@const messaging = await getMyMessagingStanding()}
 		<InfoCard title="Direct Messages">
-			{#if standing.status !== 'none' && standing.source !== 'member'}
-				<!-- Applied by staff or by an upheld report. The member can see it and
-				     read why, but cannot switch it off — that check lives in
-				     setMessagingStanding, not here. -->
+			<!-- Two separate things, shown together on purpose. The restriction is
+			     staff's and read-only; the switch below it is the member's own and
+			     always theirs to set. Toggling it never lifts the restriction —
+			     they write different tables. -->
+			{#if messaging.standing.status !== 'none'}
 				<Alert type="warning">
-					{standing.status === 'disabled'
-						? 'Direct messaging is switched off for your account.'
+					{messaging.standing.status === 'disabled'
+						? 'Direct messaging is switched off for your account by staff.'
 						: 'You cannot start new conversations at the moment. You can still reply to conversations you are already in.'}
-					{#if standing.reason}
-						<span class="mt-1 block opacity-80">{standing.reason}</span>
+					{#if messaging.standing.reason}
+						<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 					{/if}
 					<span class="mt-1 block text-sm opacity-70">
 						Contact staff if you think this is a mistake.
 					</span>
 				</Alert>
-			{:else}
-				<p class="mb-3 text-sm opacity-70">
-					When this is on, other members can send you a message request from the directory. You
-					decide whether to accept each one, and you can block anyone at any time.
-				</p>
-				<Form
-					remote={setMyMessaging}
-					successToast="Saved"
-					class="flex items-center justify-between gap-4"
-				>
-					<span class="font-medium">Allow direct messages</span>
-					<input
-						{...setMyMessaging.fields.enabled.as(
-							'hidden',
-							standing.status === 'disabled' ? 'on' : 'off'
-						)}
-					/>
-					<SubmitButton
-						label={standing.status === 'disabled' ? 'Turn on' : 'Turn off'}
-						class={standing.status === 'disabled' ? 'btn-primary btn-sm' : 'btn-outline btn-sm'}
-					/>
-				</Form>
 			{/if}
+			<p class="mt-3 mb-3 text-sm opacity-70">
+				When this is on, other members can send you a message request from the directory. You decide
+				whether to accept each one, and you can block anyone at any time.
+			</p>
+			<Form
+				remote={setMyMessaging}
+				successToast="Saved"
+				class="flex items-center justify-between gap-4"
+			>
+				<span class="font-medium">Allow direct messages</span>
+				<input
+					{...setMyMessaging.fields.enabled.as(
+						'hidden',
+						messaging.acceptsDirectMessages ? 'off' : 'on'
+					)}
+				/>
+				<SubmitButton
+					label={messaging.acceptsDirectMessages ? 'Turn off' : 'Turn on'}
+					class={messaging.acceptsDirectMessages ? 'btn-outline btn-sm' : 'btn-primary btn-sm'}
+				/>
+			</Form>
 		</InfoCard>
 	</svelte:boundary>
 
@@ -296,12 +296,10 @@
 						}}
 					>
 						{#snippet form()}
-							<div class="alert alert-error">
-								<p>
-									This action is permanent. Deleting your account will cancel all of your current
-									and future reservations and end your subscription. This cannot be undone.
-								</p>
-							</div>
+							<Alert type="error">
+								This action is permanent. Deleting your account will cancel all of your current and
+								future reservations and end your subscription. This cannot be undone.
+							</Alert>
 
 							<FormField
 								name="password"

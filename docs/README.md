@@ -46,6 +46,7 @@ as reality — reconcile deliberately.
 | [finance-spec.md](specs/finance-spec.md)                               | ✅     | Stripe-first payments, credit wallets / ledger                                                                              |
 | [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md` |
 | [volunteering-spec.md](specs/volunteering-spec.md)                     | ✅     | Volunteer roles, member hour logging, staff approval queue, reporting; shifts + certifications designed, unbuilt            |
+| [member-standing-spec.md](specs/member-standing-spec.md)               | ✅     | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables              |
 
 ## plans
 
@@ -89,9 +90,10 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## reports
 
-| Doc                                          | Status | Notes                                                   |
-| -------------------------------------------- | ------ | ------------------------------------------------------- |
-| [parity-report.md](reports/parity-report.md) | ✅     | Authoritative feature parity vs. the legacy Laravel app |
+| Doc                                                          | Status | Notes                                                                    |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------------------ |
+| [parity-report.md](reports/parity-report.md)                 | ✅     | Authoritative feature parity vs. the legacy Laravel app                  |
+| [standardization-audit.md](reports/standardization-audit.md) | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues |
 
 ## manual
 

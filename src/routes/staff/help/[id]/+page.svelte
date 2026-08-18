@@ -19,6 +19,7 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let id = $derived(page.params.id!);
 	let article = $derived(await getStaffArticle(id));
@@ -99,10 +100,10 @@
 				</FormField>
 
 				{#if article.source === 'static'}
-					<div class="alert alert-info text-sm">
+					<Alert type="info" class="text-sm">
 						This article is synced from a markdown file. Edits here will be overwritten on the next
 						sync.
-					</div>
+					</Alert>
 				{/if}
 
 				<div class="flex justify-end gap-2">
