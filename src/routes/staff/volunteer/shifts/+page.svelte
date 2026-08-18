@@ -161,7 +161,7 @@
 	>
 		{#await roles then roleOptions}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Role"
 				value={roleFilter}
 				onchange={(e: Event) => {

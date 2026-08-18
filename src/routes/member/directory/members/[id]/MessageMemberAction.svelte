@@ -35,7 +35,7 @@
 				<div class="label"><span class="label-text">Message</span></div>
 				<textarea
 					{...fields.body.as('text')}
-					class="textarea textarea-bordered w-full"
+					class="textarea w-full"
 					rows="5"
 					maxlength={DIRECT_MESSAGE_BODY_MAX}
 					bind:value={body}

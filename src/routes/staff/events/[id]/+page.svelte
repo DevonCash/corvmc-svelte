@@ -334,7 +334,7 @@
 									name="title"
 									type="text"
 									bind:value={editTitle}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 								/>
 							</FormField>
@@ -344,7 +344,7 @@
 									id="editDesc"
 									name="description"
 									bind:value={editDescription}
-									class="textarea textarea-bordered w-full"
+									class="textarea w-full"
 									rows="4"
 								></textarea>
 							</FormField>
@@ -355,7 +355,7 @@
 									name="eventDate"
 									type="date"
 									bind:value={editDate}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 									onchange={checkForRebook}
 								/>
@@ -368,7 +368,7 @@
 										name="eventStartTime"
 										type="time"
 										bind:value={editStartTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -380,7 +380,7 @@
 										name="eventEndTime"
 										type="time"
 										bind:value={editEndTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -393,7 +393,7 @@
 									name="doorsTime"
 									type="time"
 									bind:value={editDoorsTime}
-									class="input input-bordered w-full"
+									class="input w-full"
 								/>
 							</FormField>
 
@@ -403,7 +403,7 @@
 									name="tags"
 									type="text"
 									bind:value={editTags}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="e.g. open mic, workshop"
 								/>
 							</FormField>
@@ -416,7 +416,7 @@
 									name="location"
 									type="text"
 									bind:value={editLocation}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="Venue name and address"
 								/>
 							</FormField>
@@ -427,7 +427,7 @@
 									name="externalTicketUrl"
 									type="url"
 									bind:value={editExternalTicketUrl}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="https://..."
 								/>
 							</FormField>
@@ -444,7 +444,7 @@
 									min="0.01"
 									step="0.01"
 									placeholder="15.00"
-									class="input input-bordered w-full"
+									class="input w-full"
 									required={editTicketingEnabled}
 								/>
 								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
@@ -479,7 +479,7 @@
 											min="1"
 											step="1"
 											placeholder="Unlimited"
-											class="input input-bordered w-full"
+											class="input w-full"
 										/>
 									</FormField>
 									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
@@ -513,7 +513,7 @@
 														name="reservationStartTime"
 														type="time"
 														bind:value={editReservationStartTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 												<FormField label="Reservation end" id="editResEnd" issues={[]}>
@@ -522,7 +522,7 @@
 														name="reservationEndTime"
 														type="time"
 														bind:value={editReservationEndTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 											</div>

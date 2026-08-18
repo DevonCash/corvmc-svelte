@@ -77,7 +77,7 @@
 						<div class="label"><span class="label-text">Member</span></div>
 						<input
 							type="text"
-							class="input input-bordered w-full"
+							class="input w-full"
 							bind:value={query}
 							oninput={handleMemberSearch}
 							placeholder="Search by name or email..."

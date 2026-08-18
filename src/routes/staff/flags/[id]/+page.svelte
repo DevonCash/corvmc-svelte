@@ -169,7 +169,7 @@
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Resolution</span></div>
 									<Select
-										class="select-bordered w-full"
+										class="w-full"
 										{...fields.resolution.as('select')}
 										bind:value={resolution}
 									>
@@ -180,7 +180,7 @@
 								<label class="form-control w-full">
 									<div class="label"><span class="label-text">Notes (optional)</span></div>
 									<textarea
-										class="textarea textarea-bordered w-full"
+										class="textarea w-full"
 										rows="3"
 										{...fields.notes.as('text')}
 										bind:value={notes}

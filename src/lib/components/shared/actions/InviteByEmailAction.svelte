@@ -49,24 +49,20 @@
 				<div class="label"><span class="label-text">Email</span></div>
 				<input
 					{...fields.email.as('email')}
-					class="input input-bordered w-full"
+					class="input w-full"
 					placeholder="musician@example.com"
 				/>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<Select class="select-bordered w-full" {...fields.role.as('select')}>
+				<Select class="w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</Select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input
-					{...fields.position.as('text')}
-					class="input input-bordered w-full"
-					placeholder="e.g. Bassist"
-				/>
+				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Bassist" />
 			</label>
 		</div>
 	{/snippet}

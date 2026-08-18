@@ -20,7 +20,7 @@
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">
-		<Select class="select-bordered select-sm" aria-label="Status" bind:value={statusFilter}>
+		<Select size="sm" aria-label="Status" bind:value={statusFilter}>
 			<option value="">All statuses</option>
 			<option value="draft">Draft</option>
 			<option value="scheduled">Scheduled</option>

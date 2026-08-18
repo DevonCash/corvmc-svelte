@@ -88,7 +88,7 @@
 								<h3 class="font-semibold text-sm">Booking</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.bookingContact?.name ?? ''}
 									oninput={(e) => {
@@ -100,7 +100,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.bookingContact?.email ?? ''}
 									oninput={(e) => {
@@ -112,7 +112,7 @@
 								/>
 								<input
 									type="tel"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Phone (optional)"
 									value={epk.bookingContact?.phone ?? ''}
 									oninput={(e) => {
@@ -129,7 +129,7 @@
 								<h3 class="font-semibold text-sm">Management</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.managementContact?.name ?? ''}
 									oninput={(e) => {
@@ -141,7 +141,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.managementContact?.email ?? ''}
 									oninput={(e) => {
@@ -158,7 +158,7 @@
 								<h3 class="font-semibold text-sm">Press / PR</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.prContact?.name ?? ''}
 									oninput={(e) => {
@@ -170,7 +170,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.prContact?.email ?? ''}
 									oninput={(e) => {
@@ -203,7 +203,7 @@
 									<div class="flex gap-2 items-start p-3 bg-base-200 rounded-lg">
 										<div class="flex-1 space-y-2">
 											<textarea
-												class="textarea textarea-bordered textarea-sm w-full"
+												class="textarea textarea-sm w-full"
 												rows="2"
 												placeholder="Quote text..."
 												value={quote.quote}
@@ -214,7 +214,7 @@
 											<div class="grid grid-cols-2 gap-2">
 												<input
 													type="text"
-													class="input input-bordered input-sm"
+													class="input input-sm"
 													placeholder="Publication"
 													value={quote.publication}
 													oninput={(e) => {
@@ -223,7 +223,7 @@
 												/>
 												<input
 													type="text"
-													class="input input-bordered input-sm"
+													class="input input-sm"
 													placeholder="Date (optional)"
 													value={quote.date ?? ''}
 													oninput={(e) => {
@@ -269,7 +269,7 @@
 									<div class="flex gap-2 items-center">
 										<input
 											type="text"
-											class="input input-bordered input-sm flex-1"
+											class="input input-sm flex-1"
 											placeholder="e.g. Opened for The National (2024)"
 											value={achievement}
 											oninput={(e) => {
@@ -320,7 +320,7 @@
 												<td>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="e.g. Drums"
 														value={item.instrument}
 														oninput={(e) => {
@@ -331,7 +331,7 @@
 												<td>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="e.g. 5-piece kit, 22&quot; kick"
 														value={item.details}
 														oninput={(e) => {
@@ -341,7 +341,7 @@
 												</td>
 												<td>
 													<Select
-														class="select-bordered select-sm"
+														size="sm"
 														value={item.provided ? 'band' : 'venue'}
 														onchange={(e: Event) => {
 															epk.backline![i] = {

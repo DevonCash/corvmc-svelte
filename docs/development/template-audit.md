@@ -150,6 +150,25 @@ one-offs like `bg-warning/10 border-warning/40`, and `ProfileSection` — its sc
 `.profile-section` on the card element, and Svelte's scoped CSS cannot reach a class passed into a
 child component. svelte-check's unused-selector warning is what caught that.
 
+### Phase 4 notes
+
+**`input-bordered`, `select-bordered` and `textarea-bordered` emit no CSS at all.** They are daisyUI
+4 spellings; daisyUI 5 makes the border the default and dropped the classes. Verified against the
+built stylesheet — zero occurrences of any of the three — so deleting all 185 of them changed
+nothing visually. Worth knowing before adding another.
+
+`SearchInput` owns the debounce that thirteen list pages had each copied: an immediate `searchText`,
+a debounced `searchQuery`, a `setTimeout` between them and a cleanup effect. It also cancels a
+pending search when its value is reset from outside, which those copies each had to remember in
+their own `clearFilters`.
+
+`Select` gained `size="sm"` — the only modifier it was ever given, on every filter bar in the app.
+Note that `size` is _also_ a valid attribute on a native `<select>` (visible row count), so the
+migration was checked to confirm all 30 landed on the component and none on a bare element.
+
+The `searchText`-not-`search` snippet-shadowing footgun in `ui-patterns.md` is now only relevant to
+pages that still name their own state.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
@@ -158,6 +177,6 @@ child component. svelte-check's unused-selector warning is what caught that.
 | 1 — semantic text utilities      | 7,477        | 81              | −228 tokens, −67 inline styles         |
 | 2 — `Button` variant API         | 6,854        | 81              | −623 tokens; daisyUI share 1,569 → 970 |
 | 3 — `Card`                       | 6,543        | 81              | −311 tokens; daisyUI share 970 → 827   |
-| 4 — filter controls              | _pending_    |                 |                                        |
+| 4 — filter controls              | 6,324        | 81              | −219 tokens, plus 185 dead ones        |
 | 5 — marketing section vocabulary | _pending_    |                 |                                        |
 | 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                        |

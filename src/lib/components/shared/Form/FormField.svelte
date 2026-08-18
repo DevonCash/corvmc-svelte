@@ -158,17 +158,12 @@
 	{:else if input}
 		{@render input(resolvedId)}
 	{:else if readonly}
-		<p class="input-bordered input w-full">
+		<p class="input w-full">
 			<span class="grow">{value}</span>
 			<IconPencilOff class="size-5 opacity-20" />
 		</p>
 	{:else if type === 'textarea'}
-		<textarea
-			class="textarea-bordered textarea w-full"
-			class:ghost={readonly}
-			{...inputProps}
-			bind:value
-		></textarea>
+		<textarea class="textarea w-full" class:ghost={readonly} {...inputProps} bind:value></textarea>
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
 		     explicitly — without it TagInput starts empty and submits `[]`. -->
@@ -216,7 +211,7 @@
 			value={JSON.stringify(Array.isArray(value) ? value : [])}
 		/>
 		<select
-			class="select-bordered select w-full"
+			class="select w-full"
 			class:ghost={readonly}
 			multiple
 			disabled={pending || readonly}
@@ -248,7 +243,7 @@
 		</Select>
 	{:else if field && fieldAttrs}
 		<input
-			class="input-bordered input w-full"
+			class="input w-full"
 			class:ghost={readonly}
 			{...rest}
 			{...fieldAttrs}
@@ -256,12 +251,6 @@
 			disabled={pending || readonly}
 		/>
 	{:else}
-		<input
-			class="input-bordered input w-full"
-			class:ghost={readonly}
-			{...rest}
-			{...inputProps}
-			bind:value
-		/>
+		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
 </fieldset>

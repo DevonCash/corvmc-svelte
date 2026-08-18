@@ -276,7 +276,7 @@
 										name="name"
 										type="text"
 										value={product.name}
-										class="input-bordered input input-sm"
+										class="input input-sm"
 									/>
 								</div>
 
@@ -290,7 +290,7 @@
 										{#each instance.fields.unitAmountCents.issues() ?? [] as issue (issue.message)}
 											<p class="text-sm text-error">{issue.message}</p>
 										{/each}
-										<label class="input-bordered input input-sm flex items-center gap-1">
+										<label class="input input-sm flex items-center gap-1">
 											<span class="opacity-60">$</span>
 											<input
 												id="amount-{product.key}"
@@ -330,7 +330,7 @@
 									id="desc-{product.key}"
 									name="description"
 									value={product.description ?? ''}
-									class="textarea-bordered textarea textarea-sm"
+									class="textarea textarea-sm"
 									rows="2"
 								></textarea>
 							</div>
@@ -363,7 +363,7 @@
 								<label class="label" for="hourlyRate">
 									<span class="label-text">Hourly rate</span>
 								</label>
-								<label class="input-bordered input input-sm flex items-center gap-1">
+								<label class="input input-sm flex items-center gap-1">
 									<span class="opacity-60">$</span>
 									<input
 										id="hourlyRate"

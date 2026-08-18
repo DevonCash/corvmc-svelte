@@ -317,7 +317,7 @@
 					<input
 						id="user-search"
 						type="text"
-						class="input-bordered input w-full"
+						class="input w-full"
 						placeholder="Start typing a name or email..."
 						value={searchQuery}
 						oninput={onSearchInput}

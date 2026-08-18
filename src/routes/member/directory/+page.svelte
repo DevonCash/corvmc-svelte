@@ -125,7 +125,7 @@
 				type="text"
 				placeholder="Search by name..."
 				aria-label="Search by name"
-				class="input input-bordered flex-1"
+				class="input flex-1"
 				bind:value={search}
 			/>
 			{#if tab === 'members'}

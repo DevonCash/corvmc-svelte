@@ -173,7 +173,7 @@
 										{id}
 										name="password"
 										type={showPassword ? 'text' : 'password'}
-										class="input-bordered input w-full pr-10"
+										class="input w-full pr-10"
 										minlength={mode === 'register' ? 8 : undefined}
 									/>
 									<Button

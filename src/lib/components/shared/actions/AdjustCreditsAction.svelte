@@ -53,11 +53,7 @@
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
 			<FormField field={fields.creditType} label="Credit Type">
-				<Select
-					class="select-bordered w-full"
-					{...fields.creditType.as('select')}
-					bind:value={creditType}
-				>
+				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
 					<option value="free_hours">Free Hours</option>
 					<option value="equipment_credits">Equipment Credits</option>
 				</Select>
@@ -66,7 +62,7 @@
 				<input
 					{...fields.amount.as('text')}
 					type="number"
-					class="input input-bordered w-full"
+					class="input w-full"
 					bind:value={amount}
 					placeholder="Positive to add, negative to deduct"
 				/>
@@ -74,7 +70,7 @@
 			<FormField field={fields.description} label="Reason">
 				<input
 					{...fields.description.as('text')}
-					class="input input-bordered w-full"
+					class="input w-full"
 					bind:value={description}
 					placeholder="Why is this adjustment being made?"
 				/>

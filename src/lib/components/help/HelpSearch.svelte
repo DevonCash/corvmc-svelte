@@ -45,7 +45,7 @@
 		<input
 			type="text"
 			placeholder="Search help articles..."
-			class="input input-bordered w-full pl-9"
+			class="input w-full pl-9"
 			bind:value={query}
 			oninput={handleInput}
 			onfocus={() => {

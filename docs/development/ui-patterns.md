@@ -669,13 +669,29 @@ below the `@lg` container breakpoint.
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-	{#snippet search()}<input ... />{/snippet}
-	{#snippet children()}<select ...>...</select>{/snippet}
+	{#snippet search()}
+		<SearchInput
+			bind:value={searchText}
+			placeholder="Search members..."
+			onsearch={(q) => {
+				searchQuery = q;
+				page = 1;
+			}}
+		/>
+	{/snippet}
+	<Select size="sm" aria-label="Role" bind:value={roleFilter}>…</Select>
 </FilterBar>
 ```
 
+`SearchInput` (`$lib/components/shared/Form/`) owns the 300ms debounce, so a page keeps only the
+value it queries on. `bind:value` is the immediate text, for Clear; setting it from outside also
+cancels any search still in flight.
+
 Name the page's search state `searchText`, not `search` — the `search` snippet
 shadows a same-named script binding.
+
+**Do not write `input-bordered`, `select-bordered` or `textarea-bordered`.** They are daisyUI 4
+spellings that emit no CSS in daisyUI 5, where the border is the default.
 
 ### Column slots
 

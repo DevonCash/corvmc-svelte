@@ -63,22 +63,10 @@
 					<CardBody class="py-4">
 						{#if editId === c.id}
 							<div class="space-y-3">
-								<input
-									type="text"
-									bind:value={editReason}
-									class="input input-bordered w-full input-sm"
-								/>
+								<input type="text" bind:value={editReason} class="input w-full input-sm" />
 								<div class="grid grid-cols-2 gap-4">
-									<input
-										type="datetime-local"
-										bind:value={editStartsAt}
-										class="input input-bordered input-sm"
-									/>
-									<input
-										type="datetime-local"
-										bind:value={editEndsAt}
-										class="input input-bordered input-sm"
-									/>
+									<input type="datetime-local" bind:value={editStartsAt} class="input input-sm" />
+									<input type="datetime-local" bind:value={editEndsAt} class="input input-sm" />
 								</div>
 								<div class="flex justify-end gap-2">
 									<Button variant="ghost" size="sm" onclick={() => (editId = null)}>Cancel</Button>

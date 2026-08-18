@@ -137,13 +137,7 @@
 		<label class="label" for="date">
 			<span class="label-text">Date</span>
 		</label>
-		<input
-			id="date"
-			type="date"
-			value={currentDate}
-			onchange={onDateChange}
-			class="input-bordered input"
-		/>
+		<input id="date" type="date" value={currentDate} onchange={onDateChange} class="input" />
 	</div>
 
 	<Form
@@ -166,7 +160,7 @@
 			<Select
 				id="startTime"
 				name="startTime"
-				class="select-bordered"
+				class=""
 				bind:value={selectedStart}
 				onchange={onStartChange}
 				disabled={startTimeOptions.length === 0}
@@ -190,7 +184,7 @@
 			<Select
 				id="endTime"
 				name="endTime"
-				class="select-bordered"
+				class=""
 				bind:value={selectedEnd}
 				disabled={endTimeOptions.length === 0}
 			>
@@ -225,7 +219,7 @@
 			<textarea
 				id="notes"
 				name="notes"
-				class="textarea-bordered textarea"
+				class="textarea"
 				rows="2"
 				placeholder="What are you working on?"
 			></textarea>
@@ -236,7 +230,7 @@
 				<label class="label" for="recurring">
 					<span class="label-text">Repeat this reservation</span>
 				</label>
-				<Select id="recurring" name="recurring" class="select-bordered" bind:value={recurring}>
+				<Select id="recurring" name="recurring" class="" bind:value={recurring}>
 					<option value="">Don't repeat (one-time)</option>
 					<option value="weekly">Weekly</option>
 					<option value="biweekly">Every 2 weeks</option>
@@ -246,12 +240,7 @@
 					<label class="label mt-2" for="monthlyMode">
 						<span class="label-text">Monthly pattern</span>
 					</label>
-					<Select
-						id="monthlyMode"
-						name="monthlyMode"
-						class="select-bordered"
-						bind:value={monthlyMode}
-					>
+					<Select id="monthlyMode" name="monthlyMode" class="" bind:value={monthlyMode}>
 						<option value="weekday">{monthlyLabels.weekday}</option>
 						<option value="monthday">{monthlyLabels.monthday}</option>
 					</Select>

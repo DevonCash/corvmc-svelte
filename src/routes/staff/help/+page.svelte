@@ -123,31 +123,32 @@
 										<FormField name="name" label="Name">
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="slug" label="Slug">
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="description" label="Description">
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 										<FormField name="icon" label="Icon">
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 												placeholder="tabler-book"
 											/>
 										</FormField>
 										<FormField name="minRole" label="Minimum role">
 											<Select
-												class="select-bordered select-sm w-full"
+												size="sm"
+												class="w-full"
 												{...editCat.fields.minRole.as('select', cat.minRole)}
 											>
 												{#each HELP_ROLES as role (role)}
@@ -158,7 +159,7 @@
 										<FormField name="sortOrder" label="Sort order">
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
-												class="input input-bordered input-sm w-full"
+												class="input input-sm w-full"
 											/>
 										</FormField>
 									</div>
@@ -191,7 +192,7 @@
 						<input
 							name="name"
 							type="text"
-							class="input input-bordered input-sm w-40"
+							class="input input-sm w-40"
 							placeholder="Category name"
 							bind:value={catNameValue}
 						/>
@@ -200,20 +201,15 @@
 						<input
 							name="slug"
 							type="text"
-							class="input input-bordered input-sm w-40"
+							class="input input-sm w-40"
 							placeholder={slugFromName(catNameValue) || 'auto'}
 						/>
 					</FormField>
 					<FormField name="icon" label="Icon">
-						<input
-							name="icon"
-							type="text"
-							class="input input-bordered input-sm w-32"
-							placeholder="tabler-book"
-						/>
+						<input name="icon" type="text" class="input input-sm w-32" placeholder="tabler-book" />
 					</FormField>
 					<FormField name="minRole" label="Role">
-						<Select class="select-bordered select-sm w-32" name="minRole">
+						<Select size="sm" class="w-32" name="minRole">
 							{#each HELP_ROLES as role (role)}
 								<option value={role}>{role}</option>
 							{/each}

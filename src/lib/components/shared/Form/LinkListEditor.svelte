@@ -38,14 +38,14 @@
 					value={link.label}
 					oninput={(e) => updateLink(i, 'label', e.currentTarget.value)}
 					placeholder="Label (e.g. My SoundCloud)"
-					class="input-bordered input input-sm w-full"
+					class="input input-sm w-full"
 				/>
 				<input
 					type="url"
 					value={link.url}
 					oninput={(e) => updateLink(i, 'url', e.currentTarget.value)}
 					placeholder="https://..."
-					class="input-bordered input input-sm w-full"
+					class="input input-sm w-full"
 				/>
 			</div>
 			<Button

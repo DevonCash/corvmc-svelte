@@ -115,7 +115,7 @@
 					type="text"
 					bind:value={subject}
 					placeholder="Email subject line..."
-					class="input-bordered input w-full"
+					class="input w-full"
 				/>
 			</div>
 
@@ -157,7 +157,7 @@
 					id="campaign-body"
 					bind:value={markdownBody}
 					placeholder="Write your email in markdown..."
-					class="textarea-bordered textarea w-full font-mono text-sm"
+					class="textarea w-full font-mono text-sm"
 					rows="20"
 				></textarea>
 				<p class="text-subtle mt-1">
@@ -173,7 +173,7 @@
 					id="campaign-schedule"
 					type="datetime-local"
 					bind:value={scheduledFor}
-					class="input input-bordered w-full"
+					class="input w-full"
 				/>
 				{#if scheduledFor && !isFutureSchedule()}
 					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>

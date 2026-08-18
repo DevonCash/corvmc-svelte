@@ -35,7 +35,7 @@
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}
-				class="textarea textarea-bordered w-full font-mono text-xs"
+				class="textarea w-full font-mono text-xs"
 				rows="10"
 				placeholder="2024-03-14 | Bombs Away Cafe | w/ Paper Wolves&#10;2023-11-02 | The Majestic Theatre"
 			></textarea>

@@ -54,7 +54,7 @@
 		<FormField name="description" label="Description">
 			<textarea
 				{...fields.description.as('text')}
-				class="textarea textarea-bordered w-full"
+				class="textarea w-full"
 				rows="4"
 				maxlength="5000"
 				placeholder="Tell people what to expect..."

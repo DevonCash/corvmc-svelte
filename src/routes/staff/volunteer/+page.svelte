@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -48,19 +49,6 @@
 	let searchText = $state(initial.get('q') ?? '');
 	let searchQuery = $state(initial.get('q') ?? '');
 	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
-
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchQuery = searchText;
-			pageNumber = 1;
-		}, 300);
-	}
-
-	$effect(() => () => clearTimeout(searchTimer));
 
 	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
@@ -114,7 +102,6 @@
 	}
 
 	function clearFilters() {
-		clearTimeout(searchTimer);
 		searchText = '';
 		searchQuery = '';
 		roleFilter = '';
@@ -222,18 +209,19 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search members..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchQuery = q;
+					pageNumber = 1;
+				}}
 			/>
 		{/snippet}
 
 		{#await roles then roleOptions}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Role"
 				value={roleFilter}
 				onchange={(e: Event) => {
@@ -251,7 +239,7 @@
 
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or after"
 			value={fromDate}
 			onchange={(e) => {
@@ -261,7 +249,7 @@
 		/>
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or before"
 			value={toDate}
 			onchange={(e) => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
@@ -29,15 +30,6 @@
 	let categoryId = $state('');
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = search;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		categoryId: categoryId || undefined
@@ -107,15 +99,15 @@
 </PageHeader>
 <PageContent>
 	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
+		<SearchInput
+			bind:value={search}
 			placeholder="Search equipment..."
-			value={search}
-			oninput={onSearchInput}
+			onsearch={(q) => {
+				searchDebounced = q;
+			}}
 		/>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			value={categoryId}
 			onchange={(e: Event) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;

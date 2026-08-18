@@ -43,18 +43,18 @@
 		<div class="space-y-3">
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Attendee name</span></div>
-				<input {...fields.attendeeName.as('text')} class="input input-bordered w-full" required />
+				<input {...fields.attendeeName.as('text')} class="input w-full" required />
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Email</span></div>
-				<input {...fields.attendeeEmail.as('email')} class="input input-bordered w-full" required />
+				<input {...fields.attendeeEmail.as('email')} class="input w-full" required />
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Quantity</span></div>
 				<input
 					{...fields.quantity.as('text')}
 					type="number"
-					class="input input-bordered w-full"
+					class="input w-full"
 					value="1"
 					min="1"
 					max="50"

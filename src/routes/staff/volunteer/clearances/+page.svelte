@@ -102,7 +102,7 @@
 	<FilterBar activeCount={certFilter ? 1 : 0} onclear={() => (certFilter = '')}>
 		{#await certifications then certs}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Certification"
 				value={certFilter}
 				onchange={(e: Event) => {

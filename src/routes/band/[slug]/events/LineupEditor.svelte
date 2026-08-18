@@ -128,7 +128,7 @@
 	<div>
 		<input
 			type="text"
-			class="input input-bordered w-full"
+			class="input w-full"
 			placeholder="Add a band — type any name and press Enter"
 			bind:value={query}
 			{onkeydown}

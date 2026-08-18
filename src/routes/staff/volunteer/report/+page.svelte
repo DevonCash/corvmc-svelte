@@ -91,7 +91,7 @@
 				<input
 					id="report-from"
 					type="date"
-					class="input input-bordered input-sm"
+					class="input input-sm"
 					value={fromDate}
 					onchange={(e) => {
 						fromDate = (e.currentTarget as HTMLInputElement).value;
@@ -102,7 +102,7 @@
 				<input
 					id="report-to"
 					type="date"
-					class="input input-bordered input-sm"
+					class="input input-sm"
 					value={toDate}
 					onchange={(e) => {
 						toDate = (e.currentTarget as HTMLInputElement).value;

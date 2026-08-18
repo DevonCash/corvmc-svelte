@@ -96,7 +96,7 @@
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
-										class="select-bordered select-xs"
+										class="select-xs"
 										name="role"
 										aria-label="Role for {m.userName}"
 										value={m.role}

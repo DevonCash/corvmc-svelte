@@ -139,7 +139,7 @@
 					<input {...scheduleFields.loanId.as('hidden', id)} />
 					{#if !loan.equipmentId}
 						<Field name="equipmentId" label="Assign Equipment">
-							<Select class="select-bordered w-full" name="equipmentId" required>
+							<Select class="w-full" name="equipmentId" required>
 								<option value="" disabled selected>Select equipment...</option>
 								{#each availableEquipment as eq (eq.id)}
 									{#if eq.availableQuantity > 0}

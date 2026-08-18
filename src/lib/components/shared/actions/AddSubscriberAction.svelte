@@ -52,7 +52,7 @@
 				name="email"
 				bind:value={email}
 				placeholder="email@example.com"
-				class="input-bordered input w-full"
+				class="input w-full"
 				required
 			/>
 		</div>
@@ -64,7 +64,7 @@
 				name="name"
 				bind:value={name}
 				placeholder="Name"
-				class="input-bordered input w-full"
+				class="input w-full"
 			/>
 		</div>
 	{/snippet}

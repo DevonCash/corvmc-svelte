@@ -102,12 +102,7 @@
 	/>
 
 	<FilterBar activeCount={source ? 1 : 0} onclear={clearFilters}>
-		<Select
-			class="select-bordered select-sm"
-			aria-label="Source"
-			bind:value={source}
-			onchange={() => (page = 1)}
-		>
+		<Select size="sm" aria-label="Source" bind:value={source} onchange={() => (page = 1)}>
 			<option value="">All events</option>
 			<option value="cmc">CMC events</option>
 			<option value="band">Band events</option>

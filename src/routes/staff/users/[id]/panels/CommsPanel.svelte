@@ -157,7 +157,7 @@
 							<div class="label"><span class="label-text">Reason (shown to them)</span></div>
 							<input
 								{...messagingFields.reason.as('text')}
-								class="input input-bordered w-full"
+								class="input w-full"
 								maxlength="500"
 								placeholder="e.g. Under 18"
 							/>

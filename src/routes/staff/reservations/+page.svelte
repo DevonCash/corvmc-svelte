@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -52,16 +53,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		tab,
 		search: searchDebounced || undefined,
@@ -176,18 +167,19 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search member or band..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<input
 			type="date"
 			aria-label="From date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
 				page = 1;
@@ -196,14 +188,14 @@
 		<input
 			type="date"
 			aria-label="To date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Booked by"
 			value={bookerType}
 			onchange={(e: Event) => {

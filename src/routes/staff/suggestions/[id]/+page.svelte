@@ -113,10 +113,7 @@
 					<div class="space-y-3">
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Decision</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...reviewSuggestion.fields.decision.as('select')}
-							>
+							<Select class="w-full" {...reviewSuggestion.fields.decision.as('select')}>
 								<option value="approve">Approve — put it on the board</option>
 								<option value="reject">Reject — hide it</option>
 							</Select>
@@ -124,7 +121,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Note to the member (optional)</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="3"
 								{...reviewSuggestion.fields.note.as('text')}
 							></textarea>
@@ -189,10 +186,7 @@
 						<div class="space-y-3">
 							<label class="form-control w-full">
 								<div class="label"><span class="label-text">Decision</span></div>
-								<Select
-									class="select-bordered w-full"
-									{...reviewSuggestionEdit.fields.decision.as('select')}
-								>
+								<Select class="w-full" {...reviewSuggestionEdit.fields.decision.as('select')}>
 									<option value="approve">Approve — replace the text</option>
 									<option value="reject">Reject — keep what members voted for</option>
 								</Select>
@@ -202,7 +196,7 @@
 									<span class="label-text">Note to the member (optional)</span>
 								</div>
 								<textarea
-									class="textarea textarea-bordered w-full"
+									class="textarea w-full"
 									rows="3"
 									{...reviewSuggestionEdit.fields.notes.as('text')}
 								></textarea>
@@ -240,10 +234,7 @@
 					<div class="space-y-3">
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Status</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...respondToSuggestion.fields.status.as('select', s.status)}
-							>
+							<Select class="w-full" {...respondToSuggestion.fields.status.as('select', s.status)}>
 								{#each suggestionStatuses as st (st)}
 									<option value={st}>{suggestionStatusLabels[st]}</option>
 								{/each}
@@ -252,7 +243,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Public reply</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="4"
 								{...respondToSuggestion.fields.response.as('text', s.responseBody ?? '')}
 							></textarea>
@@ -301,7 +292,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Reason (shown to the member)</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="3"
 								{...setSuggestionVisibility.fields.note.as('text')}
 							></textarea>
@@ -334,10 +325,7 @@
 						<input {...mergeSuggestion.fields.sourceId.as('hidden', id)} />
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Merge into</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...mergeSuggestion.fields.targetId.as('select')}
-							>
+							<Select class="w-full" {...mergeSuggestion.fields.targetId.as('select')}>
 								{#each await candidates as c (c.id)}
 									<option value={c.id}>{c.title} ({c.voteCount})</option>
 								{/each}

@@ -69,7 +69,7 @@
 	<div class="relative">
 		<input
 			type="text"
-			class="input-bordered input w-full"
+			class="input w-full"
 			{placeholder}
 			bind:value={input}
 			onkeydown={handleKeydown}

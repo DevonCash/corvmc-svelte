@@ -43,7 +43,7 @@
 		type="text"
 		bind:value={search}
 		placeholder="Search by name, email, or code..."
-		class="input input-bordered w-full"
+		class="input w-full"
 	/>
 
 	<!-- Ticket list -->

@@ -43,7 +43,7 @@
 				<div class="label"><span class="label-text">Reason</span></div>
 				<input
 					{...fields.reason.as('text')}
-					class="input input-bordered w-full"
+					class="input w-full"
 					bind:value={reason}
 					maxlength="100"
 					placeholder="e.g. Harassment, spam, impersonation"
@@ -53,7 +53,7 @@
 				<div class="label"><span class="label-text">Details (optional)</span></div>
 				<textarea
 					{...fields.description.as('text')}
-					class="textarea textarea-bordered w-full"
+					class="textarea w-full"
 					rows="3"
 					maxlength="1000"
 					bind:value={description}

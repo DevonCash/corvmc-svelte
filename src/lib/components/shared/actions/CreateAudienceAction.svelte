@@ -67,7 +67,7 @@
 				name="slug"
 				bind:value={slug}
 				placeholder="newsletter"
-				class="input-bordered input w-full font-mono text-sm"
+				class="input w-full font-mono text-sm"
 				oninput={() => (slugManuallyEdited = true)}
 			/>
 			<p class="text-subtle mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>

@@ -72,7 +72,8 @@
 				<!-- Mobile panel nav -->
 				<div class="border-b border-base-300 px-4 py-2 lg:hidden">
 					<Select
-						class="select-bordered w-full select-sm"
+						size="sm"
+						class="w-full"
 						value={activePanel}
 						onchange={(e: Event) => {
 							const key = (e.currentTarget as HTMLSelectElement).value;

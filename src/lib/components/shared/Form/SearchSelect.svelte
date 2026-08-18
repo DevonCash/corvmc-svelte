@@ -67,7 +67,7 @@
 			<div class="relative">
 				<Combobox.Input
 					{placeholder}
-					class="input-bordered input w-full"
+					class="input w-full"
 					oninput={(e: Event) => {
 						query = (e.target as HTMLInputElement).value;
 					}}

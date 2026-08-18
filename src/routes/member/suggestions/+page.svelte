@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -34,16 +35,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		category: (categoryFilter || undefined) as (typeof suggestionCategories)[number] | undefined,
@@ -125,16 +116,17 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search suggestions..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Category"
 			value={categoryFilter}
 			onchange={(e: Event) => {
@@ -148,7 +140,7 @@
 			{/each}
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={statusFilter}
 			onchange={(e: Event) => {
@@ -162,7 +154,7 @@
 			{/each}
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Sort"
 			value={sort}
 			onchange={(e: Event) => {

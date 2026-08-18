@@ -222,7 +222,7 @@
 						<FormField name="description" label="Description">
 							<textarea
 								{...updateFields.description.as('text', evt.description ?? '')}
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="4"
 								maxlength="5000"
 							></textarea>

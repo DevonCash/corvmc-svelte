@@ -302,7 +302,7 @@
 													<span class="label-text text-xs">Image Key (R2 path or URL)</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.imageKey}
 														oninput={(e) => {
 															block.imageKey = e.currentTarget.value;
@@ -313,7 +313,7 @@
 													<span class="label-text text-xs">Headline</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.headline ?? ''}
 														oninput={(e) => {
 															block.headline = e.currentTarget.value || undefined;
@@ -324,7 +324,7 @@
 													<span class="label-text text-xs">Subtitle</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.subtitle ?? ''}
 														oninput={(e) => {
 															block.subtitle = e.currentTarget.value || undefined;
@@ -335,7 +335,7 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Content (HTML/Markdown)</span>
 													<textarea
-														class="textarea textarea-bordered w-full text-sm"
+														class="textarea w-full text-sm"
 														rows="5"
 														value={block.content}
 														oninput={(e) => {
@@ -347,7 +347,8 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Style</span>
 													<Select
-														class="select-bordered select-sm w-full"
+														size="sm"
+														class="w-full"
 														value={block.style}
 														onchange={(e: Event) => {
 															block.style = (e.currentTarget as HTMLSelectElement).value as
@@ -378,7 +379,7 @@
 													<span class="label-text text-xs">Max events to show</span>
 													<input
 														type="number"
-														class="input input-bordered input-sm w-24"
+														class="input input-sm w-24"
 														min="1"
 														max="20"
 														value={block.limit ?? 5}
@@ -408,7 +409,7 @@
 													<span class="label-text text-xs">Platform</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="spotify, youtube, soundcloud"
 														value={block.platform}
 														oninput={(e) => {
@@ -420,7 +421,7 @@
 													<span class="label-text text-xs">URL</span>
 													<input
 														type="url"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="https://open.spotify.com/track/..."
 														value={block.url}
 														oninput={(e) => {
@@ -432,7 +433,8 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Height</span>
 													<Select
-														class="select-bordered select-sm w-full"
+														size="sm"
+														class="w-full"
 														value={block.height}
 														onchange={(e: Event) => {
 															block.height = (e.currentTarget as HTMLSelectElement).value as
@@ -450,7 +452,7 @@
 												<label class="form-control">
 													<span class="label-text text-xs">HTML Content (sanitized on save)</span>
 													<textarea
-														class="textarea textarea-bordered w-full font-mono text-sm"
+														class="textarea w-full font-mono text-sm"
 														rows="6"
 														value={block.content}
 														oninput={(e) => {
@@ -493,7 +495,7 @@
 													<div class="flex gap-2 items-start">
 														<input
 															type="text"
-															class="input input-bordered input-sm flex-1"
+															class="input input-sm flex-1"
 															placeholder="Title"
 															value={item.title}
 															oninput={(e) => {
@@ -502,7 +504,7 @@
 														/>
 														<input
 															type="url"
-															class="input input-bordered input-sm flex-1"
+															class="input input-sm flex-1"
 															placeholder="URL"
 															value={item.url}
 															oninput={(e) => {
@@ -511,7 +513,7 @@
 														/>
 														<input
 															type="text"
-															class="input input-bordered input-sm w-20"
+															class="input input-sm w-20"
 															placeholder="$25"
 															value={item.price ?? ''}
 															oninput={(e) => {
@@ -545,7 +547,7 @@
 												<span class="label-text text-xs">CSS Class (optional)</span>
 												<input
 													type="text"
-													class="input input-bordered input-sm w-full"
+													class="input input-sm w-full"
 													placeholder="custom-class"
 													value={block.cssClass ?? ''}
 													oninput={(e) => {
@@ -570,7 +572,7 @@
 						Add custom styles to your page. CSS is scoped to your band site container.
 					</p>
 					<textarea
-						class="textarea textarea-bordered w-full font-mono text-sm mt-2"
+						class="textarea w-full font-mono text-sm mt-2"
 						rows="8"
 						placeholder={`.band-site-container {\n  /* your styles here */\n}`}
 						value={customCss}

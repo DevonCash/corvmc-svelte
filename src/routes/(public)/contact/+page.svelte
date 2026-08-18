@@ -110,7 +110,7 @@
 					<FormField name="message" label="Message">
 						<textarea
 							{...fields.message.as('text')}
-							class="textarea textarea-bordered w-full"
+							class="textarea w-full"
 							rows="5"
 							maxlength="5000"
 							required

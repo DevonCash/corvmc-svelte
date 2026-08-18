@@ -80,7 +80,7 @@
 					<div class="label"><span class="label-text">Search members</span></div>
 					<input
 						type="text"
-						class="input input-bordered w-full"
+						class="input w-full"
 						bind:value={query}
 						oninput={handleSearch}
 						placeholder="Name or email..."
@@ -103,18 +103,14 @@
 			{/if}
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Role</span></div>
-				<Select class="select-bordered w-full" {...fields.role.as('select')}>
+				<Select class="w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</Select>
 			</label>
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input
-					{...fields.position.as('text')}
-					class="input input-bordered w-full"
-					placeholder="e.g. Guitarist"
-				/>
+				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Guitarist" />
 			</label>
 		</div>
 	{/snippet}

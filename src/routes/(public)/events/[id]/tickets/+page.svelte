@@ -105,7 +105,7 @@
 			<Card>
 				<CardBody class="space-y-4">
 					<Field label="Number of spots" name="quantity">
-						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
+						<Select name="quantity" bind:value={quantity} class="w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
@@ -171,7 +171,7 @@
 			<Card>
 				<CardBody class="space-y-4">
 					<Field label="Number of tickets" name="quantity">
-						<Select name="quantity" bind:value={quantity} class="select-bordered w-full">
+						<Select name="quantity" bind:value={quantity} class="w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
