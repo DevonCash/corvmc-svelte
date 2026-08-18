@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -41,17 +43,17 @@
 		type="text"
 		bind:value={search}
 		placeholder="Search by name, email, or code..."
-		class="input input-bordered w-full"
+		class="input w-full"
 	/>
 
 	<!-- Ticket list -->
 	<div class="space-y-2">
 		{#each filteredTickets as ticket (ticket.id)}
-			<div class="card bg-base-100 shadow">
-				<div class="card-body p-4 flex-row items-center justify-between">
+			<Card>
+				<CardBody row padding="sm">
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
-						<p class="text-sm opacity-60">{ticket.attendeeEmail}</p>
+						<p class="text-muted">{ticket.attendeeEmail}</p>
 						<p class="font-mono text-xs opacity-50 mt-1">{ticket.code}</p>
 					</div>
 
@@ -68,7 +70,7 @@
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<SubmitButton label="Check In" class="btn-primary btn-sm" />
+								<SubmitButton label="Check In" variant="primary" size="sm" />
 							</Form>
 							<CancelTicketAction
 								eventId={data.event.id}
@@ -77,8 +79,8 @@
 							/>
 						{/if}
 					</div>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		{/each}
 
 		{#if filteredTickets.length === 0}

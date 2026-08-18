@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { creditsToHours } from '$lib/config';
 	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
@@ -45,8 +47,8 @@
 
 <PageHeader title="Pay for Your Session" />
 <PageContent width="md">
-	<div class="card bg-base-100 shadow-sm">
-		<div class="card-body">
+	<Card>
+		<CardBody>
 			<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 			<p>
 				{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours ===
@@ -55,13 +57,13 @@
 					: 's'})
 			</p>
 			{#if res.notes}
-				<p class="text-sm opacity-60">{res.notes}</p>
+				<p class="text-muted">{res.notes}</p>
 			{/if}
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
-	<div class="card bg-base-100 shadow-sm">
-		<div class="card-body space-y-2">
+	<Card>
+		<CardBody class="space-y-2">
 			<div class="flex justify-between">
 				<span
 					>Room rental ({durationHours}hr × ${formatDollars(totalCents / durationHours)}/hr)</span
@@ -83,7 +85,7 @@
 			{/if}
 
 			{#if remainingCents > 0 && coverFees}
-				<div class="flex justify-between text-sm opacity-60">
+				<div class="flex justify-between text-muted">
 					<span>Processing fee coverage</span>
 					<span>+${formatDollars(feeCents)}</span>
 				</div>
@@ -101,8 +103,8 @@
 					{/if}
 				</span>
 			</div>
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 
 	<Form remote={payReservation}>
 		{#if remainingCents > 0}
@@ -117,10 +119,11 @@
 
 		<!-- SubmitButton renders its `label` prop, not children. -->
 		<SubmitButton
-			class="btn-primary w-full mt-4"
+			variant="primary"
+			class="w-full mt-4"
 			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${formatDollars(chargeTotal)}`}
 		/>
 	</Form>
 
-	<Button href="/member/reservations" class="btn-ghost w-full">Back to Reservations</Button>
+	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
 </PageContent>

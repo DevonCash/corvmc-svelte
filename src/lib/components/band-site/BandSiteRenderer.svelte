@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
@@ -118,17 +119,19 @@
 						<div class="flex flex-col gap-3">
 							{#each band.links as link (link.url)}
 								{@const platform = detectPlatform(link.url)}
-								<a
+								<Button
 									href={link.url}
 									target="_blank"
 									rel="external noopener"
-									class="btn btn-outline w-full justify-start gap-3"
+									variant="default"
+									outline
+									class="w-full justify-start gap-3"
 								>
 									{#if platform}
 										<span class="opacity-70">{platform.name}</span>
 									{/if}
 									<span>{link.label || platform?.name || 'Link'}</span>
-								</a>
+								</Button>
 							{/each}
 						</div>
 					</div>
@@ -156,7 +159,7 @@
 								</div>
 								<p class="font-medium">{member.name}</p>
 								{#if block.showPositions && member.position}
-									<p class="text-sm opacity-60">{member.position}</p>
+									<p class="text-muted">{member.position}</p>
 								{/if}
 							</div>
 						{/each}
@@ -171,25 +174,26 @@
 								<div class="flex items-start justify-between p-4 rounded-lg bg-base-200">
 									<div>
 										<p class="font-medium">{evt.title}</p>
-										<p class="text-sm opacity-70">
+										<p class="text-muted">
 											{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}
 										</p>
 										{#if evt.location}
-											<p class="text-sm opacity-60">{evt.location}</p>
+											<p class="text-muted">{evt.location}</p>
 										{/if}
 										{#if evt.ticketPrice}
-											<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
+											<p class="text-muted">{formatCents(evt.ticketPrice)}</p>
 										{/if}
 									</div>
 									{#if evt.externalTicketUrl}
-										<a
+										<Button
 											href={evt.externalTicketUrl}
 											target="_blank"
 											rel="external noopener"
-											class="btn btn-primary btn-sm"
+											variant="primary"
+											size="sm"
 										>
 											Tickets
-										</a>
+										</Button>
 									{/if}
 								</div>
 							{/each}
@@ -263,7 +267,7 @@
 							{#each epk.pressQuotes as quote (quote.quote)}
 								<blockquote class="border-l-4 border-primary pl-4">
 									<p class="italic">"{quote.quote}"</p>
-									<footer class="mt-1 text-sm opacity-70">
+									<footer class="mt-1 text-muted">
 										&mdash; {quote.publication}
 										{#if quote.date}
 											<span class="opacity-60">({quote.date})</span>
@@ -297,19 +301,19 @@
 							<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 								{#if epk.bookingContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Booking</h3>
+										<h3 class="font-semibold text-muted uppercase">Booking</h3>
 										<p class="font-medium">{epk.bookingContact.name}</p>
 										<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
 											>{epk.bookingContact.email}</a
 										>
 										{#if epk.bookingContact.phone}
-											<p class="text-sm opacity-70">{epk.bookingContact.phone}</p>
+											<p class="text-muted">{epk.bookingContact.phone}</p>
 										{/if}
 									</div>
 								{/if}
 								{#if epk.managementContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Management</h3>
+										<h3 class="font-semibold text-muted uppercase">Management</h3>
 										<p class="font-medium">{epk.managementContact.name}</p>
 										<a href="mailto:{epk.managementContact.email}" class="link text-sm"
 											>{epk.managementContact.email}</a
@@ -318,7 +322,7 @@
 								{/if}
 								{#if epk.prContact}
 									<div>
-										<h3 class="font-semibold text-sm uppercase opacity-60">Press</h3>
+										<h3 class="font-semibold text-muted uppercase">Press</h3>
 										<p class="font-medium">{epk.prContact.name}</p>
 										<a href="mailto:{epk.prContact.email}" class="link text-sm"
 											>{epk.prContact.email}</a
@@ -367,14 +371,17 @@
 					{#if epk?.technicalRiderKey}
 						{@const riderMedia = media.find((m) => m.type === 'rider')}
 						{#if riderMedia?.url}
-							<a
+							<Button
 								href={riderMedia.url}
 								target="_blank"
 								rel="external noopener"
-								class="btn btn-outline btn-sm mt-4"
+								variant="default"
+								size="sm"
+								outline
+								class="mt-4"
 							>
 								Download Full Tech Rider (PDF)
-							</a>
+							</Button>
 						{/if}
 					{/if}
 				</div>
@@ -403,7 +410,7 @@
 								{/if}
 								<p class="font-medium group-hover:text-primary transition-colors">{item.title}</p>
 								{#if item.price}
-									<p class="text-sm opacity-60">{item.price}</p>
+									<p class="text-muted">{item.price}</p>
 								{/if}
 							</a>
 						{/each}
@@ -461,14 +468,16 @@
 						></iframe>
 					{:else}
 						{@const platform = detectPlatform(link.url)}
-						<a
+						<Button
 							href={link.url}
 							target="_blank"
 							rel="external noopener"
-							class="btn btn-outline w-full"
+							variant="default"
+							outline
+							class="w-full"
 						>
 							{link.label || platform?.name || 'Link'}
-						</a>
+						</Button>
 					{/if}
 				{/each}
 			</div>
@@ -477,7 +486,7 @@
 {/if}
 
 <!-- Navigation footer -->
-<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-sm opacity-60">
+<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-muted">
 	{#if events.length > 0}
 		<a
 			href={bandSiteHref(page.params.slug!, '/events', page.url)}

@@ -80,7 +80,7 @@
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">
 			<span class="loading loading-spinner loading-xs"></span>
-			<span class="text-xs opacity-60">Checking conflicts...</span>
+			<span class="text-subtle">Checking conflicts...</span>
 		</div>
 	{/snippet}
 </svelte:boundary>

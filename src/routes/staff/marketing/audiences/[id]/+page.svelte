@@ -72,11 +72,11 @@
 				</DefinitionList>
 
 				{#if audienceData.description}
-					<p class="text-sm opacity-70 mt-3">{audienceData.description}</p>
+					<p class="text-muted mt-3">{audienceData.description}</p>
 				{/if}
 
 				{#if isBuiltIn}
-					<p class="text-sm opacity-70 mt-3">
+					<p class="text-muted mt-3">
 						Membership is worked out from member attributes each time you send, so this list is
 						always current — there is nothing to refresh. Subscribers without a member account, such
 						as public newsletter signups, are never included.
@@ -154,7 +154,7 @@
 							<td class="cell-primary">
 								<div class="truncate font-mono text-sm">{s.email}</div>
 								{#if s.name}
-									<div class="truncate text-sm opacity-60">{s.name}</div>
+									<div class="truncate text-muted">{s.name}</div>
 								{/if}
 							</td>
 							{#if !isBuiltIn}

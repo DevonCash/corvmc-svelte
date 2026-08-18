@@ -47,7 +47,9 @@
 			and your dashboard at <code class="text-xs">/band/{slug}</code>.
 		</p>
 		<div class="card-actions mt-2 justify-end">
-			<Button class="btn-sm btn-outline" onclick={() => (showChange = true)}>Change address</Button>
+			<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
+				>Change address</Button
+			>
 		</div>
 	</InfoCard>
 </section>
@@ -102,7 +104,7 @@
 			</Alert>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Change address" successLabel="Changed" class="btn-warning" />
+				<SubmitButton label="Change address" successLabel="Changed" variant="warning" />
 			</div>
 		</div>
 	</Form>

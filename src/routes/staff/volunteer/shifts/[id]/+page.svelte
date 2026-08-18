@@ -51,10 +51,12 @@
 			<Action
 				action={cancelShift.for(shift.id)}
 				label="Call it off"
-				class="btn-ghost btn-sm text-error"
+				variant="ghost"
+				size="sm"
+				class="text-error"
 				modalTitle="Cancel this shift?"
 				submitLabel="Cancel shift"
-				submitClass="btn-error"
+				submitVariant="error"
 				successToast="Shift cancelled"
 			>
 				{#snippet form()}
@@ -117,7 +119,9 @@
 										label="Confirm"
 										iconOnly
 										icon={checkIcon}
-										class="btn-ghost btn-sm text-success"
+										variant="ghost"
+										size="sm"
+										class="text-success"
 										modalTitle="Confirm {claimant.name}?"
 										submitLabel="Confirm"
 										successToast="Confirmed"
@@ -139,10 +143,12 @@
 										label="No-show"
 										iconOnly
 										icon={noShowIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Mark {claimant.name} as a no-show?"
 										submitLabel="No-show"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Marked as no-show"
 									>
 										{#snippet form()}

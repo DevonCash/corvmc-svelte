@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
@@ -300,22 +301,20 @@
 
 				<div class="edet__ctas">
 					{#if isCancelled}
-						<span class="text-base font-medium" style="color: var(--fg-2)"
-							>Tickets and RSVPs are closed.</span
-						>
+						<span class="text-base font-medium text-fg-2">Tickets and RSVPs are closed.</span>
 					{:else if data.isPast}
-						<span class="text-base font-medium" style="color: var(--fg-2)"
-							>This event has ended.</span
-						>
+						<span class="text-base font-medium text-fg-2">This event has ended.</span>
 					{:else if mode === 'platform'}
 						{#if soldOut}
-							<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
+							<Button variant="default" size="lg" disabled
+								>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+							>
 						{:else}
-							<a href={ticketsHref} class="btn btn-primary btn-lg">
+							<Button href={ticketsHref} variant="primary" size="lg">
 								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
-							</a>
+							</Button>
 							{#if data.remaining !== null}
-								<span class="text-sm" style="color: var(--fg-2)"
+								<span class="text-muted"
 									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 								>
 							{/if}
@@ -335,21 +334,23 @@
 						<!-- Sold off-site, at the door, or not at all. Tickets (when there's a
 						     seller) are the primary action; the RSVP is just headcount. -->
 						{#if mode === 'external'}
-							<a
+							<Button
 								href={evt.externalTicketUrl!}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="btn btn-primary btn-lg">Get Tickets ↗</a
+								variant="primary"
+								size="lg">Get Tickets ↗</Button
 							>
 						{/if}
-						<a
+						<Button
 							href={resolve('/login')}
-							class="btn btn-lg {mode === 'external' ? 'btn-ghost' : 'btn-primary'}"
+							variant={mode === 'external' ? 'ghost' : 'primary'}
+							size="lg"
 						>
 							{mode === 'external' ? "Sign in to say you're going" : 'Sign in to RSVP'}
-						</a>
+						</Button>
 						{#if data.rsvpCount > 0}
-							<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+							<span class="text-muted">{data.rsvpCount} going</span>
 						{/if}
 					{/if}
 				</div>

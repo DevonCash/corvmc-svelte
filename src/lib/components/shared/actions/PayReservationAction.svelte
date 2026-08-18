@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
@@ -11,11 +12,15 @@
 	let {
 		reservation,
 		label = 'Pay Now',
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		...rest
 	}: {
 		reservation: Reservation;
 		label?: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
@@ -27,6 +32,8 @@
 	modalTitle="Pay for Your Session"
 	noFooter
 	maxWidth="max-w-md"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={async (result) => {
 		const r = result as { paid?: boolean; redirectUrl?: string };

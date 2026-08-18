@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
@@ -46,17 +47,17 @@
 	<section class="space-y-4">
 		<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
 		<div class="card bg-base-100 border border-error/30">
-			<div class="card-body">
+			<CardBody>
 				<p class="text-sm">
 					Deleting this band will cancel all future reservations and remove all members. This action
 					cannot be undone.
 				</p>
 				<div class="card-actions justify-end mt-2">
-					<Button class="btn-error btn-sm btn-outline" onclick={() => (showDeleteModal = true)}>
+					<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
 						Delete Band
 					</Button>
 				</div>
-			</div>
+			</CardBody>
 		</div>
 	</section>
 </PageContent>
@@ -76,7 +77,7 @@
 				reservations will be cancelled and all members will be removed.
 			</Alert>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Delete Band" successLabel="Deleted" class="btn-error" />
+				<SubmitButton label="Delete Band" successLabel="Deleted" variant="error" />
 			</div>
 		</div>
 	</Form>

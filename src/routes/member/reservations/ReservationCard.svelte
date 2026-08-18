@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
@@ -58,7 +59,7 @@
 		<span class="reservation-status">{reservation.status.replace('_', ' ')}</span>
 		{#if !isPast && reservation.status === 'scheduled' && !canConfirm}
 			<!-- Hint lives above the action row so it never wraps behind the buttons. -->
-			<p class="px-3 text-right text-xs opacity-60">
+			<p class="px-3 text-right text-subtle">
 				Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
 			</p>
 		{/if}
@@ -67,24 +68,29 @@
 				<CancelReservationAction
 					{reservation}
 					onsuccess={onchange}
-					class="btn-outline btn-xs btn-error"
+					variant="error"
+					size="xs"
+					outline
 				/>
 				{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
-					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} class="btn-xs btn-success" />
+					<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
 				{:else if reservation.status === 'scheduled'}
 					{#if canConfirm}
 						<ConfirmReservationAction
 							{reservation}
 							onsuccess={onchange}
-							class="btn-xs btn-primary"
+							variant="primary"
+							size="xs"
 						/>
 					{:else}
-						<a
+						<Button
 							href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-							class="btn btn-outline btn-xs btn-primary"
+							variant="primary"
+							size="xs"
+							outline
 						>
 							Pay to reserve
-						</a>
+						</Button>
 					{/if}
 				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
 					{#if (reservation.cashDueCents ?? 0) > 0}
@@ -92,12 +98,14 @@
 							>${formatDollars(reservation.cashDueCents ?? 0)} due at door</span
 						>
 					{/if}
-					<a
+					<Button
 						href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-						class="btn btn-outline btn-xs btn-primary"
+						variant="primary"
+						size="xs"
+						outline
 					>
 						Pay online
-					</a>
+					</Button>
 				{/if}
 			{/if}
 		</div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -51,16 +53,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		tab,
 		search: searchDebounced || undefined,
@@ -134,17 +126,18 @@
 <PageHeader title="Reservations">
 	<div class="flex gap-2">
 		{#await Promise.all([unresolved, counts])}
-			<button class="btn btn-sm btn-ghost" onclick={() => (resolveOpen = true)}>Resolve</button>
+			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}>Resolve</Button>
 		{:then [unresolvedData]}
-			<button
-				class="btn btn-sm {unresolvedData.length > 0 ? 'btn-warning' : 'btn-ghost'}"
+			<Button
+				variant={unresolvedData.length > 0 ? 'warning' : 'ghost'}
+				size="sm"
 				onclick={() => (resolveOpen = true)}
 			>
 				Resolve
 				{#if unresolvedData.length > 0}
 					<Badge>{unresolvedData.length}</Badge>
 				{/if}
-			</button>
+			</Button>
 		{/await}
 		<CreateReservation />
 	</div>
@@ -178,18 +171,19 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search member or band..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<input
 			type="date"
 			aria-label="From date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
 				page = 1;
@@ -198,14 +192,14 @@
 		<input
 			type="date"
 			aria-label="To date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Booked by"
 			value={bookerType}
 			onchange={(e: Event) => {
@@ -238,7 +232,7 @@
 						<tr>
 							<td
 								colspan="4"
-								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
 							</td>
@@ -337,7 +331,10 @@
 										reservation={r}
 										staff
 										iconOnly
-										class="btn-ghost btn-sm btn-square latched"
+										variant="ghost"
+										size="sm"
+										shape="square"
+										class="latched"
 									>
 										{#snippet icon()}<IconCheck size={16} />{/snippet}
 									</ConfirmReservationAction>
@@ -346,7 +343,9 @@
 									<CompleteReservationAction
 										reservation={r}
 										iconOnly
-										class="btn-ghost btn-sm btn-square"
+										variant="ghost"
+										size="sm"
+										shape="square"
 									>
 										{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 									</CompleteReservationAction>

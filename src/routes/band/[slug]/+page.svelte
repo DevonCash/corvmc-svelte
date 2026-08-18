@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -47,15 +49,15 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-3">
 					{#each sessions as res (res.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body py-4 flex-row items-center justify-between">
+						<Card>
+							<CardBody row class="py-4">
 								<div>
 									<p class="font-medium">
 										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
 											res.endsAt
 										)}
 									</p>
-									<p class="text-sm opacity-60">
+									<p class="text-muted">
 										{formatDuration(res.startsAt, res.endsAt)}
 										{#if res.bookedByName}
 											&middot; Booked by {res.bookedByName}
@@ -66,8 +68,8 @@
 									</p>
 								</div>
 								<StatusBadge status={res.status} />
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			{/if}
@@ -75,9 +77,13 @@
 
 		<!-- Quick links -->
 		<div class="flex gap-3">
-			<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">Manage Members</Button>
+			<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
+				>Manage Members</Button
+			>
 			{#if isOwnerOrAdmin}
-				<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">Edit Band Profile</Button>
+				<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
+					>Edit Band Profile</Button
+				>
 			{/if}
 		</div>
 	{/await}

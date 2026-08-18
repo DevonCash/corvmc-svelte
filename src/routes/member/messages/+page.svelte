@@ -57,7 +57,7 @@
 								{/if}
 							</div>
 							{#if c.preview}
-								<div class="truncate text-sm opacity-60">{c.preview}</div>
+								<div class="truncate text-muted">{c.preview}</div>
 							{/if}
 						</td>
 

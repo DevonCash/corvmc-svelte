@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getMemberCategories } from '$lib/remote/help.remote';
@@ -45,8 +47,8 @@
 		<div class="grid gap-4 sm:grid-cols-2">
 			{#each categories as category (category.id)}
 				{@const Icon = iconMap[category.icon ?? ''] ?? IconBook}
-				<div class="card border border-base-300 bg-base-100">
-					<div class="card-body p-4">
+				<Card bordered>
+					<CardBody padding="sm">
 						<div class="flex items-start gap-3">
 							<div class="rounded-lg bg-primary/10 p-2">
 								<Icon size={20} class="text-primary" />
@@ -54,7 +56,7 @@
 							<div class="flex-1 min-w-0">
 								<h3 class="font-semibold text-sm">{category.name}</h3>
 								{#if category.description}
-									<p class="text-xs opacity-60 mt-0.5">{category.description}</p>
+									<p class="text-subtle mt-0.5">{category.description}</p>
 								{/if}
 							</div>
 						</div>
@@ -74,8 +76,8 @@
 						{:else}
 							<p class="text-xs opacity-50 mt-3 italic">No articles yet</p>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

@@ -127,7 +127,7 @@
 				{/if}
 
 				{#if pricing.remainingCents > 0 && coverFees}
-					<div class="flex justify-between text-sm opacity-60">
+					<div class="flex justify-between text-muted">
 						<span>Processing fee coverage</span>
 						<span>+${formatDollars(feeCents)}</span>
 					</div>

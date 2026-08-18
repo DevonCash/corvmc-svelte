@@ -72,11 +72,11 @@
 		<div class="mb-3 flex gap-6">
 			<div>
 				<p class="text-2xl font-medium">{creditsToHours(credits.free_hours ?? 0)}</p>
-				<p class="text-sm opacity-60">Free Hours</p>
+				<p class="text-muted">Free Hours</p>
 			</div>
 			<div>
 				<p class="text-2xl font-medium">{credits.equipment_credits ?? 0}</p>
-				<p class="text-sm opacity-60">Equipment Credits</p>
+				<p class="text-muted">Equipment Credits</p>
 			</div>
 		</div>
 		<AdjustCreditsAction userId={id} onsuccess={refreshCredits} />
@@ -109,7 +109,7 @@
 							<div class="font-medium whitespace-nowrap">
 								{formatDateTimeShort(new Date(t.createdAt))}
 							</div>
-							<div class="text-sm opacity-60">{t.description}</div>
+							<div class="text-muted">{t.description}</div>
 						</td>
 						<td class="col-support">{t.source.replace(/_/g, ' ')}</td>
 						<td class="cell-num font-medium" class:text-error={t.amount < 0}>
@@ -155,14 +155,14 @@
 							<div class="font-medium whitespace-nowrap">
 								{formatDateTimeShort(new Date(p.paidAt))}
 							</div>
-							<div class="text-sm opacity-60">{p.paymentMethod}</div>
+							<div class="text-muted">{p.paymentMethod}</div>
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-extra">
 							<div class="flex items-center gap-2">
 								<CopyableId value={p.id} label="Stripe" />
 								{#if p.reservationId}
-									<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
 										View
 									</Button>
 								{/if}

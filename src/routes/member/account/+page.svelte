@@ -72,7 +72,7 @@
 				/>
 
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s" />
+					<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s" />
 				</div>
 			</div>
 		</Form>
@@ -103,7 +103,7 @@
 							<td>
 								<div>
 									<p class="text-sm font-medium">{pref.label}</p>
-									<p class="text-xs opacity-60">{pref.description}</p>
+									<p class="text-subtle">{pref.description}</p>
 								</div>
 							</td>
 							<td class="w-20 text-center">
@@ -157,12 +157,10 @@
 					{#if messaging.standing.reason}
 						<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 					{/if}
-					<span class="mt-1 block text-sm opacity-70">
-						Contact staff if you think this is a mistake.
-					</span>
+					<span class="mt-1 block text-muted"> Contact staff if you think this is a mistake. </span>
 				</Alert>
 			{/if}
-			<p class="mt-3 mb-3 text-sm opacity-70">
+			<p class="mt-3 mb-3 text-muted">
 				When this is on, other members can send you a message request from the directory. You decide
 				whether to accept each one, and you can block anyone at any time.
 			</p>
@@ -180,7 +178,9 @@
 				/>
 				<SubmitButton
 					label={messaging.acceptsDirectMessages ? 'Turn off' : 'Turn on'}
-					class={messaging.acceptsDirectMessages ? 'btn-outline btn-sm' : 'btn-primary btn-sm'}
+					variant={messaging.acceptsDirectMessages ? 'default' : 'primary'}
+					outline={messaging.acceptsDirectMessages}
+					size="sm"
 				/>
 			</Form>
 		</InfoCard>
@@ -197,17 +197,17 @@
 				</div>
 			{:then [subs, avail]}
 				{#if subs.length === 0 && avail.length === 0}
-					<p class="text-sm opacity-60">No mailing lists available.</p>
+					<p class="text-muted">No mailing lists available.</p>
 				{:else}
 					{#if subs.length > 0}
-						<p class="mb-2 text-xs font-medium opacity-60">Your subscriptions</p>
+						<p class="mb-2 text-subtle font-medium">Your subscriptions</p>
 						<div class="mb-4 space-y-2">
 							{#each subs as sub (sub.audienceId)}
 								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{sub.audienceName}</p>
 										{#if sub.audienceDescription}
-											<p class="text-xs opacity-60">{sub.audienceDescription}</p>
+											<p class="text-subtle">{sub.audienceDescription}</p>
 										{/if}
 									</div>
 									<UnsubscribeAction audienceId={sub.audienceId} name={sub.audienceName} />
@@ -217,14 +217,14 @@
 					{/if}
 
 					{#if avail.length > 0}
-						<p class="mb-2 text-xs font-medium opacity-60">Available lists</p>
+						<p class="mb-2 text-subtle font-medium">Available lists</p>
 						<div class="space-y-2">
 							{#each avail as a (a.id)}
 								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{a.name}</p>
 										{#if a.description}
-											<p class="text-xs opacity-60">{a.description}</p>
+											<p class="text-subtle">{a.description}</p>
 										{/if}
 									</div>
 									<SubscribeAction audienceId={a.id} name={a.name} />
@@ -243,14 +243,16 @@
 	<InfoCard title="Security">
 		<div class="space-y-4">
 			<div class="flex items-center justify-between">
-				<p class="text-sm opacity-70">Change your account password.</p>
+				<p class="text-muted">Change your account password.</p>
 				<Action
 					action={changePassword}
 					label="Change Password"
 					modalTitle="Change Password"
 					onsuccess={() => toast.success('Password changed')}
 					onfailure={() => toast.error('Password change failed')}
-					class="btn-outline btn-sm"
+					variant="default"
+					size="sm"
+					outline
 				>
 					{#snippet form()}
 						<FormField
@@ -279,17 +281,18 @@
 
 			<div class="flex items-center justify-between">
 				{#if data.isStaff}
-					<p class="text-sm opacity-70">Contact an admin to delete your account.</p>
+					<p class="text-muted">Contact an admin to delete your account.</p>
 					<span class="btn btn-error btn-sm btn-disabled">Delete Account</span>
 				{:else}
-					<p class="text-sm opacity-70">Permanently delete your account and all associated data.</p>
+					<p class="text-muted">Permanently delete your account and all associated data.</p>
 					<Action
 						action={deleteAccount}
 						label="Delete Account"
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
 						onfailure={() => toast.error('Deletion failed')}
-						class="btn-error btn-sm"
+						variant="error"
+						size="sm"
 						onsuccess={() => {
 							toast.success('Account deleted');
 							goto(resolve('/login'));
