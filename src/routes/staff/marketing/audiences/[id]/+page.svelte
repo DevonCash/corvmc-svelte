@@ -21,6 +21,8 @@
 	} from '$lib/remote/marketing.remote';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 
 	const { fields } = updateAudience;
 
@@ -50,28 +52,24 @@
 	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Details">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Slug</dt>
-					<dd class="font-mono text-xs">{audienceData.slug}</dd>
+				<DefinitionList>
+					<Fact label="Slug" mono>{audienceData.slug}</Fact>
 
-					<dt class="opacity-60">Subscribers</dt>
-					<dd>
+					<Fact label="Subscribers">
 						{audienceData.subscriberCount}
 						{isBuiltIn ? 'matching members' : 'active'}
-					</dd>
+					</Fact>
 
-					<dt class="opacity-60">Opt-in</dt>
-					<dd>
+					<Fact label="Opt-in">
 						{#if isBuiltIn}
 							<Badge variant="info" size="xs">Built-in</Badge>
 						{:else}
 							{audienceData.allowOptIn ? 'Public' : 'Staff only'}
 						{/if}
-					</dd>
+					</Fact>
 
-					<dt class="opacity-60">Created</dt>
-					<dd>{new Date(audienceData.createdAt).toLocaleDateString()}</dd>
-				</dl>
+					<Fact label="Created">{new Date(audienceData.createdAt).toLocaleDateString()}</Fact>
+				</DefinitionList>
 
 				{#if audienceData.description}
 					<p class="text-sm opacity-70 mt-3">{audienceData.description}</p>

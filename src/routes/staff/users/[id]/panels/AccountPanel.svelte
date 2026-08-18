@@ -17,6 +17,8 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
@@ -53,9 +55,8 @@
 		{#if !data.profile}
 			<EmptyState title="No profile" description="This account has no directory profile row." />
 		{:else}
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Visibility</dt>
-				<dd class="flex items-center gap-2">
+			<DefinitionList>
+				<Fact label="Visibility" class="flex items-center gap-2">
 					<Badge
 						size="sm"
 						variant={data.profile.directoryVisibility === 'hidden' ? 'ghost' : 'info'}
@@ -65,34 +66,29 @@
 					{#if !data.complete}
 						<span class="opacity-60">Profile incomplete</span>
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Tagline</dt>
-				<dd>{data.profile.tagline || '—'}</dd>
+				<Fact label="Tagline">{data.profile.tagline || '—'}</Fact>
 
-				<dt class="opacity-60">Hometown</dt>
-				<dd>{data.profile.hometown || '—'}</dd>
+				<Fact label="Hometown">{data.profile.hometown || '—'}</Fact>
 
-				<dt class="opacity-60">Instruments</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Instruments" class="flex flex-wrap gap-1">
 					{#each data.profile.instruments as i (i)}
 						<Badge size="sm">{i}</Badge>
 					{:else}
 						—
 					{/each}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Genres</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Genres" class="flex flex-wrap gap-1">
 					{#each data.profile.genres as g (g)}
 						<Badge size="sm">{g}</Badge>
 					{:else}
 						—
 					{/each}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Open to</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Open to" class="flex flex-wrap gap-1">
 					{#if data.profile.lookingForBand}<Badge size="sm">Looking for a band</Badge>{/if}
 					{#if data.profile.availableForHire}<Badge size="sm">For hire</Badge>{/if}
 					{#if data.profile.teachesLessons}<Badge size="sm">Teaches lessons</Badge>{/if}
@@ -100,8 +96,8 @@
 					{#if !data.profile.lookingForBand && !data.profile.availableForHire && !data.profile.teachesLessons && !data.profile.openToCollaboration}
 						—
 					{/if}
-				</dd>
-			</dl>
+				</Fact>
+			</DefinitionList>
 			<div class="mt-3">
 				<Button href={resolve(`/member/directory/members/${id}`)} class="btn-ghost btn-sm">
 					View public profile
@@ -148,27 +144,21 @@
 </AsyncCard>
 
 <InfoCard title="Details" class="bg-base-200 shadow-none">
-	<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-		<dt class="opacity-60">User ID</dt>
-		<dd class="font-mono text-xs">{member.id}</dd>
+	<DefinitionList>
+		<Fact label="User ID" mono>{member.id}</Fact>
 
-		<dt class="opacity-60">Member no.</dt>
-		<dd>{member.memberNumber ?? '—'}</dd>
+		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<dt class="opacity-60">Email verified</dt>
-		<dd>{member.emailVerified ? 'Yes' : 'No'}</dd>
+		<Fact label="Email verified">{member.emailVerified ? 'Yes' : 'No'}</Fact>
 
-		<dt class="opacity-60">Stripe ID</dt>
-		<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
+		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
-		<dt class="opacity-60">Joined</dt>
-		<dd>{new Date(member.createdAt).toLocaleString()}</dd>
+		<Fact label="Joined">{new Date(member.createdAt).toLocaleString()}</Fact>
 
 		{#if member.deletedAt}
-			<dt class="opacity-60">Deactivated</dt>
-			<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
+			<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
 		{/if}
-	</dl>
+	</DefinitionList>
 </InfoCard>
 
 <InfoCard title="Danger Zone" class="mt-6 border border-error/30 bg-error/5 shadow-none">

@@ -17,7 +17,7 @@
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
 import { eq, inArray } from 'drizzle-orm';
-import { withPlatformDb, withPlatformEnv } from './platform-db';
+import { readLocalDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import {
@@ -509,7 +509,7 @@ export async function seedVolunteering(): Promise<void> {
 
 /** The member's signup status on a shift, for assertions the UI cannot make. */
 export async function readSignupStatus(shiftId: string): Promise<string | null> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ status: volunteerSignup.status })
 			.from(volunteerSignup)
@@ -526,7 +526,7 @@ export async function readVolunteerState(): Promise<{
 }> {
 	const { creditTransaction } = await import('../../src/lib/server/db/schema/finance');
 
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [log] = await db
 			.select({ status: volunteerHourLog.status })
 			.from(volunteerHourLog)

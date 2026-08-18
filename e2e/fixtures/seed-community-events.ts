@@ -22,7 +22,7 @@
  * Idempotent: deletes and recreates its own rows on every run.
  */
 import { eq, inArray } from 'drizzle-orm';
-import { withPlatformDb } from './platform-db';
+import { readLocalDb, withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { event } from '../../src/lib/server/db/schema/event';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
@@ -246,7 +246,7 @@ export async function seedCommunityEvents(): Promise<void> {
 
 /** Whether a row still exists, for the delete assertions. */
 export async function eventExists(eventId: string): Promise<boolean> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ id: event.id })
 			.from(event)
@@ -261,7 +261,7 @@ export async function readListingState(eventId: string): Promise<{
 	status: string | null;
 	reviewNotes: string | null;
 }> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ status: event.status, reviewNotes: event.reviewNotes })
 			.from(event)

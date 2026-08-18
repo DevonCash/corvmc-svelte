@@ -6,6 +6,8 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { IconCheck, IconUserX } from '@tabler/icons-svelte';
@@ -69,18 +71,17 @@
 
 	<PageContent width="3xl">
 		<InfoCard title={shift.cancelledAt ? 'Cancelled shift' : 'Shift'}>
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">When</dt>
-				<dd>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</dd>
-				<dt class="opacity-60">Needed</dt>
-				<dd>
+			<DefinitionList>
+				<Fact label="When"
+					>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</Fact
+				>
+				<Fact label="Needed">
 					{claimants.filter((c) => c.status !== 'no_show').length} of {shift.capacity} filled
-				</dd>
+				</Fact>
 				{#if shift.notes}
-					<dt class="opacity-60">Notes</dt>
-					<dd>{shift.notes}</dd>
+					<Fact label="Notes">{shift.notes}</Fact>
 				{/if}
-			</dl>
+			</DefinitionList>
 		</InfoCard>
 
 		<InfoCard title="Who's on it">

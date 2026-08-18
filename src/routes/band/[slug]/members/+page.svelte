@@ -27,6 +27,7 @@
 	import MemberRoleSelect from './MemberRoleSelect.svelte';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
@@ -410,13 +411,11 @@
 			onfailure={() => toast.error('Failed to transfer')}
 		>
 			<div class="space-y-4">
-				<div class="alert alert-warning">
-					<p>
-						You are about to transfer ownership of <strong>{layout.band.name}</strong> to
-						<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
-						undone without the new owner's consent.
-					</p>
-				</div>
+				<Alert type="warning">
+					You are about to transfer ownership of <strong>{layout.band.name}</strong> to
+					<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
+					undone without the new owner's consent.
+				</Alert>
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
 					<SubmitButton label="Transfer Ownership" successLabel="Transferred" class="btn-warning" />

@@ -467,6 +467,46 @@ Pass extra classes on the outer card via `class`:
 </InfoCard>
 ```
 
+## DefinitionList / Fact
+
+The label/value grid on staff detail pages. Replaces the hand-written
+`<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">`
+that was copy-pasted into nine files.
+
+```svelte
+import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte'; import
+Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+
+<DefinitionList>
+	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
+	<Fact label="ID" mono>{item.id}</Fact>
+	<Fact label="Category" value={item.category.name} />
+	{#if item.notes}
+		<Fact label="Notes" wrap>{item.notes}</Fact>
+	{/if}
+</DefinitionList>
+```
+
+`Fact` props:
+
+- `label` — the `<dt>` text.
+- `value` — plain-text `<dd>`. Ignored when children are supplied.
+- `mono` — `font-mono text-xs`, for IDs and provider record keys.
+- `wrap` — `whitespace-pre-wrap`, for free-text notes.
+- `class` — extra classes on the `<dd>`.
+
+**`Fact` renders a bare `<dt>` + `<dd>` with no wrapper, and it must stay that
+way.** The two columns are a CSS grid declared on the `<dl>`, which only aligns
+when the `<dt>`s and `<dd>`s are direct children of it. Wrapping them in a
+`<div>` collapses every detail page's label gutter, and nothing throws —
+`DefinitionList.svelte.spec.ts` asserts the structure for exactly that reason.
+
+Use a `class` prop rather than a `class:` directive for conditional styling:
+`class:` directives do not forward from a component to its inner element.
+
+Not every `<dl>` belongs here — `member/equipment/loans` puts icons and tooltips
+in its `<dt>`s, which `Fact`'s string `label` deliberately doesn't support.
+
 ## DayTimeline
 
 Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "current" slot in primary and shows others in secondary.
@@ -666,7 +706,31 @@ Single stat display for dashboards.
 
 ```svelte
 <StatCard title="Total Users" value={stats.userCount} />
+<StatCard title="Members" value={band.memberCount} size="sm" />
+<StatCard title="Your Role" value={role} size="sm" valueClass="capitalize" />
 ```
+
+Props: `title`, `value`, `size` (`'sm'` renders the value at `text-2xl`, `'md'`
+keeps daisyUI's default), `class` (outer card), `valueClass` (value line).
+
+Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
+value size overflows a narrow panel column once three sit in a row, and that is
+exactly why two pages rebuilt the card by hand before the prop existed.
+
+## ShareButton
+
+Copies the current page URL and flashes a checkmark.
+
+```svelte
+<ShareButton title="Copy link to this event" />
+```
+
+Props: `title` (tooltip — name the thing being shared), `class` (defaults to
+`btn btn-ghost btn-sm btn-square`).
+
+The clipboard write can reject on permissions or a non-secure context; the
+failure is deliberately silent, because a convenience affordance failing loudly
+is worse than the checkmark not appearing.
 
 ## Pagination
 
