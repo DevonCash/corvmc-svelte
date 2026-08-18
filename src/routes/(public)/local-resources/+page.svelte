@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Hero from '$lib/components/shared/marketing/Hero.svelte';
 	import { IconBuildingStore, IconMicrophone, IconDisc, IconUsers } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
@@ -38,20 +39,10 @@
 </svelte:head>
 
 <!-- Hero -->
-<section class="sunburst section-tint-secondary py-20 px-6 text-center">
-	<div class="max-w-2xl mx-auto flex flex-col items-center gap-4">
-		<h1
-			class="text-5xl font-bold leading-tight tracking-tight text-balance"
-			style="color: var(--cmc-navy)"
-		>
-			Local Resources
-		</h1>
-		<p class="text-lg leading-relaxed text-fg-2">
-			CMC keeps a list of local music resources — shops, artists, record stores, venues, and more.
-			We're actively building it out, and we want your input.
-		</p>
-	</div>
-</section>
+<Hero title="Local Resources">
+	CMC keeps a list of local music resources — shops, artists, record stores, venues, and more. We're
+	actively building it out, and we want your input.
+</Hero>
 
 <!-- What we're collecting -->
 <section class="py-12 px-6">
@@ -59,7 +50,7 @@
 		<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 			{#each categories as cat (cat.label)}
 				<div class="flex flex-col items-center text-center gap-2 rounded-lg p-5 surface">
-					<div style="color: var(--cmc-teal)"><cat.icon size={32} /></div>
+					<div class="text-cmc-teal"><cat.icon size={32} /></div>
 					<span class="text-sm font-medium">{cat.label}</span>
 				</div>
 			{/each}

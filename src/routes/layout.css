@@ -301,6 +301,21 @@ p {
 	color: var(--fg-3);
 }
 
+/* Brand ink. The palette is not in Tailwind's colour space, so before these the
+   only way to reach it from markup was an inline `style="color: var(--cmc-navy)"`
+   — which is why there were 27 of them. */
+@utility text-cmc-navy {
+	color: var(--cmc-navy);
+}
+
+@utility text-cmc-teal {
+	color: var(--cmc-teal);
+}
+
+@utility text-cmc-orange {
+	color: var(--cmc-orange);
+}
+
 /* The standard raised panel surface — replaces
    `style="background: var(--surface); border: 1px solid var(--surface-border)"`. */
 @utility surface {

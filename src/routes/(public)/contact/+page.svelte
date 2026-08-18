@@ -135,7 +135,7 @@
 		<div class="space-y-6">
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMapPin size={18} /></span> Visit Us
+					<span class="text-cmc-teal"><IconMapPin size={18} /></span> Visit Us
 				</h3>
 				<p class="text-muted">
 					{address.street}<br />
@@ -146,7 +146,7 @@
 
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMail size={18} /></span> Email
+					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
 				</h3>
 				<a href="mailto:info@corvmc.org" class="link text-sm">info@corvmc.org</a>
 			</div>

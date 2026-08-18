@@ -169,6 +169,23 @@ migration was checked to confirm all 30 landed on the component and none on a ba
 The `searchText`-not-`search` snippet-shadowing footgun in `ui-patterns.md` is now only relevant to
 pages that still name their own state.
 
+### Phase 5 notes
+
+`Section`, `Hero` and `SectionHeading` under `shared/marketing/` name the shape the public pages had
+already converged on without writing down: a tinted full-bleed `<section>` wrapping a centred
+measure, fourteen times over. The hero markup was byte-identical on five pages, inline
+`style="color: var(--cmc-navy)"` included.
+
+`text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` join the utilities from Phase 1. The brand
+palette is not in Tailwind's colour space, so an inline `style` was previously the only way to reach
+it from markup — which is why there were 29 of them.
+
+Two design-system tokens are still unused and now clearly redundant: `.display` (0 uses) overlaps
+what `Hero` renders, and `.eyebrow` (1 use) overlaps the
+`text-sm font-bold uppercase tracking-wider` eyebrows. Neither is a drop-in — `.display` is 3.75rem
+against the hero's 3rem, and `.eyebrow` is `--color-primary` against the eyebrows' `--fg-3` — so
+adopting either is a visual decision rather than a refactor, and was left alone.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
@@ -178,5 +195,5 @@ pages that still name their own state.
 | 2 — `Button` variant API         | 6,854        | 81              | −623 tokens; daisyUI share 1,569 → 970 |
 | 3 — `Card`                       | 6,543        | 81              | −311 tokens; daisyUI share 970 → 827   |
 | 4 — filter controls              | 6,324        | 81              | −219 tokens, plus 185 dead ones        |
-| 5 — marketing section vocabulary | _pending_    |                 |                                        |
+| 5 — marketing section vocabulary | 6,193        | 52              | −131 tokens, −29 inline styles         |
 | 6 — `no-utility-soup` lint rule  | _pending_    |                 |                                        |

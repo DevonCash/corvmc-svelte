@@ -839,6 +839,30 @@ Page title with optional back button, subtitle, and right-side action slot.
 </PageHeader>
 ```
 
+## Public site sections
+
+The marketing pages (`(public)/`) compose from `$lib/components/shared/marketing/`:
+
+```svelte
+<Hero title="Programs">Practice spaces, performances, meetups & clubs for the music community</Hero>
+
+<Section tint="success" class="program-block">…</Section>
+<Section tint="primary">
+	<SectionHeading title="Two Ways to Belong">Everyone starts with a free account.</SectionHeading>
+	…
+</Section>
+```
+
+- `Section` — `tint` (`none`, `primary`, `secondary`, `success`, `warning`, `info`), `pad`
+  (`sm`/`md`/`lg`), `width` (the inner measure: `2xl`, `3xl`, `5xl`, `full`), `center`, `sunburst`.
+  Alternating the brand tints down a page is what gives the marketing site its rhythm.
+- `Hero` — the page masthead. Takes `title`; children are the subtitle line.
+- `SectionHeading` — centred title block, with an optional `eyebrow` snippet (usually a
+  `sticker-badge`) and a lede as children.
+
+Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an inline
+`style="color: var(--cmc-navy)"`.
+
 ## Create forms live in modals
 
 "Create" flows (new reservation, new event, etc.) should open in a modal on the list page, not navigate to a separate `/new` route. This keeps the user in context and avoids a full page transition for what's usually a short form. The modal is a sibling component to the list page (e.g. `CreateModal.svelte`) and is toggled by a button in the `PageHeader`.
