@@ -73,7 +73,12 @@
 		...rest
 	}: {
 		href?: string;
-		/** Tooltip text. Rendered on the button itself, not a wrapper — see below. */
+		/**
+		 * Tooltip text — rendered on the button itself, not a wrapper (see below).
+		 * On a disabled button it becomes a native `title` attribute instead: a
+		 * disabled trigger never fires the hover events a tooltip needs, and the
+		 * one thing a disabled control owes the user is why it is disabled.
+		 */
 		title?: string;
 		disabled?: boolean;
 		variant?: ButtonVariant;
@@ -112,7 +117,18 @@
 	</BitsButton.Root>
 {/snippet}
 
-{#if !title}
+<!-- A disabled trigger gets no hover events, so bits-ui's tooltip would never
+     open and the explanation would be unreachable — which is the opposite of
+     what a disabled control needs. Fall back to the native attribute. -->
+{#snippet plainButton(nativeTitle?: string)}
+	<BitsButton.Root {...mergeProps(rest, { href, disabled, class: classes, title: nativeTitle })}>
+		{@render children?.()}
+	</BitsButton.Root>
+{/snippet}
+
+{#if disabled && title}
+	{@render plainButton(title)}
+{:else if !title}
 	{@render renderButton()}
 {:else}
 	<Tooltip.Root>

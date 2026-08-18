@@ -107,6 +107,24 @@ describe('Button with a tooltip', () => {
 		expect(onclick).toHaveBeenCalledOnce();
 	});
 
+	/**
+	 * Regression: a disabled `<button title="…">` was converted to `<Button>`,
+	 * whose `title` becomes a bits-ui tooltip. A disabled trigger gets no hover
+	 * events, so the tooltip never opened and the explanation for *why* the
+	 * control was disabled became unreachable. Caught by
+	 * e2e/community-events.e2e.ts, which asserts the attribute directly.
+	 */
+	it('falls back to a native title attribute when disabled', async () => {
+		render(ButtonHarness, {
+			title: "Events with tickets can't be deleted",
+			label: 'Delete',
+			disabled: true
+		});
+
+		const button = page.getByRole('button', { name: 'Delete', includeHidden: true });
+		await expect.element(button).toHaveAttribute('title', "Events with tickets can't be deleted");
+	});
+
 	it('shows the tooltip on hover', async () => {
 		render(ButtonHarness, { title: 'Save changes', label: 'Save' });
 

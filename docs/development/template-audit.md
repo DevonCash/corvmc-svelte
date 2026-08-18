@@ -205,6 +205,15 @@ Phase 1, the clickable and tinted cards deliberately left in Phase 3, and the pa
 in a phase — `(public)/+page.svelte` (13) and `band-site/[slug]/epk` (13), the latter being a
 separate theme context.
 
+### A regression the e2e suite caught
+
+Converting a disabled `<button title="…">` to `<Button>` made the explanation unreachable.
+`Button`'s `title` becomes a bits-ui tooltip, and a disabled trigger gets no hover events, so it
+never opened — on the one control whose whole job was to answer "why can't I delete this?".
+
+`Button` now falls back to a native `title` attribute whenever it is disabled. Worth knowing before
+adding any other prop that quietly changes what an attribute means.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
