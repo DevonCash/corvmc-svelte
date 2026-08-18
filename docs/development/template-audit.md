@@ -205,6 +205,20 @@ Phase 1, the clickable and tinted cards deliberately left in Phase 3, and the pa
 in a phase — `(public)/+page.svelte` (13) and `band-site/[slug]/epk` (13), the latter being a
 separate theme context.
 
+### Two regressions the suites caught
+
+Both were the same shape: a prop that quietly changes what an attribute means.
+
+**Storybook.** `Button`'s `title` renders as a bits-ui tooltip, and `Tooltip.Root` _throws_ without
+a `Tooltip.Provider` above it. The app has one at the root layout, so the app was fine — but
+Storybook mounts components outside that layout, so every story containing a button with a tooltip
+failed to render. `.storybook/preview.ts` now wraps stories in the same provider, the way it already
+imports the app's stylesheet.
+
+Worth knowing about the vitest setup: the `storybook` project reports these as **unhandled errors**,
+not failed tests, so the summary line still reads `Test Files … passed`. Check the exit code, not
+the summary.
+
 ### A regression the e2e suite caught
 
 Converting a disabled `<button title="…">` to `<Button>` made the explanation unreachable.

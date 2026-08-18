@@ -71,7 +71,11 @@ export default defineConfig(
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				projectService: true,
+				// `.storybook/` sits outside SvelteKit's generated tsconfig `include`, so
+				// its components have no project and the type-aware parser refuses them.
+				// They are Storybook wiring, not app code, and typed-linting them buys
+				// nothing.
+				projectService: { allowDefaultProject: ['.storybook/*.svelte'] },
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
 				svelteConfig
