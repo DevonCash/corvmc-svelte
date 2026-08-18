@@ -1,7 +1,7 @@
 import { query, form, command } from '$app/server';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
-import { requireUser, requireStaff } from '$lib/server/authorization';
+import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	startDirectThread,
@@ -18,9 +18,8 @@ import {
 	blockUser,
 	unblockUser,
 	listBlockedBy,
-	getMessagingStanding,
-	setMessagingStanding,
-	MessagingStandingNotYoursError
+	getMessagingState,
+	setAcceptsDirectMessages
 } from '$lib/server/moderation/moderation-service';
 import { getMemberLayout } from './layout.remote';
 import {
@@ -324,62 +323,26 @@ export const reportDirectThread = form(reportDirectSchema, async (data, issue) =
 // Messaging standing
 // ---------------------------------------------------------------------------
 
-/** What the member sees on their own account page. */
+/**
+ * What the member sees on their own account page: their own switch, and
+ * separately any restriction staff or a report has put on them.
+ */
 export const getMyMessagingStanding = query(async () => {
 	const user = requireUser();
-	return getMessagingStanding(user.id);
+	return getMessagingState(user.id);
 });
 
 /**
  * A member switching their own messaging off, or back on.
  *
- * `source: 'member'` is not decoration — `setMessagingStanding` uses it to
- * refuse writing over a restriction staff or a report put there. Without that,
- * "turn my messages back on" would also clear a suspension.
+ * Writes `user.acceptsDirectMessages` and nothing else, which is the whole
+ * reason this needs no guard: the preference is theirs outright, and it lives
+ * nowhere near `member_standing`. A restricted member may still set it, and
+ * setting it cannot lift the restriction — see `docs/specs/member-standing-spec.md`.
  */
-export const setMyMessaging = form(
-	z.object({ enabled: z.enum(['on', 'off']) }),
-	async (data, issue) => {
-		const user = requireUser();
-		try {
-			await setMessagingStanding({
-				userId: user.id,
-				status: data.enabled === 'off' ? 'disabled' : 'none',
-				source: 'member'
-			});
-		} catch (err) {
-			if (err instanceof MessagingStandingNotYoursError) {
-				invalid(issue.enabled(err.message));
-			}
-			throw err;
-		}
-		void getMyMessagingStanding().refresh();
-		return { success: true };
-	}
-);
-
-/** Staff switching a member's messaging off — how we handle under-18 accounts. */
-export const setMemberMessaging = form(
-	z.object({
-		userId: z.string().min(1),
-		status: z.enum(['none', 'restricted', 'disabled']),
-		reason: z.string().trim().max(500).optional()
-	}),
-	async (data) => {
-		const staff = await requireStaff();
-		await setMessagingStanding({
-			userId: data.userId,
-			status: data.status,
-			source: 'staff',
-			reason: data.reason || null,
-			actorUserId: staff.id
-		});
-		void getMemberMessagingStanding(data.userId).refresh();
-		return { success: true };
-	}
-);
-
-export const getMemberMessagingStanding = query(z.string(), async (userId) => {
-	await requireStaff();
-	return getMessagingStanding(userId);
+export const setMyMessaging = form(z.object({ enabled: z.enum(['on', 'off']) }), async (data) => {
+	const user = requireUser();
+	await setAcceptsDirectMessages(user.id, data.enabled === 'on');
+	void getMyMessagingStanding().refresh();
+	return { success: true };
 });

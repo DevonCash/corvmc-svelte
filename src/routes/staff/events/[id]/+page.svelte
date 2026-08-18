@@ -580,7 +580,7 @@
 					<span class="opacity-60">{data.creator.email}</span>
 				{/if}
 			</p>
-			{#if data.submitterStanding?.requiresReview}
+			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
 				<Alert type="warning" class="mt-2">
 					This member's listings are checked before they publish, after a report was upheld against
 					one of them.

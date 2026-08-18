@@ -70,6 +70,26 @@ there. Absence of a row means no restriction, and lifting sets `'none'` rather
 than deleting, so "we looked at this and cleared it" still reads differently
 from "this never came up" — the same idiom as `communityEventStanding`.
 
+**Superseded.** This table was the third domain to need standing, which fired the
+rule-of-three note in `member-suggestions-spec.md`; all three are now one
+`member_standing` keyed `(userId, scope)`. Two things above changed with it, and
+`docs/specs/member-standing-spec.md` has the reasoning:
+
+- **`source` is gone.** It existed only because this one table held both a
+  moderation decision and a member preference. Those split: the two staff/report
+  cases stay as standing at scope `messaging`, and "switched off by the member
+  themselves" became `user.acceptsDirectMessages`, a directory-profile preference
+  they own outright. `MessagingStandingNotYoursError` is deleted rather than
+  renamed — a member has no way to write standing at all now, so there is no
+  guard to forget.
+- **A restricted member can now set their own preference**, which the `source`
+  check used to prevent. It cannot lift the restriction; they write different
+  tables.
+
+`messagingIsDisabled` is where the two halves recombine, and it returns one
+boolean on purpose: a sender must not be able to tell a staff decision from a
+personal choice.
+
 ### direction gets a third value
 
 `inbox_message.direction` means "which way relative to CorvMC". A DM is neither
@@ -220,7 +240,9 @@ org, so every bubble would land on the same side.
 
 **Upholding** restricts the reported party: reply yes, initiate no. Dismissing
 does nothing to standing, and does **not** un-block: staff deciding it was not a
-violation is not staff deciding who a member has to talk to.
+violation is not staff deciding who a member has to talk to. Which standing an
+upheld report costs is `scopeForFlag`'s single answer now, shared with listing
+and suggestion reports.
 
 ## Notifications and email
 

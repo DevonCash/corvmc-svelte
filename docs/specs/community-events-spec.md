@@ -26,7 +26,8 @@ slots into the existing public queries with no structural change to them.
 - Optional lineup credits through the existing `event_band` table, so a credit
   naming a platform band lands `pending` and never reaches that band's profile
   until they confirm (`docs/specs/event-lineup-spec.md`, unchanged).
-- Per-member publishing standing (`community_event_standing`) and a staff review
+- Per-member publishing standing (`member_standing` at scope `community_event`;
+  originally `community_event_standing`) and a staff review
   queue at `/staff/events` → "Needs review".
 - **Event tips**: an "Event Tip" topic on the public `/contact` form revealing
   four optional fields, formatted into the message body. No account needed. Lands
@@ -148,7 +149,9 @@ slots into the existing public queries with no structural change to them.
 - **Standing is its own table**, not columns on `user`, which already carries
   auth, billing, credits and directory-profile concerns. `volunteer_profile` is
   the precedent for a per-user gating record, and a table gives room for the FK
-  to the upheld flag.
+  to the upheld flag. (That table is now the shared, scoped `member_standing` —
+  see `docs/specs/member-standing-spec.md`. The argument is unchanged; only the
+  table's name and key are.)
 
 - **404, not 403, for someone else's listing.** "This exists but isn't yours"
   tells a stranger a listing id is real.
@@ -168,6 +171,10 @@ NULL` (was `source = 'band' OR …`). Only CMC events hold the room; a member
 - New `community_event_standing`: `userId` (PK → user, cascade),
   `requiresReview`, `reason`, `triggeringFlagId` (→ contentFlag, set null),
   `updatedByUserId`, `updatedAt`. **Absence of a row means trusted.**
+  **Superseded:** merged into `member_standing`, keyed `(userId, scope)` with
+  `requiresReview` becoming `status: 'restricted'`. Read it with
+  `getStanding(userId, 'community_event')`; see
+  `docs/specs/member-standing-spec.md`.
 
 `src/lib/server/db/schema/inbox.ts` — `submitContactFormSchema` gains four
 optional tip fields plus `EVENT_TIP_SUBJECT`.
