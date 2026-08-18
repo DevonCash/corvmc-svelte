@@ -129,6 +129,12 @@ something new turns up, but Sam cannot keep filing.
   own spec. Designing an appeal against a mechanism nobody has designed would
   produce a bad version of both. When that spec lands, it should route through
   reports and inherit this.
+- **Restrictions that are not moderation.** Switching a feature off because of who
+  a member is rather than what they did — the under-18 messaging case is the only
+  one today — is not a moderation action and gets no appeal, because there is no
+  judgement to contest. It also should not be a `member_standing` row at all;
+  requiring a report is what makes that obvious. Recorded in `CHORES.md`, since
+  the replacement does not exist yet.
 - **A second-level appeal.** A denied appeal has been read by two people. A third
   is a committee, and the collective does not have one.
 - **Changing what a report _does_.** The griefing tradeoff in
@@ -149,16 +155,33 @@ That path has to close, or the appeal has nothing to attach to precisely where
 oversight is thinnest. So this feature makes `flagId` required and reroutes the
 staff form through a filed-and-upheld report.
 
-The worked example in that docstring is the one to check the rule against:
-switching messaging off for an under-18 member, since the site has no age of its
-own. Is that a _moderation_ action? Nobody misbehaved.
+The worked example in that docstring turns out to argue for closing it rather
+than against: switching messaging off for an under-18 member, "since the site has
+no age of its own."
 
-It survives the rule intact, and is a good argument for it. The staff report
-reads "member is under 18, messaging off per policy" — a true, written, dated
-record of why, attached to the member, which is strictly better than the
-`reason: null` that path can produce today. And the appeal is not nonsense: a
-member whose age was recorded wrong appeals with "I am nineteen, here is proof,"
-which is exactly the kind of correction no informal channel reliably delivers.
+**That is not a moderation action and should never have been a standing.** Nobody
+misbehaved. It is an eligibility restriction — a fact about who the member is,
+not a judgement about what they did — and the two must not share a mechanism.
+Filing a report about someone's age would be a category error, and once appeals
+exist it becomes a visible one: the member would be told they had been moderated,
+shown a report, and offered an appeal against their own date of birth.
+
+So this feature does not accommodate that case; it evicts it. Requiring a report
+on every `member_standing` write is exactly the pressure that surfaces it, and
+the eviction is the point rather than a cost. The replacement — some notion of
+member eligibility or capability that is not moderation — is out of scope here
+and recorded in `CHORES.md`. The root gap is that `user` carries no date of birth
+at all, so "this member is a minor" has nowhere to live but a restriction.
+
+Until that lands, staff switching messaging off for a minor will file a report
+like any other. That is worse than a proper eligibility field and better than
+`reason: null`, and it is deliberately uncomfortable: the friction is the signal
+that the case is in the wrong home.
+
+Note this does not cost the `disabled` rung its purpose. `disabled` has a genuine
+moderation use — the escalation past `restricted`, which for messaging is
+reply-only — and `direct-service.ts` gates both sending and receiving on it. It
+is the age case that is the wrong occupant, not the rung.
 
 ### The appeal hangs off the flag, not off a message thread
 
