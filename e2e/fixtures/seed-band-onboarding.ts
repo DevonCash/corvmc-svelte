@@ -50,12 +50,25 @@ export const SEED_RENAME_BAND_ID = 'e2e-band-rename';
 export const SEED_RENAME_BAND_SLUG = 'e2e-rename-band';
 export const SEED_RENAME_BAND_NAME = 'E2E Rename Band';
 
+/**
+ * Exists to be retitled. Same reasoning as the band above, for the other kind of
+ * rename: the profile-edit test writes a new *name* and leaves it there, so it
+ * must not be a band another spec asserts a name on. It used to borrow the
+ * public band and put the name back afterwards, and any run where that restore
+ * did not land took three `band-subdomain.e2e.ts` assertions with it — a
+ * failure with nothing in that file to explain it.
+ */
+export const SEED_RETITLE_BAND_ID = 'e2e-band-retitle';
+export const SEED_RETITLE_BAND_SLUG = 'e2e-retitle-band';
+export const SEED_RETITLE_BAND_NAME = 'E2E Retitle Band';
+
 const BAND_IDS = [
 	SEED_PUBLIC_BAND_ID,
 	SEED_HIDDEN_BAND_ID,
 	SEED_MEMBERS_BAND_ID,
 	SEED_PREMIUM_BAND_ID,
-	SEED_RENAME_BAND_ID
+	SEED_RENAME_BAND_ID,
+	SEED_RETITLE_BAND_ID
 ];
 
 export async function seedBandOnboarding(): Promise<void> {
@@ -149,6 +162,18 @@ export async function seedBandOnboarding(): Promise<void> {
 				name: SEED_RENAME_BAND_NAME,
 				slug: SEED_RENAME_BAND_SLUG,
 				bio: 'Disposable: the address-change test moves this band.',
+				ownerId: SEED_OWNER_ID,
+				directoryVisibility: 'public',
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_RETITLE_BAND_ID,
+				name: SEED_RETITLE_BAND_NAME,
+				slug: SEED_RETITLE_BAND_SLUG,
+				// Plain-text bio, like the public band: the rename regression rode in
+				// on the edit page, whose RichTextEditor churn needs this shape.
+				bio: 'Disposable: the profile-edit test renames this band.',
 				ownerId: SEED_OWNER_ID,
 				directoryVisibility: 'public',
 				createdAt: now,
