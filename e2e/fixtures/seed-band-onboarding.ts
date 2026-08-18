@@ -5,18 +5,17 @@
  * the hometown/foundedYear save round-trip, and the directoryVisibility gate on
  * public band detail pages.
  *
- * Run by the Playwright global setup (see playwright.config.ts → globalSetup).
+ * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates the seeded user and bands on every run.
  * Mirrors the D1 access pattern in seed-pay-reservation.ts.
  */
 import 'dotenv/config';
-import { getPlatformProxy } from 'wrangler';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { band, bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
 import { scryptHash } from './seed-pay-reservation';
+import { withPlatformEnv } from './platform-db';
 
 export const SEED_OWNER_EMAIL = 'e2e.band.owner@example.com';
 export const SEED_OWNER_PASSWORD = 'e2e-password-123';
@@ -60,10 +59,7 @@ const BAND_IDS = [
 ];
 
 export async function seedBandOnboarding(): Promise<void> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-
-	try {
+	await withPlatformEnv(async ({ db, env }) => {
 		// The address change is capped at 3 per 30 days, and the local KV survives
 		// between preview runs — without this, the fourth `pnpm test:e2e` on one
 		// machine would fail the address test for reasons that look nothing like
@@ -177,7 +173,5 @@ export async function seedBandOnboarding(): Promise<void> {
 				createdAt: now
 			}))
 		);
-	} finally {
-		await dispose();
-	}
+	});
 }
