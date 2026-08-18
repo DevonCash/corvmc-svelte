@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { formatDateLong, formatTime } from '$lib/utils/format';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -12,23 +12,6 @@
 
 	const res = $derived(data.reservation);
 	const durationHours = $derived(data.durationHours);
-
-	function formatDate(d: Date): string {
-		return d.toLocaleDateString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric'
-		});
-	}
-
-	function formatTime(d: Date): string {
-		return d.toLocaleTimeString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: 'numeric',
-			minute: '2-digit'
-		});
-	}
 </script>
 
 <PageHeader title="Your Reservation" backHref="/member/reservations" />
@@ -37,7 +20,7 @@
 		<div class="card-body">
 			<header class="flex items-start justify-between gap-2">
 				<hgroup>
-					<p class="font-medium">{formatDate(res.startsAt)}</p>
+					<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 					<p class="text-sm opacity-70">
 						{formatTime(res.startsAt)}–{formatTime(res.endsAt)} · {durationHours} hour{durationHours ===
 						1

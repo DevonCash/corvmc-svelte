@@ -4,6 +4,7 @@
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();
@@ -80,9 +81,9 @@
 		</div>
 
 		{#if submitted}
-			<div class="alert alert-success">
+			<Alert type="success">
 				Thanks for the suggestion! We'll take a look and add it to the list.
-			</div>
+			</Alert>
 		{:else}
 			<Form
 				remote={rf}

@@ -23,6 +23,34 @@ export const SEARCH_LIMIT = 20;
 export const LIST_LIMIT = 100;
 
 // ---------------------------------------------------------------------------
+// Text field limits
+// ---------------------------------------------------------------------------
+//
+// These are *application* conventions, not database constraints — every text
+// column in the schema is a bare SQLite `text()` with no length at all. The 255
+// is inherited from the Laravel/MySQL app this replaced, where it meant
+// varchar(255). Kept because it is a sane cap and changing it would be churn,
+// but do not read it as something the database enforces.
+//
+// Named per *kind of field*, deliberately, rather than one constant reused
+// everywhere the number happens to be the same. A shared constant asserts that
+// two fields must change together; that is true of "every single-line name in
+// the app" and false of, say, a flag reason, which has its own limit next to
+// the rest of the flag rules.
+
+/** Single-line text: names, titles, slugs, locations. */
+export const SHORT_TEXT_MAX = 255;
+
+/** A one-or-two-sentence field: summaries, short bios, availability notes. */
+export const BLURB_MAX = 500;
+
+/** Multi-paragraph prose: descriptions, longer bios. */
+export const LONG_TEXT_MAX = 2000;
+
+/** Free-text staff/member notes attached to a record. */
+export const NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
 // Finance
 // ---------------------------------------------------------------------------
 

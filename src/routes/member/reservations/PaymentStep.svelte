@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { resolve } from '$app/paths';
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
-	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+	import { formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -35,14 +37,7 @@
 	} | null>(null);
 
 	function extractTimeFields(d: Date) {
-		// Format in Pacific time to match the create flow
-		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
-		const time = d.toLocaleTimeString('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-		return { date, time };
+		return { date: toLocalDate(d), time: toLocalTime(d) };
 	}
 
 	$effect(() => {
@@ -78,22 +73,15 @@
 		}
 	});
 
-	function calcFeeCents(baseCents: number): number {
-		if (baseCents <= 0) return 0;
-		return Math.ceil((baseCents + 30) / (1 - 0.029)) - baseCents;
-	}
-
-	function cents(amount: number): string {
-		return (amount / 100).toFixed(2);
-	}
-
-	let feeCents = $derived(pricing && coverFees ? calcFeeCents(pricing.remainingCents) : 0);
+	let feeCents = $derived(
+		pricing && coverFees ? calculateTotalWithFeeCoverage(pricing.remainingCents).feeCents : 0
+	);
 	let chargeTotal = $derived(pricing ? pricing.remainingCents + feeCents : 0);
 	let payLabel = $derived(
 		pricing
 			? pricing.remainingCents <= 0
 				? 'Confirm (Free Hours)'
-				: `Pay $${cents(chargeTotal)}`
+				: `Pay $${formatDollars(chargeTotal)}`
 			: 'Loading...'
 	);
 </script>
@@ -119,9 +107,12 @@
 		{:else}
 			<div class="space-y-2">
 				<div class="flex justify-between">
-					<span>Room rental ({pricing.durationHours}hr × ${cents(pricing.hourlyRateCents)}/hr)</span
+					<span
+						>Room rental ({pricing.durationHours}hr × ${formatDollars(
+							pricing.hourlyRateCents
+						)}/hr)</span
 					>
-					<span>${cents(pricing.totalCents)}</span>
+					<span>${formatDollars(pricing.totalCents)}</span>
 				</div>
 
 				{#if pricing.creditsApplicable > 0}
@@ -131,14 +122,14 @@
 								pricing.freeHoursBalance
 							)} available)</span
 						>
-						<span>-${cents(pricing.creditDiscountCents)}</span>
+						<span>-${formatDollars(pricing.creditDiscountCents)}</span>
 					</div>
 				{/if}
 
 				{#if pricing.remainingCents > 0 && coverFees}
 					<div class="flex justify-between text-sm opacity-60">
 						<span>Processing fee coverage</span>
-						<span>+${cents(feeCents)}</span>
+						<span>+${formatDollars(feeCents)}</span>
 					</div>
 				{/if}
 
@@ -150,7 +141,7 @@
 						{#if pricing.remainingCents <= 0}
 							$0.00 (covered by free hours)
 						{:else}
-							${cents(chargeTotal)}
+							${formatDollars(chargeTotal)}
 						{/if}
 					</span>
 				</div>
@@ -162,8 +153,8 @@
 					label=""
 					type="checkbox"
 					bind:value={coverFees}
-					checkboxLabel="Cover ${cents(
-						calcFeeCents(pricing.remainingCents)
+					checkboxLabel="Cover ${formatDollars(
+						calculateTotalWithFeeCoverage(pricing.remainingCents).feeCents
 					)} processing fee so the Collective receives 100%"
 				/>
 			{/if}

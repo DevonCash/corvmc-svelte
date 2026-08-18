@@ -15,6 +15,8 @@
 	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
 	import Form, { Field, SubmitButton, Select } from '$lib/components/shared/Form';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
 	const { fields: scheduleFields } = schedule;
@@ -47,12 +49,10 @@
 	<div class="grid gap-6 lg:grid-cols-2 mb-6">
 		<!-- Loan Details -->
 		<InfoCard title="Loan Details">
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Loan ID</dt>
-				<dd class="font-mono text-xs">{loan.id}</dd>
+			<DefinitionList>
+				<Fact label="Loan ID" mono>{loan.id}</Fact>
 
-				<dt class="opacity-60">Member</dt>
-				<dd>
+				<Fact label="Member">
 					<MemberLink
 						member={{
 							name: loan.userName,
@@ -62,10 +62,9 @@
 							userId: loan.userId
 						}}
 					/>
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Equipment</dt>
-				<dd>
+				<Fact label="Equipment">
 					{#if loan.equipmentName}
 						<a href={resolve(`/staff/equipment/${loan.equipmentId}`)} class="link"
 							>{loan.equipmentName}</a
@@ -76,54 +75,46 @@
 					{:else}
 						<span class="italic opacity-60">Not yet assigned</span>
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Quantity</dt>
-				<dd>{loan.quantity}</dd>
+				<Fact label="Quantity">{loan.quantity}</Fact>
 
-				<dt class="opacity-60">Requested pickup</dt>
-				<dd>{formatDate(loan.requestedPickupDate)}</dd>
+				<Fact label="Requested pickup">{formatDate(loan.requestedPickupDate)}</Fact>
 
 				{#if loan.scheduledPickupDate}
-					<dt class="opacity-60">Scheduled pickup</dt>
-					<dd>{formatDate(loan.scheduledPickupDate)}</dd>
+					<Fact label="Scheduled pickup">{formatDate(loan.scheduledPickupDate)}</Fact>
 				{/if}
 
 				{#if loan.dueDate}
-					<dt class="opacity-60">Due date</dt>
-					<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</dd>
+					<Fact label="Due date" class={loan.isOverdue ? 'text-error' : ''}
+						>{formatDate(loan.dueDate)}</Fact
+					>
 				{/if}
 
 				{#if loan.checkedOutAt}
-					<dt class="opacity-60">Checked out</dt>
-					<dd>{formatDate(loan.checkedOutAt)}</dd>
+					<Fact label="Checked out">{formatDate(loan.checkedOutAt)}</Fact>
 				{/if}
 
 				{#if loan.returnedAt}
-					<dt class="opacity-60">Returned</dt>
-					<dd>{formatDate(loan.returnedAt)}</dd>
+					<Fact label="Returned">{formatDate(loan.returnedAt)}</Fact>
 				{/if}
 
 				{#if loan.dailyRateCents != null}
-					<dt class="opacity-60">Daily rate</dt>
-					<dd>{formatCents(loan.dailyRateCents)}/day</dd>
+					<Fact label="Daily rate">{formatCents(loan.dailyRateCents)}/day</Fact>
 				{/if}
 
 				{#if loan.totalChargeCents != null}
-					<dt class="opacity-60">Total charge</dt>
-					<dd>{formatCents(loan.totalChargeCents)}</dd>
+					<Fact label="Total charge">{formatCents(loan.totalChargeCents)}</Fact>
 				{/if}
 
 				{#if loan.creditsCents != null && loan.creditsCents > 0}
-					<dt class="opacity-60">Paid via credits</dt>
-					<dd>{formatCents(loan.creditsCents)}</dd>
+					<Fact label="Paid via credits">{formatCents(loan.creditsCents)}</Fact>
 				{/if}
 
 				{#if loan.cashCents != null && loan.cashCents > 0}
-					<dt class="opacity-60">Paid via cash/card</dt>
-					<dd>{formatCents(loan.cashCents)}</dd>
+					<Fact label="Paid via cash/card">{formatCents(loan.cashCents)}</Fact>
 				{/if}
-			</dl>
+			</DefinitionList>
 
 			{#if loan.memberNotes}
 				<div class="mt-4">

@@ -46,13 +46,13 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 /**
  * Poll options for reading state back out of D1.
  *
- * Every call opens a fresh `getPlatformProxy()` over the same `.wrangler/state`
- * the preview server is holding, and Playwright's default intervals
- * (100/250/500/1000ms) mean a 15s poll can open a dozen of them. That
- * contention is what `platform-db.ts` retries around, and with ten read-backs
- * in this file it was enough to push the *next* suite's server into
- * `SQLITE_BUSY` on CI. Check quickly once, then back off hard — the writes
- * being waited on land in well under a second, so this costs no wall clock.
+ * Read-backs go through `readLocalDb`, which opens the D1 file directly rather
+ * than starting a second workerd over it — the earlier `getPlatformProxy()` per
+ * call, at Playwright's default intervals (100/250/500/1000ms, a dozen of them
+ * per 15s poll), was enough to push the *next* suite's server into
+ * `SQLITE_BUSY` on CI. Check quickly once, then back off hard anyway — the
+ * writes being waited on land in well under a second, so this costs no wall
+ * clock.
  */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 

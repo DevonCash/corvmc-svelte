@@ -1,6 +1,7 @@
 <script lang="ts">
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { initials } from '$lib/utils/format';
 	import { imageSrc } from '$lib/utils/images';
 
 	interface Props {
@@ -27,15 +28,6 @@
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 	const sleeve = $derived(imageSrc(avatarUrl, 'gallery'));
-
-	function initials(n: string): string {
-		return n
-			.split(' ')
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
 </script>
 
 <a {href} class="vinyl-card" style="--vinyl-label: {color}">

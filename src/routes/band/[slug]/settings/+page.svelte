@@ -14,6 +14,7 @@
 	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
 	import { page } from '$app/state';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	const band = $derived(layout.band);
@@ -70,12 +71,10 @@
 		onfailure={() => toast.error('Failed to delete band')}
 	>
 		<div class="space-y-4">
-			<div class="alert alert-error">
-				<p>
-					Are you sure you want to permanently delete <strong>{band.name}</strong>? All future
-					reservations will be cancelled and all members will be removed.
-				</p>
-			</div>
+			<Alert type="error">
+				Are you sure you want to permanently delete <strong>{band.name}</strong>? All future
+				reservations will be cancelled and all members will be removed.
+			</Alert>
 			<div class="flex justify-end pt-2">
 				<SubmitButton label="Delete Band" successLabel="Deleted" class="btn-error" />
 			</div>

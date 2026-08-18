@@ -14,6 +14,7 @@
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
 	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;
@@ -90,7 +91,7 @@
 	</div>
 
 	{#if soldOut}
-		<div class="alert alert-warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</div>
+		<Alert type="warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</Alert>
 	{:else if isFreeEvent}
 		<Form
 			remote={claimFreeTicket}

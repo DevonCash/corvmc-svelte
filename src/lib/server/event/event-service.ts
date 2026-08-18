@@ -35,7 +35,7 @@ import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -506,27 +506,63 @@ export async function unpublishWithNotice(
 	await unpublish(eventId);
 
 	if (row.source === 'community') {
-		// Take the poster down with the listing. Posters are served straight from
-		// R2 at a guessable key, and that URL consults nothing — not status, not
-		// source — so leaving the object in place would mean "unpublish" removed
-		// the row from the guide while the image stayed world-readable forever.
-		// That's tolerable when only staff and band admins can write to the
-		// bucket; it is not once any member can, because this path is the kill
-		// switch and an image is the riskiest thing on the page.
+		// Take the poster off its public URL with the listing. The object is served
+		// straight from R2 and that URL consults nothing — not status, not source —
+		// so leaving the key in place would mean "unpublish" removed the row from
+		// the guide while the image stayed readable to anyone holding the link.
+		// This path is the kill switch and an image is the riskiest thing on the
+		// page, so the link has to stop working.
+		//
+		// This used to delete the object outright, which achieved that and created
+		// a worse problem: a takedown is a moderation decision about whether
+		// something should be public, not a licence to destroy the member's
+		// artwork. Restoring a listing could never restore its poster, and an
+		// unpublish done in error was unrecoverable.
+		//
+		// So rotate the key instead. The old URL stops resolving — which is the
+		// property that matters, since anyone who saw the listing may have the link
+		// — while the bytes survive, and republishing brings the poster back with
+		// the listing.
+		//
+		// Note this is no longer about *guessability*: `mediaKey` gives every
+		// upload its own random token, so the key was never derivable from the
+		// event id to begin with. What rotation buys is invalidating links already
+		// handed out, which a random-on-upload key does nothing about.
+		let nextPosterKey: string | null = null;
 		if (row.posterKey) {
 			try {
-				await deleteObject(row.posterKey);
+				// Not `mediaKey`: that builds a key from a content type, and here we
+				// only have the existing key. Carrying its extension across is both
+				// simpler and more faithful than re-deriving one.
+				const ext = row.posterKey.split('.').pop() ?? 'jpg';
+				const withheldKey = `events/posters/withheld/${eventId}-${crypto.randomUUID()}.${ext}`;
+				// copyObject returns null when the source is already gone, in which
+				// case there is nothing to preserve and nothing to delete.
+				const moved = await copyObject(row.posterKey, withheldKey);
+				if (moved) {
+					await deleteObject(row.posterKey);
+					nextPosterKey = moved;
+				}
 			} catch (err) {
-				captureException(err, { event: 'community_event.poster_delete', eventId });
+				captureException(err, { event: 'community_event.poster_withhold', eventId });
 			}
 		}
 
 		// Keep the staff note on the row, not just in the email — the member lands
 		// on the manage page to fix the listing, and that is where the reason
 		// needs to be.
+		//
+		// Only written when one was given. Unconditionally setting it meant a
+		// takedown with no note erased whatever reason was already there, so a
+		// member could lose the explanation of an earlier decision to an unrelated
+		// later one.
 		await db
 			.update(event)
-			.set({ posterKey: null, reviewNotes: opts.notes || null, updatedAt: new Date() })
+			.set({
+				posterKey: nextPosterKey,
+				...(opts.notes ? { reviewNotes: opts.notes } : {}),
+				updatedAt: new Date()
+			})
 			.where(eq(event.id, eventId));
 
 		const [submitter] = await db

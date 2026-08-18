@@ -24,7 +24,7 @@
  * Idempotent: deletes and recreates its own rows on every run.
  */
 import { eq, inArray } from 'drizzle-orm';
-import { withPlatformDb, withPlatformEnv } from './platform-db';
+import { readLocalDb, withPlatformDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { contentFlag } from '../../src/lib/server/db/schema/flag';
 import {
@@ -211,7 +211,7 @@ export async function seedSuggestions(): Promise<void> {
  * Clear the reporters' KV rate-limit counters.
  *
  * `flagSuggestion` allows 5 reports per member per hour, and KV survives
- * between runs in `.wrangler/state`. Each pass through this suite files two
+ * between runs in the suite's state directory. Each pass through this suite files two
  * reports, so by the third run the reporter is throttled and the report simply
  * doesn't land — which surfaces as a suggestion mysteriously staying visible,
  * several assertions away from the actual cause. Resetting here keeps the
@@ -233,7 +233,7 @@ export async function readSuggestionState(suggestionId: string): Promise<{
 	mergedIntoId: string | null;
 	voteCount: number;
 }> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ visibility: suggestion.visibility, mergedIntoId: suggestion.mergedIntoId })
 			.from(suggestion)
@@ -253,7 +253,7 @@ export async function readSuggestionState(suggestionId: string): Promise<{
 
 /** Whether this member is currently posting under review. */
 export async function readSuggestionStanding(userId: string): Promise<boolean> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ requiresReview: suggestionStanding.requiresReview })
 			.from(suggestionStanding)
@@ -269,7 +269,7 @@ export async function readSuggestionText(suggestionId: string): Promise<{
 	body: string | null;
 	edited: boolean;
 }> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ title: suggestion.title, body: suggestion.body, editedAt: suggestion.editedAt })
 			.from(suggestion)

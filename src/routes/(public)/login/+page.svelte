@@ -10,6 +10,7 @@
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the
@@ -137,12 +138,12 @@
 			>
 				<div class="card-body gap-4">
 					{#if inviteMeta}
-						<div class="alert alert-info text-sm">
+						<Alert type="info" class="text-sm">
 							<span
 								><strong>{inviteMeta.inviterName}</strong> invited you to join
 								<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
 							>
-						</div>
+						</Alert>
 					{/if}
 
 					<h2 class="card-title justify-center text-lg">
@@ -150,9 +151,9 @@
 					</h2>
 
 					{#if error}
-						<div class="alert alert-error text-sm">
+						<Alert type="error" class="text-sm">
 							{error}
-						</div>
+						</Alert>
 					{/if}
 
 					<Form action={handleSubmit} class="flex flex-col gap-3">

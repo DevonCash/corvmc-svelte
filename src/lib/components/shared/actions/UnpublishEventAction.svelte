@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import FormField from '../Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { unpublishEvent } from '$lib/remote/events.remote';
 
@@ -30,5 +31,11 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">Revert this event to draft? It will no longer be visible to the public.</p>
+		<FormField
+			name="notes"
+			type="textarea"
+			label="Reason"
+			description="Sent to whoever posted this and kept on the listing. Leave blank for CMC events, which notify nobody."
+		/>
 	{/snippet}
 </Action>

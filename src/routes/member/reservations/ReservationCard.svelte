@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
@@ -19,10 +20,6 @@
 	// Members may only confirm (without paying) within the window; before then we
 	// show when it opens and offer paying to lock the slot in early.
 	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
-
-	function cents(n: number): string {
-		return (n / 100).toFixed(2);
-	}
 </script>
 
 <div
@@ -92,7 +89,7 @@
 				{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
 					{#if (reservation.cashDueCents ?? 0) > 0}
 						<span class="text-xs font-medium"
-							>${cents(reservation.cashDueCents ?? 0)} due at door</span
+							>${formatDollars(reservation.cashDueCents ?? 0)} due at door</span
 						>
 					{/if}
 					<a
