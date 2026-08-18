@@ -36,6 +36,43 @@ see the decision and the objection together, and a second staffer can be the one
 Would also want an outcome that restores standing automatically when an appeal succeeds, since
 the manual "Restore posting trust" button is easy to forget after the conversation has moved on.
 
+**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt. It rests on one rule
+that is a change to the system rather than an addition: **every moderation action is an upheld
+report.** Reports come from members or from staff — a staffer who notices something files a report
+and upholds it in the same action, which is not a fiction but the written record of why they acted.
+Dismissing never costs anyone anything; upholding is the only thing that moderates. Two things fall
+out: every moderation action is appealable through one mechanism, and every moderation action has a
+stated reason.
+
+That closes a real hole. `setStanding` takes `flagId` as optional today and `setMemberStanding` is a
+staff form that restricts a member with no report behind it — the category least reviewed, since no
+reporter and no triage was involved and one staffer decided alone. The spec makes `flagId` required
+and routes the staff form through a filed-and-upheld report, with a `content_flag.origin` of
+`report` or `staff_action` so the queue does not treat a staff action as pending work.
+
+A `moderation_appeal` row hangs off the upheld flag — the inbox was weighed and rejected because a
+thread has no outcome state, so the restore would still be a button somebody has to remember. Two
+independent outcomes (the content and the standing), so "it broke the rules but a first offense
+isn't probation" is expressible, and granting the standing half _is_ the restore. One appeal per
+decision, reopenable by staff. Nothing pauses while pending. The second-staffer rule is by identity,
+not role, with an asymmetry that keeps a one-staffer collective from deadlocking: you may overturn
+yourself, you may not ratify yourself — which matters most in the staff-filed case, where one person
+would otherwise file, uphold, and rule on the objection.
+
+Standing is no longer part of this: the three tables merged into a scoped `member_standing` in its
+own change (`docs/specs/member-standing-spec.md`), so appeals just calls
+`restoreStanding({ userId, scope, staffId })`.
+
+Still open, and not an appeals problem: **suggestions have no return state.** Community listings do
+— `rejected` and `draft` are both editable and republishable, so a turned-down listing is a
+conversation with a turn in it. A hidden suggestion is terminal, since editing is blocked for
+anything but `visible`/`pending_review`, so `hidden` does double duty as "this is bad, gone" and
+"not like this." An appeal can now restore it, but the cheaper everyday fix is still a returnable
+state where staff hand it back with a note and the author edits. Not yet specced.
+
+Account deactivation is deliberately out until there is a real ban to appeal against — see the
+CHORES entry on there being no platform ban, only deactivation.
+
 ### Merch Consignment
 
 Let bands list merch for sale at the venue. Track inventory, sales splits, and payouts. Ties into the existing band and payments systems.
