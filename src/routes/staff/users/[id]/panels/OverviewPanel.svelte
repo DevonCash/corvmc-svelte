@@ -6,7 +6,7 @@
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
+	import { formatVolunteerHours, standingScopeConfig } from '$lib/config';
 
 	let {
 		overview,
@@ -40,16 +40,14 @@
 				tone: 'error'
 			});
 		}
-		if (overview.standing.requiresReview) {
+		// One line per restricted scope, in a fixed order so the list doesn't
+		// reshuffle between members. Messaging is deliberately absent: its card on
+		// the Comms tab always renders, so an alert pointing at it would be noise.
+		for (const scope of ['community_event', 'suggestion'] as const) {
+			const standing = overview.standings[scope];
+			if (standing.status === 'none') continue;
 			items.push({
-				text: `Community listings are held for review${overview.standing.reason ? ` — ${overview.standing.reason}` : ''}.`,
-				tab: 'comms',
-				tone: 'warning'
-			});
-		}
-		if (overview.suggestionStanding.requiresReview) {
-			items.push({
-				text: `Suggestions are held for review${overview.suggestionStanding.reason ? ` — ${overview.suggestionStanding.reason}` : ''}.`,
+				text: `${standingScopeConfig[scope].label} are held for review${standing.reason ? ` — ${standing.reason}` : ''}.`,
 				tab: 'comms',
 				tone: 'warning'
 			});

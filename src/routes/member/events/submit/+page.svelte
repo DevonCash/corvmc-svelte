@@ -99,7 +99,7 @@
 			<input
 				{...fields.posterFile.as('file')}
 				accept="image/jpeg,image/png,image/webp"
-				class="file-input file-input-bordered w-full"
+				class="file-input w-full"
 			/>
 		</FormField>
 

@@ -42,7 +42,7 @@ import {
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
-import { event, eventBand, communityEventStanding } from '../src/lib/server/db/schema/event';
+import { event, eventBand } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
@@ -71,13 +71,9 @@ import {
 	inboxParticipant
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
-import { userBlock, messagingStanding } from '../src/lib/server/db/schema/moderation';
-import {
-	suggestion,
-	suggestionVote,
-	suggestionStanding,
-	suggestionEdit
-} from '../src/lib/server/db/schema/suggestion';
+import { userBlock } from '../src/lib/server/db/schema/moderation';
+import { memberStanding } from '../src/lib/server/db/schema/standing';
+import { suggestion, suggestionVote, suggestionEdit } from '../src/lib/server/db/schema/suggestion';
 import {
 	volunteerRole,
 	volunteerProfile,
@@ -465,10 +461,8 @@ async function deleteAll() {
 		'volunteer_profile',
 		'volunteer_role',
 		// Before content_flag and user: they reference both.
-		'community_event_standing',
-		'messaging_standing',
+		'member_standing',
 		'user_block',
-		'suggestion_standing',
 		'suggestion_edit',
 		'suggestion_vote',
 		'suggestion',
@@ -1563,9 +1557,10 @@ async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUser) {
 		.returning();
 	rows.push(rejected);
 
-	await db.insert(communityEventStanding).values({
+	await db.insert(memberStanding).values({
 		userId: onReview.id,
-		requiresReview: true,
+		scope: 'community_event',
+		status: 'restricted',
 		reason: 'A report about an earlier listing was upheld.',
 		updatedByUserId: staffUser.id,
 		updatedAt: new Date()
@@ -3052,33 +3047,29 @@ async function seedDirectMessages(users: SeedUser[], adminUser: SeedUser) {
 		1
 	);
 
+	// Probation from an upheld report: Frank can reply where he already is, but
+	// cannot start anything new. A moderation record, so it is a standing row.
 	const standings = await batchInsert(
-		messagingStanding,
+		memberStanding,
 		[
-			// Probation from an upheld report: Frank can reply where he already is,
-			// but cannot start anything new.
 			{
 				userId: frank.id,
+				scope: 'messaging' as const,
 				status: 'restricted' as const,
-				source: 'report' as const,
 				reason: 'Continued messaging after being asked to stop.',
 				triggeringFlagId: reportFlag,
 				updatedByUserId: adminUser.id,
 				updatedAt: new Date(now.getTime() - day)
-			},
-			// Switched off by the member themselves — they can switch it back on.
-			{
-				userId: dave.id,
-				status: 'disabled' as const,
-				source: 'member' as const,
-				reason: null,
-				triggeringFlagId: null,
-				updatedByUserId: null,
-				updatedAt: new Date(now.getTime() - 10 * day)
 			}
 		],
-		2
+		1
 	);
+
+	// Dave switched his own messaging off. Deliberately NOT a standing row —
+	// nothing was imposed on him, so there is no moderation record to write, and
+	// staff have nothing to restore. It is a preference on his user row, and it
+	// is the reason `member_standing` needs no `source` column.
+	await db.update(user).set({ acceptsDirectMessages: false }).where(eq(user.id, dave.id));
 
 	return { threads: threads.length, blocks: blocks.length, standings: standings.length };
 }
@@ -3603,9 +3594,10 @@ async function seedSuggestions(users: any[], adminUser: any) {
 		})
 		.returning();
 
-	await db.insert(suggestionStanding).values({
+	await db.insert(memberStanding).values({
 		userId: probationUser.id,
-		requiresReview: true,
+		scope: 'suggestion',
+		status: 'restricted',
 		reason: 'Upheld — please keep it civil.',
 		triggeringFlagId: upheldFlag.id,
 		updatedByUserId: adminUser.id,
@@ -3747,7 +3739,7 @@ async function main() {
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
-		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings`
+		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
 	console.log(`  ${flags.length} content flags`);
 	console.log(

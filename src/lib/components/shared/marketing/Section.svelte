@@ -30,8 +30,7 @@
 	 * A band of the public site: a full-bleed tinted `<section>` with a centred
 	 * measure inside it.
 	 *
-	 * The public pages already agreed on this shape — `<section class="section-tint-*
-	 * py-16 px-6">` wrapping `<div class="max-w-5xl mx-auto">`, fourteen times —
+	 * The public pages already agreed on this shape — `<section class="section-tint-* * py-16 px-6">` wrapping `<div class="max-w-5xl mx-auto">`, fourteen times —
 	 * they just never named it, so the tint, the padding and the measure could
 	 * each drift on their own.
 	 *

@@ -3,6 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import {
 	suggestionCategories,
@@ -16,7 +17,6 @@ import {
 import {
 	listSuggestions,
 	getSuggestion,
-	getSuggestionStanding,
 	listMergeCandidates,
 	createSuggestion as createSuggestionSvc,
 	toggleVote,
@@ -24,7 +24,6 @@ import {
 	reviewSuggestion as reviewSuggestionSvc,
 	setVisibility,
 	mergeSuggestions,
-	restoreSuggestionTrust as restoreSuggestionTrustSvc,
 	getEditableState,
 	editSuggestion as editSuggestionSvc,
 	cancelEditRequest,
@@ -109,7 +108,7 @@ export const getMySuggestionStanding = query(async () => {
 	const me = requireUser();
 	// viewerUserId rides along so the board can tell which cards are the member's
 	// own (you don't flag your own post) without a second round trip.
-	return { ...(await getSuggestionStanding(me.id)), viewerUserId: me.id };
+	return { ...(await getStanding(me.id, 'suggestion')), viewerUserId: me.id };
 });
 
 // ---------------------------------------------------------------------------
@@ -144,11 +143,6 @@ export const getPendingSuggestionEdits = query(async () => {
 export const getSuggestionPendingEdit = query(z.string(), async (suggestionId) => {
 	await requireStaff();
 	return getPendingEditFor(suggestionId);
-});
-
-export const getSuggestionStandingFor = query(z.string(), async (userId) => {
-	await requireStaff();
-	return getSuggestionStanding(userId);
 });
 
 // ---------------------------------------------------------------------------
@@ -373,16 +367,6 @@ export const reviewSuggestionEdit = form(
 		void getStaffSuggestionDetail(data.suggestionId).refresh();
 		void getSuggestionPendingEdit(data.suggestionId).refresh();
 		void getPendingSuggestionEdits().refresh();
-		return { success: true };
-	}
-);
-
-export const restoreSuggestionTrust = form(
-	z.object({ userId: z.string().min(1) }),
-	async (data) => {
-		const staff = await requireStaff();
-		await restoreSuggestionTrustSvc({ userId: data.userId, staffId: staff.id });
-		void getSuggestionStandingFor(data.userId).refresh();
 		return { success: true };
 	}
 );

@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { getMemberStanding, restoreListingTrust } from '$lib/remote/community-events.remote';
-	import { getSuggestionStandingFor, restoreSuggestionTrust } from '$lib/remote/suggestions.remote';
 	import {
-		getMemberMessagingStanding,
-		setMemberMessaging
-	} from '$lib/remote/direct-messages.remote';
+		getMemberStandings,
+		restoreMemberStanding,
+		setMemberStanding
+	} from '$lib/remote/standing.remote';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
 	import { getUserThreads } from '$lib/remote/inbox.remote';
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
@@ -24,99 +23,92 @@
 
 	let { id, email }: { id: string; email: string } = $props();
 
-	const restoreFields = restoreListingTrust.fields;
-	const restoreSuggestionFields = restoreSuggestionTrust.fields;
-	const messagingFields = setMemberMessaging.fields;
+	const restoreFields = restoreMemberStanding.fields;
+	const messagingFields = setMemberStanding.fields;
+
+	// Copy per scope, because "held for review" means something different on a
+	// public calendar than it does on the suggestion board, and a generic
+	// sentence would be true of both and useful for neither.
+	const restrictedCopy: Record<
+		string,
+		{ title: string; body: string; action: string; confirm: string }
+	> = {
+		community_event: {
+			title: 'Community listings',
+			body: "This member's listings are reviewed by staff before they go on the public calendar, after a report was upheld against one of them.",
+			action: 'Restore direct publishing',
+			confirm: 'Let this member publish listings straight to the calendar again?'
+		},
+		suggestion: {
+			title: 'Suggestions',
+			body: "This member's suggestions are reviewed by staff before they go on the board, after a report was upheld against one of them.",
+			action: 'Restore posting trust',
+			confirm: 'Let this member post suggestions straight to the board again?'
+		}
+	};
 </script>
 
 <!--
-	Standing renders only when it is bad. A "standing: fine" card on every member
-	would be noise, and the point of this one is that it appears when something
-	happened.
--->
-{#await getMemberStanding(id) then standing}
-	{#if standing.requiresReview}
-		<InfoCard title="Community listings">
-			<p class="text-sm">
-				This member's listings are reviewed by staff before they go on the public calendar, after a
-				report was upheld against one of them.
-			</p>
-			{#if standing.reason}
-				<p class="mt-1 text-muted">Staff note: "{standing.reason}"</p>
-			{/if}
-			<div class="mt-3">
-				<Action
-					action={restoreListingTrust}
-					label="Restore direct publishing"
-					successToast="Trust restored"
-					variant="default"
-					size="sm"
-					onsuccess={() => {
-						void getMemberStanding(id).refresh();
-						void getUserOverview(id).refresh();
-					}}
-				>
-					{#snippet form()}
-						<input {...restoreFields.userId.as('hidden', id)} />
-						<p class="py-2">Let this member publish listings straight to the calendar again?</p>
-					{/snippet}
-				</Action>
-			</div>
-		</InfoCard>
-	{/if}
-{/await}
+	The two posting standings render only when they are bad. A "standing: fine"
+	card on every member would be noise, and the point of these is that they
+	appear when something happened. They stay separate cards, not one merged
+	"standing" card, because they are separate decisions: an upheld report about
+	an event must not quietly cost someone their suggestion-posting rights, or
+	the reverse.
 
-<!--
-	Suggestion standing is tracked separately from listing standing: an upheld
-	report about an event shouldn't quietly cost someone their suggestion-posting
-	rights, or the reverse. Same render-only-when-revoked rule as above.
+	One query behind all three cards, where there used to be three.
 -->
-{#await getSuggestionStandingFor(id) then suggestionStanding}
-	{#if suggestionStanding.requiresReview}
-		<InfoCard title="Suggestions">
-			<p class="text-sm">
-				This member's suggestions are reviewed by staff before they go on the board, after a report
-				was upheld against one of them.
-			</p>
-			{#if suggestionStanding.reason}
-				<p class="mt-1 text-muted">Staff note: "{suggestionStanding.reason}"</p>
-			{/if}
-			{#if suggestionStanding.triggeringFlagId}
-				<p class="mt-1 text-sm">
-					<a class="link" href={resolve(`/staff/flags/${suggestionStanding.triggeringFlagId}`)}>
-						See the report
-					</a>
-				</p>
-			{/if}
-			<div class="mt-3">
-				<Action
-					action={restoreSuggestionTrust}
-					label="Restore posting trust"
-					successToast="Trust restored"
-					variant="default"
-					size="sm"
-					onsuccess={() => {
-						void getSuggestionStandingFor(id).refresh();
-					}}
-				>
-					{#snippet form()}
-						<input {...restoreSuggestionFields.userId.as('hidden', id)} />
-						<p class="py-2">Let this member post suggestions straight to the board again?</p>
-					{/snippet}
-				</Action>
-			</div>
-		</InfoCard>
-	{/if}
-{/await}
+{#await getMemberStandings(id) then standings}
+	{#each ['community_event', 'suggestion'] as const as scope (scope)}
+		{@const standing = standings[scope]}
+		{#if standing.status !== 'none'}
+			<InfoCard title={restrictedCopy[scope].title}>
+				<p class="text-sm">{restrictedCopy[scope].body}</p>
+				{#if standing.reason}
+					<p class="mt-1 text-muted">Staff note: "{standing.reason}"</p>
+				{/if}
+				{#if standing.triggeringFlagId}
+					<p class="mt-1 text-sm">
+						<a class="link" href={resolve(`/staff/flags/${standing.triggeringFlagId}`)}>
+							See the report
+						</a>
+					</p>
+				{/if}
+				<div class="mt-3">
+					<Action
+						action={restoreMemberStanding}
+						label={restrictedCopy[scope].action}
+						successToast="Trust restored"
+						variant="default"
+						size="sm"
+						onsuccess={() => {
+							void getMemberStandings(id).refresh();
+							void getUserOverview(id).refresh();
+						}}
+					>
+						{#snippet form()}
+							<input {...restoreFields.userId.as('hidden', id)} />
+							<input {...restoreFields.scope.as('hidden', scope)} />
+							<p class="py-2">{restrictedCopy[scope].confirm}</p>
+						{/snippet}
+					</Action>
+				</div>
+			</InfoCard>
+		{/if}
+	{/each}
 
-<!--
-	Unlike the two standings above, this card always renders. Those two only
-	appear when something has gone wrong; this one is also the control staff use
-	to switch messaging off for an account, which they need to reach whether or
-	not there is anything wrong yet — it is how we handle the occasional under-18
-	member, since the site has no age of its own.
--->
-{#await getMemberMessagingStanding(id) then messaging}
+	<!--
+		Unlike the two above, this card always renders. Those two only appear when
+		something has gone wrong; this one is also the control staff use to switch
+		messaging off for an account, which they need to reach whether or not there
+		is anything wrong yet — it is how we handle the occasional under-18 member,
+		since the site has no age of its own.
+
+		What it does NOT show is whether the member has switched messaging off
+		themselves. That is `user.acceptsDirectMessages`, their own preference, and
+		it is not staff's to see here or to override.
+	-->
+	{@const messaging = standings.messaging}
 	<InfoCard title="Direct messages">
 		<p class="text-sm">
 			{#if messaging.status === 'disabled'}
@@ -124,30 +116,28 @@
 			{:else if messaging.status === 'restricted'}
 				This member can reply to conversations they are already in, but cannot start new ones.
 			{:else}
-				This member can send and receive direct messages.
+				Staff have placed no restriction on this member's messaging.
 			{/if}
 		</p>
 		{#if messaging.reason}
 			<p class="mt-1 text-muted">Note: "{messaging.reason}"</p>
 		{/if}
-		{#if messaging.status !== 'none' && messaging.source === 'member'}
-			<p class="mt-1 text-muted">They switched this off themselves.</p>
-		{/if}
 
 		<div class="mt-3 flex flex-wrap gap-2">
 			{#if messaging.status !== 'disabled'}
 				<Action
-					action={setMemberMessaging}
+					action={setMemberStanding}
 					label="Switch messaging off"
 					successToast="Messaging switched off"
 					variant="default"
 					size="sm"
 					onsuccess={() => {
-						void getMemberMessagingStanding(id).refresh();
+						void getMemberStandings(id).refresh();
 					}}
 				>
 					{#snippet form()}
 						<input {...messagingFields.userId.as('hidden', id)} />
+						<input {...messagingFields.scope.as('hidden', 'messaging')} />
 						<input {...messagingFields.status.as('hidden', 'disabled')} />
 						<p class="py-2">
 							They will not be able to send or receive direct messages, and their existing
@@ -167,19 +157,19 @@
 			{/if}
 			{#if messaging.status !== 'none'}
 				<Action
-					action={setMemberMessaging}
+					action={restoreMemberStanding}
 					label="Restore messaging"
 					successToast="Messaging restored"
 					variant="default"
 					size="sm"
 					outline
 					onsuccess={() => {
-						void getMemberMessagingStanding(id).refresh();
+						void getMemberStandings(id).refresh();
 					}}
 				>
 					{#snippet form()}
-						<input {...messagingFields.userId.as('hidden', id)} />
-						<input {...messagingFields.status.as('hidden', 'none')} />
+						<input {...restoreFields.userId.as('hidden', id)} />
+						<input {...restoreFields.scope.as('hidden', 'messaging')} />
 						<p class="py-2">Let this member send and receive direct messages again?</p>
 					{/snippet}
 				</Action>

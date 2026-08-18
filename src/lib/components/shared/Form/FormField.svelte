@@ -233,7 +233,7 @@
 			{/each}
 		</select>
 	{:else if type === 'select'}
-		<Select class="select-bordered w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
+		<Select class="w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}

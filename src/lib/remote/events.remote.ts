@@ -51,7 +51,7 @@ import {
 	countRsvps
 } from '$lib/server/event/rsvp-service';
 import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
-import { getCommunityStanding } from '$lib/server/event/community-event-service';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
@@ -532,7 +532,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		// It's what tells a reviewer whether this member is here because of a
 		// past problem or because they're new.
 		submitterStanding:
-			evt.source === 'community' ? await getCommunityStanding(evt.createdByUserId) : null,
+			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
 		submitterId: evt.createdByUserId,
 		linkedReservation,
 		ticketStats,

@@ -97,7 +97,7 @@
 				{accept}
 				onchange={handleFileChange}
 				{disabled}
-				class="file-input file-input-bordered w-full"
+				class="file-input w-full"
 			/>
 		{/if}
 

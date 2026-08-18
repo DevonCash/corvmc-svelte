@@ -14,8 +14,8 @@ import { and, count, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from 'drizz
 
 import { getAllBalances } from '$lib/server/finance/credit-service';
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
-import { getCommunityStanding } from '$lib/server/event/community-event-service';
-import { getSuggestionStanding } from '$lib/server/suggestion/suggestion-service';
+import { getStandings, type Standing } from '$lib/server/moderation/standing-service';
+import type { StandingScope } from '$lib/config';
 import { getUserHourSummary } from '$lib/server/volunteer/hour-log-service';
 import { listForUser as listCertificationsForUser } from '$lib/server/volunteer/member-certification-service';
 import { getVolunteerProfile, stageOf } from '$lib/server/volunteer/volunteer-profile-service';
@@ -81,9 +81,12 @@ export interface UserOverview {
 		creditsResetAt: Date | null;
 		hoursPerReset: number | null;
 	};
-	standing: { requiresReview: boolean; reason: string | null };
-	/** Suggestion-board posting trust, tracked separately from listing trust. */
-	suggestionStanding: { requiresReview: boolean; reason: string | null };
+	/**
+	 * Every scope at once. Kept as a record rather than a field per domain so
+	 * adding a scope is a config change, not another pair of columns here — and
+	 * so the caller loops rather than copy-pasting a block.
+	 */
+	standings: Record<StandingScope, Standing>;
 	volunteer: { stage: OnboardingStage };
 	marketing: { suppressed: boolean; suppressionReason: string | null };
 	directory: { visibility: string; profileComplete: boolean };
@@ -172,8 +175,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		paymentsAgg,
 		credits,
 		dbSubscription,
-		standing,
-		suggestions,
+		standings,
 		hourSummary,
 		certifications,
 		volunteerProfile,
@@ -308,8 +310,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			.where(eq(paymentCache.userId, userId)),
 		getAllBalances(userId),
 		getMemberSubscription(userId),
-		getCommunityStanding(userId),
-		getSuggestionStanding(userId),
+		getStandings(userId),
 		getUserHourSummary(userId),
 		listCertificationsForUser(userId),
 		getVolunteerProfile(userId),
@@ -366,11 +367,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			creditsResetAt: subscription?.currentPeriodEnd ?? null,
 			hoursPerReset: dbSubscription?.hoursPerReset ?? null
 		},
-		standing: { requiresReview: standing.requiresReview, reason: standing.reason },
-		suggestionStanding: {
-			requiresReview: suggestions.requiresReview,
-			reason: suggestions.reason
-		},
+		standings,
 		volunteer: { stage: stageOf(volunteerProfile) },
 		marketing: {
 			suppressed: subscriber?.suppressedAt != null,

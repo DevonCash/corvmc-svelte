@@ -690,7 +690,7 @@ cancels any search still in flight.
 Name the page's search state `searchText`, not `search` — the `search` snippet
 shadows a same-named script binding.
 
-**Do not write `input-bordered`, `select-bordered` or `textarea-bordered`.** They are daisyUI 4
+**Do not write `input-bordered`, `select-bordered`, `textarea-bordered` or `file-input-bordered`.** They are daisyUI 4
 spellings that emit no CSS in daisyUI 5, where the border is the default.
 
 ### Column slots

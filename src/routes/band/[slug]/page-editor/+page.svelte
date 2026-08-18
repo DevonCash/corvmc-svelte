@@ -610,7 +610,7 @@
 							<span class="label-text text-xs font-medium">Gallery Images</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								multiple
 								onchange={async (e) => {
@@ -640,7 +640,7 @@
 							<span class="label-text text-xs font-medium">Hero Image</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -669,7 +669,7 @@
 							<span class="label-text text-xs font-medium">Stage Plot</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -698,7 +698,7 @@
 							<span class="label-text text-xs font-medium">Tech Rider (PDF/Image)</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*,.pdf"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];

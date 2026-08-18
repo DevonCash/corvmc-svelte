@@ -583,7 +583,7 @@
 					<span class="opacity-60">{data.creator.email}</span>
 				{/if}
 			</p>
-			{#if data.submitterStanding?.requiresReview}
+			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
 				<Alert type="warning" class="mt-2">
 					This member's listings are checked before they publish, after a report was upheld against
 					one of them.
@@ -740,7 +740,7 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handlePosterUpload}
-					class="file-input file-input-bordered file-input-sm"
+					class="file-input file-input-sm"
 				/>
 			</div>
 		{/if}

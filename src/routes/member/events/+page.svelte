@@ -90,7 +90,7 @@
 	<section>
 		<SectionLabel label="Your listings" count={mine.listings.length + mine.rejected.length} />
 
-		{#if mine.standing.requiresReview}
+		{#if mine.standing.status !== 'none'}
 			<Alert type="info" class="mb-4">
 				Staff check your listings before they go on the public calendar.
 			</Alert>

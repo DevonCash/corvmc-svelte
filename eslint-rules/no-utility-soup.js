@@ -27,7 +27,12 @@ const COMPONENTISED = {
 const RAW_OK_FOR = { btn: ['label', 'summary', 'span'], card: ['a', 'li'] };
 
 /** daisyUI 4 spellings that emit no CSS in daisyUI 5. */
-const DEAD = new Set(['input-bordered', 'select-bordered', 'textarea-bordered']);
+const DEAD = new Set([
+	'input-bordered',
+	'select-bordered',
+	'textarea-bordered',
+	'file-input-bordered'
+]);
 
 const OPACITY = new Set(['opacity-50', 'opacity-60', 'opacity-70']);
 

@@ -152,7 +152,7 @@ child component. svelte-check's unused-selector warning is what caught that.
 
 ### Phase 4 notes
 
-**`input-bordered`, `select-bordered` and `textarea-bordered` emit no CSS at all.** They are daisyUI
+**`input-bordered`, `select-bordered`, `textarea-bordered` and `file-input-bordered` emit no CSS at all.** They are daisyUI
 4 spellings; daisyUI 5 makes the border the default and dropped the classes. Verified against the
 built stylesheet — zero occurrences of any of the three — so deleting all 185 of them changed
 nothing visually. Worth knowing before adding another.

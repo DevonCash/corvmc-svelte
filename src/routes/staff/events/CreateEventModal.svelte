@@ -201,7 +201,7 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handleFileSelect}
-					class="file-input file-input-bordered w-full"
+					class="file-input w-full"
 				/>
 				{#if posterFile}
 					<p class="text-muted mt-1">
