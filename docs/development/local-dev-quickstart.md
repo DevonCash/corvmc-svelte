@@ -106,13 +106,16 @@ pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at RE
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**`) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`) |
 | `pnpm test:components` | One-shot client + storybook story tests                                                                                                                               |
-| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173, seeds local D1 via `e2e/global-setup.ts`, runs `e2e/**/*.e2e.ts`                                                   |
+| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173, migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`                                           |
 | `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                       |
 
 Notes: every test must make at least one assertion (`expect.requireAssertions` is on
 globally in `vite.config.ts`). The e2e web server injects dummy Stripe/auth env so it runs
-without real keys (see `playwright.config.ts`). Run the minimum tests you need while
-iterating; save `pnpm test` for pre-commit.
+without real keys (see `playwright.config.ts`). It keeps its database in
+`.wrangler/e2e-state`, not the `.wrangler/state` your dev server uses — the suite never
+touches your dev data, and `pnpm dev` can keep running while it does. Delete that directory
+to force a rebuild; `e2e/prepare.ts` rebuilds it by itself whenever the migrations change.
+Run the minimum tests you need while iterating; save `pnpm test` for pre-commit.
 
 Lint/format: `pnpm lint` (check), `pnpm format` (write), `pnpm lint:changed` (only files
 changed vs `origin/main` — what PR CI runs).
