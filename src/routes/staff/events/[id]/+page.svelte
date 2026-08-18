@@ -77,6 +77,12 @@
 	let rebookConfirmed = $state(false);
 	let overrideConflicts = $state(false);
 
+	// Holding the space for an event that never had a hold. Disjoint from rebook:
+	// an event with a reservation gets the rebook alert instead, and one without
+	// had no way to acquire it at all before this.
+	let reserveSpace = $state(false);
+	const canReserveSpace = $derived(!data.linkedReservation);
+
 	let hasConflicts = $state(false);
 
 	// Ticket price in cents for the hidden field. Independent of the ticketing
@@ -121,6 +127,8 @@
 		rebookReason = '';
 		rebookConfirmed = false;
 		overrideConflicts = false;
+		reserveSpace = false;
+		hasConflicts = false;
 		editing = true;
 	}
 
@@ -128,6 +136,28 @@
 		editing = false;
 		rebookNeeded = false;
 		rebookConfirmed = false;
+		reserveSpace = false;
+		// Outlives the form otherwise: ConflictWarnings only writes it while
+		// mounted, so a conflict seen before Cancel would arm the next override.
+		hasConflicts = false;
+		overrideConflicts = false;
+	}
+
+	/**
+	 * Show the hold as the event's own window when the toggle goes on. The server
+	 * falls back to exactly this, so the fields are an optional setup/teardown
+	 * override — filling them just makes what will be booked visible.
+	 */
+	function toggleReserveSpace() {
+		if (reserveSpace) {
+			editReservationStartTime = editStartTime;
+			editReservationEndTime = editEndTime;
+		} else {
+			editReservationStartTime = '';
+			editReservationEndTime = '';
+			hasConflicts = false;
+			overrideConflicts = false;
+		}
 	}
 
 	// Check if times changed enough to need a rebook
@@ -164,6 +194,9 @@
 		editing = false;
 		rebookNeeded = false;
 		rebookConfirmed = false;
+		reserveSpace = false;
+		hasConflicts = false;
+		overrideConflicts = false;
 		void getStaffEventDetail(id).refresh();
 	}
 
@@ -320,7 +353,7 @@
 						<!-- Always submitted: the price is the attendee's price whoever sells
 						     the ticket, so it has to survive the ticketing toggle being off. -->
 						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
-						{#if rebookNeeded && rebookConfirmed}
+						{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
 							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
 						{#if overrideConflicts}
@@ -550,6 +583,72 @@
 								</div>
 							{/if}
 
+							<!--
+								Hold the space for an event that never had a hold. The rebook alert
+								above covers the other case, so the two never render together.
+							-->
+							{#if canReserveSpace}
+								<div>
+									<label class="label cursor-pointer justify-start gap-3">
+										<input
+											type="checkbox"
+											bind:checked={reserveSpace}
+											onchange={toggleReserveSpace}
+											class="checkbox checkbox-sm"
+										/>
+										<span class="label-text">Reserve practice space</span>
+									</label>
+
+									{#if reserveSpace}
+										<Card tone="base-200" class="p-4 space-y-4 mt-2">
+											<p class="text-muted">
+												Reservation times can differ from event times to allow for setup and
+												teardown.
+											</p>
+
+											<div class="grid grid-cols-2 gap-4">
+												<FormField label="Reservation start" id="editReserveStart" issues={[]}>
+													<input
+														id="editReserveStart"
+														name="reservationStartTime"
+														type="time"
+														bind:value={editReservationStartTime}
+														class="input w-full"
+													/>
+												</FormField>
+												<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
+													<input
+														id="editReserveEnd"
+														name="reservationEndTime"
+														type="time"
+														bind:value={editReservationEndTime}
+														class="input w-full"
+													/>
+												</FormField>
+											</div>
+
+											<ConflictWarnings
+												date={editDate}
+												startTime={editReservationStartTime}
+												endTime={editReservationEndTime}
+												{checkConflicts}
+												bind:hasConflicts
+											/>
+											{#if hasConflicts}
+												<label class="label cursor-pointer justify-start gap-3">
+													<input
+														type="checkbox"
+														bind:checked={overrideConflicts}
+														class="checkbox checkbox-sm"
+													/>
+													<span class="label-text">Override conflicts</span>
+												</label>
+											{/if}
+										</Card>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="flex justify-end gap-2 pt-2">
 								<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
 									>Cancel</Button
@@ -746,9 +845,13 @@
 		{/if}
 	</InfoCard>
 
-	<!-- Linked reservation -->
-	{#if data.linkedReservation}
-		<InfoCard title="Space Reservation">
+	<!--
+		Linked reservation. Always rendered: omitting the card when nothing is held
+		made "no space held" indistinguishable from "this page doesn't show holds",
+		which is how a whole calendar of events reached production with none.
+	-->
+	<InfoCard title="Space Reservation">
+		{#if data.linkedReservation}
 			<div class="flex items-center gap-3">
 				<StatusBadge status={data.linkedReservation.status} />
 				<span
@@ -765,8 +868,12 @@
 					View reservation →
 				</a>
 			</div>
-		</InfoCard>
-	{/if}
+		{:else}
+			<p class="text-muted">
+				No space held for this event. Use Edit to reserve the practice space.
+			</p>
+		{/if}
+	</InfoCard>
 
 	<!-- Creator -->
 	<InfoCard title="Created by">

@@ -369,28 +369,36 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.ticketQuantity = params.ticketQuantity;
 	}
 
-	// Handle reservation rebooking if requested
-	if (params.rebook && existing.reservationId) {
+	// Hold the space, or move an existing hold. Both live here because they differ
+	// only by whether there is an old reservation to release first: an event that
+	// was created without space is otherwise unfixable, since nothing else in the
+	// app can attach one after the fact.
+	if (params.rebook) {
 		const { userId, reservationStartsAt, reservationEndsAt, overrideConflicts } = params.rebook;
 
-		// Cancel existing reservation
-		try {
-			await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
-				staffOverride: true
-			});
-		} catch {
-			// Already cancelled — continue
-		}
-
-		// Create new reservation
+		// Conflict check first. Cancelling ahead of it meant a rejected window left
+		// the event pointing at a reservation we had already released, with nothing
+		// re-created and no compensating write — the room lost and the link dead.
+		// Excluding the current reservation keeps an event from conflicting with
+		// its own hold.
 		if (!overrideConflicts) {
 			const conflict = await hasConflict(
 				reservationStartsAt,
 				reservationEndsAt,
-				existing.reservationId
+				existing.reservationId ?? undefined
 			);
 			if (conflict) {
 				throw new ReservationConflictError();
+			}
+		}
+
+		if (existing.reservationId) {
+			try {
+				await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
+					staffOverride: true
+				});
+			} catch {
+				// Already cancelled — continue
 			}
 		}
 

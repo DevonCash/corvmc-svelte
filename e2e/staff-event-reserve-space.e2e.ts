@@ -7,7 +7,9 @@ import {
 	SEED_EVENT_DATE,
 	SEED_EVENT_END,
 	SEED_EVENT_START,
-	SEED_EVENT_TITLE_PREFIX
+	SEED_EVENT_TITLE_PREFIX,
+	SEED_EDIT_EVENT_DATE,
+	SEED_SELF_CONFLICT_DATE
 } from './fixtures/seed-staff-event';
 
 /**
@@ -133,5 +135,95 @@ test.describe('staff event creation — reserve space', () => {
 
 		await expect(page.getByRole('button', { name: 'Create Event' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Create with Override' })).toHaveCount(0);
+	});
+});
+
+/**
+ * The other half of the same defect. #206 repaired creation, but an event that
+ * was created without a hold had no way to acquire one: update() ignored the
+ * reservation params unless the event already had a reservationId, and the edit
+ * form only offered reservation fields when a *rebook* was needed. Production
+ * reached 18 events with zero reservations and nothing could repair any of them.
+ */
+test.describe('staff event edit — reserve space', () => {
+	const RESERVE_CHECKBOX = { name: 'Reserve practice space' };
+
+	test('an event created without space can book it from the edit form', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'New Event' }).click();
+
+		const title = `${SEED_EVENT_TITLE_PREFIX} edit ${Date.now()}`;
+		await page.locator('input[name="title"]').fill(title);
+		await page.locator('input[name="eventDate"]').fill(SEED_EDIT_EVENT_DATE);
+		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
+		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
+		// Deliberately left unchecked — this is the state prod is full of.
+		await page.getByRole('button', { name: 'Create Event' }).click();
+
+		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: title })).toBeVisible();
+
+		// The card always renders now; with no hold it says so, rather than
+		// vanishing and leaving "not held" indistinguishable from "not shown".
+		await expect(page.getByText('No space held for this event')).toBeVisible();
+
+		await page.getByRole('button', { name: 'Edit' }).click();
+		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
+		await expect(reserve).toBeVisible();
+		await reserve.check();
+
+		// Pre-filled from the event's own window: the times are a setup/teardown
+		// override, not a precondition.
+		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
+		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+
+		await page.getByRole('button', { name: 'Save' }).click();
+
+		// Presence of the link proves the reservation was created AND linked.
+		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible({
+			timeout: 15000
+		});
+	});
+
+	test('re-timing an event does not report its own hold as a conflict', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'New Event' }).click();
+
+		const title = `${SEED_EVENT_TITLE_PREFIX} self ${Date.now()}`;
+		await page.locator('input[name="title"]').fill(title);
+		await page.locator('input[name="eventDate"]').fill(SEED_SELF_CONFLICT_DATE);
+		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
+		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
+		await page.locator(RESERVE_TOGGLE).check();
+		await page.getByRole('button', { name: 'Create Event' }).click();
+
+		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
+
+		// Start the show two hours earlier. That escapes the current hold, so the
+		// edit form raises the rebook alert and mounts ConflictWarnings against a
+		// window that overlaps the event's own reservation. Earlier rather than
+		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
+		// hours, so no out-of-hours warning muddies the picture.
+		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.locator('input[name="eventStartTime"]').fill('17:00');
+		await page.getByRole('checkbox', { name: 'Confirm rebook' }).check();
+
+		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('17:00');
+
+		// The seeded dates are years out, so ConflictWarnings always reports the
+		// advance-booking warning here. Asserting it first proves the component
+		// actually ran and rendered — without it, the check below would pass just
+		// as happily against a panel that never mounted.
+		await expect(page.getByText('More than 14 days in advance')).toBeVisible();
+
+		// The real assertion. checkConflicts filtered on `!('id' in c)` while
+		// getConflictDetails never selected an id, so the filter dropped nothing and
+		// the event's own hold came back as a conflict against a window that merely
+		// extends it. Note this is about the *reservation* warning specifically —
+		// "Override conflicts" is still offered here, for the advance-days warning.
+		await expect(page.getByText(/Conflicts with reservation/)).toHaveCount(0);
 	});
 });

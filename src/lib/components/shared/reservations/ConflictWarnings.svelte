@@ -3,6 +3,7 @@
 
 	type Conflict = {
 		type: 'reservation' | 'closure';
+		id?: string;
 		startsAt: Date | string;
 		endsAt: Date | string;
 		label: string;
