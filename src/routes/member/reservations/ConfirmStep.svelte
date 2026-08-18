@@ -141,7 +141,7 @@
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
 				<p class="font-medium">{dateLabel}</p>
-				<p class="text-sm opacity-70">{timeLabel}</p>
+				<p class="text-muted">{timeLabel}</p>
 			{:else}
 				<div class="skeleton h-5 w-48"></div>
 			{/if}
@@ -183,7 +183,7 @@
 					<p class="text-sm font-medium">{scheduleLabel}</p>
 				{/if}
 				<div class="mt-2">
-					<p class="mb-1 text-xs font-medium opacity-70">Upcoming instances</p>
+					<p class="mb-1 text-subtle font-medium">Upcoming instances</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
 							{#each Array(3), i (i)}
@@ -191,7 +191,7 @@
 							{/each}
 						</div>
 					{:else if recurringPreview.dates.length === 0}
-						<p class="text-xs opacity-60">No upcoming instances in the next 60 days.</p>
+						<p class="text-subtle">No upcoming instances in the next 60 days.</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
 							{#each recurringPreview.dates as iso (iso)}
@@ -212,7 +212,7 @@
 		{/if}
 
 		{#if staff}
-			<p class="text-xs opacity-70">
+			<p class="text-subtle">
 				Comp makes this reservation fully free without using the member's free hours.
 				{#if pricing && pricing.creditsApplicable > 0}
 					Apply Credits commits their free hours; any remainder is due at the door.
@@ -224,13 +224,13 @@
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
-				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
+				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
 			{/if}
 			{#if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" class="btn-info btn-outline">Comp</Button>
-				<Button type="submit" class="btn-primary">
+				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>
+				<Button type="submit" variant="primary">
 					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
 				</Button>
 			{:else}
@@ -239,7 +239,7 @@
 					type="submit"
 					name="skipPayment"
 					value="on"
-					class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+					variant={showPayAhead ? 'ghost' : 'primary'}>Confirm</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>

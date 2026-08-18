@@ -98,21 +98,25 @@
 			<div class="flex gap-1">
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === 0}
 					onclick={() => move(i, -1)}
 					aria-label="Move {chip.name} up">↑</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					disabled={i === value.length - 1}
 					onclick={() => move(i, 1)}
 					aria-label="Move {chip.name} down">↓</Button
 				>
 				<Button
 					type="button"
-					class="btn-ghost btn-xs text-error"
+					variant="ghost"
+					size="xs"
+					class="text-error"
 					disabled={!!ownerBandId && chip.bandId === ownerBandId}
 					onclick={() => remove(i)}
 					aria-label="Remove {chip.name}">✕</Button
@@ -124,7 +128,7 @@
 	<div>
 		<input
 			type="text"
-			class="input input-bordered w-full"
+			class="input w-full"
 			placeholder="Add a band — type any name and press Enter"
 			bind:value={query}
 			{onkeydown}
@@ -143,7 +147,7 @@
 			</ul>
 		{/if}
 
-		<p class="mt-1 text-xs opacity-60">
+		<p class="mt-1 text-subtle">
 			Anyone can go on the bill. Bands with a CMC account are asked to confirm before the show
 			appears on their own profile — everyone else is listed as plain text.
 		</p>

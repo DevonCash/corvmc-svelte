@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Form, { Field } from '$lib/components/shared/Form';
@@ -106,7 +108,9 @@
 
 <PageHeader title="Members" subtitle={layout.band.name}>
 	{#if isOwner || isAdmin}
-		<Button class="btn-sm" onclick={() => (showInviteModal = true)}>Invite Member</Button>
+		<Button variant="default" size="sm" onclick={() => (showInviteModal = true)}
+			>Invite Member</Button
+		>
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
@@ -123,8 +127,8 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-2">
 					{#each active as member (member.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body flex-row items-center justify-between py-3">
+						<Card>
+							<CardBody row class="py-3">
 								<div class="flex items-center gap-3">
 									<div class="placeholder avatar">
 										<div class="w-8 rounded-full bg-neutral text-neutral-content">
@@ -133,7 +137,7 @@
 									</div>
 									<div>
 										<p class="font-medium">{member.userName}</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											{member.userEmail}
 											{#if member.position}
 												&middot; {member.position}
@@ -162,12 +166,13 @@
 											onfailure={() => toast.error('Failed to remove')}
 										>
 											<input {...removeFields.memberId.as('hidden', member.id)} />
-											<SubmitButton label="Remove" class="btn-ghost btn-xs" />
+											<SubmitButton label="Remove" variant="ghost" size="xs" />
 										</Form>
 									{/if}
 									{#if isOwner && member.role !== 'owner'}
 										<Button
-											class="btn-ghost btn-xs"
+											variant="ghost"
+											size="xs"
 											onclick={() => {
 												transferTarget = { userId: member.userId, name: member.userName ?? '' };
 												showTransferModal = true;
@@ -177,8 +182,8 @@
 										</Button>
 									{/if}
 								</div>
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			{/if}
@@ -190,11 +195,11 @@
 				<h2 class="mb-3 text-lg font-semibold">Pending Invitations ({pending.length})</h2>
 				<div class="grid grid-cols-1 gap-2">
 					{#each pending as invite (invite.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body flex-row items-center justify-between py-3">
+						<Card>
+							<CardBody row class="py-3">
 								<div>
 									<p class="font-medium">{invite.userName}</p>
-									<p class="text-xs opacity-60">
+									<p class="text-subtle">
 										{invite.userEmail} &middot; Invited as {invite.role}
 										{#if invite.position}
 											&middot; {invite.position}
@@ -212,11 +217,11 @@
 										onfailure={() => toast.error('Failed to revoke')}
 									>
 										<input {...revokeFields.memberId.as('hidden', invite.id)} />
-										<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+										<SubmitButton label="Revoke" variant="ghost" size="xs" />
 									</Form>
 								{/if}
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			</section>
@@ -230,11 +235,11 @@
 					<h2 class="mb-3 text-lg font-semibold">Awaiting Signup ({pendingPlatform.length})</h2>
 					<div class="grid grid-cols-1 gap-2">
 						{#each pendingPlatform as invite (invite.id)}
-							<div class="card bg-base-100 shadow">
-								<div class="card-body flex-row items-center justify-between py-3">
+							<Card>
+								<CardBody row class="py-3">
 									<div>
 										<p class="font-medium">{invite.email}</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											Invited as {invite.role}
 											{#if invite.position}
 												&middot; {invite.position}
@@ -253,11 +258,11 @@
 											onfailure={() => toast.error('Failed to revoke')}
 										>
 											<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
-											<SubmitButton label="Revoke" class="btn-ghost btn-xs" />
+											<SubmitButton label="Revoke" variant="ghost" size="xs" />
 										</Form>
 									</div>
-								</div>
-							</div>
+								</CardBody>
+							</Card>
 						{/each}
 					</div>
 				</section>
@@ -267,7 +272,7 @@
 		<!-- Leave band (non-owners) -->
 		{#if !isOwner && layout.userRole !== 'staff'}
 			<div class="pt-4">
-				<Button class="btn-outline btn-sm btn-error" onclick={() => (showLeaveModal = true)}>
+				<Button variant="error" size="sm" outline onclick={() => (showLeaveModal = true)}>
 					Leave Band
 				</Button>
 			</div>
@@ -312,7 +317,7 @@
 					<input
 						id="user-search"
 						type="text"
-						class="input-bordered input w-full"
+						class="input w-full"
 						placeholder="Start typing a name or email..."
 						value={searchQuery}
 						oninput={onSearchInput}
@@ -329,17 +334,17 @@
 								<li>
 									<button type="button" onclick={() => selectUser(result)}>
 										<span class="font-medium">{result.name}</span>
-										<span class="text-xs opacity-60">{result.email}</span>
+										<span class="text-subtle">{result.email}</span>
 									</button>
 								</li>
 							{/each}
 						</ul>
 					{/if}
 					{#if searching}
-						<p class="mt-1 text-xs opacity-60">Searching...</p>
+						<p class="mt-1 text-subtle">Searching...</p>
 					{/if}
 					{#if searchQuery.length >= 2 && searchResults.length === 0 && !searching && !selectedUser && looksLikeEmail}
-						<p class="mt-1 text-xs opacity-60">
+						<p class="mt-1 text-subtle">
 							No existing members found.
 							<button type="button" class="link" onclick={() => (inviteMode = 'email')}>
 								Invite {searchQuery} by email?
@@ -357,7 +362,7 @@
 					<SubmitButton
 						label="Send Invitation"
 						successLabel="Sent"
-						class="btn-primary"
+						variant="primary"
 						disabled={!selectedUser}
 					/>
 				</div>
@@ -376,7 +381,7 @@
 			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
 					signup link and be automatically added to your band.
 				</p>
@@ -391,7 +396,7 @@
 					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
 				</div>
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Send Email Invite" successLabel="Sent" class="btn-primary" />
+					<SubmitButton label="Send Email Invite" successLabel="Sent" variant="primary" />
 				</div>
 			</div>
 		</Form>
@@ -418,7 +423,7 @@
 				</Alert>
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Transfer Ownership" successLabel="Transferred" class="btn-warning" />
+					<SubmitButton label="Transfer Ownership" successLabel="Transferred" variant="warning" />
 				</div>
 			</div>
 		</Form>
@@ -441,7 +446,7 @@
 				re-invited to rejoin.
 			</p>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Leave Band" successLabel="Left" class="btn-error" />
+				<SubmitButton label="Leave Band" successLabel="Left" variant="error" />
 			</div>
 		</div>
 	</Form>

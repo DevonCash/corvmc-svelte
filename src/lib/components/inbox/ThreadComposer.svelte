@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	/**
 	 * One box for both outbound replies and internal notes.
 	 *
@@ -54,7 +55,7 @@
 <div
 	class="card border {isNote ? 'border-warning/40 bg-warning/5' : 'border-base-300 bg-base-100'}"
 >
-	<div class="card-body gap-3 p-4">
+	<CardBody padding="sm" class="gap-3">
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<TabBar
 				{tabs}
@@ -65,7 +66,7 @@
 				}}
 			/>
 			{#if isNote}
-				<span class="flex items-center gap-1 text-xs opacity-60">
+				<span class="flex items-center gap-1 text-subtle">
 					<IconNote size={14} /> Staff only — the contact never sees this
 				</span>
 			{/if}
@@ -107,5 +108,5 @@
 				</SubmitButton>
 			</div>
 		</Form>
-	</div>
+	</CardBody>
 </div>

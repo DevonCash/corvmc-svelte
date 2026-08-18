@@ -3,6 +3,7 @@ import type { Preview } from '@storybook/sveltekit';
 // tokens, and the @plugin/utility layers apply inside Storybook. Without this,
 // components render unstyled.
 import '../src/routes/layout.css';
+import TooltipProvider from './TooltipProvider.svelte';
 
 // Toolbar control to flip between the two daisyUI themes defined in layout.css.
 export const globalTypes = {
@@ -34,10 +35,20 @@ const preview: Preview = {
 			// 'todo' - show a11y violations in the test UI only
 			// 'error' - fail CI on a11y violations
 			// 'off' - skip a11y checks entirely
-			test: 'todo'
+			//
+			// Was 'todo', which ran a full axe scan on every story during `vitest
+			// --project=storybook` while never being able to fail: the addon's
+			// afterEach scans whenever test !== 'off', but its
+			// expect(...).toHaveNoViolations() only asserts when the mode is
+			// 'error'. That cost 4.5s of the project's 6s of test time for a
+			// result nothing consumed. Flip to 'error' to actually gate on it.
+			test: 'off'
 		}
 	},
 	decorators: [
+		// The app mounts one `Tooltip.Provider` at the root layout; stories render
+		// outside it, and bits-ui's `Tooltip.Root` throws without one.
+		() => ({ Component: TooltipProvider, props: {} }),
 		// Apply the selected theme to the document and paint the canvas with the
 		// theme's base surface so dark mode is actually visible.
 		(story, context) => {

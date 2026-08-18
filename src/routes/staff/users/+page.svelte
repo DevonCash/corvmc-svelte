@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -25,17 +26,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-			selected.clear();
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status,
@@ -128,12 +118,14 @@
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search by name or email..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+					selected.clear();
+				}}
 			/>
 		{/snippet}
 		<div onchange={onStatusChange}>
@@ -147,10 +139,11 @@
 			<Action
 				action={bulkDeactivateUsers}
 				label="Deactivate"
-				class="btn-error btn-sm"
+				variant="error"
+				size="sm"
 				modalTitle="Deactivate users"
 				submitLabel="Deactivate"
-				submitClass="btn-error"
+				submitVariant="error"
 				onsuccess={(result) => {
 					const r = result as { deactivated: string[]; skipped: string[] };
 					selected.clear();
@@ -171,7 +164,7 @@
 					</p>
 				{/snippet}
 			</Action>
-			<Button class="btn-ghost btn-sm" onclick={() => selected.clear()}>Clear</Button>
+			<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Clear</Button>
 		</div>
 	{/if}
 
@@ -220,7 +213,13 @@
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 						<td class="w-px">
 							<div class="dropdown dropdown-end">
-								<Button class="btn-ghost btn-xs btn-square" tabindex="0" aria-label="Row actions">
+								<Button
+									variant="ghost"
+									size="xs"
+									shape="square"
+									tabindex="0"
+									aria-label="Row actions"
+								>
 									<IconDots size={16} />
 								</Button>
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -39,8 +40,8 @@
 
 <PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
-		<Button class="btn-ghost btn-sm" onclick={() => (importing = true)}>Import past gigs</Button>
-		<Button href="events/create" class="btn-sm">Create Event</Button>
+		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
+		<Button href="events/create" variant="default" size="sm">Create Event</Button>
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
@@ -48,20 +49,20 @@
 	     the show is on the other band's listing only — never on this profile. -->
 	{#if invites.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-sm font-semibold uppercase opacity-60">Invitations</h2>
+			<h2 class="text-muted font-semibold uppercase">Invitations</h2>
 			{#each invites as invite (invite.eventId)}
 				<!-- One form object can only back a single <form>, so each invite gets
 				     its own instance with its own pending state. -->
 				{@const confirm = confirmLineupSlotForm.for(invite.eventId)}
 				{@const decline = declineLineupSlotForm.for(invite.eventId)}
 				<div class="card bg-warning/10 border border-warning/40">
-					<div class="card-body flex-row items-center justify-between gap-4 py-4">
+					<CardBody row class="gap-4 py-4">
 						<div>
 							<p class="font-medium">{invite.eventTitle}</p>
-							<p class="text-sm opacity-70">
+							<p class="text-muted">
 								{formatDate(invite.startsAt)}{invite.location ? ` · ${invite.location}` : ''}
 							</p>
-							<p class="text-xs opacity-60">
+							<p class="text-subtle">
 								Added by {invite.ownerBandName ?? 'CMC staff'}
 							</p>
 						</div>
@@ -75,7 +76,7 @@
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Confirm" class="btn-primary btn-sm" />
+									<SubmitButton label="Confirm" variant="primary" size="sm" />
 								</Form>
 								<Form
 									remote={decline}
@@ -85,11 +86,11 @@
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Decline" class="btn-ghost btn-sm" />
+									<SubmitButton label="Decline" variant="ghost" size="sm" />
 								</Form>
 							</div>
 						{/if}
-					</div>
+					</CardBody>
 				</div>
 			{/each}
 		</div>
@@ -114,17 +115,17 @@
 					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
 					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
 				>
-					<div class="card-body flex-row items-center justify-between py-4">
+					<CardBody row class="py-4">
 						<div>
 							<p class="font-medium">{evt.title}</p>
-							<p class="text-sm opacity-70">
+							<p class="text-muted">
 								{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 							</p>
 							{#if evt.location}
-								<p class="text-xs opacity-60">{evt.location}</p>
+								<p class="text-subtle">{evt.location}</p>
 							{/if}
 							{#if supportNames(evt.lineup)}
-								<p class="text-xs opacity-60">w/ {supportNames(evt.lineup)}</p>
+								<p class="text-subtle">w/ {supportNames(evt.lineup)}</p>
 							{/if}
 						</div>
 						<div class="flex shrink-0 items-center gap-2">
@@ -133,7 +134,7 @@
 							{/if}
 							<StatusBadge status={evt.status} />
 						</div>
-					</div>
+					</CardBody>
 				</a>
 			{/each}
 		</div>

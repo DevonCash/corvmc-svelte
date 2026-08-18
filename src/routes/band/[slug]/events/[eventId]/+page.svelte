@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -65,37 +67,37 @@
 <PageContent width="2xl">
 	<div class="space-y-6">
 		<!-- Event details -->
-		<div class="card bg-base-100 shadow-sm">
-			<div class="card-body">
+		<Card>
+			<CardBody>
 				<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Date</dt>
+						<dt class="text-subtle font-medium uppercase">Date</dt>
 						<dd>{formatDate(evt.startsAt)}</dd>
 					</div>
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Time</dt>
+						<dt class="text-subtle font-medium uppercase">Time</dt>
 						<dd>{formatEventTimeRange(evt.startsAt, evt.endsAt)}</dd>
 					</div>
 					{#if evt.doorsAt}
 						<div>
-							<dt class="text-xs font-medium uppercase opacity-60">Doors</dt>
+							<dt class="text-subtle font-medium uppercase">Doors</dt>
 							<dd>{formatTime(evt.doorsAt)}</dd>
 						</div>
 					{/if}
 					{#if evt.location}
 						<div>
-							<dt class="text-xs font-medium uppercase opacity-60">Location</dt>
+							<dt class="text-subtle font-medium uppercase">Location</dt>
 							<dd>{evt.location}</dd>
 						</div>
 					{/if}
 					<div>
-						<dt class="text-xs font-medium uppercase opacity-60">Price</dt>
+						<dt class="text-subtle font-medium uppercase">Price</dt>
 						<!-- Band gigs never sell through our checkout. -->
 						<dd>{priceDisplay({ ...evt, ticketingEnabled: false }).label}</dd>
 					</div>
 					{#if evt.externalTicketUrl}
 						<div class="sm:col-span-2">
-							<dt class="text-xs font-medium uppercase opacity-60">Ticket Link</dt>
+							<dt class="text-subtle font-medium uppercase">Ticket Link</dt>
 							<dd>
 								<a
 									href={evt.externalTicketUrl}
@@ -112,7 +114,7 @@
 
 				{#if evt.lineup.length > 1}
 					<div class="mt-4 border-t pt-4">
-						<p class="text-xs font-medium uppercase opacity-60">Bill</p>
+						<p class="text-subtle font-medium uppercase">Bill</p>
 						<ul class="mt-1 space-y-1">
 							{#each evt.lineup as act (act.id)}
 								<li class="flex items-center gap-2 text-sm">
@@ -133,8 +135,8 @@
 						<p class="whitespace-pre-wrap text-sm">{evt.description}</p>
 					</div>
 				{/if}
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 
 		<!-- Actions -->
 		{#if isAdmin && evt.status !== 'cancelled'}
@@ -147,7 +149,7 @@
 					>
 						<input {...publishFields.slug.as('hidden', band.slug)} />
 						<input {...publishFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Publish" class="btn-primary btn-sm" />
+						<SubmitButton label="Publish" variant="primary" size="sm" />
 					</Form>
 				{:else if evt.status === 'published'}
 					<Form
@@ -157,7 +159,7 @@
 					>
 						<input {...unpublishFields.slug.as('hidden', band.slug)} />
 						<input {...unpublishFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Unpublish" class="btn-ghost btn-sm" />
+						<SubmitButton label="Unpublish" variant="ghost" size="sm" />
 					</Form>
 				{/if}
 
@@ -168,10 +170,10 @@
 				>
 					<input {...cancelFields.slug.as('hidden', band.slug)} />
 					<input {...cancelFields.eventId.as('hidden', evt.id)} />
-					<SubmitButton label="Cancel Event" class="btn-error btn-outline btn-sm" />
+					<SubmitButton label="Cancel Event" variant="error" size="sm" outline />
 				</Form>
 
-				<Button class="btn-ghost btn-sm" onclick={() => (editing = !editing)}>
+				<Button variant="ghost" size="sm" onclick={() => (editing = !editing)}>
 					{editing ? 'Done Editing' : 'Edit'}
 				</Button>
 
@@ -184,7 +186,7 @@
 					>
 						<input {...posterFields.slug.as('hidden', band.slug)} />
 						<input {...posterFields.eventId.as('hidden', evt.id)} />
-						<SubmitButton label="Remove Poster" class="btn-ghost btn-sm" />
+						<SubmitButton label="Remove Poster" variant="ghost" size="sm" />
 					</Form>
 				{/if}
 			</div>
@@ -192,8 +194,8 @@
 
 		<!-- Edit form (toggle) -->
 		{#if editing && isAdmin}
-			<div class="card bg-base-200 shadow-sm">
-				<div class="card-body">
+			<Card tone="base-200">
+				<CardBody>
 					<Form
 						remote={updateBandEventForm}
 						guard
@@ -220,7 +222,7 @@
 						<FormField name="description" label="Description">
 							<textarea
 								{...updateFields.description.as('text', evt.description ?? '')}
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="4"
 								maxlength="5000"
 							></textarea>
@@ -302,16 +304,16 @@
 							<input
 								{...updateFields.posterFile.as('file')}
 								accept="image/jpeg,image/png,image/webp"
-								class="file-input file-input-bordered w-full"
+								class="file-input w-full"
 							/>
 						</FormField>
 
 						<div class="flex justify-end pt-2">
-							<SubmitButton label="Save Changes" class="btn-primary" />
+							<SubmitButton label="Save Changes" variant="primary" />
 						</div>
 					</Form>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		{/if}
 	</div>
 </PageContent>

@@ -36,7 +36,7 @@
 	<div class="alert {typeClass[type]} {className}" role="alert">
 		<div>{@render children()}</div>
 		{#if reset}
-			<Button class="btn-sm" onclick={reset}>Retry</Button>
+			<Button variant="default" size="sm" onclick={reset}>Retry</Button>
 		{:else if action}
 			{@render action()}
 		{/if}

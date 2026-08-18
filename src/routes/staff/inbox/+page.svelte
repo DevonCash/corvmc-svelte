@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -46,19 +47,6 @@
 	let searchQuery = $state(initial.get('q') ?? '');
 	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
 
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchQuery = searchText;
-			pageNumber = 1;
-		}, 300);
-	}
-
-	$effect(() => () => clearTimeout(searchTimer));
-
 	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
 	// rewrites the address bar, and the router then overwrites that entry with
@@ -101,7 +89,6 @@
 	);
 
 	function clearFilters() {
-		clearTimeout(searchTimer);
 		searchText = '';
 		searchQuery = '';
 		channelFilter = '';
@@ -135,17 +122,18 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchQuery = q;
+					pageNumber = 1;
+				}}
 			/>
 		{/snippet}
 		{#await enabledChannels then channels}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Channel"
 				value={channelFilter}
 				onchange={(e: Event) => {
@@ -163,7 +151,7 @@
 		{/await}
 		{#await staffUsers then staff}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Assigned to"
 				value={assignedFilter}
 				onchange={(e: Event) => {
@@ -220,11 +208,11 @@
 									{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
 								</a>
 								{#if t.subject}
-									<span class="truncate text-sm opacity-70">{t.subject}</span>
+									<span class="truncate text-muted">{t.subject}</span>
 								{/if}
 							</div>
 							{#if t.preview}
-								<div class="truncate text-sm opacity-60">{t.preview}</div>
+								<div class="truncate text-muted">{t.preview}</div>
 							{/if}
 						</td>
 

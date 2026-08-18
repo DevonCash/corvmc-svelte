@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import EntityAvatar from '../EntityAvatar.svelte';
 	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 
@@ -46,7 +47,7 @@
 
 	<div class="profile-header__actions">
 		{#if primaryAction}
-			<a href={primaryAction.href} class="btn btn-primary btn-sm">{primaryAction.label}</a>
+			<Button href={primaryAction.href} variant="primary" size="sm">{primaryAction.label}</Button>
 		{/if}
 		<ShareButton title="Copy link to this profile" />
 	</div>

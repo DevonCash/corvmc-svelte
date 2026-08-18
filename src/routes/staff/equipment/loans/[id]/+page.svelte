@@ -118,14 +118,14 @@
 
 			{#if loan.memberNotes}
 				<div class="mt-4">
-					<h4 class="text-sm font-semibold opacity-60 mb-1">Member Notes</h4>
+					<h4 class="text-muted font-semibold mb-1">Member Notes</h4>
 					<p class="text-sm bg-base-200 rounded p-2">{loan.memberNotes}</p>
 				</div>
 			{/if}
 
 			{#if loan.staffNotes}
 				<div class="mt-4">
-					<h4 class="text-sm font-semibold opacity-60 mb-1">Staff Notes</h4>
+					<h4 class="text-muted font-semibold mb-1">Staff Notes</h4>
 					<p class="text-sm bg-base-200 rounded p-2">{loan.staffNotes}</p>
 				</div>
 			{/if}
@@ -139,7 +139,7 @@
 					<input {...scheduleFields.loanId.as('hidden', id)} />
 					{#if !loan.equipmentId}
 						<Field name="equipmentId" label="Assign Equipment">
-							<Select class="select-bordered w-full" name="equipmentId" required>
+							<Select class="w-full" name="equipmentId" required>
 								<option value="" disabled selected>Select equipment...</option>
 								{#each availableEquipment as eq (eq.id)}
 									{#if eq.availableQuantity > 0}
@@ -153,7 +153,7 @@
 					{/if}
 					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
 					<div class="flex gap-2">
-						<SubmitButton label="Schedule" class="btn-primary btn-sm" />
+						<SubmitButton label="Schedule" variant="primary" size="sm" />
 						<CancelLoanAction
 							loanId={id}
 							label="Cancel Request"
@@ -167,7 +167,7 @@
 					<input {...checkoutFields.loanId.as('hidden', id)} />
 					<Field name="dueDate" type="date" label="Due Date" />
 					<div class="flex gap-2">
-						<SubmitButton label="Check Out" class="btn-primary btn-sm" />
+						<SubmitButton label="Check Out" variant="primary" size="sm" />
 						<CancelLoanAction loanId={id} />
 					</div>
 				</Form>
@@ -192,7 +192,7 @@
 						: undefined}
 				/>
 			{:else}
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					This loan is <strong>{loan.status}</strong>. No actions available.
 				</p>
 			{/if}

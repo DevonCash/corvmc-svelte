@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { IconSend, IconCheck, IconX, IconFlag } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -75,16 +77,16 @@
 		<!-- Accept, Decline, Report. Showing the message above is what makes the
 		     decision possible — and Report only means something if you can see
 		     what you are reporting. -->
-		<div class="card border-base-300 bg-base-100 border">
-			<div class="card-body gap-3 p-4">
-				<p class="text-sm opacity-70">
+		<Card bordered>
+			<CardBody padding="sm" class="gap-3">
+				<p class="text-muted">
 					{t.counterpartName ?? 'This member'} would like to start a conversation with you. They cannot
 					send anything else unless you accept.
 				</p>
 				<div class="flex flex-wrap items-center gap-2">
 					<Form remote={acceptDirectRequest} successToast="Request accepted">
 						<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Accept" class="btn-primary btn-sm">
+						<SubmitButton label="Accept" variant="primary" size="sm">
 							{#snippet icon()}<IconCheck size={16} />{/snippet}
 						</SubmitButton>
 					</Form>
@@ -94,15 +96,15 @@
 					     request, which is what makes saying no cost nothing. -->
 					<Form remote={declineDirectRequest} successToast="Request declined">
 						<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Decline" class="btn-ghost btn-sm">
+						<SubmitButton label="Decline" variant="ghost" size="sm">
 							{#snippet icon()}<IconX size={16} />{/snippet}
 						</SubmitButton>
 					</Form>
 
 					<ReportDirectThreadAction threadId={t.id} />
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{:else if blocked}
 		<Alert type="info" href="/member/messages">
 			This conversation is closed. You can still read it, but neither of you can write here.
@@ -113,8 +115,8 @@
 			{#if t.kind === 'staff'}Start a new message if you need anything else.{/if}
 		</Alert>
 	{:else}
-		<div class="card border-base-300 bg-base-100 border">
-			<div class="card-body gap-3 p-4">
+		<Card bordered>
+			<CardBody padding="sm" class="gap-3">
 				<Form
 					remote={t.kind === 'direct' ? directReplyForm : staffReplyForm}
 					successToast="Message sent"
@@ -135,14 +137,14 @@
 							successLabel="Sent"
 							shortcut="mod+enter"
 							disabled={!draft.trim()}
-							class="btn-primary"
+							variant="primary"
 						>
 							{#snippet icon()}<IconSend size={16} />{/snippet}
 						</SubmitButton>
 					</div>
 				</Form>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{/if}
 
 	{#if t.kind === 'direct' && !isRequest && !blocked}
@@ -153,7 +155,7 @@
 			<ReportDirectThreadAction threadId={t.id} />
 			<Form remote={blockFromThread} successToast="Blocked">
 				<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
-				<SubmitButton label="Block" class="btn-ghost btn-sm btn-error">
+				<SubmitButton label="Block" variant="error" size="sm">
 					{#snippet icon()}<IconFlag size={16} />{/snippet}
 				</SubmitButton>
 			</Form>

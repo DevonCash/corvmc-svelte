@@ -76,7 +76,7 @@
 
 		<Nav.Group title="My Bands">
 			{#snippet action()}
-				<Button href="/member/bands" class="btn-ghost btn-xs">All</Button>
+				<Button href="/member/bands" variant="ghost" size="xs">All</Button>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>

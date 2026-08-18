@@ -72,10 +72,9 @@
 				</span>
 			{/if}
 			<span class="truncate">{member.name}</span>{#if member.pronouns}
-				<span class="text-xs font-normal opacity-60">{member.pronouns}</span>{/if}
+				<span class="text-subtle font-normal">{member.pronouns}</span>{/if}
 		</p>
-		{#if member.email}<span
-				class="block truncate text-sm opacity-60 {variant === 'inline' ? '' : 'link'}"
+		{#if member.email}<span class="block truncate text-muted {variant === 'inline' ? '' : 'link'}"
 				>{member.email}</span
 			>{/if}
 	</div>

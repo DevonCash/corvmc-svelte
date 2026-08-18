@@ -131,7 +131,8 @@
 					action={publishListing}
 					label={publishLabel}
 					successToast={requiresReview ? 'Sent to staff' : 'Published'}
-					class="btn-primary btn-sm"
+					variant="primary"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -151,7 +152,8 @@
 					action={deleteListing}
 					label="Delete"
 					successToast="Listing deleted"
-					class="btn-ghost btn-sm"
+					variant="ghost"
+					size="sm"
 					onsuccess={() => goto(resolve('/member/events'))}
 				>
 					{#snippet form()}
@@ -166,7 +168,8 @@
 					action={unpublishListing}
 					label="Take it down"
 					successToast="Back in your drafts"
-					class="btn-ghost btn-sm"
+					variant="ghost"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -181,7 +184,8 @@
 					action={withdrawListing}
 					label="Cancel the show"
 					successToast="Marked as cancelled"
-					class="btn-warning btn-sm"
+					variant="warning"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -226,7 +230,7 @@
 			<FormField name="description" label="Description">
 				<textarea
 					{...fields.description.as('text', listing.description ?? '')}
-					class="textarea textarea-bordered w-full"
+					class="textarea w-full"
 					rows="4"
 					maxlength="5000"
 				></textarea>
@@ -302,7 +306,7 @@
 				<input
 					{...fields.posterFile.as('file')}
 					accept="image/jpeg,image/png,image/webp"
-					class="file-input file-input-bordered w-full"
+					class="file-input w-full"
 				/>
 			</FormField>
 
@@ -324,7 +328,7 @@
 			</div>
 
 			<div class="flex justify-end pt-4">
-				<SubmitButton label="Save changes" class="btn-primary" />
+				<SubmitButton label="Save changes" variant="primary" />
 			</div>
 		</Form>
 	</PageContent>
