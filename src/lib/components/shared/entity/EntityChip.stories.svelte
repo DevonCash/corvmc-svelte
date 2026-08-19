@@ -1,0 +1,73 @@
+<script module lang="ts">
+	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import EntityChip from './EntityChip.svelte';
+	import EntityGallery from './EntityGallery.svelte';
+	import { fakeRef } from '$lib/test/fixtures';
+
+	const { Story } = defineMeta({
+		title: 'Shared/Entity/EntityChip',
+		component: EntityChip,
+		tags: ['autodocs'],
+		parameters: {
+			layout: 'padded',
+			docs: {
+				description: {
+					component:
+						'An inline reference to another record: type glyph + its distinctive name. ' +
+						'Takes no `href` — it derives the one canonical page this viewer can reach. ' +
+						'Use the **Viewer** and **Panel** toolbars above to watch the links change.'
+				}
+			}
+		},
+		args: { ref: fakeRef('member', { id: 'm1' }) }
+	});
+
+	const staffOnly = ['flag', 'campaign', 'audience', 'equipment', 'loan'] as const;
+</script>
+
+<!--
+	Bespoke stories pass a `template` snippet. With `component:` set, svelte-csf
+	renders `<EntityChip {...args} />` *instead of* a story's children — the same
+	trap documented in DataList.stories.svelte.
+-->
+
+<Story name="Default" />
+<Story name="Without the type glyph" args={{ icon: false }} />
+
+<!-- The visual net for a duplicated or wrong icon: every type, side by side. -->
+{#snippet gallery()}
+	<EntityGallery>
+		{#snippet item(type)}
+			<EntityChip ref={fakeRef(type)} />
+		{/snippet}
+	</EntityGallery>
+{/snippet}
+<Story name="Gallery — every entity type" template={gallery} />
+
+<!-- A deleted account still gets named; it just stops linking. -->
+<Story name="Record is gone" args={{ ref: fakeRef('member', { id: null }) }} />
+
+{#snippet truncation()}
+	<div class="max-w-48 border border-dashed border-base-300 p-2">
+		<EntityChip
+			ref={fakeRef('event', {
+				id: 'e1',
+				title: 'An Extremely Long Show Title That Will Not Fit In This Column'
+			})}
+		/>
+	</div>
+{/snippet}
+<Story name="Long title truncates" template={truncation} />
+
+<!--
+	Staff-only records. Switch the Viewer toolbar to "member" and every one of
+	these stops being a link — there is no page for them to open.
+-->
+{#snippet staffOnlyStory()}
+	<div class="flex flex-col items-start gap-2">
+		{#each staffOnly as type (type)}
+			<EntityChip ref={fakeRef(type)} />
+		{/each}
+	</div>
+{/snippet}
+<Story name="Staff-only records" template={staffOnlyStory} />

@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { entityKinds } from './registry';
+import { entityTypes, entityLabels, flagEntityTypeToEntity, type EntityType } from '$lib/config';
+import { flagEntityTypes } from '$lib/server/db/schema/flag';
+
+/**
+ * The entity vocabulary is split across three files by necessity — values in
+ * `config.ts` because the browser needs them, icons in `registry.ts` because
+ * server code cannot import Svelte components, routes in `entity-href.ts`
+ * because that has to stay pure. Nothing in the type system holds the three
+ * together, so this does.
+ *
+ * Same idea as `StatusBadge.spec.ts`: adding an entity type and forgetting half
+ * its wiring should fail here rather than render a wrong glyph in production.
+ */
+describe('entity registry', () => {
+	it('draws every entity type', () => {
+		const missing = entityTypes.filter((t) => !(t in entityKinds));
+		expect(missing, `add these to entityKinds: ${missing.join(', ')}`).toEqual([]);
+	});
+
+	it('names every entity type', () => {
+		const missing = entityTypes.filter((t) => !(t in entityLabels));
+		expect(missing, `add these to entityLabels: ${missing.join(', ')}`).toEqual([]);
+	});
+
+	it('has no entries for types that no longer exist', () => {
+		const known = new Set<string>(entityTypes);
+		const stale = [...Object.keys(entityKinds), ...Object.keys(entityLabels)].filter(
+			(k) => !known.has(k)
+		);
+		expect(stale, `remove these, or add them to entityTypes: ${stale.join(', ')}`).toEqual([]);
+	});
+
+	/**
+	 * A chip is a glyph and a name. Two types sharing a glyph makes the glyph
+	 * say nothing, which is the one failure the smallest tier cannot absorb.
+	 */
+	it('gives every type its own icon', () => {
+		const byIcon = new Map<unknown, EntityType[]>();
+		for (const type of entityTypes) {
+			const icon = entityKinds[type].icon;
+			byIcon.set(icon, [...(byIcon.get(icon) ?? []), type]);
+		}
+		const collisions = [...byIcon.values()].filter((types) => types.length > 1);
+		expect(collisions, `these types share an icon: ${JSON.stringify(collisions)}`).toEqual([]);
+	});
+
+	/** The directory-wide convention, stated in prose in ui-patterns. */
+	it('keeps member avatars round and band avatars square', () => {
+		expect(entityKinds.member.shape).toBe('round');
+		expect(entityKinds.band.shape).toBe('square');
+	});
+
+	/**
+	 * `contentFlag.entityType` is an older, narrower vocabulary. Before the
+	 * bridge existed, `staff/flags/[id]` carried a hand-written label map and a
+	 * five-deep nested ternary to turn one into a URL.
+	 */
+	it('maps every flag entity type onto an entity type', () => {
+		const unmapped = flagEntityTypes.filter((t) => !(t in flagEntityTypeToEntity));
+		expect(unmapped, `add these to flagEntityTypeToEntity: ${unmapped.join(', ')}`).toEqual([]);
+
+		const known = new Set<string>(entityTypes);
+		const dangling = Object.entries(flagEntityTypeToEntity).filter(([, v]) => !known.has(v));
+		expect(dangling, `these point at unknown entity types: ${JSON.stringify(dangling)}`).toEqual(
+			[]
+		);
+	});
+});
