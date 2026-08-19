@@ -1,4 +1,4 @@
-import { query, form, command } from '$app/server';
+import { query, form } from '$app/server';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
 import { requireUser } from '$lib/server/authorization';
@@ -8,12 +8,11 @@ import {
 	replyToDirectThread,
 	acceptDirectThread,
 	declineDirectThread,
-	listDirectThreads,
 	listMemberConversations,
 	getDirectThread,
 	counterpartOf
 } from '$lib/server/inbox/direct-service';
-import { markPortalThreadRead, getPortalThread } from '$lib/server/inbox/portal-service';
+import { getPortalThread } from '$lib/server/inbox/portal-service';
 import {
 	blockUser,
 	unblockUser,
@@ -54,15 +53,6 @@ export const getMyMessages = query(
 	}
 );
 
-export const getMyDirectThreads = query(
-	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
-	async (args) => {
-		await requireFeature('directMessages');
-		const user = requireUser();
-		return listDirectThreads(user.id, { page: args?.page ?? 1, pageSize: 25 });
-	}
-);
-
 /**
  * One conversation from the member's Messages list, whichever kind it is.
  *
@@ -84,16 +74,6 @@ export const getMyMessageThread = query(z.string(), async (id) => {
 	if (portal) return { kind: 'staff' as const, ...portal };
 
 	throw error(404, 'Conversation not found');
-});
-
-export const getMyDirectThread = query(z.string(), async (id) => {
-	await requireFeature('directMessages');
-	const user = requireUser();
-	const thread = await getDirectThread(id, user.id);
-	// One 404 whether it is someone else's, is not a direct thread, or does not
-	// exist. The caller has no business telling those apart.
-	if (!thread) throw error(404, 'Conversation not found');
-	return thread;
 });
 
 const startDirectSchema = z.object({
@@ -140,7 +120,7 @@ export const startDirectConversation = form(startDirectSchema, async (data, issu
 		invalid(issue.body('You have started a lot of conversations today. Try again tomorrow.'));
 	}
 
-	void getMyDirectThreads().refresh();
+	void getMyMessages().refresh();
 	return { success: true };
 });
 
@@ -164,8 +144,8 @@ export const sendDirectMessage = form(sendDirectSchema, async (data, issue) => {
 		invalid(issue.body('You can no longer write in this conversation.'));
 	}
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
+	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -181,8 +161,8 @@ export const acceptDirectRequest = form(threadIdSchema, async (data, issue) => {
 		invalid(issue.threadId('This request is no longer available.'));
 	}
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
+	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -201,7 +181,7 @@ export const declineDirectRequest = form(threadIdSchema, async (data, issue) => 
 		invalid(issue.threadId('This request is no longer available.'));
 	}
 
-	void getMyDirectThreads().refresh();
+	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -220,8 +200,8 @@ export const blockFromThread = form(threadIdSchema, async (data, issue) => {
 
 	await blockUser({ blockerUserId: user.id, blockedUserId: other, source: 'manual' });
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
+	void getMyMessages().refresh();
 	return { success: true };
 });
 
@@ -235,17 +215,6 @@ export const unblockMember = form(z.object({ userId: z.string().min(1) }), async
 	await unblockUser(user.id, data.userId);
 	void getMyBlocks().refresh();
 	return { success: true };
-});
-
-// A command rather than a write inside getMyDirectThread: queries are cached and
-// deduped, so a write hidden in a read fires an unpredictable number of times.
-export const markDirectThreadRead = command(z.string(), async (id) => {
-	await requireFeature('directMessages');
-	const user = requireUser();
-	// Reuses the portal cursor write: it is keyed on (threadId, userId) and knows
-	// nothing about channels, so there is no second copy to keep in step.
-	await markPortalThreadRead(id, user.id);
-	void getMemberLayout().refresh();
 });
 
 // ---------------------------------------------------------------------------
@@ -314,7 +283,7 @@ export const reportDirectThread = form(reportDirectSchema, async (data, issue) =
 	});
 	await updateStatus(data.threadId, 'resolved');
 
-	void getMyDirectThreads().refresh();
+	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });

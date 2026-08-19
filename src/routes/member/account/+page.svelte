@@ -6,7 +6,12 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
-	import { getMyMessagingStanding, setMyMessaging } from '$lib/remote/direct-messages.remote';
+	import {
+		getMyMessagingStanding,
+		setMyMessaging,
+		getMyBlocks,
+		unblockMember
+	} from '$lib/remote/direct-messages.remote';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -183,6 +188,40 @@
 					size="sm"
 				/>
 			</Form>
+
+			<!--
+				Blocking has been reachable from a conversation since DMs shipped, and
+				unblocking has not been reachable from anywhere. That matters more than
+				it sounds: declining a request blocks the sender too, so this list fills
+				up with people the member never consciously chose to block.
+			-->
+			{@const blocks = await getMyBlocks()}
+			{#if blocks.length > 0}
+				<div class="mt-4 border-t border-base-300 pt-4">
+					<h3 class="mb-2 font-medium">Blocked members</h3>
+					<p class="mb-3 text-muted text-sm">
+						Neither of you can write to the other. Conversations you already had stay readable.
+					</p>
+					<ul class="flex flex-col gap-1">
+						{#each blocks as blocked (blocked.userId)}
+							<li class="flex items-center justify-between gap-3 py-1">
+								<span class="min-w-0">
+									<span class="truncate font-medium">{blocked.name}</span>
+									{#if blocked.source === 'declined_request'}
+										<span class="ml-2 text-subtle text-xs">from a declined request</span>
+									{:else if blocked.source === 'reported'}
+										<span class="ml-2 text-subtle text-xs">from a report</span>
+									{/if}
+								</span>
+								<Form remote={unblockMember} successToast="Unblocked">
+									<input {...unblockMember.fields.userId.as('hidden', blocked.userId)} />
+									<SubmitButton label="Unblock" variant="ghost" size="sm" />
+								</Form>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		</InfoCard>
 	</svelte:boundary>
 
