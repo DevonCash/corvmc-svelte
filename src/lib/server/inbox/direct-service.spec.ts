@@ -105,6 +105,17 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 		directoryVisibility: 'user.directoryVisibility'
 	}
 }));
+// direct-service interpolates the drizzle table objects into its raw SQL rather
+// than spelling the names out, so that a dropped table breaks the build instead
+// of the page. That means the schema module has to be mocked here too.
+vi.mock('$lib/server/db/schema/standing', () => ({
+	memberStanding: {
+		__table: 'member_standing',
+		userId: 'standing.userId',
+		scope: 'standing.scope',
+		status: 'standing.status'
+	}
+}));
 vi.mock('drizzle-orm/sqlite-core', () => ({
 	alias: (t: unknown, name: string) => ({ ...(t as object), __alias: name })
 }));

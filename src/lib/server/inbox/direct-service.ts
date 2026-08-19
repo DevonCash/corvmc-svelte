@@ -1,7 +1,21 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, count, desc, eq, gt, inArray, isNull, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { memberStanding } from '$lib/server/db/schema/standing';
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNull,
+	isNotNull,
+	ne,
+	or,
+	sql,
+	type SQLWrapper
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
@@ -72,12 +86,36 @@ function counterpartAccepted(userId: string) {
 	                     AND other.accepted_at IS NOT NULL)`;
 }
 
+/**
+ * The SQL twin of `messagingIsDisabled()`: a staff decision OR the member's own
+ * switch, as one expression that can sit in a WHERE clause.
+ *
+ * **Both halves are load-bearing.** Before the standing tables were merged,
+ * `messaging_standing` held the staff decision *and* the member's preference, so
+ * one EXISTS covered both. `member_standing` holds only the first — the
+ * preference moved to `user.accepts_direct_messages` — so a reader that checks
+ * standing alone quietly stops honouring "I turned messaging off".
+ *
+ * The tables are interpolated rather than spelled out. These four call sites all
+ * went on naming `messaging_standing` after it was dropped, and the page 500'd
+ * rather than the build failing. Interpolated, the next such migration cannot
+ * get that far. `db/raw-sql-tables.spec.ts` covers the raw SQL that remains.
+ */
+function messagingDisabled(userId: SQLWrapper) {
+	return sql`(EXISTS (SELECT 1 FROM ${memberStanding} ms
+	                    WHERE ms.user_id = ${userId}
+	                      AND ms.scope = 'messaging'
+	                      AND ms.status = 'disabled')
+	            OR EXISTS (SELECT 1 FROM ${user} u
+	                       WHERE u.id = ${userId}
+	                         AND u.accepts_direct_messages = 0))`;
+}
+
 /** Nobody on this thread has messaging switched off. */
 function neitherPartyDisabled() {
-	return sql`NOT EXISTS (SELECT 1 FROM inbox_participant p
-	                       JOIN messaging_standing ms ON ms.user_id = p.user_id
+	return sql`NOT EXISTS (SELECT 1 FROM ${inboxParticipant} p
 	                       WHERE p.thread_id = ${inboxThread.id}
-	                         AND ms.status = 'disabled')`;
+	                         AND ${messagingDisabled(sql`p.user_id`)})`;
 }
 
 /** No block between the two people on this thread, in either direction. */
@@ -349,8 +387,7 @@ export async function listDirectThreads(userId: string, pagination: PaginationIn
 		// A member who has switched messaging off disappears from the other
 		// person's list. They keep their own history; nobody gets to keep writing
 		// at someone who cannot answer.
-		sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-		                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+		sql`NOT ${messagingDisabled(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -420,8 +457,7 @@ export async function listMemberConversations(userId: string, pagination: Pagina
 		// list. Their own history stays; nobody keeps writing at someone who
 		// cannot answer. Portal threads have no `other`, so this is vacuously true
 		// for them.
-		sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-		                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+		sql`NOT ${messagingDisabled(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -502,8 +538,7 @@ export async function getDirectThread(threadId: string, userId: string) {
 			and(
 				eq(inboxThread.id, threadId),
 				eq(inboxThread.channel, 'direct'),
-				sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-				                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+				sql`NOT ${messagingDisabled(other.userId)}`
 			)
 		)
 		.limit(1);
