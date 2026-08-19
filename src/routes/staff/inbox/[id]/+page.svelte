@@ -13,6 +13,7 @@
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { formatDateTime } from '$lib/utils/format';
 	import {
@@ -20,6 +21,7 @@
 		replyToThread,
 		addThreadNote,
 		updateThreadStatus,
+		setThreadAwaiting,
 		assignThread,
 		getInboxEnabledChannels,
 		getAssignableStaff
@@ -45,6 +47,7 @@
 	const resolveForm = updateThreadStatus.for('resolve');
 	const reopenForm = updateThreadStatus.for('reopen');
 	const snoozeForm = updateThreadStatus;
+	const awaitingForm = setThreadAwaiting.for('awaiting');
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
@@ -75,7 +78,7 @@
 	subtitle={t.subject ?? channelLabel(t.channel)}
 	backHref="/staff/inbox"
 >
-	<StatusBadge status={t.status} label />
+	<StatusBadge status={threadDisplayStatus(t)} label />
 </PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -141,9 +144,11 @@
 					threadId={t.id}
 					status={t.status}
 					snoozedUntil={t.snoozedUntil}
+					awaitingReplySince={t.awaitingReplySince}
 					{resolveForm}
 					{reopenForm}
 					{snoozeForm}
+					{awaitingForm}
 				/>
 			</InfoCard>
 
