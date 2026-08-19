@@ -6,7 +6,6 @@
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
-	import { hashPattern } from '$lib/utils/patterns';
 	import { entityKinds } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
@@ -35,11 +34,10 @@
 	}: {
 		ref: EntityRef;
 		/**
-		 * `auto` takes the avatar shape from the registry, and falls back to
-		 * `none` for types that have no image. `banner` is the wide crop, for
-		 * posters.
+		 * `auto` follows the registry's shape for the type. Override only to
+		 * suppress the media slot, or to force a shape the registry doesn't give.
 		 */
-		media?: 'auto' | 'avatar' | 'banner' | 'none';
+		media?: 'auto' | 'avatar' | 'poster' | 'icon' | 'none';
 		status?: boolean;
 		class?: string;
 		/** A `DefinitionList` of the facts worth showing at this size. */
@@ -51,39 +49,75 @@
 	const viewer = getEntityViewer();
 	const href = $derived(entityHref(ref, viewer));
 	const kind = $derived(entityKinds[ref.type]);
-	const mode = $derived(media === 'auto' ? (kind.shape === 'none' ? 'none' : 'avatar') : media);
-	const banner = $derived(ref.image ? imageSrc(ref.image, 'gallery') : null);
+	const Icon = $derived(kind.icon);
+
+	/**
+	 * `icon` is the no-image answer at every shape.
+	 *
+	 * A card is big enough that the fallback has to *say* something, and initials
+	 * on a generated pattern say the least: two letters repeating the title
+	 * printed right beside them. Most of these types have no image at all — a
+	 * reservation, a report, a campaign — so the glyph is not a fallback for them
+	 * but the only honest illustration, which is why `auto` reaches for it rather
+	 * than dropping the media slot.
+	 */
+	const mode = $derived.by(() => {
+		if (media !== 'auto') return media === 'none' ? 'none' : media;
+		if (!ref.image) return 'icon';
+		if (kind.shape === 'poster') return 'poster';
+		if (kind.shape === 'none') return 'icon';
+		return 'avatar';
+	});
+
+	/**
+	 * The media slot is a fixed box the image is cropped into, so the card's
+	 * text column starts at the same x whatever the type. Posters are portrait —
+	 * a gig poster is never landscape, and cropping one into a wide strip throws
+	 * away the half that carries the lineup.
+	 */
+	const isPoster = $derived(media === 'poster' || (media === 'auto' && kind.shape === 'poster'));
+	// Keyed off the *shape*, not off whether an image happened to load: an event
+	// with no artwork yet keeps the portrait box, so a grid of cards still lines
+	// its text columns up.
+	const boxClass = $derived(
+		isPoster
+			? 'aspect-[2/3] w-24 rounded-md'
+			: kind.shape === 'round'
+				? 'size-14 rounded-full'
+				: 'size-14 rounded-lg'
+	);
+	const poster = $derived(ref.image ? imageSrc(ref.image, 'poster') : null);
 </script>
 
 <Card class={className}>
-	{#if mode === 'banner'}
-		<figure class="h-32 w-full overflow-hidden">
-			{#if banner}
-				<img
-					src={banner.src}
-					srcset={banner.srcset}
-					sizes={banner.sizes}
-					alt=""
-					class="size-full object-cover"
-					loading="lazy"
-				/>
-			{:else}
-				<!-- The generated pattern, not a grey box: a listing with no poster
-				     should still look like something. -->
-				<div class="poster-gen size-full poster-gen--{hashPattern(ref.title)}"></div>
-			{/if}
-		</figure>
-	{/if}
 	<CardBody>
 		<div class="flex min-w-0 items-start gap-3">
-			{#if mode === 'avatar'}
+			{#if mode === 'poster' && poster}
+				<figure class="shrink-0 overflow-hidden bg-base-200 {boxClass}">
+					<img
+						src={poster.src}
+						srcset={poster.srcset}
+						sizes={poster.sizes}
+						alt=""
+						class="size-full object-cover"
+						loading="lazy"
+					/>
+				</figure>
+			{:else if mode === 'avatar'}
 				<EntityAvatar
-					shape={kind.shape === 'none' ? 'square' : kind.shape}
+					shape={kind.shape === 'round' ? 'round' : 'square'}
 					name={ref.title}
 					image={ref.image}
 					size="avatar-md"
 					class="size-14 shrink-0"
 				/>
+			{:else if mode !== 'none'}
+				<div
+					class="flex shrink-0 items-center justify-center bg-base-200 {boxClass}"
+					aria-hidden="true"
+				>
+					<Icon size={isPoster ? 40 : 28} class="text-subtle" />
+				</div>
 			{/if}
 			<div class="min-w-0 flex-1">
 				<!--

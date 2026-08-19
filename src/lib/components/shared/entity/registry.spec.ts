@@ -53,6 +53,15 @@ describe('entity registry', () => {
 	});
 
 	/**
+	 * A gig poster is portrait, always. Cropping one into a landscape strip
+	 * throws away the half that carries the lineup, so the event type gets its
+	 * own shape rather than borrowing the square avatar box.
+	 */
+	it('gives events a portrait poster box', () => {
+		expect(entityKinds.event.shape).toBe('poster');
+	});
+
+	/**
 	 * `contentFlag.entityType` is an older, narrower vocabulary. Before the
 	 * bridge existed, `staff/flags/[id]` carried a hand-written label map and a
 	 * five-deep nested ternary to turn one into a URL.

@@ -7,6 +7,11 @@
 	import Button from '../Button.svelte';
 	import { fakeRef } from '$lib/test/fixtures';
 
+	// Remote URLs, as IdCard.stories.svelte already uses: `imageSrc` passes
+	// anything without the /cdn-cgi/image/ marker through untouched.
+	const POSTER = 'https://picsum.photos/seed/loudnight/480/720';
+	const PORTRAIT = 'https://i.pravatar.cc/300?img=32';
+
 	const { Story } = defineMeta({
 		title: 'Shared/Entity/EntityCard',
 		component: EntityCard,
@@ -54,21 +59,33 @@
 <Story name="With facts and actions" template={withFacts} />
 
 <!--
-	`banner` ships from day one so Event does not force an API change later.
-	The right-hand card has no image and falls back to the generated pattern
-	rather than a grey box — a listing without a poster should still look like
-	something.
+	Events carry a poster, and a poster is portrait — 2:3, never landscape. The
+	registry gives the event type `shape: 'poster'`, so `auto` picks the portrait
+	box without the call site asking. Right-hand card has no artwork yet.
 -->
-{#snippet banner()}
-	<div class="grid max-w-3xl grid-cols-2 gap-4">
-		<EntityCard ref={fakeRef('event', { id: 'e1', status: 'published' })} media="banner" />
-		<EntityCard
-			ref={fakeRef('event', { id: 'e2', title: 'No Poster Yet', status: 'draft' })}
-			media="banner"
-		/>
+{#snippet posters()}
+	<div class="grid max-w-3xl gap-4 sm:grid-cols-2">
+		<EntityCard ref={fakeRef('event', { id: 'e1', status: 'published', image: POSTER })} />
+		<EntityCard ref={fakeRef('event', { id: 'e2', title: 'No Poster Yet', status: 'draft' })} />
 	</div>
 {/snippet}
-<Story name="Banner media — with and without an image" template={banner} />
+<Story name="Event poster — portrait, with and without artwork" template={posters} />
+
+<!--
+	The no-image answer at both sizes. Initials on a generated pattern were the
+	obvious fallback and the wrong one: on a card they spell out two letters of
+	the title that is already printed beside them, and most of these types — a
+	reservation, a report, a campaign — have no image to fall back *from*.
+-->
+{#snippet avatarVsIcon()}
+	<div class="grid max-w-3xl gap-4 sm:grid-cols-2">
+		<EntityCard ref={fakeRef('member', { id: 'm1', status: 'active', image: PORTRAIT })} />
+		<EntityCard ref={fakeRef('member', { id: 'm2', status: 'active' })} />
+		<EntityCard ref={fakeRef('band', { id: 'band-1', status: 'active' })} />
+		<EntityCard ref={fakeRef('reservation', { id: 'r1', status: 'confirmed' })} />
+	</div>
+{/snippet}
+<Story name="Photo vs. icon fallback" template={avatarVsIcon} />
 
 {#snippet gallery()}
 	<EntityGallery columns={1}>

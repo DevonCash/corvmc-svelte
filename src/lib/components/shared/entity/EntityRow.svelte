@@ -98,7 +98,7 @@
 		{/if}
 		{#if showAvatar}
 			<EntityAvatar
-				shape={kind.shape === 'none' ? 'square' : kind.shape}
+				shape={kind.shape === 'round' ? 'round' : 'square'}
 				name={ref.title}
 				image={ref.image}
 				size="avatar-sm"

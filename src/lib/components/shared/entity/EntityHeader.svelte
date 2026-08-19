@@ -43,7 +43,7 @@
 <div class="flex flex-wrap items-center gap-4 {className}">
 	{#if kind.shape !== 'none'}
 		<EntityAvatar
-			shape={kind.shape}
+			shape={kind.shape === 'round' ? 'round' : 'square'}
 			name={ref.title}
 			image={ref.image}
 			size="avatar-md"

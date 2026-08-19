@@ -41,16 +41,20 @@ export type EntityKind = {
 	icon: IconComponent;
 	/**
 	 * The directory-wide convention, stated in ui-patterns: a member avatar is
-	 * always round, a band avatar always square. `none` is for the types that
-	 * have no image of their own and render the glyph instead.
+	 * always round, a band avatar always square.
+	 *
+	 * `poster` is portrait (2:3). A gig poster is never landscape, so an event
+	 * cropped into a wide strip loses the half of the artwork that carries the
+	 * lineup. `none` is for the types with no image of their own, which render
+	 * the glyph instead.
 	 */
-	shape: 'round' | 'square' | 'none';
+	shape: 'round' | 'square' | 'poster' | 'none';
 };
 
 export const entityKinds: Record<EntityType, EntityKind> = {
 	member: { icon: IconUser, shape: 'round' },
 	band: { icon: IconUsersGroup, shape: 'square' },
-	event: { icon: IconCalendarEvent, shape: 'square' },
+	event: { icon: IconCalendarEvent, shape: 'poster' },
 	reservation: { icon: IconMetronome, shape: 'none' },
 	suggestion: { icon: IconBulb, shape: 'none' },
 	thread: { icon: IconMessages, shape: 'none' },
