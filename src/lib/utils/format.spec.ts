@@ -22,6 +22,8 @@ import {
 	formatTimeRange,
 	fullDate,
 	initials,
+	formatPaymentBreakdown,
+	reservationPaymentBreakdown,
 	toLocalDate,
 	toLocalTime
 } from './format';
@@ -142,5 +144,71 @@ describe('initials', () => {
 
 	it('upper-cases a lowercase name', () => {
 		expect(initials('ada lovelace')).toBe('AL');
+	});
+});
+
+/**
+ * The venue rate at the time these were written. A credit is worth an hour of
+ * room time, so at $15.00/hr one credit displaces exactly 1500 cents.
+ */
+const RATE = 1500;
+
+/** A booking of `hours` length, anchored anywhere — only the span matters here. */
+function booking(hours: number): [Date, Date] {
+	const startsAt = new Date('2026-07-03T18:00:00Z');
+	return [startsAt, new Date(startsAt.getTime() + hours * 60 * 60 * 1000)];
+}
+
+describe('formatPaymentBreakdown', () => {
+	it('shows dollars alone when no credits were applied', () => {
+		expect(formatPaymentBreakdown(...booking(2.5), RATE, null)).toBe('$37.50');
+	});
+
+	it('treats zero credits the same as none', () => {
+		expect(formatPaymentBreakdown(...booking(2), RATE, 0)).toBe('$30.00');
+	});
+
+	it('shows both halves when a booking is partly covered', () => {
+		expect(formatPaymentBreakdown(...booking(2.5), RATE, 1.5)).toBe('$15.00, 1.5cr');
+	});
+
+	// The whole point of the change: a fully covered booking used to render its
+	// full list price, which read as though the member still owed it.
+	it('drops the dollar half when credits cover the whole booking', () => {
+		expect(formatPaymentBreakdown(...booking(2.5), RATE, 2.5)).toBe('2.5cr');
+	});
+
+	it('trims a whole credit count rather than showing 2.0cr', () => {
+		expect(formatPaymentBreakdown(...booking(2), RATE, 2)).toBe('2cr');
+	});
+
+	// Half credits are normal — the venue books in 30-minute blocks.
+	it('renders a half credit', () => {
+		expect(formatPaymentBreakdown(...booking(1), RATE, 0.5)).toBe('$7.50, 0.5cr');
+	});
+});
+
+describe('reservationPaymentBreakdown', () => {
+	it('splits the list price into cash and credits', () => {
+		expect(reservationPaymentBreakdown(...booking(2.5), RATE, 1.5)).toEqual({
+			cashCents: 1500,
+			credits: 1.5
+		});
+	});
+
+	// Credits are reversed on cancel and re-committed on confirm, so a row can
+	// carry more credit-hours than it books. That must not bill a negative.
+	it('never returns negative cash when credits exceed the booking', () => {
+		expect(reservationPaymentBreakdown(...booking(1), RATE, 4)).toEqual({
+			cashCents: 0,
+			credits: 4
+		});
+	});
+
+	it('ignores a negative credit value', () => {
+		expect(reservationPaymentBreakdown(...booking(1), RATE, -2)).toEqual({
+			cashCents: 1500,
+			credits: 0
+		});
 	});
 });

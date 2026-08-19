@@ -30,7 +30,7 @@
 		IconCircleX,
 		IconRepeat
 	} from '@tabler/icons-svelte';
-	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -69,8 +69,12 @@
 
 	let resolveOpen = $state(false);
 
-	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
-		switch (reservationPaymentState(r)) {
+	function paymentStatus(state: ReturnType<typeof reservationPaymentState>): {
+		label: string;
+		color: string;
+		icon: typeof IconCheck;
+	} {
+		switch (state) {
 			case 'no_show':
 				return { label: 'No-show', color: 'text-error', icon: IconUserX };
 			case 'refunded':
@@ -302,9 +306,16 @@
 								{#if r.bookerType === 'event'}
 									<span class="opacity-40">—</span>
 								{:else}
-									{@const ps = paymentStatus(r)}
+									{@const state = reservationPaymentState(r)}
+									{@const ps = paymentStatus(state)}
 									<span class="inline-flex items-center justify-end gap-1">
-										{formatDurationAmount(r.startsAt, r.endsAt, rate)}
+										<!-- Comped keeps its cash value on screen but strikes it, so the row
+										     still says what the room time was worth while reading as waived.
+										     A comped booking never carries credits: once credits are
+										     committed the row reports as `credits`, not `comped`. -->
+										<span class:line-through={state === 'comped'}>
+											{formatPaymentBreakdown(r.startsAt, r.endsAt, rate, r.creditsUsed)}
+										</span>
 										<span class="tooltip" data-tip={ps.label}>
 											<ps.icon size={16} class={ps.color} />
 										</span>
