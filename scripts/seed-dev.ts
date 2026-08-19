@@ -528,6 +528,9 @@ interface SeedEvent {
 	status: string;
 	startsAt: Date;
 }
+/** Matches the `reservation.hourlyRateCents` site-config default. */
+const HOURLY_RATE_CENTS = 1500;
+
 interface SeedReservation {
 	id: string;
 	createdByUserId: string;
@@ -730,6 +733,38 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			const status = Math.random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
 			const member = pick(users);
 
+			// Free-hour settlement, mirroring `commitReservationCredits`:
+			// `creditsUsed` is denominated in hours and `cashDueCents` freezes the
+			// remainder owed at the door. Cancelled and no-show bookings keep both
+			// null, the way cancellation resets them.
+			//
+			// Without this every seeded reservation settled in cash, so the staff
+			// Payment column rendered nothing but plain dollar amounts and the
+			// credit-covered and mixed shapes went unexercised locally.
+			const coverage =
+				status === 'completed' ? pick(['none', 'none', 'partial', 'full', 'comped']) : 'none';
+			// Measured off the stored timestamps, not `duration`: `ptDate` floors a
+			// fractional hour (setUTCHours truncates), and the `hour` accumulator
+			// goes fractional, so the booking on disk is regularly longer than the
+			// duration picked for it. Deriving from `duration` wrote credits that
+			// overran their own reservation.
+			const bookedHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
+			const creditsUsed =
+				coverage === 'full'
+					? bookedHours
+					: coverage === 'partial'
+						? Math.min(0.5, bookedHours)
+						: null;
+			// Comped waives the charge outright: nothing owed and no credits spent.
+			// That tuple — cashDueCents 0 with creditsUsed null — is the only thing
+			// separating a comped booking from a credit-settled one.
+			const cashDueCents =
+				coverage === 'comped'
+					? 0
+					: creditsUsed === null
+						? null
+						: Math.round((bookedHours - creditsUsed) * HOURLY_RATE_CENTS);
+
 			const [r] = await db
 				.insert(reservation)
 				.values({
@@ -741,7 +776,14 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					endsAt,
 					notes: Math.random() > 0.7 ? 'Band practice' : null,
 					cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null,
-					paidAt: status === 'completed' ? startsAt : null
+					creditsUsed,
+					cashDueCents,
+					// A fully covered booking is settled by the credits themselves —
+					// leaving `paidAt` null is what marks it "Paid with credits"
+					// rather than "Paid".
+					// A booking settled by credits or comped away was never *paid* —
+					// leaving `paidAt` null is what distinguishes those states.
+					paidAt: status === 'completed' && cashDueCents !== 0 ? startsAt : null
 				})
 				.returning();
 			rows.push(r);
@@ -3127,6 +3169,10 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: 'Sarah Chen',
 				contactEmail: 'sarah.chen@example.com',
 				messageCount: 2,
+				// Staff answered and nobody has written back: still open, but waiting
+				// on her rather than on us, so it carries the awaiting-reply marker and
+				// drops out of the nav badge. Matches the outbound message below.
+				awaitingReplySince: new Date(now.getTime() - 2 * hour),
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 2 * hour)
@@ -3198,6 +3244,9 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: memberUser.name,
 				contactEmail: memberUser.email,
 				messageCount: 2,
+				// Same again on the portal channel, where the member replying from
+				// /member/messages is what clears it.
+				awaitingReplySince: new Date(now.getTime() - 4 * hour),
 				lastMessageAt: new Date(now.getTime() - 4 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 4 * hour)

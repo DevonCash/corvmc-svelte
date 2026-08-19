@@ -78,8 +78,10 @@
 		draft: 'badge-warning',
 		pending_review: 'badge-info',
 		published: 'badge-success',
-		// Inbox
+		// Inbox. `awaiting_reply` is ghost against open's info on purpose: the
+		// thread is still open work, but nothing is owed from this end today.
 		open: 'badge-info',
+		awaiting_reply: 'badge-ghost',
 		resolved: 'badge-success',
 		dismissed: 'badge-ghost',
 		snoozed: 'badge-ghost',
@@ -159,8 +161,10 @@
 		// `rejected` is shared with volunteer hour logs below — same meaning
 		// (sent back to its author to fix), same glyph, labelled "Returned".
 
-		// Inbox statuses
+		// Inbox statuses. `awaiting_reply` is derived, not stored — see
+		// threadDisplayStatus() in components/inbox/thread-status.ts.
 		open: { icon: IconClock, color: 'text-info' },
+		awaiting_reply: { icon: IconSend, color: 'text-base-content' },
 		resolved: { icon: IconInboxOff, color: 'text-success' },
 		dismissed: { icon: IconCircleX, color: 'text-base-content' },
 		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
