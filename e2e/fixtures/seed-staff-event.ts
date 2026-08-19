@@ -47,6 +47,12 @@ export const SEED_CONFLICT_END = '22:00';
 export const SEED_EDIT_EVENT_DATE = '2030-06-17';
 export const SEED_SELF_CONFLICT_DATE = '2030-06-18';
 
+/**
+ * The day the reservation-list test books. A day of its own for the same reason:
+ * sharing SEED_EVENT_DATE would collide with the creation test's own hold.
+ */
+export const SEED_LIST_LINK_DATE = '2030-06-19';
+
 /** The club's wall clock — the times above are entered in it, as staff would. */
 const CLUB_TZ = 'America/Los_Angeles';
 

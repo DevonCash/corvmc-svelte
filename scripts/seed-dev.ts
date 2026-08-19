@@ -849,6 +849,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	const staffUsers = users.slice(0, 6);
 
 	async function createEventReservation(
+		eventId: string,
 		day: number,
 		eventStartHour: number,
 		eventEndHour: number,
@@ -861,7 +862,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(reservation)
 			.values({
 				bookerType: 'event',
-				bookerId: 'event',
+				// The real polymorphic pointer, as event-service writes it. A literal
+				// 'event' here left every seeded hold unattached to its show.
+				bookerId: eventId,
 				createdByUserId,
 				status: reservationStatus,
 				startsAt,
@@ -883,9 +886,13 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const publishedAt = new Date(startsAt.getTime() - randomInt(7, 21) * 86400000);
 		const creator = pick(staffUsers);
 
+		// The id is minted up front so the hold can point at the event, the same
+		// ordering event-service.create() uses.
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -897,6 +904,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Join us for an evening of live music and community.',
 				startsAt,
@@ -944,9 +952,11 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const creator = pick(staffUsers);
 		const config = futureConfigs[i];
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -958,6 +968,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: config.externalTicketUrl
 					? 'Tickets for this one are sold through our partner venue.'
@@ -986,14 +997,23 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const hour = randomInt(18, 20);
 		const creator = pick(staffUsers);
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
+			reservationId = await createEventReservation(
+				eventId,
+				day,
+				hour,
+				hour + 3,
+				creator.id,
+				'scheduled'
+			);
 		}
 
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Details TBD',
 				startsAt: ptDate(day, hour),
@@ -1008,10 +1028,19 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	}
 
 	const cancelledCreator = pick(staffUsers);
-	const cancelledResId = await createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
+	const cancelledEventId = crypto.randomUUID();
+	const cancelledResId = await createEventReservation(
+		cancelledEventId,
+		7,
+		14,
+		20,
+		cancelledCreator.id,
+		'cancelled'
+	);
 	const [cancelled] = await db
 		.insert(event)
 		.values({
+			id: cancelledEventId,
 			title: 'Cancelled: Outdoor Festival',
 			description: 'Unfortunately cancelled due to weather.',
 			startsAt: ptDate(7, 14),
@@ -1048,7 +1077,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const duration = 3;
 		const protoStart = ptDate(protoDay, hour);
 
+		const protoEventId = crypto.randomUUID();
 		const protoResId = await createEventReservation(
+			protoEventId,
 			protoDay,
 			hour,
 			hour + duration,
@@ -1059,6 +1090,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [proto] = await db
 			.insert(event)
 			.values({
+				id: protoEventId,
 				title: 'Weekly Open Mic',
 				description: 'Sign up at the door — all skill levels welcome.',
 				startsAt: protoStart,
@@ -1088,7 +1120,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		for (let w = 1; w <= 2; w++) {
 			const instDay = protoDay + w * 7;
+			const instEventId = crypto.randomUUID();
 			const instResId = await createEventReservation(
+				instEventId,
 				instDay,
 				hour,
 				hour + duration,
@@ -1098,6 +1132,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			const [inst] = await db
 				.insert(event)
 				.values({
+					id: instEventId,
 					title: proto.title,
 					description: proto.description,
 					startsAt: ptDate(instDay, hour),

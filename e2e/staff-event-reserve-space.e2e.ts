@@ -9,7 +9,8 @@ import {
 	SEED_EVENT_START,
 	SEED_EVENT_TITLE_PREFIX,
 	SEED_EDIT_EVENT_DATE,
-	SEED_SELF_CONFLICT_DATE
+	SEED_SELF_CONFLICT_DATE,
+	SEED_LIST_LINK_DATE
 } from './fixtures/seed-staff-event';
 
 /**
@@ -111,6 +112,51 @@ test.describe('staff event creation — reserve space', () => {
 		// give 17:00–20:00 and throw the padding away. The padding moves with it.
 		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('16:00');
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue('21:00');
+	});
+
+	test('the reservation list links an event hold to its event, not to the booker', async ({
+		page
+	}) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'New Event' }).click();
+
+		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
+		await page.locator('input[name="title"]').fill(title);
+		await page.locator('input[name="eventDate"]').fill(SEED_LIST_LINK_DATE);
+		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
+		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
+		await page.locator(RESERVE_TOGGLE).check();
+		await page.getByRole('button', { name: 'Create Event' }).click();
+
+		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		const eventId = new URL(page.url()).pathname.split('/').pop()!;
+
+		await page.goto('/staff/reservations');
+		// Searching the title is itself part of the change: the list only matched
+		// member and band names, so an event hold was unfindable by its show.
+		await page.getByPlaceholder('Search member, band, or event...').fill(title);
+		// The date bounds keep the row off a later page of the 50-row list.
+		await page.getByLabel('From date').fill(SEED_LIST_LINK_DATE);
+		await page.getByLabel('To date').fill(SEED_LIST_LINK_DATE);
+
+		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
+		await expect(row.getByRole('link', { name: title })).toHaveAttribute(
+			'href',
+			`/staff/events/${eventId}`
+		);
+		// The staff account that raised the hold is not what the row is about.
+		await expect(row.locator('a[href^="/staff/users/"]')).toHaveCount(0);
+
+		// The detail page leads with the show too — its card used to be a bare
+		// "Member", with the event nowhere on the page.
+		await row.locator('a[href^="/staff/reservations/"]').first().click();
+		await page.waitForURL(/\/staff\/reservations\/[^/]+$/, { timeout: 15000 });
+		await expect(page.getByRole('link', { name: 'View Event' })).toHaveAttribute(
+			'href',
+			`/staff/events/${eventId}`
+		);
+		await expect(page.getByText('Booked by')).toBeVisible();
 	});
 
 	test('unchecking the toggle drops the conflict override it raised', async ({ page }) => {
