@@ -28,10 +28,19 @@
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
+
+	// Above the `await`s on purpose. Declared after one, `candidates` is compiled
+	// as "blocked", and `{#each await candidates}` below then becomes
+	// `$.async(node, [blocker], [expression], …)` — the shape that crashes with
+	// `null is not an object (evaluating 'c.async_deriveds')` and takes the page
+	// down (JAVASCRIPT-SVELTEKIT-25). See the longer note in
+	// routes/member/reservations/+page.svelte and the guard in
+	// async-effect-shape.spec.ts.
+	let candidates = $derived(getMergeCandidates(id));
+
 	let s = $derived(await getStaffSuggestionDetail(id));
 
 	let isMerged = $derived(!!s.mergedIntoId);
-	let candidates = $derived(getMergeCandidates(id));
 	let pendingEdit = $derived(await getSuggestionPendingEdit(id));
 
 	function refresh() {
