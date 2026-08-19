@@ -31,6 +31,7 @@ import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
+import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
@@ -78,6 +79,7 @@ await seedPayReservation();
 await seedBandOnboarding();
 await seedStaffUser();
 await seedStaffEvent();
+await seedReservationPayments();
 await seedVolunteering();
 await seedCommunityEvents();
 // After the staff fixture: one seeded vote belongs to the staff user.
