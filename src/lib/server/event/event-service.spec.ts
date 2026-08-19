@@ -654,7 +654,11 @@ describe('EventService', () => {
 			expect(staffCreate).toHaveBeenCalled();
 		});
 
-		it('does not rebook when no reservationId on event', async () => {
+		// This used to assert the opposite — that an event without a reservation was
+		// left alone. That silence was the bug: an event created without a hold had
+		// no way to acquire one, so a calendar of reservation-less events piled up
+		// with nothing in the app able to repair them.
+		it('books the space for an event that has none', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: null }];
 
 			await update('evt-1', {
@@ -667,8 +671,54 @@ describe('EventService', () => {
 				}
 			});
 
+			// Nothing to release — this is an add, not a replace.
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(staffCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bookerType: 'event',
+					bookerId: 'evt-1',
+					status: 'confirmed'
+				})
+			);
+			expect(lastUpdateSet?.reservationId).toBe('res-1');
+		});
+
+		// The conflict check used to run *after* the cancellation, so a rejected
+		// window released the room and left the event pointing at a cancelled
+		// reservation, with nothing re-created and no compensating write.
+		it('leaves the existing hold intact when the new window conflicts', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			vi.mocked(hasConflict).mockResolvedValueOnce(true);
+
+			await expect(
+				update('evt-1', {
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+						overrideConflicts: false
+					}
+				})
+			).rejects.toThrow('Time slot is not available');
+
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
+		});
+
+		// An event must not collide with its own hold when it is only being re-timed.
+		it('excludes the event current reservation from the conflict check', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(hasConflict).toHaveBeenCalledWith(expect.any(Date), expect.any(Date), 'res-1');
 		});
 	});
 
