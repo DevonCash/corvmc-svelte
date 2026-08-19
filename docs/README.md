@@ -19,6 +19,7 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 [architecture overview](architecture/overview.md) →
 [business-workflows](development/business-workflows.md) →
 [conventions](development/conventions.md) →
+[working-with-claude](development/working-with-claude.md) →
 [operations-manual](architecture/operations-manual.md) →
 [deployment-checklist](architecture/deployment-checklist.md) (first deploy only).
 
@@ -45,6 +46,7 @@ as reality — reconcile deliberately.
 | [finance-spec.md](specs/finance-spec.md)                               | ✅     | Stripe-first payments, credit wallets / ledger                                                                              |
 | [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md` |
 | [volunteering-spec.md](specs/volunteering-spec.md)                     | ✅     | Volunteer roles, member hour logging, staff approval queue, reporting; shifts + certifications designed, unbuilt            |
+| [member-standing-spec.md](specs/member-standing-spec.md)               | ✅     | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables              |
 
 ## plans
 
@@ -69,27 +71,31 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [overview.md](architecture/overview.md)                                           | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
 | [operations-manual.md](architecture/operations-manual.md)                         | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                   | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
+| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                         | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
 | [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                 | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
 | [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md) | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
 | [product-config-kv-migration.md](architecture/product-config-kv-migration.md)     | ⚠️     | product_config → KV — migration pending user action                                                  |
 
 ## development
 
-| Doc                                                                          | Status | Notes                                                                  |
-| ---------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
-| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode       |
-| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes       |
-| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference |
-| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition    |
-| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                         |
-| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                         |
-| [component-style-audit.md](development/component-style-audit.md)             | ⚠️     | Visual audit; documents the magenta content-token theme bug            |
+| Doc                                                                          | Status | Notes                                                                               |
+| ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode                    |
+| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes                    |
+| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
+| [working-with-claude.md](development/working-with-claude.md)                 | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
+| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition                 |
+| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                                      |
+| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                                      |
+| [component-style-audit.md](development/component-style-audit.md)             | ✅     | Visual audit; the magenta content-token theme bug it found is now fixed             |
+| [template-audit.md](development/template-audit.md)                           | 🔧     | Class-soup census + phased migration to a component-based design system             |
 
 ## reports
 
-| Doc                                          | Status | Notes                                                   |
-| -------------------------------------------- | ------ | ------------------------------------------------------- |
-| [parity-report.md](reports/parity-report.md) | ✅     | Authoritative feature parity vs. the legacy Laravel app |
+| Doc                                                          | Status | Notes                                                                    |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------------------ |
+| [parity-report.md](reports/parity-report.md)                 | ✅     | Authoritative feature parity vs. the legacy Laravel app                  |
+| [standardization-audit.md](reports/standardization-audit.md) | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues |
 
 ## manual
 
@@ -105,6 +111,5 @@ the in-app Help/KB via `pnpm help:sync`. The manifest tracks coverage across all
 
 ### Open action items (from the docs above)
 
-- ⚠️ **Magenta content tokens** — theme bug documented in `development/component-style-audit.md`.
 - ⚠️ **product_config → KV migration** — pending in `architecture/product-config-kv-migration.md`.
 - ⚠️ **Credit/cash rework** — awaiting migration in `plans/reservation-credits-cash-checklist.md`.

@@ -3,8 +3,10 @@
 	import type { TabKey } from '../tabs';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
+	import { formatVolunteerHours, standingScopeConfig } from '$lib/config';
 
 	let {
 		overview,
@@ -38,16 +40,14 @@
 				tone: 'error'
 			});
 		}
-		if (overview.standing.requiresReview) {
+		// One line per restricted scope, in a fixed order so the list doesn't
+		// reshuffle between members. Messaging is deliberately absent: its card on
+		// the Comms tab always renders, so an alert pointing at it would be noise.
+		for (const scope of ['community_event', 'suggestion'] as const) {
+			const standing = overview.standings[scope];
+			if (standing.status === 'none') continue;
 			items.push({
-				text: `Community listings are held for review${overview.standing.reason ? ` — ${overview.standing.reason}` : ''}.`,
-				tab: 'comms',
-				tone: 'warning'
-			});
-		}
-		if (overview.suggestionStanding.requiresReview) {
-			items.push({
-				text: `Suggestions are held for review${overview.suggestionStanding.reason ? ` — ${overview.suggestionStanding.reason}` : ''}.`,
+				text: `${standingScopeConfig[scope].label} are held for review${standing.reason ? ` — ${standing.reason}` : ''}.`,
 				tab: 'comms',
 				tone: 'warning'
 			});
@@ -202,33 +202,28 @@
 {/if}
 
 <InfoCard title="At a glance">
-	<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-		<dt class="opacity-60">Joined</dt>
-		<dd>{formatDateShortYear(member.createdAt)}</dd>
+	<DefinitionList>
+		<Fact label="Joined">{formatDateShortYear(member.createdAt)}</Fact>
 
-		<dt class="opacity-60">Last sign-in</dt>
-		<dd>
+		<Fact label="Last sign-in">
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
 				<span class="opacity-60">Never, or signed out everywhere</span>
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Member no.</dt>
-		<dd>{member.memberNumber ?? '—'}</dd>
+		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<dt class="opacity-60">Roles</dt>
-		<dd class="flex flex-wrap gap-1">
+		<Fact label="Roles" class="flex flex-wrap gap-1">
 			{#each member.roles as role (role)}
 				<Badge size="sm">{role}</Badge>
 			{:else}
 				<span class="opacity-60">Member</span>
 			{/each}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Membership</dt>
-		<dd>
+		<Fact label="Membership">
 			{#if overview.membership.sustaining}
 				Sustaining{overview.membership.hoursPerReset
 					? ` · ${overview.membership.hoursPerReset / 2} hrs a month`
@@ -236,16 +231,15 @@
 			{:else}
 				Free tier
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Directory</dt>
-		<dd>
+		<Fact label="Directory">
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
 				<span class="opacity-60"> · profile incomplete</span>
 			{/if}
-		</dd>
-	</dl>
+		</Fact>
+	</DefinitionList>
 </InfoCard>
 
 <InfoCard title="Programs">
@@ -256,7 +250,7 @@
 				class="rounded-box border border-base-300 px-3 py-2 text-left hover:bg-base-200"
 				onclick={() => onjump(p.tab)}
 			>
-				<div class="text-xs opacity-60">{p.label}</div>
+				<div class="text-subtle">{p.label}</div>
 				<div class="text-sm font-medium">{p.value}</div>
 			</button>
 		{/each}

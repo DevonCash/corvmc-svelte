@@ -13,7 +13,7 @@ This is the "lightweight feature-request board where members upvote ideas to hel
 **Out (deliberately):**
 
 - **Comments or threads.** The one staff response is the whole conversation surface. Discussion belongs in `/member/messages`, and a comment system is a moderation surface of its own.
-- **Appealing a takedown.** A member who thinks staff got it wrong messages staff. Workable now and clearly not workable at three times the size — the person who most needs a channel is the one just told they aren't trusted, which is exactly when "just ask us" breaks down. Written up under **Moderation Appeals** in `IDEAS.md`.
+- **Appealing a takedown.** A member who thinks staff got it wrong messages staff. Workable now and clearly not workable at three times the size — the person who most needs a channel is the one just told they aren't trusted, which is exactly when "just ask us" breaks down. Written up under **Moderation Appeals** in `IDEAS.md`, and since designed in `docs/specs/moderation-appeals-spec.md`, which supersedes this exclusion: an appeal hangs off the upheld flag and carries two independent outcomes, so it can restore the suggestion, the author's standing, or both. The rule this spec wired in `resolveFlag` gains a route back in both directions. Note that an appeal is the _review_ path, not the everyday one — `hidden` is still terminal for editing, so a suggestion staff would rather see reworked than reversed still wants a returnable state this spec does not have.
 - **Editing after staff have hidden or merged a suggestion.** Editing a hidden post would be a way to launder it back past the reason it went down.
 - **Formal balloting.** Board elections and policy votes need ballot secrecy, eligibility rules, and a close date. None of that is here, and grafting it onto an upvote counter would produce a bad version of both.
 - **Public visibility.** The board is members-only. Nothing here renders for signed-out visitors.
@@ -59,7 +59,9 @@ The request stores a **snapshot** of the text it would replace, not a live join,
 
 `editedAt` is stamped only when the title or body actually differs, so opening the form and saving without typing doesn't mark a suggestion as edited.
 
-**A separate `suggestion_standing` table, duplicating `community_event_standing`.** Generalizing means renaming a shipped table and touching working community-events code for no user-visible gain. Sharing it means an upheld report about an event listing silently puts someone on probation for suggestions, which is surprising and wasn't asked for. Two domains is not a pattern; when a third needs standing, merge all three into a scoped `member_standing`. This is knowing duplication, recorded here so the next person doesn't think it was an oversight.
+**A separate `suggestion_standing` table, duplicating `community_event_standing`.** Generalizing means renaming a shipped table and touching working community-events code for no user-visible gain. Sharing it means an upheld report about an event listing silently puts someone on probation for suggestions, which is surprising and wasn't asked for. Two domains is not a pattern; when a third needs standing, merge all three into a scoped `member_standing`. This was knowing duplication, recorded here so the next person didn't think it was an oversight.
+
+**That trigger has since fired, and the merge is done.** PR #213 (direct messages) was the third domain to need standing, so all three tables are now one `member_standing` keyed `(userId, scope)` — see `docs/specs/member-standing-spec.md`, which records how the two-state/ladder and `source` questions were resolved. Nothing about the rule above changed: scope did not collapse, and an upheld report about an event listing still costs nothing on the suggestion board. Suggestion standing is now `getStanding(userId, 'suggestion')`.
 
 **No denormalized vote counter.** Counts come from a `leftJoin` + `groupBy`. At this scale that is free, and — more to the point — `custom/no-db-transaction` makes an _incrementing_ counter genuinely unsafe: a read-modify-write has no transaction to protect it, so concurrent votes would lose counts permanently. If a counter is ever needed, the only safe form is an absolute recompute (`SET vote_count = (SELECT count(*) …)`), never `+= 1`.
 
@@ -80,7 +82,7 @@ Merging into an already-merged suggestion is **rejected rather than followed**. 
 - **`suggestion`** — author (`set null`, so a deleted account doesn't take community history), title, body, `category`, `status`, `visibility` + `visibilityNote`/`visibilityChangedAt`/`visibilityChangedByUserId` (null when the _system_ moved it, i.e. an incoming report), `responseBody`/`responseByUserId`/`responseAt`, `mergedIntoId`/`mergedByUserId`/`mergedAt`, timestamps. Indexed on status, category, visibility, author, mergedIntoId, createdAt.
 - **`suggestion_vote`** — `uniqueIndex(suggestionId, userId)`. That index is both the double-submit backstop and the merge dedup.
 - **`suggestion_edit`** — the proposed title/body/category, a snapshot of the original three, `status` (`pending`/`approved`/`rejected`), reviewer, notes. Plus `suggestion.editedAt`, null until the text actually changes.
-- **`suggestion_standing`** — `userId` pk, `requiresReview`, `reason`, `triggeringFlagId` → `content_flag` (so "why am I in review?" always resolves), `updatedByUserId`, `updatedAt`.
+- ~~**`suggestion_standing`**~~ — `userId` pk, `requiresReview`, `reason`, `triggeringFlagId` → `content_flag` (so "why am I in review?" always resolves), `updatedByUserId`, `updatedAt`. **Superseded:** merged into `member_standing` at scope `suggestion`; see `docs/specs/member-standing-spec.md`.
 
 `mergedIntoId` is a **plain indexed column with no FK**. No self-referencing FK exists anywhere in the schema, and `scripts/db/d1-safe-rebuild.mjs` walks a child graph on every `db:generate` that has never had to order a table against itself. This mirrors `contentFlag.entityId`, FK-less for the same reason. Nothing hard-deletes a suggestion, and the service validates the target.
 
@@ -118,7 +120,7 @@ Notifications: `suggestion_responded`, `suggestion_moderated`, and `suggestion_e
 
 - a **merged pair with overlapping voters** — the target shows 8 votes where the naive sum would be 10, so a broken merge is visible at a glance rather than plausible
 - an **`under_review`** suggestion with its pending `content_flag`, so report → resolve/dismiss is testable end to end
-- a **`pending_review`** post from a member with a `suggestion_standing` row and an already-upheld flag behind it
+- a **`pending_review`** post from a member with a `member_standing` row at scope `suggestion` and an already-upheld flag behind it
 - a **pending edit** on the most-voted suggestion, so the staff before/after card has something at stake
 
 Then: vote and unvote from the board and the detail page; report another member's suggestion and watch it leave the board; dismiss the report in `/staff/flags` and watch it come back; uphold a second one and check `/staff/users/[id]` shows the author on review with a link to the report; post as that member and approve it out of the review tab; merge two suggestions with overlapping voters and confirm the union; click Merge again and confirm nothing changes.

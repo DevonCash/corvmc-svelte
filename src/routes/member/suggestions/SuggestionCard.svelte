@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { resolve } from '$app/paths';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -42,7 +43,7 @@
 </script>
 
 <li class="card bg-base-100 shadow">
-	<div class="card-body flex-row items-start gap-4 p-4">
+	<CardBody padding="sm" class="flex-row items-start gap-4">
 		<!-- The vote control is a Form whose only field is hidden. SubmitButton has
 		     no dirty gate, so a fields-free form still submits. -->
 		<Form remote={vote} class="shrink-0" onsuccess={onchanged}>
@@ -83,7 +84,7 @@
 				</p>
 			{/if}
 
-			<p class="text-sm opacity-60">
+			<p class="text-muted">
 				{suggestion.authorName ?? 'A former member'} · {relativeDay(suggestion.createdAt)}
 			</p>
 		</div>
@@ -96,13 +97,15 @@
 				modalTitle="Flag for review"
 				submitLabel="Send report"
 				successToast="Reported — staff will take a look"
-				class="btn-ghost btn-xs shrink-0"
+				variant="ghost"
+				size="xs"
+				class="shrink-0"
 				onsuccess={onchanged}
 			>
 				{#snippet icon()}<IconFlag size={16} />{/snippet}
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
-					<p class="mb-3 text-sm opacity-70">
+					<p class="mb-3 text-muted">
 						This takes the suggestion off the board straight away while staff look at it. If they
 						don't agree with the report, it goes back up.
 					</p>
@@ -111,5 +114,5 @@
 				{/snippet}
 			</Action>
 		{/if}
-	</div>
+	</CardBody>
 </li>

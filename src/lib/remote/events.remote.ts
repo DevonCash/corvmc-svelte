@@ -51,9 +51,10 @@ import {
 	countRsvps
 } from '$lib/server/event/rsvp-service';
 import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
-import { getCommunityStanding } from '$lib/server/event/community-event-service';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
+import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
@@ -65,7 +66,7 @@ import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, SHORT_TEXT_MAX } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -531,7 +532,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		// It's what tells a reviewer whether this member is here because of a
 		// past problem or because they're new.
 		submitterStanding:
-			evt.source === 'community' ? await getCommunityStanding(evt.createdByUserId) : null,
+			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
 		submitterId: evt.createdByUserId,
 		linkedReservation,
 		ticketStats,
@@ -553,9 +554,14 @@ export const checkConflicts = query(
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
 
-		// Filter out the event's own reservation from conflicts
+		// Drop the event's own hold — re-timing an event must not report it as
+		// conflicting with itself. The old test was `!('id' in c)`, and
+		// getConflictDetails never returned an id, so it was always true and
+		// nothing was ever filtered: every event with a hold showed a phantom
+		// conflict, which armed "Override conflicts" and made the save skip the
+		// real double-booking check.
 		const filtered = excludeReservationId
-			? conflicts.filter((c) => c.type !== 'reservation' || !('id' in c))
+			? conflicts.filter((c) => c.type !== 'reservation' || c.id !== excludeReservationId)
 			: conflicts;
 
 		return { conflicts: filtered, validationWarnings };
@@ -710,7 +716,7 @@ export const updateEvent = form(
 		doorsTime: z.string().optional(),
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
-		location: z.string().max(255).optional(),
+		location: z.string().max(SHORT_TEXT_MAX).optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
@@ -759,19 +765,27 @@ export const updateEvent = form(
 				data.doorsTime && data.eventDate ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
-		// Handle reservation rebooking
-		if (
-			rebookReservation &&
-			data.eventDate &&
-			data.reservationStartTime &&
-			data.reservationEndTime
-		) {
-			const reservationRange = buildTimeRangeInTz(
-				data.eventDate,
-				data.reservationStartTime,
-				data.reservationEndTime,
-				tz
-			);
+		// Hold the space, or move the existing hold. Same rules as createEvent: the
+		// reservation times are an optional override for setup and teardown, not a
+		// precondition, and they are all-or-nothing because buildTimeRangeInTz reads
+		// an end before the start as an overnight range — a supplied 23:00 start
+		// against a defaulted 22:00 end would roll over and hold the room 23 hours.
+		//
+		// Gating on the times is what made this a silent no-op: the box was ticked,
+		// the event saved, and no space was ever held. Same defect the create path
+		// carried until #206.
+		if (rebookReservation) {
+			const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
+			const startTime = customWindow ? data.reservationStartTime! : data.eventStartTime;
+			const endTime = customWindow ? data.reservationEndTime! : data.eventEndTime;
+
+			// The edit form always submits the event's date and times, so this only
+			// trips on a malformed payload. Failing loudly beats booking nothing.
+			if (!data.eventDate || !startTime || !endTime) {
+				error(400, 'A date and time range are required to hold the space');
+			}
+
+			const reservationRange = buildTimeRangeInTz(data.eventDate, startTime, endTime, tz);
 			updateParams.rebook = {
 				userId: staff.id,
 				reservationStartsAt: reservationRange.startsAt,
@@ -791,13 +805,26 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 	return { success: true };
 });
 
-export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
-	// Band-sourced events notify the band's admins — pulling a gig silently is
-	// the one unpublish that needs a word back to whoever posted it.
-	await unpublishWithNotice(data.id);
-	return { success: true };
-});
+export const unpublishEvent = form(
+	z.object({
+		id: z.string().min(1),
+		// Optional, because unpublishing a CMC event notifies nobody and requiring
+		// a reason there is pure friction. It is passed through whenever it is
+		// given: community listings and band gigs both email whoever posted them,
+		// and this endpoint had no way to say why at all — the member got "your
+		// listing was taken down" and a blank space where the reason goes.
+		// 1000 matches `rejectCommunityEvent`, which writes the same
+		// `event.reviewNotes` column.
+		notes: z.string().trim().max(1000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		// Band-sourced events notify the band's admins — pulling a gig silently is
+		// the one unpublish that needs a word back to whoever posted it.
+		await unpublishWithNotice(data.id, { notes: data.notes });
+		return { success: true };
+	}
+);
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireStaff();
@@ -1077,25 +1104,48 @@ export const purchaseTickets = form(
 
 		const lineItem = await buildLineItem('ticket', unitPrice, data.quantity);
 
-		const result = await checkout({
-			stripeCustomerId: locals.user?.stripeId ?? undefined,
-			customerEmail: locals.user?.email ?? attendee.email,
-			userId: locals.user?.id ?? undefined,
-			mode: 'payment',
-			lineItems: [lineItem],
-			coverFees,
-			metadata: {
-				type: 'ticket',
-				purchase_id: purchaseId,
-				event_id: evt.id,
-				ticket_quantity: String(data.quantity),
-				// The webhook needs this to break the charge into tickets vs. covered
-				// fees on the receipt — the session alone can't tell them apart.
-				ticket_unit_price_cents: String(unitPrice)
-			},
-			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
-		});
+		// checkout() spends any credits the buyer has before charging the card, and
+		// payment-service reverses every completed deduction if a later one fails.
+		// The only way that surfaces here is a lost race — the balance moved between
+		// this request pricing the cart and the deduction landing. Nothing is
+		// broken and nothing is charged; the buyer just needs to resubmit against
+		// the new balance.
+		//
+		// Reported as a field issue rather than a thrown status because Form routes
+		// a thrown error into onfailure(issues), which carries no message — this
+		// page's onfailure shows a generic "Something went wrong". It also keeps a
+		// routine race out of Sentry, where an unhandled throw lands as a 500.
+		let result;
+		try {
+			result = await checkout({
+				stripeCustomerId: locals.user?.stripeId ?? undefined,
+				customerEmail: locals.user?.email ?? attendee.email,
+				userId: locals.user?.id ?? undefined,
+				mode: 'payment',
+				lineItems: [lineItem],
+				coverFees,
+				metadata: {
+					type: 'ticket',
+					purchase_id: purchaseId,
+					event_id: evt.id,
+					ticket_quantity: String(data.quantity),
+					// The webhook needs this to break the charge into tickets vs. covered
+					// fees on the receipt — the session alone can't tell them apart.
+					ticket_unit_price_cents: String(unitPrice)
+				},
+				successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
+				cancelUrl: `${url.origin}/events/${evt.id}/tickets`
+			});
+		} catch (err) {
+			if (err instanceof InsufficientCreditsError) {
+				invalid(
+					issue.quantity(
+						'Your credit balance changed while this was being processed. Nothing was charged — check the total and try again.'
+					)
+				);
+			}
+			throw err;
+		}
 
 		if (result.paid) {
 			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');

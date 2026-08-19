@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
@@ -10,6 +11,7 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -66,7 +68,9 @@ export class OwnerCannotLeaveError extends Error {
 	}
 }
 
-export class BandTierManagedByStripeError extends Error {
+export class BandTierManagedByStripeError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This band has an active Stripe subscription — change the tier in Stripe instead');
 		this.name = 'BandTierManagedByStripeError';
@@ -723,12 +727,6 @@ export async function getUserRole(bandId: string, userId: string): Promise<BandR
 // Avatar
 // ---------------------------------------------------------------------------
 
-const AVATAR_EXTENSIONS: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
-
 /** Upload a band avatar to storage and persist its key. */
 export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
 	const [row] = await db
@@ -746,8 +744,7 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 		}
 	}
 
-	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
-	const key = `bands/avatars/${bandId}.${ext}`;
+	const key = mediaKey('bands/avatars', bandId, contentType);
 	await uploadFile(buffer, key, contentType);
 
 	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));

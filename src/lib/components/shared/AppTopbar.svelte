@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from './Button.svelte';
 	import { IconMenu2, IconMusic, IconChevronDown } from '@tabler/icons-svelte';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
@@ -52,26 +53,28 @@
 		<!-- Panel tabs - desktop only -->
 		<ButtonGroup class="ml-4 hidden lg:flex">
 			{#each primaryPanels as panel (panel.key)}
-				<a
+				<Button
 					href={panel.href}
-					class="join-item btn btn-sm {panel.key === activePanel
-						? 'latched btn-primary'
-						: 'btn-ghost'}"
+					variant={panel.key === activePanel ? 'primary' : 'ghost'}
+					size="sm"
+					class="join-item {panel.key === activePanel ? 'latched' : ''}"
 				>
 					{panel.label}
-				</a>
+				</Button>
 			{/each}
 
 			{#if bandPanels.length > 0}
 				<div class="bands-dropdown-wrapper join-item relative">
-					<button
-						class="btn btn-sm rounded-[inherit] {activeBand ? 'latched btn-primary' : 'btn-ghost'}"
+					<Button
+						variant={activeBand ? 'primary' : 'ghost'}
+						size="sm"
+						class="rounded-[inherit] {activeBand ? 'latched' : ''}"
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />
 						{activeBand?.label ?? 'Bands'}
 						<IconChevronDown size={14} />
-					</button>
+					</Button>
 
 					{#if bandsOpen}
 						<div

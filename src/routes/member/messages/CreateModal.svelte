@@ -19,7 +19,8 @@
 	modalTitle="Message CorvMC staff"
 	submitLabel="Send"
 	successToast="Message sent"
-	class="btn-primary btn-sm"
+	variant="primary"
+	size="sm"
 	onsuccess={(result) => {
 		const { threadId } = (result ?? {}) as { threadId?: string };
 		if (threadId) goto(resolve(`/member/messages/${threadId}`));

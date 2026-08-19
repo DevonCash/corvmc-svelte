@@ -29,18 +29,17 @@
 
 	let activeTab = $state<'active' | 'all'>('active');
 
-	// These MUST stay above the two `await`s below. A declaration that follows a
-	// top-level await is compiled as "blocked", and Svelte attaches that blocker
-	// to every template node reading it — so `{#each await activeReservations}`
-	// became `$.async(node, [blocker], [expression], …)`. That is the one shape
-	// that reaches `flatten`'s deferred branch, where `restore()` may reactivate a
-	// null batch (it optional-chains, admitting as much) but `async_derived` then
-	// dereferences `current_batch.async_deriveds` unguarded — the crash in
-	// JAVASCRIPT-SVELTEKIT-25. Unfixed in every published Svelte (5.56.9 is
-	// byte-identical here) and on main. Declared first, the blocker list is empty
-	// and `flatten` takes its synchronous path. See the sibling notes on the same
-	// class of bug in ../profile/+page.svelte and ../profile/ProfileForm.svelte,
-	// and the guard in async-effect-shape.spec.ts that keeps this from regressing.
+	// These two MUST stay above the `await`s below. A declaration that follows a
+	// top-level await is compiled as "blocked", and Svelte hangs that blocker on
+	// every template node that reads it — so `{#each await activeReservations}`
+	// compiled to `$.async(node, [blocker], [expression], …)`. That is the one
+	// shape that reaches `flatten`'s deferred branch, where `restore()` may
+	// reactivate a null batch (it optional-chains, conceding as much) and
+	// `async_derived` then dereferences `current_batch.async_deriveds` unguarded:
+	// an unhandled TypeError that kills the page, and the Confirm button with it
+	// (JAVASCRIPT-SVELTEKIT-25). Unfixed in every published Svelte. Declared
+	// first, the blocker list is empty and `flatten` takes its synchronous path.
+	// `async-effect-shape.spec.ts` fails the build if this order is undone.
 	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
 	let allReservations = $state(getReservations({ includeTerminal: true }));
 
@@ -156,22 +155,22 @@
 				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
 				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
-					<p class="text-sm opacity-70">
+					<p class="text-muted">
 						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}
 					</p>
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
-					<p class="text-xs opacity-60">
+					<p class="text-subtle">
 						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be offered
 						to someone else.
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
-					<Button type="button" class="btn-outline btn-sm" onclick={closeConfirmModal}
+					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
 						>Dismiss</Button
 					>
-					<SubmitButton label="Confirm Reservation" class="btn-sm btn-success" />
+					<SubmitButton label="Confirm Reservation" variant="success" size="sm" />
 				</div>
 			</div>
 		</Form>

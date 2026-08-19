@@ -6,8 +6,16 @@
 	import { getFormContext } from '$lib/components/shared/Form/Form.svelte';
 	import * as Form from '$lib/components/shared/Form';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { fullDate, formatTimeRange, formatScheduleLabel } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE, creditsToHours } from '$lib/config';
+	import {
+		formatDate,
+		formatDollars,
+		formatScheduleLabel,
+		formatTimeRange,
+		fullDate,
+		toLocalDate,
+		toLocalTime
+	} from '$lib/utils/format';
+	import { creditsToHours } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -29,13 +37,7 @@
 	let el: HTMLDivElement;
 
 	function extractTimeFields(d: Date) {
-		const date = d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
-		const time = d.toLocaleTimeString('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-		return { date, time };
+		return { date: toLocalDate(d), time: toLocalTime(d) };
 	}
 
 	let pricing = $state<{
@@ -58,18 +60,8 @@
 	// (which skips payment) is the single action — no redundant payment screen.
 	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
 
-	function cents(amount: number): string {
-		return (amount / 100).toFixed(2);
-	}
-
 	function formatPreviewDate(iso: string): string {
-		const d = new Date(iso);
-		return d.toLocaleDateString('en-US', {
-			timeZone: DEFAULT_TIMEZONE,
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(new Date(iso));
 	}
 
 	$effect(() => {
@@ -149,7 +141,7 @@
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
 				<p class="font-medium">{dateLabel}</p>
-				<p class="text-sm opacity-70">{timeLabel}</p>
+				<p class="text-muted">{timeLabel}</p>
 			{:else}
 				<div class="skeleton h-5 w-48"></div>
 			{/if}
@@ -163,14 +155,16 @@
 		{:else}
 			<div class="py-2 text-sm">
 				<div class="flex justify-between">
-					<span>{pricing.durationHours} hr × ${cents(pricing.hourlyRateCents)}/hr</span>
+					<span>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</span>
 					{#if pricing.creditsApplicable > 0}
 						<span>
-							<span class="line-through opacity-60">${cents(pricing.totalCents)}</span>
-							<span class="ml-1 font-medium text-success">${cents(pricing.remainingCents)}</span>
+							<span class="line-through opacity-60">${formatDollars(pricing.totalCents)}</span>
+							<span class="ml-1 font-medium text-success"
+								>${formatDollars(pricing.remainingCents)}</span
+							>
 						</span>
 					{:else}
-						<span>${cents(pricing.totalCents)}</span>
+						<span>${formatDollars(pricing.totalCents)}</span>
 					{/if}
 				</div>
 				{#if pricing.creditsApplicable > 0}
@@ -189,7 +183,7 @@
 					<p class="text-sm font-medium">{scheduleLabel}</p>
 				{/if}
 				<div class="mt-2">
-					<p class="mb-1 text-xs font-medium opacity-70">Upcoming instances</p>
+					<p class="mb-1 text-subtle font-medium">Upcoming instances</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
 							{#each Array(3), i (i)}
@@ -197,7 +191,7 @@
 							{/each}
 						</div>
 					{:else if recurringPreview.dates.length === 0}
-						<p class="text-xs opacity-60">No upcoming instances in the next 60 days.</p>
+						<p class="text-subtle">No upcoming instances in the next 60 days.</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
 							{#each recurringPreview.dates as iso (iso)}
@@ -218,7 +212,7 @@
 		{/if}
 
 		{#if staff}
-			<p class="text-xs opacity-70">
+			<p class="text-subtle">
 				Comp makes this reservation fully free without using the member's free hours.
 				{#if pricing && pricing.creditsApplicable > 0}
 					Apply Credits commits their free hours; any remainder is due at the door.
@@ -230,13 +224,13 @@
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
-				<Button type="button" class="btn-ghost" onclick={() => formCtx.back()}>Back</Button>
+				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
 			{/if}
 			{#if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" class="btn-info btn-outline">Comp</Button>
-				<Button type="submit" class="btn-primary">
+				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>
+				<Button type="submit" variant="primary">
 					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
 				</Button>
 			{:else}
@@ -245,7 +239,7 @@
 					type="submit"
 					name="skipPayment"
 					value="on"
-					class={showPayAhead ? 'btn-ghost' : 'btn-primary'}>Confirm</Button
+					variant={showPayAhead ? 'ghost' : 'primary'}>Confirm</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>

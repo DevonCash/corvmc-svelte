@@ -3,9 +3,8 @@ import { invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import {
-	getCommunityStanding,
-	restoreCommunityTrust,
 	listCommunityEventsForUser,
 	listRejectedForUser,
 	countPublishedListingsBy,
@@ -49,7 +48,7 @@ export const getMyListings = query(async () => {
 	const [listings, rejected, standing] = await Promise.all([
 		listCommunityEventsForUser(user.id),
 		listRejectedForUser(user.id),
-		getCommunityStanding(user.id)
+		getStanding(user.id, 'community_event')
 	]);
 
 	const shape = (e: Awaited<ReturnType<typeof listCommunityEventsForUser>>[number]) => ({
@@ -80,7 +79,7 @@ export const getMyListing = query(z.string(), async (eventId) => {
 
 	const [lineup, standing] = await Promise.all([
 		getEventLineup(eventId),
-		getCommunityStanding(user.id)
+		getStanding(user.id, 'community_event')
 	]);
 
 	return {
@@ -128,12 +127,6 @@ export const searchBandsForListing = query(z.string(), async (q) => {
 	requireUser();
 	if (!q || q.trim().length < 2) return [];
 	return searchBandsByName(q.trim());
-});
-
-/** Standing for one member, for the staff user detail page. */
-export const getMemberStanding = query(z.string(), async (userId) => {
-	await requireStaff();
-	return getCommunityStanding(userId);
 });
 
 // ---------------------------------------------------------------------------
@@ -380,13 +373,6 @@ export const rejectListing = form(
 		return { success: true };
 	}
 );
-
-export const restoreListingTrust = form(z.object({ userId: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
-	await restoreCommunityTrust({ userId: data.userId, staffId: staff.id });
-	void getMemberStanding(data.userId).refresh();
-	return { success: true };
-});
 
 // ---------------------------------------------------------------------------
 // Staff user record (/staff/users/[id])

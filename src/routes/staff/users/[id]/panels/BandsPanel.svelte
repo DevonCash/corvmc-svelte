@@ -33,10 +33,15 @@
 							class="flex items-center gap-3 rounded-box px-2 py-2 hover:bg-base-200"
 						>
 							<!-- Band avatars are square; member avatars are round. -->
-							<Avatar src={b.avatarUrl ?? undefined} name={b.name} class="size-10 !rounded" />
+							<Avatar
+								src={b.avatarUrl ?? undefined}
+								name={b.name}
+								size="avatar-sm"
+								class="size-10 !rounded"
+							/>
 							<div class="min-w-0 flex-1">
 								<div class="font-medium">{b.name}</div>
-								<div class="text-sm opacity-60">{b.memberCount} active members</div>
+								<div class="text-muted">{b.memberCount} active members</div>
 							</div>
 							<StatusBadge status={b.role} label />
 							{#if b.status !== 'active'}
@@ -58,7 +63,7 @@
 				description="No published show credits this member's bands are confirmed on."
 			/>
 		{:else}
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				{shows.upcoming.length} upcoming · {shows.pastCount} played
 			</p>
 			<Table>
@@ -90,7 +95,7 @@
 				description="This member has never submitted an event to the community calendar."
 			/>
 		{:else}
-			<p class="mb-3 text-sm opacity-60">{data.publishedCount} currently on the public calendar</p>
+			<p class="mb-3 text-muted">{data.publishedCount} currently on the public calendar</p>
 			<Table>
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
@@ -103,7 +108,7 @@
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/events/${e.id}`)}>{e.title}</a>
 							{#if e.reviewNotes}
-								<div class="text-sm opacity-60">{e.reviewNotes}</div>
+								<div class="text-muted">{e.reviewNotes}</div>
 							{/if}
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(e.startsAt)}</td>
@@ -134,7 +139,7 @@
 						<td class="w-px"><StatusBadge status={t.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/events/${t.eventId}`)}>{t.eventTitle}</a>
-							<div class="text-sm opacity-60">{t.code}</div>
+							<div class="text-muted">{t.code}</div>
 						</td>
 						<td class="col-support">Ticket</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(t.eventStartsAt)}</td>

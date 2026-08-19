@@ -23,6 +23,34 @@ export const SEARCH_LIMIT = 20;
 export const LIST_LIMIT = 100;
 
 // ---------------------------------------------------------------------------
+// Text field limits
+// ---------------------------------------------------------------------------
+//
+// These are *application* conventions, not database constraints — every text
+// column in the schema is a bare SQLite `text()` with no length at all. The 255
+// is inherited from the Laravel/MySQL app this replaced, where it meant
+// varchar(255). Kept because it is a sane cap and changing it would be churn,
+// but do not read it as something the database enforces.
+//
+// Named per *kind of field*, deliberately, rather than one constant reused
+// everywhere the number happens to be the same. A shared constant asserts that
+// two fields must change together; that is true of "every single-line name in
+// the app" and false of, say, a flag reason, which has its own limit next to
+// the rest of the flag rules.
+
+/** Single-line text: names, titles, slugs, locations. */
+export const SHORT_TEXT_MAX = 255;
+
+/** A one-or-two-sentence field: summaries, short bios, availability notes. */
+export const BLURB_MAX = 500;
+
+/** Multi-paragraph prose: descriptions, longer bios. */
+export const LONG_TEXT_MAX = 2000;
+
+/** Free-text staff/member notes attached to a record. */
+export const NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
 // Finance
 // ---------------------------------------------------------------------------
 
@@ -222,6 +250,58 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
 }
+
+// ---------------------------------------------------------------------------
+// Member standing
+// ---------------------------------------------------------------------------
+
+/**
+ * The privileges a member can be put on probation for, one per domain that
+ * reads standing. Exactly three, and each one has a code path that consults it
+ * — a scope nothing reads is a column that lies. `member_profile` and
+ * `band_profile` reports cost nobody anything on uphold today, so they get no
+ * scope; `scopeForFlag` maps them to null.
+ */
+export const standingScopes = ['community_event', 'suggestion', 'messaging'] as const;
+export type StandingScope = (typeof standingScopes)[number];
+
+/**
+ * One ladder for every scope.
+ *
+ * `none`       — no restriction. Also what a lifted one becomes, so "we looked
+ *                at this and cleared it" still reads differently from "this
+ *                never came up".
+ * `restricted` — you may still act, but with a gate. For the two posting
+ *                scopes that gate is staff review; for messaging it is
+ *                reply-only.
+ * `disabled`   — you may not act at all.
+ */
+export const standingStatuses = ['none', 'restricted', 'disabled'] as const;
+export type StandingStatus = (typeof standingStatuses)[number];
+
+/**
+ * Which rungs each scope may actually hold, and what to call it on screen.
+ *
+ * Only messaging has a use for `disabled` — staff switching it off wholesale,
+ * which is how the occasional under-18 member is handled. "You may not post
+ * community listings at all" is not a thing anyone can do, so `setStanding`
+ * rejects it rather than leaving an unreachable value lying in the column.
+ */
+export const standingScopeConfig: Record<
+	StandingScope,
+	{ statuses: readonly StandingStatus[]; label: string }
+> = {
+	community_event: { statuses: ['none', 'restricted'], label: 'Community listings' },
+	suggestion: { statuses: ['none', 'restricted'], label: 'Suggestions' },
+	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' }
+};
+
+/**
+ * Longest staff note stored on a standing. 500 was already the cap on both the
+ * staff messaging form and `revokeSuggestionTrust`; community listings trimmed
+ * nowhere, which was the outlier.
+ */
+export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
 // Volunteering

@@ -7,7 +7,7 @@
  * hook runs the preview server is already up and reachable. That makes it the
  * right place to check *which* build is being served, and the wrong place to
  * touch the database: migrating and seeding from here ran a second miniflare
- * against `.wrangler/state` while the server held it, which killed the runtime
+ * against the state directory while the server held it, which killed the runtime
  * outright once the file needed recovery. That work moved to `e2e/prepare.ts`,
  * which the `test:e2e` script runs before Playwright starts.
  */

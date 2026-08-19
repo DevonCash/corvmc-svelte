@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -28,7 +30,7 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import { fullDate, formatTime, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { formatDollars, formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -38,6 +40,7 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { rejectListing } from '$lib/remote/community-events.remote';
+	import { imageSrc } from '$lib/utils/images';
 
 	const rejectFields = rejectListing.fields;
 
@@ -74,6 +77,12 @@
 	let rebookConfirmed = $state(false);
 	let overrideConflicts = $state(false);
 
+	// Holding the space for an event that never had a hold. Disjoint from rebook:
+	// an event with a reservation gets the rebook alert instead, and one without
+	// had no way to acquire it at all before this.
+	let reserveSpace = $state(false);
+	const canReserveSpace = $derived(!data.linkedReservation);
+
 	let hasConflicts = $state(false);
 
 	// Ticket price in cents for the hidden field. Independent of the ticketing
@@ -102,7 +111,7 @@
 		// allows disabling it. The price is untouched: a band gig legitimately has
 		// one for the door or an outside seller.
 		editTicketingEnabled = cmcCanSell ? evt.ticketingEnabled : false;
-		editTicketPriceDollars = evt.ticketPrice ? (evt.ticketPrice / 100).toFixed(2) : '';
+		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
@@ -118,6 +127,8 @@
 		rebookReason = '';
 		rebookConfirmed = false;
 		overrideConflicts = false;
+		reserveSpace = false;
+		hasConflicts = false;
 		editing = true;
 	}
 
@@ -125,6 +136,28 @@
 		editing = false;
 		rebookNeeded = false;
 		rebookConfirmed = false;
+		reserveSpace = false;
+		// Outlives the form otherwise: ConflictWarnings only writes it while
+		// mounted, so a conflict seen before Cancel would arm the next override.
+		hasConflicts = false;
+		overrideConflicts = false;
+	}
+
+	/**
+	 * Show the hold as the event's own window when the toggle goes on. The server
+	 * falls back to exactly this, so the fields are an optional setup/teardown
+	 * override — filling them just makes what will be booked visible.
+	 */
+	function toggleReserveSpace() {
+		if (reserveSpace) {
+			editReservationStartTime = editStartTime;
+			editReservationEndTime = editEndTime;
+		} else {
+			editReservationStartTime = '';
+			editReservationEndTime = '';
+			hasConflicts = false;
+			overrideConflicts = false;
+		}
 	}
 
 	// Check if times changed enough to need a rebook
@@ -161,6 +194,9 @@
 		editing = false;
 		rebookNeeded = false;
 		rebookConfirmed = false;
+		reserveSpace = false;
+		hasConflicts = false;
+		overrideConflicts = false;
 		void getStaffEventDetail(id).refresh();
 	}
 
@@ -221,11 +257,11 @@
 <PageHeader title={evt.title} backHref="/staff/events">
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}
-			<Button href="/staff/events/{evt.id}/check-in" class="btn-sm btn-ghost">Check-in</Button>
+			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
 		{/if}
 
 		{#if evt.status !== 'cancelled' && !editing}
-			<Button class="btn-sm btn-ghost" onclick={startEditing}>Edit</Button>
+			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
 		{/if}
 
 		{#if evt.status === 'draft'}
@@ -242,7 +278,8 @@
 				action={rejectListing}
 				label="Turn down"
 				successToast="Sent back to the member"
-				class="btn-warning btn-sm"
+				variant="warning"
+				size="sm"
 				onsuccess={() => invalidateAll()}
 			>
 				{#snippet form()}
@@ -297,7 +334,7 @@
 					onsuccess={() => void getEventRecurringSeries(id).refresh()}
 				>
 					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
-					<SubmitButton label="Cancel series" class="btn-xs btn-ghost text-error" />
+					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
 				</Form>
 			{/if}
 		</div>
@@ -306,9 +343,9 @@
 	<!-- Edit form -->
 	{#if editing}
 		<svelte:boundary>
-			<div class="card bg-base-100 shadow">
-				<div class="card-body space-y-4">
-					<h3 class="text-sm font-medium opacity-60">Edit Event</h3>
+			<Card>
+				<CardBody class="space-y-4">
+					<h3 class="text-muted font-medium">Edit Event</h3>
 
 					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
 						<input {...fields.eventId.as('hidden', evt.id)} />
@@ -316,7 +353,7 @@
 						<!-- Always submitted: the price is the attendee's price whoever sells
 						     the ticket, so it has to survive the ticketing toggle being off. -->
 						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
-						{#if rebookNeeded && rebookConfirmed}
+						{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
 							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
 						{#if overrideConflicts}
@@ -330,7 +367,7 @@
 									name="title"
 									type="text"
 									bind:value={editTitle}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 								/>
 							</FormField>
@@ -340,7 +377,7 @@
 									id="editDesc"
 									name="description"
 									bind:value={editDescription}
-									class="textarea textarea-bordered w-full"
+									class="textarea w-full"
 									rows="4"
 								></textarea>
 							</FormField>
@@ -351,7 +388,7 @@
 									name="eventDate"
 									type="date"
 									bind:value={editDate}
-									class="input input-bordered w-full"
+									class="input w-full"
 									required
 									onchange={checkForRebook}
 								/>
@@ -364,7 +401,7 @@
 										name="eventStartTime"
 										type="time"
 										bind:value={editStartTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -376,7 +413,7 @@
 										name="eventEndTime"
 										type="time"
 										bind:value={editEndTime}
-										class="input input-bordered w-full"
+										class="input w-full"
 										required
 										onchange={checkForRebook}
 									/>
@@ -389,7 +426,7 @@
 									name="doorsTime"
 									type="time"
 									bind:value={editDoorsTime}
-									class="input input-bordered w-full"
+									class="input w-full"
 								/>
 							</FormField>
 
@@ -399,7 +436,7 @@
 									name="tags"
 									type="text"
 									bind:value={editTags}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="e.g. open mic, workshop"
 								/>
 							</FormField>
@@ -412,7 +449,7 @@
 									name="location"
 									type="text"
 									bind:value={editLocation}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="Venue name and address"
 								/>
 							</FormField>
@@ -423,7 +460,7 @@
 									name="externalTicketUrl"
 									type="url"
 									bind:value={editExternalTicketUrl}
-									class="input input-bordered w-full"
+									class="input w-full"
 									placeholder="https://..."
 								/>
 							</FormField>
@@ -440,7 +477,7 @@
 									min="0.01"
 									step="0.01"
 									placeholder="15.00"
-									class="input input-bordered w-full"
+									class="input w-full"
 									required={editTicketingEnabled}
 								/>
 								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
@@ -450,7 +487,7 @@
 							     do: `update()` throws on it, so offering the toggle here would
 							     only produce a failed save. The band's own link takes the money. -->
 							{#if !cmcCanSell}
-								<p class="text-sm opacity-60">
+								<p class="text-muted">
 									CMC doesn't sell tickets for shows it isn't producing — the price above is what
 									attendees pay at the door or through the {isBandEvent ? "band's" : 'listed'} ticket
 									link.
@@ -465,7 +502,7 @@
 							{/if}
 
 							{#if editTicketingEnabled}
-								<div class="card bg-base-200 p-4">
+								<Card tone="base-200" class="p-4">
 									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
 										<input
 											id="editTicketQuantity"
@@ -475,16 +512,16 @@
 											min="1"
 											step="1"
 											placeholder="Unlimited"
-											class="input input-bordered w-full"
+											class="input w-full"
 										/>
 									</FormField>
-									<p class="text-sm opacity-60 mt-2">Leave capacity blank for unlimited tickets.</p>
-								</div>
+									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
+								</Card>
 							{/if}
 
 							<!-- Rebook warning -->
 							{#if rebookNeeded}
-								<div class="alert alert-warning">
+								<div class="alert alert-warning" role="alert">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
 										<p class="text-sm">
@@ -509,7 +546,7 @@
 														name="reservationStartTime"
 														type="time"
 														bind:value={editReservationStartTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 												<FormField label="Reservation end" id="editResEnd" issues={[]}>
@@ -518,7 +555,7 @@
 														name="reservationEndTime"
 														type="time"
 														bind:value={editReservationEndTime}
-														class="input input-bordered w-full"
+														class="input w-full"
 													/>
 												</FormField>
 											</div>
@@ -546,23 +583,89 @@
 								</div>
 							{/if}
 
+							<!--
+								Hold the space for an event that never had a hold. The rebook alert
+								above covers the other case, so the two never render together.
+							-->
+							{#if canReserveSpace}
+								<div>
+									<label class="label cursor-pointer justify-start gap-3">
+										<input
+											type="checkbox"
+											bind:checked={reserveSpace}
+											onchange={toggleReserveSpace}
+											class="checkbox checkbox-sm"
+										/>
+										<span class="label-text">Reserve practice space</span>
+									</label>
+
+									{#if reserveSpace}
+										<Card tone="base-200" class="p-4 space-y-4 mt-2">
+											<p class="text-muted">
+												Reservation times can differ from event times to allow for setup and
+												teardown.
+											</p>
+
+											<div class="grid grid-cols-2 gap-4">
+												<FormField label="Reservation start" id="editReserveStart" issues={[]}>
+													<input
+														id="editReserveStart"
+														name="reservationStartTime"
+														type="time"
+														bind:value={editReservationStartTime}
+														class="input w-full"
+													/>
+												</FormField>
+												<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
+													<input
+														id="editReserveEnd"
+														name="reservationEndTime"
+														type="time"
+														bind:value={editReservationEndTime}
+														class="input w-full"
+													/>
+												</FormField>
+											</div>
+
+											<ConflictWarnings
+												date={editDate}
+												startTime={editReservationStartTime}
+												endTime={editReservationEndTime}
+												{checkConflicts}
+												bind:hasConflicts
+											/>
+											{#if hasConflicts}
+												<label class="label cursor-pointer justify-start gap-3">
+													<input
+														type="checkbox"
+														bind:checked={overrideConflicts}
+														class="checkbox checkbox-sm"
+													/>
+													<span class="label-text">Override conflicts</span>
+												</label>
+											{/if}
+										</Card>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="flex justify-end gap-2 pt-2">
-								<Button type="button" class="btn-ghost btn-sm" onclick={cancelEditing}
+								<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
 									>Cancel</Button
 								>
-								<SubmitButton label="Save" class="btn-primary btn-sm" />
+								<SubmitButton label="Save" variant="primary" size="sm" />
 							</div>
 						</div>
 					</Form>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			{#snippet pending()}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body flex items-center justify-center p-8">
+				<Card>
+					<CardBody class="flex items-center justify-center p-8">
 						<span class="loading loading-spinner loading-md"></span>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/snippet}
 		</svelte:boundary>
 	{/if}
@@ -579,7 +682,7 @@
 					<span class="opacity-60">{data.creator.email}</span>
 				{/if}
 			</p>
-			{#if data.submitterStanding?.requiresReview}
+			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
 				<Alert type="warning" class="mt-2">
 					This member's listings are checked before they publish, after a report was upheld against
 					one of them.
@@ -645,28 +748,28 @@
 		<InfoCard title="Ticketing">
 			<div class="flex gap-6">
 				<div>
-					<p class="text-sm opacity-60">Price</p>
+					<p class="text-muted">Price</p>
 					<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
 				</div>
 				<div>
-					<p class="text-sm opacity-60">Sold by</p>
+					<p class="text-muted">Sold by</p>
 					<p class="text-lg font-medium">
 						{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
 					</p>
 				</div>
 				{#if evt.ticketingEnabled}
 					<div>
-						<p class="text-sm opacity-60">Capacity</p>
+						<p class="text-muted">Capacity</p>
 						<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
 					</div>
 				{/if}
 				{#if data.ticketStats}
 					<div>
-						<p class="text-sm opacity-60">Sold</p>
+						<p class="text-muted">Sold</p>
 						<p class="text-lg font-medium">{data.ticketStats.sold}</p>
 					</div>
 					<div>
-						<p class="text-sm opacity-60">Remaining</p>
+						<p class="text-muted">Remaining</p>
 						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
 					</div>
 				{/if}
@@ -705,7 +808,7 @@
 							<td class="w-px"><StatusBadge status={t.status} /></td>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{t.attendeeName}</div>
-								<div class="truncate text-sm opacity-60">{t.attendeeEmail}</div>
+								<div class="truncate text-muted">{t.attendeeEmail}</div>
 							</td>
 							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
 						</tr>
@@ -718,7 +821,14 @@
 	<!-- Poster -->
 	<InfoCard title="Poster">
 		{#if data.posterUrl}
-			<img src={data.posterUrl} alt="Event poster" class="rounded max-h-64 object-contain" />
+			{@const poster = imageSrc(data.posterUrl, 'poster')}
+			<img
+				src={poster.src}
+				srcset={poster.srcset}
+				sizes={poster.sizes}
+				alt="Event poster"
+				class="rounded max-h-64 object-contain"
+			/>
 		{:else}
 			<p class="text-sm opacity-50">No poster uploaded</p>
 		{/if}
@@ -729,15 +839,19 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handlePosterUpload}
-					class="file-input file-input-bordered file-input-sm"
+					class="file-input file-input-sm"
 				/>
 			</div>
 		{/if}
 	</InfoCard>
 
-	<!-- Linked reservation -->
-	{#if data.linkedReservation}
-		<InfoCard title="Space Reservation">
+	<!--
+		Linked reservation. Always rendered: omitting the card when nothing is held
+		made "no space held" indistinguishable from "this page doesn't show holds",
+		which is how a whole calendar of events reached production with none.
+	-->
+	<InfoCard title="Space Reservation">
+		{#if data.linkedReservation}
 			<div class="flex items-center gap-3">
 				<StatusBadge status={data.linkedReservation.status} />
 				<span
@@ -754,8 +868,12 @@
 					View reservation →
 				</a>
 			</div>
-		</InfoCard>
-	{/if}
+		{:else}
+			<p class="text-muted">
+				No space held for this event. Use Edit to reserve the practice space.
+			</p>
+		{/if}
+	</InfoCard>
 
 	<!-- Creator -->
 	<InfoCard title="Created by">

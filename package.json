@@ -13,6 +13,8 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
 		"test:components": "vitest --run --project=client --project=storybook",
+		"test:server": "vitest --run --project=server",
+		"test:changed": "vitest --run --changed",
 		"test": "pnpm run test:unit -- --run && playwright install chromium && pnpm run test:e2e",
 		"test:e2e": "tsx e2e/prepare.ts && playwright test",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
@@ -33,12 +35,13 @@
 		"volunteer:seed-roles": "tsx scripts/seed-volunteer-roles.ts",
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
+		"class-census": "node scripts/class-census.mjs",
 		"email:push": "postmark templates push postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
 		"email:pull": "postmark templates pull postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
 		"email:preview": "tsx scripts/email-preview.ts",
 		"email:validate": "tsx scripts/email-validate.ts",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
-		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --file=\"$f\"; done",
+		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --persist-to \"${WRANGLER_PERSIST_TO:-.wrangler/state}\" --file=\"$f\"; done",
 		"db:sync": "bash scripts/sync-d1.sh"
 	},
 	"imports": {

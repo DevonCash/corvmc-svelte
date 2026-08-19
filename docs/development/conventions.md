@@ -113,11 +113,12 @@ Three project-specific rules live in `eslint-rules/` and are registered once as 
 `custom` plugin in `eslint.config.js` (note the comment there: registering the plugin in
 more than one config object crashes eslint with "Cannot redefine plugin custom").
 
-| Rule                              | Severity / scope                                        | What it flags → what to do instead                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `custom/no-db-transaction`        | **error** on `src/lib/server/**/*.ts` (excluding specs) | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                           |
-| `custom/no-raw-form-elements`     | **warn** on `+page.svelte` files                        | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                         |
-| `custom/no-duplicate-field-names` | **error** on all `*.svelte`                             | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one. |
+| Rule                              | Severity / scope                                        | What it flags → what to do instead                                                                                                                                                                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `custom/no-db-transaction`        | **error** on `src/lib/server/**/*.ts` (excluding specs) | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                                                                                                                                                                                     |
+| `custom/no-raw-form-elements`     | **warn** on `+page.svelte` files                        | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                                                                                                                                                                                   |
+| `custom/no-utility-soup`          | **warn** on `+page.svelte` files                        | Hand-written utility-class soup where a component or semantic utility exists: >5 classes on one element, a raw `btn`/`card`/`badge`/`alert`/`stat`/`table`, the dead `*-bordered` classes, `text-sm opacity-60` instead of `text-muted`, or an inline `style` reaching a `var(--…)`. See `template-audit.md`. |
+| `custom/no-duplicate-field-names` | **error** on all `*.svelte`                             | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one.                                                                                                                                                           |
 
 Other lint posture (see `eslint.config.js`): `no-explicit-any` and
 `svelte/no-navigation-without-resolve` are downgraded to warnings; unused vars error unless
@@ -148,9 +149,9 @@ Every script in `package.json`:
 | Script                          | What it does                                                                                                                                                          |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dev`                           | Vite dev server on :5173                                                                                                                                              |
-| `build`                         | Compile MJML email layout, then `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                      |
+| `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                                                      |
 | `preview`                       | Serve the production build on :4173                                                                                                                                   |
-| `prepare`                       | (auto on install) svelte-kit sync + email-layout compile + lefthook install                                                                                           |
+| `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                                                                                                  |
 | `check` / `check:watch`         | svelte-check type checking                                                                                                                                            |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                                                                                             |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                                                                                                 |
@@ -166,6 +167,7 @@ Every script in `package.json`:
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                                                                                                |
 | `db:migrate:local`              | Replay all migration files into the local D1                                                                                                                          |
 | `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                                                                                            |
+| `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                                                                                                 |
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                                                                                        |
 | `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                                    |
 | `db:sync`                       | Pre-cutover: reload remote D1 data from Postgres (destructive — see [operations manual](../architecture/operations-manual.md#6-the-postgres-bridge-pre-cutover-only)) |
@@ -176,6 +178,8 @@ Every script in `package.json`:
 | `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                                                                                                      |
 | `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                                                                                          |
 | `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                                                                                                 |
+| `email:preview`                 | Render the templates to `.email-preview/` for eyeballing                                                                                                              |
+| `email:validate`                | Check template syntax and required variables                                                                                                                          |
 
 ## Docs workflow (when you change routes or help content)
 
@@ -193,9 +197,37 @@ deterministic detector, then drafts changes with an LLM). Review those PRs like 
 other — the full picture is in the
 [operations manual §7](../architecture/operations-manual.md#7-keeping-the-docs-healthy).
 
+## Working with Claude Code
+
+Agent-facing instructions are split by cost: `CLAUDE.md` (always loaded), `.claude/rules/`
+(path-scoped), `.claude/skills/` (on demand), and two `PreToolUse` hooks in `scripts/claude/` that
+block `npm`/`npx` and edits to committed migrations. The reasoning, and where a new rule belongs,
+is in [working-with-claude.md](working-with-claude.md).
+
 ## Dependency posture
 
 Prefer existing libraries and managed services over new bespoke code — the goal is to
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
 dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+
+## Where a status enum lives
+
+Two homes, and the split is deliberate:
+
+- **`src/lib/config.ts`** — enums that client code (routes, components) imports.
+- **`src/lib/server/db/schema/*.ts`** — enums only server code needs.
+
+The constraint is bundling, not taste: `$lib/server` cannot be imported from the browser, so an
+enum a `.svelte` file needs _cannot_ live in a schema file. Schema files import the client-side
+enums from `config.ts` when they need to build a column constraint, which is why the dependency
+runs config → schema and never the other way.
+
+If you see a schema-defined enum with what looks like a client importer, check the file: spec files
+run in the **server** vitest project, where `$lib/server` is reachable. `StatusBadge.spec.ts` is the
+example that makes the split look inconsistent when it isn't.
+
+Label and colour maps for these values live in `StatusBadge.svelte` (`labels`, `badgeClass`,
+`variants`), and `StatusBadge.spec.ts` asserts every enum value is covered. Domain-specific wording
+— "Waiting on DNS" rather than a generic "Pending" — belongs at the call site, not in the shared
+registry.

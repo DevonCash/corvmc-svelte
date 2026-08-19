@@ -6,6 +6,8 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import MemberLink from '$lib/components/shared/MemberLink.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { IconCheck, IconUserX } from '@tabler/icons-svelte';
@@ -49,10 +51,12 @@
 			<Action
 				action={cancelShift.for(shift.id)}
 				label="Call it off"
-				class="btn-ghost btn-sm text-error"
+				variant="ghost"
+				size="sm"
+				class="text-error"
 				modalTitle="Cancel this shift?"
 				submitLabel="Cancel shift"
-				submitClass="btn-error"
+				submitVariant="error"
 				successToast="Shift cancelled"
 			>
 				{#snippet form()}
@@ -69,18 +73,17 @@
 
 	<PageContent width="3xl">
 		<InfoCard title={shift.cancelledAt ? 'Cancelled shift' : 'Shift'}>
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">When</dt>
-				<dd>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</dd>
-				<dt class="opacity-60">Needed</dt>
-				<dd>
+			<DefinitionList>
+				<Fact label="When"
+					>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</Fact
+				>
+				<Fact label="Needed">
 					{claimants.filter((c) => c.status !== 'no_show').length} of {shift.capacity} filled
-				</dd>
+				</Fact>
 				{#if shift.notes}
-					<dt class="opacity-60">Notes</dt>
-					<dd>{shift.notes}</dd>
+					<Fact label="Notes">{shift.notes}</Fact>
 				{/if}
-			</dl>
+			</DefinitionList>
 		</InfoCard>
 
 		<InfoCard title="Who's on it">
@@ -116,7 +119,9 @@
 										label="Confirm"
 										iconOnly
 										icon={checkIcon}
-										class="btn-ghost btn-sm text-success"
+										variant="ghost"
+										size="sm"
+										class="text-success"
 										modalTitle="Confirm {claimant.name}?"
 										submitLabel="Confirm"
 										successToast="Confirmed"
@@ -138,10 +143,12 @@
 										label="No-show"
 										iconOnly
 										icon={noShowIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Mark {claimant.name} as a no-show?"
 										submitLabel="No-show"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Marked as no-show"
 									>
 										{#snippet form()}

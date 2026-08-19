@@ -42,7 +42,7 @@ import {
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
-import { event, eventBand, communityEventStanding } from '../src/lib/server/db/schema/event';
+import { event, eventBand } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
@@ -71,13 +71,9 @@ import {
 	inboxParticipant
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
-import { userBlock, messagingStanding } from '../src/lib/server/db/schema/moderation';
-import {
-	suggestion,
-	suggestionVote,
-	suggestionStanding,
-	suggestionEdit
-} from '../src/lib/server/db/schema/suggestion';
+import { userBlock } from '../src/lib/server/db/schema/moderation';
+import { memberStanding } from '../src/lib/server/db/schema/standing';
+import { suggestion, suggestionVote, suggestionEdit } from '../src/lib/server/db/schema/suggestion';
 import {
 	volunteerRole,
 	volunteerProfile,
@@ -465,10 +461,8 @@ async function deleteAll() {
 		'volunteer_profile',
 		'volunteer_role',
 		// Before content_flag and user: they reference both.
-		'community_event_standing',
-		'messaging_standing',
+		'member_standing',
 		'user_block',
-		'suggestion_standing',
 		'suggestion_edit',
 		'suggestion_vote',
 		'suggestion',
@@ -534,6 +528,9 @@ interface SeedEvent {
 	status: string;
 	startsAt: Date;
 }
+/** Matches the `reservation.hourlyRateCents` site-config default. */
+const HOURLY_RATE_CENTS = 1500;
+
 interface SeedReservation {
 	id: string;
 	createdByUserId: string;
@@ -736,6 +733,38 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			const status = Math.random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
 			const member = pick(users);
 
+			// Free-hour settlement, mirroring `commitReservationCredits`:
+			// `creditsUsed` is denominated in hours and `cashDueCents` freezes the
+			// remainder owed at the door. Cancelled and no-show bookings keep both
+			// null, the way cancellation resets them.
+			//
+			// Without this every seeded reservation settled in cash, so the staff
+			// Payment column rendered nothing but plain dollar amounts and the
+			// credit-covered and mixed shapes went unexercised locally.
+			const coverage =
+				status === 'completed' ? pick(['none', 'none', 'partial', 'full', 'comped']) : 'none';
+			// Measured off the stored timestamps, not `duration`: `ptDate` floors a
+			// fractional hour (setUTCHours truncates), and the `hour` accumulator
+			// goes fractional, so the booking on disk is regularly longer than the
+			// duration picked for it. Deriving from `duration` wrote credits that
+			// overran their own reservation.
+			const bookedHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
+			const creditsUsed =
+				coverage === 'full'
+					? bookedHours
+					: coverage === 'partial'
+						? Math.min(0.5, bookedHours)
+						: null;
+			// Comped waives the charge outright: nothing owed and no credits spent.
+			// That tuple — cashDueCents 0 with creditsUsed null — is the only thing
+			// separating a comped booking from a credit-settled one.
+			const cashDueCents =
+				coverage === 'comped'
+					? 0
+					: creditsUsed === null
+						? null
+						: Math.round((bookedHours - creditsUsed) * HOURLY_RATE_CENTS);
+
 			const [r] = await db
 				.insert(reservation)
 				.values({
@@ -747,7 +776,14 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					endsAt,
 					notes: Math.random() > 0.7 ? 'Band practice' : null,
 					cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null,
-					paidAt: status === 'completed' ? startsAt : null
+					creditsUsed,
+					cashDueCents,
+					// A fully covered booking is settled by the credits themselves —
+					// leaving `paidAt` null is what marks it "Paid with credits"
+					// rather than "Paid".
+					// A booking settled by credits or comped away was never *paid* —
+					// leaving `paidAt` null is what distinguishes those states.
+					paidAt: status === 'completed' && cashDueCents !== 0 ? startsAt : null
 				})
 				.returning();
 			rows.push(r);
@@ -813,6 +849,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	const staffUsers = users.slice(0, 6);
 
 	async function createEventReservation(
+		eventId: string,
 		day: number,
 		eventStartHour: number,
 		eventEndHour: number,
@@ -825,7 +862,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(reservation)
 			.values({
 				bookerType: 'event',
-				bookerId: 'event',
+				// The real polymorphic pointer, as event-service writes it. A literal
+				// 'event' here left every seeded hold unattached to its show.
+				bookerId: eventId,
 				createdByUserId,
 				status: reservationStatus,
 				startsAt,
@@ -847,9 +886,13 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const publishedAt = new Date(startsAt.getTime() - randomInt(7, 21) * 86400000);
 		const creator = pick(staffUsers);
 
+		// The id is minted up front so the hold can point at the event, the same
+		// ordering event-service.create() uses.
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -861,6 +904,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Join us for an evening of live music and community.',
 				startsAt,
@@ -908,9 +952,11 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const creator = pick(staffUsers);
 		const config = futureConfigs[i];
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -922,6 +968,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: config.externalTicketUrl
 					? 'Tickets for this one are sold through our partner venue.'
@@ -950,14 +997,23 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const hour = randomInt(18, 20);
 		const creator = pick(staffUsers);
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
+			reservationId = await createEventReservation(
+				eventId,
+				day,
+				hour,
+				hour + 3,
+				creator.id,
+				'scheduled'
+			);
 		}
 
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Details TBD',
 				startsAt: ptDate(day, hour),
@@ -972,10 +1028,19 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	}
 
 	const cancelledCreator = pick(staffUsers);
-	const cancelledResId = await createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
+	const cancelledEventId = crypto.randomUUID();
+	const cancelledResId = await createEventReservation(
+		cancelledEventId,
+		7,
+		14,
+		20,
+		cancelledCreator.id,
+		'cancelled'
+	);
 	const [cancelled] = await db
 		.insert(event)
 		.values({
+			id: cancelledEventId,
 			title: 'Cancelled: Outdoor Festival',
 			description: 'Unfortunately cancelled due to weather.',
 			startsAt: ptDate(7, 14),
@@ -1012,7 +1077,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const duration = 3;
 		const protoStart = ptDate(protoDay, hour);
 
+		const protoEventId = crypto.randomUUID();
 		const protoResId = await createEventReservation(
+			protoEventId,
 			protoDay,
 			hour,
 			hour + duration,
@@ -1023,6 +1090,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [proto] = await db
 			.insert(event)
 			.values({
+				id: protoEventId,
 				title: 'Weekly Open Mic',
 				description: 'Sign up at the door — all skill levels welcome.',
 				startsAt: protoStart,
@@ -1052,7 +1120,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		for (let w = 1; w <= 2; w++) {
 			const instDay = protoDay + w * 7;
+			const instEventId = crypto.randomUUID();
 			const instResId = await createEventReservation(
+				instEventId,
 				instDay,
 				hour,
 				hour + duration,
@@ -1062,6 +1132,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			const [inst] = await db
 				.insert(event)
 				.values({
+					id: instEventId,
 					title: proto.title,
 					description: proto.description,
 					startsAt: ptDate(instDay, hour),
@@ -1563,9 +1634,10 @@ async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUser) {
 		.returning();
 	rows.push(rejected);
 
-	await db.insert(communityEventStanding).values({
+	await db.insert(memberStanding).values({
 		userId: onReview.id,
-		requiresReview: true,
+		scope: 'community_event',
+		status: 'restricted',
 		reason: 'A report about an earlier listing was upheld.',
 		updatedByUserId: staffUser.id,
 		updatedAt: new Date()
@@ -3052,33 +3124,29 @@ async function seedDirectMessages(users: SeedUser[], adminUser: SeedUser) {
 		1
 	);
 
+	// Probation from an upheld report: Frank can reply where he already is, but
+	// cannot start anything new. A moderation record, so it is a standing row.
 	const standings = await batchInsert(
-		messagingStanding,
+		memberStanding,
 		[
-			// Probation from an upheld report: Frank can reply where he already is,
-			// but cannot start anything new.
 			{
 				userId: frank.id,
+				scope: 'messaging' as const,
 				status: 'restricted' as const,
-				source: 'report' as const,
 				reason: 'Continued messaging after being asked to stop.',
 				triggeringFlagId: reportFlag,
 				updatedByUserId: adminUser.id,
 				updatedAt: new Date(now.getTime() - day)
-			},
-			// Switched off by the member themselves — they can switch it back on.
-			{
-				userId: dave.id,
-				status: 'disabled' as const,
-				source: 'member' as const,
-				reason: null,
-				triggeringFlagId: null,
-				updatedByUserId: null,
-				updatedAt: new Date(now.getTime() - 10 * day)
 			}
 		],
-		2
+		1
 	);
+
+	// Dave switched his own messaging off. Deliberately NOT a standing row —
+	// nothing was imposed on him, so there is no moderation record to write, and
+	// staff have nothing to restore. It is a preference on his user row, and it
+	// is the reason `member_standing` needs no `source` column.
+	await db.update(user).set({ acceptsDirectMessages: false }).where(eq(user.id, dave.id));
 
 	return { threads: threads.length, blocks: blocks.length, standings: standings.length };
 }
@@ -3101,6 +3169,10 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: 'Sarah Chen',
 				contactEmail: 'sarah.chen@example.com',
 				messageCount: 2,
+				// Staff answered and nobody has written back: still open, but waiting
+				// on her rather than on us, so it carries the awaiting-reply marker and
+				// drops out of the nav badge. Matches the outbound message below.
+				awaitingReplySince: new Date(now.getTime() - 2 * hour),
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 2 * hour)
@@ -3172,6 +3244,9 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: memberUser.name,
 				contactEmail: memberUser.email,
 				messageCount: 2,
+				// Same again on the portal channel, where the member replying from
+				// /member/messages is what clears it.
+				awaitingReplySince: new Date(now.getTime() - 4 * hour),
 				lastMessageAt: new Date(now.getTime() - 4 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 4 * hour)
@@ -3603,9 +3678,10 @@ async function seedSuggestions(users: any[], adminUser: any) {
 		})
 		.returning();
 
-	await db.insert(suggestionStanding).values({
+	await db.insert(memberStanding).values({
 		userId: probationUser.id,
-		requiresReview: true,
+		scope: 'suggestion',
+		status: 'restricted',
 		reason: 'Upheld — please keep it civil.',
 		triggeringFlagId: upheldFlag.id,
 		updatedByUserId: adminUser.id,
@@ -3747,7 +3823,7 @@ async function main() {
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
-		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings`
+		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
 	console.log(`  ${flags.length} content flags`);
 	console.log(
