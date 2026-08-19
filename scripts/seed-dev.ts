@@ -3134,6 +3134,10 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: 'Sarah Chen',
 				contactEmail: 'sarah.chen@example.com',
 				messageCount: 2,
+				// Staff answered and nobody has written back: still open, but waiting
+				// on her rather than on us, so it carries the awaiting-reply marker and
+				// drops out of the nav badge. Matches the outbound message below.
+				awaitingReplySince: new Date(now.getTime() - 2 * hour),
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 2 * hour)
@@ -3205,6 +3209,9 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: memberUser.name,
 				contactEmail: memberUser.email,
 				messageCount: 2,
+				// Same again on the portal channel, where the member replying from
+				// /member/messages is what clears it.
+				awaitingReplySince: new Date(now.getTime() - 4 * hour),
 				lastMessageAt: new Date(now.getTime() - 4 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 4 * hour)

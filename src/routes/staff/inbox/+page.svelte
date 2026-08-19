@@ -21,6 +21,7 @@
 		getAssignableStaff
 	} from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { IconWorld } from '@tabler/icons-svelte';
 
 	type StatusView = 'open' | 'snoozed' | 'resolved' | 'all';
@@ -41,6 +42,8 @@
 	let statusView = $state(parseStatus(initial.get('status')));
 	let channelFilter = $state(initial.get('channel') ?? '');
 	let assignedFilter = $state(initial.get('assigned') ?? '');
+	// '' | 'yes' (waiting on them) | 'no' (waiting on us).
+	let waitingFilter = $state(initial.get('waiting') ?? '');
 	// `searchText` (not `search`): FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state(initial.get('q') ?? '');
@@ -59,6 +62,7 @@
 		if (statusView !== 'open') pairs.push(['status', statusView]);
 		if (channelFilter) pairs.push(['channel', channelFilter]);
 		if (assignedFilter) pairs.push(['assigned', assignedFilter]);
+		if (waitingFilter) pairs.push(['waiting', waitingFilter]);
 		if (searchQuery) pairs.push(['q', searchQuery]);
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
@@ -74,6 +78,7 @@
 		status: statusView === 'all' ? undefined : statusView,
 		channel: (channelFilter || undefined) as (typeof inboxChannels)[number] | undefined,
 		assigned: assignedFilter || undefined,
+		awaiting: (waitingFilter || undefined) as 'yes' | 'no' | undefined,
 		page: pageNumber
 	});
 
@@ -85,7 +90,10 @@
 	// The status view is a view, not a filter — it always has a value, so counting
 	// it would leave "Clear" permanently offered.
 	const activeFilterCount = $derived(
-		(searchQuery ? 1 : 0) + (channelFilter ? 1 : 0) + (assignedFilter ? 1 : 0)
+		(searchQuery ? 1 : 0) +
+			(channelFilter ? 1 : 0) +
+			(assignedFilter ? 1 : 0) +
+			(waitingFilter ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -93,6 +101,7 @@
 		searchQuery = '';
 		channelFilter = '';
 		assignedFilter = '';
+		waitingFilter = '';
 		pageNumber = 1;
 	}
 </script>
@@ -167,6 +176,21 @@
 				{/each}
 			</Select>
 		{/await}
+		<!-- Which side the ball is on. Awaiting threads stay in the Open tab, so
+		     this is how staff narrow it down to what they still owe an answer. -->
+		<Select
+			size="sm"
+			aria-label="Waiting on"
+			value={waitingFilter}
+			onchange={(e: Event) => {
+				waitingFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<option value="">Waiting on anyone</option>
+			<option value="no">Needs a reply</option>
+			<option value="yes">Awaiting their reply</option>
+		</Select>
 	</FilterBar>
 
 	<DataList
@@ -216,7 +240,11 @@
 							{/if}
 						</td>
 
-						<td class="w-px"><StatusBadge status={t.status} label /></td>
+						<!-- nowrap: the status column is `w-px`, and "Awaiting reply" wraps
+						     onto two lines without it. -->
+						<td class="w-px whitespace-nowrap">
+							<StatusBadge status={threadDisplayStatus(t)} label />
+						</td>
 						<td class="col-extra text-sm">{t.assignedToName ?? '—'}</td>
 						<td class="col-support text-sm whitespace-nowrap">
 							{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
