@@ -173,7 +173,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search member or band..."
+				placeholder="Search member, band, or event..."
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -269,35 +269,55 @@
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
-								{#if r.bookerType === 'band' && r.bandName}
+								{#if r.bookerType === 'event'}
 									<!--
-										The band owns the slot, so it is the subline; the member who
-										booked it is the qualifier after the middot.
+										The show is what this hold is *for*. The staff account that
+										clicked "Reserve practice space" is an audit detail, and
+										linking to it led away from the only page that explains the
+										booking — so the event replaces the member here.
 									-->
-									<a
-										href={resolve(`/staff/bands/${r.bandId}`)}
-										class="truncate font-medium hover:underline"
-									>
-										{r.bandName}
-									</a>
-									<span class="opacity-40">·</span>
+									{#if r.eventId}
+										<a
+											href={resolve(`/staff/events/${r.eventId}`)}
+											class="truncate font-medium hover:underline"
+										>
+											{r.eventTitle}
+										</a>
+									{:else}
+										<!-- Event deleted out from under a stale hold: name it, don't link it. -->
+										<span class="truncate text-muted">Event</span>
+									{/if}
+								{:else}
+									{#if r.bookerType === 'band' && r.bandName}
+										<!--
+											The band owns the slot, so it is the subline; the member who
+											booked it is the qualifier after the middot.
+										-->
+										<a
+											href={resolve(`/staff/bands/${r.bandId}`)}
+											class="truncate font-medium hover:underline"
+										>
+											{r.bandName}
+										</a>
+										<span class="opacity-40">·</span>
+									{/if}
+									<!--
+										No email: the member is already the *subline* of this cell,
+										and a third line puts the row back over two. The email is one
+										click away on the reservation detail page.
+									-->
+									<MemberLink
+										variant="inline"
+										hideAvatar
+										member={{
+											name: r.memberName,
+											pronouns: r.memberPronouns,
+											role: r.memberRole,
+											sustaining: !!r.memberSustaining,
+											userId: r.createdByUserId
+										}}
+									/>
 								{/if}
-								<!--
-									No email: the member is already the *subline* of this cell,
-									and a third line puts the row back over two. The email is one
-									click away on the reservation detail page.
-								-->
-								<MemberLink
-									variant="inline"
-									hideAvatar
-									member={{
-										name: r.memberName,
-										pronouns: r.memberPronouns,
-										role: r.memberRole,
-										sustaining: !!r.memberSustaining,
-										userId: r.createdByUserId
-									}}
-								/>
 							</div>
 						</td>
 

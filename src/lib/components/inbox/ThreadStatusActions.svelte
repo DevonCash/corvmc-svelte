@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Status controls for one thread: resolve, reopen, snooze.
+	 * Status controls for one thread: resolve, reopen, snooze, awaiting reply.
 	 *
 	 * This replaced a `<select>` + "Update Status" button, which took two
 	 * interactions to do the one thing anyone does from here. Each action is its
@@ -9,7 +9,13 @@
 	 */
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { addDays, format, nextMonday } from 'date-fns';
-	import { IconAlarmSnooze, IconCheck, IconRotate } from '@tabler/icons-svelte';
+	import {
+		IconAlarmSnooze,
+		IconCheck,
+		IconRotate,
+		IconInbox,
+		IconSend
+	} from '@tabler/icons-svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -23,23 +29,29 @@
 	};
 	/** What `.for(key)` returns — a form instance with its own pending state. */
 	type StatusFormInstance = Omit<RemoteForm<StatusInput, unknown>, 'for'>;
+	type AwaitingInput = { threadId: string; awaiting: 'true' | 'false' };
 
 	let {
 		threadId,
 		status,
 		snoozedUntil,
+		awaitingReplySince,
 		resolveForm,
 		reopenForm,
-		snoozeForm
+		snoozeForm,
+		awaitingForm
 	}: {
 		threadId: string;
 		status: 'open' | 'resolved' | 'snoozed';
 		snoozedUntil?: Date | null;
+		/** Set while we are waiting on the contact — see thread-status.ts. */
+		awaitingReplySince?: Date | null;
 		/** Separate instances so each button tracks its own pending state. */
 		resolveForm: StatusFormInstance;
 		reopenForm: StatusFormInstance;
 		/** `Action` needs the full form (it renders its own `<Form>`). */
 		snoozeForm: RemoteForm<StatusInput, unknown>;
+		awaitingForm: Omit<RemoteForm<AwaitingInput, unknown>, 'for'>;
 	} = $props();
 
 	// Values are the dates themselves, so picking a preset *is* picking a date and
@@ -86,6 +98,28 @@
 		</Form>
 	{/if}
 
+	<!--
+		Replying sets this by itself; the button is for the conversation that was
+		answered off the platform, and for taking a marked thread back.
+	-->
+	{#if awaitingReplySince}
+		<Form remote={awaitingForm} successToast="Back in the queue" class="contents">
+			<input {...awaitingForm.fields.threadId.as('hidden', threadId)} />
+			<input {...awaitingForm.fields.awaiting.as('hidden', 'false')} />
+			<SubmitButton label="Needs a reply" successLabel="Back in queue" variant="ghost" size="sm">
+				{#snippet icon()}<IconInbox size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{:else if status === 'open'}
+		<Form remote={awaitingForm} successToast="Marked awaiting reply" class="contents">
+			<input {...awaitingForm.fields.threadId.as('hidden', threadId)} />
+			<input {...awaitingForm.fields.awaiting.as('hidden', 'true')} />
+			<SubmitButton label="Awaiting reply" successLabel="Awaiting reply" variant="ghost" size="sm">
+				{#snippet icon()}<IconSend size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{/if}
+
 	{#if status !== 'snoozed'}
 		<Action
 			action={snoozeForm}
@@ -119,5 +153,10 @@
 	<p class="flex items-center gap-1.5 text-muted">
 		<IconAlarmSnooze size={14} />
 		Returns {formatDate(new Date(snoozedUntil))}
+	</p>
+{:else if awaitingReplySince}
+	<p class="flex items-center gap-1.5 text-muted">
+		<IconSend size={14} />
+		Waiting on a reply since {formatDate(new Date(awaitingReplySince))}
 	</p>
 {/if}

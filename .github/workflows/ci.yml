@@ -86,10 +86,12 @@ jobs:
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - run: pnpm exec playwright install --with-deps chromium
+      # No `--with-deps` — see the note in the e2e job below.
+      - run: pnpm exec playwright install chromium
       - run: pnpm run test:unit -- --run
 
   e2e:
@@ -107,10 +109,27 @@ jobs:
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - run: pnpm exec playwright install --with-deps chromium
+      # `--with-deps` is deliberately absent. The cache above restores the browsers
+      # in ~4s; `--with-deps` then shells out to apt, which is cached by nothing and
+      # re-run on every job. Measured on run 32301057462: 3m10s of pure apt with no
+      # browser work at all — 36s of it stalled on the azure.archive.ubuntu.com
+      # mirror — and the unit job on the same run sat here 14m41s before it was
+      # cancelled. It installs fonts and libraries the ubuntu-24.04 runner image
+      # already ships, and nothing here asserts on rendering.
+      #
+      # If a future runner image does drop a library, chromium fails to launch on
+      # the first run rather than misbehaving quietly. The fix then is to restore
+      # the apt path only where it can help:
+      #
+      #   - if: steps.pw-cache.outputs.cache-hit != 'true'
+      #     run: pnpm exec playwright install --with-deps chromium
+      #
+      # which pays it when the Playwright version bumps, not on every push.
+      - run: pnpm exec playwright install chromium
       # Builds the app and seeds a local D1 via playwright.config.ts webServer +
       # e2e/global-setup.ts.
       - run: pnpm run test:e2e
