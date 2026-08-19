@@ -92,6 +92,21 @@ participant, and every outbound message is written behind `requireStaff()`.
 
 ## Timeline orientation
 
+Both inboxes are the same two-pane shell — `InboxShell` mounted from each
+`+layout.svelte`, so the list survives navigating between threads and every
+`/…/[id]` URL still resolves. That matters most here: `/staff/inbox/[id]` is
+deep-linked from notification emails, the in-app bell and the staff user record.
+
+One consequence of the list living in the layout: `/staff/inbox`'s filter mirror
+keeps running while a thread is open, so it writes onto the **current** pathname
+rather than a hard-coded `/staff/inbox`. Pinned to the index it would navigate
+straight back out of whatever you just opened; carrying the query onto the thread
+URL is also what makes back return to the same filtered view.
+
+`ThreadComposer` is shared by both sides. Its `noteForm` is optional — with no
+note form it renders as a plain reply box, which is the member side, since
+internal notes are staff-private.
+
 `ThreadTimeline` serves two readers with opposite ideas of "mine", so it orients
 on **author identity, not direction**:
 
@@ -108,13 +123,13 @@ change that fixes one view by flipping the axis silently breaks the other.
 
 ## Surfaces
 
-| Path                               | What                                                                                               |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `/member/messages`                 | The member's conversations; unread dot, status, last activity. Compose is a modal.                 |
-| `/member/messages/[id]`            | One conversation; timeline + composer, or a closed notice when resolved. Opening it marks it read. |
-| `/staff/inbox`                     | Unchanged. Portal threads appear as channel "Member Portal".                                       |
-| `/staff/inbox/[id]`                | Details card links to the member's `/staff/users/[id]` record.                                     |
-| `/staff/settings` → Inbox Channels | Member Portal shown as Always On, with no toggle.                                                  |
+| Path                               | What                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `/member/messages`                 | The member's conversations, in the left pane of a two-pane inbox; unread dot, status, last activity. Compose is a modal. |
+| `/member/messages/[id]`            | One conversation in the right pane; timeline + composer, or a closed notice when resolved. Opening it marks it read.     |
+| `/staff/inbox`                     | The queue, in the left pane of the same shell. Portal threads appear as channel "Member Portal".                         |
+| `/staff/inbox/[id]`                | The thread pane. Status and assignment sit in the header; the details card is a disclosure under it.                     |
+| `/staff/settings` → Inbox Channels | Member Portal shown as Always On, with no toggle.                                                                        |
 
 The member nav badge comes from `countPortalUnread` on `getMemberLayout()`. It
 refreshes on the member's own mutations; live push is deliberately out of scope,

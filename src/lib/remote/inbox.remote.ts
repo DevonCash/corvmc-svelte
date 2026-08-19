@@ -3,7 +3,6 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff, requireUser, listStaffUsers } from '$lib/server/authorization';
-import { getMyMessages } from './direct-messages.remote';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
@@ -333,11 +332,9 @@ export const markConversationRead = command(z.string(), async (id) => {
 	const user = requireUser();
 	await markPortalThreadRead(id, user.id);
 	void getMemberLayout().refresh();
-	// Clears the unread dot in the list pane, which is a sibling of the thread
-	// pane rather than its parent. Safe against the loop this page has hit
-	// before: the effect that calls this is guarded to fire once per thread id,
-	// and it lives in the page while this refresh lands on the layout.
-	void getMyMessages().refresh();
+	// The unread dot in the list pane is cleared by the caller, not here: the
+	// list is paginated and queries cache per argument, so this handler cannot
+	// name the entry the page is holding.
 });
 
 // ---------------------------------------------------------------------------

@@ -43,6 +43,13 @@ import { updateStatus } from '$lib/server/inbox/thread-service';
 //
 // None of these can reach an internal note, and none of them are reachable by
 // staff. A reported conversation is read through the flags queue instead.
+//
+// Note what the mutations below do NOT do: refresh the conversation list.
+// Queries are cached per argument and the list is paginated, so a handler here
+// cannot name the entry the page is holding — it would refresh one nothing
+// renders, which is the bug these calls used to have when they pointed at
+// `getMyDirectThreads()`. The pages refresh in `onsuccess`, where the page
+// number is in scope. See `src/routes/member/messages/list-state.svelte.ts`.
 
 /** Everything in the member's Messages list: staff threads and member threads. */
 export const getMyMessages = query(
@@ -120,7 +127,6 @@ export const startDirectConversation = form(startDirectSchema, async (data, issu
 		invalid(issue.body('You have started a lot of conversations today. Try again tomorrow.'));
 	}
 
-	void getMyMessages().refresh();
 	return { success: true };
 });
 
@@ -145,7 +151,6 @@ export const sendDirectMessage = form(sendDirectSchema, async (data, issue) => {
 	}
 
 	void getMyMessageThread(data.threadId).refresh();
-	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -162,7 +167,6 @@ export const acceptDirectRequest = form(threadIdSchema, async (data, issue) => {
 	}
 
 	void getMyMessageThread(data.threadId).refresh();
-	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -181,7 +185,6 @@ export const declineDirectRequest = form(threadIdSchema, async (data, issue) => 
 		invalid(issue.threadId('This request is no longer available.'));
 	}
 
-	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -201,7 +204,6 @@ export const blockFromThread = form(threadIdSchema, async (data, issue) => {
 	await blockUser({ blockerUserId: user.id, blockedUserId: other, source: 'manual' });
 
 	void getMyMessageThread(data.threadId).refresh();
-	void getMyMessages().refresh();
 	return { success: true };
 });
 
@@ -283,7 +285,6 @@ export const reportDirectThread = form(reportDirectSchema, async (data, issue) =
 	});
 	await updateStatus(data.threadId, 'resolved');
 
-	void getMyMessages().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });

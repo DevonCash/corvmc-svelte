@@ -196,6 +196,7 @@
 						{@const href = resolve(`/staff/inbox/${t.id}`)}
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
+						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}
 						<li>
 							<a
 								{href}
@@ -210,13 +211,18 @@
 
 								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 									<span class="flex items-center gap-2">
+										<!-- A portal thread has no denormalised contact — the member is a
+										     participant row, and `listThreads` cannot join them live the
+										     way `getThread` does without multiplying a flagged direct
+										     thread's two member rows. So fall back to the subject rather
+										     than heading the row with a dash. -->
 										<span class="truncate font-medium">
-											{t.contactName ?? t.contactEmail ?? t.contactPhone ?? '—'}
+											{who ?? t.subject ?? channelLabel(t.channel)}
 										</span>
 										<StatusBadge status={t.status} />
 									</span>
 
-									{#if t.subject}
+									{#if t.subject && who}
 										<span class="truncate text-sm">{t.subject}</span>
 									{/if}
 									{#if t.preview}

@@ -187,6 +187,8 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 </FormField>
 ```
 
+`FormField` with `type="textarea"` spreads only its own input props, so `rows`, `placeholder` and `maxlength` are **silently dropped** on that branch. Use custom input mode for a textarea that needs any of them.
+
 ### Key props
 
 - `name` — **required inside a Form**. Must match the field name in the remote form's Zod schema. This is how FormField looks up validation issues from the Form context and how the value is submitted.
@@ -903,3 +905,17 @@ Components:
 **Avatar shape convention:** a member avatar is always **round**, a band avatar always **square** — use `EntityAvatar shape="round|square"` (or `Avatar` for members) anywhere one represents these entities.
 
 Pure display logic (link partitioning, embeddable-service ordering, the private-row rule) lives in `src/lib/utils/directory-display.ts` and is unit-tested — keep DB/Svelte concerns out of it.
+
+## Inbox
+
+`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `InboxShell` from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
+
+Components in `src/lib/components/inbox/`:
+
+- `InboxShell` — the two-pane frame. One pane at a time below `lg`, both from `lg`; which one shows on a phone follows whether a thread is open. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
+- `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId`, not direction; see `member-portal-chat-spec.md`.
+- `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
+- `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.
+
+**A list pane that mirrors filter state into the URL must write onto the current pathname**, not a hard-coded index path. It lives in the layout, so it keeps running while a thread is open — pinned to the index it navigates straight back out of whatever was just opened.

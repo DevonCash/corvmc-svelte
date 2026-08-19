@@ -18,6 +18,7 @@
 	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
 	import { searchMessageRecipients } from '$lib/remote/directory.remote';
 	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+	import { refreshConversations } from './list-state.svelte';
 
 	let { canMessageMembers = false }: { canMessageMembers?: boolean } = $props();
 
@@ -42,11 +43,19 @@
 		onsuccess={() => {
 			recipient = null;
 			body = '';
+			void refreshConversations();
 		}}
 	>
 		{#snippet icon()}<IconUsers size={16} />{/snippet}
 		{#snippet form()}
 			<div class="space-y-3">
+				<!-- The hidden field comes from the remote form, not from SearchSelect's
+				     own `name` prop: a remote form encodes its field names, so a plain
+				     `name="recipientId"` arrives as nothing and the submit fails Zod
+				     with no visible field to hang the issue on. -->
+				{#if recipient}
+					<input {...directForm.fields.recipientId.as('hidden', recipient.id)} />
+				{/if}
 				<label class="form-control w-full">
 					<div class="label"><span class="label-text">To</span></div>
 					<!-- The picker lists everyone the viewer can already see in the
@@ -54,13 +63,19 @@
 					     the unreachable ones would leak exactly what the silent drop in
 					     startDirectThread exists to withhold. -->
 					<SearchSelect
-						name="recipientId"
 						bind:value={recipient}
 						labelKey="name"
 						descriptionKey="tagline"
 						placeholder="Search members by name..."
 						search={(q) => searchMessageRecipients({ search: q })}
 					/>
+					<!-- Picking someone commits a tick after the click, so submitting
+					     immediately posts no recipient at all. Without this the failure is
+					     a silent no-op: the field has no FormField to hang its issue on,
+					     so nothing on screen changes. -->
+					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
+						<p class="text-error text-sm">Choose who this is going to.</p>
+					{/each}
 				</label>
 
 				<p class="text-muted">

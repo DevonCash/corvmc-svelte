@@ -65,12 +65,6 @@ vi.mock('$lib/remote/layout.remote', () => ({
 	getStaffLayout: () => ({ refresh: () => undefined }),
 	getMemberLayout: () => ({ refresh: () => undefined })
 }));
-// markConversationRead also refreshes the Messages list, which lives in the
-// layout beside the thread. The `$app/server` stub below runs a query's handler
-// for real when it is called, so an unmocked one would reach the database.
-vi.mock('$lib/remote/direct-messages.remote', () => ({
-	getMyMessages: () => ({ refresh: () => undefined })
-}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

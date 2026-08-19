@@ -16,10 +16,12 @@
 	import ComposeAction from './ComposeAction.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { conversationList } from './list-state.svelte';
 
-	let pageNumber = $state(1);
-
-	const result = $derived(getMyMessages({ page: pageNumber }));
+	// The page number is shared module state, not local: the thread pane is a
+	// sibling, and it has to be able to refresh this list at the page it is
+	// actually showing. See list-state.svelte.ts.
+	const result = $derived(getMyMessages({ page: conversationList.page }));
 	const layout = $derived(await getMemberLayout());
 	const openId = $derived(page.params.id);
 </script>
@@ -50,7 +52,7 @@
 			{result}
 			emptyTitle="No messages yet"
 			empty="Start a conversation and it will appear here."
-			onpage={(p) => (pageNumber = p)}
+			onpage={(p) => (conversationList.page = p)}
 		>
 			{#snippet children(conversations)}
 				<ul class="flex flex-col gap-1">

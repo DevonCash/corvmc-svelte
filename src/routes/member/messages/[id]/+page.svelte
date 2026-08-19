@@ -18,6 +18,7 @@
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
 	import ReportDirectThreadAction from './ReportDirectThreadAction.svelte';
+	import { refreshConversations } from '../list-state.svelte';
 	import { sendConversationMessage, markConversationRead } from '$lib/remote/inbox.remote';
 	import {
 		getMyMessageThread,
@@ -58,7 +59,7 @@
 		const id = threadId;
 		if (markedId === id) return;
 		markedId = id;
-		void markConversationRead(id);
+		void markConversationRead(id).then(refreshConversations);
 	});
 </script>
 
@@ -95,7 +96,11 @@
 						send anything else unless you accept.
 					</p>
 					<div class="flex flex-wrap items-center gap-2">
-						<Form remote={acceptDirectRequest} successToast="Request accepted">
+						<Form
+							remote={acceptDirectRequest}
+							successToast="Request accepted"
+							onsuccess={refreshConversations}
+						>
 							<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
 							<SubmitButton label="Accept" variant="primary" size="sm">
 								{#snippet icon()}<IconCheck size={16} />{/snippet}
@@ -105,7 +110,11 @@
 						<!-- Declining blocks them and is never reported back to the sender:
 						     from their side this is indistinguishable from an unopened
 						     request, which is what makes saying no cost nothing. -->
-						<Form remote={declineDirectRequest} successToast="Request declined">
+						<Form
+							remote={declineDirectRequest}
+							successToast="Request declined"
+							onsuccess={refreshConversations}
+						>
 							<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
 							<SubmitButton label="Decline" variant="ghost" size="sm">
 								{#snippet icon()}<IconX size={16} />{/snippet}
@@ -131,6 +140,7 @@
 			<ThreadComposer
 				threadId={t.id}
 				replyForm={t.kind === 'direct' ? directReplyForm : staffReplyForm}
+				onsent={refreshConversations}
 			/>
 		{/if}
 
@@ -140,7 +150,7 @@
 			     it if they later decide to report. -->
 			<div class="flex justify-end gap-2">
 				<ReportDirectThreadAction threadId={t.id} />
-				<Form remote={blockFromThread} successToast="Blocked">
+				<Form remote={blockFromThread} successToast="Blocked" onsuccess={refreshConversations}>
 					<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
 					<SubmitButton label="Block" variant="error" size="sm" outline>
 						{#snippet icon()}<IconBan size={16} />{/snippet}
