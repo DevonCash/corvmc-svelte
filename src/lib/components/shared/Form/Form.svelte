@@ -42,6 +42,7 @@
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '$lib/report-error';
+	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -212,9 +213,16 @@
 					status = 'error';
 				}
 			} catch (err) {
+				await delay(150 - (performance.now() - start));
+
+				// A tab left open across a deploy POSTs to a remote endpoint whose URL
+				// hash is gone; the server returns HTML and Kit's devalue.parse throws
+				// a SyntaxError (JAVASCRIPT-SVELTEKIT-24). That's recoverable, not a
+				// bug — reload onto the new build instead of reporting it.
+				if (await recoverFromStaleDeploy(err)) return;
+
 				// Genuine submission failure (network/server). Capture it: forms with
 				// an onfailure handler bypass the error boundary, so report directly.
-				await delay(150 - (performance.now() - start));
 				if (onfailure) {
 					reportError(err);
 					onfailure(ctx.issues);

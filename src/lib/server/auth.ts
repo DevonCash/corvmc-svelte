@@ -392,6 +392,23 @@ function createAuth() {
 		user: {
 			additionalFields: userAdditionalFields
 		},
+		session: {
+			// Every request resolved the session with a DB read, which Sentry's
+			// performance detector flagged as blocking on remote POSTs
+			// (JAVASCRIPT-SVELTEKIT-2B). The signed cookie carries the session for a
+			// short window instead.
+			//
+			// The cost is that deactivation is no longer instantaneous: deactivateUser
+			// purges the session rows, but a cached cookie is trusted without a read
+			// until it ages out. 60s bounds that window — short enough that a
+			// deactivated member can't meaningfully keep working, long enough to drop
+			// nearly every repeat read. Raising it widens the window; don't, without
+			// revisiting the gate in hooks.server.ts.
+			cookieCache: {
+				enabled: true,
+				maxAge: 60
+			}
+		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
 				// Gate public sign-up behind Cloudflare Turnstile. The login page sends
