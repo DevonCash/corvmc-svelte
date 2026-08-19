@@ -11,11 +11,11 @@ configuration that lets a reply to one of our emails land back on the conversati
 
 ## What this turns on
 
-The inbox already sends and already receives — the route, the signing, and the threading are all
-built and tested. What is missing is the address that connects them. `INBOX_REPLY_ADDRESS` is
-commented out in `wrangler.toml`, and every difference below follows from that one fact:
+The inbox sends and receives either way — the route, the signing, and the threading are always
+built. What this configures is the address that connects them. Every difference below follows from
+the single `INBOX_REPLY_ADDRESS` variable:
 
-|                                                | `INBOX_REPLY_ADDRESS` unset (today)                                     | Configured                                                     |
+|                                                | `INBOX_REPLY_ADDRESS` unset                                             | Configured                                                     |
 | ---------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `Reply-To` on a staff inbox reply              | `STAFF_CONTACT_EMAIL` (`contact@corvmc.org`)                            | `reply+<threadId>.<sig>@replies.corvmc.org`                    |
 | The contact answers that email                 | Lands in the `contact@` mailbox, attached to no thread                  | Files onto the original thread; reopens it if resolved         |
@@ -24,7 +24,13 @@ commented out in `wrangler.toml`, and every difference below follows from that o
 | Wording in the alert                           | "…your reply goes straight to them and is NOT saved to the staff inbox" | "…sent from CMC and saved on the conversation"                 |
 
 The unset state is deliberate and safe: every reply still reaches a human, nothing bounces, and
-nothing is lost. It simply isn't on the record.
+nothing is lost. It simply isn't on the record. That is what the app falls back to before this is
+configured, and what [rollback](#rollback) returns it to.
+
+> **Status:** steps 1–4 were completed on 2026-08-19 — the MX is live, the secrets are set, and
+> `INBOX_REPLY_ADDRESS` is uncommented in `wrangler.toml`. It reaches production on the next
+> deploy of `main`. Keep this runbook for staging, for re-enablement after a rollback, and for
+> the troubleshooting table.
 
 ## Prerequisites
 

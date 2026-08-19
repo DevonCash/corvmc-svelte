@@ -195,11 +195,10 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   to anyone the recipient forwards our reply to.
   - Requires `MX replies.corvmc.org → inbound.postmarkapp.com` (priority 10) and _Inbound
     domain forwarding_ set to `replies.corvmc.org` in the Postmark server settings.
-  - **Currently off in production**: `INBOX_REPLY_ADDRESS` is commented out in `wrangler.toml`,
-    so replies fall back to `Reply-To: STAFF_CONTACT_EMAIL` — a human, not a bounce. Turning it
-    on is a sequenced DNS + Postmark + secrets change, in an order that matters: follow
-    [inbox-reply-setup.md](inbox-reply-setup.md), which also carries the reply-routing
-    troubleshooting table.
+  - **Enabled** as of 2026-08-19: the MX is live and `INBOX_REPLY_ADDRESS` is set in
+    `wrangler.toml`. Unsetting it is the rollback — replies fall back to
+    `Reply-To: STAFF_CONTACT_EMAIL`, a human rather than a bounce. Enablement steps and the
+    reply-routing troubleshooting table: [inbox-reply-setup.md](inbox-reply-setup.md).
   - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
     mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
     MX records.
