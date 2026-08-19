@@ -151,13 +151,21 @@
 
 	<!-- Member + Payment grid -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<!-- Member card — a band booking leads with the band, then who booked it -->
-		<InfoCard title={r.bookerType === 'band' ? 'Band Booking' : 'Member'}>
+		<!-- Member card — a band or event booking leads with it, then who booked it -->
+		<InfoCard
+			title={r.bookerType === 'band'
+				? 'Band Booking'
+				: r.bookerType === 'event'
+					? 'Event'
+					: 'Member'}
+		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.bookerType === 'band' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
+					{:else if r.bookerType === 'event' && r.eventId}
+						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}
 						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
 							>View Profile</Button
@@ -171,7 +179,18 @@
 						<BookerTypeIcon type="band" size={18} />
 						<span class="text-lg font-medium">{r.bandName}</span>
 					</div>
-					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
+					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
+				{:else if r.bookerType === 'event'}
+					<!--
+						The show leads, as the band does for a band booking. Unlike the list
+						row, the detail page has room to keep the staff account that raised
+						the hold — that is the audit trail for it.
+					-->
+					<div class="mb-3 flex items-center gap-2">
+						<BookerTypeIcon type="event" size={18} />
+						<span class="text-lg font-medium">{r.eventTitle ?? 'Event'}</span>
+					</div>
+					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
 				{/if}
 				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
 				<h3 class="text-lg">{r.memberName}</h3>
