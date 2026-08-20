@@ -36,6 +36,25 @@ async function loginAsStaff(page: Page) {
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
+/**
+ * Wait for a create or edit submission to land on the event's own page.
+ *
+ * `waitForURL` on its own is not that, and assuming it was is what made this
+ * file flake on CI. `handleSuccess` navigates with `goto()`, which commits the
+ * URL as soon as the route's (empty) load resolves — the page's data is fetched
+ * by the component afterwards, and Svelte commits the whole tree in one batch,
+ * so the events *list* is still what is on screen when `waitForURL` returns.
+ *
+ * Everything after that point is therefore still waiting for a page to load,
+ * which is not what Playwright's implicit 5s expect budget is for. The rest of
+ * this file already spends 15s on its post-navigation assertions; these are the
+ * two that did not, and they are the two that went red.
+ */
+async function waitForEventPage(page: Page, title: string) {
+	await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
+}
+
 // A checkbox Field carries the `b:` prefix so SvelteKit submits a real boolean.
 const RESERVE_TOGGLE = 'input[name="b:reserveSpace"]';
 
@@ -80,8 +99,7 @@ test.describe('staff event creation — reserve space', () => {
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
 		// handleSuccess navigates to the new event's detail page.
-		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: title })).toBeVisible();
+		await waitForEventPage(page, title);
 
 		// The card only renders off `event.reservationId`, so its presence proves
 		// the reservation was created AND linked.
@@ -129,7 +147,7 @@ test.describe('staff event creation — reserve space', () => {
 		await page.locator(RESERVE_TOGGLE).check();
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		await waitForEventPage(page, title);
 		const eventId = new URL(page.url()).pathname.split('/').pop()!;
 
 		await page.goto('/staff/reservations');
@@ -207,8 +225,7 @@ test.describe('staff event edit — reserve space', () => {
 		// Deliberately left unchecked — this is the state prod is full of.
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: title })).toBeVisible();
+		await waitForEventPage(page, title);
 
 		// The card always renders now; with no hold it says so, rather than
 		// vanishing and leaving "not held" indistinguishable from "not shown".
@@ -245,7 +262,7 @@ test.describe('staff event edit — reserve space', () => {
 		await page.locator(RESERVE_TOGGLE).check();
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		await waitForEventPage(page, title);
 		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
 
 		// Start the show two hours earlier. That escapes the current hold, so the
