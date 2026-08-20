@@ -1181,6 +1181,33 @@ async function seedCreditTransactions(users: SeedUser[]) {
 	}
 }
 
+/**
+ * Insert a band together with the `band_member` row that records its owner.
+ *
+ * These two are one fact stored twice, and the app's guards read only the
+ * member row (`requireBandOwner` resolves through `requireBandMember()`), so a
+ * band seeded without it has no owner in practice. The seeds can't call the
+ * service's `create()` — they need to set slug, tier, timestamps and deletedAt,
+ * which `create()` derives — so this is the seed-side equivalent. Going through
+ * it everywhere is what stops a new seed band from quietly reproducing the
+ * production drift that `scripts/backfill-band-owners.ts` had to repair.
+ */
+async function insertBandWithOwner(
+	values: typeof band.$inferInsert,
+	ownerId: string,
+	position?: string
+) {
+	const [b] = await db.insert(band).values(values).returning();
+	await db.insert(bandMember).values({
+		bandId: b.id,
+		userId: ownerId,
+		role: 'owner',
+		position: position ?? null,
+		status: 'active'
+	});
+	return b;
+}
+
 async function seedBands(users: SeedUser[]) {
 	console.log('Seeding bands...');
 	const bands = [];
@@ -1210,9 +1237,8 @@ async function seedBands(users: SeedUser[]) {
 		];
 		const bandVisibility = 'public';
 
-		const [b] = await db
-			.insert(band)
-			.values({
+		const b = await insertBandWithOwner(
+			{
 				name: BAND_NAMES[i],
 				slug,
 				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`,
@@ -1255,21 +1281,15 @@ async function seedBands(users: SeedUser[]) {
 				directoryVisibility: bandVisibility,
 				directoryContact: { email: `booking+${slug}@example.com` },
 				links: bandLinks
-			})
-			.returning();
+			},
+			owner.id,
+			pick(BAND_POSITIONS)
+		);
 		bands.push(b);
 
 		for (const g of genres) {
 			await db.insert(bandGenre).values({ bandId: b.id, genre: g });
 		}
-
-		await db.insert(bandMember).values({
-			bandId: b.id,
-			userId: owner.id,
-			role: 'owner',
-			position: pick(BAND_POSITIONS),
-			status: 'active'
-		});
 
 		const memberCount = randomInt(1, 3);
 		const candidates = users.filter((u) => u.id !== owner.id);
@@ -1317,38 +1337,26 @@ async function seedBands(users: SeedUser[]) {
 	];
 	for (let i = 0; i < onboardingStates.length; i++) {
 		const owner = users[(BAND_NAMES.length + 1 + i) % users.length];
-		const [b] = await db
-			.insert(band)
-			.values({ ownerId: owner.id, ...onboardingStates[i] })
-			.returning();
-		await db.insert(bandMember).values({
-			bandId: b.id,
-			userId: owner.id,
-			role: 'owner',
-			position: pick(BAND_POSITIONS),
-			status: 'active'
-		});
+		const b = await insertBandWithOwner(
+			{ ownerId: owner.id, ...onboardingStates[i] },
+			owner.id,
+			pick(BAND_POSITIONS)
+		);
 		bands.push(b);
 	}
 
 	const deactivatedOwner = users[BAND_NAMES.length % users.length];
-	const [deactivated] = await db
-		.insert(band)
-		.values({
+	const deactivated = await insertBandWithOwner(
+		{
 			name: 'Disbanded Project',
 			slug: 'disbanded-project',
 			bio: 'This band was deactivated by staff.',
 			ownerId: deactivatedOwner.id,
 			deletedAt: new Date(Date.now() - 10 * 86400000)
-		})
-		.returning();
-	await db.insert(bandMember).values({
-		bandId: deactivated.id,
-		userId: deactivatedOwner.id,
-		role: 'owner',
-		position: 'Guitar',
-		status: 'active'
-	});
+		},
+		deactivatedOwner.id,
+		'Guitar'
+	);
 	bands.push(deactivated);
 
 	return bands;

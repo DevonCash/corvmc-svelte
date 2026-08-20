@@ -187,7 +187,16 @@ export const bandMember = sqliteTable(
 	(t) => [
 		unique('band_member_band_user_unique').on(t.bandId, t.userId),
 		index('idx_band_member_user').on(t.userId),
-		index('idx_band_member_status').on(t.status)
+		index('idx_band_member_status').on(t.status),
+		// Ownership is stored twice — here and on `band.ownerId` — and only
+		// `create()` writes both in one batch. This caps a band at one owner row
+		// so the second drift path (a `transferOwnership` whose demote matched
+		// nothing) can't silently produce two. It cannot enforce that a band has
+		// *at least* one owner, nor that the row agrees with `band.ownerId`:
+		// SQLite has no cross-table constraint. Both stay code-level. See CHORES.
+		uniqueIndex('idx_band_member_single_owner')
+			.on(t.bandId)
+			.where(sql`role = 'owner'`)
 	]
 );
 
