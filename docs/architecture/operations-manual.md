@@ -365,16 +365,11 @@ When you add, move, or remove a route:
    the production database (verify your wrangler remote-binding setup before assuming this
    — the script itself has no `--remote` flag).
 
-### The nightly bot (optional, requires Anthropic API access)
-
-`.github/workflows/nightly-docs-sync.yml` runs at 10:00 UTC daily: it re-runs the same
-deterministic detector plus a git diff against the moving `docs-sync-last` tag, and **only
-if** something changed does it invoke Claude (via `anthropics/claude-code-action`) to draft
-a docs-only PR for human review. It needs the Claude GitHub App installed and an
-`ANTHROPIC_API_KEY` repo secret; without them the workflow simply fails at the model step —
-the app is unaffected. You can disable it entirely (Actions → Nightly Docs Sync → Disable
-workflow) and rely on the manual procedure; nothing else depends on it. Note GitHub
-auto-pauses scheduled workflows after 60 days of repo inactivity.
+There is no automation behind this — the procedure above is the whole mechanism. A
+`nightly-docs-sync.yml` workflow used to run a detector and have Claude draft a docs-only
+PR from it; it was removed in August 2026, having failed on every scheduled run because
+the `ANTHROPIC_API_KEY` secret it needs was never added. `pnpm docs:check` in CI remains
+the only automatic gate, and it checks integrity, not staleness.
 
 Also keep current as you change things:
 
