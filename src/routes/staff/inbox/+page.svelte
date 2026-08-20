@@ -109,24 +109,21 @@
 <PageHeader title="Inbox" />
 <PageContent>
 	{#await counts then c}
-		<!-- The four tabs are wider than a phone; without this the last one is
-		     clipped off the edge with no way to reach it. -->
-		<div class="mb-4 overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{ key: 'open', label: 'Open', badge: c.open },
-					{ key: 'snoozed', label: 'Snoozed', badge: c.snoozed },
-					{ key: 'resolved', label: 'Resolved', badge: c.resolved },
-					{ key: 'all', label: 'All', badge: c.all }
-				]}
-				active={statusView}
-				onchange={(key) => {
-					statusView = key as StatusView;
-					pageNumber = 1;
-				}}
-			/>
-		</div>
+		<TabBar
+			class="mb-4"
+			collapse
+			tabs={[
+				{ key: 'open', label: 'Open', badge: c.open },
+				{ key: 'snoozed', label: 'Snoozed', badge: c.snoozed },
+				{ key: 'resolved', label: 'Resolved', badge: c.resolved },
+				{ key: 'all', label: 'All', badge: c.all }
+			]}
+			active={statusView}
+			onchange={(key) => {
+				statusView = key as StatusView;
+				pageNumber = 1;
+			}}
+		/>
 	{/await}
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

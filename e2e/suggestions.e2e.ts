@@ -229,7 +229,7 @@ test.describe('reporting a suggestion', () => {
 		// Staff approve it out of the review queue, and it lands on the board.
 		await switchUser(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/suggestions');
-		await page.getByRole('radio', { name: 'Needs review' }).click();
+		await page.getByRole('tab', { name: 'Needs review' }).click();
 		await page.getByRole('link', { name: 'E2E Post While On Review' }).first().click();
 		await page.waitForURL(/\/staff\/suggestions\/[^/]+$/);
 		await page.getByRole('button', { name: 'Approve or reject' }).click();
