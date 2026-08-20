@@ -29,6 +29,12 @@ Incremental coverage for isolated component tests. See
 - [x] CopyableId
 - [x] VinylCard / VinylCardCta (decorative)
 - [x] IdCard / IdCardCta (decorative)
+- [x] EntityChip (stories + `EntityChip.svelte.spec.ts` — hover/focus/tap preview needs real
+      `page.hover()`; bits-ui ignores synthetic events)
+- [x] EntityIdentity (stories + `EntityIdentity.svelte.spec.ts` — pins the no-wrapper `sm` shape,
+      that a bare cell draws no status, and that status rides the media once given an avatar)
+- [x] EntityCard (stories)
+- [ ] RelatedList (adopted by all six user panels in Stage D; no story yet)
 - [ ] FormField (has a spec; add a story for the gallery)
 
 See `docs/development/component-style-audit.md` for the visual audit run over these.
@@ -36,6 +42,7 @@ See `docs/development/component-style-audit.md` for the visual audit run over th
 ## Coupled components — specs
 
 - [x] AccountDropdown
+- [x] EntityViewer (covered through the identity/chip specs, which mount it as their harness)
 - [ ] NotificationBell
 - [ ] TabBar
 - [ ] actions/CancelReservationAction (use `fakeForm`)
