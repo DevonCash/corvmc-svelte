@@ -6,7 +6,7 @@
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
-	import { entityKinds, entityGlyph, statusRing, isNoteworthyStatus } from './registry';
+	import { entityKinds, entityIcon, statusRing, isNoteworthyStatus } from './registry';
 	import { variants } from '../StatusBadge.svelte';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
@@ -54,7 +54,7 @@
 	const viewer = getEntityViewer();
 	const href = $derived(entityHref(ref, viewer));
 	const kind = $derived(entityKinds[ref.type]);
-	const Icon = $derived(entityGlyph(ref).icon);
+	const Icon = $derived(entityIcon(ref).icon);
 
 	/**
 	 * `icon` is the no-image answer at every shape.

@@ -157,13 +157,30 @@ export const statusRing: Record<string, string> = {
 };
 
 /**
- * The glyph and label for one record: its subtype's if it has one, otherwise
- * its type's.
+ * The **identity** glyph: what kind of record this is, full stop.
  *
- * Components call this instead of reaching for `kind.icon`, so "which variant
- * of this thing is it" stays a registry fact. `EntityRow` used to carry a
- * hardcoded member-role branch with a comment saying a second branch would mean
- * the registry was missing a field — this is that field.
+ * Use wherever the icon stands in for the record itself — a chip's leading
+ * glyph, a card's no-image fallback. Never the subtype here: a band-booked
+ * reservation drawn with a music note reads as *a band*, which is the wrong
+ * answer to "what am I looking at".
+ */
+export function entityIcon(ref: EntityRef): EntitySubtype {
+	return { icon: entityKinds[ref.type].icon, label: entityLabels[ref.type].one };
+}
+
+/**
+ * The **qualifier** glyph: which variant of its type this is.
+ *
+ * Use only where the glyph sits beside a name that already says what the record
+ * is — `EntityRow`'s inline marker. Because a subtype glyph never stands alone
+ * as identity, two *different* types may safely reuse one (a band's show and a
+ * band-booked reservation both take the music note): the thing it qualifies is
+ * always named right next to it. Uniqueness is therefore enforced within a
+ * type, not across the registry.
+ *
+ * `EntityRow` used to carry a hardcoded member-role branch with a comment
+ * saying a second branch would mean the registry was missing a field — this is
+ * that field.
  */
 export function entityGlyph(ref: EntityRef): EntitySubtype {
 	const kind = entityKinds[ref.type];

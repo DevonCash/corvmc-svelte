@@ -4,6 +4,7 @@ import {
 	statusRing,
 	entityGlyph,
 	hasSubtype,
+	entityIcon,
 	ordinaryStatuses,
 	isNoteworthyStatus
 } from './registry';
@@ -183,6 +184,36 @@ describe('entity registry', () => {
 		it('leaves no ordinary status that StatusBadge cannot draw', () => {
 			const undrawable = [...ordinaryStatuses].filter((s) => !(s in variants));
 			expect(undrawable, `not in StatusBadge variants: ${undrawable.join(', ')}`).toEqual([]);
+		});
+	});
+
+	/**
+	 * Identity vs qualifier. A subtype glyph only ever appears next to a name
+	 * that already says what the record is, which is what makes it safe for two
+	 * *different* types to share one — a band's show and a band-booked
+	 * reservation both take the music note. An identity glyph has no such
+	 * context, so it must never be a subtype's.
+	 */
+	describe('identity vs qualifier glyphs', () => {
+		it('never lets a subtype stand in as identity', () => {
+			const reservation = fakeRef('reservation', { subtype: 'band' });
+			expect(entityIcon(reservation).icon).toBe(entityKinds.reservation.icon);
+			// ...even though the qualifier for the same ref is the band glyph.
+			expect(entityGlyph(reservation).icon).toBe(entityKinds.reservation.subtypes!.band.icon);
+		});
+
+		it('always names the type, whatever the subtype', () => {
+			expect(entityIcon(fakeRef('member', { subtype: 'sustaining' })).label).toBe('Member');
+			expect(entityIcon(fakeRef('event', { subtype: 'community' })).label).toBe('Event');
+		});
+
+		/**
+		 * The identity glyphs are the ones that must stay distinct across the
+		 * whole registry, because they are what a chip or a card leans on alone.
+		 */
+		it('keeps every identity glyph unique across types', () => {
+			const icons = entityTypes.map((t) => entityIcon(fakeRef(t)).icon);
+			expect(new Set(icons).size).toBe(icons.length);
 		});
 	});
 });

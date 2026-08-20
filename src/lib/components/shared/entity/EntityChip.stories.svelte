@@ -96,3 +96,36 @@
 	</div>
 {/snippet}
 <Story name="In a fact list and in prose" template={inContext} />
+
+<!--
+	A cancelled show and a live one used to be pixel-identical, which made the
+	chip quietly lie in the place it is most likely to be read in passing —
+	mid-sentence, where nobody goes looking for a status column. Exception-only,
+	so the first chip in each pair trails nothing.
+
+	A trailing glyph rather than a tinted container: chips run several to a
+	paragraph, and colouring the border would shout across the page to say one of
+	them is off.
+-->
+{#snippet statuses()}
+	<div class="flex max-w-lg flex-col items-start gap-3">
+		<div class="flex flex-wrap items-center gap-2">
+			<EntityChip ref={fakeRef('event', { id: 'e1', status: 'published' })} />
+			<EntityChip
+				ref={fakeRef('event', { id: 'e2', title: 'Cancelled: Loud Night', status: 'cancelled' })}
+			/>
+		</div>
+		<div class="flex flex-wrap items-center gap-2">
+			<EntityChip ref={fakeRef('member', { id: 'm1', status: 'active' })} />
+			<EntityChip
+				ref={fakeRef('member', { id: 'm2', title: 'Sam Reyes', status: 'deactivated' })}
+			/>
+		</div>
+		<p>
+			The listing <EntityChip
+				ref={fakeRef('event', { id: 'e2', title: 'Loud Night', status: 'cancelled' })}
+			/> was pulled after the report was upheld.
+		</p>
+	</div>
+{/snippet}
+<Story name="Status — only when it needs attention" template={statuses} />
