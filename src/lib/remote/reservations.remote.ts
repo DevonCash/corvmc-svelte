@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {
@@ -39,9 +38,11 @@ import {
 	bandRefColumns,
 	eventRefColumns,
 	memberRefColumns,
+	reservationRefColumns,
 	toBandRef,
 	toBookerRef,
-	toMemberRef
+	toMemberRef,
+	toReservationRef
 } from '$lib/server/entity/refs';
 import {
 	getAvailableSlots,
@@ -170,7 +171,6 @@ export const getReservationDetail = query(z.string(), async (id) => {
 });
 
 export const getBandReservations = query(z.string(), async (slug) => {
-	await requireFeature('bandReservations');
 	requireUser();
 	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
@@ -184,6 +184,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
+			ref: reservationRefColumns(),
 			// Who booked it for the band. The `user` join is already here.
 			bookedBy: memberRefColumns()
 		})
@@ -206,6 +207,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
+			ref: reservationRefColumns(),
 			// Who booked it for the band. The `user` join is already here.
 			bookedBy: memberRefColumns()
 		})
@@ -223,6 +225,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 
 	const withBooker = (r: (typeof upcoming)[number]) => ({
 		...r,
+		ref: toReservationRef(r.ref, band),
 		bookedBy: toMemberRef(r.bookedBy)
 	});
 	return { upcoming: upcoming.map(withBooker), past: past.map(withBooker) };
@@ -662,7 +665,6 @@ export const previewRecurringInstances = query(
 
 /** Band: available slots + config + recurring frequencies for a given date. */
 export const getBandSlots = query(z.string(), async (dateParam) => {
-	await requireFeature('bandReservations');
 	await requireBandMember();
 
 	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
@@ -762,7 +764,6 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.void(), async () => {
-	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
@@ -1465,7 +1466,6 @@ const bandBookingSchema = createReservationSchema.extend({
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
-	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
 
@@ -1543,7 +1543,6 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
-		await requireFeature('bandReservations');
 		const currentUser = requireUser();
 		await requireBandMember();
 		try {

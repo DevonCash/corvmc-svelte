@@ -9,7 +9,13 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
-import { memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
+import {
+	memberRefColumns,
+	reservationRefColumns,
+	toBandRef,
+	toMemberRef,
+	toReservationRef
+} from '$lib/server/entity/refs';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -139,6 +145,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
+			ref: reservationRefColumns(),
 			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
@@ -154,7 +161,11 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		.orderBy(reservation.startsAt)
 		.limit(10);
 
-	return rows.map((r) => ({ ...r, bookedBy: toMemberRef(r.bookedBy) }));
+	return rows.map((r) => ({
+		...r,
+		ref: toReservationRef(r.ref, band),
+		bookedBy: toMemberRef(r.bookedBy)
+	}));
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {

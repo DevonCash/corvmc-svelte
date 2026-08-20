@@ -5,7 +5,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Form from '$lib/components/shared/Form';
@@ -13,7 +13,6 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { cancelBandReservation, getBandReservations } from '$lib/remote/reservations.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
@@ -58,22 +57,17 @@
 					{@const cancel = cancelBandReservation.for(res.id)}
 					<Card>
 						<CardBody row class="py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-										res.endsAt
-									)}
-								</p>
-								<p class="text-subtle">
-									{formatDuration(res.startsAt, res.endsAt)}
+							<EntityIdentity ref={res.ref} size="md">
+								{#snippet subtitle()}
+									{res.ref.subtitle}
 									{#if res.bookedBy.id}
 										&middot; Booked by <EntityChip ref={res.bookedBy} icon={false} />
 									{/if}
 									{#if res.notes}
 										&middot; {res.notes}
 									{/if}
-								</p>
-							</div>
+								{/snippet}
+							</EntityIdentity>
 							<div class="flex items-center gap-2">
 								<StatusBadge status={res.status} />
 								{#if res.status === 'scheduled' || res.status === 'confirmed'}
@@ -105,19 +99,14 @@
 				{#each past as res (res.id)}
 					<Card>
 						<CardBody row class="py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-										res.endsAt
-									)}
-								</p>
-								<p class="text-subtle">
-									{formatDuration(res.startsAt, res.endsAt)}
+							<EntityIdentity ref={res.ref} size="md">
+								{#snippet subtitle()}
+									{res.ref.subtitle}
 									{#if res.bookedBy.id}
 										&middot; Booked by <EntityChip ref={res.bookedBy} icon={false} />
 									{/if}
-								</p>
-							</div>
+								{/snippet}
+							</EntityIdentity>
 							<StatusBadge status={res.status} />
 						</CardBody>
 					</Card>

@@ -23,11 +23,13 @@ import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
+import { reservation } from '$lib/server/db/schema/reservation';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
-import type { BandRef, EntityRef, EventRef, MemberRef } from '$lib/types/entity';
+import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
+import type { BandRef, EntityRef, EventRef, MemberRef, ReservationRef } from '$lib/types/entity';
 
 /**
  * The `user` table, or any `alias()` of it — the alias arm is what lets a query
@@ -190,4 +192,63 @@ export function toBookerRef(row: {
 	if (row.bookerType === 'band') return toBandRef(row.band);
 	if (row.bookerType === 'event') return toEventRef(row.event);
 	return toMemberRef(row.member);
+}
+
+// ---------------------------------------------------------------------------
+// Reservation
+// ---------------------------------------------------------------------------
+
+type ReservationTable = typeof reservation | BuildAliasTable<typeof reservation, string>;
+
+export function reservationRefColumns(r: ReservationTable = reservation) {
+	return {
+		id: r.id,
+		status: r.status,
+		startsAt: r.startsAt,
+		endsAt: r.endsAt,
+		bookerType: r.bookerType,
+		ownerUserId: r.createdByUserId
+	};
+}
+
+export interface ReservationRefRow {
+	id: string | null;
+	status?: string | null;
+	startsAt: Date;
+	endsAt: Date;
+	bookerType?: string | null;
+	ownerUserId?: string | null;
+}
+
+/**
+ * A booking as a record: the slot it holds, and who can reach it.
+ *
+ * The title is formatted here rather than at the call site, which is safe
+ * because `$lib/utils/format` pins `DEFAULT_TIMEZONE` on every formatter it
+ * builds — venue time, not the reader's and not the server's. A booking is a
+ * room at an hour, so the club's clock is the only one that means anything;
+ * formatting it on the server changes the string not at all.
+ *
+ * `band` unlocks the band panel's route, `ownerUserId` the booker's own. A
+ * band has no per-reservation page yet (see CHORES), so today the band arm of
+ * `entityHref` lands on the list — the ref is right either way, and the page
+ * appearing is what changes the answer.
+ */
+export function toReservationRef(
+	row: ReservationRefRow,
+	band?: { id: string | null; slug: string | null } | null
+): ReservationRef {
+	return {
+		type: 'reservation',
+		id: row.id,
+		title: `${formatDate(row.startsAt)} · ${formatTimeRange(row.startsAt, row.endsAt)}`,
+		subtitle: formatDuration(row.startsAt, row.endsAt),
+		status: row.status ?? null,
+		// Exception-only: a member booking for themselves is the ordinary case and
+		// is absent from the registry, so it resolves to no marker.
+		subtype: row.bookerType ?? null,
+		ownerUserId: row.ownerUserId ?? null,
+		bandId: band?.id ?? null,
+		bandSlug: band?.slug ?? null
+	};
 }
