@@ -172,15 +172,26 @@ const {
 	getBandSlots: getSlots,
 	bookBandReservation: bookReservation,
 	cancelBandReservation,
-	getBandMembershipStatus
+	getBandMembershipStatus,
+	getBandReservations
 } = (await import('$lib/remote/reservations.remote')) as any;
+
+const { hasAnyRole } = (await import('$lib/server/authorization')) as unknown as {
+	hasAnyRole: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('member');
 	ensureContactPhone.mockResolvedValue(true);
+	hasAnyRole.mockResolvedValue(false);
 	selectResult = [];
 });
+
+/** The row `cancelBandReservation` reads before authorizing. */
+function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1') {
+	return [{ bookerType: 'band', bookerId, createdByUserId }];
+}
 
 // ---------------------------------------------------------------------------
 // Remote handlers
@@ -238,11 +249,168 @@ describe('bookReservation', () => {
 });
 
 describe('cancelBandReservation', () => {
-	it('cancels the reservation', async () => {
+	it('cancels a reservation the caller booked', async () => {
+		selectResult = bandReservationRow('user-owner');
+
 		const result = await cancelBandReservation({ reservationId: 'res-42' });
 
-		expect(reservationServiceMock.cancel).toHaveBeenCalledWith('res-42', 'user-owner');
+		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
+			'res-42',
+			'user-owner',
+			undefined,
+			undefined
+		);
 		expect(result.success).toBe(true);
+	});
+
+	// The page rendered Cancel on every row, but `cancel()` authorizes on
+	// `createdByUserId` — so a bandmate who hadn't booked got an error toast from
+	// a button they were offered. A band admin is allowed; a plain member is not.
+	it('lets a band admin cancel a bandmate booking', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2');
+
+		await cancelBandReservation({ reservationId: 'res-42' });
+
+		expect(reservationServiceMock.cancel).toHaveBeenCalled();
+	});
+
+	it('refuses a plain member cancelling a bandmate booking', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = bandReservationRow('user-2');
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
+	});
+
+	// Nothing checked that the reservation belonged to the guarded band, so an id
+	// from another band reached `cancel()` and was refused there — or, for a band
+	// admin, would not have been.
+	it('404s a reservation belonging to another band', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2', 'band-other');
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 404
+		});
+		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
+	});
+
+	it('404s a reservation that is not a band booking at all', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = [{ bookerType: 'user', bookerId: 'user-2', createdByUserId: 'user-2' }];
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 404
+		});
+	});
+
+	// `staffOverride` would ALSO waive the already-started check and stamp the
+	// domain event `cancelledBy: 'staff'`, misattributing a member cancellation
+	// in every downstream listener. The admin path must use the narrow option.
+	it('uses authorizedActor and never staffOverride for a band admin', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2');
+
+		await cancelBandReservation({ reservationId: 'res-42' });
+
+		const options = reservationServiceMock.cancel.mock.calls[0][3];
+		expect(options).toEqual({ authorizedActor: true });
+		expect(options).not.toHaveProperty('staffOverride');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getBandReservations — previously `requireUser()` only, so any signed-in
+// account could read any band's practice schedule, booker names and notes.
+// ---------------------------------------------------------------------------
+
+describe('getBandReservations', () => {
+	it('returns upcoming and past for a member', async () => {
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result).toHaveProperty('upcoming');
+		expect(result).toHaveProperty('past');
+	});
+
+	it('refuses a signed-in non-member', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+
+		await expect(getBandReservations('the-velvet-underground')).rejects.toMatchObject({
+			status: 403
+		});
+	});
+
+	it('allows staff who are not band members', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(true);
+
+		await expect(getBandReservations('the-velvet-underground')).resolves.toBeDefined();
+	});
+
+	// The guard resolves its band from `params.slug`; the query takes a slug of
+	// its own. Without the cross-check those two could name different bands.
+	it('refuses a slug that is not the guarded band', async () => {
+		await expect(getBandReservations('some-other-band')).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('marks a row cancellable only for its booker', async () => {
+		selectResult = [
+			{
+				id: 'res-1',
+				status: 'scheduled',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				notes: null,
+				createdByUserId: 'user-2',
+				bookedByName: 'Someone Else'
+			}
+		];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.upcoming[0].canCancel).toBe(false);
+	});
+
+	it('marks every row cancellable for a band admin', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = [
+			{
+				id: 'res-1',
+				status: 'scheduled',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				notes: null,
+				createdByUserId: 'user-2',
+				bookedByName: 'Someone Else'
+			}
+		];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.upcoming[0].canCancel).toBe(true);
+	});
+
+	// Past sessions are never cancellable, whoever is looking.
+	it('never marks a past row cancellable', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		selectResult = [
+			{
+				id: 'res-1',
+				status: 'completed',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				notes: null,
+				createdByUserId: 'user-owner',
+				bookedByName: 'Test Owner'
+			}
+		];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.past[0].canCancel).toBe(false);
 	});
 });
 

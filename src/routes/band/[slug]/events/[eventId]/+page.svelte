@@ -47,6 +47,16 @@
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
+	// `isAdmin` alone offered Publish / Cancel / Edit on a bill this band is only
+	// *credited* on — the `guest` badge on the events list. Every one of those
+	// forms re-checks `evt.bandId !== band.id` on the server and throws 404, so
+	// the buttons were there to fail. Ownership has to be part of the gate.
+	const canEdit = $derived(isAdmin && evt.isOwner && evt.status !== 'cancelled');
+
+	// The band that owns the bill, for the line a guest band sees instead of
+	// actions it doesn't have.
+	const ownerActName = $derived(evt.lineup.find((l) => l.bandId && l.bandId !== band.id)?.name);
+
 	let editing = $state(false);
 
 	// Seeded from the saved bill so an edit that doesn't touch the lineup
@@ -139,7 +149,13 @@
 		</Card>
 
 		<!-- Actions -->
-		{#if isAdmin && evt.status !== 'cancelled'}
+		{#if !evt.isOwner}
+			<p class="text-muted text-sm">
+				Your band is credited on this bill{ownerActName ? `, added by ${ownerActName}` : ''}. Only
+				the band that created the listing can change it.
+			</p>
+		{/if}
+		{#if canEdit}
 			<div class="flex flex-wrap items-center gap-2">
 				{#if evt.status === 'draft'}
 					<Form
@@ -193,7 +209,7 @@
 		{/if}
 
 		<!-- Edit form (toggle) -->
-		{#if editing && isAdmin}
+		{#if editing && canEdit}
 			<Card tone="base-200">
 				<CardBody>
 					<Form

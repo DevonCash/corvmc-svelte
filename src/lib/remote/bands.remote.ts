@@ -40,7 +40,6 @@ import {
 	revoke as revokePlatformInviteService
 } from '$lib/server/band/platform-invite-service';
 import {
-	requireBandBySlug,
 	requireBandMember,
 	requireBandAdmin,
 	requireBandOwner
@@ -462,7 +461,11 @@ export const removeMember = form(
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
-		await removeMemberService(data.memberId, band.id);
+		try {
+			await removeMemberService(data.memberId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -473,7 +476,11 @@ export const revokeInvitation = form(
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
-		await revokeInvitationService(data.memberId, band.id);
+		try {
+			await revokeInvitationService(data.memberId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -504,15 +511,26 @@ export const transferOwner = form(
 	}),
 	async (data) => {
 		const { user, band } = await requireBandOwner();
-		await transferOwnershipService(band.id, data.newOwnerId, user.id);
+		try {
+			await transferOwnershipService(band.id, data.newOwnerId, user.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
 export const leave = form(z.object({}), async () => {
-	const user = requireUser();
-	const band = await requireBandBySlug();
-	await leaveBandService(band.id, user.id);
+	// `requireBandBySlug()` + `requireUser()` let a non-member's submission reach
+	// the service, which threw a plain Error — a 500 and a generic toast for what
+	// is really a 403. The owner case was worse: `OwnerCannotLeaveError` already
+	// maps to 422, but nothing routed it through `mapDomainError`.
+	const { user, band } = await requireBandMember();
+	try {
+		await leaveBandService(band.id, user.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -548,8 +566,14 @@ export const revokePlatformInviteRemote = form(
 		inviteId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireBandAdmin();
-		await revokePlatformInviteService(data.inviteId);
+		// Scoped to this band: the service used to take an invite id alone, so a
+		// band admin holding another band's invite id could revoke it.
+		const { band } = await requireBandAdmin();
+		try {
+			await revokePlatformInviteService(data.inviteId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

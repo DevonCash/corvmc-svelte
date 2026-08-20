@@ -75,7 +75,13 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<StatusBadge status={res.status} />
-								{#if res.status === 'scheduled' || res.status === 'confirmed'}
+								<!-- `canCancel` comes from the server: `cancel()` authorizes on
+							     createdByUserId, so this used to render Cancel for every
+							     bandmate and answer with an error toast for all but the
+							     one who booked. Band admins may cancel any of the band's
+							     sessions. Nothing is shown to someone who can't — a
+							     disabled button would just raise the same question. -->
+								{#if res.canCancel && (res.status === 'scheduled' || res.status === 'confirmed')}
 									<Form
 										remote={cancel}
 										onsuccess={() => {

@@ -29,7 +29,7 @@ import {
 	desc,
 	count
 } from 'drizzle-orm';
-import { getBySlug, getById as getBandById } from '$lib/server/band/band-service';
+import { getById as getBandById } from '$lib/server/band/band-service';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
@@ -89,7 +89,7 @@ import {
 	listActive as listActiveSeries
 } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
-import { requireBandMember } from '$lib/server/band/band-context';
+import { requireBandMember, requireBandMemberOrStaff } from '$lib/server/band/band-context';
 import { paginate } from '$lib/server/db/paginate';
 import { ensureContactPhone } from '$lib/server/user/user-service';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
@@ -171,11 +171,24 @@ export const getReservationDetail = query(z.string(), async (id) => {
 
 export const getBandReservations = query(z.string(), async (slug) => {
 	await requireFeature('bandReservations');
-	requireUser();
-	const band = await getBySlug(slug);
-	if (!band) throw error(404, 'Band not found');
+	// A bare `requireUser()` here meant any signed-in account could read any
+	// band's practice schedule, the name of whoever booked each session, and the
+	// notes on it, just by passing that band's slug. The read-side guard rather
+	// than `requireBandMember()`: staff administer band panels, and the layout
+	// already lets them in, so the member-only guard would 403 them into the
+	// error boundary. The slug cross-check is what stops the guard's band (from
+	// `params.slug`) and the requested one from diverging.
+	const { user: currentUser, band, role } = await requireBandMemberOrStaff();
+	if (band.slug !== slug) error(403, 'Not authorized');
 
 	const now = new Date();
+	// Whether the viewer may cancel each row. `cancel()` authorizes on
+	// `createdByUserId`, so a bandmate who didn't book cannot — the page used to
+	// render Cancel on every row regardless and answered with an error toast.
+	// Band admins may cancel any of their band's sessions; everyone else only
+	// their own. Computed here because the client cannot be trusted to.
+	const bandAdmin = role === 'owner' || role === 'admin';
+	const canCancelRow = (createdByUserId: string) => bandAdmin || createdByUserId === currentUser.id;
 
 	const upcoming = await db
 		.select({
@@ -184,6 +197,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
+			createdByUserId: reservation.createdByUserId,
 			bookedByName: user.name
 		})
 		.from(reservation)
@@ -205,6 +219,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
+			createdByUserId: reservation.createdByUserId,
 			bookedByName: user.name
 		})
 		.from(reservation)
@@ -219,7 +234,10 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.orderBy(desc(reservation.startsAt))
 		.limit(SEARCH_LIMIT);
 
-	return { upcoming, past };
+	return {
+		upcoming: upcoming.map((r) => ({ ...r, canCancel: canCancelRow(r.createdByUserId) })),
+		past: past.map((r) => ({ ...r, canCancel: false }))
+	};
 });
 
 export const getStaffReservationDetail = query(z.string(), async (id) => {
@@ -1535,17 +1553,56 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	return { reservationId: res.id, waitlisted };
 });
 
-/** Band: cancel a band reservation. */
+/**
+ * Band: cancel a band reservation.
+ *
+ * A band admin may cancel any of their band's sessions; everyone else only the
+ * ones they booked. Previously this passed straight to `cancel()`, which
+ * authorizes on `createdByUserId`, so a bandmate who hadn't booked got an error
+ * toast from a button the page showed them anyway. It also never checked that
+ * the reservation belonged to the guarded band.
+ */
 export const cancelBandReservation = form(
 	z.object({
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
 		await requireFeature('bandReservations');
-		const currentUser = requireUser();
-		await requireBandMember();
+		// A mutation, so the member-only guard — not `…OrStaff`. Staff cancel
+		// through their own reservation surface, which carries the audit trail.
+		const { user: currentUser, band, role } = await requireBandMember();
+
+		const [row] = await db
+			.select({
+				bookerType: reservation.bookerType,
+				bookerId: reservation.bookerId,
+				createdByUserId: reservation.createdByUserId
+			})
+			.from(reservation)
+			.where(eq(reservation.id, data.reservationId))
+			.limit(1);
+
+		// 404 rather than 403: whether some other band's reservation exists is not
+		// this band's business.
+		if (!row || row.bookerType !== 'band' || row.bookerId !== band.id) {
+			error(404, 'Reservation not found');
+		}
+
+		const bandAdmin = role === 'owner' || role === 'admin';
+		if (!bandAdmin && row.createdByUserId !== currentUser.id) {
+			error(403, 'Only the member who booked this session, or a band admin, can cancel it');
+		}
+
 		try {
-			await cancel(data.reservationId, currentUser.id);
+			// `authorizedActor`, never `staffOverride`: a band admin must still not
+			// cancel a session that has already started, and the cancellation is a
+			// member cancellation as far as the waitlist and notifications go.
+			await cancel(
+				data.reservationId,
+				currentUser.id,
+				undefined,
+				bandAdmin ? { authorizedActor: true } : undefined
+			);
 		} catch (err) {
 			mapDomainError(err);
 		}

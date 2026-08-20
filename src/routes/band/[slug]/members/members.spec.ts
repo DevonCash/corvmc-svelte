@@ -36,7 +36,16 @@ const bandServiceMock = {
 	revokeInvitation: vi.fn(async () => ({ rowCount: 1 })),
 	updateMember: vi.fn(async () => undefined),
 	transferOwnership: vi.fn(async () => undefined),
-	leaveBand: vi.fn(async () => ({ rowCount: 1 }))
+	leaveBand: vi.fn(async () => ({ rowCount: 1 })),
+	// `mapDomainError` builds its `instanceof` ladder from this module's exports.
+	// With the module mocked they must be here, or the ladder compares against
+	// `undefined` and throws a TypeError instead of mapping the status. Same
+	// shape as the real ones — plain Error subclasses, matched by identity.
+	CannotRemoveOwnerError: class CannotRemoveOwnerError extends Error {},
+	OwnerCannotLeaveError: class OwnerCannotLeaveError extends Error {},
+	BandMemberExistsError: class BandMemberExistsError extends Error {},
+	BandNotFoundError: class BandNotFoundError extends Error {},
+	BandTierManagedByStripeError: class BandTierManagedByStripeError extends Error {}
 };
 
 vi.mock('$lib/server/band/band-service', () => bandServiceMock);
@@ -202,6 +211,27 @@ describe('leave', () => {
 
 		expect(bandServiceMock.leaveBand).toHaveBeenCalledWith('band-1', 'user-owner');
 		expect(result.success).toBe(true);
+	});
+
+	// This used to guard with `requireBandBySlug()` + `requireUser()` rather than
+	// `requireBandMember()`, so a non-member's submission reached the service and
+	// surfaced its plain Error as a 500 — a generic toast for what is a 403.
+	it('refuses a non-member with 403, not a 500', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+
+		await expect(leave({})).rejects.toMatchObject({ status: 403 });
+		expect(bandServiceMock.leaveBand).not.toHaveBeenCalled();
+	});
+
+	// `OwnerCannotLeaveError` already maps to 422, but nothing routed the service
+	// call through `mapDomainError`, so an owner got a 500 and a generic toast.
+	it('maps the owner-cannot-leave rule to 422', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		bandServiceMock.leaveBand.mockRejectedValueOnce(
+			new bandServiceMock.OwnerCannotLeaveError('Owner cannot leave the band')
+		);
+
+		await expect(leave({})).rejects.toMatchObject({ status: 422 });
 	});
 });
 
