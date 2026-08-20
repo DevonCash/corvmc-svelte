@@ -404,14 +404,20 @@ Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` 
 Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
 the staff and member panels should be one of them.
 
-| Tier   | Component                      | Use                                                                     |
-| ------ | ------------------------------ | ----------------------------------------------------------------------- |
-| chip   | `EntityChip`                   | mentioning a record mid-sentence or in a `Fact`                         |
-| row    | `EntityRow`                    | a list item — `size="sm"` is the table primary cell, `md` has an avatar |
-| card   | `EntityCard`                   | a related record on someone else's detail page                          |
-| detail | `EntityHeader` + `RelatedList` | the identity strip and the related-records sections                     |
+| Tier   | Component                                  | Use                                                    |
+| ------ | ------------------------------------------ | ------------------------------------------------------ |
+| chip   | `EntityChip`                               | mentioning a record mid-sentence or in a `Fact`        |
+| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row |
+| card   | `EntityCard`                               | a related record on someone else's detail page         |
+| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections            |
 
 All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+
+`EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
+the top of a record's own page are one object at three scales — same avatar convention, same subtype
+glyph, same status rule. It was briefly split into `EntityRow` plus an `EntityHeader`, which meant
+two places for all three of those to drift apart. `lg` does not link by default: the record's own
+page is where you already are.
 
 **Scope: the panels only.** The public site and the directory profiles keep their own art-directed
 set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
@@ -465,15 +471,15 @@ flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`
 - **`truncate` does nothing on `<h1>`–`<h6>` or `<p>`.** `layout.css` sets `text-wrap: balance` and
   `pretty` on them _unlayered_, and unlayered CSS beats every `@layer`, so `overflow` and `ellipsis`
   apply but `white-space: nowrap` does not. Put the `truncate` on an inner `<span>`, or use a `<div>`.
-- **`EntityRow` in cell mode renders two sibling roots with no wrapper.** `cell-primary` is
+- **`EntityIdentity` at `sm` renders two sibling roots with no wrapper.** `cell-primary` is
   `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
-  Wrapping it silently un-truncates every list in the app; `EntityRow.svelte.spec.ts` pins it.
+  Wrapping it silently un-truncates every list in the app; `EntityIdentity.svelte.spec.ts` pins it.
 - **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
   `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
 
 ## MemberLink
 
-**Superseded by `EntityRow` / `EntityChip`** — being removed as its call sites migrate. It hardcodes
+**Superseded by `EntityIdentity` / `EntityChip`** — being removed as its call sites migrate. It hardcodes
 its target as `/staff/users/${userId}`, which is why every non-staff surface hand-rolled its own
 member link, and it takes a summary object that 16 of its 17 call sites build inline.
 

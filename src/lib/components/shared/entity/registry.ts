@@ -41,6 +41,7 @@ import {
 import type { SvelteComponent } from 'svelte';
 import { entityTypes, entityLabels, type EntityType } from '$lib/config';
 import type { EntityRef } from '$lib/types/entity';
+import { variants } from '../StatusBadge.svelte';
 
 type IconComponent = typeof SvelteComponent<any>;
 
@@ -132,31 +133,6 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 export const allEntityTypes = entityTypes;
 
 /**
- * The ring colour that carries a status on a card's media box.
- *
- * Keyed by `StatusBadge`'s own `variants[...].color`, so the outline and the
- * glyph can never disagree — there is one status registry, and this maps its
- * colours onto a second property rather than restating which status is which.
- *
- * Written as literal class strings on purpose: Tailwind generates only the
- * classes it can see in source, so a computed `text-` → `ring-` swap would
- * emit nothing at all. `registry.spec.ts` asserts every colour in `variants`
- * has an entry here.
- *
- * The neutral statuses share one muted ring. `cancelled` and `dismissed` are
- * not warnings, and a card should not shout them.
- */
-export const statusRing: Record<string, string> = {
-	'text-success': 'ring-success',
-	'text-warning': 'ring-warning',
-	'text-info': 'ring-info',
-	'text-error': 'ring-error',
-	'text-base-content': 'ring-base-content/30',
-	'text-base-content/60': 'ring-base-content/30',
-	'text-base-content/40': 'ring-base-content/30'
-};
-
-/**
  * The **identity** glyph: what kind of record this is, full stop.
  *
  * Use wherever the icon stands in for the record itself — a chip's leading
@@ -172,13 +148,13 @@ export function entityIcon(ref: EntityRef): EntitySubtype {
  * The **qualifier** glyph: which variant of its type this is.
  *
  * Use only where the glyph sits beside a name that already says what the record
- * is — `EntityRow`'s inline marker. Because a subtype glyph never stands alone
+ * is — `EntityIdentity`'s inline marker. Because a subtype glyph never stands alone
  * as identity, two *different* types may safely reuse one (a band's show and a
  * band-booked reservation both take the music note): the thing it qualifies is
  * always named right next to it. Uniqueness is therefore enforced within a
  * type, not across the registry.
  *
- * `EntityRow` used to carry a hardcoded member-role branch with a comment
+ * `EntityIdentity` used to carry a hardcoded member-role branch with a comment
  * saying a second branch would mean the registry was missing a field — this is
  * that field.
  */
@@ -191,6 +167,82 @@ export function entityGlyph(ref: EntityRef): EntitySubtype {
 /** True when this record is a marked variant rather than the ordinary case. */
 export function hasSubtype(ref: EntityRef): boolean {
 	return !!ref.subtype && !!entityKinds[ref.type].subtypes?.[ref.subtype];
+}
+
+/**
+ * How a status colours the thing it is attached to.
+ *
+ * One entry per tone, giving every surface that has to carry it: the ring round
+ * a card's media, the fill of a chip's trailing region, and the outline of the
+ * chip itself. They are in one record because they must agree — a chip with an
+ * error region and a neutral outline reads as two unrelated decisions.
+ *
+ * Keyed by `StatusBadge`'s `variants[...].color`, so the tone is chosen once,
+ * there, and everything else follows from it.
+ *
+ * Written as literal class strings: Tailwind emits only the classes it can see
+ * in source, so a computed `text-` → `ring-` swap would produce no CSS at all.
+ * `registry.spec.ts` asserts every colour in `variants` has an entry.
+ */
+export type StatusTone = {
+	ring: string;
+	fill: string;
+	border: string;
+	/** Dimmed outline for hover — a toned chip is already loud at rest. */
+	borderHover: string;
+};
+
+/**
+ * `bg-neutral` rather than a base shade: a chip is already `bg-base-200`, and
+ * the base ramp steps only a few percent in lightness at the dark end, so a
+ * base-300 region on it reads as nothing.
+ *
+ * Neutral stays neutral, though — `cancelled` and `deactivated` are ghost in
+ * StatusBadge because an ended record is not a fault, and reddening them would
+ * make every closed thing look broken.
+ */
+const NEUTRAL: StatusTone = {
+	ring: 'ring-base-content/30',
+	fill: 'bg-neutral text-neutral-content',
+	border: 'border-neutral',
+	borderHover: 'hover:border-neutral/60'
+};
+
+export const statusTone: Record<string, StatusTone> = {
+	'text-error': {
+		ring: 'ring-error',
+		fill: 'bg-error text-error-content',
+		border: 'border-error',
+		borderHover: 'hover:border-error/60'
+	},
+	'text-warning': {
+		ring: 'ring-warning',
+		fill: 'bg-warning text-warning-content',
+		border: 'border-warning',
+		borderHover: 'hover:border-warning/60'
+	},
+	'text-info': {
+		ring: 'ring-info',
+		fill: 'bg-info text-info-content',
+		border: 'border-info',
+		borderHover: 'hover:border-info/60'
+	},
+	'text-success': {
+		ring: 'ring-success',
+		fill: 'bg-success text-success-content',
+		border: 'border-success',
+		borderHover: 'hover:border-success/60'
+	},
+	'text-base-content': NEUTRAL,
+	'text-base-content/60': NEUTRAL,
+	'text-base-content/40': NEUTRAL
+};
+
+/** The tone for a status, or null when it has none mapped. */
+export function toneFor(status: string | null | undefined): StatusTone | null {
+	if (!status) return null;
+	const colour = variants[status]?.color;
+	return (colour && statusTone[colour]) || NEUTRAL;
 }
 
 /**

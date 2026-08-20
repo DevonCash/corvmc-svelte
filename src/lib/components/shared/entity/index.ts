@@ -10,9 +10,13 @@
  * `member/events/**` and `member/directory/**` are art-directed routes.
  */
 export { default as EntityChip } from './EntityChip.svelte';
-export { default as EntityRow } from './EntityRow.svelte';
+/**
+ * One record's identity at three scales: a table cell, a list row, and the
+ * strip at the top of its own page. Formerly EntityRow plus a separate
+ * EntityHeader, which were the same object drawn twice.
+ */
+export { default as EntityIdentity } from './EntityIdentity.svelte';
 export { default as EntityCard } from './EntityCard.svelte';
-export { default as EntityHeader } from './EntityHeader.svelte';
 export { default as RelatedList } from './RelatedList.svelte';
 export { default as EntityViewer } from './EntityViewer.svelte';
 export { entityKinds, type EntityKind } from './registry';

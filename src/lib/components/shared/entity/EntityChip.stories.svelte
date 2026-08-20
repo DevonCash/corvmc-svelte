@@ -121,6 +121,19 @@
 				ref={fakeRef('member', { id: 'm2', title: 'Sam Reyes', status: 'deactivated' })}
 			/>
 		</div>
+		<!--
+			Every tone the follower can take. Error and warning are loud because
+			something is wrong; `cancelled` and `deactivated` stay neutral because an
+			ended record is not a fault, and reddening them would make every closed
+			thing look broken.
+		-->
+		<div class="flex flex-wrap items-center gap-2">
+			<EntityChip ref={fakeRef('reservation', { id: 'r1', status: 'no_show' })} />
+			<EntityChip
+				ref={fakeRef('equipment', { id: 'q1', title: 'Ampeg SVT', status: 'maintenance' })}
+			/>
+			<EntityChip ref={fakeRef('event', { id: 'e3', title: 'Draft Show', status: 'draft' })} />
+		</div>
 		<p>
 			The listing <EntityChip
 				ref={fakeRef('event', { id: 'e2', title: 'Loud Night', status: 'cancelled' })}

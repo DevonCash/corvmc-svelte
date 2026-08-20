@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import Harness from './EntityRowHarness.svelte';
+import Harness from './EntityIdentityHarness.svelte';
 import { fakeRef } from '$lib/test/fixtures';
 
-describe('EntityRow', () => {
+describe('EntityIdentity', () => {
 	/**
 	 * `cell-primary` is `width:100%; max-width:0`, and `truncate` resolves
 	 * against that only when the anchor is a *direct* block child of the cell.
@@ -103,7 +103,7 @@ describe('EntityRow', () => {
  * no app stylesheet, so `.truncate` resolves to nothing here regardless. The
  * visual proof lives in the Storybook stories, which do import `layout.css`.
  */
-describe('EntityRow truncation elements', () => {
+describe('EntityIdentity truncation elements', () => {
 	it('never puts truncate directly on a heading or a paragraph', async () => {
 		render(Harness, {
 			ref: fakeRef('member', { id: 'm1', title: 'A'.repeat(120), subtitle: 'B'.repeat(120) }),

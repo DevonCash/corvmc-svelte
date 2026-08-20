@@ -6,8 +6,7 @@
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
-	import { entityKinds, entityIcon, statusRing, isNoteworthyStatus } from './registry';
-	import { variants } from '../StatusBadge.svelte';
+	import { entityKinds, entityIcon, toneFor, isNoteworthyStatus } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -102,14 +101,13 @@
 	const notable = $derived(status && isNoteworthyStatus(ref.status));
 	const inMedia = $derived(notable && mode !== 'none');
 	const ringClass = $derived.by(() => {
-		if (!inMedia || !ref.status) return '';
-		const colour = variants[ref.status]?.color;
+		if (!inMedia) return '';
 		// 4px on a poster, 2px on a tile — the same width reads very differently
 		// against a ~230px poster edge than around a 56px avatar, where it would
 		// go back to shouting. Both spelled literally: Tailwind only emits classes
 		// it can see in source.
 		const width = isPoster ? 'ring-4' : 'ring-2';
-		return `${width} ${(colour && statusRing[colour]) || 'ring-base-content/30'}`;
+		return `${width} ${toneFor(ref.status)?.ring ?? ''}`;
 	});
 </script>
 
@@ -200,7 +198,7 @@
 				{#if ref.subtitle}
 					<!-- A <div>, not a <p>: `layout.css` sets `text-wrap: pretty` on p
 					     unlayered, which defeats `truncate` the same way `balance` does on
-					     headings. EntityRow uses a <div> here for the same reason. -->
+					     headings. EntityIdentity uses a <div> here for the same reason. -->
 					<div class="truncate text-muted">{ref.subtitle}</div>
 				{/if}
 			</div>

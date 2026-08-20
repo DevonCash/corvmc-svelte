@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
 	entityKinds,
-	statusRing,
+	statusTone,
+	toneFor,
 	entityGlyph,
 	hasSubtype,
 	entityIcon,
@@ -95,10 +96,29 @@ describe('entity registry', () => {
 	 * classes it can see, so a new `variants` colour silently loses its ring
 	 * unless this catches it.
 	 */
-	it('has a ring colour for every status colour StatusBadge uses', () => {
+	it('has a tone for every status colour StatusBadge uses', () => {
 		const colours = [...new Set(Object.values(variants).map((v) => v.color))];
-		const missing = colours.filter((c) => !(c in statusRing));
-		expect(missing, `add these to statusRing: ${missing.join(', ')}`).toEqual([]);
+		const missing = colours.filter((c) => !(c in statusTone));
+		expect(missing, `add these to statusTone: ${missing.join(', ')}`).toEqual([]);
+	});
+
+	/**
+	 * Ring, fill and border come from one record so a chip cannot end up with an
+	 * error region and a neutral outline — two decisions that read as a mistake.
+	 */
+	it('gives a status the same tone on every surface', () => {
+		const tone = toneFor('no_show');
+		expect(tone).toEqual({
+			ring: 'ring-error',
+			fill: 'bg-error text-error-content',
+			border: 'border-error',
+			borderHover: 'hover:border-error/60'
+		});
+	});
+
+	it('falls back to neutral rather than nothing for an unmapped status', () => {
+		expect(toneFor('some_new_status')?.border).toBe('border-neutral');
+		expect(toneFor(null)).toBeNull();
 	});
 
 	/**

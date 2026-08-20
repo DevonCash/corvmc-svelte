@@ -1,24 +1,26 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import EntityRow from './EntityRow.svelte';
+	import EntityIdentity from './EntityIdentity.svelte';
 	import EntityGallery from './EntityGallery.svelte';
 	import Table from '../Table.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
+	import Button from '../Button.svelte';
 	import { fakeRef } from '$lib/test/fixtures';
 
 	const { Story } = defineMeta({
-		title: 'Shared/Entity/EntityRow',
-		component: EntityRow,
+		title: 'Shared/Entity/EntityIdentity',
+		component: EntityIdentity,
 		tags: ['autodocs'],
 		parameters: {
 			layout: 'padded',
 			docs: {
 				description: {
 					component:
-						'One record as a list item. `size="sm"` is the staff table **primary cell** — ' +
-						'the shape hand-written 53 times across the panel; `size="md"` is the ' +
-						'standalone list row with an avatar. It owns one cell&apos;s content and never ' +
-						'the column set, the fetch, or the `<tr>`.'
+						'One record&apos;s identity, at three scales. `sm` is the staff table ' +
+						'**primary cell** — the shape hand-written 53 times across the panel; `md` ' +
+						'is a standalone list row; `lg` is the strip at the top of a record&apos;s own ' +
+						'page, which used to be a separate EntityHeader. It owns one cell&apos;s ' +
+						'content and never the column set, the fetch, or the `<tr>`.'
 				}
 			}
 		},
@@ -74,7 +76,7 @@
 
 <!--
 	`component:` is set for the autodocs props table, which means svelte-csf
-	renders `<EntityRow {...args} />` *instead of* a story's children — the trap
+	renders `<EntityIdentity {...args} />` *instead of* a story's children — the trap
 	documented in DataList.stories.svelte. Bespoke stories pass a `template`.
 -->
 
@@ -90,7 +92,7 @@
 		{#each members as ref, i (ref.id)}
 			<tr class="hover">
 				<td class="w-px"><StatusBadge status="active" /></td>
-				<td class="cell-primary"><EntityRow {ref} /></td>
+				<td class="cell-primary"><EntityIdentity {ref} /></td>
 				<td class="col-support whitespace-nowrap">Mar {10 + i}, 2025</td>
 			</tr>
 		{/each}
@@ -119,11 +121,11 @@
 			</Table>
 		</div>
 		<div>
-			<p class="mb-2 text-subtle">After — &lt;EntityRow&gt;</p>
+			<p class="mb-2 text-subtle">After — &lt;EntityIdentity&gt;</p>
 			<Table>
 				{#snippet head()}<th>Member</th>{/snippet}
 				<tr class="hover">
-					<td class="cell-primary"><EntityRow ref={fakeRef('member', { id: 'm1' })} /></td>
+					<td class="cell-primary"><EntityIdentity ref={fakeRef('member', { id: 'm1' })} /></td>
 				</tr>
 			</Table>
 		</div>
@@ -140,7 +142,7 @@
 		{/snippet}
 		<tr class="hover">
 			<td class="cell-primary">
-				<EntityRow
+				<EntityIdentity
 					ref={fakeRef('event', {
 						id: 'e1',
 						title:
@@ -158,9 +160,9 @@
 <!-- The standalone list row: 40px avatar, its own flex wrapper. -->
 {#snippet listRows()}
 	<div class="flex max-w-md flex-col gap-2">
-		<EntityRow ref={fakeRef('band', { id: 'band-1' })} size="md" />
-		<EntityRow ref={fakeRef('member', { id: 'm1' })} size="md" />
-		<EntityRow ref={fakeRef('event', { id: 'e1' })} size="md" />
+		<EntityIdentity ref={fakeRef('band', { id: 'band-1' })} size="md" />
+		<EntityIdentity ref={fakeRef('member', { id: 'm1' })} size="md" />
+		<EntityIdentity ref={fakeRef('event', { id: 'e1' })} size="md" />
 	</div>
 {/snippet}
 <Story name="Size md — standalone list row" template={listRows} />
@@ -168,7 +170,7 @@
 {#snippet gallery()}
 	<EntityGallery columns={1}>
 		{#snippet item(type)}
-			<EntityRow ref={fakeRef(type)} size="md" />
+			<EntityIdentity ref={fakeRef(type)} size="md" />
 		{/snippet}
 	</EntityGallery>
 {/snippet}
@@ -177,8 +179,8 @@
 <!-- Unreachable and deleted both render unlinked, and both keep their row. -->
 {#snippet unlinked()}
 	<div class="flex max-w-md flex-col gap-2">
-		<EntityRow ref={fakeRef('member', { id: null, subtitle: 'Account deleted' })} size="md" />
-		<EntityRow ref={fakeRef('flag')} size="md" />
+		<EntityIdentity ref={fakeRef('member', { id: null, subtitle: 'Account deleted' })} size="md" />
+		<EntityIdentity ref={fakeRef('flag')} size="md" />
 	</div>
 {/snippet}
 <Story name="Unlinked states" template={unlinked} />
@@ -196,7 +198,7 @@
 				<p class="mb-2 text-subtle">{set.type}</p>
 				<div class="flex max-w-md flex-col gap-1">
 					{#each set.rows as [subtype, title] (title)}
-						<EntityRow ref={fakeRef(set.type, { id: title, subtype, title })} />
+						<EntityIdentity ref={fakeRef(set.type, { id: title, subtype, title })} />
 					{/each}
 				</div>
 			</div>
@@ -204,3 +206,75 @@
 	</div>
 {/snippet}
 <Story name="Subtypes — marked variants only" template={subtypes} />
+
+<!--
+	`lg` — the strip at the top of a record's own detail page. This was a separate
+	`EntityHeader` until it became clear it was the same object as a row, one size
+	up: same avatar convention, same subtype glyph, same status rule. It does not
+	link, because the record's own page is where you already are.
+
+	`email`/`phone` replace the subline: a detail strip wants to be actionable
+	where a list row wants to be read.
+-->
+{#snippet detailStrip()}
+	<div class="flex flex-col gap-8">
+		<EntityIdentity
+			ref={fakeRef('member', { id: 'm1', subtype: 'sustaining', status: 'active' })}
+			size="lg"
+			status
+			email="jane@example.dev"
+			phone="(541) 555-0134"
+		>
+			{#snippet qualifiers()}
+				<span class="text-muted">#0142</span>
+			{/snippet}
+			{#snippet meta()}
+				<Button variant="primary" size="xs">Message</Button>
+			{/snippet}
+		</EntityIdentity>
+
+		<EntityIdentity
+			ref={fakeRef('band', { id: 'band-1', status: 'active' })}
+			size="lg"
+			status
+			email="book@vu.example"
+		/>
+
+		<!-- A noteworthy status gets the word at this size: there is one record on
+		     the page, and room to say it. -->
+		<EntityIdentity
+			ref={fakeRef('member', { id: 'm2', title: 'Sam Reyes', status: 'deactivated' })}
+			size="lg"
+			status
+			email="sam@example.dev"
+		/>
+	</div>
+{/snippet}
+<Story name="Size lg — a record's own detail strip" template={detailStrip} />
+
+<!--
+	The three scales together. Same component, same conventions — a member is
+	round at every size, a subtype glyph marks the same records, and an ordinary
+	status stays quiet throughout.
+-->
+{#snippet scales()}
+	{@const ref = fakeRef('member', { id: 'm1', subtype: 'staff', status: 'active' })}
+	<div class="flex flex-col gap-6">
+		<div>
+			<p class="mb-1 text-subtle">sm — table primary cell</p>
+			<Table>
+				{#snippet head()}<th>Member</th>{/snippet}
+				<tr class="hover"><td class="cell-primary"><EntityIdentity {ref} /></td></tr>
+			</Table>
+		</div>
+		<div>
+			<p class="mb-1 text-subtle">md — list row</p>
+			<EntityIdentity {ref} size="md" />
+		</div>
+		<div>
+			<p class="mb-1 text-subtle">lg — detail strip</p>
+			<EntityIdentity {ref} size="lg" status email="jane@example.dev" />
+		</div>
+	</div>
+{/snippet}
+<Story name="The three scales" template={scales} />

@@ -238,6 +238,20 @@
 	 * state — rendering a red X made available equipment read as broken.
 	 */
 	const fallback: StatusVariant = { icon: IconPointFilled, color: 'text-base-content/40' };
+
+	/**
+	 * What a status is called on screen: an override from `labels` where the
+	 * humanised enum reads wrong, otherwise the enum with its underscores
+	 * removed.
+	 *
+	 * Exported because anything else drawing a status glyph needs the same
+	 * string for its accessible name, and two copies of this would drift.
+	 */
+	export function statusLabel(status: string): string {
+		if (labels[status]) return labels[status];
+		const s = status.replace(/_/g, ' ');
+		return s.charAt(0).toUpperCase() + s.slice(1);
+	}
 </script>
 
 <script lang="ts">
@@ -254,11 +268,7 @@
 	} = $props();
 
 	const variant = $derived(variants[status] ?? fallback);
-	const label = $derived.by(() => {
-		if (labels[status]) return labels[status];
-		const s = status.replace(/_/g, ' ');
-		return s.charAt(0).toUpperCase() + s.slice(1);
-	});
+	const label = $derived(statusLabel(status));
 </script>
 
 {#if showLabel}

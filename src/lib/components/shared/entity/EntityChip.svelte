@@ -1,8 +1,8 @@
 <script lang="ts">
 	import clsx from 'clsx';
 	import type { EntityRef } from '$lib/types/entity';
-	import StatusBadge from '../StatusBadge.svelte';
-	import { entityIcon, isNoteworthyStatus } from './registry';
+	import StatusMark from './StatusMark.svelte';
+	import { entityIcon, isNoteworthyStatus, toneFor } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -39,7 +39,7 @@
 		status?: boolean;
 		class?: string;
 		/**
-		 * RESERVED, not yet implemented — mounts `EntityRow` in a hover popover.
+		 * RESERVED, not yet implemented — mounts `EntityIdentity` in a hover popover.
 		 * Declared now so adding it later is an implementation rather than an API
 		 * change.
 		 */
@@ -59,6 +59,14 @@
 	 * to say one of them is off.
 	 */
 	const notable = $derived(status && isNoteworthyStatus(ref.status));
+	// Dim rather than brighten on hover: an untoned chip has a faint outline that
+	// needs to come forward, but a toned one is already the loudest thing in the
+	// line, so the hover cue is to ease off. Only when it links — hover means
+	// nothing on a chip that cannot be opened.
+	const tone = $derived(notable ? toneFor(ref.status) : null);
+	const toneClass = $derived(
+		tone ? `${tone.border} ${href ? `transition-colors ${tone.borderHover}` : ''}` : ''
+	);
 
 	const classes = $derived(
 		clsx(
@@ -66,16 +74,29 @@
 			// in running prose does not push the lines apart. A Material chip is
 			// taller than this, but Material chips live in chip *groups* — these have
 			// to sit inside a sentence.
-			'inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-full border align-bottom text-sm',
+			// overflow-hidden so the trailing status region clips to the pill.
+			'inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-full border align-bottom text-sm',
 			// Material's leading-icon inset: the glyph sits closer to the edge than
 			// the label does, or the chip reads lopsided.
 			icon ? 'pl-2' : 'pl-3',
-			notable ? 'pr-2' : 'pr-3',
+			// The region reaches the border itself, so the chip keeps no right inset.
+			notable ? 'pr-0' : 'pr-3',
+			// With a status, the outline takes that status's tone, so the chip reads
+			// as one object rather than a neutral pill with a coloured cap stuck on
+			// the end.
+			//
+			// Without one, the outline is a fraction of the foreground rather than
+			// `base-300`: the base ramp steps only 3–7% in lightness at the dark end
+			// (page 0.14, fill 0.17, border 0.21), so a base-300 outline all but
+			// vanishes there while reading fine in light. An alpha of the text
+			// colour inverts with the theme and holds its contrast in both.
+			toneClass ||
+				(href ? 'border-base-content/25 hover:border-base-content/40' : 'border-base-content/15'),
 			href
-				? 'border-base-300 bg-base-200 transition-colors hover:border-base-content/20 hover:bg-base-300'
+				? 'bg-base-200 transition-colors hover:bg-base-300'
 				: // Unreachable or deleted. Same shape, so a list of chips stays a list
 					// of chips, but nothing that suggests it can be opened.
-					'border-base-300/60 bg-base-200/50 text-muted',
+					'bg-base-200/50 text-muted',
 			className
 		)
 	);
@@ -86,12 +107,12 @@
 	<a {href} class={classes}>
 		{#if icon}<glyph.icon size={16} class="shrink-0" />{/if}
 		<span class="min-w-0 truncate">{ref.title}</span>
-		{#if notable && ref.status}<StatusBadge status={ref.status} size={14} />{/if}
+		{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
 	</a>
 {:else}
 	<span class={classes}>
 		{#if icon}<glyph.icon size={16} class="shrink-0 opacity-60" />{/if}
 		<span class="min-w-0 truncate">{ref.title}</span>
-		{#if notable && ref.status}<StatusBadge status={ref.status} size={14} />{/if}
+		{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
 	</span>
 {/if}
