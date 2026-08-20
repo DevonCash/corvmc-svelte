@@ -444,6 +444,34 @@ set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). Tha
 `member/` too: `member/events/**` and `member/directory/**` are art-directed routes. Don't
 "consistency-fix" one into the other — they optimise for different things.
 
+### Refs come from the query, not the page
+
+`src/lib/server/entity/refs.ts` projects a record into its ref: `memberRefColumns()` drops into a
+drizzle `.select()` under one key and `toMemberRef()` maps the row back out.
+
+```ts
+.select({ id: reservation.id, member: memberRefColumns() })
+// …
+rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
+```
+
+That is where the admin/staff/sustaining precedence lives, and it is why it is now applied once
+rather than at each call site — three staff queries used to read the role and not the subscription,
+so their sustaining members drew as ordinary ones.
+
+Two rules:
+
+- **A ref may only use columns from joins the query already makes.** One that would need a new join
+  gets a `null` image, not a query per row.
+- **Keep it out of module scope.** `memberRefColumns()` reaches `subscription-service`, which cycles
+  back through `payment-service`; a `const baseSelect = {…}` evaluated at import time throws
+  `Cannot access '__vite_ssr_import_2__' before initialization`. Make the select object a function.
+
+The correlated helpers (`primaryRoleFor`, `isSustainingMemberSql`) take any user id column, so
+`memberRefColumns(alias(user, 'approver'))` correlates to the alias — that is what lets one query
+project two different people. `refs.spec.ts` pins the rendered SQL, which is the only thing that
+catches a subquery binding to the wrong table.
+
 ### Links are derived, never passed
 
 No component takes an `href`. `entityHref(ref, viewer)` picks the one canonical page for this
