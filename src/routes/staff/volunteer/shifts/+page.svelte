@@ -10,8 +10,9 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { IconCopy } from '@tabler/icons-svelte';
 	import {
 		getShifts,
@@ -56,21 +57,9 @@
 		return `${fmt.format(start)}–${fmt.format(end)}`;
 	}
 
-	/** `YYYY-MM-DDTHH:mm` in club time, for a datetime-local default. */
-	function localInput(d: Date): string {
-		const date = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
-		const time = new Intl.DateTimeFormat('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		}).format(d);
-		return `${date}T${time}`;
-	}
-
 	// Tomorrow, so the form opens on a plausible date rather than one already past.
 	const START_MS = Date.now() + 86_400_000;
-	const defaultStart = localInput(new Date(START_MS));
+	const defaultStart = toLocalDateTime(new Date(START_MS));
 
 	// The role carries the shape of its own shift, so the end time and headcount
 	// follow whichever role is picked in the modal. Roles that never had defaults
@@ -102,7 +91,7 @@
 		const picked = all.find((r) => r.id === pickedRoleId) ?? all[0];
 		const minutes = picked?.defaultDurationMinutes ?? FALLBACK_DURATION_MINUTES;
 		return {
-			end: localInput(new Date(START_MS + minutes * 60_000)),
+			end: toLocalDateTime(new Date(START_MS + minutes * 60_000)),
 			capacity: String(picked?.defaultCapacity ?? FALLBACK_CAPACITY)
 		};
 	}
@@ -121,29 +110,13 @@
 			>
 				{#snippet form()}
 					{@const defaults = defaultsFor(live)}
-					<FormField
-						name="volunteerRoleId"
-						label="Role"
-						type="select"
-						bind:value={pickedRoleId}
-						options={live.map((r) => ({ value: r.id, label: r.name }))}
-					/>
-					<FormField name="startsAt" label="Starts" type="datetime-local" value={defaultStart} />
-					<FormField name="endsAt" label="Ends" type="datetime-local" value={defaults.end} />
-					<FormField
-						name="capacity"
-						label="People needed"
-						type="number"
-						min="1"
-						value={defaults.capacity}
-						description="Claims beyond this are refused."
-					/>
-					<FormField
-						name="notes"
-						label="Anything they should know"
-						type="textarea"
-						maxlength={VOLUNTEER_SHIFT_NOTES_MAX}
-						description="Where to meet, what to bring — shown when they claim it."
+					<ShiftFormFields
+						form={createShift}
+						roles={live}
+						bind:roleId={pickedRoleId}
+						startsAt={defaultStart}
+						endsAt={defaults.end}
+						capacity={defaults.capacity}
 					/>
 				{/snippet}
 			</Action>
@@ -214,7 +187,11 @@
 						<td class="cell-primary">
 							<div class="truncate font-medium">{shift.roleName}</div>
 							{#if shift.eventTitle}
-								<div class="truncate text-subtle">{shift.eventTitle}</div>
+								<div class="truncate">
+									<a href={resolve(`/staff/events/${shift.eventId}`)} class="link text-subtle">
+										{shift.eventTitle}
+									</a>
+								</div>
 							{/if}
 							{#if shift.cancelledAt}
 								<div class="text-xs text-error">Cancelled</div>

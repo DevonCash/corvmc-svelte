@@ -246,6 +246,17 @@ export function toLocalTime(d: Date): string {
 	return venue(d, { hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB');
 }
 
+/**
+ * Date → the value a `<input type="datetime-local">` wants: "2026-05-13T14:30".
+ *
+ * In *venue* time, which is the whole point. A datetime-local input has no
+ * timezone, so whatever wall clock this produces is the wall clock the server
+ * parses back — and the server parses in club time.
+ */
+export function toLocalDateTime(d: Date): string {
+	return `${toLocalDate(d)}T${toLocalTime(d)}`;
+}
+
 // ---------------------------------------------------------------------------
 // Duration
 // ---------------------------------------------------------------------------
