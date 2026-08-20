@@ -414,10 +414,30 @@ the staff and member panels should be one of them.
 All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
 
 `EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
-the top of a record's own page are one object at three scales — same avatar convention, same subtype
-glyph, same status rule. It was briefly split into `EntityRow` plus an `EntityHeader`, which meant
-two places for all three of those to drift apart. `lg` does not link by default: the record's own
-page is where you already are.
+the top of a record's own page are one object at three scales:
+
+| Size | Media                  | Title     | Status          | Links |
+| ---- | ---------------------- | --------- | --------------- | ----- |
+| `sm` | none                   | plain     | leading glyph   | yes   |
+| `md` | 40px avatar/glyph tile | plain     | rides the media | yes   |
+| `lg` | 64px avatar/glyph tile | `text-lg` | rides the media | no    |
+
+`sm` is the only structurally different one: it renders the anchor and subline as **two sibling
+roots with no wrapper**, because that is what `cell-primary` needs. The other two are a flex row.
+
+`lg` does not link by default — the record's own page is where you already are — and takes
+`email`/`phone` for its subline, because a detail strip wants to be actionable where a row wants to
+be read. `heading` puts the name in a heading element, for a card whose title is the record; leave
+it off in lists, since fifty headings in a table are not an outline.
+
+It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
+for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
+already drifted before they were merged.
+
+`EntityCard` composes it rather than redrawing it, and owns only what is genuinely card-shaped: the
+full-bleed portrait poster, its ring, and the facts/actions structure. Card actions ride the bottom
+edge (`mt-5 h-0`, outside `CardBody`), matching `member/reservations/ReservationCard.svelte`; pass
+`size="xs"`.
 
 **Scope: the panels only.** The public site and the directory profiles keep their own art-directed
 set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
@@ -450,13 +470,36 @@ The same rule three times over, and it is the thing to preserve when extending a
   band's. The ordinary case (`member`, `cmc`, `user`) is deliberately absent from the registry and
   gets no marker.
 - **Status** — `ordinaryStatuses` covers the expected resting states (all of `StatusBadge`'s success
-  tone, plus `confirmed` and `valid`). Only the rest draw a ring, a corner mark, or a trailing glyph.
+  tone, plus `confirmed` and `valid`). Only the rest are drawn at all.
 - **Identity vs qualifier** — `entityIcon()` is what kind of record this is, used where the glyph
   stands alone (a chip's leading icon, a card's no-image fallback). `entityGlyph()` is which variant,
   used only beside a name that already says what the record is.
 
 A marker on every row marks nothing, and the record that actually needs attention stops standing
 out — which is the only reason the marker exists.
+
+### Status rides the media
+
+One treatment, so the same record does not report its state one way in a list and another on a card.
+Where there is media — an avatar, a glyph tile, a poster — a noteworthy status draws a **ring in its
+tone plus the glyph in the corner**. Status becomes its own element only where there is nothing to
+ride: the labelled badge at `lg` with no media, the leading glyph in the bare `sm` cell, and a
+tinted trailing region on a chip.
+
+Ring, fill, border and hover-border all come from one `statusTone` record keyed by `StatusBadge`'s
+own `variants[...].color`, so a chip cannot end up with an error region and a neutral outline. Tone
+classes are literal strings — Tailwind emits only what it can see in source, so a computed
+`text-` → `ring-` swap produces no CSS at all.
+
+### Chip previews
+
+`EntityChip` shows the record's `md` identity on hover, on keyboard focus, or on first tap, built on
+bits-ui's `LinkPreview`. On a coarse pointer the first tap opens the preview instead of following the
+link, so the preview carries an arrow button — without it a phone could reach the preview and never
+the record. Pass `preview={false}` where the surroundings already show the same thing.
+
+Note that bits-ui's trigger sets `role="button"`, which is dropped for the anchor: a link that
+navigates must not be announced as a button.
 
 ### Registry
 
