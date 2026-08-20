@@ -17,7 +17,7 @@
 	} from '$lib/components/shared/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import {
 		IconCheck,
@@ -283,21 +283,11 @@
 									<span class="opacity-40">·</span>
 								{/if}
 								<!--
-									No email: the member is already the *subline* of this cell,
-									and a third line puts the row back over two. The email is one
-									click away on the reservation detail page.
+									A mention inside the booking's subline, so a chip. No email:
+									the member is already the *subline* of this cell, and a third
+									line puts the row back over two.
 								-->
-								<MemberLink
-									variant="inline"
-									hideAvatar
-									member={{
-										name: r.memberName,
-										pronouns: r.memberPronouns,
-										role: r.memberRole,
-										sustaining: !!r.memberSustaining,
-										userId: r.createdByUserId
-									}}
-								/>
+								<EntityChip ref={r.member} icon={false} />
 							</div>
 						</td>
 

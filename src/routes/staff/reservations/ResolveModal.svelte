@@ -5,7 +5,8 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/shared/actions';
 	import { invalidateAll } from '$app/navigation';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import type { MemberRef } from '$lib/types/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
 
@@ -22,10 +23,7 @@
 			endsAt: Date;
 			createdByUserId: string;
 			notes: string | null;
-			memberName: string;
-			memberEmail: string;
-			memberPronouns: string | null;
-			memberRole: string | null;
+			member: MemberRef;
 			cashDueCents: number | null;
 		}>;
 		hourlyRateCents: number;
@@ -75,16 +73,7 @@
 				<Card bordered>
 					<CardBody padding="sm">
 						<div class="flex justify-between mb-2">
-							<div>
-								<MemberLink
-									member={{
-										name: r.memberName,
-										email: r.memberEmail,
-										pronouns: r.memberPronouns,
-										role: r.memberRole
-									}}
-								/>
-							</div>
+							<EntityIdentity ref={r.member} size="md" />
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
 								<p class="text-muted">{formatTimeRange(r.startsAt, r.endsAt)}</p>

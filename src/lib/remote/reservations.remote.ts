@@ -34,14 +34,8 @@ import { band } from '$lib/server/db/schema/band';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
-import {
-	isStaff,
-	primaryRoleFor,
-	requireStaff,
-	requireStaffOrOwner,
-	requireUser
-} from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
+import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import {
 	getAvailableSlots,
 	getConflictDetails,
@@ -851,11 +845,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
-			memberName: user.name,
-			memberEmail: user.email,
-			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id),
-			memberSustaining: isSustainingMemberSql(user.id),
+			member: memberRefColumns(),
 			bandId: band.id,
 			bandName: band.name
 		})
@@ -873,7 +863,11 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.leftJoin(band, bandBookerJoin)
 		.where(where);
 
-	return paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 50 });
+	const { rows, pagination } = await paginate(dataQ, countQ, {
+		page: filters.page ?? 1,
+		pageSize: 50
+	});
+	return { rows: rows.map((r) => ({ ...r, member: toMemberRef(r.member) })), pagination };
 });
 
 /** Staff: tab badge counts for reservations. */
@@ -896,7 +890,7 @@ export const getUnresolvedReservations = query(async () => {
 	await requireStaff();
 	const now = new Date();
 
-	return db
+	const rows = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
@@ -904,10 +898,7 @@ export const getUnresolvedReservations = query(async () => {
 			endsAt: reservation.endsAt,
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
-			memberName: user.name,
-			memberEmail: user.email,
-			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
 			cashDueCents: reservation.cashDueCents
 		})
 		.from(reservation)
@@ -929,6 +920,8 @@ export const getUnresolvedReservations = query(async () => {
 		)
 		.orderBy(asc(reservation.endsAt))
 		.limit(LIST_LIMIT);
+
+	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 });
 
 /** Staff: current hourly rate for reservation pricing. */
