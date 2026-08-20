@@ -4,6 +4,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import CreateModal from './CreateModal.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -44,16 +45,18 @@
 						</td>
 
 						<td class="cell-primary">
-							<div class="flex items-center gap-2">
-								<a {href} class="font-medium hover:underline" class:font-bold={c.unread}>
-									{c.channel === 'direct'
-										? (c.counterpartName ?? 'Member')
-										: (c.subject ?? 'Conversation')}
-								</a>
+							<!--
+								A wrapper here is safe where `cell-primary` normally forbids one:
+								the truncating element is the preview below, which stays a direct
+								child. The badge has to sit beside the name, and a bare `sm`
+								identity has no slot for one.
+							-->
+							<div class="flex min-w-0 items-center gap-2">
+								<EntityIdentity ref={c.ref} class={c.unread ? 'font-bold' : ''} />
 								<!-- A request is in the list so it is found, but is never in the
 								     unread count — see countDirectUnread. -->
 								{#if c.pending}
-									<span class="badge badge-sm badge-warning">Request</span>
+									<span class="badge badge-sm badge-warning shrink-0">Request</span>
 								{/if}
 							</div>
 							{#if c.preview}

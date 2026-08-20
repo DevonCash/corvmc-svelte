@@ -1,4 +1,5 @@
 import { query, form, command } from '$app/server';
+import { toGenericRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
 import { requireUser } from '$lib/server/authorization';
@@ -50,7 +51,24 @@ export const getMyMessages = query(
 	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
 	async (args) => {
 		const user = requireUser();
-		return listMemberConversations(user.id, { page: args?.page ?? 1, pageSize: 25 });
+		const { rows, pagination } = await listMemberConversations(user.id, {
+			page: args?.page ?? 1,
+			pageSize: 25
+		});
+		return {
+			rows: rows.map((c) => ({
+				...c,
+				// A conversation is titled by whoever is on the other end of it, or by
+				// its subject where the other end is the collective rather than a
+				// person. The row's own unread state and status keep their columns.
+				ref: toGenericRef('thread', {
+					id: c.id,
+					title:
+						c.channel === 'direct' ? (c.counterpartName ?? 'Member') : (c.subject ?? 'Conversation')
+				})
+			})),
+			pagination
+		};
 	}
 );
 
