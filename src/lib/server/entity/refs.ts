@@ -21,11 +21,13 @@
  */
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
+import { band } from '$lib/server/db/schema/band';
+import { event } from '$lib/server/db/schema/event';
 import { primaryRoleFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
-import type { MemberRef } from '$lib/types/entity';
+import type { BandRef, EntityRef, EventRef, MemberRef } from '$lib/types/entity';
 
 /**
  * The `user` table, or any `alias()` of it — the alias arm is what lets a query
@@ -92,4 +94,100 @@ export function toMemberRef(row: MemberRefRow | null | undefined): MemberRef {
 		image: resolveImageUrl(row?.image),
 		subtype: memberSubtype(row?.role, !!row?.sustaining)
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Band
+// ---------------------------------------------------------------------------
+
+type BandTable = typeof band | BuildAliasTable<typeof band, string>;
+
+/**
+ * `slug` is not optional dressing: every band route outside the staff panel is
+ * keyed by it, so a ref without one simply has fewer reachable pages.
+ *
+ * No status. A band's `tier` is the only state it has, and `premium` on every
+ * premium band marks nothing — the rule the registry states for subtypes.
+ */
+export function bandRefColumns(b: BandTable = band) {
+	return { id: b.id, name: b.name, slug: b.slug, image: b.avatarKey };
+}
+
+export interface BandRefRow {
+	id: string | null;
+	name: string | null;
+	slug?: string | null;
+	image?: string | null;
+}
+
+export function toBandRef(row: BandRefRow | null | undefined): BandRef {
+	return {
+		type: 'band',
+		id: row?.id ?? null,
+		title: row?.name ?? 'Unknown band',
+		slug: row?.slug ?? null,
+		image: resolveImageUrl(row?.image)
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Event
+// ---------------------------------------------------------------------------
+
+type EventTable = typeof event | BuildAliasTable<typeof event, string>;
+
+export function eventRefColumns(e: EventTable = event) {
+	return { id: e.id, title: e.title, status: e.status, startsAt: e.startsAt, image: e.posterKey };
+}
+
+export interface EventRefRow {
+	id: string | null;
+	title: string | null;
+	status?: string | null;
+	startsAt?: Date | null;
+	image?: string | null;
+}
+
+export function toEventRef(row: EventRefRow | null | undefined): EventRef {
+	return {
+		type: 'event',
+		id: row?.id ?? null,
+		title: row?.title ?? 'Unknown event',
+		status: row?.status ?? null,
+		startsAt: row?.startsAt ?? null,
+		image: resolveImageUrl(row?.image)
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Booker
+// ---------------------------------------------------------------------------
+
+/**
+ * Who a reservation is *for*, which is not one type of record.
+ *
+ * `bookerType` picks between three tables, so the ref does too — and the chip
+ * that renders it carries its type glyph, which is how a reader tells a band's
+ * booking from a member's without a column of icons beside it.
+ *
+ * The branch lives here rather than at the call site because it is a fact about
+ * the data, and because a page that branched on it would be back to deciding
+ * per-site what a booking looks like.
+ *
+ * `lesson` has no record to point at: nothing in this app writes that booker
+ * type — it arrives with migrated rows — so it resolves to the member who holds
+ * the booking, and the reservation keeps its own lesson glyph to say what it is.
+ */
+export function toBookerRef(row: {
+	bookerType: string;
+	member: MemberRefRow | null;
+	band?: BandRefRow | null;
+	event?: EventRefRow | null;
+}): EntityRef {
+	// A left join that missed — a deleted band, a purged event — still gets its
+	// own ref rather than silently reporting as a member booking. `id: null`
+	// renders unlinked, so the row stays honest about what it is.
+	if (row.bookerType === 'band') return toBandRef(row.band);
+	if (row.bookerType === 'event') return toEventRef(row.event);
+	return toMemberRef(row.member);
 }

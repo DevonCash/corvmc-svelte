@@ -67,7 +67,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Series</th>
-					<th>Member</th>
+					<th>Booker</th>
 					<th class="col-support whitespace-nowrap">Starts</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -92,7 +92,9 @@
 								{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
 							</div>
 						</td>
-						<td class="min-w-0"><EntityChip ref={s.member} icon={false} /></td>
+						<!-- Member, band or event, exactly as on the bookings the series
+						     generates — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={s.booker} /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
 						<td class="w-px">
 							{#if !s.cancelledAt}

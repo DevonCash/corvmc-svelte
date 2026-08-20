@@ -860,13 +860,20 @@ renders the email and the admin/staff/sustaining glyph, so a list showing a
 member never needs separate Email or role columns.
 
 **But another record is not a qualifier.** A fact about the row merges into the
-subline; a _different record_ the row points at — the member on a booking, the
-borrower on a loan — gets its own column with an `EntityChip` in it. Chips down a
-column scan as a column; the same chips scattered under each primary cell do not,
-and they cost the primary cell its second line. `staff/reservations`,
-`staff/equipment/loans` and `staff/recurring` all read this way. Reserve the
-subline for what genuinely qualifies the record: the band that owns a booked
-slot, an equipment loan's category, a series' time range.
+subline; a _different record_ the row points at — the booker of a reservation,
+the borrower on a loan — gets its own column with an `EntityChip` in it. Chips
+down a column scan as a column; the same chips scattered under each primary cell
+do not, and they cost the primary cell its second line. `staff/reservations`,
+`staff/recurring` and `staff/equipment/loans` all read this way. Reserve the
+subline for what genuinely qualifies the record: a series' time range, an
+equipment loan's category.
+
+**Let the chip carry its glyph when the column's type varies.** A reservation's
+booker is a member, a band or an event, so `toBookerRef()` returns whichever it
+is and the chip's own glyph tells them apart — no column of icons beside it, and
+no branch on the page. Where every row in a column is the same type (a loan's
+borrower is always a member), pass `icon={false}`: a glyph on every row marks
+nothing, which is the same rule the registry states for subtypes.
 
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.

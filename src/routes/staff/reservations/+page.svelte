@@ -221,7 +221,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Reservation</th>
-					<th>Member</th>
+					<th>Booker</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -253,11 +253,6 @@
 							The day is not repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
-							<!--
-								Both glyphs ride the time rather than taking a line of their own:
-								an event or lesson booking has no second line to sit on, and a
-								lone icon under the time reads as a dropped row.
-							-->
 							<div class="flex items-center gap-1">
 								<a {href} class="font-medium whitespace-nowrap hover:underline">
 									{formatTimeRange(r.startsAt, r.endsAt)}
@@ -267,25 +262,21 @@
 										<IconRepeat size={14} class="text-base-content" />
 									</span>
 								{/if}
-								{#if r.bookerType !== 'user'}
-									<span class="tooltip" data-tip={r.bookerType}>
+								{#if r.bookerType === 'lesson'}
+									<!--
+										The one booker type with no record to point at, so the chip
+										beside it cannot say what this is. Every other type reads
+										off its own glyph in the Booker column.
+									-->
+									<span class="tooltip" data-tip="lesson">
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
 							</div>
-							{#if r.bookerType === 'band' && r.bandName}
-								<!-- The band owns the slot, so it qualifies the time. Who booked
-								     it on the band's behalf is the Member column. -->
-								<a
-									href={resolve(`/staff/bands/${r.bandId}`)}
-									class="block truncate text-muted hover:underline"
-								>
-									{r.bandName}
-								</a>
-							{/if}
 						</td>
 
-						<td class="min-w-0"><EntityChip ref={r.member} icon={false} /></td>
+						<!-- Member, band or event — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}

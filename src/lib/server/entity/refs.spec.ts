@@ -21,7 +21,7 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 	buildSubscriptionLineItem: vi.fn()
 }));
 
-import { memberRefColumns, toMemberRef } from './refs';
+import { memberRefColumns, toBookerRef, toMemberRef } from './refs';
 
 describe('toMemberRef', () => {
 	it('carries identity, contact and avatar', () => {
@@ -97,5 +97,52 @@ describe('memberRefColumns', () => {
 			.toSQL();
 
 		expect(sql).toContain('u.id = "approver"."id"');
+	});
+});
+
+describe('toBookerRef', () => {
+	const member = { id: 'u1', name: 'Ada' };
+	const bandRow = { id: 'b1', name: 'The Velvet Underground', slug: 'the-velvet-underground' };
+	const eventRow = { id: 'e1', title: 'Loud Night' };
+
+	it('follows bookerType to the record the booking is actually for', () => {
+		const args = { member, band: bandRow, event: eventRow };
+		expect(toBookerRef({ ...args, bookerType: 'user' })).toMatchObject({
+			type: 'member',
+			title: 'Ada'
+		});
+		expect(toBookerRef({ ...args, bookerType: 'band' })).toMatchObject({
+			type: 'band',
+			title: 'The Velvet Underground',
+			slug: 'the-velvet-underground'
+		});
+		expect(toBookerRef({ ...args, bookerType: 'event' })).toMatchObject({
+			type: 'event',
+			title: 'Loud Night'
+		});
+	});
+
+	/**
+	 * Nothing in this app writes `lesson`; it arrives with migrated rows and has
+	 * no record to point at, so the booking falls back to whoever holds it and
+	 * the row keeps its own lesson glyph to say what it is.
+	 */
+	it('falls back to the member for a lesson, which has no booker record', () => {
+		expect(toBookerRef({ bookerType: 'lesson', member })).toMatchObject({
+			type: 'member',
+			title: 'Ada'
+		});
+	});
+
+	/**
+	 * A deleted band must not quietly report as a member booking — the row would
+	 * then claim something about the data that is not true.
+	 */
+	it('keeps the type when the join missed, rather than reporting a member', () => {
+		expect(toBookerRef({ bookerType: 'band', member, band: null })).toMatchObject({
+			type: 'band',
+			id: null,
+			title: 'Unknown band'
+		});
 	});
 });

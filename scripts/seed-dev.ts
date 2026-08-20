@@ -1114,6 +1114,21 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		}
 	}
 
+	// Stamp the back-link every event reservation needs.
+	//
+	// The app books the room *after* the event exists, so `bookerId` is the event
+	// id (`event-service.ts`, `generation-job.ts`). This seed has to go the other
+	// way round — `event.reservationId` is set at insert — so the reservation is
+	// written first and its booker id is filled in here, once every event exists.
+	// Without this pass every seeded event booking has a dangling booker, and the
+	// staff reservations list reports the whole lot as "Unknown event".
+	await db.run(sql`
+		update reservation
+		set booker_id = (select id from event where event.reservation_id = reservation.id)
+		where booker_type = 'event'
+			and exists (select 1 from event where event.reservation_id = reservation.id)
+	`);
+
 	return rows;
 }
 

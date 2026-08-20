@@ -31,10 +31,17 @@ import {
 } from 'drizzle-orm';
 import { getBySlug, getById as getBandById } from '$lib/server/band/band-service';
 import { band } from '$lib/server/db/schema/band';
+import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import {
+	bandRefColumns,
+	eventRefColumns,
+	memberRefColumns,
+	toBookerRef,
+	toMemberRef
+} from '$lib/server/entity/refs';
 import {
 	getAvailableSlots,
 	getConflictDetails,
@@ -780,6 +787,12 @@ const staffReservationFiltersSchema = z.object({
  */
 const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
 
+/** The same shape for the other polymorphic booker: an event holding the room. */
+const eventBookerJoin = and(
+	eq(reservation.bookerType, 'event'),
+	eq(event.id, reservation.bookerId)
+);
+
 /** Staff: paginated, filtered reservation list. */
 export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
 	await requireStaff();
@@ -841,13 +854,16 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
+			// Three joins for one column: the booker is a member, a band or an
+			// event, and which one it is comes from `bookerType`.
 			member: memberRefColumns(),
-			bandId: band.id,
-			bandName: band.name
+			band: bandRefColumns(),
+			event: eventRefColumns()
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -863,7 +879,13 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		page: filters.page ?? 1,
 		pageSize: 50
 	});
-	return { rows: rows.map((r) => ({ ...r, member: toMemberRef(r.member) })), pagination };
+	return {
+		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
+			...r,
+			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
+		})),
+		pagination
+	};
 });
 
 /** Staff: tab badge counts for reservations. */

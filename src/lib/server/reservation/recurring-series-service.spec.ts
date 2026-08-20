@@ -50,10 +50,12 @@ vi.mock('drizzle-orm', () => ({
 // are pinned by `entity/refs.spec.ts` against rendered SQL instead.
 vi.mock('$lib/server/entity/refs', () => ({
 	memberRefColumns: vi.fn(() => ({ id: 'user.id', name: 'user.name' })),
-	toMemberRef: vi.fn((row: { id?: string; name?: string } | null | undefined) => ({
-		type: 'member',
-		id: row?.id ?? null,
-		title: row?.name ?? 'Unknown member'
+	bandRefColumns: vi.fn(() => ({ id: 'band.id', name: 'band.name' })),
+	eventRefColumns: vi.fn(() => ({ id: 'event.id', title: 'event.title' })),
+	toBookerRef: vi.fn((row: { bookerType: string; member?: { id?: string; name?: string } }) => ({
+		type: row.bookerType === 'band' ? 'band' : 'member',
+		id: row.member?.id ?? null,
+		title: row.member?.name ?? 'Unknown member'
 	}))
 }));
 
@@ -301,7 +303,11 @@ describe('recurring-series-service', () => {
 		function setupGetSelect(rows: unknown[]) {
 			const limit = vi.fn().mockResolvedValue(rows);
 			const where = vi.fn().mockReturnValue({ limit });
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -341,7 +347,11 @@ describe('recurring-series-service', () => {
 	describe('listActive()', () => {
 		function setupListSelect(rows: unknown[]) {
 			const where = vi.fn().mockResolvedValue(rows);
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -416,7 +426,11 @@ describe('recurring-series-service', () => {
 			const limit = vi.fn().mockReturnValue({ offset });
 			const $dynamic = vi.fn().mockReturnValue({ limit });
 			const where = vi.fn().mockReturnValue({ $dynamic });
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			// First call: data query, second call: count query
@@ -469,7 +483,11 @@ describe('recurring-series-service', () => {
 	describe('listActive({ forUser })', () => {
 		function setupListActiveSelect(rows: unknown[]) {
 			const where = vi.fn().mockResolvedValue(rows);
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -502,7 +520,7 @@ describe('recurring-series-service', () => {
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
 				id: 'series-user',
-				member: { title: 'Charlie' },
+				booker: { title: 'Charlie' },
 				frequencyLabel: 'Weekly'
 			});
 		});
