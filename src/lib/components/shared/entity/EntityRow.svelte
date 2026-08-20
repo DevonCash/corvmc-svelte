@@ -58,7 +58,14 @@
 
 {#snippet title()}
 	{#if glyph}
-		<span class="tooltip mr-1 align-middle" data-tip={glyph.label}>
+		<!--
+			`align-middle` alone sits the glyph ~2px low: it aligns to the baseline
+			plus half an x-height, not to the middle of the line. One line tall,
+			topped to the line box, centring its contents puts the glyph's centre on
+			the line's centre exactly — and keeps it inline, so the anchor stays
+			`block truncate` and the cell-primary contract holds.
+		-->
+		<span class="tooltip mr-1 inline-flex h-[1lh] items-center align-top" data-tip={glyph.label}>
 			<glyph.icon size={14} />
 		</span>
 	{/if}{ref.title}
