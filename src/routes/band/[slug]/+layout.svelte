@@ -13,6 +13,7 @@
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -92,6 +93,13 @@
 		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
-		{@render children()}
+		<EntityViewer
+			panel="band"
+			userId={layout.user.id}
+			isStaff={layout.isStaff}
+			bands={layout.userBands}
+		>
+			{@render children()}
+		</EntityViewer>
 	</ErrorToastBoundary>
 </AppShell>

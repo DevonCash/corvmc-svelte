@@ -2,7 +2,7 @@
 	import { getUserThreads } from '$lib/remote/inbox.remote';
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
 	import { getUserMarketing } from '$lib/remote/marketing.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -21,7 +21,7 @@
 	the panel answered that question and "what has this member done" at the same
 	time; they are the Moderation tab now.
 -->
-<AsyncCard title="Conversations" result={getUserThreads({ userId: id, email })}>
+<RelatedList title="Conversations" result={getUserThreads({ userId: id, email })}>
 	{#snippet children(data)}
 		{@const groups = [
 			{ label: 'Portal', rows: data.portal },
@@ -64,13 +64,13 @@
 			{/each}
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Preferences alongside the sends, because the question they answer together is
 	"why didn't they get the email?" — which is unanswerable from either half.
 -->
-<AsyncCard title="Notifications" result={getUserNotifications(id)}>
+<RelatedList title="Notifications" result={getUserNotifications(id)}>
 	{#snippet children(data)}
 		<h4 class="mb-1 text-subtle font-semibold uppercase">Channels</h4>
 		{@const overrides = Object.entries(data.preferences)}
@@ -111,9 +111,9 @@
 			</ul>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Email lists" result={getUserMarketing(id)}>
+<RelatedList title="Email lists" result={getUserMarketing(id)}>
 	{#snippet children(data)}
 		{#if !data.subscriber}
 			<EmptyState
@@ -139,4 +139,4 @@
 			</div>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

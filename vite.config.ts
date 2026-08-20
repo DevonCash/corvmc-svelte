@@ -62,7 +62,13 @@ export default defineConfig({
 					// file. `drizzle-orm/sqlite-core` alone costs ~400ms to evaluate in a
 					// cold process, which the default `forks` pool re-paid 136 times.
 					pool: 'vmForks',
-					include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.{test,spec}.{js,ts}'],
+					include: [
+						'src/**/*.{test,spec}.{js,ts}',
+						'scripts/**/*.{test,spec}.{js,ts}',
+						// Helpers the e2e suite runs outside Playwright. `*.e2e.ts` does not
+						// match `*.{test,spec}.ts`, so the Playwright specs stay out.
+						'e2e/**/*.{test,spec}.{js,ts}'
+					],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 					server: {
 						deps: {

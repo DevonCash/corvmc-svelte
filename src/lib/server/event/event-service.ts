@@ -1590,6 +1590,9 @@ export async function listBandEventsPast(
 }
 
 export interface MemberShowRow extends EventRow {
+	/** The credited band, whose id makes the byline reachable rather than text.
+	 *  `null` when the event has no confirmed credit. */
+	bandId: string | null;
 	bandName: string;
 	bandSlug: string;
 }
@@ -1634,6 +1637,7 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		.select({
 			eventId: eventBand.eventId,
 			billingOrder: eventBand.billingOrder,
+			bandId: eventBand.bandId,
 			bandName: band.name,
 			bandSlug: band.slug
 		})
@@ -1658,14 +1662,18 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		)
 		.orderBy(asc(eventBand.billingOrder));
 
-	const byEvent = new Map<string, { bandName: string; bandSlug: string }>();
+	const byEvent = new Map<string, { bandId: string | null; bandName: string; bandSlug: string }>();
 	for (const c of credits) {
 		if (!byEvent.has(c.eventId))
-			byEvent.set(c.eventId, { bandName: c.bandName, bandSlug: c.bandSlug });
+			byEvent.set(c.eventId, { bandId: c.bandId, bandName: c.bandName, bandSlug: c.bandSlug });
 	}
 
 	return rows.map((r) => ({
 		...r,
+		// An event with no confirmed credit keeps its empty byline; `null` for the
+		// id rather than '' so a ref built from it renders unlinked instead of
+		// pointing at a band that does not exist.
+		bandId: byEvent.get(r.id)?.bandId ?? null,
 		bandName: byEvent.get(r.id)?.bandName ?? '',
 		bandSlug: byEvent.get(r.id)?.bandSlug ?? ''
 	}));

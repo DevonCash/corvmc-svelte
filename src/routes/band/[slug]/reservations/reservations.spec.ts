@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
+import { sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -83,7 +84,10 @@ vi.mock('$lib/server/db/schema/recurring', () => ({
 
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
-	hasAnyRole: vi.fn(async () => false)
+	hasAnyRole: vi.fn(async () => false),
+	// `memberRefColumns()` selects this as a correlated subquery. The value is
+	// never asserted here — only that building the projection doesn't throw.
+	primaryRoleFor: vi.fn(() => sql`null`)
 }));
 
 vi.mock('$lib/server/feature-flags', () => ({
@@ -91,7 +95,9 @@ vi.mock('$lib/server/feature-flags', () => ({
 }));
 
 const subscriptionServiceMock = {
-	getSubscription: vi.fn(async () => null as { id: string; status: string } | null)
+	getSubscription: vi.fn(async () => null as { id: string; status: string } | null),
+	/** Same as `primaryRoleFor`: a SQL fragment `memberRefColumns()` projects. */
+	isSustainingMemberSql: vi.fn(() => sql`0`)
 };
 
 vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);
@@ -193,6 +199,20 @@ beforeEach(() => {
 	hasAnyRole.mockResolvedValue(false);
 	selectResult = [];
 });
+
+/** A row shaped like the entity-ref projection `getBandReservations` selects. */
+function reservationRow(createdByUserId: string, status = 'scheduled') {
+	return {
+		id: 'res-1',
+		status,
+		startsAt: new Date(),
+		endsAt: new Date(),
+		notes: null,
+		createdByUserId,
+		ref: { id: 'res-1', startsAt: new Date(), endsAt: new Date(), status },
+		bookedBy: { id: createdByUserId, name: 'Someone', email: null }
+	};
+}
 
 /** The row `cancelBandReservation` reads before authorizing. */
 function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1') {
@@ -346,17 +366,7 @@ describe('getBandReservations', () => {
 	});
 
 	it('marks a row cancellable only for its booker', async () => {
-		selectResult = [
-			{
-				id: 'res-1',
-				status: 'scheduled',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				notes: null,
-				createdByUserId: 'user-2',
-				bookedByName: 'Someone Else'
-			}
-		];
+		selectResult = [reservationRow('user-2')];
 
 		const result = await getBandReservations('the-velvet-underground');
 
@@ -365,17 +375,7 @@ describe('getBandReservations', () => {
 
 	it('marks every row cancellable for a band admin', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
-		selectResult = [
-			{
-				id: 'res-1',
-				status: 'scheduled',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				notes: null,
-				createdByUserId: 'user-2',
-				bookedByName: 'Someone Else'
-			}
-		];
+		selectResult = [reservationRow('user-2')];
 
 		const result = await getBandReservations('the-velvet-underground');
 
@@ -385,17 +385,7 @@ describe('getBandReservations', () => {
 	// Past sessions are never cancellable, whoever is looking.
 	it('never marks a past row cancellable', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('owner');
-		selectResult = [
-			{
-				id: 'res-1',
-				status: 'completed',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				notes: null,
-				createdByUserId: 'user-owner',
-				bookedByName: 'Test Owner'
-			}
-		];
+		selectResult = [reservationRow('user-owner', 'completed')];
 
 		const result = await getBandReservations('the-velvet-underground');
 

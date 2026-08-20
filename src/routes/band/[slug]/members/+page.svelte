@@ -2,7 +2,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Card from '$lib/components/shared/Card/Card.svelte';
 	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
@@ -124,7 +124,7 @@
 			toast.error('There is nobody else in the band to transfer ownership to.');
 			return;
 		}
-		transferTarget = { userId: first.userId, name: first.userName ?? '' };
+		transferTarget = { userId: first.userId, name: first.member.title };
 		showTransferModal = true;
 	}
 </script>
@@ -164,31 +164,13 @@
 				{#each others as member (member.id)}
 					<Card tone="base-200">
 						<CardBody row class="py-3">
-							<div class="flex min-w-0 items-center gap-3">
-								<Avatar
-									class="size-8 shrink-0"
-									size="avatar-sm"
-									src={member.userImage}
-									name={member.alias ?? member.userName ?? '?'}
-								/>
-								<div class="min-w-0">
-									<p class="truncate font-medium">
-										{member.alias ?? member.userName}
-										{#if member.alias && member.userName && member.alias !== member.userName}
-											<span class="text-subtle">({member.userName})</span>
-										{/if}
-									</p>
-									<p class="text-subtle truncate">
-										{member.userEmail}{member.position ? ` · ${member.position}` : ''}
-									</p>
-								</div>
-							</div>
+							<EntityIdentity ref={member.member} size="md" />
 							<div class="flex shrink-0 items-center gap-2">
 								<StatusBadge status={member.role} />
 								{#if canManage && member.role !== 'owner'}
 									<EditMemberAction
 										memberId={member.id}
-										memberName={member.userName ?? 'this member'}
+										memberName={member.member.title}
 										role={member.role as 'admin' | 'member'}
 										position={member.position}
 										onchanged={refreshMembers}
@@ -198,7 +180,7 @@
 										label="Remove"
 										variant="ghost"
 										size="xs"
-										confirm="Remove {member.userName} from {layout.band.name}?"
+										confirm="Remove {member.member.title} from {layout.band.name}?"
 										successToast="Member removed"
 										onsuccess={refreshMembers}
 										onfailure={() => toast.error('Failed to remove')}
@@ -213,7 +195,7 @@
 										variant="ghost"
 										size="xs"
 										onclick={() => {
-											transferTarget = { userId: member.userId, name: member.userName ?? '' };
+											transferTarget = { userId: member.userId, name: member.member.title };
 											showTransferModal = true;
 										}}
 									>
@@ -234,21 +216,19 @@
 				{#each pending as invite (invite.id)}
 					<Card tone="base-200">
 						<CardBody row class="py-3">
-							<div class="min-w-0">
-								<p class="truncate font-medium">{invite.userName}</p>
-								<p class="text-subtle truncate">
-									{invite.userEmail} · Invited as {invite.role}{invite.position
-										? ` · ${invite.position}`
-										: ''}
-								</p>
-							</div>
+							<EntityIdentity ref={invite.member} size="md">
+								{#snippet subtitle()}
+									Invited as {invite.role}{#if invite.position}
+										&middot; {invite.position}{/if}
+								{/snippet}
+							</EntityIdentity>
 							{#if canManage}
 								<Action
 									action={revokeInvitation.for(invite.id)}
 									label="Revoke"
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation for {invite.userName}?"
+									confirm="Revoke the invitation for {invite.member.title}?"
 									successToast="Invitation revoked"
 									onsuccess={refreshMembers}
 									onfailure={() => toast.error('Failed to revoke')}

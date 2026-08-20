@@ -16,7 +16,7 @@
 		"test:server": "vitest --run --project=server",
 		"test:changed": "vitest --run --changed",
 		"test": "pnpm run test:unit -- --run && playwright install chromium && pnpm run test:e2e",
-		"test:e2e": "tsx e2e/prepare.ts && playwright test",
+		"test:e2e": "tsx e2e/prepare.ts && tsx e2e/run.ts",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --cache --check . && eslint .",
 		"lint:changed": "bash scripts/lint-changed.sh",

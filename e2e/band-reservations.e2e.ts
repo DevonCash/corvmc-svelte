@@ -15,9 +15,6 @@ import {
  * every bandmate except the one who booked. The server decides now, and sends
  * the answer down as `canCancel` — which is only observable from the outside,
  * hence an e2e rather than another unit test.
- *
- * Runs behind the `bandReservations` flag, enabled for the suite in
- * `fixtures/seed-feature-flags.ts`.
  */
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');

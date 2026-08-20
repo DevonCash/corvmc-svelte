@@ -26,7 +26,7 @@ import {
 	and
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
@@ -74,7 +74,7 @@ export const getStaffDashboard = query(async () => {
 		db.select({ value: count() }).from(role),
 		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
 		db
-			.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+			.select({ member: memberRefColumns(), createdAt: user.createdAt })
 			.from(user)
 			.orderBy(desc(user.createdAt))
 			.limit(5)
@@ -86,7 +86,11 @@ export const getStaffDashboard = query(async () => {
 			totalRoles: totalRolesResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
-		recentUsers
+		recentUsers: recentUsers.map((u) => ({
+			id: u.member.id,
+			createdAt: u.createdAt,
+			ref: toMemberRef(u.member)
+		}))
 	};
 });
 
@@ -117,13 +121,9 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 
 	const dataQ = db
 		.select({
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			pronouns: user.pronouns,
+			member: memberRefColumns(),
 			deletedAt: user.deletedAt,
-			createdAt: user.createdAt,
-			sustaining: isSustainingMemberSql(user.id)
+			createdAt: user.createdAt
 		})
 		.from(user)
 		.where(where)
@@ -137,24 +137,22 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 		pageSize: 20
 	});
 
-	const userIds = users.map((u) => u.id);
-	const roleMap: Record<string, string[]> = {};
-
-	if (userIds.length > 0) {
-		const roleRows = await db
-			.select({ userId: modelHasRole.userId, roleName: role.name })
-			.from(modelHasRole)
-			.innerJoin(role, eq(role.id, modelHasRole.roleId))
-			.where(or(...userIds.map((id) => eq(modelHasRole.userId, id)))!);
-
-		for (const row of roleRows) {
-			if (!roleMap[row.userId]) roleMap[row.userId] = [];
-			roleMap[row.userId].push(row.roleName);
-		}
-	}
-
+	// The page used to be handed every role name of every row, from a second
+	// query, so that it could work out which glyph to draw. `memberRefColumns`
+	// answers that in the same statement, and the answer is the ref.
 	return {
-		rows: users.map((u) => ({ ...u, sustaining: !!u.sustaining, roles: roleMap[u.id] ?? [] })),
+		rows: users.map((u) => ({
+			// Kept alongside the ref: selection, the row link and the actions menu
+			// key off a definitely-present id, where `ref.id` is nullable because a
+			// ref may describe a member who is gone.
+			id: u.member.id,
+			email: u.member.email,
+			deletedAt: u.deletedAt,
+			createdAt: u.createdAt,
+			// Deactivation is the row's status, not a badge the page bolts on: it
+			// then rides the avatar like every other status in the app.
+			ref: { ...toMemberRef(u.member), status: u.deletedAt ? 'deactivated' : null }
+		})),
 		pagination
 	};
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Card from '$lib/components/shared/Card/Card.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -9,7 +10,6 @@
 	import Form from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import {
 		cancelBandReservation,
 		getBandReservations,
@@ -66,22 +66,17 @@
 					{@const cancel = cancelBandReservation.for(res.id)}
 					<Card>
 						<CardBody row class="py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-										res.endsAt
-									)}
-								</p>
-								<p class="text-subtle">
-									{formatDuration(res.startsAt, res.endsAt)}
-									{#if res.bookedByName}
-										&middot; Booked by {res.bookedByName}
+							<EntityIdentity ref={res.ref} size="md">
+								{#snippet subtitle()}
+									{res.ref.subtitle}
+									{#if res.bookedBy.id}
+										&middot; Booked by {res.bookedBy.title}
 									{/if}
 									{#if res.notes}
 										&middot; {res.notes}
 									{/if}
-								</p>
-							</div>
+								{/snippet}
+							</EntityIdentity>
 							<div class="flex items-center gap-2">
 								<StatusBadge status={res.status} />
 								<!-- `canCancel` comes from the server: `cancel()` authorizes on
@@ -119,19 +114,14 @@
 				{#each past as res (res.id)}
 					<Card>
 						<CardBody row class="py-4">
-							<div>
-								<p class="font-medium">
-									{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-										res.endsAt
-									)}
-								</p>
-								<p class="text-subtle">
-									{formatDuration(res.startsAt, res.endsAt)}
-									{#if res.bookedByName}
-										&middot; Booked by {res.bookedByName}
+							<EntityIdentity ref={res.ref} size="md">
+								{#snippet subtitle()}
+									{res.ref.subtitle}
+									{#if res.bookedBy.id}
+										&middot; Booked by {res.bookedBy.title}
 									{/if}
-								</p>
-							</div>
+								{/snippet}
+							</EntityIdentity>
 							<StatusBadge status={res.status} />
 						</CardBody>
 					</Card>

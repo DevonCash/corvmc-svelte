@@ -403,15 +403,163 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 
 Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` instead of `<div>`), `reset` (adds a Retry button), `action` (snippet for custom action content), `class`.
 
-## MemberLink
+## Entity tiers — chip / row / card / detail
 
-Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
+Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
+the staff and member panels should be one of them.
 
-```svelte
-<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} avatar />
+| Tier   | Component                                  | Use                                                                      |
+| ------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| chip   | `EntityChip`                               | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
+| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row                   |
+| card   | `EntityCard`                               | a related record on someone else's detail page                           |
+| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections                              |
+
+All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+
+`EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
+the top of a record's own page are one object at three scales:
+
+| Size | Media                      | Title     | Status             | Links |
+| ---- | -------------------------- | --------- | ------------------ | ----- |
+| `sm` | none, or `avatar` for 24px | plain     | only with `avatar` | yes   |
+| `md` | 40px avatar/glyph tile     | plain     | rides the media    | yes   |
+| `lg` | 64px avatar/glyph tile     | `text-lg` | rides the media    | no    |
+
+`sm` is the only structurally different one: it renders the anchor and subline as **two sibling
+roots with no wrapper**, because that is what `cell-primary` needs. The other two are a flex row.
+
+That is also why a bare `sm` cell draws **no status at all**, and passing `status` without `avatar`
+is silently a no-op: a status element would have to be a third sibling, and the wrapper needed to
+place it is the one thing this mode cannot have. A cell that must show status has two options —
+keep the status in its own `w-px` column, which is what ~30 staff tables already do, or pass
+`avatar` and let it ride the 24px avatar or glyph tile like every other size.
+`EntityIdentity.svelte.spec.ts` pins both.
+
+`lg` does not link by default — the record's own page is where you already are — and takes
+`email`/`phone` for its subline, because a detail strip wants to be actionable where a row wants to
+be read. `heading` puts the name in a heading element, for a card whose title is the record; leave
+it off in lists, since fifty headings in a table are not an outline.
+
+It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
+for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
+already drifted before they were merged.
+
+`EntityCard` composes it rather than redrawing it, and owns only what is genuinely card-shaped: the
+full-bleed portrait poster, its ring, and the facts/actions structure. Card actions ride the bottom
+edge (`mt-5 h-0`, outside `CardBody`), matching `member/reservations/ReservationCard.svelte`; pass
+`size="xs"`.
+
+**Scope: the panels only.** The public site and the directory profiles keep their own art-directed
+set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
+`member/` too: `member/events/**` and `member/directory/**` are art-directed routes. Don't
+"consistency-fix" one into the other — they optimise for different things.
+
+### Refs come from the query, not the page
+
+`src/lib/server/entity/refs.ts` projects a record into its ref: `memberRefColumns()` drops into a
+drizzle `.select()` under one key and `toMemberRef()` maps the row back out.
+
+```ts
+.select({ id: reservation.id, member: memberRefColumns() })
+// …
+rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 ```
 
-Without `userId`, the name renders as plain text. Without `avatar`, only name + email are shown.
+That is where the admin/staff/sustaining precedence lives, and it is why it is now applied once
+rather than at each call site — three staff queries used to read the role and not the subscription,
+so their sustaining members drew as ordinary ones.
+
+Two rules:
+
+- **A ref may only use columns from joins the query already makes.** One that would need a new join
+  gets a `null` image, not a query per row.
+- **Keep it out of module scope.** `memberRefColumns()` reaches `subscription-service`, which cycles
+  back through `payment-service`; a `const baseSelect = {…}` evaluated at import time throws
+  `Cannot access '__vite_ssr_import_2__' before initialization`. Make the select object a function.
+
+The correlated helpers (`primaryRoleFor`, `isSustainingMemberSql`) take any user id column, so
+`memberRefColumns(alias(user, 'approver'))` correlates to the alias — that is what lets one query
+project two different people. `refs.spec.ts` pins the rendered SQL, which is the only thing that
+catches a subquery binding to the wrong table.
+
+### Links are derived, never passed
+
+No component takes an `href`. `entityHref(ref, viewer)` picks the one canonical page for this
+record _and this viewer_: **stay in the panel you are already in, otherwise take the richest page
+they are entitled to** (staff → band → member → public). A staff user who is also in a band, clicking
+that band from inside its own panel, gets `/band/[slug]` rather than the staff record.
+
+`null` — no reachable page — is normal, not a failure: the components render unlinked but still
+visible, so a list keeps its length and a sentence keeps its subject.
+
+The viewer comes from `<EntityViewer panel=… >`, mounted once per panel layout. It is a separate
+synchronous component because the layouts already `await`, and context must be set during init.
+With no provider the viewer is anonymous, so links degrade to public routes — the harmless
+direction.
+
+This is display logic, not authorization. Remote functions remain the security boundary, so a
+mis-derived link is a 403, never a leak.
+
+### Everything visual is exception-only
+
+The same rule three times over, and it is the thing to preserve when extending any of this:
+
+- **Subtypes** — a glyph marks a member as `sustaining`, a listing as `community`, a booking as a
+  band's. The ordinary case (`member`, `cmc`, `user`) is deliberately absent from the registry and
+  gets no marker.
+- **Status** — `ordinaryStatuses` covers the expected resting states (all of `StatusBadge`'s success
+  tone, plus `confirmed` and `valid`). Only the rest are drawn at all.
+- **Identity vs qualifier** — `entityIcon()` is what kind of record this is, used where the glyph
+  stands alone (a chip's leading icon, a card's no-image fallback). `entityGlyph()` is which variant,
+  used only beside a name that already says what the record is.
+
+A marker on every row marks nothing, and the record that actually needs attention stops standing
+out — which is the only reason the marker exists.
+
+### Status rides the media
+
+One treatment, so the same record does not report its state one way in a list and another on a card.
+Where there is media — an avatar, a glyph tile, a poster — a noteworthy status draws a **ring in its
+tone plus the glyph in the corner**. Status becomes its own element only where there is nothing to
+ride: the labelled badge at `lg` with no media, and a tinted trailing region on a chip.
+
+Where there is no media _and_ no room for an element — the bare `sm` cell — there is no status.
+Give it an `avatar` if it needs one; see the size table above.
+
+Ring, fill, border and hover-border all come from one `statusTone` record keyed by `StatusBadge`'s
+own `variants[...].color`, so a chip cannot end up with an error region and a neutral outline. Tone
+classes are literal strings — Tailwind emits only what it can see in source, so a computed
+`text-` → `ring-` swap produces no CSS at all.
+
+### Chip previews
+
+`EntityChip` shows the record's `md` identity on hover, on keyboard focus, or on first tap, built on
+bits-ui's `LinkPreview`. On a coarse pointer the first tap opens the preview instead of following the
+link, so the preview carries an arrow button — without it a phone could reach the preview and never
+the record. Pass `preview={false}` where the surroundings already show the same thing.
+
+Note that bits-ui's trigger sets `role="button"`, which is dropped for the anchor: a link that
+navigates must not be announced as a button.
+
+### Registry
+
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) and `$lib/config`
+(`entityTypes`, `entityLabels`). Components must not branch on `ref.type`; a branch means the
+registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
+stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
+flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.
+
+### Things that will bite
+
+- **`truncate` does nothing on `<h1>`–`<h6>` or `<p>`.** `layout.css` sets `text-wrap: balance` and
+  `pretty` on them _unlayered_, and unlayered CSS beats every `@layer`, so `overflow` and `ellipsis`
+  apply but `white-space: nowrap` does not. Put the `truncate` on an inner `<span>`, or use a `<div>`.
+- **`EntityIdentity` at `sm` renders two sibling roots with no wrapper.** `cell-primary` is
+  `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
+  Wrapping it silently un-truncates every list in the app; `EntityIdentity.svelte.spec.ts` pins it.
+- **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
+  `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
 
 ## BookerTypeIcon
 
@@ -711,9 +859,25 @@ Every list row is built from the same four slots, in this order:
    `dropdown dropdown-end`. Never hidden.
 
 **Merge before you hide.** If a column repeats or merely qualifies the primary
-cell, delete it and make it the subline — don't tier it. `MemberLink` already
+cell, delete it and make it the subline — don't tier it. `EntityIdentity` already
 renders the email and the admin/staff/sustaining glyph, so a list showing a
 member never needs separate Email or role columns.
+
+**But another record is not a qualifier.** A fact about the row merges into the
+subline; a _different record_ the row points at — the booker of a reservation,
+the borrower on a loan — gets its own column with an `EntityChip` in it. Chips
+down a column scan as a column; the same chips scattered under each primary cell
+do not, and they cost the primary cell its second line. `staff/reservations`,
+`staff/recurring` and `staff/equipment/loans` all read this way. Reserve the
+subline for what genuinely qualifies the record: a series' time range, an
+equipment loan's category.
+
+**Let the chip carry its glyph when the column's type varies.** A reservation's
+booker is a member, a band or an event, so `toBookerRef()` returns whichever it
+is and the chip's own glyph tells them apart — no column of icons beside it, and
+no branch on the page. Where every row in a column is the same type (a loan's
+borrower is always a member), pass `icon={false}`: a glyph on every row marks
+nothing, which is the same rule the registry states for subtypes.
 
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.

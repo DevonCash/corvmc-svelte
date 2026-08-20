@@ -12,7 +12,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -145,16 +145,7 @@
 						<tr>
 							<td class="w-px"><StatusBadge status="blocked" /></td>
 							<td class="cell-primary">
-								<MemberLink
-									variant="inline"
-									member={{
-										name: row.userName,
-										email: row.userEmail,
-										pronouns: row.userPronouns,
-										role: row.userRole,
-										userId: row.userId
-									}}
-								/>
+								<EntityIdentity ref={row.member} />
 							</td>
 							<td class="col-support">{row.firstName} {row.lastName}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(row.createdAt)}</td>
@@ -301,24 +292,16 @@
 						</td>
 
 						<!--
-							MemberLink already carries the email and the role glyph, so the
-							description rides here as the subline rather than taking the
-							seventh column the budget doesn't have.
+							The description rides as the subline rather than taking the
+							seventh column the budget doesn't have. The email drops with it:
+							it is one click away on the member's own page.
 						-->
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: log.userName,
-									email: log.userEmail,
-									pronouns: log.userPronouns,
-									role: log.userRole,
-									userId: log.userId
-								}}
-							/>
-							<div class="truncate text-subtle" title={log.description}>
-								{log.description}
-							</div>
+							<EntityIdentity ref={log.member}>
+								{#snippet subtitle()}
+									<span title={log.description}>{log.description}</span>
+								{/snippet}
+							</EntityIdentity>
 							{#if log.reviewNotes}
 								<div class="truncate text-subtle">
 									{log.reviewedByName ?? 'Staff'}: {log.reviewNotes}
@@ -355,7 +338,7 @@
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
+												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
 												{formatDateShort(log.workedOn)}.
 											</p>
 											<p class="text-muted">{log.description}</p>
@@ -385,7 +368,7 @@
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
+												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
 												{formatDateShort(log.workedOn)}.
 											</p>
 											<p class="text-muted">{log.description}</p>

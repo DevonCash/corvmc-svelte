@@ -14,7 +14,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
 	import Form, { Field, SubmitButton, Select } from '$lib/components/shared/Form';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -53,15 +53,7 @@
 				<Fact label="Loan ID" mono>{loan.id}</Fact>
 
 				<Fact label="Member">
-					<MemberLink
-						member={{
-							name: loan.userName,
-							email: loan.userEmail,
-							pronouns: loan.userPronouns,
-							role: loan.userRole,
-							userId: loan.userId
-						}}
-					/>
+					<EntityChip ref={loan.member} />
 				</Fact>
 
 				<Fact label="Equipment">

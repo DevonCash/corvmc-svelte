@@ -2,7 +2,7 @@
 	import { getUserReservations } from '$lib/remote/users.remote';
 	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
 	import { getUserLoans } from '$lib/remote/equipment.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
@@ -15,7 +15,7 @@
 	let { id }: { id: string } = $props();
 </script>
 
-<AsyncCard title="Reservations" result={getUserReservations(id)}>
+<RelatedList title="Reservations" result={getUserReservations(id)}>
 	{#snippet children(data)}
 		{#if data.counts.upcoming === 0 && data.counts.past === 0}
 			<EmptyState
@@ -81,9 +81,9 @@
 			{/each}
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Recurring bookings" result={getUserRecurringSeries(id)}>
+<RelatedList title="Recurring bookings" result={getUserRecurringSeries(id)}>
 	{#snippet children(series)}
 		{#if series.length === 0}
 			<EmptyState title="No recurring bookings" description="No standing weekly or monthly slot." />
@@ -110,9 +110,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Equipment loans" result={getUserLoans(id)}>
+<RelatedList title="Equipment loans" result={getUserLoans(id)}>
 	{#snippet children(loans)}
 		{#if loans.length === 0}
 			<EmptyState title="No loans" description="This member has never borrowed equipment." />
@@ -153,4 +153,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

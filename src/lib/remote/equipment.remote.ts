@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toGenericRef } from '$lib/server/entity/refs';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
@@ -74,7 +75,7 @@ const staffEquipmentFilters = z.object({
 
 export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters) => {
 	await requireStaff();
-	return listEquipment(
+	const { rows, pagination } = await listEquipment(
 		{
 			search: filters.search || undefined,
 			categoryId: filters.categoryId || undefined,
@@ -85,6 +86,20 @@ export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+	return {
+		rows: rows.map((e) => ({
+			...e,
+			// A retired item reports as deactivated rather than by its last
+			// condition — the row's own status column already says the same thing,
+			// so the ref carries none.
+			ref: toGenericRef('equipment', {
+				id: e.id,
+				title: e.name,
+				subtitle: e.category.name
+			})
+		})),
+		pagination
+	};
 });
 
 const staffLoansFilters = z.object({

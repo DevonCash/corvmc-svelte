@@ -3,6 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
+import { bandRefColumns, toBandRef, toEventRef } from '$lib/server/entity/refs';
 import {
 	create,
 	update,
@@ -19,6 +20,7 @@ import {
 	getEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
+	type MemberShowRow,
 	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
@@ -60,13 +62,14 @@ import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE, SHORT_TEXT_MAX } from '$lib/config';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
+import { formatDateShortYear } from '$lib/utils/format';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -423,12 +426,67 @@ export const getStaffEvents = query(
 	}),
 	async (filters) => {
 		await requireStaff();
-		return listAllEvents(
+		const { rows, pagination } = await listAllEvents(
 			{ source: filters.source, status: filters.status },
 			{ page: filters.page ?? 1, pageSize: 50 }
 		);
+		return {
+			rows: rows.map((e) => ({
+				...e,
+				// The listing's own status is the row's and keeps its column, so the
+				// ref carries none — two marks for one fact reads as two facts.
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				// `event.bandId` is who manages the listing; the left join is already
+				// here for the byline.
+				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+			})),
+			pagination
+		};
 	}
 );
+
+/**
+ * Staff: event lookup for anything that hangs off a show — today, the volunteer
+ * shift forms.
+ *
+ * Two departures from `listAll`, which is the other staff-facing event read:
+ *
+ *  - **Nearest-in-time first, not newest first.** A venue has five rows called
+ *    "Open Mic Night"; ordering by `startsAt` descending hands back the one
+ *    furthest in the future, which is never the one the staffer meant. Sorting
+ *    by distance from now puts next Thursday's ahead of next April's, and still
+ *    reaches backwards for a show that already happened.
+ *  - **Cancelled and rejected are excluded**, because you do not staff a show
+ *    that is not happening. `listAll` keeps them; it is an admin index, and
+ *    this is a picker.
+ *
+ * The community-draft exclusion is `listAll`'s and carries its reasoning: a
+ * draft listing is a member's private working copy, and a staffer browsing
+ * events has no business reading it.
+ */
+export const searchEvents = query(z.string(), async (q) => {
+	await requireStaff();
+	if (!q || q.length < 2) return [];
+
+	const pattern = `%${q}%`;
+	const rows = await db
+		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
+		.from(event)
+		.where(
+			and(
+				like(event.title, pattern),
+				notInArray(event.status, ['cancelled', 'rejected']),
+				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+			)
+		)
+		.orderBy(sql`abs(${event.startsAt} - unixepoch())`)
+		.limit(SEARCH_LIMIT);
+
+	// The date arrives as a string because SearchSelect renders its description
+	// field verbatim — and it is formatted here so it lands in club time rather
+	// than whatever timezone the staffer's laptop is set to.
+	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
+});
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();
@@ -447,11 +505,11 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	let bookingBand: { id: string; name: string; slug: string } | null = null;
 	if (evt.bandId) {
 		const [row] = await db
-			.select({ id: band.id, name: band.name, slug: band.slug })
+			.select(bandRefColumns())
 			.from(band)
 			.where(eq(band.id, evt.bandId))
 			.limit(1);
-		if (row) bookingBand = row;
+		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
@@ -526,6 +584,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			externalTicketUrl: evt.externalTicketUrl
 		},
 		band: bookingBand,
+		/** The same band, ready to render. `band` stays for the fields the form reads. */
+		bandRef: bookingBand ? toBandRef(bookingBand) : null,
 		posterUrl,
 		creator,
 		// Standing only matters for a community listing, and only staff see it.
@@ -1174,11 +1234,35 @@ export const getUserShows = query(z.string(), async (userId) => {
 		listMemberPastShows(userId, { limit: 5, offset: 0 }),
 		countMemberPastShows(userId)
 	]);
-	return { upcoming, past, pastCount };
+	// Projected here rather than in `listMemberShows`: the directory profile
+	// reads those same functions and is art-directed, so its rows keep their
+	// shape while the staff panel gets refs.
+	return { upcoming: upcoming.map(toShowRow), past: past.map(toShowRow), pastCount };
 });
+
+/** A show as the staff panel draws it: the event, and the band it credits. */
+function toShowRow(show: MemberShowRow) {
+	return {
+		...show,
+		ref: toEventRef({ ...show, image: show.posterKey }),
+		band: toBandRef({ id: show.bandId, name: show.bandName, slug: show.bandSlug })
+	};
+}
 
 export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
 	await requireStaff();
 	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
-	return { tickets, rsvps };
+	// The row's own status is the ticket's or the RSVP's, which is not the
+	// event's — so the event ref carries no status here and the page keeps its
+	// status column.
+	return {
+		tickets: tickets.map((t) => ({
+			...t,
+			ref: toEventRef({ id: t.eventId, title: t.eventTitle, startsAt: t.eventStartsAt })
+		})),
+		rsvps: rsvps.map((r) => ({
+			...r,
+			ref: toEventRef({ id: r.eventId, title: r.eventTitle, startsAt: r.startsAt })
+		}))
+	};
 });

@@ -9,7 +9,13 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import {
+	memberRefColumns,
+	reservationRefColumns,
+	toBandRef,
+	toMemberRef,
+	toReservationRef
+} from '$lib/server/entity/refs';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -132,14 +138,15 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
 	const now = new Date();
-	return db
+	const rows = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			bookedByName: user.name
+			ref: reservationRefColumns(),
+			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -153,20 +160,22 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		)
 		.orderBy(reservation.startsAt)
 		.limit(10);
+
+	return rows.map((r) => ({
+		...r,
+		ref: toReservationRef(r.ref, band),
+		bookedBy: toMemberRef(r.bookedBy)
+	}));
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
+	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = await getMembers(bandId);
-	// `getMembers` selects the raw storage key; the roster needs a URL.
-	const withAvatar = members.map((m) => ({
-		...m,
-		userImage: resolveImageUrl(m.userImage) ?? undefined
-	}));
 	return {
-		active: withAvatar.filter((m) => m.status === 'active'),
-		pending: withAvatar.filter((m) => m.status === 'pending')
+		active: members.filter((m) => m.status === 'active'),
+		pending: members.filter((m) => m.status === 'pending')
 	};
 });
 
@@ -653,5 +662,13 @@ export const getUserBands = query(z.string(), async (userId) => {
 	// listForUser is unfiltered by status, so pending invitations come through
 	// too — a staff member needs to see an invite that was never accepted.
 	const bands = await listForUser(userId);
-	return bands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
+	return bands.map((b) => ({
+		...b,
+		// The member count is what qualifies a band in this list, so it takes the
+		// ref's subline rather than a column of its own.
+		ref: {
+			...toBandRef({ ...b, image: b.avatarKey }),
+			subtitle: `${b.memberCount} active members`
+		}
+	}));
 });

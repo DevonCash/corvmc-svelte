@@ -56,11 +56,12 @@ describe('bandNavItems', () => {
 		expect(labelsFor({ userRole: 'owner' })).not.toContain('Subscription');
 	});
 
-	it('shows Reservations only behind its feature flag', () => {
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Reservations');
-		expect(labelsFor({ userRole: 'member', features: { bandReservations: true } })).toContain(
-			'Reservations'
-		);
+	// The `bandReservations` flag was retired on main; band booking is on for
+	// every member now, so this asserts presence rather than gating.
+	it('shows Reservations to every band member', () => {
+		for (const userRole of ['owner', 'admin', 'member']) {
+			expect(labelsFor({ userRole })).toContain('Reservations');
+		}
 	});
 
 	it('shows the page editor only to an admin of a premium band with the flag on', () => {

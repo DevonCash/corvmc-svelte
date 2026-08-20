@@ -6,7 +6,7 @@
 		getUserPayments,
 		getUserOverview
 	} from '$lib/remote/users.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
@@ -36,7 +36,7 @@
 	}
 </script>
 
-<AsyncCard title="Membership" result={getUserMembership(id)}>
+<RelatedList title="Membership" result={getUserMembership(id)}>
 	{#snippet children(m)}
 		{#if !m.subscription}
 			<EmptyState
@@ -65,9 +65,9 @@
 			</DefinitionList>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Credits" result={getUserCredits(id)}>
+<RelatedList title="Credits" result={getUserCredits(id)}>
 	{#snippet children(credits)}
 		<div class="mb-3 flex gap-6">
 			<div>
@@ -81,7 +81,7 @@
 		</div>
 		<AdjustCreditsAction userId={id} onsuccess={refreshCredits} />
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	The ledger. A balance with no history was the standing complaint: "where did
@@ -129,7 +129,7 @@
 	</DataList>
 </InfoCard>
 
-<AsyncCard title="Payment records" result={getUserPayments(id)}>
+<RelatedList title="Payment records" result={getUserPayments(id)}>
 	{#snippet children(payments)}
 		{#if payments.length === 0}
 			<!-- Rendered even when empty: without it, "no payments" and "the query
@@ -173,4 +173,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

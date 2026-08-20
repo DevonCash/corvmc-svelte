@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import type { MemberRef } from '$lib/types/entity';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -33,9 +34,8 @@
 		ontransfer
 	}: {
 		me: {
-			userName: string | null;
-			userEmail: string | null;
-			userImage?: string;
+			/** The presentation ref `getMembers` builds — alias-aware. */
+			member: MemberRef;
 			alias: string | null;
 			position: string | null;
 		} | null;
@@ -47,23 +47,13 @@
 	} = $props();
 
 	const isOwner = $derived(role === 'owner');
-	const displayName = $derived(me?.alias ?? me?.userName ?? '');
 </script>
 
 {#if me}
 	<InfoCard title="Your membership">
 		<div class="space-y-4">
 			<div class="flex items-center gap-3">
-				<Avatar class="size-10" size="avatar-sm" src={me.userImage} name={displayName} />
-				<div class="min-w-0">
-					<p class="truncate font-medium">
-						{displayName}
-						{#if me.alias && me.userName && me.alias !== me.userName}
-							<span class="text-subtle">({me.userName})</span>
-						{/if}
-					</p>
-					<p class="text-subtle truncate">{me.userEmail}</p>
-				</div>
+				<EntityIdentity ref={me.member} size="md" />
 				<div class="ml-auto"><StatusBadge status={role} /></div>
 			</div>
 
@@ -81,7 +71,7 @@
 						label="Stage name"
 						value={me.alias ?? ''}
 						maxlength="100"
-						placeholder={me.userName ?? ''}
+						placeholder={me.member.title}
 						description="How you're credited on this band's roster and site. Leave blank to use your account name."
 					/>
 					<FormField

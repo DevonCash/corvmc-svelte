@@ -8,6 +8,7 @@
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 
@@ -45,14 +46,9 @@
 						: resolve(`/staff/marketing/campaigns/${c.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={c.status} /></td>
-					<!-- Audiences was its own column; it qualifies the campaign, so it is
-					     the subline. -->
-					<td class="cell-primary">
-						<a {href} class="block truncate font-medium hover:underline">{c.subject}</a>
-						<div class="truncate text-muted">
-							{c.audienceNames.length > 0 ? c.audienceNames.join(', ') : '—'}
-						</div>
-					</td>
+					<!-- Audiences was its own column; it qualifies the campaign, so the
+					     ref carries it as the subline. -->
+					<td class="cell-primary"><EntityIdentity ref={c.ref} /></td>
 					<td class="col-support cell-num">{c.recipientCount ?? '—'}</td>
 					<td class="col-support whitespace-nowrap">
 						{formatDateShort(c.sentAt ?? c.scheduledFor ?? c.createdAt)}

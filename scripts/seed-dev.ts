@@ -543,6 +543,7 @@ interface SeedEvent {
 	id: string;
 	status: string;
 	startsAt: Date;
+	endsAt: Date | null;
 }
 /** Matches the `reservation.hourlyRateCents` site-config default. */
 const HOURLY_RATE_CENTS = 1500;
@@ -1164,6 +1165,21 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			rows.push(inst);
 		}
 	}
+
+	// Stamp the back-link every event reservation needs.
+	//
+	// The app books the room *after* the event exists, so `bookerId` is the event
+	// id (`event-service.ts`, `generation-job.ts`). This seed has to go the other
+	// way round — `event.reservationId` is set at insert — so the reservation is
+	// written first and its booker id is filled in here, once every event exists.
+	// Without this pass every seeded event booking has a dangling booker, and the
+	// staff reservations list reports the whole lot as "Unknown event".
+	await db.run(sql`
+		update reservation
+		set booker_id = (select id from event where event.reservation_id = reservation.id)
+		where booker_type = 'event'
+			and exists (select 1 from event where event.reservation_id = reservation.id)
+	`);
 
 	return rows;
 }
@@ -3818,7 +3834,7 @@ async function main() {
 	const volunteerHours = await seedVolunteerHours(activeVolunteers, volunteerRoles);
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
-	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles);
+	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
@@ -4153,7 +4169,7 @@ async function seedCertifications(users: any[], roles: any[]) {
  * feedback, today's confirmed, upcoming ones part-claimed so the staff list
  * shows real needed-vs-claimed numbers and the member board has things to take.
  */
-async function seedVolunteerShifts(users: any[], roles: any[]) {
+async function seedVolunteerShifts(users: any[], roles: any[], events: SeedEvent[]) {
 	console.log('Seeding volunteer shifts...');
 	const liveRoles = roles.filter((r: any) => r.isActive !== false);
 	if (liveRoles.length === 0 || users.length === 0) return { shifts: 0, signups: 0, feedback: 0 };
@@ -4166,16 +4182,43 @@ async function seedVolunteerShifts(users: any[], roles: any[]) {
 		return d;
 	};
 
+	// Most volunteer shifts staff a show, so most of the seeded ones carry an
+	// event — but not all of them. Work parties and gear-repair days are why
+	// `eventId` is nullable, and both branches of every "linked to an event?"
+	// check need data or nobody sees the unlinked rendering until production.
+	//
+	// Attached shifts take their times *from the show*, half an hour before doors
+	// through the end of the night. A shift pointing at a gig on some other
+	// evening would be worse than no link at all.
+	const published = events.filter((e) => e.status === 'published');
+	const pastShows = published.filter((e) => e.startsAt < now);
+	const futureShows = published.filter((e) => e.startsAt >= now);
+
 	const shiftRows = await batchInsert(
 		volunteerShift,
-		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => ({
-			id: randomUUID(),
-			volunteerRoleId: pick(liveRoles).id,
-			startsAt: at(offset, 18),
-			endsAt: at(offset, 22),
-			capacity: 1 + (i % 3),
-			notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
-		}))
+		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
+			// Every third shift is deliberately left unattached.
+			const pool = offset < 0 ? pastShows : futureShows;
+			const show = i % 3 === 2 ? undefined : pool[Math.floor(i / 3) % (pool.length || 1)];
+
+			const startsAt = show ? new Date(show.startsAt.getTime() - 30 * 60_000) : at(offset, 18);
+			const endsAt = show
+				? (show.endsAt ?? new Date(show.startsAt.getTime() + 4 * 3_600_000))
+				: at(offset, 22);
+
+			return {
+				id: randomUUID(),
+				volunteerRoleId: pick(liveRoles).id,
+				eventId: show?.id ?? null,
+				startsAt,
+				endsAt,
+				capacity: 1 + (i % 3),
+				notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
+			};
+		}),
+		// One more bound column per row than this insert used to carry, and D1 caps
+		// a statement at 100 parameters.
+		8
 	);
 
 	const signupRows: any[] = [];

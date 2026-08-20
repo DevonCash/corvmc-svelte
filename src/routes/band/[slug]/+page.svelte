@@ -4,9 +4,9 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { resolve } from '$app/paths';
@@ -51,22 +51,17 @@
 					{#each sessions as res (res.id)}
 						<Card>
 							<CardBody row class="py-4">
-								<div>
-									<p class="font-medium">
-										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-											res.endsAt
-										)}
-									</p>
-									<p class="text-muted">
-										{formatDuration(res.startsAt, res.endsAt)}
-										{#if res.bookedByName}
-											&middot; Booked by {res.bookedByName}
+								<EntityIdentity ref={res.ref} size="md">
+									{#snippet subtitle()}
+										{res.ref.subtitle}
+										{#if res.bookedBy.id}
+											&middot; Booked by {res.bookedBy.title}
 										{/if}
 										{#if res.notes}
 											&middot; {res.notes}
 										{/if}
-									</p>
-								</div>
+									{/snippet}
+								</EntityIdentity>
 								<StatusBadge status={res.status} />
 							</CardBody>
 						</Card>

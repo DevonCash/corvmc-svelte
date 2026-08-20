@@ -27,6 +27,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { E2E_STATE_ROOT, REPO_ROOT } from './state-dir';
+import { resetE2eDatabase } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
@@ -76,6 +77,13 @@ function migrateIfStale(): void {
 }
 
 migrateIfStale();
+
+// Start from an empty database, not a nearly-empty one. Each fixture clears
+// its own rows, but nothing owns the `session` rows every login writes, the
+// `notification` rows the app writes as a side effect, or whatever a UI test
+// left in a table its fixture does not sweep. `e2e/run.ts` already cleared
+// after a green run; this covers a crash, or a red run kept for inspection.
+resetE2eDatabase();
 
 await seedPayReservation();
 await seedBandOnboarding();

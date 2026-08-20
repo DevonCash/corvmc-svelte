@@ -10,7 +10,7 @@
 	} from '$lib/remote/users.remote';
 	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
 	import StaffUserForm from '../StaffUserForm.svelte';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -50,7 +50,7 @@
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} />
 {/await}
 
-<AsyncCard title="Directory profile" result={getUserDirectoryProfile(id)}>
+<RelatedList title="Directory profile" result={getUserDirectoryProfile(id)}>
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState title="No profile" description="This account has no directory profile row." />
@@ -105,13 +105,13 @@
 			</div>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Read-only. Revoking a session would be a new mutation, and the one lever staff
 	already have for cutting off access — deactivation — deletes them all.
 -->
-<AsyncCard title="Sign-in activity" result={getUserSessions(id)}>
+<RelatedList title="Sign-in activity" result={getUserSessions(id)}>
 	{#snippet children(data)}
 		<p class="mb-3 text-muted">
 			Last sign-in: {data.lastLoginAt ? formatDateTimeShort(data.lastLoginAt) : 'never on record'}
@@ -141,7 +141,7 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <InfoCard title="Details" class="bg-base-200 shadow-none">
 	<DefinitionList>

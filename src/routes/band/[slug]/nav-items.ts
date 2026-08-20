@@ -27,7 +27,7 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandReservations?: boolean; bandPremium?: boolean };
+	features: { bandPremium?: boolean };
 }
 
 export interface BandNavItem {
@@ -49,10 +49,9 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		{ key: 'members', label: 'Members', href: `${base}/members` }
 	];
 
-	if (input.features.bandReservations) {
-		items.push({ key: 'reservations', label: 'Reservations', href: `${base}/reservations` });
-	}
-
+	// Reservations used to sit behind a `bandReservations` flag, retired on main
+	// in #238's wake — band booking is simply on now.
+	items.push({ key: 'reservations', label: 'Reservations', href: `${base}/reservations` });
 	items.push({ key: 'events', label: 'Events', href: `${base}/events` });
 
 	if (isOwnerOrAdmin) {

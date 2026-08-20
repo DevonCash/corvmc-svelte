@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {
@@ -33,16 +32,18 @@ import { getById as getBandById } from '$lib/server/band/band-service';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
-import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
+import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
 import {
-	isStaff,
-	primaryRoleFor,
-	requireStaff,
-	requireStaffOrOwner,
-	requireUser
-} from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
+	bandRefColumns,
+	eventRefColumns,
+	memberRefColumns,
+	reservationRefColumns,
+	toBandRef,
+	toBookerRef,
+	toMemberRef,
+	toReservationRef
+} from '$lib/server/entity/refs';
 import {
 	getAvailableSlots,
 	getConflictDetails,
@@ -170,14 +171,14 @@ export const getReservationDetail = query(z.string(), async (id) => {
 });
 
 export const getBandReservations = query(z.string(), async (slug) => {
-	await requireFeature('bandReservations');
 	// A bare `requireUser()` here meant any signed-in account could read any
 	// band's practice schedule, the name of whoever booked each session, and the
-	// notes on it, just by passing that band's slug. The read-side guard rather
-	// than `requireBandMember()`: staff administer band panels, and the layout
-	// already lets them in, so the member-only guard would 403 them into the
-	// error boundary. The slug cross-check is what stops the guard's band (from
-	// `params.slug`) and the requested one from diverging.
+	// notes on it, just by passing that band's slug — which matters more now the
+	// feature is on for everyone rather than flag-gated off. The read-side guard
+	// rather than `requireBandMember()`: staff administer band panels, and the
+	// layout already lets them in, so the member-only guard would 403 them into
+	// the error boundary. The slug cross-check is what stops the guard's band
+	// (from `params.slug`) and the requested one from diverging.
 	const { user: currentUser, band, role } = await requireBandMemberOrStaff();
 	if (band.slug !== slug) error(403, 'Not authorized');
 
@@ -197,8 +198,11 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			createdByUserId: reservation.createdByUserId,
-			bookedByName: user.name
+			ref: reservationRefColumns(),
+			// Who booked it for the band. The `user` join is already here.
+			bookedBy: memberRefColumns(),
+			// Not for display — `canCancel` below is derived from it.
+			createdByUserId: reservation.createdByUserId
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -219,8 +223,11 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			createdByUserId: reservation.createdByUserId,
-			bookedByName: user.name
+			ref: reservationRefColumns(),
+			// Who booked it for the band. The `user` join is already here.
+			bookedBy: memberRefColumns(),
+			// Not for display — `canCancel` below is derived from it.
+			createdByUserId: reservation.createdByUserId
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -234,9 +241,16 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.orderBy(desc(reservation.startsAt))
 		.limit(SEARCH_LIMIT);
 
+	const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
+		...r,
+		ref: toReservationRef(r.ref, band),
+		bookedBy: toMemberRef(r.bookedBy),
+		canCancel: cancellable && canCancelRow(r.createdByUserId)
+	});
 	return {
-		upcoming: upcoming.map((r) => ({ ...r, canCancel: canCancelRow(r.createdByUserId) })),
-		past: past.map((r) => ({ ...r, canCancel: false }))
+		upcoming: upcoming.map((r) => withBooker(r, true)),
+		// A session that has already happened is nobody's to cancel.
+		past: past.map((r) => withBooker(r, false))
 	};
 });
 
@@ -246,11 +260,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 	const rows = await db
 		.select({
 			reservation: reservation,
-			memberName: user.name,
-			memberEmail: user.email,
+			member: memberRefColumns(),
 			memberPhone: user.phone,
-			memberPronouns: user.pronouns,
-			memberImage: user.image,
 			bandId: band.id,
 			bandName: band.name,
 			bandSlug: band.slug,
@@ -279,16 +290,29 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 	const row = {
 		...rows[0].reservation,
-		memberName: rows[0].memberName,
-		memberEmail: rows[0].memberEmail,
+		member: toMemberRef(rows[0].member),
+		// The two contact affordances the identity strip takes as props. Email is
+		// also the ref's subline, but the strip renders contact instead of it.
+		memberEmail: rows[0].member.email,
 		memberPhone: rows[0].memberPhone,
-		memberPronouns: rows[0].memberPronouns,
-		memberImage: resolveImageUrl(rows[0].memberImage),
 		bandId: rows[0].bandId,
 		bandName: rows[0].bandName,
 		bandSlug: rows[0].bandSlug,
 		eventId: rows[0].eventId,
 		eventTitle: rows[0].eventTitle,
+		// The booking band as a record. `bandId`/`bandName` stay for the header
+		// action and the page title, which are not references.
+		band: rows[0].bandId
+			? toBandRef({ id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug })
+			: null,
+		// Who the room is held for — a band, a show, or the member themselves.
+		// The list column and this page then lead with the same record.
+		booker: toBookerRef({
+			bookerType: rows[0].reservation.bookerType,
+			member: rows[0].member,
+			band: { id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug },
+			event: { id: rows[0].eventId, title: rows[0].eventTitle }
+		}),
 		createdByStaffName
 	};
 
@@ -753,7 +777,6 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.void(), async () => {
-	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
@@ -790,7 +813,7 @@ const staffReservationFiltersSchema = z.object({
  */
 const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
 
-/** The same discriminated shape for events: an event hold carries the event id. */
+/** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
 	eq(reservation.bookerType, 'event'),
 	eq(event.id, reservation.bookerId)
@@ -862,15 +885,11 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
-			memberName: user.name,
-			memberEmail: user.email,
-			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id),
-			memberSustaining: isSustainingMemberSql(user.id),
-			bandId: band.id,
-			bandName: band.name,
-			eventId: event.id,
-			eventTitle: event.title
+			// Three joins for one column: the booker is a member, a band or an
+			// event, and which one it is comes from `bookerType`.
+			member: memberRefColumns(),
+			band: bandRefColumns(),
+			event: eventRefColumns()
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -888,7 +907,17 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.leftJoin(event, eventBookerJoin)
 		.where(where);
 
-	return paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 50 });
+	const { rows, pagination } = await paginate(dataQ, countQ, {
+		page: filters.page ?? 1,
+		pageSize: 50
+	});
+	return {
+		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
+			...r,
+			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
+		})),
+		pagination
+	};
 });
 
 /** Staff: tab badge counts for reservations. */
@@ -911,7 +940,7 @@ export const getUnresolvedReservations = query(async () => {
 	await requireStaff();
 	const now = new Date();
 
-	return db
+	const rows = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
@@ -919,10 +948,7 @@ export const getUnresolvedReservations = query(async () => {
 			endsAt: reservation.endsAt,
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
-			memberName: user.name,
-			memberEmail: user.email,
-			memberPronouns: user.pronouns,
-			memberRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
 			cashDueCents: reservation.cashDueCents
 		})
 		.from(reservation)
@@ -944,6 +970,8 @@ export const getUnresolvedReservations = query(async () => {
 		)
 		.orderBy(asc(reservation.endsAt))
 		.limit(LIST_LIMIT);
+
+	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 });
 
 /** Staff: current hourly rate for reservation pricing. */
@@ -1457,7 +1485,6 @@ const bandBookingSchema = createReservationSchema.extend({
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
-	await requireFeature('bandReservations');
 	const { band } = await requireBandMember();
 	const currentUser = requireUser();
 
@@ -1543,7 +1570,6 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
-		await requireFeature('bandReservations');
 		// A mutation, so the member-only guard — not `…OrStaff`. Staff cancel
 		// through their own reservation surface, which carries the audit trail.
 		const { user: currentUser, band, role } = await requireBandMember();

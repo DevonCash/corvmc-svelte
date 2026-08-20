@@ -6,9 +6,8 @@
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Field from '$lib/components/shared/Form/FormField.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -35,24 +34,6 @@
 	let result = $derived(getStaffUsers(filters));
 
 	type User = Awaited<typeof result>['rows'][number];
-
-	// `MemberLink` renders the admin/staff/sustaining glyph and the email itself,
-	// so the tier and Email columns this page used to carry are folded into the
-	// primary cell rather than hidden.
-	function memberOf(user: User) {
-		return {
-			name: user.name,
-			email: user.email,
-			pronouns: user.pronouns,
-			role: user.roles.includes('admin')
-				? 'admin'
-				: user.roles.includes('staff')
-					? 'staff'
-					: undefined,
-			sustaining: user.sustaining,
-			userId: user.id
-		};
-	}
 
 	const statusOptions = [
 		{ value: 'active', label: 'Active' },
@@ -196,19 +177,14 @@
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
-								aria-label="Select {row.name}"
+								aria-label="Select {row.ref.title}"
 								disabled={!!row.deletedAt}
 								checked={selected.has(row.id)}
 								onchange={(e) => toggle(row.id, e.currentTarget.checked)}
 							/>
 						</td>
 						<td class="cell-primary">
-							<div class="flex min-w-0 items-center gap-2">
-								<MemberLink variant="inline" member={memberOf(row)} />
-								{#if row.deletedAt}
-									<Badge variant="error" size="xs">Deactivated</Badge>
-								{/if}
-							</div>
+							<EntityIdentity ref={row.ref} avatar status />
 						</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 						<td class="w-px">

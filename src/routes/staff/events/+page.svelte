@@ -2,10 +2,10 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
-	import { IconMusic } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
@@ -143,20 +143,22 @@
 						<!-- The day is in the group header, so the cell carries the title
 						     and just the time range. -->
 						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{e.title}</a>
-							<div class="text-muted whitespace-nowrap">
-								{formatEventTimeRange(e.startsAt, e.endsAt)}
-							</div>
+							<EntityIdentity ref={e.ref}>
+								{#snippet subtitle()}
+									<span class="whitespace-nowrap">
+										{formatEventTimeRange(e.startsAt, e.endsAt)}
+									</span>
+								{/snippet}
+							</EntityIdentity>
 						</td>
+						<!--
+							The managing band, which used to link to the *public* directory
+							from inside the staff panel — the split `entityHref` exists to
+							close. The collective's own shows have no band to name.
+						-->
 						<td class="col-support">
 							{#if e.source === 'band'}
-								<a
-									href={resolve(`/directory/bands/${e.bandSlug}`)}
-									class="link inline-flex items-center gap-1 text-sm"
-								>
-									<IconMusic size={14} />
-									{e.bandName ?? 'Band'}
-								</a>
+								<EntityChip ref={e.band} />
 							{:else}
 								<span class="text-muted">CMC</span>
 							{/if}
