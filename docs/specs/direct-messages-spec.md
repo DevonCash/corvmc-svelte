@@ -85,6 +85,20 @@ rule-of-three note in `member-suggestions-spec.md`; all three are now one
 - **A restricted member can now set their own preference**, which the `source`
   check used to prevent. It cannot lift the restriction; they write different
   tables.
+- **Four read filters were left behind, and broke the feature outright.**
+  `direct-service.ts` names `messaging_standing` in hand-written SQL in four
+  places, and dropping the table took `/member/messages` down for every member —
+  staff threads included — because `listMemberConversations` is one of them.
+  Nothing caught it: the service specs mock `db` wholesale and assert on captured
+  fragments they never execute. Two consequences worth keeping:
+  - The port is not a rename. The old table held **both** halves of "cannot be
+    reached"; the split means each site now checks standing at scope `messaging`
+    **or** `user.acceptsDirectMessages`, exactly as `messagingIsDisabled` does.
+    Checking standing alone silently stops honouring the member's own switch.
+  - The tables are now interpolated into those fragments rather than spelled
+    out, so the next such migration fails the build. `db/raw-sql-tables.spec.ts`
+    scans every remaining `sql` template for table names the schema does not
+    declare.
 
 `messagingIsDisabled` is where the two halves recombine, and it returns one
 boolean on purpose: a sender must not be able to tell a staff decision from a
@@ -131,6 +145,14 @@ notice it is breaking something deliberate.
 The one branch that does report back is the sender's own standing: they are
 entitled to know they cannot start conversations, and to read the staff note
 saying why.
+
+**The recipient picker obeys the same rule.** `searchDirectoryMembers` reuses
+the directory's own visibility predicate, so it can only offer members the
+sender could already browse — it widens nothing. It deliberately does **not**
+filter on `acceptsDirectMessages` and does not mark who accepts: hiding or
+greying out the unreachable would hand the sender precisely the signal the
+silent drops exist to withhold. The composer is allowed to offer someone
+unreachable, and the send is then dropped like any other.
 
 ### Blocking
 
@@ -285,13 +307,14 @@ participants.
 
 ## Surfaces
 
-| Path                             | What                                                                                                                                                                                           |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/member/messages`               | One list: staff threads and member threads, requests tagged. Both are participant-based, which is what made a single query possible.                                                           |
-| `/member/messages/[id]`          | Discriminated on kind. A pending request shows Accept / Decline / Report instead of a message box.                                                                                             |
-| `/member/directory/members/[id]` | Message button. Shown for anyone but yourself — deliberately _not_ hidden based on blocks or the recipient's switch, which would tell the sender what the silent drop is designed to withhold. |
-| `/staff/flags/[id]`              | Reported conversation, in full, from the reporter's point of view.                                                                                                                             |
-| `/staff/inbox`                   | Unchanged. Direct threads never appear.                                                                                                                                                        |
+| Path                             | What                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/member/messages`               | The conversation list, in the left pane of a two-pane inbox (`InboxShell`, shared with `/staff/inbox`). Staff threads and member threads in one list, requests tagged. Both are participant-based, which is what made a single query possible. Compose offers **Message a Member** — a recipient picker over the directory roster — and **Message Staff**. |
+| `/member/messages/[id]`          | The thread pane. Discriminated on kind; a pending request shows Accept / Decline / Report instead of a message box. Below `lg` it replaces the list, so its back button is the only way out.                                                                                                                                                               |
+| `/member/directory/members/[id]` | Message button. Shown for anyone but yourself — deliberately _not_ hidden based on blocks or the recipient's switch, which would tell the sender what the silent drop is designed to withhold.                                                                                                                                                             |
+| `/member/account`                | The member's own switch, any staff restriction, and the list of members they have blocked. Unblocking lives here because declining a request blocks the sender too — members accumulate blocks they never consciously chose.                                                                                                                               |
+| `/staff/flags/[id]`              | Reported conversation, in full, from the reporter's point of view.                                                                                                                                                                                                                                                                                         |
+| `/staff/inbox`                   | Unchanged. Direct threads never appear.                                                                                                                                                                                                                                                                                                                    |
 
 ## Deliberately not built
 

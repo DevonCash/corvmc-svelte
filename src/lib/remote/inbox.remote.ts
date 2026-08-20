@@ -364,6 +364,9 @@ export const markConversationRead = command(z.string(), async (id) => {
 	const user = requireUser();
 	await markPortalThreadRead(id, user.id);
 	void getMemberLayout().refresh();
+	// The unread dot in the list pane is cleared by the caller, not here: the
+	// list is paginated and queries cache per argument, so this handler cannot
+	// name the entry the page is holding.
 });
 
 // ---------------------------------------------------------------------------

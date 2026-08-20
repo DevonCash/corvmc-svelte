@@ -3,9 +3,11 @@ import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
+	searchDirectoryMembers,
 	listBands,
 	getPublicDirectory as getPublicDirectoryService,
 	getMemberProfile as getMemberProfileService,
@@ -125,6 +127,23 @@ export const getDirectoryBands = query(filtersSchema, async (filters) => {
 		avatarUrl: resolveImageUrl(b.avatarKey)
 	}));
 });
+
+/**
+ * Recipient candidates for the message composer.
+ *
+ * Scoped to the directory the caller can already browse, and deliberately blind
+ * to whether a candidate accepts messages — see `searchDirectoryMembers`. The
+ * composer is allowed to offer someone unreachable; `startDirectThread` drops
+ * the message silently, which is the point.
+ */
+export const searchMessageRecipients = query(
+	z.object({ search: z.string().trim().min(2).max(100) }),
+	async ({ search }) => {
+		await requireFeature('directMessages');
+		const user = requireUser();
+		return searchDirectoryMembers(search, user.id);
+	}
+);
 
 export const getDirectoryMember = query(z.string(), async (userId) => {
 	requireUser();
