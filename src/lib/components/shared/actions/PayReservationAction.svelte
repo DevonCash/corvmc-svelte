@@ -4,7 +4,7 @@
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
-	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
+	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
 	import type { Reservation } from '$lib/server/reservation';
 
 	const { fields } = payForReservation;

@@ -21,8 +21,9 @@ slots into the existing public queries with no structural change to them.
 - `source='community'` listings, authored end to end by a member: draft, edit,
   publish, unpublish, cancel, delete.
 - `/member/events/submit` (create) and `/member/events/[id]/manage` (edit +
-  status-driven actions), mirroring `/band/[slug]/events/create` and
-  `/band/[slug]/events/[eventId]`.
+  status-driven actions), mirroring the band panel's create modal on
+  `/band/[slug]/events` and its detail page `/band/[slug]/events/[eventId]`,
+  which is itself the edit form.
 - Optional lineup credits through the existing `event_band` table, so a credit
   naming a platform band lands `pending` and never reaches that band's profile
   until they confirm (`docs/specs/event-lineup-spec.md`, unchanged).

@@ -3,8 +3,8 @@
 	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation, confirmReservation } from '$lib/remote/reservations.remote';
-	import ConfirmStep from '../../../../routes/member/reservations/ConfirmStep.svelte';
-	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
+	import ConfirmStep from '../reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
 
 	let {
 		reservation,

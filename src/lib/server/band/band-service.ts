@@ -235,9 +235,12 @@ export async function getMembers(bandId: string) {
 			userId: bandMember.userId,
 			role: bandMember.role,
 			position: bandMember.position,
+			alias: bandMember.alias,
 			status: bandMember.status,
 			invitedById: bandMember.invitedById,
 			createdAt: bandMember.createdAt,
+			// Carries name, email, pronouns, image, role and sustaining status —
+			// a superset of the flat columns this used to select.
 			member: memberRefColumns()
 		})
 		.from(bandMember)
@@ -250,11 +253,17 @@ export async function getMembers(bandId: string) {
 
 	return rows.map((row) => ({
 		...row,
-		// The position is what qualifies this person *in this band*, so it takes
-		// the subline where it exists and the email falls back to the member's own
-		// page. Both call sites used to print the email and the position on two
-		// separate lines, which is a third line on a two-line row.
-		member: { ...toMemberRef(row.member), subtitle: row.position ?? row.member.email }
+		member: {
+			...toMemberRef(row.member),
+			// A stage name is this band's word for who this is, so it takes the
+			// title here — the account name stays on the member's own profile.
+			...(row.alias ? { title: row.alias } : {}),
+			// The position is what qualifies this person *in this band*, so it takes
+			// the subline where it exists and the email falls back to the member's own
+			// page. Both call sites used to print the email and the position on two
+			// separate lines, which is a third line on a two-line row.
+			subtitle: row.position ?? row.member.email
+		}
 	}));
 }
 
@@ -508,6 +517,44 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	if (data.position !== undefined) updates.position = data.position;
 
 	return db.update(bandMember).set(updates).where(scope);
+}
+
+export interface UpdateOwnMembershipData {
+	alias?: string | null;
+	position?: string | null;
+}
+
+/**
+ * A member editing their own row.
+ *
+ * Deliberately not `updateMember`: that one refuses any row whose role is
+ * 'owner', which is what stops an admin demoting the owner — but it would also
+ * lock an owner out of their own stage name. Role is not settable here at all,
+ * so that protection has nothing to protect.
+ *
+ * Scoped by `(bandId, userId)`, which is unique, and to an active membership:
+ * a pending invitee has not joined yet and has nothing to name.
+ */
+export async function updateOwnMembership(
+	bandId: string,
+	userId: string,
+	data: UpdateOwnMembershipData
+) {
+	const updates: Record<string, unknown> = {};
+	if (data.alias !== undefined) updates.alias = data.alias;
+	if (data.position !== undefined) updates.position = data.position;
+	if (Object.keys(updates).length === 0) return;
+
+	return db
+		.update(bandMember)
+		.set(updates)
+		.where(
+			and(
+				eq(bandMember.bandId, bandId),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		);
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {

@@ -257,6 +257,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			userId: bandMember.userId,
 			role: bandMember.role,
 			position: bandMember.position,
+			alias: bandMember.alias,
 			userName: user.name,
 			userImage: user.image,
 			userVisibility: user.directoryVisibility
@@ -294,8 +295,10 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 				userId: m.userId,
 				role: m.role,
 				position: m.position,
-				// Withhold identifying details for private members in public.
-				userName: isPrivate ? null : m.userName,
+				// Withhold identifying details for private members in public. The
+				// alias is withheld with them: a stage name is more public than an
+				// account name, not an exemption from the private-row rule.
+				userName: isPrivate ? null : (m.alias ?? m.userName),
 				userImage: isPrivate ? null : resolveImageUrl(m.userImage),
 				private: isPrivate
 			};
