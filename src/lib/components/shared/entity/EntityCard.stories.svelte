@@ -10,6 +10,7 @@
 	// Remote URLs, as IdCard.stories.svelte already uses: `imageSrc` passes
 	// anything without the /cdn-cgi/image/ marker through untouched.
 	const POSTER = 'https://picsum.photos/seed/loudnight/480/720';
+	const POSTER_2 = 'https://picsum.photos/seed/matinee/480/720';
 	const PORTRAIT = 'https://i.pravatar.cc/300?img=32';
 
 	const { Story } = defineMeta({
@@ -59,17 +60,28 @@
 <Story name="With facts and actions" template={withFacts} />
 
 <!--
-	Events carry a poster, and a poster is portrait — 2:3, never landscape. The
-	registry gives the event type `shape: 'poster'`, so `auto` picks the portrait
-	box without the call site asking. Right-hand card has no artwork yet.
+	A poster type turns the *whole card* portrait: full-bleed 2:3 artwork with the
+	text underneath, the way a poster is actually looked at. The registry gives
+	the event type `shape: 'poster'`, so `auto` picks it up without the call site
+	asking. The third card has no artwork yet and keeps the same silhouette, so a
+	listing grid stays even.
 -->
 {#snippet posters()}
-	<div class="grid max-w-3xl gap-4 sm:grid-cols-2">
+	<div class="grid max-w-3xl gap-4 sm:grid-cols-3">
 		<EntityCard ref={fakeRef('event', { id: 'e1', status: 'published', image: POSTER })} />
-		<EntityCard ref={fakeRef('event', { id: 'e2', title: 'No Poster Yet', status: 'draft' })} />
+		<EntityCard
+			ref={fakeRef('event', {
+				id: 'e2',
+				title: 'Sunday Matinee',
+				subtitle: 'Sun, Mar 16 · 2:00 PM',
+				status: 'published',
+				image: POSTER_2
+			})}
+		/>
+		<EntityCard ref={fakeRef('event', { id: 'e3', title: 'No Poster Yet', status: 'draft' })} />
 	</div>
 {/snippet}
-<Story name="Event poster — portrait, with and without artwork" template={posters} />
+<Story name="Event — the whole card is the poster" template={posters} />
 
 <!--
 	The no-image answer at both sizes. Initials on a generated pattern were the

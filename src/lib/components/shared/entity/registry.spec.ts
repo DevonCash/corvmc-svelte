@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { entityKinds } from './registry';
+import { entityKinds, statusRing } from './registry';
 import { entityTypes, entityLabels, flagEntityTypeToEntity, type EntityType } from '$lib/config';
 import { flagEntityTypes } from '$lib/server/db/schema/flag';
+import { variants } from '../StatusBadge.svelte';
 
 /**
  * The entity vocabulary is split across three files by necessity — values in
@@ -75,5 +76,17 @@ describe('entity registry', () => {
 		expect(dangling, `these point at unknown entity types: ${JSON.stringify(dangling)}`).toEqual(
 			[]
 		);
+	});
+
+	/**
+	 * A card carries status as an outline round its media rather than a labelled
+	 * badge. The ring colours are literal strings because Tailwind only emits
+	 * classes it can see, so a new `variants` colour silently loses its ring
+	 * unless this catches it.
+	 */
+	it('has a ring colour for every status colour StatusBadge uses', () => {
+		const colours = [...new Set(Object.values(variants).map((v) => v.color))];
+		const missing = colours.filter((c) => !(c in statusRing));
+		expect(missing, `add these to statusRing: ${missing.join(', ')}`).toEqual([]);
 	});
 });

@@ -71,3 +71,28 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 
 /** Declaration order, for gallery stories and exhaustiveness checks. */
 export const allEntityTypes = entityTypes;
+
+/**
+ * The ring colour that carries a status on a card's media box.
+ *
+ * Keyed by `StatusBadge`'s own `variants[...].color`, so the outline and the
+ * glyph can never disagree — there is one status registry, and this maps its
+ * colours onto a second property rather than restating which status is which.
+ *
+ * Written as literal class strings on purpose: Tailwind generates only the
+ * classes it can see in source, so a computed `text-` → `ring-` swap would
+ * emit nothing at all. `registry.spec.ts` asserts every colour in `variants`
+ * has an entry here.
+ *
+ * The neutral statuses share one muted ring. `cancelled` and `dismissed` are
+ * not warnings, and a card should not shout them.
+ */
+export const statusRing: Record<string, string> = {
+	'text-success': 'ring-success',
+	'text-warning': 'ring-warning',
+	'text-info': 'ring-info',
+	'text-error': 'ring-error',
+	'text-base-content': 'ring-base-content/30',
+	'text-base-content/60': 'ring-base-content/30',
+	'text-base-content/40': 'ring-base-content/30'
+};

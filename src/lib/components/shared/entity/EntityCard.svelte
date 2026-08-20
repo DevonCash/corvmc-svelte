@@ -6,7 +6,8 @@
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
-	import { entityKinds } from './registry';
+	import { entityKinds, statusRing } from './registry';
+	import { variants } from '../StatusBadge.svelte';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -70,30 +71,41 @@
 	});
 
 	/**
-	 * The media slot is a fixed box the image is cropped into, so the card's
-	 * text column starts at the same x whatever the type. Posters are portrait —
-	 * a gig poster is never landscape, and cropping one into a wide strip throws
-	 * away the half that carries the lineup.
+	 * A poster type turns the whole card portrait: full-bleed 2:3 artwork with
+	 * the text underneath, the way a poster is actually looked at. The other
+	 * shapes keep the media as a small tile beside the text.
+	 *
+	 * Keyed off the *shape*, not off whether an image loaded, so an event with no
+	 * artwork yet is still a portrait card and a grid of them stays even.
 	 */
 	const isPoster = $derived(media === 'poster' || (media === 'auto' && kind.shape === 'poster'));
-	// Keyed off the *shape*, not off whether an image happened to load: an event
-	// with no artwork yet keeps the portrait box, so a grid of cards still lines
-	// its text columns up.
-	const boxClass = $derived(
-		isPoster
-			? 'aspect-[2/3] w-24 rounded-md'
-			: kind.shape === 'round'
-				? 'size-14 rounded-full'
-				: 'size-14 rounded-lg'
-	);
+	const tileClass = $derived(kind.shape === 'round' ? 'rounded-full' : 'rounded-lg');
 	const poster = $derived(ref.image ? imageSrc(ref.image, 'poster') : null);
+
+	/**
+	 * Status rides on the media rather than sitting beside the title: an outline
+	 * in its colour, and the glyph in the corner.
+	 *
+	 * A labelled badge on the title line was reading louder than the record's own
+	 * name, and on a poster card it clipped every title to an ellipsis. The mark
+	 * is the unlabelled `StatusBadge`, so it keeps that component's tooltip and
+	 * its humanised label — icon-only here does not mean unlabelled to a reader.
+	 *
+	 * With `media="none"` there is no media to ride on, so the badge stays inline.
+	 */
+	const inMedia = $derived(status && !!ref.status && mode !== 'none');
+	const ringClass = $derived.by(() => {
+		if (!inMedia || !ref.status) return '';
+		const colour = variants[ref.status]?.color;
+		return `ring-2 ${(colour && statusRing[colour]) || 'ring-base-content/30'}`;
+	});
 </script>
 
 <Card class={className}>
-	<CardBody>
-		<div class="flex min-w-0 items-start gap-3">
-			{#if mode === 'poster' && poster}
-				<figure class="shrink-0 overflow-hidden bg-base-200 {boxClass}">
+	{#if isPoster}
+		<div class="relative">
+			<figure class="aspect-[2/3] w-full overflow-hidden bg-base-200">
+				{#if poster}
 					<img
 						src={poster.src}
 						srcset={poster.srcset}
@@ -102,21 +114,58 @@
 						class="size-full object-cover"
 						loading="lazy"
 					/>
-				</figure>
-			{:else if mode === 'avatar'}
-				<EntityAvatar
-					shape={kind.shape === 'round' ? 'round' : 'square'}
-					name={ref.title}
-					image={ref.image}
-					size="avatar-md"
-					class="size-14 shrink-0"
-				/>
-			{:else if mode !== 'none'}
-				<div
-					class="flex shrink-0 items-center justify-center bg-base-200 {boxClass}"
-					aria-hidden="true"
+				{:else}
+					<div class="flex size-full items-center justify-center">
+						<Icon size={64} class="text-subtle" />
+					</div>
+				{/if}
+			</figure>
+			{#if ringClass}
+				<!--
+					The ring is its own overlay rather than a class on the figure. An
+					inset ring is a box-shadow, which paints under the element's content,
+					so the poster image covered it completely — and an *outset* ring gets
+					clipped by the card's own rounded corners. This sits above both.
+				-->
+				<div class="pointer-events-none absolute inset-0 {ringClass} ring-inset"></div>
+			{/if}
+			{#if inMedia && ref.status}
+				<span
+					class="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-base-100 shadow"
 				>
-					<Icon size={isPoster ? 40 : 28} class="text-subtle" />
+					<StatusBadge status={ref.status} size={16} />
+				</span>
+			{/if}
+		</div>
+	{/if}
+	<CardBody>
+		<div class="flex min-w-0 items-start gap-3">
+			<!-- On a poster card the artwork is above, so nothing sits beside the title. -->
+			{#if !isPoster && mode !== 'none'}
+				<div class="relative shrink-0">
+					{#if mode === 'avatar'}
+						<EntityAvatar
+							shape={kind.shape === 'round' ? 'round' : 'square'}
+							name={ref.title}
+							image={ref.image}
+							size="avatar-md"
+							class="size-14 {ringClass}"
+						/>
+					{:else}
+						<div
+							class="flex size-14 items-center justify-center bg-base-200 {tileClass} {ringClass}"
+							aria-hidden="true"
+						>
+							<Icon size={28} class="text-subtle" />
+						</div>
+					{/if}
+					{#if inMedia && ref.status}
+						<span
+							class="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-base-100"
+						>
+							<StatusBadge status={ref.status} size={14} />
+						</span>
+					{/if}
 				</div>
 			{/if}
 			<div class="min-w-0 flex-1">
@@ -143,7 +192,7 @@
 					<div class="truncate text-muted">{ref.subtitle}</div>
 				{/if}
 			</div>
-			{#if status && ref.status}
+			{#if status && ref.status && !inMedia}
 				<StatusBadge status={ref.status} label />
 			{/if}
 		</div>
