@@ -9,6 +9,7 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onDestroy } from 'svelte';
@@ -129,22 +130,7 @@
 					{#each active as member (member.id)}
 						<Card>
 							<CardBody row class="py-3">
-								<div class="flex items-center gap-3">
-									<div class="placeholder avatar">
-										<div class="w-8 rounded-full bg-neutral text-neutral-content">
-											<span class="text-xs">{member.userName?.charAt(0).toUpperCase() ?? '?'}</span>
-										</div>
-									</div>
-									<div>
-										<p class="font-medium">{member.userName}</p>
-										<p class="text-subtle">
-											{member.userEmail}
-											{#if member.position}
-												&middot; {member.position}
-											{/if}
-										</p>
-									</div>
-								</div>
+								<EntityIdentity ref={member.member} size="md" />
 								<div class="flex items-center gap-2">
 									{#if (isOwner || isAdmin) && member.role !== 'owner'}
 										<MemberRoleSelect
@@ -174,7 +160,7 @@
 											variant="ghost"
 											size="xs"
 											onclick={() => {
-												transferTarget = { userId: member.userId, name: member.userName ?? '' };
+												transferTarget = { userId: member.userId, name: member.member.title };
 												showTransferModal = true;
 											}}
 										>
@@ -197,15 +183,12 @@
 					{#each pending as invite (invite.id)}
 						<Card>
 							<CardBody row class="py-3">
-								<div>
-									<p class="font-medium">{invite.userName}</p>
-									<p class="text-subtle">
-										{invite.userEmail} &middot; Invited as {invite.role}
-										{#if invite.position}
-											&middot; {invite.position}
-										{/if}
-									</p>
-								</div>
+								<EntityIdentity ref={invite.member} size="md">
+									{#snippet subtitle()}
+										Invited as {invite.role}{#if invite.position}
+											&middot; {invite.position}{/if}
+									{/snippet}
+								</EntityIdentity>
 								{#if isOwner || isAdmin}
 									{@const revoke = revokeInvitation.for(invite.id)}
 									<Form

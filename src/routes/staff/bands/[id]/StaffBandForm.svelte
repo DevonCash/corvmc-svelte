@@ -18,7 +18,7 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
@@ -82,15 +82,7 @@
 					<Fact label="Slug" mono>{band.slug}</Fact>
 
 					<Fact label="Owner">
-						<MemberLink
-							member={{
-								name: band.ownerName,
-								email: band.ownerEmail,
-								pronouns: band.ownerPronouns,
-								role: band.ownerRole,
-								userId: band.ownerId
-							}}
-						/>
+						<EntityChip ref={band.owner} />
 					</Fact>
 
 					<Fact label="Members">{band.memberCount} active</Fact>
