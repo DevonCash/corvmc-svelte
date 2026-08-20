@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { entityKinds, statusRing, entityGlyph, hasSubtype } from './registry';
+import {
+	entityKinds,
+	statusRing,
+	entityGlyph,
+	hasSubtype,
+	ordinaryStatuses,
+	isNoteworthyStatus
+} from './registry';
 import { entityTypes, entityLabels, flagEntityTypeToEntity, type EntityType } from '$lib/config';
 import { flagEntityTypes } from '$lib/server/db/schema/flag';
 import { eventSources } from '$lib/server/db/schema/event';
 import { bookerTypes } from '$lib/server/db/schema/reservation';
 import { fakeRef } from '$lib/test/fixtures';
-import { variants } from '../StatusBadge.svelte';
+import { variants, badgeClass } from '../StatusBadge.svelte';
 
 /**
  * The entity vocabulary is split across three files by necessity — values in
@@ -136,6 +143,46 @@ describe('entity registry', () => {
 			const sustaining = entityGlyph(fakeRef('member', { subtype: 'sustaining' }));
 			expect(sustaining.icon).toBe(entityKinds.member.subtypes!.sustaining.icon);
 			expect(sustaining.label).toBe('Sustaining member');
+		});
+	});
+
+	/**
+	 * A status callout is for exceptions. Once every healthy record carries one,
+	 * the record that actually needs attention stops standing out — which is the
+	 * only reason the mark exists.
+	 */
+	describe('noteworthy statuses', () => {
+		it('treats every "everything is fine" status as ordinary', () => {
+			const success = Object.entries(badgeClass)
+				.filter(([, cls]) => cls === 'badge-success')
+				.map(([status]) => status);
+			const shouting = success.filter((s) => !ordinaryStatuses.has(s));
+			expect(
+				shouting,
+				`these read as success but would still be called out: ${shouting.join(', ')}`
+			).toEqual([]);
+		});
+
+		it('marks the states that need attention', () => {
+			for (const status of ['cancelled', 'no_show', 'draft', 'expired', 'blocked', 'pending']) {
+				expect(isNoteworthyStatus(status), `${status} should be marked`).toBe(true);
+			}
+		});
+
+		it('says nothing about a record in its expected state', () => {
+			for (const status of ['active', 'published', 'confirmed', 'completed']) {
+				expect(isNoteworthyStatus(status), `${status} should be quiet`).toBe(false);
+			}
+		});
+
+		it('errs toward marking a status it has never seen', () => {
+			expect(isNoteworthyStatus('some_new_status')).toBe(true);
+			expect(isNoteworthyStatus(null)).toBe(false);
+		});
+
+		it('leaves no ordinary status that StatusBadge cannot draw', () => {
+			const undrawable = [...ordinaryStatuses].filter((s) => !(s in variants));
+			expect(undrawable, `not in StatusBadge variants: ${undrawable.join(', ')}`).toEqual([]);
 		});
 	});
 });

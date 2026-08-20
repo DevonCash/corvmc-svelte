@@ -6,7 +6,7 @@
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
-	import { entityKinds, entityGlyph, statusRing } from './registry';
+	import { entityKinds, entityGlyph, statusRing, isNoteworthyStatus } from './registry';
 	import { variants } from '../StatusBadge.svelte';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
@@ -93,7 +93,10 @@
 	 *
 	 * With `media="none"` there is no media to ride on, so the badge stays inline.
 	 */
-	const inMedia = $derived(status && !!ref.status && mode !== 'none');
+	// Exception-only, like subtypes: an `active` member or a `published` listing
+	// is in its expected state and gets no mark at all.
+	const notable = $derived(status && isNoteworthyStatus(ref.status));
+	const inMedia = $derived(notable && mode !== 'none');
 	const ringClass = $derived.by(() => {
 		if (!inMedia || !ref.status) return '';
 		const colour = variants[ref.status]?.color;
@@ -197,7 +200,7 @@
 					<div class="truncate text-muted">{ref.subtitle}</div>
 				{/if}
 			</div>
-			{#if status && ref.status && !inMedia}
+			{#if notable && ref.status && !inMedia}
 				<StatusBadge status={ref.status} label />
 			{/if}
 		</div>

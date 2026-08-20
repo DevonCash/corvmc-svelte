@@ -3,7 +3,7 @@
 	import type { EntityRef } from '$lib/types/entity';
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { entityKinds, entityGlyph, hasSubtype } from './registry';
+	import { entityKinds, entityGlyph, hasSubtype, isNoteworthyStatus } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -92,7 +92,7 @@
 	{/if}
 {:else}
 	<div class="flex min-w-0 items-center gap-3 {className}">
-		{#if status && ref.status}
+		{#if status && isNoteworthyStatus(ref.status) && ref.status}
 			<StatusBadge status={ref.status} />
 		{/if}
 		{#if showAvatar}

@@ -175,3 +175,49 @@ export function entityGlyph(ref: EntityRef): EntitySubtype {
 export function hasSubtype(ref: EntityRef): boolean {
 	return !!ref.subtype && !!entityKinds[ref.type].subtypes?.[ref.subtype];
 }
+
+/**
+ * Statuses that are a record's expected resting state, and so are not worth
+ * calling out.
+ *
+ * Same rule as subtypes: marking everything marks nothing. A card ringed green
+ * with a tick because a member is `active` is telling you that nothing has
+ * happened — and once every healthy record carries a mark, the one that needs
+ * attention stops standing out, which is the only reason the mark exists.
+ *
+ * Everything absent from this set is noteworthy by default, so a new status
+ * errs toward being seen. The set is the whole of StatusBadge's `success` tone
+ * — "fine" is precisely what needs no callout — plus the two `info` statuses
+ * that are also resting states rather than transitions, and the default band
+ * role and tier.
+ *
+ * `registry.spec.ts` asserts no success-toned status escapes this list.
+ */
+export const ordinaryStatuses: ReadonlySet<string> = new Set([
+	// StatusBadge's success tone, in full.
+	'completed',
+	'published',
+	'resolved',
+	'available',
+	'returned',
+	'checked_in',
+	'sent',
+	'accepted',
+	'current',
+	'approved',
+	'cleared',
+	'done',
+	'active',
+	// Resting states that happen to be info-toned: a confirmed booking and a
+	// valid ticket are both simply "as expected".
+	'confirmed',
+	'valid',
+	// The default band role and tier.
+	'member',
+	'free'
+]);
+
+/** Whether a status is worth marking on a row or a card. */
+export function isNoteworthyStatus(status: string | null | undefined): boolean {
+	return !!status && !ordinaryStatuses.has(status);
+}

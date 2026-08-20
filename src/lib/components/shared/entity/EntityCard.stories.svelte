@@ -114,3 +114,29 @@
 	</div>
 {/snippet}
 <Story name="Unreachable record" template={unreachable} />
+
+<!--
+	Status is exception-only, the same as subtypes. The left column is each
+	record in its expected state and carries no ring and no corner mark at all;
+	the right is the same record needing attention. If every healthy card were
+	ringed, the one that matters would stop standing out.
+-->
+{#snippet statuses()}
+	<div class="grid max-w-3xl gap-4 sm:grid-cols-2">
+		<EntityCard ref={fakeRef('member', { id: 'm1', status: 'active' })} />
+		<EntityCard ref={fakeRef('member', { id: 'm2', title: 'Sam Reyes', status: 'deactivated' })} />
+		<EntityCard ref={fakeRef('reservation', { id: 'r1', status: 'confirmed' })} />
+		<EntityCard
+			ref={fakeRef('reservation', {
+				id: 'r2',
+				title: 'Mar 16, 7:00–9:00 PM',
+				status: 'no_show'
+			})}
+		/>
+		<EntityCard ref={fakeRef('equipment', { id: 'q1', status: 'available' })} />
+		<EntityCard
+			ref={fakeRef('equipment', { id: 'q2', title: 'Ampeg SVT', status: 'maintenance' })}
+		/>
+	</div>
+{/snippet}
+<Story name="Status — expected state vs needs attention" template={statuses} />
