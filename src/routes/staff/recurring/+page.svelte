@@ -4,7 +4,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -87,10 +87,9 @@
 								</span>
 							</a>
 							<div class="flex min-w-0 items-center gap-1 text-muted">
-								<MemberLink
-									variant="inline"
-									member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}
-								/>
+								<!-- The series is the record here; the member is a mention
+								     inside its subline, which is the chip's job. -->
+								<EntityChip ref={s.member} icon={false} />
 								<span>·</span>
 								<span class="whitespace-nowrap">
 									{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}

@@ -46,8 +46,15 @@ vi.mock('drizzle-orm', () => ({
 	count: vi.fn(() => 'count()')
 }));
 
-vi.mock('$lib/server/authorization', () => ({
-	primaryRoleFor: vi.fn(() => 'member')
+// Stands in for the correlated subqueries the real projection builds; those
+// are pinned by `entity/refs.spec.ts` against rendered SQL instead.
+vi.mock('$lib/server/entity/refs', () => ({
+	memberRefColumns: vi.fn(() => ({ id: 'user.id', name: 'user.name' })),
+	toMemberRef: vi.fn((row: { id?: string; name?: string } | null | undefined) => ({
+		type: 'member',
+		id: row?.id ?? null,
+		title: row?.name ?? 'Unknown member'
+	}))
 }));
 
 vi.mock('./rrule-helpers', () => ({
@@ -354,9 +361,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=MO',
 				createdAt: new Date('2026-01-01'),
 				cancelledAt: null,
-				userName: 'Alice',
-				userPronouns: null,
-				userRole: 'member',
+				member: { id: 'user-1', name: 'Alice' },
 				bookerType: 'user',
 				bookerId: 'user-1',
 				startsAt: new Date('2026-06-01T10:00:00Z'),
@@ -437,9 +442,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=TU',
 				createdAt: new Date('2026-01-01'),
 				cancelledAt: new Date('2026-02-01'),
-				userName: 'Bob',
-				userPronouns: 'he/him',
-				userRole: 'member',
+				member: { id: 'user-2', name: 'Bob' },
 				bookerType: 'user',
 				bookerId: 'user-2',
 				startsAt: new Date('2026-06-01T14:00:00Z'),
@@ -486,9 +489,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=WE',
 				createdAt: new Date('2026-03-01'),
 				cancelledAt: null,
-				userName: 'Charlie',
-				userPronouns: 'they/them',
-				userRole: 'member',
+				member: { id: 'user-3', name: 'Charlie' },
 				bookerType: 'user',
 				bookerId: 'user-3',
 				startsAt: new Date('2026-06-05T09:00:00Z'),
@@ -501,7 +502,7 @@ describe('recurring-series-service', () => {
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
 				id: 'series-user',
-				userName: 'Charlie',
+				member: { title: 'Charlie' },
 				frequencyLabel: 'Weekly'
 			});
 		});

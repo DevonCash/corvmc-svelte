@@ -5,7 +5,8 @@ import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
@@ -66,9 +67,8 @@ export interface SeriesListItem {
 	createdAt: Date;
 	seriesEndsAt: Date | null;
 	cancelledAt: Date | null;
-	userName: string;
-	userPronouns: string | null;
-	userRole: string | null;
+	/** Who books the series. The `user` join follows `createdByUserId`. */
+	member: MemberRef;
 	bookerType: string;
 	bookerId: string;
 	startsAt: Date;
@@ -354,9 +354,7 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 			createdAt: recurringSeries.createdAt,
 			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
-			userName: user.name,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -369,6 +367,7 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 
 	return rows.map((r) => ({
 		...r,
+		member: toMemberRef(r.member),
 		frequencyLabel: describeFrequency(r.rrule),
 		monthlyMode: monthlyModeOf(r.rrule)
 	}));
@@ -399,9 +398,7 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 			createdAt: recurringSeries.createdAt,
 			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
-			userName: user.name,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -424,6 +421,7 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		...result,
 		rows: result.rows.map((r) => ({
 			...r,
+			member: toMemberRef(r.member),
 			frequencyLabel: describeFrequency(r.rrule),
 			monthlyMode: monthlyModeOf(r.rrule)
 		}))
